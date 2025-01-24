@@ -1,0 +1,9 @@
+{% with msg = get_flashed_messages() %}
+{% if msg %}
+{% for message in msg %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <strong>{{ message }}</strong>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}

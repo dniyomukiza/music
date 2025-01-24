@@ -1,0 +1,73 @@
+
+
+/* Form styling */
+.search-form {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.search-form input {
+    padding: 14px 20px;
+    font-size: 18px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 400px;
+    border: 2px solid #ddd;
+    background-color: #f9f9f9;
+    transition: border-color 0.3s ease;
+}
+
+.search-form input:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 8px rgba(72, 199, 89, 0.7);
+}
+
+.search-form button {
+    padding: 14px 28px;
+    background: linear-gradient(145deg, #4CAF50, #45a049);
+    border: none;
+    color: rgb(0, 0, 0);
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+    display: inline-block;
+}
+
+.search-form button:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.error-message {
+    color: #FF6347;
+    font-size: 16px;
+    margin-top: 12px;
+}
+
+h2 {
+    font-size: 28px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.definitions, .part-of-speech, .phonetics, .root, .bandika-writing {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+ul {
+    list-style-type: disc;
+    margin-left: 20px;
+}
+
+p {
+    font-size: 18px;
+    color: #333;
+}
+
+

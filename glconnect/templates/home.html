@@ -1,0 +1,21 @@
+
+{% extends "base.html" %}
+{% block audio %}
+<audio controls>
+    <source src="http://localhost:8000/station" type="audio/ogg">
+</audio>
+
+{% endblock %}
+{% block salutation%}
+<div class="hero-content">
+    <h2>From A's to A's</h2>
+    <p>The ultimate destination for premium content</p>
+</div>
+{% endblock %}
+{% block images %}
+<div class="hero-images">
+    <img src="/static/images/photo1.avif" alt="Streaming Image 1">
+    <img src="/static/images/photo2.avif" alt="Streaming Image 2">
+</div>
+   
+{% endblock %}

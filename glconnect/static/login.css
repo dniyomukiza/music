@@ -1,0 +1,82 @@
+/* Container for the form */
+.login-container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 400px;
+  max-width: 90%;
+  margin-top: 20px;
+}
+
+/* Heading */
+.login-container h2 {
+  margin-top: 0;
+}
+
+/* Form styling */
+.login-container form {
+  margin-top: 20px;
+}
+
+/* Input fields */
+.login-container input[type="text"],
+.login-container input[type="password"] {
+  width: calc(100% - 22px); 
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* Submit button styling */
+.login-container .btn {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-top: 10px;
+  border: 2px solid #007bff;
+  background-color: #007bff;
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+/* Hover effect for button */
+.login-container .btn:hover {
+  background-color: #0056b3;
+}
+
+/* Ensure responsiveness */
+@media (max-width: 600px) {
+  .login-container {
+      width: 100%;
+      padding: 15px;
+  }
+}
+
+/* Text and Links under the form */
+.login-container p {
+  font-size: 16px;
+  margin-top: 20px;
+}
+
+/* Link styling */
+.login-container a {
+  text-decoration: none; 
+  color: #007bff; 
+  font-weight: bold; 
+  transition: color 0.3s ease; 
+}
+
+.login-container a:hover {
+  color: #0056b3;
+}
+
+/* Adding a subtle hover effect to the links */
+.login-container a:active {
+  color: #ff8c00; 
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Search & Player</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Search for a Song</h1>
+        <form id="searchForm">
+            <input type="text" id="searchQuery" placeholder="Enter song name or artist" required>
+            <button type="submit">Search</button>
+        </form>
+
+        <div id="songDetails" style="display:none;">
+            <h2 id="songName"></h2>
+            <p id="songArtist"></p>
+            <p id="songFeatures"></p>
+            <audio id="player" controls>
+                <source id="songPreviewUrl" type="audio/mpeg">
+            </audio>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const query = document.getElementById('searchQuery').value;
+
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `query=${query}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                const songDetails = document.getElementById('songDetails');
+                songDetails.style.display = 'block';
+                document.getElementById('songName').innerText = data.name;
+                document.getElementById('songArtist').innerText = `By: ${data.artist}`;
+
+                // Display song features (optional)
+                const features = data.features ? `
+                    Danceability: ${data.features.danceability}<br>
+                    Energy: ${data.features.energy}<br>
+                    Tempo: ${data.features.tempo}<br>
+                ` : 'No features available.';
+                document.getElementById('songFeatures').innerHTML = features;
+
+                // Set the audio player source to the song preview URL
+                const player = document.getElementById('player');
+                const previewUrl = data.url ? data.url : '';
+                document.getElementById('songPreviewUrl').src = previewUrl;
+                player.load(); // Reload the audio player with the new source
+                player.play(); // Automatically play the song preview
+            });
+        });
+    </script>
+</body>
+</html>

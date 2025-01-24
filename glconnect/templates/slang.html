@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Slang</title>
+</head>
+<body>
+
+<h2>Submit Slang</h2>
+
+<form id="slang-form">
+    <label for="slang">Slang:</label>
+    <input type="text" id="slang" name="slang" required><br><br>
+    
+    <label for="original">Original Meaning:</label>
+    <input type="text" id="original" name="original" required><br><br>
+    
+    <label for="current">Current Meaning:</label>
+    <input type="text" id="current" name="current" required><br><br>
+    
+    <label for="example">Example Sentence:</label>
+    <input type="text" id="example" name="example" required><br><br>
+    
+    <label for="created_by">Created By:</label>
+    <input type="text" id="created_by" name="created_by" required><br><br>
+    
+    <button type="submit">Submit Slang</button>
+</form>
+
+<script>
+    document.getElementById('slang-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent form from submitting normally
+        
+        // Collect form data
+        const formData = new FormData(event.target);
+        const slangData = {
+            slang: formData.get('slang'),
+            original: formData.get('original'),
+            current: formData.get('current'),
+            example: formData.get('example'),
+            created_by: formData.get('created_by'),
+            created_at: new Date().toISOString()
+        };
+        
+        // Send POST request to server
+        fetch('/slang', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(slangData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+            } else {
+                alert('Error submitting slang.');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block images %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='./words.css') }}">
+
+    <div class="container">
+        <h1>Kinyarwanda Dictionary</h1>
+        <form action="{{ url_for('routes.findwords') }}" method="GET" class="search-form">
+            <input type="text" placeholder="Enter a word" name="word" required>
+            <button type="submit">Search</button>
+        </form>
+
+        {% if word %}
+            {% if word.error %}
+                <p class="error-message">{{ word.error }}</p>
+            {% else %}
+                <h2>{{ word.word }}</h2>
+                <div class="definitions">
+                    <h3>Definitions:</h3>
+                    <ul>
+                        {% for meaning in word.igisobanuro_meaning %}
+                            <li>{{ meaning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="part-of-speech">
+                    <h3>Part of Speech:</h3>
+                    <ul>
+                        {% for pos in word.icyiciro_pos %}
+                            <li>{{ pos }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% if word.basoma_phonetics %}
+                    <div class="phonetics">
+                        <h3>Phonetics:</h3>
+                        <ul>
+                            {% for key, phonetic in word.basoma_phonetics.items() %}
+                                <li><strong>{{ key }}:</strong> {{ phonetic }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                {% if word.umzi_root %}
+                    <div class="root">
+                        <h3>Root:</h3>
+                        <p>{{ word.umzi_root }}</p>
+                    </div>
+                {% endif %}
+                {% if word.bandika_writing %}
+                    <div class="bandika-writing">
+                        <h3>Bandika Writing:</h3>
+                        <p>{{ word.bandika_writing }}</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+        {% else %}
+            <p>No word found. Please try again.</p>
+        {% endif %}
+    </div>
+
+{% endblock %}

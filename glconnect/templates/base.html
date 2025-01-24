@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GLC Streaming{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/home.css">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <div class="left">
+                <h1>GL Connect</h1>
+            </div>
+            <div class="middle">
+                <nav>
+                    <ul>
+                        <li><a href="#home">About</a></li>
+                        <li><a href="#categories">Categories</a></li>
+                        <li><a href="#about">Contact</a></li>
+                        <li><a href="http://127.0.0.1:8001">API</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="right">
+                <ul>
+                    <li><a href="{{ url_for('routes.register') }}">👤</a></li>
+                    <li><a href="#">🛒</a></li>
+                    <li><a href="#">▼</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        
+        {% block audio %}
+       
+        {% endblock %}
+
+        <section id="hero" class="hero">
+            {% block salutation %}
+           
+            {% endblock %}
+            
+            {% block images %}
+             
+            {% endblock %}
+        </section>
+
+        <section id="categories" class="categories">
+            <h2>Explore Our Categories</h2>
+            <div class="category-cards">
+                <div class="card">
+                    <a href="/search">
+                        <img src="/static/images/party.webp" alt="Category 1">
+                        <h3>Music</h3>
+                    </a>
+                </div>
+                <div class="card">
+                    <a href="/">
+                        <img src="/static/images/onair.webp" alt="Category 2">
+                        <h3>Live</h3>
+                    </a>
+                </div>
+                <div class="card">
+                    <a href="/words">
+                        <img src="/static/images/photo3.webp" alt="Category 3">
+                        <h3>Language</h3>
+                    </a>
+                </div>
+                <div class="card">
+                    <a href="/podcasts">
+                        <img src="/static/images/landscape.jpg" alt="Category 3">
+                        <h3>Advertise Here</h3>
+                    </a>
+                </div>
+                <div class="card">
+                    <a href="/podcasts">
+                        <img src="/static/images/news.avif" alt="Category 3">
+                        <h3>Latest News</h3>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2024 GLC | All Rights Reserved</p>
+    </footer>
+
+</body>
+</html>

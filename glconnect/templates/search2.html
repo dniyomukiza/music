@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Song Results</h1>
+        <ul>
+            {% for song in songs %}
+            <li>
+                <p>{{ song.name }} by {{ song.artist }}</p>
+                <button class="play-button" data-song="{{ song.name }}" data-artist="{{ song.artist }}">Play</button>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

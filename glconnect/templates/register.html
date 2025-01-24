@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account | GLC Streaming{% endblock %}
+
+{% block salutation %}
+<div class="register-container">
+    {% include 'messages.html' %}
+    <h2>Create Account</h2>
+    <link rel="stylesheet" href="{{ url_for('static', filename='../static/reg.css') }}">
+    <p>You must create an account to reserve your spot</p>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <input type="text" id="fname" name="fname" placeholder="First Name" required>
+        <input type="text" id="lname" name="lname" placeholder="Last Name" required>
+        <input type="email" id="email" name="email" placeholder="Email" required>
+        <input type="tel" id="phone" name="phone" pattern="[0-9]{10}" placeholder="Phone" required>
+        <input type="text" id="username" name="username" placeholder="Username" required>
+        <input type="password" id="password" name="password" placeholder="Password" required>
+        <input type="submit" value="Register" class="btn">
+    </form>
+    <p><a href="{{ url_for('routes.index') }}">Homepage</a> Already have an account? <a href="{{ url_for('routes.index') }}">Log in</a></p>
+</div>
+{% endblock %}
