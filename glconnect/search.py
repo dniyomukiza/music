@@ -15,7 +15,7 @@ class SongSearcher:
             return None  
 
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
-        song_path = os.path.join("static", "songs", f"{song.artist} - {song.name}.ogg")
+        song_path = os.path.join("static", "afro", f"{song.artist} - {song.name}.ogg")
 
         # Check if the file exists
         if not os.path.exists(song_path):
