@@ -1,0 +1,47 @@
+
+
+services:
+  app:
+    image: myapp:latest
+    container_name: myapp
+    build:
+      context: .
+    depends_on:
+      - icecast2
+    volumes:
+      - ./appdir:/usr/src/appdir
+    networks:
+      - app_network
+    command: >
+      sh -c "python run.py & uvicorn glconnect.voc:app --reload --host 0.0.0.0 --port 8001"
+    ports:
+      - "5000:5000"
+      - "8001:8001"
+
+  icecast2:
+    image: deepcomp/icecast2
+    container_name: icecast_server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./icecast.xml:/etc/icecast.xml
+    networks:
+      - app_network
+    command: /usr/bin/icecast -c /etc/icecast.xml -b
+    
+
+  liquidsoap:
+    image: phasecorex/liquidsoap:latest 
+    container_name: liquidsoap_service
+    depends_on:
+      - icecast2
+    volumes:
+      - ./:/liqfolder
+    networks:
+      - app_network
+    command: liquidsoap /liqfolder/scripts/main.liq
+    
+
+networks:
+  app_network:
+    driver: bridge

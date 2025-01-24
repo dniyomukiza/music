@@ -1,0 +1,53 @@
+<icecast>
+    <location>USA</location>
+    <admin>icemaster@me.com</admin>
+    <hostname>0.0.0.0</hostname>
+
+    <limits>
+        <clients>1000</clients>
+        <sources>10</sources>
+    </limits>
+
+    <authentication>
+        <source-password>123</source-password>
+        <admin-user>admin</admin-user>
+        <admin-password>123</admin-password>
+    </authentication>
+
+    <listen-socket>
+        <port>8000</port>
+    </listen-socket>
+
+    <paths>
+    <basedir>/etc/icecast2</basedir>
+        <webroot>/usr/share/icecast/web</webroot>
+        <adminroot>/usr/share/icecast/admin</adminroot>
+        <logdir>/var/log/icecast</logdir>
+    </paths>
+
+    <mount>
+        <mount-name>/turnup</mount-name>
+        <mount-name>/station</mount-name>
+        <mount-name>/live</mount-name>
+        <mount-name>/video</mount-name>
+        <mount-name>/podcast</mount-name>
+
+    </mount>
+
+    <logging>
+        <errorlog>error.log</errorlog>
+        <accesslog>access.log</accesslog>
+        <loglevel>3</loglevel>
+        <logsize>10000</logsize>
+    </logging>
+
+    <security>
+        <chroot>0</chroot>
+        <changeowner>
+            <user>icecast</user>
+            <group>icecast</group>
+        </changeowner>
+    </security>
+</icecast>
+
+
