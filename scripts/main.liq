@@ -21,9 +21,10 @@ radio = add([radio, switch([({ 0m0s }, clock)])])  # Clock jingle every hour
 
 # Add the ability to relay live shows (if available)
 # Pull the stream from the given URL
-live_show = input.harbor("http://localhost:8000/station") 
+#live_show = input.harbor("http://localhost:8000/station") 
+radio = mksafe(radio)
 full = fallback(track_sensitive=false, [
-    live_show,  # Relay live show if available
+    #live_show,Relay live show if available
     radio       # Use radio if no live show is available
 ])
 
