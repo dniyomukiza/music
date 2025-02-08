@@ -1,4 +1,4 @@
 .env
-pyenv
+myenv
 __pycache__
 .DS_Store
