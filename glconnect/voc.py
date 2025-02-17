@@ -14053,7 +14053,7 @@ words_data = {
     },
     "agahomamunwa": {
         "umuzi/root": "homamunwa",
-        "basoamaphonetics": {
+        "basoma/phonetics": {
             " ": "NA",
             "mu buke/singular": "agahomamunwa",
             "mu bwinshi/plural": "NA"
@@ -14984,7 +14984,7 @@ words_data = {
     },
     "ubujiji": {
         "umuzi/root": "jiji",
-        "basoa/phonetics": {
+        "basoma/phonetics": {
             " ": "NA",
             "mu buke/singular": "ubujiji",
             "mu bwinshi/plural": "NA"
@@ -17331,7 +17331,7 @@ words_data = {
             
                 "Imisatsi iboshye", "Cheveux tressés.", "Braided hair" 
             ]
-        };
+        },
     "inyabutembo": {
         "umuzi/root": "nyábutéembo",
         "basoma/phonetics": {
@@ -17488,10 +17488,8 @@ words_data = {
             ],
             "igisobanuro/meaning": [
                 
-                    "ubwoko bw'inzoga ikaze cyane iva mu byuya by'ibyo baba bacaniriye nk'urwagwa, isukari","La boisson alcoolisée fermentée traditionnelle du Rwanda est appelée "urwagwa". Elle est fabriquée à partir de matières premières locales","traditional fermented alcoholic beverage made from local raw materials like cereals and banana fruit"
+                    "ubwoko bw'inzoga ikaze cyane iva mu byuya by'ibyo baba bacaniriye nk'urwagwa, isukari","La boisson alcoolisée fermentée traditionnelle du Rwanda. Elle est fabriquée à partir de matières premières locales","traditional fermented alcoholic beverage made from local raw materials like cereals and banana fruit"
                 ]
-            
-       
         },
         "inyarigina": {
             "umuzi/root": "nyarigina",
@@ -22251,7 +22249,7 @@ words_data = {
                     "Ingeso y'imbyirukanano cg yabaye akarande ku muntu kera akaba atagishobora kuyicakaho","mauvaise habitude dont on ne peut pas se défaire.","a bad habit that one cannot get rid of"
                 ]
             
-        }
+        },
         "mutwa": {
             "umuzi/root": "twá",
             "basoma/phonetics": {
@@ -23533,6 +23531,7 @@ words_data = {
 
 def insert_data():
     for word, details in words_data.items():
+       #proceed with adding the word to the database
         new_record = WordsData(
             word=word,
             umuzi_root=details["umuzi/root"],
@@ -23542,6 +23541,7 @@ def insert_data():
             igisobanuro_meaning=details["igisobanuro/meaning"]
         )
         db.session.add(new_record)
+    
     db.session.commit()
 #Endpoint to look up a word
 @app.get("/word/{word_name}")

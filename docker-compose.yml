@@ -9,7 +9,7 @@ services:
     depends_on:
       - icecast2
     volumes:
-      - ./appdir:/usr/src/appdir
+      - ./music-1:/usr/src/appdir
     networks:
       - app_network
     command: >
@@ -17,6 +17,9 @@ services:
     ports:
       - "5000:5000"
       - "8001:8001"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
 
   icecast2:
     image: deepcomp/icecast2
