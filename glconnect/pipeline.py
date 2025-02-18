@@ -7,7 +7,7 @@ from models import db, Song
 load_dotenv()
 
 # Path to your output folder for music files
-output_folder = os.path.join(os.getcwd(), "global")
+output_folder = os.path.join(os.getcwd(), "glconnect/static/afro")
 
 class AudioDownloader:
     def __init__(self, playlist_url=None, output_folder=None):
@@ -111,6 +111,7 @@ if __name__ == "__main__":
 
     # Example usage: Download and convert audio (if playlist URL is provided)
     playlist_url = os.getenv("YT_DOWNLOADS")
+    print("playlist",playlist_url)
     if playlist_url:
         downloader = AudioDownloader(playlist_url=playlist_url, output_folder=output_folder)
         downloader.download_and_convert()
