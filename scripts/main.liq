@@ -32,3 +32,16 @@ full = fallback(track_sensitive=false, [
 output.icecast(%vorbis,
     host="icecast2", port=8000, password="123", 
     mount="station", full)  # OGG output stream
+
+
+# **Gospel Stream Setup (Fixed)**
+gospel = playlist("/liqfolder/gospel.m3u") 
+gospel_radio = mksafe(gospel)
+gospel_stream = fallback(track_sensitive=false, [
+    gospel_radio
+]) 
+
+# **Output Gospel Stream**
+output.icecast(%vorbis,
+    host="icecast2", port=8000, password="123", 
+    mount="gospel", gospel_stream)

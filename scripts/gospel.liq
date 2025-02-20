@@ -7,9 +7,6 @@ myplaylist = playlist("/liqfolder/gospel.m3u")
 # Jingles playlist (fallible source)
 jingles = playlist("/liqfolder/jingles.m3u")
 
-# Security fallback (infallible source)
-security = single("/liqfolder/dash.ogg")
-
 # Combine music and jingles (fallible sources)
 radio = random(weights = [1, 5], [jingles, myplaylist])
 
@@ -17,12 +14,12 @@ radio = random(weights = [1, 5], [jingles, myplaylist])
 radio = mksafe(radio)
 
 # Ensure the stream is infallible with a fallback
-radio = fallback(track_sensitive = false, [radio, security])
+radio = fallback(track_sensitive = false, [radio])
 
 # Stream to Icecast
 output.icecast(%vorbis,
   host = "icecast2", port = 8000,
-  password ="123", mount = "turnup",
+  password ="123", mount = "gospel",
   radio)
 
 

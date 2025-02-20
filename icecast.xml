@@ -26,7 +26,7 @@
     </paths>
 
     <mount>
-        <mount-name>/turnup</mount-name>
+        <mount-name>/gospel</mount-name>
         <mount-name>/station</mount-name>
         <mount-name>/live</mount-name>
         <mount-name>/video</mount-name>
