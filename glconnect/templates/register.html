@@ -4,10 +4,21 @@
 
 {% block salutation %}
 <div class="register-container">
-    {% include 'messages.html' %}
+    <!-- Display Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
     <h2>Create Account</h2>
-    <link rel="stylesheet" href="{{ url_for('static', filename='../static/reg.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='reg.css') }}">
     <p>You must create an account to reserve your spot</p>
+
     <form method="POST" action="">
         {{ form.hidden_tag() }}
         <input type="text" id="fname" name="fname" placeholder="First Name" required>
@@ -18,6 +29,7 @@
         <input type="password" id="password" name="password" placeholder="Password" required>
         <input type="submit" value="Register" class="btn">
     </form>
+
     <p><a href="{{ url_for('routes.index') }}">Homepage</a> Already have an account? <a href="{{ url_for('routes.index') }}">Log in</a></p>
 </div>
 {% endblock %}
