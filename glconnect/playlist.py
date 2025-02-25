@@ -30,8 +30,8 @@ def create_or_append_m3u_playlist(output_folder, m3u_filename):
 
 if __name__ == "__main__":
     # Define the output folder and the name of the .m3u playlist
-    output_folder = os.getcwd() + "/global"
-    m3u_filename = "global.m3u"
+    output_folder = os.getcwd() + "/glconnect/static/afro"
+    m3u_filename = "afro.m3u"
 
     # Create or append to the .m3u playlist
     create_or_append_m3u_playlist(output_folder, m3u_filename)

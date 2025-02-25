@@ -1,12 +1,11 @@
 import os
-import time
 from flask import Flask
 from .models import db
 from .voc import insert_data
-from flask_jwt_extended import JWTManager 
+from flask_jwt_extended import JWTManager
+from sqlalchemy import inspect
 
 jwt = JWTManager()
-
 
 def create_app():
     app = Flask(__name__)
@@ -19,15 +18,20 @@ def create_app():
 
     # Initialize the database with the app
     db.init_app(app)
-    jwt.init_app(app) 
+    jwt.init_app(app)
+
     with app.app_context():
         # Register blueprints/routes
         from .routes import bp as routes_bp
         app.register_blueprint(routes_bp)
+        # Check for missing tables and create only those
+        inspector = inspect(db.engine)
+        existing_tables = inspector.get_table_names()
+        missing_tables = [table for table in db.metadata.tables.keys() if table not in existing_tables]
 
-        # Create tables and insert data
-        db.create_all()
-        insert_data()
+        if missing_tables:
+            db.create_all()
 
     return app
+
 
