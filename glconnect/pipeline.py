@@ -54,8 +54,11 @@ class AudioDownloader:
                 ogg_file = os.path.join(self.output_folder, filename.replace(".mp3", ".ogg"))
                 command = ["ffmpeg", "-i", mp3_file, "-c:a", "libvorbis", ogg_file]
                 result = run(command)
+
                 if result.returncode == 0:
                     print(f"Converted {mp3_file} to {ogg_file}")
+                    os.remove(mp3_file)  # Delete the MP3 file after successful conversion
+                    print(f"Deleted {mp3_file}")
                 else:
                     print(f"Failed to convert {mp3_file} to {ogg_file}")
 
@@ -65,34 +68,33 @@ class AudioDownloader:
 
 class MusicFileRenamer:
     @staticmethod
-    def rename_music_files(directory):
+    def clean_music_names(directory):
         os.chdir(directory)
         for filename in os.listdir(directory):
-            if filename.endswith(".mp3") or filename.endswith(".ogg"):
-                try:
-                    base_name, extension = os.path.splitext(filename)
-                    parts = base_name.split(" - ")
-                    if len(parts) == 2:
-                        artist = parts[0].strip()
-                        song = parts[1].split("(")[0].strip()
-                        new_filename = f"{artist} - {song}{extension}"
-                        os.rename(filename, new_filename)
-                        print(f"Renamed: {filename} -> {new_filename}")
-                    else:
-                        print(f"Skipping file (unexpected format): {filename}")
-                except Exception as e:
-                    print(f"Error renaming {filename}: {e}")
+            try:
+                base_name, extension = os.path.splitext(filename)
+                parts = base_name.split(" - ")
+                if len(parts) == 2:
+                    artist = parts[0].strip()
+                    song = parts[1].split("(")[0].strip()
+                    new_filename = f"{artist} - {song}{extension}"
+                    os.rename(filename, new_filename)
+                    print(f"Renamed: {filename} -> {new_filename}")
+                else:
+                    print(f"Skipping file (unexpected format): {filename}")
+            except Exception as e:
+                print(f"Error renaming {filename}: {e}")
 
 class PlaylistIngestion:
     @staticmethod
-    def extract_song_info(file_path):
+    def extract_name_artist(file_path):
         file_path = os.path.normpath(file_path)
         keyword = os.path.join("afro", "") 
         if keyword in file_path:
             relative_path = file_path.split(keyword, 1)[1]
         else:
             print(f"Skipping file, 'afro/' not found in path: {file_path}")
-            return None, None  # Gracefully handle missing paths
+            return None, None  
         
         # Extract artist and song name
         if ' - ' in relative_path:
@@ -111,7 +113,7 @@ class PlaylistIngestion:
                 for line in m3u_file:
                     line = line.strip()
                     if line:
-                        artist, song_name = PlaylistIngestion.extract_song_info(line)
+                        artist, song_name = PlaylistIngestion.extract_name_artist(line)
                         song = Song(name=song_name, artist=artist, local_path=line)
                         db.session.add(song)
                 db.session.commit()
@@ -124,13 +126,12 @@ class PlaylistIngestion:
             db.session.add(song)
             db.session.commit()
 
-# New function from file.py
+
 def create_or_append_m3u_playlist(output_folder, m3u_filename):
     print(f"Preparing .m3u playlist in {output_folder}...")
-    m3u_path = os.path.join(output_folder, m3u_filename)
+    m3u_path = os.path.join(os.getcwd(), m3u_filename)
     ogg_files = [filename for filename in os.listdir(output_folder) if filename.endswith(".ogg")]
     ogg_files.sort(key=lambda filename: filename.split(" - ")[-1].lower())
-
     file_mode = 'a' if os.path.exists(m3u_path) else 'w'
     added_songs = set()
 
@@ -154,10 +155,10 @@ def create_or_append_m3u_playlist(output_folder, m3u_filename):
     print(f"Playlist updated: {m3u_path}")
 
 if __name__ == "__main__":
-    with app.app_context():  # Ensure all database-related actions are within an app context
+    with app.app_context():
         # Rename music files
         renamer = MusicFileRenamer()
-        renamer.rename_music_files(output_folder)
+        renamer.clean_music_names(output_folder)
 
         # Download and convert audio
         playlist_url = os.getenv("YT_DOWNLOADS")
