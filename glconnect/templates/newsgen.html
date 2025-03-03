@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>News Generator</h1>
+        <form method="POST" action="{{ url_for('routes.news') }}">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.keyword.label }}<br>
+                {{ form.keyword(size=40) }}
+            </div>
+            <div class="form-group">
+                {{ form.submit() }}
+            </div>
+        </form>
+        {% if audio_file_path %}
+    <div class="news-result">
+        <h2>News about {{ form.keyword.data }}</h2>
+        <p>Click below to listen to the news:</p>
+        <audio controls>
+            <source src="{{ url_for('static', filename='news_audio.mp3') }}" type="audio/mp3">
+        </audio>
+        <p><a href="{{ url_for('static', filename='news_audio.mp3') }}" download>Download the Audio</a></p>
+    </div>
+    {% else %}
+        <p>Audio is still being processed. Please try again shortly.</p>
+    {% endif %}
+            
+    </div>
+</body>
+</html>

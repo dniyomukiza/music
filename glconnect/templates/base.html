@@ -33,20 +33,16 @@
             </div>
         </div>
     </header>
+    <audio controls autoplay>
+        <source src="http://localhost:8000/station" type="audio/ogg">
+    </audio>
 
     <main>
-        
-        {% block audio %}
-       
-        {% endblock %}
-
         <section id="hero" class="hero">
             {% block salutation %}
-           
             {% endblock %}
             
             {% block images %}
-             
             {% endblock %}
         </section>
 
@@ -77,14 +73,13 @@
                     </a>
                 </div>
                 <div class="card">
-                    <a href="/podcasts">
+                    <a href="/news">
                         <img src="/static/images/news.avif" alt="Category 3">
                         <h3>Latest News</h3>
                     </a>
                 </div>
             </div>
         </section>
-
     </main>
 
     <footer>
@@ -93,3 +88,4 @@
 
 </body>
 </html>
+
