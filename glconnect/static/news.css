@@ -1,0 +1,56 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #5c5c8a;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.form-group {
+    margin: 20px 0;
+}
+
+input[type="text"] {
+    padding: 8px;
+    font-size: 16px;
+    width: 80%;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #5c5c8a;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+.news-result {
+    margin-top: 30px;
+    text-align: center;
+}
+
+audio {
+    width: 100%;
+    margin-top: 20px;
+}

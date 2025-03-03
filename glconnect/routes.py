@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, Response,flash,redirect,url_for,jsonify
+from flask import Blueprint, render_template, request, Response,flash,redirect,url_for,send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity 
 from glconnect.search import SongSearcher
 from glconnect.forms import *
@@ -9,6 +9,13 @@ from flask_login import login_user, current_user,LoginManager
 import requests
 import time,re
 from re import search
+import os
+import openai
+import time
+from dotenv import load_dotenv
+from google.cloud import texttospeech
+
+
 
 login_manager = LoginManager()
 bp = Blueprint('routes', __name__)
@@ -31,24 +38,24 @@ def register():
         new_user_fname = form.fname.data
         new_user_lname = form.lname.data
 
-        print("Form submitted, validating...")  # Debug print to confirm form submission
+        print("Form submitted, validating...")  
 
         # Validate username and password
         if len(new_user_username) < 7:
-            print("Username is too short")  # Debug print for username length
+            print("Username is too short")
         if not re.search(r"[\d]+", new_user_username):
-            print("Username doesn't contain a digit")  # Debug print for digit check
+            print("Username doesn't contain a digit")
         if not re.search(r"[A-Z]+", new_user_username):
-            print("Username doesn't contain an uppercase letter")  # Debug print for uppercase check
+            print("Username doesn't contain an uppercase letter") 
 
         if len(new_user_username) < 7 or not re.search(r"[\d]+", new_user_username) or not re.search(r"[A-Z]+", new_user_username):
             flash("Username must be at least 7 characters with one uppercase letter and a digit.", 'error')
         elif len(new_user_password) < 8:
-            print("Password is too short")  # Debug print for password length
+            print("Password is too short")
         if not re.search(r"[A-Z]+", new_user_password):
-            print("Password doesn't contain an uppercase letter")  # Debug print for uppercase check
+            print("Password doesn't contain an uppercase letter")
         if not re.search(r"[_@#$]+", new_user_password):
-            print("Password doesn't contain a special symbol")  # Debug print for special symbol check
+            print("Password doesn't contain a special symbol")
 
         if len(new_user_password) < 8 or not re.search(r"[A-Z]+", new_user_password) or not re.search(r"[_@#$]+", new_user_password):
             flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
@@ -100,7 +107,7 @@ def login():
 
 @bp.route('/words', methods=['GET', 'POST'])
 def findwords():
-    word = request.args.get('word')  # Get the word from the query parameter
+    word = request.args.get('word')
     if word:
         # Call the external API to get word details
         word_data = word_details(word)
@@ -152,9 +159,9 @@ def add_slang():
             original=original,
             current=current,
             example=example,
-            created_by=user_id,  # Store the user ID
-            created_at=datetime.now().isoformat(),  # Current timestamp
-            approved=False  # Slang needs to be reviewed (not approved yet)
+            created_by=user_id,
+            created_at=datetime.now().isoformat(), 
+            approved=False 
         )
 
         # Add the new slang entry to the database
@@ -162,7 +169,7 @@ def add_slang():
         db.session.commit()
 
         flash('Slang submitted for approval!', 'success')
-        return redirect(url_for('bp.add_slang'))  # Redirect to the form after submission
+        return redirect(url_for('bp.add_slang')) 
 
     # Render the form template
     return render_template('slang.html', form=form)
@@ -201,6 +208,93 @@ def search():
             }
 
     return render_template('search.html', error_message=error_message, song_result=song_result)
+
+# Load environment variables
+load_dotenv()
+
+# Load your OpenAI API key from an environment variable
+openai.api_key = os.getenv("OPENAI_AI_KEY")
+
+# Check for API key
+if not openai.api_key:
+    print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
+    exit(1)
+
+# Set the path to your Google Cloud service account key file
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
+
+# Create the text-to-speech client
+client = texttospeech.TextToSpeechClient()
+@bp.route("/news", methods=["GET", "POST"])
+def news():
+    form = KeywordForm()  # Assuming you have a form to collect keywords
+    audio_file_path = None
+    news_file_path = None  # Placeholder for news file path
+    
+    if form.validate_on_submit():
+        keyword = form.keyword.data
+        print(f"Form keyword: {form.keyword.data}")
+        
+        try:
+            # Step 1: Generate news content using OpenAI API
+            ai_response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are an experienced news reporter assistant that summarizes the latest news regarding certain topics."},
+                    {"role": "user", "content": f"Provide a balanced article of the latest news about {keyword} with an analytical perspective and potential impact. Never include any header titles, intro, and subtitles."}
+                ],
+                max_tokens=300
+            )
+            news_script = ai_response['choices'][0]['message']['content']
+            
+            # Step 2: Save the generated news content to news.txt
+            static_folder = os.path.join(os.getcwd(), 'glconnect/static')
+            if not os.path.exists(static_folder):
+                os.makedirs(static_folder)
+
+            news_file_path = os.path.join(static_folder, 'news.txt')
+            with open(news_file_path, 'w') as news_file:
+                news_file.write(news_script)
+            print(f"News text saved to {news_file_path}")
+
+            # Step 3: Generate speech using Google Cloud TTS
+            client = texttospeech.TextToSpeechClient()
+            synthesis_input = texttospeech.SynthesisInput(text=news_script)
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="en-US",
+                name="en-US-Neural2-D"
+            )
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+
+            response = client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+
+            # Step 4: Save the generated audio to news_audio.mp3
+            audio_file_path = os.path.join(static_folder, 'news_audio.mp3')
+            with open(audio_file_path, "wb") as audio_file:
+                audio_file.write(response.audio_content)
+            print(f"Audio saved to {audio_file_path}")
+        
+        except openai.error.OpenAIError as e:
+            print(f"Error generating response from OpenAI: {e}")
+        except Exception as e:
+            print(f"Error generating speech: {e}")
+    
+    # Ensure audio file exists before passing to template (only if audio_file_path is not None)
+    audio_file_ready = audio_file_path and os.path.exists(audio_file_path)
+    
+    # Render template and pass paths for news and audio
+    return render_template(
+        "newsgen.html",
+        form=form,
+        audio_file_path=audio_file_path if audio_file_ready else None,
+        news_file_path=news_file_path
+    )
 
 def stream_icecast():
     """Get the audio stream from Icecast."""

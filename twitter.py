@@ -2,9 +2,11 @@ import os
 import requests
 import openai
 import time
+from dotenv import load_dotenv
 
+load_dotenv()
 # Load your OpenAI API key from an environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("OPENAI_AI_KEY")
 bearer_token = os.getenv("BEARER_TOKEN")
 
 # Check for API keys
@@ -18,7 +20,7 @@ if not bearer_token:
 
 # Define the Twitter API endpoint and query parameters
 url = "https://api.twitter.com/2/tweets/search/recent"
-topics = ["drones", "climate change", "technology", "sports", "politics"] 
+topics = ["tariffs", "russia"] 
 current_topic_index = 0  
 delay = 15 * 60 
 
@@ -30,7 +32,7 @@ while True:
 
     params = {
         "query": topic,
-        "max_results": 10 
+        "max_results": 5 
     }
 
     try:

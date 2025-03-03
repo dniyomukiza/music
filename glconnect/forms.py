@@ -26,6 +26,10 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
+class KeywordForm(FlaskForm):
+    keyword = StringField('Enter keyyword', validators=[DataRequired()])
+    submit = SubmitField('Generate News')
+
 class OTPForm(FlaskForm):
     otp_code = StringField('Verification Code', validators=[DataRequired()])
     submit = SubmitField('Submit')
