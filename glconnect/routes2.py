@@ -47,9 +47,9 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
 client = texttospeech.TextToSpeechClient()
 @bp.route("/news", methods=["GET", "POST"])
 def news():
-    form = KeywordForm()  # Assuming you have a form to collect keywords
+    form = KeywordForm()
     audio_file_path = None
-    news_file_path = None  # Placeholder for news file path
+    news_file_path = None  
     
     if form.validate_on_submit():
         keyword = form.keyword.data
