@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "table_image",
+            "type": "shell",
+            "command": "pg_dump -U USERNAME -d DATABASE -h HOST -p PORT  -t TABLE -F p --clean > ${workspaceFolder}/db_backup/${input:sql-dump-file-name}.sql",
+            "problemMatcher": []
+        },
+        {
+            "label": "paste_image",
+            "type": "shell",
+            "command": "psql -U USERNAME -d DATABASE -h HOST -p PORT < ${workspaceFolder}/db_backup/${input:sql-dump-file-name}.sql",
+            "problemMatcher": []
+        },
+        {
+            "label": "clear_table",
+            "type": "shell",
+            "command": "psql -U USERNAME -d DATABASE -h HOST -p PORT -c \"TRUNCATE TABLE YOURTABLE RESTART IDENTITY CASCADE;\"",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "sql-dump-file-name",
+            "type": "promptString",
+            "description": "dump file name"
+        }
+    ]
+}
