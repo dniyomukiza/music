@@ -6,7 +6,6 @@
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Build Docker Image](#build-docker-image)
-  - [Run with Docker Compose](#run-with-docker-compose)
   - [Run Flask App Locally](#run-flask-app-locally)
 
 ## Installation
@@ -54,7 +53,7 @@ Since the Docker image is not yet shared, you will need to build it locally:
     docker build -t myapp:latest .
     ```
 
-2. **Stop any running containers** (if needed):
+2. **Stop any running containers** (if any created):
     ```bash
     docker-compose down
     ```
@@ -68,22 +67,6 @@ Since the Docker image is not yet shared, you will need to build it locally:
 
 ---
 
-## Run with Docker Compose
-
-To run the application using Docker Compose, follow these steps:
-
-1. **Start the application with Docker Compose**:
-    ```bash
-    docker-compose up
-    ```
-
-2. **Stop the application**:
-    ```bash
-    docker-compose down
-    ```
-
----
-
 ## Run Flask App Locally
 
 To run the Flask app locally in debug mode:
@@ -93,16 +76,14 @@ To run the Flask app locally in debug mode:
         ```bash
         export FLASK_APP=run.py
         export FLASK_DEBUG=1
+        flask run
         ```
     - **Windows**:
         ```bash
         set FLASK_APP=run.py
         set FLASK_DEBUG=1
+        flask run
         ```
 
-2. **Start the Flask app**:
-    ```bash
-    flask run
-    ```
 
 The Flask application should now be running locally at `http://127.0.0.1:5000`
