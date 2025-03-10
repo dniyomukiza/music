@@ -91,6 +91,11 @@ def login():
 
     return render_template('login.html', title='Login', form=form)
 
+@bp.route('/playlist')
+def playlist():
+    """Render the playlist page."""
+    return render_template('playlist.html')
+
 @bp.route('/words', methods=['GET', 'POST'])
 def findwords():
     word = request.args.get('word')
@@ -114,53 +119,5 @@ def word_details(word):
     except requests.exceptions.RequestException as e:
         # In case of an error with the API request
         return {"error": f"Error fetching word details: {e}"}
-'''
-@bp.route("/slang", methods=["GET"])
-def get_slangform():
-    return render_template("slang.html")  '''
 
-@bp.route("/slang", methods=["GET", "POST"])
-@jwt_required() 
-def add_slang():
-    form = SlangForm()
 
-    # Check if the form was submitted and validated
-    if form.validate_on_submit():
-        slang_word = form.slang.data
-        original = form.original.data
-        current = form.current.data
-        example = form.example.data
-
-        # Get the user ID from JWT
-        user_id = get_jwt_identity()
-
-        # Check if the slang already exists in the database
-        if SlangWords.query.filter_by(slang=slang_word).first():
-            flash('Slang already exists', 'error')
-            return redirect(url_for('bp.add_slang'))
-
-        # Create a new slang word entry to be submitted for approval
-        new_slang = SlangWords(
-            slang=slang_word,
-            original=original,
-            current=current,
-            example=example,
-            created_by=user_id,
-            created_at=datetime.now().isoformat(), 
-            approved=False 
-        )
-
-        # Add the new slang entry to the database
-        db.session.add(new_slang)
-        db.session.commit()
-
-        flash('Slang submitted for approval!', 'success')
-        return redirect(url_for('bp.add_slang')) 
-
-    # Render the form template
-    return render_template('slang.html', form=form)
-
-@bp.route('/playlist')
-def playlist():
-    """Render the playlist page."""
-    return render_template('playlist.html')
