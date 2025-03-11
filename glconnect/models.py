@@ -22,11 +22,10 @@ class User(db.Model, UserMixin):
     last_name = db.Column(db.String(80), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), nullable=False)
-    password = db.Column(db.String(255), nullable=False)  # Increased length for hashed password
-    phone = db.Column(db.String(10), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
 
     def get_id(self):
-        return str(self.id)  # Return the id as a string for Flask-Login
+        return str(self.id)
 
     def __repr__(self):
         return f"User('{self.username}', '{self.email}')"

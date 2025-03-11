@@ -20,10 +20,8 @@ def register():
         new_user_username = form.username.data
         new_user_password = form.password.data
         new_user_email = form.email.data
-        new_user_phone = form.phone.data
         new_user_fname = form.fname.data
         new_user_lname = form.lname.data
-
         print("Form submitted, validating...")  
 
         # Validate username and password
@@ -50,14 +48,12 @@ def register():
             new_user = User(
                 username=new_user_username,
                 email=new_user_email,
-                phone=new_user_phone,
                 first_name=new_user_fname,
                 last_name=new_user_lname
             )
 
             # Set the hashed password
             new_user.set_password(new_user_password)
-
             db.session.add(new_user)
             db.session.commit()
 
@@ -72,13 +68,12 @@ def load_user(user_id):
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-
     if form.validate_on_submit():
+        print("validated")
         username = form.username.data
         password = form.password.data
-
-        user = User.query.filter_by(username=username.lower()).first()
-
+        user = User.query.filter(User.username.ilike(username)).first()
+        print(user)
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash('Login successful!', 'success')
@@ -88,7 +83,7 @@ def login():
             return redirect(url_for('routes.index'))
         else:
             flash('Invalid username or password', 'error')
-
+    print("not validated!")
     return render_template('login.html', title='Login', form=form)
 
 @bp.route('/playlist')

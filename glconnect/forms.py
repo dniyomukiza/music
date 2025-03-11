@@ -11,7 +11,6 @@ class RegistrationForm(FlaskForm):
     username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Username"})
     password = StringField(validators=[DataRequired(), Length(min=2, max=20)], render_kw={"placeholder": "Password"})
     email = StringField('Email', validators=[DataRequired(), Email()], render_kw={"placeholder": "Email"})
-    phone = StringField('Phone', validators=[DataRequired(), Regexp(r'^\d{10}$', message="Phone number must be 10 digits")], render_kw={"placeholder": "Phone"})
     submit = SubmitField('Sign up')
 
     def validate_username(self, username):
@@ -73,6 +72,5 @@ class ContactForm(FlaskForm):
     FirstName = StringField('First Name', validators=[DataRequired(), Length(max=50)])
     LastName = StringField('Last Name', validators=[DataRequired(), Length(max=50)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    phone = StringField('Phone', validators=[DataRequired(), Length(max=15)])
     message = TextAreaField('Message', validators=[DataRequired(), Length(max=500)])
     submit = SubmitField('Submit')
