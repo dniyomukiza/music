@@ -1,9 +1,8 @@
 import os
 import openai
 from glconnect.forms import *
-from glconnect.routes import bp
 from dotenv import load_dotenv
-from flask import render_template, request
+from flask import render_template, request,Blueprint
 from glconnect.search import SongSearcher
 from google.cloud import texttospeech
 
@@ -11,8 +10,9 @@ from google.cloud import texttospeech
 load_dotenv()
 # Load your OpenAI API key from an environment variable
 openai.api_key = os.getenv("OPENAI_AI_KEY")
+bp2 = Blueprint('routes2', __name__)
 
-@bp.route('/search', methods=['GET', 'POST'])
+@bp2.route('/search', methods=['GET', 'POST'])
 def search():
     error_message = None
     song_result = None
@@ -22,7 +22,7 @@ def search():
         song_searcher = SongSearcher(query)
         result = song_searcher.search_and_play_song()
 
-        if result is None:  # No song found
+        if result is None: 
             error_message = "No song found matching your query."
         else:
             song_result = {
@@ -45,7 +45,7 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
 
 # Create the text-to-speech client
 client = texttospeech.TextToSpeechClient()
-@bp.route("/news", methods=["GET", "POST"])
+@bp2.route("/news", methods=["GET", "POST"])
 def news():
     form = KeywordForm()
     audio_file_path = None

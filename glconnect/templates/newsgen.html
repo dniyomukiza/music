@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h1>News Generator</h1>
-        <form method="POST" action="{{ url_for('routes.news') }}">
+        <form method="POST" action="{{ url_for('routes2.news') }}">
             {{ form.hidden_tag() }}
             <div class="form-group">
                 {{ form.keyword.label }}<br>

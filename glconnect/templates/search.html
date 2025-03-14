@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 
 {% block images %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='./search.css') }}">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='search.css') }}">
     <div class="container">
-        <form action="/search" method="POST">
+        <form action="{{ url_for('routes2.search') }}" method="POST">
             <input type="text" placeholder="Enter song name" id="song_query" name="song_query" required>
             <button type="submit">Search</button>
         </form>
@@ -24,21 +23,21 @@
 
     <script>
         document.getElementById("playButton")?.addEventListener("click", function() {
-            const songPath = "{{ song_result.path }}";  // Get the song path dynamically
+            const songPath = "{{ url_for('static', filename=song_result.path) }}"; 
             const audio = document.getElementById("audioPlayer");
             const audioSource = document.getElementById("audioSource");
-
+    
             // Log the song path to ensure it is correct
             console.log("Song path:", songPath);
-
+    
             // Set the source and load the audio
             audioSource.src = songPath;
-            audio.load();  // Load the new song
-
+            audio.load();  
+    
             // Show the audio controls and play the audio
-            audio.classList.remove("hidden");  // Show audio controls
-            audio.play();  // Play the song
-
+            audio.classList.remove("hidden"); 
+            audio.play(); 
+    
             // Handle errors if the audio fails to load
             audio.onerror = function() {
                 alert("Error loading the audio. Please try again.");

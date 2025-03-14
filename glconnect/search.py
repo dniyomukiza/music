@@ -32,7 +32,8 @@ class SongSearcher:
             # Generate the song path
             song_path = self.play_song(song)
             if song_path:
-                return song.name, song.artist, song_path
+                print("song path from songsearcher",song_path)
+                return song.name, song.artist, f"afro/{song.artist} - {song.name}.ogg"
             else:
                 print("Song found in database, but file not found in static/songs directory.")
         else:

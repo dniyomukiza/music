@@ -1,18 +1,24 @@
 import requests
-import re
-from glconnect.routes import bp
+import re,os
+import smtplib
 from flask_jwt_extended import jwt_required, get_jwt_identity 
 from glconnect.forms import *
 from glconnect.models import db,SlangWords,User
 from datetime import datetime
 from werkzeug.security import check_password_hash
-from flask import render_template, request, flash,redirect,url_for
+from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint
+from itsdangerous import URLSafeTimedSerializer
+from flask_mail import Message
 from flask_login import login_user, current_user,LoginManager
 
-
+bp1 = Blueprint('routes1', __name__)
 API_URL = "http://127.0.0.1:8001/word/"
 login_manager = LoginManager()
-@bp.route('/register', methods=['GET', 'POST'])
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
 
@@ -22,50 +28,89 @@ def register():
         new_user_email = form.email.data
         new_user_fname = form.fname.data
         new_user_lname = form.lname.data
-        print("Form submitted, validating...")  
 
         # Validate username and password
-        if len(new_user_username) < 7:
-            print("Username is too short")
-        if not re.search(r"[\d]+", new_user_username):
-            print("Username doesn't contain a digit")
-        if not re.search(r"[A-Z]+", new_user_username):
-            print("Username doesn't contain an uppercase letter") 
-
         if len(new_user_username) < 7 or not re.search(r"[\d]+", new_user_username) or not re.search(r"[A-Z]+", new_user_username):
             flash("Username must be at least 7 characters with one uppercase letter and a digit.", 'error')
-        elif len(new_user_password) < 8:
-            print("Password is too short")
-        if not re.search(r"[A-Z]+", new_user_password):
-            print("Password doesn't contain an uppercase letter")
-        if not re.search(r"[_@#$]+", new_user_password):
-            print("Password doesn't contain a special symbol")
-
-        if len(new_user_password) < 8 or not re.search(r"[A-Z]+", new_user_password) or not re.search(r"[_@#$]+", new_user_password):
+        elif len(new_user_password) < 8 or not re.search(r"[A-Z]+", new_user_password) or not re.search(r"[_@#$]+", new_user_password):
             flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
         else:
-            # Create a new user and set the password
             new_user = User(
                 username=new_user_username,
                 email=new_user_email,
                 first_name=new_user_fname,
                 last_name=new_user_lname
             )
-
-            # Set the hashed password
             new_user.set_password(new_user_password)
-            db.session.add(new_user)
-            db.session.commit()
 
-            flash('Your account has been successfully created! Please login below.', 'success')
-            return redirect(url_for('routes.login'))
+            try:
+                db.session.add(new_user)
+                db.session.commit()
+                print("User successfully added to the database")
+
+                # Generate email confirmation token
+                s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+                token = s.dumps(new_user.email, salt='email-confirm')
+                confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
+
+                # Send email
+                print("about to send email")
+                send_confirmation_email(new_user.email, confirm_url)
+                print("sent email")
+                flash('Your account has been created! Check your email to confirm your account.', 'success')
+                return redirect(url_for('routes1.check_email'))
+
+            except Exception as e:
+                db.session.rollback()
+                print(f"Database error: {e}")
+                flash("An error occurred while creating your account. Please try again.", 'error')
 
     return render_template('register.html', title='Register', form=form)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-@bp.route('/login', methods=['GET', 'POST'])
+
+def send_confirmation_email(to_email, confirm_url):
+    sender_email = os.getenv("MAIL_USERNAME")
+    app_password = os.getenv("MAIL_PASSWORD")
+
+    subject = "Please Confirm Your Email"
+    body = f"Click the link below to confirm your email:\n\n{confirm_url}"
+
+    try:
+        print(f"Sending email to {to_email}...")
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, app_password)
+            message = f"Subject: {subject}\n\n{body}"
+            server.sendmail(sender_email, to_email, message)
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"SMTP error: {e}")
+
+
+@bp1.route('/confirm/<token>')
+def confirm_email(token):
+    try:
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        email = s.loads(token, salt='email-confirm', max_age=3600)  # Link expires in 1 hour
+    except Exception as e:
+        flash('The confirmation link is invalid or has expired.', 'danger')
+        return redirect(url_for('routes1.login'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+    if user.confirmed:
+        flash('Your email has already been confirmed.', 'info')
+    else:
+        user.confirmed = True
+        db.session.commit()
+        flash('Your email has been confirmed. You can now log in.', 'success')
+
+    return redirect(url_for('routes1.login'))
+
+
+@bp1.route('/check_email')
+def check_email():
+    return render_template('check_email.html', title='Check Email')
+
+@bp1.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -86,12 +131,12 @@ def login():
     print("not validated!")
     return render_template('login.html', title='Login', form=form)
 
-@bp.route('/playlist')
+@bp1.route('/playlist')
 def playlist():
     """Render the playlist page."""
     return render_template('playlist.html')
 
-@bp.route('/words', methods=['GET', 'POST'])
+@bp1.route('/words', methods=['GET', 'POST'])
 def findwords():
     word = request.args.get('word')
     if word:

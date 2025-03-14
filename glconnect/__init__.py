@@ -5,8 +5,14 @@ from .voc import insert_data
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
+from flask_mail import Mail
+from dotenv import load_dotenv 
 
-# Initialize extensions outside of the create_app function
+# Load environment variables
+load_dotenv()
+
+# Initialize extensions
+mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
 
@@ -14,26 +20,44 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = os.urandom(24)
     
-    # Database configuration
+    # Mail configuration
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+    app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
+    app.config['MAIL_USE_SSL'] = True
+    app.config['MAIL_USE_TLS'] = False
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+    
+    # Database and JWT configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["JWT_SECRET_KEY"] = "abarayon"
-    
-    # Initialize the database and JWTManager with the app
+
+    # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'routes1.login'  # Define the route to redirect to when not authenticated
+    mail.init_app(app)
     
+    login_manager.login_view = 'routes1.login'
+
     # Register user_loader globally
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
     with app.app_context():
-        # Register blueprints/routes
-        from .routes import bp as routes_bp
-        app.register_blueprint(routes_bp)
+        # Import and register blueprints
+        from .routes import bp 
+        from .routes1 import bp1 
+        from .routes2 import bp2
+
+        app.register_blueprint(bp)  # No prefix, base routes
+        app.register_blueprint(bp1, url_prefix='/routes1')
+        app.register_blueprint(bp2, url_prefix='/routes2')
+
+        # Ensure tables exist
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()
         missing_tables = [table for table in db.metadata.tables.keys() if table not in existing_tables]
@@ -41,4 +65,3 @@ def create_app():
             db.create_all()
 
     return app
-
