@@ -17,7 +17,6 @@ login_manager = LoginManager()
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
@@ -35,11 +34,13 @@ def register():
         elif len(new_user_password) < 8 or not re.search(r"[A-Z]+", new_user_password) or not re.search(r"[_@#$]+", new_user_password):
             flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
         else:
+            # Create user without confirmation
             new_user = User(
                 username=new_user_username,
                 email=new_user_email,
                 first_name=new_user_fname,
-                last_name=new_user_lname
+                last_name=new_user_lname,
+                confirmed=False
             )
             new_user.set_password(new_user_password)
 
@@ -52,9 +53,12 @@ def register():
                 token = s.dumps(new_user.email, salt='email-confirm')
                 confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
 
-                # Send email
+                # Send confirmation email
                 send_confirmation_email(new_user.email, confirm_url)
+
                 flash('Your account has been created! Check your email to confirm your account.', 'success')
+                
+                # Redirect to a page telling the user to check their email
                 return redirect(url_for('routes1.check_email'))
 
             except Exception as e:
@@ -62,7 +66,6 @@ def register():
                 flash("An error occurred while creating your account. Please try again.", 'error')
 
     return render_template('register.html', title='Register', form=form)
-
 
 def send_confirmation_email(to_email, confirm_url):
     sender_email = os.getenv("MAIL_USERNAME")
@@ -79,15 +82,14 @@ def send_confirmation_email(to_email, confirm_url):
     except Exception as e:
         print(f"SMTP error: {e}")
 
-
 @bp1.route('/confirm/<token>')
 def confirm_email(token):
     try:
         s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-        email = s.loads(token, salt='email-confirm', max_age=3600)  # Link expires in 1 hour
+        email = s.loads(token, salt='email-confirm', max_age=3600) 
     except Exception as e:
         flash('The confirmation link is invalid or has expired.', 'danger')
-        return redirect(url_for('routes1.login'))
+        return redirect(url_for('routes1.register'))  
 
     user = User.query.filter_by(email=email).first_or_404()
     if user.confirmed:
@@ -97,8 +99,7 @@ def confirm_email(token):
         db.session.commit()
         flash('Your email has been confirmed. You can now log in.', 'success')
 
-    return redirect(url_for('routes1.login'))
-
+    return redirect(url_for('routes1.login'))  
 
 @bp1.route('/check_email')
 def check_email():
