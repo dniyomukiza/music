@@ -46,7 +46,6 @@ def register():
             try:
                 db.session.add(new_user)
                 db.session.commit()
-                print("User successfully added to the database")
 
                 # Generate email confirmation token
                 s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -54,15 +53,12 @@ def register():
                 confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
 
                 # Send email
-                print("about to send email")
                 send_confirmation_email(new_user.email, confirm_url)
-                print("sent email")
                 flash('Your account has been created! Check your email to confirm your account.', 'success')
                 return redirect(url_for('routes1.check_email'))
 
             except Exception as e:
                 db.session.rollback()
-                print(f"Database error: {e}")
                 flash("An error occurred while creating your account. Please try again.", 'error')
 
     return render_template('register.html', title='Register', form=form)
@@ -72,16 +68,14 @@ def send_confirmation_email(to_email, confirm_url):
     sender_email = os.getenv("MAIL_USERNAME")
     app_password = os.getenv("MAIL_PASSWORD")
 
-    subject = "Please Confirm Your Email"
+    subject = "Please verify your account"
     body = f"Click the link below to confirm your email:\n\n{confirm_url}"
 
     try:
-        print(f"Sending email to {to_email}...")
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(sender_email, app_password)
             message = f"Subject: {subject}\n\n{body}"
             server.sendmail(sender_email, to_email, message)
-        print("Email sent successfully!")
     except Exception as e:
         print(f"SMTP error: {e}")
 
