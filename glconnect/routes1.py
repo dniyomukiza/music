@@ -29,7 +29,7 @@ def register():
         new_user_lname = form.lname.data
 
         # Validate username and password
-        if len(new_user_username) < 7 or not re.search(r"[\d]+", new_user_username) or not re.search(r"[A-Z]+", new_user_username):
+        if len(new_user_username) < 5:
             flash("Username must be at least 7 characters with one uppercase letter and a digit.", 'error')
         elif len(new_user_password) < 8 or not re.search(r"[A-Z]+", new_user_password) or not re.search(r"[_@#$]+", new_user_password):
             flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
@@ -120,10 +120,9 @@ def login():
             print(f"Logged in as: {current_user.username}, authenticated: {current_user.is_authenticated}")
 
             # Redirect to the home page
-            return redirect(url_for('routes.index'))
+            return redirect(url_for('blog.blogpost'))
         else:
             flash('Invalid username or password', 'error')
-    print("not validated!")
     return render_template('login.html', title='Login', form=form)
 
 @bp1.route('/playlist')

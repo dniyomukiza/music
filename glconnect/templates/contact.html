@@ -1,0 +1,16 @@
+{% extends "parent.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/contact.css') }}">
+<form method="POST" action="" class="login-container">
+    {{ form.csrf_token }}
+    {{ form.hidden_tag() }}
+    <div class="container">
+    {{ form.firstName(class="form-input") }}
+    {{ form.lastName(class="form-input") }}
+    {{ form.email(class="form-input") }}
+    {{ form.message(class="form-input") }}
+    {{ form.submit(class="btn") }}
+</div>
+</form>
+{% endblock content %}
+
