@@ -6,7 +6,8 @@ from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
 from flask_mail import Mail
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
+from flask_ckeditor import CKEditor
 
 # Load environment variables
 load_dotenv()
@@ -19,7 +20,9 @@ login_manager = LoginManager()
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.urandom(24)
-    
+    ckeditor = CKEditor() 
+    app.config['CKEDITOR_SERVE_LOCAL'] = True
+    app.config['CKEDITOR_PKG_TYPE'] = 'full'   
     # Mail configuration
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
     app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
@@ -38,6 +41,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     login_manager.init_app(app)
+    ckeditor.init_app(app)
     mail.init_app(app)
     
     login_manager.login_view = 'routes1.login'
@@ -52,10 +56,12 @@ def create_app():
         from .routes import bp 
         from .routes1 import bp1 
         from .routes2 import bp2
+        from .blog import blog
 
         app.register_blueprint(bp)  # No prefix, base routes
         app.register_blueprint(bp1, url_prefix='/routes1')
         app.register_blueprint(bp2, url_prefix='/routes2')
+        app.register_blueprint(blog, url_prefix='/blog')
 
         # Ensure tables exist
         inspector = inspect(db.engine)

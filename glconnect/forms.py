@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from flask import flash
 from datetime import datetime
 from .models import User
+from flask_ckeditor import CKEditorField
 from wtforms import StringField, PasswordField, SubmitField,BooleanField,DateField,SelectField,IntegerField,TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Regexp,ValidationError
 
@@ -74,3 +75,8 @@ class ContactForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     message = TextAreaField('Message', validators=[DataRequired(), Length(max=500)])
     submit = SubmitField('Submit')
+
+class PostForm(FlaskForm):
+    title=StringField("Title",validators=[DataRequired()],render_kw={"placeholder":"Blog Title"})
+    content = CKEditorField('Content')
+    submit=SubmitField('Post')

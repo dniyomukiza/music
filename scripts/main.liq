@@ -3,7 +3,7 @@ log.stdout := true
 
 # Define the playlists and files
 default = single("/liqfolder/jinglemix.ogg")  # Default fallback track
-day = playlist("/liqfolder/global.m3u")        # Day playlist
+day = playlist("/liqfolder/mixes.m3u")        # Day playlist
 night = playlist("/liqfolder/afro.m3u")      # Night playlist
 jingles = playlist("/liqfolder/jingles.m3u")  # Jingles playlist
 clock = single("/liqfolder/jinglemix.ogg")         # Clock jingle for top-of-hour

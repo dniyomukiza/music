@@ -10,7 +10,7 @@
         {
             "label": "paste_image",
             "type": "shell",
-            "command": "psql -U USERNAME -d DATABASE -h HOST -p PORT < ${workspaceFolder}/db_backup/${input:sql-dump-file-name}.sql",
+            "command": "psql -U music_owqr_user -d music_owqr -h dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com -p 5432 < ${workspaceFolder}/db_backup/${input:sql-dump-file-name}.sql",
             "problemMatcher": []
         },
         {

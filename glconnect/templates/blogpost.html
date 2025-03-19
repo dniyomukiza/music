@@ -1,0 +1,13 @@
+{%extends "parent.html"%}
+{%block content%}
+      <form method="POST" action="">
+        <legend>{{ legend }}</legend>
+            {{ form.hidden_tag()}}
+            {{ form.title}}
+            {{ form.content | safe}}
+            {{form.submit }}
+          
+      </form>
+     
+
+{%endblock content%}

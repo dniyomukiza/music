@@ -2,6 +2,7 @@ from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, JSON
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timezone
 
 # Initialize the database instance
 db = SQLAlchemy()
@@ -14,19 +15,30 @@ class Song(db.Model):
     local_path = db.Column(db.String(200), nullable=True)
     spotify_id = db.Column(db.String(100), nullable=True)
     is_available_on_spotify = db.Column(db.Boolean, default=False)
+    
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    confirmed = db.Column(db.Boolean, default=False) 
+    confirmed = db.Column(db.Boolean, default=False)
+    posts = db.relationship('Post', backref='author', lazy=True, foreign_keys='Post.user_id')
+
 
     def get_id(self):
-        return str(self.id)
+     return str(self.user_id)
+
 
     def __repr__(self):
         return f"User('{self.username}', '{self.email}')"
