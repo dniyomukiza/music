@@ -1,23 +1,104 @@
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+div {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+}
+
 .button-container {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px; 
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
 .btn {
-    background-color:  #452932;
-    color: white; 
-    padding: 5px 10px;
-    text-align: center; 
+    background-color: #5c374c;
+    color: white;
+    padding: 8px 16px;
     text-decoration: none;
-    display: inline-block;
-    font-size: 10px; 
-    border: none; 
-    border-radius: 5px; 
+    font-size: 14px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
 }
 
 .btn:hover {
-    background-color:darkgrey;
+    background-color: #7a4a5c;
+    transform: scale(1.05);
+}
+
+div[style="display: flex; margin-bottom: 20px;"] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+div[style="flex: 1; margin-right: 20px;"] {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    min-width: 45%;
+}
+
+div[style="flex: 1; margin-right: 20px;"]:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+
+small {
+    color: #777;
+    font-size: 12px;
+}
+
+h2 {
+    font-size: 22px;
+    margin: 10px 0;
+}
+
+h2 a {
+    text-decoration: none;
+    color: #5c374c;
+    transition: 0.3s;
+}
+
+h2 a:hover {
+    color: #8a5b6c;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #444;
+}
+
+@media (max-width: 768px) {
+    .button-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    div[style="display: flex; margin-bottom: 20px;"] {
+        flex-direction: column;
+    }
+
+    div[style="flex: 1; margin-right: 20px;"] {
+        min-width: 100%;
+    }
 }

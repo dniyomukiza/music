@@ -36,7 +36,9 @@ def unauthorized(error):
 @blog.route("/blogs",methods=['GET','POST'])
 def blogs():
     #log_web_visit()
-    posts=Post.query.all()
+    p=request.args.get('page',1, type=int)
+    posts=Post.query.paginate(per_page=2,page=p)
+
     for post in posts:
         print(post.author)
     return render_template("blogs.html",posts=posts)
@@ -96,32 +98,39 @@ def contact():
     form = ContactForm()
     if form.validate_on_submit():
         def send_email():
-    
-            server = smtplib.SMTP('smtp.gmail.com', 587)
-            server.starttls()
+            try:
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.starttls()
+                server.login(os.environ.get("MAIL_USERNAME"), os.environ.get("MAIL_PASSWORD"))
 
-            server.login(os.environ.get("CONF_EMAIL2"), os.environ.get("CONF_CODE2"))
+                # Create the email content
+                subject = 'EMAIL FROM USERS'
+                body = f" First name: {form.FirstName.data} \n Last name: {form.LastName.data} \n Email: {form.email.data}\n Message: {form.message.data}"
+                message = MIMEMultipart()
+                message['From'] = form.email.data
+                message['Subject'] = subject
+                message.attach(MIMEText(body, 'plain'))
 
-            # Create the email content
-            subject = 'NEW EMAIL FROM A CUSTOMER'
-            body = f"First name: {form.firstName.data} \n Last name:  {form.lastName.data} \n Email:  {form.email.data}\n Message: {form.message.data}"
-            message = MIMEMultipart()
-            message['From'] =form.email.data
-            message['Subject'] = subject
-            message.attach(MIMEText(body, 'plain'))
+                # Send the email
+                server.sendmail(form.email.data, os.environ.get("MAIL_USERNAME"), message.as_string())
+                
+            except Exception as e:
+                flash(f"An error occurred while sending the email: {str(e)}", "error")
+            else:
+                flash("Thank you for reaching out, we will get back to you as soon as possible")
 
-            # Send the email
-            server.sendmail(form.email.data, os.environ.get("CONF_EMAIL"), message.as_string())
+            finally:
+                server.quit()
 
-            # Close the server connection
-            server.quit()
-        send_email()  
-        flash("Thank you for reaching out, we will get back to you as soon as possible")
-        form.firstName.data = ''
-        form.lastName.data = ''
+        send_email()
+        
+        # Clear the form after submission
+        form.FirstName.data = ''
+        form.LastName.data = ''
         form.email.data = ''
         form.message.data = ''  
-    return render_template("contact.html",form=form)
+    
+    return render_template("contact.html", form=form)
 
 
 # Define the UPLOAD_FOLDER and ensure it exists

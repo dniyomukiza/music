@@ -5,15 +5,16 @@
 {% block salutation %}
 <div class="login-container">
     {% include 'messages.html' %}
-    <h2>Login</h2>
+    <h2>Sign in</h2>
     <link rel="stylesheet" href="{{ url_for('static', filename='../static/login.css') }}">
-    <p>Please log in to your account</p>
     <form method="POST" action="">
         {{ form.hidden_tag() }}
         <input type="text" id="username" name="username" placeholder="Username" required>
         <input type="password" id="password" name="password" placeholder="Password" required>
         <input type="submit" value="Login" class="btn">
     </form>
-    <p><a href="{{ url_for('routes.index') }}">Homepage</a> Don't have an account? <a href="{{ url_for('routes1.register') }}">Register</a></p>
+    <p>Don't have an account? <a href="{{ url_for('routes1.register') }}">Register</a></p>
+    <p><a href="{{ url_for('routes1.reset_password_request') }}">Forgot Password?</a></p>
+
 </div>
 {% endblock %}

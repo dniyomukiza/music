@@ -4,7 +4,7 @@
 
 {% block salutation %}
 <div class="register-container">
-    <!-- Display Flash Messages -->
+   
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <ul class="flashes">
@@ -17,7 +17,7 @@
 
     <h2>Create Account</h2>
     <link rel="stylesheet" href="{{ url_for('static', filename='reg.css') }}">
-    <p>You must create an account to reserve your spot</p>
+
 
     <form method="POST" action="">
         {{ form.hidden_tag() }}

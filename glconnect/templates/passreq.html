@@ -1,0 +1,23 @@
+
+{% extends "base.html" %}
+
+{% block title %}Reset Request | GLC Streaming{% endblock %}
+
+{% block salutation %}
+<div class="reset-container">
+    {% include 'messages.html' %}
+    <h2>Reset Request</h2>
+    <link rel="stylesheet" href="{{ url_for('static', filename='request.css') }}">
+
+    <!-- Form for requesting a password reset -->
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            {{ form.email(class="form-control", id="email", placeholder="Enter your email address") }}
+        </div>
+        <input type="submit" value="Request Password Reset" class="btn">
+    </form>
+    <p>Remembered your password? <a href="{{ url_for('routes1.login') }}">Login</a></p>
+</div>
+{% endblock %}

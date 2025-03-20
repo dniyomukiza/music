@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Reset Password | GLC Streaming{% endblock %}
+
+{% block salutation %}
+<div class="reset-password-container">
+    {% include 'messages.html' %}
+    <h2>Reset Your Password</h2>
+    <link rel="stylesheet" href="{{ url_for('static', filename='reset.css') }}">
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            <label for="password">New Password</label>
+            {{ form.password(class="form-control", id="password", placeholder="Enter new password") }}
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            {{ form.confirm_password(class="form-control", id="confirm_password", placeholder="Confirm new password") }}
+        </div>
+        <button type="submit" class="btn">Reset Password</button>
+    </form>
+</div>
+{% endblock %}
