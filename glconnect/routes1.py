@@ -155,3 +155,69 @@ def word_details(word):
         return {"error": f"Error fetching word details: {e}"}
 
 
+@bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        email = s.loads(token, salt='password-reset', max_age=3600)  # Token expires in 1 hour
+    except Exception as e:
+        flash('The reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('routes1.reset_password_request'))
+
+    user = User.query.filter_by(email=email).first_or_404()
+
+    form = PasswordResetForm()
+
+    if form.validate_on_submit():
+        new_password = form.password.data
+
+        # Validate password complexity
+        if len(new_password) < 8 or not re.search(r"[A-Z]+", new_password) or not re.search(r"[_@#$]+", new_password):
+            flash("Password must be at least 8 characters long, contain a capital letter, and a special symbol.", 'error')
+        else:
+            user.set_password(new_password)
+            db.session.commit()
+            flash('Your password has been reset successfully. You can now log in.', 'success')
+            return redirect(url_for('routes1.login'))
+
+    return render_template('passreset.html', title='Reset Password', form=form, token=token)
+
+
+
+@bp1.route('/reset_request', methods=['GET', 'POST'])
+def reset_password_request():
+    form = ResetRequestForm()
+
+    if form.validate_on_submit():
+        email = form.email.data
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            # Generate password reset token
+            s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+            token = s.dumps(user.email, salt='password-reset')
+            reset_url = url_for('routes1.reset_password', token=token, _external=True)
+
+            # Send password reset email
+            send_reset_email(user.email, reset_url)
+            flash("A password reset link has been sent to your email.", "info")
+        else:
+            flash("No account is associated with this email. Please sign up.", "error")
+            return redirect(url_for('bp1.register'))
+
+    return render_template('passreq.html', title='Reset Password', form=form)
+  
+def send_reset_email(to_email, reset_url):
+    sender_email = os.getenv("MAIL_USERNAME")
+    app_password = os.getenv("MAIL_PASSWORD")
+
+    subject = "Reset Your Password"
+    body = f"Click the link below to reset your password:\n\n{reset_url}"
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, app_password)
+            message = f"Subject: {subject}\n\n{body}"
+            server.sendmail(sender_email, to_email, message)
+    except Exception as e:
+        print(f"SMTP error: {e}")

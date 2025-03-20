@@ -1,6 +1,6 @@
 
 .register-container {
-    background-color: white;
+    background-color: #ffffff9d;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -12,6 +12,7 @@
 
 .register-container h2 {
     margin-top: 0;
+    color: black;
 }
 
 .register-container form {
@@ -47,7 +48,6 @@
     background-color: #0056b3;
 }
 
-/* Ensure responsiveness */
 @media (max-width: 600px) {
     .register-container {
         width: 100%;
@@ -55,13 +55,11 @@
     }
 }
 
-/* Styles for Homepage and Login links */
 .register-container p {
     font-size: 16px;
     margin-top: 20px;
 }
 
-/* Style for links */
 .register-container a {
     text-decoration: none; 
     color: #007bff; 
@@ -73,7 +71,6 @@
     color: #0056b3;
 }
 
-/* Adding a subtle hover effect to the links */
 .register-container a:active {
     color: #ff8c00; 
 }

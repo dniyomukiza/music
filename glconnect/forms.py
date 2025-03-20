@@ -80,3 +80,12 @@ class PostForm(FlaskForm):
     title=StringField("Title",validators=[DataRequired()],render_kw={"placeholder":"Blog Title"})
     content = CKEditorField('Content')
     submit=SubmitField('Post')
+
+class ResetRequestForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Request Password Reset')
+
+class PasswordResetForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Reset Password')

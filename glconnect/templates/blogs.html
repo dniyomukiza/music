@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blogs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/blogs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
 </head>
 <body>
     <div style="margin-bottom: 20px;">
@@ -13,25 +13,30 @@
             <a href="{{ url_for('routes1.login') }}" class="btn">Create Blog</a>
         </div>
 
-        {% for i in range(0, posts|length, 2) %}
-        <div style="display: flex; margin-bottom: 20px;">
-            {% for post in posts[i:i+2] %}
-            <div style="flex: 1; margin-right: 20px;">
-                <div style="padding: 10px; margin-bottom: 10px;">
-                    <div style="font-size: 12px; margin-bottom: 5px;">
-                        <small>Posted by: {{ post.author.username }}</small>
-                        <br>
-                        <small>Date: {{ post.date_posted.strftime("%Y-%m-%d") }}</small>
-                    </div>
-                    <h2 style="font-size: 24px; margin-bottom: 10px;">
-                        <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: rgb(70, 24, 24); text-decoration: none;">{{ post.title }}</a>
-                    </h2>
-                    <p style="font-size: 16px; margin-bottom: 10px;">{{ post.content | safe }}</p>
-                </div>
+        {% for post in posts.items %}
+        <div style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc;">
+            <div style="font-size: 12px; margin-bottom: 5px;">
+                <small>Posted by: {{ post.author.username }}</small>
+                <br>
+                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d") }}</small>
             </div>
-            {% endfor %}
+            <h2 style="font-size: 24px; margin-bottom: 10px;">
+                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: rgb(70, 24, 24); text-decoration: none;">{{ post.title }}</a>
+            </h2>
+            <p style="font-size: 16px; margin-bottom: 10px;">{{ post.content | safe }}</p>
         </div>
         {% endfor %}
+
+        <!-- Pagination Controls -->
+        <div style="text-align: center; margin-top: 20px;">
+            {% if posts.has_prev %}
+                <a href="{{ url_for('blog.blogs', page=posts.prev_num) }}" class="btn">Previous</a>
+            {% endif %}
+            <span>Page {{ posts.page }} of {{ posts.pages }}</span>
+            {% if posts.has_next %}
+                <a href="{{ url_for('blog.blogs', page=posts.next_num) }}" class="btn">Next</a>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>
