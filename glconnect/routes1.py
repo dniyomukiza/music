@@ -3,12 +3,11 @@ import re,os
 import smtplib
 from flask_jwt_extended import jwt_required, get_jwt_identity 
 from glconnect.forms import *
-from glconnect.models import db,SlangWords,User
+from glconnect.models import*
 from datetime import datetime
 from werkzeug.security import check_password_hash
 from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint
 from itsdangerous import URLSafeTimedSerializer
-from flask_mail import Message
 from flask_login import login_user, current_user,LoginManager
 
 bp1 = Blueprint('routes1', __name__)
@@ -27,6 +26,7 @@ def register():
         new_user_email = form.email.data
         new_user_fname = form.fname.data
         new_user_lname = form.lname.data
+        new_user_role = form.role.data
 
         # Validate username and password
         if len(new_user_username) < 5:
@@ -40,7 +40,8 @@ def register():
                 email=new_user_email,
                 first_name=new_user_fname,
                 last_name=new_user_lname,
-                confirmed=False
+                confirmed=False,
+                role=new_user_role
             )
             new_user.set_password(new_user_password)
 
@@ -55,8 +56,6 @@ def register():
 
                 # Send confirmation email
                 send_confirmation_email(new_user.email, confirm_url)
-
-                flash('Your account has been created! Check your email to confirm your account.', 'success')
                 
                 # Redirect to a page telling the user to check their email
                 return redirect(url_for('routes1.check_email'))
@@ -109,18 +108,16 @@ def check_email():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        print("validated")
         username = form.username.data
         password = form.password.data
         user = User.query.filter(User.username.ilike(username)).first()
-        print(user)
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash('Login successful!', 'success')
-            print(f"Logged in as: {current_user.username}, authenticated: {current_user.is_authenticated}")
-
-            # Redirect to the home page
-            return redirect(url_for('blog.blogpost'))
+            if user.role=="Blogger".lower():
+                return redirect(url_for('blog.blogpost'))
+            else:
+                return redirect(url_for('prof.profile'))
         else:
             flash('Invalid username or password', 'error')
     return render_template('login.html', title='Login', form=form)
@@ -134,9 +131,7 @@ def playlist():
 def findwords():
     word = request.args.get('word')
     if word:
-        # Call the external API to get word details
         word_data = word_details(word)
-        # Pass the word data to the template
         return render_template('vocabulary.html', word=word_data)
     return render_template('vocabulary.html', word=None)
 
@@ -181,8 +176,6 @@ def reset_password(token):
             return redirect(url_for('routes1.login'))
 
     return render_template('passreset.html', title='Reset Password', form=form, token=token)
-
-
 
 @bp1.route('/reset_request', methods=['GET', 'POST'])
 def reset_password_request():

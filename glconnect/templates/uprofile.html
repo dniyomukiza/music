@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block salutation %}
+<div class="profile-container">
+    <div class="profile-icon-container">
+        <div class="profile-dropdown">
+            <label for="fileInput">
+                <img id="profileImage" class="profile-pic"
+                    src="{{ url_for('static', filename='uploads/' + (user.profile_picture if user.profile_picture else 'default.png')) }}" 
+                    alt="Photo">
+            </label>
+            <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
+            <div class="dropdown-content">
+                <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
+                <a href="{{ url_for('blog.blogs') }}">Settings</a>
+                <a href="{{ url_for('blog.blogs') }}">Help</a>
+                <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <h2>Welcome, {{ user.first_name }}!</h2>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+    <div class="profile-details">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+    </div>
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Artists, songs, books, writers, podcasts, and more..." onkeyup="filterContent()">
+        <button class="btn">Search</button>
+    </div>
+</div>
+
+<script>
+function filterContent() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let details = document.querySelector(".profile-details");
+
+    if (details.textContent.toLowerCase().includes(input)) {
+        details.style.display = "block";
+    } else {
+        details.style.display = "none";
+    }
+}
+
+function uploadImage(event) {
+    let file = event.target.files[0];
+    if (file) {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("profileImage").src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+
+{% endblock %}

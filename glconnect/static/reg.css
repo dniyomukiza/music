@@ -1,4 +1,3 @@
-
 .register-container {
     background-color: #ffffff9d;
     padding: 20px;
@@ -22,13 +21,25 @@
 .register-container input[type="text"],
 .register-container input[type="password"],
 .register-container input[type="email"],
-.register-container input[type="tel"] {
+.register-container input[type="tel"],
+.register-container select {
     width: calc(100% - 22px); 
     padding: 10px;
     margin-bottom: 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
     box-sizing: border-box;
+}
+
+.register-container select {
+    -webkit-appearance: none; /* For better styling in some browsers */
+    -moz-appearance: none;
+    appearance: none;
+    background-color: white;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="none" stroke="%23333" stroke-width="1" d="M1 4l5 5 5-5"></path></svg>'); /* Down arrow */
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px; /* Make space for the down arrow */
 }
 
 .register-container .btn {

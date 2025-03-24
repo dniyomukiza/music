@@ -15,19 +15,25 @@
                 <a href="{{ url_for('blog.delete_post', post_id=post.id) }}" class="btn delete-btn">Delete Post</a>
             </div>
             {% endif %}
+
             <div class="post-header">
                 <h2>{{ post.title }}</h2>
             </div>
             <p>{{ post.content | safe }}</p>
+
+            <!-- Play Button -->
+            <button onclick="playAudio({{ post.id }})" class="btn play-btn">▶️ Play Audio</button>
+            <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
         </div>
     </div>
+
+    <script>
+    function playAudio(postId) {
+        let audioElement = document.getElementById(`audio-${postId}`);
+        audioElement.src = `/blog/play-audio/${postId}`;
+        audioElement.style.display = "block";
+        audioElement.play();
+    }
+    </script>
 </body>
 </html>
-
-
-
-
-
-
-  
-

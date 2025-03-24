@@ -1,11 +1,10 @@
 import os
-from datetime import datetime,timedelta
-from flask import Flask,redirect,url_for,render_template,request,flash,abort,send_from_directory
-from flask import Blueprint,render_template,request,flash,redirect,url_for,session,jsonify
-from flask_login import login_user, current_user, login_required, logout_user,LoginManager,login_manager
 from .models import *
 from .forms import *
-from re import search
+from elevenlabs.client import ElevenLabs
+from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory
+from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app
+from flask_login import current_user, login_required, logout_user
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask_ckeditor import CKEditor,upload_success, upload_fail
@@ -43,11 +42,17 @@ def blogs():
         print(post.author)
     return render_template("blogs.html",posts=posts)
 
+@blog.route("/post/<int:post_id>")
+def update(post_id):
+     #log_web_visit()
+     post=Post.query.get_or_404(post_id)
+     return render_template("singlepost.html",title=post.title, post=post)
+
 @blog.route('/logout')
 @login_required
 def logout():
     #log_web_visit()
-    logout_user
+    logout_user()
     flash("You are logged out")
     return redirect(url_for('routes1.login'))
 
@@ -56,11 +61,6 @@ def logout():
 def curr_user():
     return 'current user is '+current_user.username
 
-@blog.route("/post/<int:post_id>")
-def update(post_id):
-     #log_web_visit()
-     post=Post.query.get_or_404(post_id)
-     return render_template("singlepost.html",title=post.title, post=post)
 
 @blog.route("/post/<int:post_id>/update", methods=['GET', 'POST'])
 @login_required
@@ -117,19 +117,14 @@ def contact():
             except Exception as e:
                 flash(f"An error occurred while sending the email: {str(e)}", "error")
             else:
-                flash("Thank you for reaching out, we will get back to you as soon as possible")
+                flash("Thank you for reaching out, we will get back to you asap")
 
             finally:
                 server.quit()
 
         send_email()
+        form.process()
         
-        # Clear the form after submission
-        form.FirstName.data = ''
-        form.LastName.data = ''
-        form.email.data = ''
-        form.message.data = ''  
-    
     return render_template("contact.html", form=form)
 
 
@@ -167,3 +162,38 @@ def upload():
         return upload_success(url, filename=f.filename) 
     
     return upload_fail(message='No file uploaded', filename=None)
+
+client = ElevenLabs(
+    api_key=os.getenv("ELEVENLABS_API_KEY"),
+)
+
+
+@blog.route("/play-audio/<int:post_id>")
+def play_audio(post_id):
+    post = Post.query.get_or_404(post_id)
+    text = post.content  # Blog post content
+
+    # Generate the audio file
+    audio = client.text_to_speech.convert(
+        text=text,
+        voice_id="EXAVITQu4vr4xnSDxMaL",
+        model_id="eleven_multilingual_v2",
+        output_format="mp3_44100_128",
+    )
+
+    # Ensure the 'audio' directory exists
+    audio_dir = os.path.join(current_app.root_path, 'static', 'audio')
+    if not os.path.exists(audio_dir):
+        os.makedirs(audio_dir)
+
+    # Create a file path to save the audio
+    audio_path = os.path.join(audio_dir, f"post_{post_id}.mp3")
+
+    # If the audio response is a generator, we need to get the content properly
+    with open(audio_path, "wb") as f:
+        # Assuming `audio` is a generator, you need to iterate through it or process it
+        for chunk in audio:
+            f.write(chunk)  # Write each chunk to the file
+
+    # Return the audio file as a response
+    return send_file(audio_path, mimetype="audio/mp3")
