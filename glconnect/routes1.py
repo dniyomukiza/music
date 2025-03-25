@@ -1,14 +1,12 @@
 import requests
 import re,os
 import smtplib
-from flask_jwt_extended import jwt_required, get_jwt_identity 
 from glconnect.forms import *
 from glconnect.models import*
-from datetime import datetime
 from werkzeug.security import check_password_hash
 from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint
 from itsdangerous import URLSafeTimedSerializer
-from flask_login import login_user, current_user,LoginManager
+from flask_login import login_user,LoginManager
 
 bp1 = Blueprint('routes1', __name__)
 API_URL = "http://127.0.0.1:8001/word/"

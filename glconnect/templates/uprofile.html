@@ -6,7 +6,7 @@
         <div class="profile-dropdown">
             <label for="fileInput">
                 <img id="profileImage" class="profile-pic"
-                    src="{{ url_for('static', filename='uploads/' + (user.profile_picture if user.profile_picture else 'default.png')) }}" 
+                    src="{{ url_for('static', filename='uploads/' + user.profile_picture) if user.profile_picture else '' }}" 
                     alt="Photo">
             </label>
             <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
@@ -21,38 +21,174 @@
 
     <h2>Welcome, {{ user.first_name }}!</h2>
     <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+    
     <div class="profile-details">
         <p><strong>Username:</strong> {{ user.username }}</p>
         <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Role:</strong> {{ user.role }}</p>
     </div>
-    <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Artists, songs, books, writers, podcasts, and more..." onkeyup="filterContent()">
-        <button class="btn">Search</button>
+
+    <div class="search-playlist-container">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search for an artist...">
+            <button class="btn" onclick="searchArtist()">Search</button>
+        </div>
+
+        <div id="searchResults" class="results-container"></div>
+
+        <div class="playlist-container">
+            <h3 style="color: black;">Your playlist</h3>
+
+            <div id="playlistResults" class="results-container"></div>
+            <button class="btn delete-playlist-btn" onclick="deletePlaylist()">Delete Playlist</button>
+        </div>
     </div>
 </div>
 
 <script>
-function filterContent() {
-    let input = document.getElementById("searchInput").value.toLowerCase();
-    let details = document.querySelector(".profile-details");
+// Function to handle artist search
+function searchArtist() {
+    let query = document.getElementById("searchInput").value.trim().toLowerCase();
+    if (!query) return document.getElementById("searchResults").innerHTML = "";
 
-    if (details.textContent.toLowerCase().includes(input)) {
-        details.style.display = "block";
-    } else {
-        details.style.display = "none";
-    }
+    fetch(`/playlist2/playlist2?q=${query}`)
+        .then(response => response.json())
+        .then(data => {
+            let resultsContainer = document.getElementById("searchResults");
+            resultsContainer.innerHTML = data.length ? "" : "<p>No songs found.</p>";
+            
+            data.forEach(song => {
+                let songDiv = document.createElement("div");
+                songDiv.classList.add("song-item");
+
+                // Construct the correct path using artist and song name
+                let songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
+
+                songDiv.innerHTML = `
+                    <p><strong>${song.name}</strong> by ${song.artist}</p>
+                    <audio controls>
+                        <source src="${songPath}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <button class="btn add-btn" onclick="addToPlaylist(${song.id})">Add to Playlist</button>
+                `;
+
+                resultsContainer.appendChild(songDiv);
+            });
+        })
+        .catch(error => console.error("Error fetching songs:", error));
 }
 
+// Function to add a song to the playlist
+function addToPlaylist(songId) {
+    fetch(`/playlist2/add_to_playlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ song_id: songId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadPlaylist(); // Reload playlist after adding song
+    })
+    .catch(error => console.error("Error adding to playlist:", error));
+}
+
+// Function to remove a song from the playlist
+function removeFromPlaylist(songId) {
+    fetch(`/playlist2/remove_song`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ song_id: songId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        loadPlaylist(); // Reload playlist after removing song
+    })
+    .catch(error => console.error("Error removing from playlist:", error));
+}
+
+// Function to delete the entire playlist
+function deletePlaylist() {
+    if (!confirm("Are you sure you want to delete your entire playlist?")) return;
+    fetch(`/playlist2/delete_playlist`, { method: "POST", headers: { "Content-Type": "application/json" } })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadPlaylist(); // Reload playlist after deleting
+        })
+        .catch(error => console.error("Error deleting playlist:", error));
+}
+
+// Function to handle image upload
 function uploadImage(event) {
     let file = event.target.files[0];
     if (file) {
         let reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById("profileImage").src = e.target.result;
-        };
+        reader.onload = e => document.getElementById("profileImage").src = e.target.result;
         reader.readAsDataURL(file);
     }
 }
+// Function to remove a song from the playlist
+function removeFromPlaylist(songId) {
+    fetch(`/playlist2/remove_song`, {  // Make sure to match this route to the one in your Flask app
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ song_id: songId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);  // Show success or error message
+        loadPlaylist(); // Reload playlist after removing song
+    })
+    .catch(error => console.error("Error removing from playlist:", error));
+}
+
+// Function to load and display the user's playlist
+function loadPlaylist() {
+    fetch('/playlist2/view_playlist')  // Ensure this returns the playlist data correctly
+        .then(response => response.json())
+        .then(data => {
+            let playlistResults = document.getElementById("playlistResults");
+            playlistResults.innerHTML = "";  // Clear existing playlist items
+
+            if (!Array.isArray(data) || data.length === 0) {
+                playlistResults.innerHTML = "<p>No songs found in your playlist.</p>";
+                return;
+            }
+
+            // Loop through the songs and create HTML elements for each song
+            data.forEach(song => {
+                let songDiv = document.createElement("div");
+                songDiv.classList.add("song-item");
+
+                // Construct the correct filename format: "artist - song.ogg"
+                let fileName = `${song.artist} - ${song.name}.ogg`;
+                let audioSrc = `/static/afro/${encodeURIComponent(fileName)}`;  // Encode special characters
+
+                songDiv.innerHTML = `
+                    <p><strong>${song.name}</strong> by ${song.artist}</p>
+                    <audio controls>
+                        <source src="${audioSrc}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <button class="btn remove-btn" onclick="removeFromPlaylist(${song.id})">Remove</button>
+                `;
+
+                playlistResults.appendChild(songDiv);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading playlist:', error);
+            let playlistResults = document.getElementById("playlistResults");
+            playlistResults.innerHTML = "<p>Error loading playlist. Please try again later.</p>";
+        });
+}
+
+// Load the playlist on page load
+document.addEventListener("DOMContentLoaded", loadPlaylist);
+
 </script>
 
 {% endblock %}

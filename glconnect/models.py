@@ -73,4 +73,11 @@ class SlangWords(db.Model):
     example = Column(String, nullable=False)       
     created_by = Column(String, nullable=True)      
     created_at = Column(String, nullable=False)
-    approved = Column(Integer, default=0)    
+    approved = Column(Integer, default=0) 
+       
+class Playlist(db.Model):
+    __tablename__ = 'playlists'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    song_id = db.Column(db.Integer, db.ForeignKey('songs.id'), nullable=False)
+    added_on = db.Column(db.DateTime, default=db.func.now())
