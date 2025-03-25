@@ -112,7 +112,7 @@ def login():
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash('Login successful!', 'success')
-            if user.role=="Blogger".lower():
+            if user.role=="blogger":
                 return redirect(url_for('blog.blogpost'))
             else:
                 return redirect(url_for('prof.profile'))

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block salutation %}
+<div class="profile-container">
+    <div class="profile-icon-container">
+        <div class="profile-dropdown">
+            <label for="fileInput">
+                <img id="profileImage" class="profile-pic"
+                    src="{{ url_for('static', filename='uploads/' + user.profile_picture) if user.profile_picture else '' }}" 
+                    alt="Photo">
+            </label>
+            <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
+            <div class="dropdown-content">
+                <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
+                <a href="{{ url_for('settings.index') }}">Settings</a>
+                <a href="{{ url_for('help.index') }}">Help</a>
+                <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <h2>Welcome, {{ user.first_name }}!</h2>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+    
+    <div class="profile-details">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Role:</strong> {{ user.role }}</p>
+    </div>
+
+    {% if user.role == 'artist' %}
+    <div class="upload-container">
+        <form action="{{ url_for('music.upload_song') }}" method="POST" enctype="multipart/form-data">
+            <input type="text" name="song_name" placeholder="Song Name" required>
+            <input type="text" name="artist_name" value="{{ user.username }}" readonly>
+            <input type="file" name="song_file" accept="audio/mp3" required>
+            <button type="submit" class="btn upload-btn">Upload</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="search-playlist-container">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search for an artist...">
+            <button class="btn" onclick="searchArtist()">Search</button>
+        </div>
+
+        <div id="searchResults" class="results-container"></div>
+
+        <div class="playlist-container">
+            <h3 style="color: black;">Your playlist</h3>
+            <div id="playlistResults" class="results-container"></div>
+            <button class="btn delete-playlist-btn" onclick="deletePlaylist()">Delete Playlist</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to handle image upload
+function uploadImage(event) {
+    let file = event.target.files[0];
+    if (file) {
+        let reader = new FileReader();
+        reader.onload = e => document.getElementById("profileImage").src = e.target.result;
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+{% endblock %}

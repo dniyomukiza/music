@@ -59,8 +59,10 @@ def create_app():
         from .blog import blog
         from .uprofile import prof
         from .playlist2 import play
+        from .artists import music
 
-        app.register_blueprint(bp)  # No prefix, base routes
+        app.register_blueprint(music, url_prefix="/music")
+        app.register_blueprint(bp)
         app.register_blueprint(bp1, url_prefix='/routes1')
         app.register_blueprint(bp2, url_prefix='/routes2')
         app.register_blueprint(blog, url_prefix='/blog')

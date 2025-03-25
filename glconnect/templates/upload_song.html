@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block salutation %}
+<div class="upload-container">
+    
+    <form action="{{ url_for('music.upload_song') }}" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="song_file">Select Song File (mp3, ogg, or wav):</label>
+            <input type="file" id="song_file" name="song_file" accept=".mp3,.ogg,.wav" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="song_name">Song Name</label>
+            <input type="text" id="song_name" name="song_name" placeholder="song name with no extension" required>
+        </div>
+        
+        <button type="submit" class="btn upload-btn">Upload Song</button>
+    </form>
+
+    {% if message %}
+        <div class="alert {{ message_type }}">
+            <p>{{ message }}</p>
+        </div>
+    {% endif %}
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='upload_song.css') }}">
+
+{% endblock %}

@@ -39,20 +39,6 @@
     flex-wrap: wrap;
 }
 
-.playlist-container,
-.results-container {
-    background-color: #ff8c00;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    min-width: 300px; 
-    box-sizing: border-box;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    height: auto;
-}
 
 .playlist-container {
     max-height: 100%; 

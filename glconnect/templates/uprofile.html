@@ -10,12 +10,6 @@
                     alt="Photo">
             </label>
             <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
-            <div class="dropdown-content">
-                <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
-                <a href="{{ url_for('blog.blogs') }}">Settings</a>
-                <a href="{{ url_for('blog.blogs') }}">Help</a>
-                <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
-            </div>
         </div>
     </div>
 
@@ -27,6 +21,32 @@
         <p><strong>Email:</strong> {{ user.email }}</p>
         <p><strong>Role:</strong> {{ user.role }}</p>
     </div>
+
+    {% if user.role == "artist" %}
+    <div class="create-profile">
+        <div class="dropdown-content">
+            <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
+            <a href="{{ url_for('blog.blogs') }}">Settings</a>
+            <a href="{{ url_for('blog.blogs') }}">Help</a>
+            <a href="{{ url_for('blog.blogs') }}">Upload songs</a>
+            <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
+        </div>
+
+        </div>
+    {% endif %}
+
+    {% if user.role == "writer" %}
+    <div class="create-profile">
+        <div class="dropdown-content">
+            <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
+            <a href="{{ url_for('blog.blogs') }}">Settings</a>
+            <a href="{{ url_for('blog.blogs') }}">Help</a>
+            <a href="{{ url_for('blog.blogs') }}">Upload books</a>
+            <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
+        </div>
+
+        </div>
+    {% endif %}
 
     <div class="search-playlist-container">
         <div class="search-bar">
@@ -65,7 +85,7 @@ function searchArtist() {
                 let songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
 
                 songDiv.innerHTML = `
-                    <p><strong>${song.name}</strong> by ${song.artist}</p>
+                    <p><strong>${song.name}</strong> ${song.artist}</p>
                     <audio controls>
                         <source src="${songPath}" type="audio/mpeg">
                         Your browser does not support the audio element.
@@ -130,20 +150,6 @@ function uploadImage(event) {
         reader.readAsDataURL(file);
     }
 }
-// Function to remove a song from the playlist
-function removeFromPlaylist(songId) {
-    fetch(`/playlist2/remove_song`, {  // Make sure to match this route to the one in your Flask app
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ song_id: songId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);  // Show success or error message
-        loadPlaylist(); // Reload playlist after removing song
-    })
-    .catch(error => console.error("Error removing from playlist:", error));
-}
 
 // Function to load and display the user's playlist
 function loadPlaylist() {
@@ -168,7 +174,7 @@ function loadPlaylist() {
                 let audioSrc = `/static/afro/${encodeURIComponent(fileName)}`;  // Encode special characters
 
                 songDiv.innerHTML = `
-                    <p><strong>${song.name}</strong> by ${song.artist}</p>
+                    <p><strong>${song.name}</strong> ${song.artist}</p>
                     <audio controls>
                         <source src="${audioSrc}" type="audio/mpeg">
                         Your browser does not support the audio element.
