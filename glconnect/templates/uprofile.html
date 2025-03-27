@@ -18,7 +18,6 @@
     
     <div class="profile-details">
         <p><strong>Username:</strong> {{ user.username }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
         <p><strong>Role:</strong> {{ user.role }}</p>
     </div>
 
@@ -56,12 +55,6 @@
 
         <div id="searchResults" class="results-container"></div>
 
-        <div class="playlist-container">
-            <h3 style="color: black;">Your playlist</h3>
-
-            <div id="playlistResults" class="results-container"></div>
-            <button class="btn delete-playlist-btn" onclick="deletePlaylist()">Delete Playlist</button>
-        </div>
     </div>
 </div>
 
@@ -71,75 +64,73 @@ function searchArtist() {
     let query = document.getElementById("searchInput").value.trim().toLowerCase();
     if (!query) return document.getElementById("searchResults").innerHTML = "";
 
-    fetch(`/playlist2/playlist2?q=${query}`)
-        .then(response => response.json())
+    fetch(`/playlist2/playlist2?q=${query}`)  // Make sure this is the correct URL
+        .then(response => {
+            // Check if the response is successful
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             let resultsContainer = document.getElementById("searchResults");
             resultsContainer.innerHTML = data.length ? "" : "<p>No songs found.</p>";
-            
-            data.forEach(song => {
+
+            // If a redirect URL is provided, handle it
+            if (data.redirect) {
+                // Redirect to the artist's profile page
+                window.location.href = data.redirect;  // Use the redirect URL from backend
+                return;  // Stop further processing as we've already redirected
+            }
+
+            if (data.length === 1 && data[0].id) {
+                // If one song is found, display it
+                let song = data[0];
                 let songDiv = document.createElement("div");
                 songDiv.classList.add("song-item");
-
-                // Construct the correct path using artist and song name
-                let songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
-
                 songDiv.innerHTML = `
                     <p><strong>${song.name}</strong> ${song.artist}</p>
                     <audio controls>
-                        <source src="${songPath}" type="audio/mpeg">
+                        <source src="${song.local_path}" type="audio/mpeg">
                         Your browser does not support the audio element.
                     </audio>
                     <button class="btn add-btn" onclick="addToPlaylist(${song.id})">Add to Playlist</button>
                 `;
-
                 resultsContainer.appendChild(songDiv);
-            });
+
+                // If the artist is found and has an ID, redirect
+                if (song.artist.toLowerCase() === query) {
+                    window.location.href = `/art/artist/${song.artist_id}`;  // Use artist_id here
+                }
+            } else if (data.length > 1) {
+                // Multiple songs found, display them
+                data.forEach(song => {
+                    let songDiv = document.createElement("div");
+                    songDiv.classList.add("song-item");
+
+                    // Ensure the path for each song is correct
+                    let songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
+
+                    songDiv.innerHTML = `
+                        <p><strong>${song.name}</strong> ${song.artist}</p>
+                        <audio controls>
+                            <source src="${songPath}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <button class="btn add-btn" onclick="addToPlaylist(${song.id})">Add to Playlist</button>
+                    `;
+                    resultsContainer.appendChild(songDiv);
+                });
+            } else {
+                resultsContainer.innerHTML = "<p>No songs found.</p>";
+            }
         })
-        .catch(error => console.error("Error fetching songs:", error));
+        .catch(error => {
+            console.error("Error fetching songs:", error);
+            document.getElementById("searchResults").innerHTML = "<p>Error fetching results. Please try again later.</p>";
+        });
 }
 
-// Function to add a song to the playlist
-function addToPlaylist(songId) {
-    fetch(`/playlist2/add_to_playlist`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ song_id: songId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        loadPlaylist(); // Reload playlist after adding song
-    })
-    .catch(error => console.error("Error adding to playlist:", error));
-}
-
-// Function to remove a song from the playlist
-function removeFromPlaylist(songId) {
-    fetch(`/playlist2/remove_song`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ song_id: songId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert(data.message);
-        loadPlaylist(); // Reload playlist after removing song
-    })
-    .catch(error => console.error("Error removing from playlist:", error));
-}
-
-// Function to delete the entire playlist
-function deletePlaylist() {
-    if (!confirm("Are you sure you want to delete your entire playlist?")) return;
-    fetch(`/playlist2/delete_playlist`, { method: "POST", headers: { "Content-Type": "application/json" } })
-        .then(response => response.json())
-        .then(data => {
-            alert(data.message);
-            loadPlaylist(); // Reload playlist after deleting
-        })
-        .catch(error => console.error("Error deleting playlist:", error));
-}
 
 // Function to handle image upload
 function uploadImage(event) {
@@ -150,51 +141,6 @@ function uploadImage(event) {
         reader.readAsDataURL(file);
     }
 }
-
-// Function to load and display the user's playlist
-function loadPlaylist() {
-    fetch('/playlist2/view_playlist')  // Ensure this returns the playlist data correctly
-        .then(response => response.json())
-        .then(data => {
-            let playlistResults = document.getElementById("playlistResults");
-            playlistResults.innerHTML = "";  // Clear existing playlist items
-
-            if (!Array.isArray(data) || data.length === 0) {
-                playlistResults.innerHTML = "<p>No songs found in your playlist.</p>";
-                return;
-            }
-
-            // Loop through the songs and create HTML elements for each song
-            data.forEach(song => {
-                let songDiv = document.createElement("div");
-                songDiv.classList.add("song-item");
-
-                // Construct the correct filename format: "artist - song.ogg"
-                let fileName = `${song.artist} - ${song.name}.ogg`;
-                let audioSrc = `/static/afro/${encodeURIComponent(fileName)}`;  // Encode special characters
-
-                songDiv.innerHTML = `
-                    <p><strong>${song.name}</strong> ${song.artist}</p>
-                    <audio controls>
-                        <source src="${audioSrc}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
-                    <button class="btn remove-btn" onclick="removeFromPlaylist(${song.id})">Remove</button>
-                `;
-
-                playlistResults.appendChild(songDiv);
-            });
-        })
-        .catch(error => {
-            console.error('Error loading playlist:', error);
-            let playlistResults = document.getElementById("playlistResults");
-            playlistResults.innerHTML = "<p>Error loading playlist. Please try again later.</p>";
-        });
-}
-
-// Load the playlist on page load
-document.addEventListener("DOMContentLoaded", loadPlaylist);
-
 </script>
 
 {% endblock %}

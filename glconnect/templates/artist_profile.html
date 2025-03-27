@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ artist.artist_name }} - Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='artist.css') }}">
+    <script defer src="{{ url_for('static', filename='artist.js') }}"></script>
+</head>
+<body>
+
+    <div class="hero">
+        <img src="{{ url_for('static', filename='images/' + artist.profile_pic) }}" class="profile-pic">
+        <h1 class="artist-name">{{ artist.artist_name }}</h1>
+        <p class="bio">{{ artist.bio }}</p>
+        <div class="follow-links">
+            <a href="#">Follow on Twitter</a> <a></a> <a>Follow on Instagram</a> | <a href="#">Listen on Spotify</a> <a href="#">Listen on Apple Music</a>
+        </div>
+    </div>
+     <div id="playlist-container">
+       <h3>Playlist</h3>
+       <ul id="playlist"></ul>
+   </div>
+
+
+    <div class="music-section">
+        <h2>All Songs</h2>
+        <div class="songs">
+            {% for song in songs %}
+            <div class="song-card">
+                <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'photo3.webp')) }}" class="song-cover">
+
+                <p class="song-title">{{ song.name }}</p>
+                <audio id="audio-{{ song.id }}">
+                    <source src="{{ url_for('static', filename='afro/' + song.artist + ' - ' + song.name + '.ogg') }}" type="audio/ogg">
+                    Your browser does not support the audio element.
+                </audio>
+                <button onclick="togglePlayPause('{{ song.id }}')">▶ Play</button>
+                <button onclick="addToPlaylist('{{ song.id }}', '{{ song.name }}')">➕ Add to Playlist</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="playlist-section">
+        <h2>Playlist</h2>
+        <ul id="playlist">
+            <!-- Playlist items will be added dynamically -->
+        </ul>
+        <button id="play-all-button" onclick="togglePlayAll()">▶ Play All</button> <!-- Single play button for the entire playlist -->
+    </div>
+    
+</body>
+</html>

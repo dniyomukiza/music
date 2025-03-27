@@ -1,39 +1,37 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
-from glconnect.models import Song, Playlist, db
+from glconnect.models import Song, Playlist, db,Artist
 
 play = Blueprint('playlist2', __name__)
 
+from flask import url_for
+
+# In your route for fetching songs
 @play.route('/playlist2', methods=['GET'])
 def playlist2():
-    print("Playlist2 route is being hit!")
     query = request.args.get('q', '').strip().lower()
     if not query:
         return jsonify([])
 
-    # Query songs based on artist or name
-    artist_songs = Song.query.filter(db.func.lower(Song.artist) == query).all()
+    # Search for the artist by name
+    artist = Artist.query.filter(db.func.lower(Artist.artist_name) == query).first()
+    if artist:
+        # Return the artist ID along with other data
+        return jsonify({
+            'redirect': url_for('art.artist_profile', artist_id=artist.artist_id)  # Use artist_id here
+        })
 
-    if artist_songs:
-        results = artist_songs
-    else:
-        results = Song.query.filter(
-            (db.func.lower(Song.artist).contains(query)) |
-            (db.func.lower(Song.name).contains(query))
-        ).all()
+    # If no artist is found, search for songs
+    song = Song.query.filter(db.func.lower(Song.name) == query).first()
+    if song:
+        # Redirect to the artist's profile associated with the song
+        return jsonify({
+            'redirect': url_for('art.artist_profile', artist_id=song.artist_id)  # Redirect to artist's profile
+        })
 
-    songs_list = [
-        {
-            'id': song.id,
-            'name': song.name,
-            'artist': song.artist,
-            'local_path': song.local_path,
-            'spotify_id': song.spotify_id,
-            'is_available_on_spotify': song.is_available_on_spotify
-        }
-        for song in results
-    ]
-    return jsonify(songs_list)
+    return jsonify([])  # If no song or artist is found
+
+
 
 
 @play.route('/add_to_playlist', methods=['POST'])

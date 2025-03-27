@@ -60,6 +60,7 @@ def create_app():
         from .uprofile import prof
         from .playlist2 import play
         from .artists import music
+        from .artist import art
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(bp)
@@ -68,6 +69,7 @@ def create_app():
         app.register_blueprint(blog, url_prefix='/blog')
         app.register_blueprint(prof, url_prefix='/prof')
         app.register_blueprint(play, url_prefix='/playlist2')
+        app.register_blueprint(art, url_prefix='/art')
         # Ensure tables exist
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()
