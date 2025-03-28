@@ -4,7 +4,7 @@ import smtplib
 from glconnect.forms import *
 from glconnect.models import*
 from werkzeug.security import check_password_hash
-from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint
+from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session
 from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager
 
@@ -111,6 +111,7 @@ def login():
         user = User.query.filter(User.username.ilike(username)).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
+            session['user_id'] = user.user_id 
             flash('Login successful!', 'success')
             if user.role=="blogger":
                 return redirect(url_for('blog.blogpost'))

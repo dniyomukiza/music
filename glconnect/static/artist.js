@@ -16,15 +16,43 @@ function togglePlayPause(songId) {
 let playlist = [];
 
 // Function to add a song to the playlist
-function addToPlaylist(songId, songName) {
+// Function to add a song to the playlist
+function addToPlaylist(songId, songName, userId) {
     // Check if the song is already in the playlist
     if (!playlist.some(song => song.id === songId)) {
         playlist.push({ id: songId, name: songName });
         updatePlaylistUI();
+
+        // After adding to the playlist, save to backend
+        saveSongToBackend(songId, userId);
     } else {
         alert('This song is already in your playlist!');
     }
 }
+
+// Function to save the song to the backend (called after adding to playlist)
+function saveSongToBackend(songId, userId) {
+    // Prepare the playlist with the current song added
+    const songIds = playlist.map(song => song.id);
+
+    fetch('http://127.0.0.1:5000/art/save_playlist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',  // Ensure JSON format
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ user_id: userId, song_ids: songIds })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);  // Show response message from the backend
+    })
+    .catch(error => {
+        console.error("Error saving song to playlist:", error);
+        alert("There was an error saving the song to the playlist.");
+    });
+}
+
 
 // Function to update the playlist UI
 function updatePlaylistUI() {
@@ -99,3 +127,34 @@ function playSongSequentially(index) {
     }
 }
 
+function savePlaylist(userId) {
+    if (playlist.length === 0) {
+        alert("Your playlist is empty! Add songs before saving.");
+        return;
+    }
+
+    const songIds = playlist.map(song => song.id);
+
+    fetch('http://127.0.0.1:5000/art/save_playlist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',  // Ensure JSON format
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ user_id: userId, song_ids: songIds })
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch(error => console.error("Error saving playlist:", error));
+}
+fetch('http://127.0.0.1:5000/art/save_playlist', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json', 
+        'Accept': 'application/json'
+    },
+    body: JSON.stringify({ user_id: 1, song_ids: [101, 102] }) 
+})
+.then(response => response.json())
+.then(data => console.log("Response:", data))
+.catch(error => console.error("Error:", error));

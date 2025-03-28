@@ -1,6 +1,8 @@
 
 from flask import render_template, Blueprint,request,session,jsonify
 from .models import*
+import urllib.parse
+
 
 art = Blueprint("art", __name__)
 
@@ -14,7 +16,7 @@ def artist_profile(artist_id):
 @art.route('/add_to_playlist', methods=['POST'])
 def add_to_playlist():
     song_id = request.json.get('song_id')
-    user_id = session.get('user_id')  # Assuming user_id is stored in session
+    user_id = session.get('user_id')  
 
     # Check if the song is already in the user's playlist
     existing_entry = Playlist.query.filter_by(user_id=user_id, song_id=song_id).first()
@@ -43,64 +45,54 @@ def remove_from_playlist():
 
     return jsonify({'message': 'Song removed from playlist'}), 200
 
-@art.route('/get_playlist', methods=['GET'])
-def get_playlist():
-    user_id = session.get('user_id')
-    playlist = Playlist.query.filter_by(user_id=user_id).all()
-    songs = [{'song_id': entry.song_id, 'added_on': entry.added_on} for entry in playlist]
-
-    return jsonify(songs), 200
-
-
-
-
-
 @art.route('/save_playlist', methods=['POST'])
 def save_playlist():
     data = request.get_json()
-    user_id = data.get('user_id')
-    song_ids = data.get('song_ids')  # List of song IDs
-    
-    # Ensure user exists (Optional check)
+    user_id = session.get('user_id')
+    song_ids = data.get('song_ids')
+
+    # Ensure user exists
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'message': 'User not found'}), 404
+        return jsonify({'message': 'User not found be sure you are logged in'}), 400
 
-    # Add each song to the playlist
-    try:
-        for song_id in song_ids:
-            song = Song.query.get(song_id)
-            if not song:
-                continue  # Skip if the song is not found
-            # Create new playlist entry
-            new_playlist_entry = Playlist(user_id=user_id, song_id=song_id)
-            db.session.add(new_playlist_entry)
-        db.session.commit()
-        return jsonify({'message': 'Playlist saved successfully'}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'message': f'Error saving playlist: {str(e)}'}), 500
+    # Ensure that songs exist in the database
+    for song_id in song_ids:
+        song = Song.query.get(song_id)
+        if not song:
+            return jsonify({'message': f'Song with ID {song_id} not found'}), 400
+        # Log the data being added to the session
+        print(f"Adding song ID {song_id} to playlist for user ID {user_id}")
+        new_playlist_entry = Playlist(user_id=user_id, song_id=song_id)
+        db.session.add(new_playlist_entry)
 
-# Route to load the playlist
-@art.route('/load_playlist', methods=['GET'])
-def load_playlist():
-    user_id = request.args.get('user_id')  # Retrieve user_id from query params
-    
-    # Get the playlist for the user
+    # Log before committing the changes
+    print(f"Committing changes to the database...")
+    db.session.commit()
+
+    return jsonify({'message': 'Playlist saved successfully'}), 200
+
+
+@art.route('/get_playlist/<int:user_id>', methods=['GET'])
+def get_playlist(user_id):
+    # Retrieve the user's playlist
     playlist_entries = Playlist.query.filter_by(user_id=user_id).all()
-    
-    if not playlist_entries:
-        return jsonify({'message': 'No playlist found for this user'}), 404
-    
-    # Get song details for the playlist
-    playlist_data = []
+
+    # Get the song details for each playlist entry
+    songs = []
     for entry in playlist_entries:
         song = Song.query.get(entry.song_id)
-        playlist_data.append({
-            'song_id': song.id,
-            'song_name': song.name,
-            'artist': song.artist,
-            'added_on': entry.added_on
-        })
-    
-    return jsonify({'playlist': playlist_data}), 200
+        if song:
+            # Construct the song path using the artist and song name
+            song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.ogg"
+            
+            songs.append({
+                'song_id': song.id,
+                'song_name': song.name,
+                'song_url': song_path  # Return the dynamically constructed song path
+            })
+
+    if not songs:
+        return jsonify({'message': 'No songs found in playlist'}), 404
+
+    return jsonify({'playlist': songs}), 200

@@ -94,7 +94,8 @@ function searchArtist() {
                         <source src="${song.local_path}" type="audio/mpeg">
                         Your browser does not support the audio element.
                     </audio>
-                    <button class="btn add-btn" onclick="addToPlaylist(${song.id})">Add to Playlist</button>
+                <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
+
                 `;
                 resultsContainer.appendChild(songDiv);
 
@@ -117,7 +118,8 @@ function searchArtist() {
                             <source src="${songPath}" type="audio/mpeg">
                             Your browser does not support the audio element.
                         </audio>
-                        <button class="btn add-btn" onclick="addToPlaylist(${song.id})">Add to Playlist</button>
+                        <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
+
                     `;
                     resultsContainer.appendChild(songDiv);
                 });
