@@ -15,11 +15,12 @@ class Song(db.Model):
     local_path = db.Column(db.String(200), nullable=True)
     spotify_id = db.Column(db.String(100), nullable=True)
     is_available_on_spotify = db.Column(db.Boolean, default=False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'), nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=False)
     cover_image = db.Column(db.String(200), nullable=True)
     
 
 class Post(db.Model):
+    __tablename__ = 'post'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text, nullable=False)
@@ -91,7 +92,6 @@ class Artist(db.Model):
     artist_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_pic= db.Column(db.String(200), nullable=True, default="static/uploads/default.jpg")
-
     user = db.relationship("User", backref=db.backref("artist_profile", uselist=False))
 
     def __repr__(self):

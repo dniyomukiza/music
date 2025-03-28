@@ -1,6 +1,3 @@
-// Global array to store the playlist
-let playlist = [];
-
 // Function to toggle play/pause for an individual song
 function togglePlayPause(songId) {
     const audioElement = document.getElementById(`audio-${songId}`);
@@ -14,9 +11,13 @@ function togglePlayPause(songId) {
         button.innerHTML = '▶ Play';
     }
 }
+// Function to add a song to the playlist
+// Ensure playlist is initialized as an array
+let playlist = [];
 
 // Function to add a song to the playlist
 function addToPlaylist(songId, songName) {
+    // Check if the song is already in the playlist
     if (!playlist.some(song => song.id === songId)) {
         playlist.push({ id: songId, name: songName });
         updatePlaylistUI();
@@ -51,10 +52,16 @@ function removeFromPlaylist(songId) {
     updatePlaylistUI();
 }
 
-// Function to toggle play/pause for all songs in the playlist
+
 function togglePlayAll() {
     const allAudioElements = document.querySelectorAll('audio');
     const playAllButton = document.getElementById('play-all-button');
+    
+    // If the playlist is empty, do nothing
+    if (playlist.length === 0) {
+        alert("Your playlist is empty! Add songs before playing.");
+        return;
+    }
     
     // Check if any audio is currently playing
     const isAnyAudioPlaying = Array.from(allAudioElements).some(audio => !audio.paused);
@@ -64,21 +71,31 @@ function togglePlayAll() {
         allAudioElements.forEach(audio => audio.pause());
         playAllButton.innerHTML = '▶ Play All';
     } else {
-        // Play the first song in the playlist and pause others
-        const firstAudioElement = document.getElementById(`audio-${playlist[0].id}`);
-        firstAudioElement.play();
-        
-        // Pause all other songs
-        allAudioElements.forEach(audio => {
-            if (audio !== firstAudioElement) {
-                audio.pause();
-            }
-        });
-        
+        // Start playing the playlist from the first song
+        playSongSequentially(0);
         playAllButton.innerHTML = '⏸ Pause All';
     }
 }
-// Ensure the playlist is displayed when the page loads
-window.onload = function() {
-    updatePlaylistUI();
-};
+
+// Function to play songs sequentially
+function playSongSequentially(index) {
+    if (index >= playlist.length) {
+        // If we've reached the end of the playlist, stop
+        return;
+    }
+
+    const song = playlist[index];
+    const audioElement = document.getElementById(`audio-${song.id}`);
+
+    if (audioElement) {
+        audioElement.play();
+
+        // Set up event listener to play next song when the current one ends
+        audioElement.addEventListener('ended', function() {
+            playSongSequentially(index + 1); // Play the next song in the playlist
+        });
+    } else {
+        alert(`Audio element for song ${song.name} not found.`);
+    }
+}
+

@@ -7,3 +7,4 @@ __pycache__
 /glconnect/static/mixes
 /glconnect/__pycache__/
 migrations
+.vscode/

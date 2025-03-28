@@ -26,7 +26,8 @@
             <p style="font-size: 16px; margin-bottom: 10px;">{{ post.content | safe }}</p>
 
             <!-- Play Audio Button -->
-            <button onclick="playAudio({{ post.id }})" class="btn play-btn">▶️ Play Audio</button>
+            <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
+
             <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
         </div>
         {% endfor %}
