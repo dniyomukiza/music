@@ -71,7 +71,7 @@ def save_playlist():
     print(f"Committing changes to the database...")
     db.session.commit()
 
-    return jsonify({'message': 'Playlist saved successfully'}), 200
+    return jsonify({'message': 'Playlist saved successfully. Refresh page'}), 200
 
 
 @art.route('/get_playlist/<int:user_id>', methods=['GET'])
@@ -125,7 +125,7 @@ def delete_song_from_playlist():
             db.session.delete(song)
             db.session.commit()
             print("Song deleted from playlist!")
-            return jsonify({'message': 'Song removed from playlist!'}), 200
+            return jsonify({'message': 'Song removed from playlist! Refresh page'}), 200
         else:
             print(f"Song with ID {song_id} not found.")
             return jsonify({'message': 'Song not found in playlist!'}), 404
