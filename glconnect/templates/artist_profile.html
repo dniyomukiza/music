@@ -26,11 +26,7 @@
                 <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'photo3.webp')) }}" class="song-cover">
 
                 <p class="song-title">{{ song.name }}</p>
-                <audio id="audio-{{ song.id }}">
-                    <source src="{{ url_for('static', filename='afro/' + song.artist + ' - ' + song.name + '.ogg') }}" type="audio/ogg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button onclick="togglePlayPause('{{ song.id }}')">▶ Play</button>
+        
                 <button onclick="addToPlaylist('{{ song.id }}', '{{ song.name }}')">➕ Add to Playlist</button>
             </div>
             {% endfor %}
