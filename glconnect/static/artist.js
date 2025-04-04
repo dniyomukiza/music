@@ -21,7 +21,6 @@ function addToPlaylist(songId, songName, userId) {
     // Check if the song is already in the playlist
     if (!playlist.some(song => song.id === songId)) {
         playlist.push({ id: songId, name: songName });
-        updatePlaylistUI();
 
         // After adding to the playlist, save to backend
         saveSongToBackend(songId, userId);
@@ -51,33 +50,6 @@ function saveSongToBackend(songId, userId) {
         console.error("Error saving song to playlist:", error);
         alert("There was an error saving the song to the playlist.");
     });
-}
-
-
-// Function to update the playlist UI
-function updatePlaylistUI() {
-    const playlistElement = document.getElementById('playlist');
-    playlistElement.innerHTML = ''; // Clear the existing playlist UI
-
-    // Add songs from the playlist array to the UI
-    playlist.forEach(song => {
-        const songItem = document.createElement('li');
-        songItem.textContent = song.name;
-
-        // Add remove button for each song
-        const removeButton = document.createElement('button');
-        removeButton.textContent = '❌ Remove';
-        removeButton.onclick = () => removeFromPlaylist(song.id);
-
-        songItem.appendChild(removeButton);
-        playlistElement.appendChild(songItem);
-    });
-}
-
-// Function to remove a song from the playlist
-function removeFromPlaylist(songId) {
-    playlist = playlist.filter(song => song.id !== songId);
-    updatePlaylistUI();
 }
 
 
@@ -158,3 +130,86 @@ fetch('http://127.0.0.1:5000/art/save_playlist', {
 .then(response => response.json())
 .then(data => console.log("Response:", data))
 .catch(error => console.error("Error:", error));
+
+function deleteSongFromBackend(songId) {
+    fetch('http://127.0.0.1:5000/art/delete_song_from_playlist', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({ song_id: songId })
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Failed to remove song from playlist');
+        }
+    })
+    .then(data => {
+        alert(data.message);
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("There was an error removing the song from the playlist.");
+    });
+}
+
+
+// Function to fetch a specific user's songs from the playlist table
+function fetchUserPlaylist(userId) {
+    fetch(`http://127.0.0.1:5000/art/get_playlist/${userId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.playlist) {
+            // Process the list of songs in the playlist
+            const songs = data.playlist;
+            console.log("User's Playlist:", songs);
+            
+            // Update the "MyDB" section with the user's playlist songs
+            const mydbPlaylistElement = document.getElementById('mydb-playlist');
+            mydbPlaylistElement.innerHTML = '';  // Clear any existing songs
+
+            songs.forEach(song => {
+                const songItem = document.createElement('li');
+                songItem.textContent = `${song.song_name} by ${song.artist_name}`;  // Display song name and artist name
+
+                // Create the "Play" button
+                const playButton = document.createElement('button');
+                playButton.textContent = '▶';
+                playButton.onclick = () => playSong(song.song_id); // Implement playSong function if needed
+
+                // Create the "Remove" button
+                const removeButton = document.createElement('button');
+                removeButton.textContent = '❌';
+                removeButton.onclick = () => deleteSongFromBackend(song.song_id); // Call the function to remove the song
+                
+                // Append the buttons to the song item
+                songItem.appendChild(playButton);
+                songItem.appendChild(removeButton);
+                
+                // Append the song item to the playlist element
+                mydbPlaylistElement.appendChild(songItem);
+            });
+        } else {
+            console.log("No songs found in the playlist.");
+        }
+    })
+    .catch(error => {
+        console.error("Error fetching playlist:", error);
+        alert("There was an error fetching your playlist.");
+    });
+}
+
+// Wait for the DOM to be ready before calling the function
+document.addEventListener("DOMContentLoaded", function() {
+    const userId = 5; // Replace with the actual logged-in user ID
+    fetchUserPlaylist(userId);
+});

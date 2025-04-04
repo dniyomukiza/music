@@ -17,14 +17,9 @@
             <a href="#">Follow on Twitter</a> <a></a> <a>Follow on Instagram</a> | <a href="#">Listen on Spotify</a> <a href="#">Listen on Apple Music</a>
         </div>
     </div>
-     <div id="playlist-container">
-       <h3>Playlist</h3>
-       <ul id="playlist"></ul>
-   </div>
-
 
     <div class="music-section">
-        <h2>All Songs</h2>
+        <h2>{{ artist.artist_name }}'s songs </h2>
         <div class="songs">
             {% for song in songs %}
             <div class="song-card">
@@ -41,14 +36,12 @@
             {% endfor %}
         </div>
     </div>
-
-    <div class="playlist-section">
-        <h2>Playlist</h2>
-        <ul id="playlist">
-            <!-- Playlist items will be added dynamically -->
+    <div class="mydb-section">
+        <h2>Your Playlist</h2>
+        <ul id="mydb-playlist">
         </ul>
-        <button id="play-all-button" onclick="togglePlayAll()">▶ Play All</button> <!-- Single play button for the entire playlist -->
+        <button id="play-all-button" onclick="togglePlayAll()">▶ Play All</button>
     </div>
-    
+
 </body>
 </html>

@@ -1,5 +1,6 @@
 
 from flask import render_template, Blueprint,request,session,jsonify
+from flask_login import current_user
 from .models import*
 import urllib.parse
 
@@ -75,7 +76,7 @@ def save_playlist():
 
 @art.route('/get_playlist/<int:user_id>', methods=['GET'])
 def get_playlist(user_id):
-    # Retrieve the user's playlist
+    # Retrieve the user's playlist entries
     playlist_entries = Playlist.query.filter_by(user_id=user_id).all()
 
     # Get the song details for each playlist entry
@@ -83,12 +84,20 @@ def get_playlist(user_id):
     for entry in playlist_entries:
         song = Song.query.get(entry.song_id)
         if song:
+            # Get the artist details using the artist_id from the song
+            artist = Artist.query.get(song.artist_id)
+            if artist:
+                artist_name = artist.artist_name
+            else:
+                artist_name = "Unknown Artist"
+
             # Construct the song path using the artist and song name
             song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.ogg"
             
             songs.append({
                 'song_id': song.id,
                 'song_name': song.name,
+                'artist_name': artist_name,  # Add artist name to the response
                 'song_url': song_path  # Return the dynamically constructed song path
             })
 
@@ -96,3 +105,31 @@ def get_playlist(user_id):
         return jsonify({'message': 'No songs found in playlist'}), 404
 
     return jsonify({'playlist': songs}), 200
+
+@art.route('/delete_song_from_playlist', methods=['DELETE'])
+def delete_song_from_playlist():
+    data = request.get_json()
+    print(f"Request data: {data}")  # Log the data received from the frontend
+    
+    song_id = data.get('song_id')
+    if not song_id:
+        print("Song ID is missing!")
+        return jsonify({'message': 'song_id is required'}), 400
+
+    try:
+        # Find the song in the database
+        song = Playlist.query.filter_by(song_id=song_id, user_id=current_user.user_id).first()
+        
+        if song:
+            print(f"Found song: {song}")  # Log the song being deleted
+            db.session.delete(song)
+            db.session.commit()
+            print("Song deleted from playlist!")
+            return jsonify({'message': 'Song removed from playlist!'}), 200
+        else:
+            print(f"Song with ID {song_id} not found.")
+            return jsonify({'message': 'Song not found in playlist!'}), 404
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({'message': f'Error: {str(e)}'}), 500
+
