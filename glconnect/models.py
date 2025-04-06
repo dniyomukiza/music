@@ -88,7 +88,7 @@ class Artist(db.Model):
     __tablename__ = 'artists'
     
     artist_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=True)
     artist_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_pic= db.Column(db.String(200), nullable=True, default="static/uploads/default.jpg")

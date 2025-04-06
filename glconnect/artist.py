@@ -17,19 +17,20 @@ def artist_profile(artist_id):
 @art.route('/add_to_playlist', methods=['POST'])
 def add_to_playlist():
     song_id = request.json.get('song_id')
-    user_id = session.get('user_id')  
+    user_id = session.get('user_id')
 
     # Check if the song is already in the user's playlist
     existing_entry = Playlist.query.filter_by(user_id=user_id, song_id=song_id).first()
     if existing_entry:
         return jsonify({'message': 'Song already in playlist'}), 400
 
-    # Add song to playlist
+    # Add the new song to the playlist
     new_playlist_entry = Playlist(user_id=user_id, song_id=song_id)
     db.session.add(new_playlist_entry)
     db.session.commit()
 
     return jsonify({'message': 'Song added to playlist'}), 200
+
 
 @art.route('/remove_from_playlist', methods=['POST'])
 def remove_from_playlist():

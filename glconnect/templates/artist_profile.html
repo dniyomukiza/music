@@ -28,6 +28,7 @@
                 <p class="song-title">{{ song.name }}</p>
         
                 <button onclick="addToPlaylist('{{ song.id }}', '{{ song.name }}')">➕ Add to Playlist</button>
+                <button onclick="shareSong('{{ song.id }}', '{{ song.name }}')">📤 Share</button>
             </div>
             {% endfor %}
         </div>
