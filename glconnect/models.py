@@ -15,7 +15,7 @@ class Song(db.Model):
     local_path = db.Column(db.String(200), nullable=True)
     spotify_id = db.Column(db.String(100), nullable=True)
     is_available_on_spotify = db.Column(db.Boolean, default=False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
     cover_image = db.Column(db.String(200), nullable=True)
     
 
@@ -88,7 +88,7 @@ class Artist(db.Model):
     __tablename__ = 'artists'
     
     artist_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=False)
     artist_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_pic= db.Column(db.String(200), nullable=True, default="static/uploads/default.jpg")
