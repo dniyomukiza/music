@@ -133,6 +133,58 @@ function searchArtist() {
         });
 }
 
+function searchWriter() {
+    let query = document.getElementById("searchInput").value.trim().toLowerCase();
+    if (!query) {
+        document.getElementById("searchResults").innerHTML = "<p>Please enter a search query.</p>";
+        return;  // If the input is empty, do nothing
+    }
+
+    // Show a loading message or spinner
+    let resultsContainer = document.getElementById("searchResults");
+    resultsContainer.innerHTML = "<p>Searching...</p>";
+
+    // Send query to your backend for searching writers or their publications
+    fetch(`/search_writer?q=${query}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            resultsContainer.innerHTML = "";  // Clear previous results
+
+            // If no results found
+            if (data.length === 0) {
+                resultsContainer.innerHTML = "<p>No writers or publications found.</p>";
+                return;
+            }
+
+            // Display search results
+            data.forEach(result => {
+                let resultDiv = document.createElement("div");
+                resultDiv.classList.add("search-item");
+
+                // Display either writer name or publication title
+                if (result.writer_name) {
+                    resultDiv.innerHTML = `<p><strong>Writer:</strong> ${result.writer_name}</p>`;
+                    resultDiv.innerHTML += `<a href="/writer/view-writer/${result.writer_id}">View Profile</a>`;
+                } else if (result.title) {
+                    resultDiv.innerHTML = `<p><strong>Publication:</strong> ${result.title}</p>`;
+                    resultDiv.innerHTML += `<a href="/writer/view-writer/${result.writer_id}">View Writer Profile</a>`;
+                }
+
+                resultsContainer.appendChild(resultDiv);
+            });
+        })
+        .catch(error => {
+            console.error("Error fetching writers or publications:", error);
+            resultsContainer.innerHTML = "<p>Error fetching results. Please try again later.</p>";
+        });
+
+    return false;  // Prevent form submission (optional, since it's a single page)
+}
 
 // Function to handle image upload
 function uploadImage(event) {

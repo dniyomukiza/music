@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Writer Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='writer_prof.css') }}">
+</head>
+<body>
+    <h2>Writer Profile</h2>
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }} 
+        
+        <div>
+            <label for="writer_name">Writer Name</label>
+            {{ form.writer_name }}
+        </div>
+    
+        <div>
+            <label for="bio">Bio</label>
+            {{ form.bio }}
+        </div>
+    
+        <div>
+            <label for="profile_picture">Profile Picture</label>
+            {{ form.profile_picture }}
+        </div>
+    
+        <button type="submit">Save Profile</button>
+    </form>
+    
+</body>
+</html>

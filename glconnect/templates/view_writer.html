@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ writer.writer_name }}'s Profile</title>
+    <!-- Add your CSS here -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='view_writer.css') }}">
+</head>
+<body>
+    <h1>{{ writer.writer_name }}'s Profile</h1>
+
+    <!-- Display Profile Info -->
+    <img src="{{ url_for('static', filename=writer.profile_picture or 'writer_uploads/default_writer.jpg') }}" alt="Profile Picture" width="150">
+    <p><strong>Bio:</strong> {{ writer.bio }}</p>
+
+    <!-- Display Books -->
+    <h2>Books by {{ writer.writer_name }}</h2>
+    {% if books %}
+        <ul>
+            {% for book in books %}
+                <li>
+                    <h3>{{ book.title }}</h3>
+                    <p><strong>Year:</strong> {{ book.publication_year }}</p>
+                    <p><strong>Description:</strong> {{ book.description }}</p>
+                    <img src="{{ url_for('static', filename=book.cover_image) }}" alt="Cover Image" width="100">
+                    <br>
+                    <a href="{{ book.purchase_link }}" target="_blank">Purchase</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{{ writer.writer_name }} hasn't uploaded any books yet.</p>
+    {% endif %}
+    
+    <a href="{{ url_for('routes.index') }}">Back to Homepage</a>
+</body>
+</html>

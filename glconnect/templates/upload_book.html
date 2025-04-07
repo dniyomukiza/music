@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Your Work</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Upload Your Work</h1>
+
+    <!-- Display flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Form for uploading work -->
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <div>
+            <label for="title">Title</label>
+            {{ form.title(class="form-control", placeholder="Enter the book title") }}
+        </div>
+
+        <div>
+            <label for="description">Description</label>
+            {{ form.description(class="form-control", placeholder="Enter the book description") }}
+        </div>
+
+        <div>
+            <label for="publication_year">Publication Year</label>
+            {{ form.publication_year(class="form-control", placeholder="Enter the publication year") }}
+        </div>
+
+        <div>
+            <label for="purchase_link">Purchase Link</label>
+            {{ form.purchase_link(class="form-control", placeholder="Enter the purchase link") }}
+        </div>
+
+        <div>
+            <label for="cover_image">Cover Image</label>
+            {{ form.cover_image(class="form-control") }}
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+        </div>
+    </form>
+
+    <a href="{{ url_for('writer.writer_dashboard') }}">Back to Dashboard</a>
+</body>
+</html>

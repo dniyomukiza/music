@@ -101,15 +101,15 @@ class Writer(db.Model):
     __tablename__ = 'writers'
     
     writer_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # Allow multiple writers for the same user
     writer_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_picture = db.Column(db.String(200), nullable=True, default="static/uploads/default_writer.jpg")
 
-    user = db.relationship("User", backref=db.backref("writer_profile", uselist=False))
+    user = db.relationship("User", backref=db.backref("writer_profiles", lazy=True))  # One-to-many relationship with User
 
     def __repr__(self):
-        return f"<Writer {self.pen_name}>"
+        return f"<Writer {self.writer_name}>"
 
 class Book(db.Model):
     __tablename__ = 'books'

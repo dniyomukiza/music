@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ writer.writer_name }}'s Dashboard</title>
+    <!-- Add your CSS here -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='writer_dashboard.css') }}">
+</head>
+<body>
+    <h1>{{ writer.writer_name }}'s Dashboard</h1>
+
+    <!-- Display Profile Info -->
+    <img src="{{ url_for('static', filename=writer.profile_picture or 'writer_uploads/default_writer.jpg') }}" alt="Profile Picture" width="150">
+    <p><strong>Bio:</strong> {{ writer.bio }}</p>
+
+    <!-- Options -->
+    <a href="{{ url_for('writer.writer_profile') }}" class="btn btn-primary">Edit Profile</a>
+    <a href="" class="btn btn-danger">Delete Profile</a>
+    <a href="{{ url_for('book.upload_work') }}" class="btn btn-success">Upload Your Work</a>
+
+    <!-- Display Uploaded Books -->
+    <h2>Your Uploaded Books</h2>
+    {% if books %}
+        <ul>
+            {% for book in books %}
+                <li>
+                    <h3>{{ book.title }}</h3>
+                    <p><strong>Year:</strong> {{ book.publication_year }}</p>
+                    <p><strong>Description:</strong> {{ book.description }}</p>
+                    <img src="{{ url_for('static', filename=book.cover_image) }}" alt="Cover Image" width="100">
+                    <br>
+                    <a href="{{ book.purchase_link }}" target="_blank">Purchase</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You haven't uploaded any books yet. <a href="{{ url_for('writer.upload_work') }}">Upload Your First Book</a></p>
+    {% endif %}
+</body>
+</html>

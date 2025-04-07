@@ -1,0 +1,104 @@
+/* view_writer.css */
+
+/* Overall layout */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+h1 {
+    color: #5c5c5c;
+    text-align: center;
+    padding-top: 30px;
+}
+
+h2 {
+    color: #555;
+    margin-top: 30px;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+/* Profile section */
+.profile-info {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.profile-info img {
+    border-radius: 50%;
+    border: 3px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.profile-info p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #666;
+}
+
+/* Book section */
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+ul li {
+    background-color: #fff;
+    margin: 10px 0;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+ul li h3 {
+    font-size: 1.4em;
+    color: #333;
+}
+
+ul li p {
+    color: #777;
+}
+
+ul li img {
+    max-width: 100px;
+    margin-right: 20px;
+}
+
+ul li a {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+ul li a:hover {
+    background-color: #0056b3;
+}
+
+/* No books message */
+p {
+    font-size: 1.2em;
+    text-align: center;
+    color: #888;
+}
+
+/* Back link */
+a {
+    display: block;
+    text-align: center;
+    margin-top: 40px;
+    font-size: 1.1em;
+    color: #007bff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
