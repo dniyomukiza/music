@@ -143,8 +143,6 @@ def upload_song():
 
     return redirect(url_for("music.upload_song"))
 
-
-    return redirect(url_for("music.upload_song"))
 @music.route("/artist_profile")
 @login_required
 def artist_profile():

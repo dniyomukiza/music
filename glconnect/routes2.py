@@ -12,29 +12,6 @@ load_dotenv()
 openai.api_key = os.getenv("OPENAI_AI_KEY")
 bp2 = Blueprint('routes2', __name__)
 
-@bp2.route('/search', methods=['GET', 'POST'])
-def search():
-    error_message = None
-    song_result = None
-
-    if request.method == 'POST':
-        query = request.form['song_query']
-        song_searcher = SongSearcher(query)
-        result = song_searcher.search_and_play_song()
-
-        if result is None: 
-            error_message = "No song found matching your query."
-        else:
-            song_result = {
-                'name': result[0],
-                'artist': result[1],
-                'path': result[2]  
-            }
-
-    return render_template('search.html', error_message=error_message, song_result=song_result)
-
-
-
 # Check for API key
 if not openai.api_key:
     print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")

@@ -102,7 +102,7 @@ class Writer(db.Model):
     
     writer_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=False)
-    pen_name = db.Column(db.String(100), nullable=False)
+    writer_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_picture = db.Column(db.String(200), nullable=True, default="static/uploads/default_writer.jpg")
 
@@ -118,14 +118,14 @@ class Book(db.Model):
     writer_id = db.Column(db.Integer, db.ForeignKey('writers.writer_id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     publication_year = db.Column(db.Integer, nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     purchase_link = db.Column(db.String(300), nullable=True)
     cover_image = db.Column(db.String(200), nullable=True, default="static/uploads/default_cover.jpg")
 
     writer = db.relationship("Writer", backref=db.backref("books", lazy=True))
 
     def __repr__(self):
-        return f"<Book {self.title} by {self.writer.pen_name}>"
+        return f"<Book {self.title} by {self.writer.writer_name}>"
 
 class Song_upload(db.Model):
     __tablename__ = 'song_upload'
