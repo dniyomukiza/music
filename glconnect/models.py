@@ -88,7 +88,7 @@ class Artist(db.Model):
     __tablename__ = 'artists'
     
     artist_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=True)
     artist_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_pic= db.Column(db.String(200), nullable=True, default="static/uploads/default.jpg")
@@ -127,4 +127,14 @@ class Book(db.Model):
     def __repr__(self):
         return f"<Book {self.title} by {self.writer.pen_name}>"
 
-
+class Song_upload(db.Model):
+    __tablename__ = 'song_upload'
+    upload_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name_song = db.Column(db.String(100), nullable=False)
+    name_artist = db.Column(db.String(100), nullable=True)
+    local_path = db.Column(db.String(200), nullable=True)
+    cover_image = db.Column(db.String(200), nullable=True)
+    twitter_link = db.Column(db.String(255), nullable=True)
+    instagram_link = db.Column(db.String(255), nullable=True)
+    spotify_link = db.Column(db.String(255), nullable=True)
+    apple_music_link = db.Column(db.String(255), nullable=True)
