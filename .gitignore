@@ -6,3 +6,5 @@ __pycache__
 /glconnect/static/gospel
 /glconnect/static/mixes
 /glconnect/__pycache__/
+migrations
+.vscode/

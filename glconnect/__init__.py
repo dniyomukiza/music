@@ -57,12 +57,23 @@ def create_app():
         from .routes1 import bp1 
         from .routes2 import bp2
         from .blog import blog
+        from .uprofile import prof
+        from .playlist2 import play
+        from .artists import music
+        from .artist import art
+        from .writer import writer
+        from .book import book
 
-        app.register_blueprint(bp)  # No prefix, base routes
+        app.register_blueprint(music, url_prefix="/music")
+        app.register_blueprint(writer, url_prefix="/writer")
+        app.register_blueprint(bp)
         app.register_blueprint(bp1, url_prefix='/routes1')
         app.register_blueprint(bp2, url_prefix='/routes2')
         app.register_blueprint(blog, url_prefix='/blog')
-
+        app.register_blueprint(prof, url_prefix='/prof')
+        app.register_blueprint(play, url_prefix='/playlist2')
+        app.register_blueprint(art, url_prefix='/art')
+        app.register_blueprint(book, url_prefix='/book')
         # Ensure tables exist
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()

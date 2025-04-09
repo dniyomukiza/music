@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block salutation %}
+<div class="upload-container">
+    <h2 class="upload-title">Upload a New Song</h2>
+    
+    <form action="{{ url_for('music.upload_song') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="form-group">
+            <label for="song_file">🎵 Select Song File:</label>
+            <input type="file" id="song_file" name="song_file" accept=".mp3,.ogg" required>
+            <small class="form-hint">Only .mp3 or .ogg files are allowed for upload</small>
+        </div>
+
+        <div class="form-group">
+            <label for="song_name">🎶 Song Name:</label>
+            <input type="text" id="song_name" name="song_name" placeholder="Enter song title (no extension)" required>
+        </div>
+
+        <div class="form-group">
+            <label for="artist_name">🧑‍🎤 Artist Name:</label>
+            <input type="text" id="artist_name" name="artist_name" placeholder="Enter artist's name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="cover_image">🖼️ Cover Image:</label>
+            <input type="file" id="cover_image" name="cover_image" accept="image/*" required>
+        </div>
+
+        <!-- Social Media Links -->
+        <div class="form-group">
+            <label for="twitter">🐦 Twitter:</label>
+            <input type="url" id="twitter" name="twitter" placeholder="Enter your X URL" pattern="https?://.*" title="Please enter a valid URL starting with http:// or https://" >
+        </div>
+
+        <div class="form-group">
+            <label for="instagram">📸 Instagram:</label>
+            <input type="url" id="instagram" name="instagram" placeholder="Enter your Instagram URL" pattern="https?://.*" title="Please enter a valid URL starting with http:// or https://" >
+        </div>
+
+        <div class="form-group">
+            <label for="spotify">🎧 Spotify:</label>
+            <input type="url" id="spotify" name="spotify" placeholder="Enter your Spotify URL" pattern="https?://.*" title="Please enter a valid URL starting with http:// or https://" >
+        </div>
+
+        <div class="form-group">
+            <label for="apple_music">🍏 Apple Music:</label>
+            <input type="url" id="apple_music" name="apple_music" placeholder="Enter your Apple Music URL" pattern="https?://.*" title="Please enter a valid URL starting with http:// or https://" >
+        </div>
+
+        <button type="submit" class="btn upload-btn">Upload Song</button>
+    </form>
+
+    {% if message %}
+        <div class="alert {{ message_type }}">
+            <p>{{ message }}</p>
+        </div>
+    {% endif %}
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='upload_song.css') }}">
+{% endblock %}
+
+

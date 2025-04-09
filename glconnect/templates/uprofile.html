@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block salutation %}
+<div class="profile-container">
+    <div class="profile-icon-container">
+        <div class="profile-dropdown">
+            <label for="fileInput">
+                <img id="profileImage" class="profile-pic"
+                    src="{{ url_for('static', filename='uploads/' + user.profile_picture) if user.profile_picture else '' }}" 
+                    alt="Photo">
+            </label>
+            <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
+        </div>
+    </div>
+
+    <h2>Welcome, {{ user.first_name }}!</h2>
+    <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+    
+    <div class="profile-details">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Role:</strong> {{ user.role }}</p>
+    </div>
+
+    {% if user.role == "artist" %}
+    <div class="create-profile">
+        <div class="dropdown-content">
+            <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
+            <a href="{{ url_for('blog.blogs') }}">Settings</a>
+            <a href="{{ url_for('blog.blogs') }}">Help</a>
+            <a href="{{ url_for('blog.blogs') }}">Upload songs</a>
+            <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
+        </div>
+
+        </div>
+    {% endif %}
+
+    {% if user.role == "writer" %}
+    <div class="create-profile">
+        <div class="dropdown-content">
+            <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
+            <a href="{{ url_for('blog.blogs') }}">Settings</a>
+            <a href="{{ url_for('blog.blogs') }}">Help</a>
+            <a href="{{ url_for('blog.blogs') }}">Upload books</a>
+            <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
+        </div>
+
+        </div>
+    {% endif %}
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search for an artist, a song, a book or a writer">
+        <button class="btn" onclick="searchAll()">Search</button>
+    </div>
+    
+    <div id="searchResults" class="results-container"></div>
+    
+    <script>
+    function searchAll() {
+        const query = document.getElementById("searchInput").value.trim().toLowerCase();
+        if (!query) return document.getElementById("searchResults").innerHTML = "";
+    
+        const resultsContainer = document.getElementById("searchResults");
+        resultsContainer.innerHTML = "";
+    
+        // First try searching artist or song
+        fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
+    
+                // If data contains song results (array), render them
+                if (Array.isArray(data) && data.length) {
+                    data.forEach(song => {
+                        const songDiv = document.createElement("div");
+                        songDiv.classList.add("song-item");
+    
+                        const songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
+    
+                        songDiv.innerHTML = `
+                            <p><strong>${song.name}</strong> by ${song.artist}</p>
+                            <audio controls>
+                                <source src="${songPath}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
+                        `;
+                        resultsContainer.appendChild(songDiv);
+                    });
+                    return;
+                }
+    
+                // If no match found in artist/song, try writer/book
+                fetch(`/writer/search-writer?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data2 => {
+                        if (data2.redirect) {
+                            window.location.href = data2.redirect;
+                        } else if (Array.isArray(data2) && data2.length) {
+                            data2.forEach(book => {
+                                const bookDiv = document.createElement("div");
+                                bookDiv.classList.add("book-item");
+                                bookDiv.innerHTML = `
+                                    <p><strong>${book.title}</strong> by ${book.writer}</p>
+                                    <a class="btn" href="/books/${book.id}">View Book</a>
+                                `;
+                                resultsContainer.appendChild(bookDiv);
+                            });
+                        } else {
+                            resultsContainer.innerHTML = "<p>No results found.</p>";
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Writer/book search error:", err);
+                        resultsContainer.innerHTML = "<p>Error searching writer/book.</p>";
+                    });
+    
+            })
+            .catch(error => {
+                console.error("Artist/song search error:", error);
+                resultsContainer.innerHTML = "<p>Error searching artist/song.</p>";
+            });
+    }
+    </script>
+    
+    
+</script>
+
+{% endblock %}

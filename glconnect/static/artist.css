@@ -1,0 +1,114 @@
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(145deg, #005f73, #008CBA);
+}
+
+.hero {
+    text-align: center;
+    margin: 20px;
+}
+
+.profile-pic {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-color: white;
+}
+
+.artist-name {
+    font-size: 4em;
+    color:white;
+}
+
+.bio {
+    color:white;
+    margin-top: 10px;
+}
+
+.follow-links {
+    margin-top: 20px;
+}
+
+.follow-links a {
+    color: white;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+/* Music Section Styles */
+.music-section {
+    margin: 20px;
+}
+
+.songs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.song-card {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    width: 200px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.song-cover {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.song-title {
+    font-size: 1.2em;
+    margin: 10px 0;
+    color: #333;
+}
+
+button {
+    background-color: #2575fc;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #6a11cb;
+}
+
+/* Playlist Section Styles */
+.playlist-section {
+    margin: 20px;
+}
+
+#playlist li {
+    background-color: #fff;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#playlist li button {
+    margin-left: 10px;
+}
+
+#play-all-button {
+    width: 8%;
+    font-size: 1.2em;
+    transition: background-color 0.3s;
+}
+
+

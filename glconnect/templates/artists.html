@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ artist.artist_name }} - Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='artist.css') }}">
+</head>
+<body>
+
+    <div class="hero">
+        <img src="{{ url_for('static', filename='images/' + artist.profile_pic) }}" class="profile-pic">
+        <h1 class="artist-name">{{ artist.artist_name }}</h1>
+        <p class="bio">{{ artist.bio }}</p>
+        <div class="follow-links">
+            <a href="#">Edit profile</a>
+            <span> | </span>
+            <a href="{{ url_for('music.delete_profile') }}">Delete profile</a>
+            <span> | </span>
+            <a href="{ {url_for('music.upload_song') }}">Upload songs</a>
+            <span> | </span>
+            <a href="{{ url_for('routes.index') }}">Back to homepage</a>
+        </div>
+        
+    </div>
+
+    <div class="songs">
+        {% for song in songs %}
+        <div class="song-card">
+            <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'default.jpg')) }}" class="song-cover">
+            <p class="song-title">{{ song.name }}</p>
+            <form action="{{ url_for('music.delete_song', song_id=song.id) }}" method="POST">
+                <button type="submit" class="btn delete-song-btn">Remove</button>
+            </form>
+        </div>
+        {% else %}
+        <p>No songs found.</p>
+        {% endfor %}
+    </div>
+    
+
+</body>
+</html>

@@ -18,7 +18,7 @@
                 <nav>
                     <ul>
                         <li><a href="#home">About</a></li>
-                        <li><a href="#categories">Categories</a></li>
+                        <li><a href="http://127.0.0.1:5000/">Home</a></li>
                         <li><a href="http://127.0.0.1:5000/blog/contact">Contact</a></li>
                         <li><a href="http://127.0.0.1:8001">API</a></li>
                     </ul>
@@ -28,7 +28,14 @@
                 <ul>
                     <li><a href="{{ url_for('routes1.register') }}">👤</a></li>
                     <li><a href="#">🛒</a></li>
-                    <li><a href="#">▼</a></li>
+                    <li>
+                        <a href="#" id="dropdownButton">▼</a>
+                        <div class="dropdown-menu" id="dropdownMenu">
+                            <a href="{{ url_for('routes1.register') }}">Artists</a>
+                            <a href="{{ url_for('routes1.register') }}">Writers</a>
+                            <a href="{{ url_for('routes1.register') }}">Bloggers</a>
+                        </div>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -49,7 +56,7 @@
         <section id="categories" class="categories">
             <div class="category-cards">
                 <div class="card">
-                    <a href="/routes2/search">
+                    <a href="/prof/uprofile">
                         <img src="/static/images/party.webp" alt="Category 1">
                         <h3>Music</h3>
                     </a>
@@ -85,7 +92,24 @@
     <footer>
         <p>&copy; 2024 GLC | All Rights Reserved</p>
     </footer>
-
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+        const dropdownButton = document.getElementById("dropdownButton");
+        const dropdownMenu = document.getElementById("dropdownMenu");
+    
+        dropdownButton.addEventListener("click", function (event) {
+            event.stopPropagation();
+            dropdownMenu.classList.toggle("show");
+        });
+    
+        document.addEventListener("click", function (event) {
+            if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.remove("show");
+            }
+        });
+    });
+    
+</script>
 </body>
 </html>
 

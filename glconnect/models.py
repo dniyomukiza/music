@@ -15,9 +15,12 @@ class Song(db.Model):
     local_path = db.Column(db.String(200), nullable=True)
     spotify_id = db.Column(db.String(100), nullable=True)
     is_available_on_spotify = db.Column(db.Boolean, default=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
+    cover_image = db.Column(db.String(200), nullable=True)
     
 
 class Post(db.Model):
+    __tablename__ = 'post'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text, nullable=False)
@@ -33,12 +36,12 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), nullable=False)
     password = db.Column(db.String(255), nullable=False)
     confirmed = db.Column(db.Boolean, default=False)
+    role = db.Column(db.String(50), nullable=False, default='other') 
     posts = db.relationship('Post', backref='author', lazy=True, foreign_keys='Post.user_id')
 
 
     def get_id(self):
      return str(self.user_id)
-
 
     def __repr__(self):
         return f"User('{self.username}', '{self.email}')"
@@ -72,4 +75,66 @@ class SlangWords(db.Model):
     example = Column(String, nullable=False)       
     created_by = Column(String, nullable=True)      
     created_at = Column(String, nullable=False)
-    approved = Column(Integer, default=0)    
+    approved = Column(Integer, default=0) 
+       
+class Playlist(db.Model):
+    __tablename__ = 'playlists'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    song_id = db.Column(db.Integer, db.ForeignKey('songs.id'), nullable=False)
+    added_on = db.Column(db.DateTime, default=db.func.now())
+
+class Artist(db.Model):
+    __tablename__ = 'artists'
+    
+    artist_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), unique=True, nullable=True)
+    artist_name = db.Column(db.String(100), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    profile_pic= db.Column(db.String(200), nullable=True, default="static/uploads/default.jpg")
+    user = db.relationship("User", backref=db.backref("artist_profile", uselist=False))
+
+    def __repr__(self):
+        return f"<Artist {self.artist_name}>"
+
+class Writer(db.Model):
+    __tablename__ = 'writers'
+    
+    writer_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # Allow multiple writers for the same user
+    writer_name = db.Column(db.String(100), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    profile_picture = db.Column(db.String(200), nullable=True, default="static/uploads/default_writer.jpg")
+
+    user = db.relationship("User", backref=db.backref("writer_profiles", lazy=True))  # One-to-many relationship with User
+
+    def __repr__(self):
+        return f"<Writer {self.writer_name}>"
+
+class Book(db.Model):
+    __tablename__ = 'books'
+
+    book_id = db.Column(db.Integer, primary_key=True)
+    writer_id = db.Column(db.Integer, db.ForeignKey('writers.writer_id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    publication_year = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    purchase_link = db.Column(db.String(300), nullable=True)
+    cover_image = db.Column(db.String(200), nullable=True, default="static/uploads/default_cover.jpg")
+
+    writer = db.relationship("Writer", backref=db.backref("books", lazy=True))
+
+    def __repr__(self):
+        return f"<Book {self.title} by {self.writer.writer_name}>"
+
+class Song_upload(db.Model):
+    __tablename__ = 'song_upload'
+    upload_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name_song = db.Column(db.String(100), nullable=False)
+    name_artist = db.Column(db.String(100), nullable=True)
+    local_path = db.Column(db.String(200), nullable=True)
+    cover_image = db.Column(db.String(200), nullable=True)
+    twitter_link = db.Column(db.String(255), nullable=True)
+    instagram_link = db.Column(db.String(255), nullable=True)
+    spotify_link = db.Column(db.String(255), nullable=True)
+    apple_music_link = db.Column(db.String(255), nullable=True)
