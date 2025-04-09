@@ -130,3 +130,59 @@ def view_writer(writer_id):
     # Render the writer's profile page and pass the writer and books to the template
     return render_template('view_writer.html', writer=writer, books=books)
 
+@writer.route('/delete-profile', methods=['POST'])
+@login_required
+def delete_profile():
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
+
+    if not writer:
+        flash("Profile not found.", "warning")
+        return redirect(url_for('writer.writer_dashboard'))
+
+    # Remove associated books
+    books = Book.query.filter_by(writer_id=writer.writer_id).all()
+    for book in books:
+        # Optionally, remove cover images from file system
+        if book.cover_image and os.path.exists(os.path.join(ABS_UPLOAD_FOLDER, book.cover_image.split('/')[-1])):
+            os.remove(os.path.join(ABS_UPLOAD_FOLDER, book.cover_image.split('/')[-1]))
+        db.session.delete(book)
+
+    # Remove the profile picture from file system
+    if writer.profile_picture and os.path.exists(os.path.join(ABS_UPLOAD_FOLDER, writer.profile_picture.split('/')[-1])):
+        os.remove(os.path.join(ABS_UPLOAD_FOLDER, writer.profile_picture.split('/')[-1]))
+
+    # Delete the writer profile
+    db.session.delete(writer)
+    
+    try:
+        db.session.commit()
+        flash("Your profile and all associated data have been deleted.", "success")
+        return redirect(url_for('routes.index'))  # Redirect to home or another page
+    except Exception as e:
+        db.session.rollback()
+        flash(f"An error occurred: {e}", "danger")
+        return redirect(url_for('writer.writer_dashboard'))
+@writer.route('/delete-book/<int:book_id>', methods=['POST'])
+@login_required
+def delete_book(book_id):
+    # Fetch the book to be deleted using the book_id
+    book = Book.query.get_or_404(book_id)
+
+    # Fetch the writer associated with the logged-in user
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
+
+    # Check if the current logged-in user is the writer who uploaded this book
+    if not writer or book.writer_id != writer.writer_id:
+        flash("You don't have permission to delete this book.", "danger")
+        return redirect(url_for('writer.writer_dashboard'))
+
+    # Optionally, delete the cover image file from the filesystem
+    if book.cover_image and os.path.exists(os.path.join(ABS_UPLOAD_FOLDER, book.cover_image.split('/')[-1])):
+        os.remove(os.path.join(ABS_UPLOAD_FOLDER, book.cover_image.split('/')[-1]))
+
+    # Delete the book from the database
+    db.session.delete(book)
+    db.session.commit()
+
+    flash("Book deleted successfully.", "success")
+    return redirect(url_for('writer.writer_dashboard'))

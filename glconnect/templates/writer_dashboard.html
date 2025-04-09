@@ -16,7 +16,9 @@
 
     <!-- Options -->
     <a href="{{ url_for('writer.writer_profile') }}" class="btn btn-primary">Edit Profile</a>
-    <a href="" class="btn btn-danger">Delete Profile</a>
+    <form method="POST" action="{{ url_for('writer.delete_profile') }}" style="display:inline;">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your profile? This action cannot be undone.')">Delete Profile</button>
+    </form>
     <a href="{{ url_for('book.upload_work') }}" class="btn btn-success">Upload Your Work</a>
 
     <!-- Display Uploaded Books -->
@@ -31,6 +33,9 @@
                     <img src="{{ url_for('static', filename=book.cover_image) }}" alt="Cover Image" width="100">
                     <br>
                     <a href="{{ book.purchase_link }}" target="_blank">Purchase</a>
+                    <form method="POST" action="{{ url_for('writer.delete_book', book_id=book.book_id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this book? This action cannot be undone.')">Remove</button>
+                    </form>
                 </li>
             {% endfor %}
         </ul>
