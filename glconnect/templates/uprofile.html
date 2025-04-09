@@ -46,155 +46,85 @@
 
         </div>
     {% endif %}
-
-    <div class="search-playlist-container">
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Search for an artist, a song,a book or a writer">
-            <button class="btn" onclick="searchArtist()">Search</button>
-        </div>
-
-        <div id="searchResults" class="results-container"></div>
-
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search for an artist, a song, a book or a writer">
+        <button class="btn" onclick="searchAll()">Search</button>
     </div>
-</div>
-
-<script>
-// Function to handle artist search
-function searchArtist() {
-    let query = document.getElementById("searchInput").value.trim().toLowerCase();
-    if (!query) return document.getElementById("searchResults").innerHTML = "";
-
-    fetch(`/playlist2/playlist2?q=${query}`)  // Make sure this is the correct URL
-        .then(response => {
-            // Check if the response is successful
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            let resultsContainer = document.getElementById("searchResults");
-            resultsContainer.innerHTML = data.length ? "" : "<p>No songs found.</p>";
-
-            // If a redirect URL is provided, handle it
-            if (data.redirect) {
-                // Redirect to the artist's profile page
-                window.location.href = data.redirect;  // Use the redirect URL from backend
-                return;  // Stop further processing as we've already redirected
-            }
-
-            if (data.length === 1 && data[0].id) {
-                // If one song is found, display it
-                let song = data[0];
-                let songDiv = document.createElement("div");
-                songDiv.classList.add("song-item");
-                songDiv.innerHTML = `
-                    <p><strong>${song.name}</strong> ${song.artist}</p>
-                    <audio controls>
-                        <source src="${song.local_path}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>
-                <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
-
-                `;
-                resultsContainer.appendChild(songDiv);
-
-                // If the artist is found and has an ID, redirect
-                if (song.artist.toLowerCase() === query) {
-                    window.location.href = `/art/artist/${song.artist_id}`;  // Use artist_id here
+    
+    <div id="searchResults" class="results-container"></div>
+    
+    <script>
+    function searchAll() {
+        const query = document.getElementById("searchInput").value.trim().toLowerCase();
+        if (!query) return document.getElementById("searchResults").innerHTML = "";
+    
+        const resultsContainer = document.getElementById("searchResults");
+        resultsContainer.innerHTML = "";
+    
+        // First try searching artist or song
+        fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
                 }
-            } else if (data.length > 1) {
-                // Multiple songs found, display them
-                data.forEach(song => {
-                    let songDiv = document.createElement("div");
-                    songDiv.classList.add("song-item");
-
-                    // Ensure the path for each song is correct
-                    let songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
-
-                    songDiv.innerHTML = `
-                        <p><strong>${song.name}</strong> ${song.artist}</p>
-                        <audio controls>
-                            <source src="${songPath}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
-                        <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
-
-                    `;
-                    resultsContainer.appendChild(songDiv);
-                });
-            } else {
-                resultsContainer.innerHTML = "<p>No songs found.</p>";
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching songs:", error);
-            document.getElementById("searchResults").innerHTML = "<p>Error fetching results. Please try again later.</p>";
-        });
-}
-
-function searchWriter() {
-    let query = document.getElementById("searchInput").value.trim().toLowerCase();
-    if (!query) {
-        document.getElementById("searchResults").innerHTML = "<p>Please enter a search query.</p>";
-        return;  // If the input is empty, do nothing
-    }
-
-    // Show a loading message or spinner
-    let resultsContainer = document.getElementById("searchResults");
-    resultsContainer.innerHTML = "<p>Searching...</p>";
-
-    // Send query to your backend for searching writers or their publications
-    fetch(`/search_writer?q=${query}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            resultsContainer.innerHTML = "";  // Clear previous results
-
-            // If no results found
-            if (data.length === 0) {
-                resultsContainer.innerHTML = "<p>No writers or publications found.</p>";
-                return;
-            }
-
-            // Display search results
-            data.forEach(result => {
-                let resultDiv = document.createElement("div");
-                resultDiv.classList.add("search-item");
-
-                // Display either writer name or publication title
-                if (result.writer_name) {
-                    resultDiv.innerHTML = `<p><strong>Writer:</strong> ${result.writer_name}</p>`;
-                    resultDiv.innerHTML += `<a href="/writer/view-writer/${result.writer_id}">View Profile</a>`;
-                } else if (result.title) {
-                    resultDiv.innerHTML = `<p><strong>Publication:</strong> ${result.title}</p>`;
-                    resultDiv.innerHTML += `<a href="/writer/view-writer/${result.writer_id}">View Writer Profile</a>`;
+    
+                // If data contains song results (array), render them
+                if (Array.isArray(data) && data.length) {
+                    data.forEach(song => {
+                        const songDiv = document.createElement("div");
+                        songDiv.classList.add("song-item");
+    
+                        const songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.ogg`;
+    
+                        songDiv.innerHTML = `
+                            <p><strong>${song.name}</strong> by ${song.artist}</p>
+                            <audio controls>
+                                <source src="${songPath}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
+                        `;
+                        resultsContainer.appendChild(songDiv);
+                    });
+                    return;
                 }
-
-                resultsContainer.appendChild(resultDiv);
+    
+                // If no match found in artist/song, try writer/book
+                fetch(`/writer/search-writer?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data2 => {
+                        if (data2.redirect) {
+                            window.location.href = data2.redirect;
+                        } else if (Array.isArray(data2) && data2.length) {
+                            data2.forEach(book => {
+                                const bookDiv = document.createElement("div");
+                                bookDiv.classList.add("book-item");
+                                bookDiv.innerHTML = `
+                                    <p><strong>${book.title}</strong> by ${book.writer}</p>
+                                    <a class="btn" href="/books/${book.id}">View Book</a>
+                                `;
+                                resultsContainer.appendChild(bookDiv);
+                            });
+                        } else {
+                            resultsContainer.innerHTML = "<p>No results found.</p>";
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Writer/book search error:", err);
+                        resultsContainer.innerHTML = "<p>Error searching writer/book.</p>";
+                    });
+    
+            })
+            .catch(error => {
+                console.error("Artist/song search error:", error);
+                resultsContainer.innerHTML = "<p>Error searching artist/song.</p>";
             });
-        })
-        .catch(error => {
-            console.error("Error fetching writers or publications:", error);
-            resultsContainer.innerHTML = "<p>Error fetching results. Please try again later.</p>";
-        });
-
-    return false;  // Prevent form submission (optional, since it's a single page)
-}
-
-// Function to handle image upload
-function uploadImage(event) {
-    let file = event.target.files[0];
-    if (file) {
-        let reader = new FileReader();
-        reader.onload = e => document.getElementById("profileImage").src = e.target.result;
-        reader.readAsDataURL(file);
     }
-}
+    </script>
+    
+    
 </script>
 
 {% endblock %}

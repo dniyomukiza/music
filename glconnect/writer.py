@@ -186,3 +186,21 @@ def delete_book(book_id):
 
     flash("Book deleted successfully.", "success")
     return redirect(url_for('writer.writer_dashboard'))
+
+@writer.route('/search-writer', methods=['GET'])
+def search_writer():
+    query = request.args.get('q', '').strip().lower()
+    if not query:
+        return jsonify([])
+
+    # Search for writer name (case-insensitive, partial match)
+    writer = Writer.query.filter(Writer.writer_name.ilike(f"%{query}%")).first()
+    if writer:
+        return jsonify({'redirect': url_for('writer.view_writer', writer_id=writer.writer_id)})
+
+    # If not found, search for a book title
+    book = Book.query.filter(Book.title.ilike(f"%{query}%")).first()
+    if book:
+        return jsonify({'redirect': url_for('writer.view_writer', writer_id=book.writer_id)})
+
+    return jsonify([])  # No match found

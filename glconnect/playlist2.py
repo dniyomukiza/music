@@ -13,24 +13,36 @@ def playlist2():
     if not query:
         return jsonify([])
 
-    # Search for the artist by name
+    # 1. Exact match for artist (case-insensitive)
     artist = Artist.query.filter(db.func.lower(Artist.artist_name) == query).first()
     if artist:
-        # Return the artist ID along with other data
         return jsonify({
-            'redirect': url_for('art.artist_profile', artist_id=artist.artist_id)  # Use artist_id here
+            'redirect': url_for('art.artist_profile', artist_id=artist.artist_id)
         })
 
-    # If no artist is found, search for songs
+    # 2. Partial match for artist name (if exact match fails)
+    artist_partial = Artist.query.filter(db.func.lower(Artist.artist_name).like(f'%{query}%')).first()
+    if artist_partial:
+        return jsonify({
+            'redirect': url_for('art.artist_profile', artist_id=artist_partial.artist_id)
+        })
+
+    # 3. Exact match for song name
     song = Song.query.filter(db.func.lower(Song.name) == query).first()
     if song:
-        # Redirect to the artist's profile associated with the song
         return jsonify({
-            'redirect': url_for('art.artist_profile', artist_id=song.artist_id)  # Redirect to artist's profile
+            'redirect': url_for('art.artist_profile', artist_id=song.artist_id)
         })
 
-    return jsonify([])  # If no song or artist is found
+    # 4. Partial match for song name
+    song_partial = Song.query.filter(db.func.lower(Song.name).like(f'%{query}%')).first()
+    if song_partial:
+        return jsonify({
+            'redirect': url_for('art.artist_profile', artist_id=song_partial.artist_id)
+        })
 
+    # No match found
+    return jsonify([])
 
 
 

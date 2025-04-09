@@ -134,34 +134,4 @@ def delete_song_from_playlist():
         print(f"Error: {str(e)}")
         return jsonify({'message': f'Error: {str(e)}'}), 500
 
-@art.route('/search_writer', methods=['GET'])
-def search_writer():
-    query = request.args.get('q', '').strip().lower()
-    if not query:
-        return jsonify([])  # Return an empty list if no query is provided
 
-    # Search for writers by name (case insensitive)
-    writers = Writer.query.filter(Writer.writer_name.ilike(f"%{query}%")).all()
-    
-    # Search for books/publications by title (case insensitive)
-    publications = Book.query.filter(Book.title.ilike(f"%{query}%")).all()
-
-    results = []
-
-    # Collect results from both writers and publications
-    for writer in writers:
-        results.append({
-            'type': 'writer',  # Indicate this result is a writer
-            'writer_id': writer.writer_id,
-            'writer_name': writer.writer_name
-        })
-    
-    for book in publications:
-        results.append({
-            'type': 'book',  # Indicate this result is a book
-            'book_id': book.book_id,
-            'title': book.title,
-            'writer_id': book.writer_id  # Assuming a book has a writer_id
-        })
-
-    return jsonify(results)
