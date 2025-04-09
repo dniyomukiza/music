@@ -146,4 +146,69 @@ def upload_song():
 @music.route("/artist_profile")
 @login_required
 def artist_profile():
-    return render_template("artists.html", user=current_user)
+    artist = current_user.artist_profile
+
+    if not artist:
+        return redirect(url_for("routes.index"))
+
+    # Get songs uploaded by the artist (via artist_id)
+    uploaded_songs = Song.query.filter_by(artist_id=artist.artist_id)
+
+    # Get songs where the artist name appears in the 'artist' string (e.g., "John ft Sarah")
+    featured_songs = Song.query.filter(Song.artist.ilike(f"%{artist.artist_name}%"))
+
+    # Merge both queries and avoid duplicates by song ID
+    all_songs = {song.id: song for song in uploaded_songs.union(featured_songs)}.values()
+
+    return render_template("artists.html", user=current_user, artist=artist, songs=all_songs)
+
+
+from flask import flash, redirect, url_for
+
+@music.route("/delete_song/<int:song_id>", methods=["POST"])
+@login_required
+def delete_song(song_id):
+    # Get the song
+    song = Song.query.get(song_id)
+
+    if not song:
+        flash("Song not found.")
+        return redirect(url_for("music.artist_profile"))
+
+    # Check if the logged-in user is the artist who uploaded the song
+    if song.artist_id != current_user.artist_profile.artist_id:
+        flash("You do not have permission to delete this song.")
+        return redirect(url_for("music.artist_profile"))
+
+    # Delete the song from the database
+    db.session.delete(song)
+    db.session.commit()
+
+    flash("Song deleted successfully!")
+    return redirect(url_for("music.artist_profile"))
+
+@music.route('/delete-profile', methods=['POST'])
+@login_required
+def delete_profile():
+    artist = Artist.query.filter_by(user_id=current_user.user_id).first()
+
+    if not artist:
+        flash("Profile not found.", "warning")
+        return redirect(url_for('routes.index'))
+
+    # Remove associated songs from the database
+    songs = Song.query.filter_by(artist_id=artist.artist_id).all()
+    for song in songs:
+        db.session.delete(song)
+
+    # Delete the artist profile
+    db.session.delete(artist)
+
+    try:
+        db.session.commit()
+        flash("Your profile and all associated data have been deleted.", "success")
+        return redirect(url_for('routes.index'))  # Redirect to home or another page
+    except Exception as e:
+        db.session.rollback()
+        flash(f"An error occurred: {e}", "danger")
+        return redirect(url_for('routes.index'))

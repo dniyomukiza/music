@@ -115,6 +115,11 @@ def login():
             flash('Login successful!', 'success')
             if user.role=="blogger":
                 return redirect(url_for('blog.blogpost'))
+            elif user.role=="artist":
+                return redirect(url_for('music.artist_profile'))
+            elif user.role=="writer":
+                return redirect(url_for('writer.profile'))
+            
             else:
                 return redirect(url_for('prof.profile'))
         else:
