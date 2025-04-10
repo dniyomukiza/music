@@ -5,7 +5,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='writer_prof.css') }}">
 </head>
 <body>
-    <h2>Writer Profile</h2>
+    {% include 'messages.html' %}
+    <h2>Create your profile or go to dashboard</h2>
     <form method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }} 
         
@@ -26,6 +27,7 @@
     
         <button type="submit">Save Profile</button>
     </form>
-    
+    <a href="{{ url_for('writer.writer_dashboard') }}">Go to Dashboard</a>
+
 </body>
 </html>

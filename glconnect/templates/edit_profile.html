@@ -5,7 +5,7 @@
 {% block content %}
 <div class="edit-profile-container">
     <h2>Edit Your Profile</h2>
-    
+    {% include 'messages.html' %}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <ul class="flashes">

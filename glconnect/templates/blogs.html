@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
 </head>
 <body>
+    {% include 'messages.html' %}
     <div style="margin-bottom: 20px;">
         <div class="button-container">
             <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>

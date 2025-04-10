@@ -4,6 +4,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='./words.css') }}">
 
     <div class="container">
+        {% include 'messages.html' %}
         <h1>Kinyarwanda Dictionary</h1>
         <form action="{{ url_for('routes1.findwords') }}" method="GET" class="search-form">
             <input type="text" placeholder="Enter a word" name="word" required>

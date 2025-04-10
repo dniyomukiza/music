@@ -3,6 +3,7 @@
 {% block title %}Contact Us | GLC Streaming{% endblock %}
 
 {% block salutation %}
+{% include 'messages.html' %}
 <div class="contact-container">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

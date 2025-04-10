@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='view_writer.css') }}">
 </head>
 <body>
+    {% include 'messages.html' %}
     <h1>{{ writer.writer_name }}'s Profile</h1>
 
     <!-- Display Profile Info -->

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='artist.css') }}">
 </head>
 <body>
-
+    {% include 'messages.html' %}
     <div class="hero">
         <img src="{{ url_for('static', filename='images/' + artist.profile_pic) }}" class="profile-pic">
         <h1 class="artist-name">{{ artist.artist_name }}</h1>

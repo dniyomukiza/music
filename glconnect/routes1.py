@@ -114,11 +114,11 @@ def login():
             session['user_id'] = user.user_id 
             flash('Login successful!', 'success')
             if user.role=="blogger":
-                return redirect(url_for('blog.blogpost'))
+                return redirect(url_for('blog.blogs'))
             elif user.role=="artist":
                 return redirect(url_for('music.artist_profile'))
             elif user.role=="writer":
-                return redirect(url_for('writer.profile'))
+                return redirect(url_for('writer.writer_profile'))
             
             else:
                 return redirect(url_for('prof.profile'))
