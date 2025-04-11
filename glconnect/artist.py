@@ -10,10 +10,18 @@ art = Blueprint("art", __name__)
 @art.route('/artist/<int:artist_id>')
 def artist_profile(artist_id):
     artist = Artist.query.get_or_404(artist_id)
-    if artist is None:
-        print(f"Artist with ID {artist_id} not found.") 
-    songs = Song.query.filter_by(artist_id=artist_id).all()
-    return render_template('artist_profile.html', artist=artist, songs=songs)
+
+    # Get songs uploaded by the artist via Song model
+    songs_from_song_model = Song.query.filter_by(artist_id=artist_id).all()
+
+    # Get songs uploaded via Song_upload model (where name_artist matches the artist_name)
+    songs_from_upload_model = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
+
+    # Combine both song lists (no duplicates based on song ID)
+    all_songs = songs_from_song_model + songs_from_upload_model
+
+    return render_template('artist_profile.html', artist=artist, songs=all_songs)
+
 @art.route('/add_to_playlist', methods=['POST'])
 def add_to_playlist():
     song_id = request.json.get('song_id')

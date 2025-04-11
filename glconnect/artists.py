@@ -44,6 +44,8 @@ def sanitize_url(url):
         else:
             return ""  # Invalid URL, return empty string
     return ""
+
+
 @music.route("/upload_song", methods=["GET", "POST"])
 @login_required
 def upload_song():
@@ -73,6 +75,14 @@ def upload_song():
 
     if song_file.content_length > MAX_FILE_SIZE:
         flash("File is too large. Maximum allowed size is 50 MB.", "error")
+        return redirect(url_for("music.upload_song"))
+
+    # Query the Artist object by artist_name
+    artist = Artist.query.filter_by(artist_name=artist_name).first()
+
+    if not artist:
+        # If artist not found, flash error and return
+        flash(f"Artist {artist_name} not found.", "error")
         return redirect(url_for("music.upload_song"))
 
     # Secure file naming
@@ -121,7 +131,7 @@ def upload_song():
     else:
         cover_filename = "cover.webp"  # fallback default
 
-    # Save to database
+    # Save the song with artist_id
     new_song = Song_upload(
         name_song=song_name,
         name_artist=artist_name,
@@ -130,7 +140,8 @@ def upload_song():
         twitter_link=twitter_link,
         instagram_link=instagram_link,
         spotify_link=spotify_link,
-        apple_music_link=apple_music_link
+        apple_music_link=apple_music_link,
+        artist_id=artist.artist_id  # Now we correctly set the artist_id
     )
 
     try:
@@ -138,10 +149,12 @@ def upload_song():
         db.session.commit()
         flash("Song uploaded and converted successfully!" if song_file.filename.endswith('.mp3') else "Song uploaded successfully!", "success")
     except Exception as e:
-        print(f"Database error: {e}")
+        db.session.rollback()  # Rollback if there's an error during commit
         flash("Database error occurred.", "error")
 
-    return redirect(url_for("music.upload_song"))
+    return redirect(url_for("art.artist_profile", artist_id=artist.artist_id))
+
+
 
 @music.route("/artist_profile")
 @login_required
@@ -151,41 +164,50 @@ def artist_profile():
     if not artist:
         return redirect(url_for("routes.index"))
 
-    # Get songs uploaded by the artist (via artist_id)
-    uploaded_songs = Song.query.filter_by(artist_id=artist.artist_id)
+    # Get songs uploaded by the artist (via artist_id) from Song model
+    uploaded_songs = Song.query.filter_by(artist_id=artist.artist_id).all()
 
-    # Get songs where the artist name appears in the 'artist' string (e.g., "John ft Sarah")
-    featured_songs = Song.query.filter(Song.artist.ilike(f"%{artist.artist_name}%"))
+    # Get songs uploaded via Song_upload model (assuming artist_name is stored in Song_upload)
+    uploaded_songs_upload = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
 
-    # Merge both queries and avoid duplicates by song ID
-    all_songs = {song.id: song for song in uploaded_songs.union(featured_songs)}.values()
+    # Combine both song lists (you could also filter out duplicates based on some criteria, if needed)
+    all_songs = uploaded_songs + uploaded_songs_upload
 
     return render_template("artists.html", user=current_user, artist=artist, songs=all_songs)
 
 
-from flask import flash, redirect, url_for
 
 @music.route("/delete_song/<int:song_id>", methods=["POST"])
 @login_required
 def delete_song(song_id):
-    # Get the song
+    # Try to find the song in Song table first
     song = Song.query.get(song_id)
+
+    # If not found, try Song_upload table
+    if not song:
+        song = Song_upload.query.get(song_id)
 
     if not song:
         flash("Song not found.")
         return redirect(url_for("music.artist_profile"))
 
-    # Check if the logged-in user is the artist who uploaded the song
-    if song.artist_id != current_user.artist_profile.artist_id:
-        flash("You do not have permission to delete this song.")
-        return redirect(url_for("music.artist_profile"))
+    # Check artist ownership
+    artist_id = getattr(song, 'artist_id', None)
+    current_artist_id = getattr(current_user.artist_profile, 'artist_id', None)
+    print("Song artist_id:", getattr(song, 'artist_id', None))
+    print("Current user artist_id:", getattr(current_user.artist_profile, 'artist_id', None))
 
-    # Delete the song from the database
+    if artist_id != current_artist_id:
+        flash("You do not have permission to delete this song.")
+        return redirect(url_for("music.artist_profile", artist_id=current_artist_id))
+
+    # Delete from database
     db.session.delete(song)
     db.session.commit()
 
     flash("Song deleted successfully!")
-    return redirect(url_for("music.artist_profile"))
+    return redirect(url_for("music.artist_profile", artist_id=current_artist_id))
+
 
 @music.route('/delete-profile', methods=['POST'])
 @login_required

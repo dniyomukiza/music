@@ -6,9 +6,6 @@
     <div class="profile-icon-container">
         <div class="profile-dropdown">
             <label for="fileInput">
-                <img id="profileImage" class="profile-pic"
-                    src="{{ url_for('static', filename='uploads/' + user.profile_picture) if user.profile_picture else '' }}" 
-                    alt="Photo">
             </label>
             <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
         </div>
@@ -48,9 +45,11 @@
         </div>
     {% endif %}
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search for an artist, a song, a book or a writer">
+        <input type="search" id="searchInput" placeholder="Search for an artist, a song, a book or a writer" oninput="toggleClearButton()">
+        <span class="clear-icon" onclick="clearSearch()">×</span>
         <button class="btn" onclick="searchAll()">Search</button>
-    </div>
+      </div>
+      
     
     <div id="searchResults" class="results-container"></div>
     
@@ -123,6 +122,31 @@
                 resultsContainer.innerHTML = "<p>Error searching artist/song.</p>";
             });
     }
+    document.getElementById("searchInput").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        searchAll();
+    }
+});
+
+function toggleClearButton() {
+  const input = document.getElementById("searchInput");
+  const clearIcon = document.querySelector(".clear-icon");
+  clearIcon.style.display = input.value ? "block" : "none";
+}
+
+function clearSearch() {
+  const input = document.getElementById("searchInput");
+  input.value = "";
+  toggleClearButton();
+  input.focus();
+}
+
+document.getElementById("searchInput").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    searchAll();
+  }
+});
+
     </script>
     
     

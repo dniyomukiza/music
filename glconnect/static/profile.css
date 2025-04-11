@@ -104,3 +104,31 @@ audio {
     width: 100px; 
     height: 30px; 
 }
+.search-bar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  #searchInput {
+    padding-right: 30px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .clear-icon {
+    position: absolute;
+    right: 85px; 
+    font-size: 18px;
+    color: #aaa;
+    cursor: pointer;
+    display: none; 
+    user-select: none;
+  }
+
+  /* Hide browser default clear button */
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+  

@@ -3,7 +3,7 @@ from .models import *
 from .forms import *
 from elevenlabs.client import ElevenLabs
 from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory
-from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app
+from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
 from flask_login import current_user, login_required, logout_user
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -48,13 +48,24 @@ def update(post_id):
      post=Post.query.get_or_404(post_id)
      return render_template("singlepost.html",title=post.title, post=post)
 
+
 @blog.route('/logout')
 @login_required
 def logout():
-    #log_web_visit()
     logout_user()
-    flash("You are logged out")
-    return redirect(url_for('routes1.login'))
+    session.clear()
+
+    # Clear session cookie
+    response = redirect(url_for('routes1.login'))
+    response.set_cookie('session', '', expires=0)
+
+    # Disable caching
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+
+    flash("You are logged out", "success")
+    return response
 
 @blog.route('/curr')
 @login_required
