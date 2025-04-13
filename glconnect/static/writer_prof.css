@@ -1,110 +1,97 @@
-/* Reset some default styling */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Body Styling */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    color: #333;
-    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 2rem;
 }
 
-/* Title Styling */
 h2 {
     text-align: center;
-    font-size: 2rem;
-    color: #2c3e50;
-    margin-bottom: 30px;
+    color: #343a40;
+    margin-bottom: 2rem;
 }
 
-/* Form container styling */
 form {
-    background-color: white;
-    padding: 30px;
     max-width: 600px;
-    margin: 0 auto;
+    background: #fff;
+    padding: 2rem;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
 }
 
-/* Form field styling */
-div {
-    margin-bottom: 15px;
+form div {
+    margin-bottom: 1.5rem;
 }
 
 label {
     display: block;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #495057;
 }
 
 input[type="text"],
 textarea,
 input[type="file"] {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    padding: 0.7rem;
     font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background-color: #fdfdfd;
 }
 
 textarea {
     resize: vertical;
-    min-height: 150px;
+    min-height: 100px;
 }
 
-input[type="file"] {
-    padding: 0;
-    font-size: 1rem;
-}
-
-/* Button Styling */
-button {
-    width: 100%;
-    padding: 12px;
-    background-color: #3498db;
+button[type="submit"] {
+    background-color: #0d6efd;
     color: white;
-    font-size: 1.1rem;
+    padding: 0.8rem 1.5rem;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-button:hover {
-    background-color: #2980b9;
+button[type="submit"]:hover {
+    background-color: #084298;
 }
 
-/* Success/Error messages */
-.flash-message {
-    margin-top: 20px;
-    padding: 10px;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    color: #2c3e50;
+a {
+    display: block;
     text-align: center;
+    margin-top: 1.5rem;
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
 }
 
-.flash-message.success {
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-    color: #155724;
+a:hover {
+    text-decoration: underline;
 }
 
-.flash-message.error {
+.flash-message {
+    max-width: 600px;
+    margin: 1rem auto;
+    padding: 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.flash-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+
+.flash-error {
     background-color: #f8d7da;
-    border-color: #f5c6cb;
-    color: #721c24;
-}
-
-/* Responsive Styles */
-@media (max-width: 600px) {
-    form {
-        width: 90%;
-    }
+    color: #842029;
+    border: 1px solid #f5c2c7;
 }

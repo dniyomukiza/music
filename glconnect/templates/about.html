@@ -1,61 +1,118 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multimedia Company</title>
+{% extends "base.html" %}
+
+{% block salutation %}
+<div class="hero-content">
+    <h2>The epicenter of premium content</h2>
+    <p>Radio, Music, Language, News, and more..</p>
+</div>
+{% endblock %}
+
+{% block images %}
+<div class="info-sections">
+
+    <div class="info-box">
+        <h3>GLCONNECT</h3>
+        <p>
+            GLCONNECT is a multimedia subsidiary of DN CREDO LLC., an international technology company based in the U.S.
+            We engage audiences through high-quality, intentional content while offering creatives a powerful
+            platform to connect with their niche and showcase their potential.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <h3>Mission</h3>
+        <p>
+            Our mission is to uncover hidden potential and amplify unheard voices. We bridge the gap
+            between creators and opportunity providing exposure and connection.
+            GLCONNECT is where brand building meets meaningful content delivery.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <h3>Vision</h3>
+        <p>
+            To be the ultimate platform where undiscovered talent thrives empowering independent creators
+            to share their voices, ideas, and art with the world.
+        </p>
+    </div>
+
+    <div class="info-box call-to-action">
+        <h3>Partner with Us</h3>
+        <p>
+            Whether you're an advertiser looking to reach the right audience or a creator: artist, author, researcher, or an independent thinker, seeking to grow your presence, come work with us. Collaborate on strategy or leverage our platform to amplify your impact
+        </p>
+        <a href="{{ url_for('blog.contact') }}" class="btn">Get in Touch</a>
+    </div>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #111;
-            color: #fff;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        .info-sections {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2c3e50;
+        }
+    
+        .info-box {
+            background-color: #f9f9fb;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+    
+        .info-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+    
+        .info-box h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+            border-left: 5px solid #0a58ca;
+            padding-left: 0.75rem;
+        }
+    
+        .info-box p {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: #444;
+        }
+        .call-to-action {
+            background: linear-gradient(120deg, #0a58ca, #007bff);
+            color: white;
             text-align: center;
         }
-        .container {
-            max-width: 650px;
-            padding: 20px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.2);
+    
+        .call-to-action h3 {
+            color: white;
         }
-        h1 {
-            font-size: 28px;
-            color: #f39c12;
+    
+        .call-to-action p {
+            color: #f1f1f1;
         }
-        p {
-            font-size: 18px;
-            line-height: 1.6;
-        }
-        .cta {
+    
+        .call-to-action .btn {
             display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            color: #fff;
-            background: #f39c12;
+            margin-top: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            background-color: #ffffff;
+            color: #0a58ca;
             text-decoration: none;
-            border-radius: 5px;
-            transition: background 0.3s ease;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease-in-out;
         }
-        .cta:hover {
-            background: #e67e22;
+    
+        .call-to-action .btn:hover {
+            background-color: #e6ecf7;
+            color: #084298;
+            transform: scale(1.05);
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Elevate Your Brand with Us</h1>
-        <p>We are a multimedia company dedicated to engaging audiences through news and entertainment while providing advertisers and small to medium-sized enterprises with powerful ways to connect with our diverse audience.</p>
-        <p>We go beyond the mainstream—tapping into hard-to-reach communities, niche markets, and highly engaged audiences through targeted content strategies, digital innovation, and data-driven insights. Whether it's local communities, specialized interest groups, or emerging markets, we bridge the gap between brands and audiences that matter.</p>
-        <p>Build your product or service with us and elevate your brand—where brand building meets impactful content delivery.</p>
-        <a href="#" class="cta">Get Started</a>
-    </div>
-</body>
-</html>
+           
+</div>
+{% endblock %}

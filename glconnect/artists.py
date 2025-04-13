@@ -234,3 +234,74 @@ def delete_profile():
         db.session.rollback()
         flash(f"An error occurred: {e}", "danger")
         return redirect(url_for('routes.index'))
+    
+@music.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    if request.method == 'POST':
+        current_user.username = request.form['username']
+        current_user.bio = request.form.get('bio')
+
+        profile_picture = request.files.get('profile_picture')
+        if profile_picture and profile_picture.filename != '':
+            filename = secure_filename(profile_picture.filename)
+            picture_path = os.path.join('static/profile_pics', filename)
+            profile_picture.save(picture_path)
+            current_user.profile_picture = filename
+
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('music.edit_profile'))
+
+    return render_template('user_edit.html')
+
+
+@music.route('/edit_artist', methods=['GET', 'POST'])
+@login_required
+def artist_edit():
+    artist = current_user.artist_profile
+
+    if not artist:
+        flash('No artist profile found for this user.', 'error')
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        artist_name = request.form.get('artist_name')
+        bio = request.form.get('bio')
+
+        # Update artist name and bio only if they were modified
+        if artist.artist_name != artist_name:
+            artist.artist_name = artist_name
+        if artist.bio != bio:
+            artist.bio = bio
+
+        # Handling profile picture update
+        profile_pic = request.files.get('profile_pic')
+        if profile_pic and profile_pic.filename != '':
+            filename = secure_filename(profile_pic.filename)
+
+            # Define the folder where the profile picture will be stored
+            upload_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'song_uploads')
+
+            # Ensure the directory exists before saving
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+
+            # Set the file path where the profile picture will be saved
+            filepath = os.path.join(upload_folder, filename)
+            profile_pic.save(filepath)
+
+            # Save the relative path in the database (no need for full file path)
+            artist.profile_pic = filename
+
+        # Commit changes to the database
+        db.session.commit()
+
+        # Flash success message
+        flash('Artist profile updated successfully!', 'success')
+        return redirect(url_for('music.artist_profile'))
+
+    return render_template('artist_edit.html', artist=artist)
+
+
+

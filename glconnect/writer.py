@@ -12,44 +12,63 @@ writer = Blueprint("writer", __name__)
 UPLOAD_FOLDER = os.path.join("glconnect", "static", "writer_uploads")  # Relative path for saving
 ABS_UPLOAD_FOLDER = os.path.join(os.getcwd(), UPLOAD_FOLDER)  # Absolute path for saving
 
-# Ensure the folder exists
-os.makedirs(ABS_UPLOAD_FOLDER, exist_ok=True)
 
 @writer.route('/profile', methods=['GET', 'POST'])
 @login_required
 def writer_profile():
     form = WriterProfileForm()
-    writers = Writer.query.filter_by(user_id=current_user.user_id).all()
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()  # Get the first existing writer for the user
 
     if form.validate_on_submit():
         writer_name = form.writer_name.data
         bio = form.bio.data
         profile_pic = form.profile_picture.data
-        relative_path = "writer_uploads/default_writer.jpg"  # Default if no upload
+        relative_path = writer.profile_picture  # Default to the current picture if no new upload
 
+        # Check if a new profile picture is uploaded
         if profile_pic:
             filename = secure_filename(profile_pic.filename)
             absolute_path = os.path.join(ABS_UPLOAD_FOLDER, filename)
             profile_pic.save(absolute_path)
             relative_path = f"writer_uploads/{filename}"  # Path relative to /static/
 
-        writer = Writer(
-            user_id=current_user.user_id,
-            writer_name=writer_name,
-            bio=bio,
-            profile_picture=relative_path
-        )
-        db.session.add(writer)
+        # Update the existing writer's details
+        if writer:
+            writer.writer_name = writer_name
+            writer.bio = bio
+            writer.profile_picture = relative_path  # Update profile picture
 
-        try:
-            db.session.commit()
-            flash("Profile saved successfully!", "success")
-            return redirect(url_for('writer.writer_dashboard'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f"An error occurred: {e}", "danger")
+            try:
+                db.session.commit()
+                flash("Profile updated successfully!", "success")
+                return redirect(url_for('writer.writer_dashboard'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An error occurred: {e}", "danger")
+        else:
+            # If no writer exists for the user, create a new record
+            new_writer = Writer(
+                user_id=current_user.user_id,
+                writer_name=writer_name,
+                bio=bio,
+                profile_picture=relative_path
+            )
+            db.session.add(new_writer)
 
-    return render_template('writer_profile.html', form=form, writers=writers)
+            try:
+                db.session.commit()
+                flash("Profile saved successfully!", "success")
+                return redirect(url_for('writer.writer_dashboard'))
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An error occurred: {e}", "danger")
+
+    return render_template('writer_profile.html', form=form, writer=writer)
+
+# Ensure the folder exists
+os.makedirs(ABS_UPLOAD_FOLDER, exist_ok=True)
+
+
 
 
 @writer.route('/dashboard')

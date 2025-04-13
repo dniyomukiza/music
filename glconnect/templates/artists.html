@@ -13,7 +13,7 @@
         <h1 class="artist-name">{{ artist.artist_name }}</h1>
         <p class="bio">{{ artist.bio }}</p>
         <div class="follow-links">
-            <a href="#">Edit profile</a>
+            <a href="{{ url_for('music.artist_edit') }}">Edit profile</a>
             <span> | </span>
             <a href="{{ url_for('music.delete_profile') }}">Delete profile</a>
             <span> | </span>

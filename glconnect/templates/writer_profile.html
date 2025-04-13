@@ -1,33 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Writer Profile</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='writer_prof.css') }}">
-</head>
-<body>
-    {% include 'messages.html' %}
-    <h2>Create your profile or go to dashboard</h2>
-    <form method="POST" enctype="multipart/form-data">
-        {{ form.hidden_tag() }} 
-        
-        <div>
-            <label for="writer_name">Writer Name</label>
-            {{ form.writer_name }}
-        </div>
-    
-        <div>
-            <label for="bio">Bio</label>
-            {{ form.bio }}
-        </div>
-    
-        <div>
-            <label for="profile_picture">Profile Picture</label>
-            {{ form.profile_picture }}
-        </div>
-    
-        <button type="submit">Save Profile</button>
-    </form>
-    <a href="{{ url_for('writer.writer_dashboard') }}">Go to Dashboard</a>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block salutation %}
+    {% include 'messages.html' %}
+    <div class="writer-profile-container">
+        <h2>Create your profile or go to dashboard</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }} 
+            
+            <div>
+                <label for="writer_name">Writer Name</label>
+                {{ form.writer_name }}
+            </div>
+        
+            <div>
+                <label for="bio">Bio</label>
+                {{ form.bio }}
+            </div>
+        
+            <div>
+                <label for="profile_picture">Profile Picture</label>
+                {{ form.profile_picture }}
+            </div>
+        
+            <button type="submit">Save Profile</button>
+        </form>
+        <a href="{{ url_for('writer.writer_dashboard') }}">Dashboard</a>
+    </div>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='writer_prof.css') }}">
+{% endblock %}
