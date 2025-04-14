@@ -198,15 +198,15 @@
         <div class="header">
             <div class="nav-container">
                 <div class="nav-links">
-                    <a href="#">BLOGS</a>
-                    <a href="#">RADIO</a>
-                    <a href="#">MUSIC</a>
-                    <a href="#">PODCASTS</a>
+                    <a href="{{ url_for('routes.index') }}">Radio</a>
+                    <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+                    <a href="{{ url_for('prof.profile') }}">Music</a>
+                    <a href="{{ url_for('routes.index') }}">Podcasts</a>
+           
                 </div>
             </div>
-            <span class="logo">GLCONNECT</span>
             <div class="platform-button-container">
-                <a href="#" class="platform-button">PLATFORM</a>
+                <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
             </div>
             <div class="mobile-menu-button" onclick="toggleMobileMenu()">
                 <div class="bar"></div>
@@ -215,15 +215,17 @@
             </div>
         </div>
         <div class="mobile-nav" id="mobileNav">
-            <a href="#">BLOGS</a>
-            <a href="#">RADIO</a>
-            <a href="#">MUSIC</a>
-            <a href="#">PODCASTS</a>
-            <a href="#" class="platform-button">PLATFORM</a>
+            <a href="{{ url_for('routes.index') }}">Radio</a>
+            <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+            <a href="{{ url_for('prof.profile') }}">Music</a>
+            <a href="{{ url_for('routes.index') }}">Podcasts</a>
+            <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
+
         </div>
         <div class="content">
-            <h2 class="headline">THE EPICENTER OF PREMIUM CONTENT</h2>
             <h1 class="coming-soon">GLCONNECT</h1>
+            <h2 class="headline">THE EPICENTER OF PREMIUM CONTENT</h2>
+
         </div>
     </div>
 

@@ -27,13 +27,14 @@
             <div class="right">
                 <ul>
                     <li><a href="{{ url_for('routes1.register') }}">👤</a></li>
-                    <li><a href="#">🛒</a></li>
                     <li>
                         <a href="#" id="dropdownButton">▼</a>
                         <div class="dropdown-menu" id="dropdownMenu">
-                            <a href="{{ url_for('routes1.register') }}">Artists</a>
-                            <a href="{{ url_for('routes1.register') }}">Writers</a>
-                            <a href="{{ url_for('routes1.register') }}">Bloggers</a>
+                            <a href="{{ url_for('prof.profile') }}">Music</a>
+                            <a href="{{ url_for('routes.index') }}">Radio</a>
+                            <a href="{{ url_for('routes2.news') }}">News</a>
+                            <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+                            <a href="{{ url_for('routes1.findwords') }}">Language</a>
                         </div>
                     </li>
                 </ul>
@@ -64,7 +65,7 @@
                 <div class="card">
                     <a href="/">
                         <img src="/static/images/onair.webp" alt="Category 2">
-                        <h3>Live</h3>
+                        <h3>Radio</h3>
                     </a>
                 </div>
                 <div class="card">
@@ -76,13 +77,13 @@
                 <div class="card">
                     <a href="/blog/blogs">
                         <img src="/static/images/landscape.jpg" alt="Category 3">
-                        <h3>Talk Tech</h3>
+                        <h3>Blogs</h3>
                     </a>
                 </div>
                 <div class="card">
                     <a href="/routes2/news">
                         <img src="/static/images/news.avif" alt="Category 3">
-                        <h3>Latest News HT</h3>
+                        <h3>News</h3>
                     </a>
                 </div>
             </div>

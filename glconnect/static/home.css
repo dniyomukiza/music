@@ -197,3 +197,12 @@ footer {
 .dropdown-menu.show {
     display: block;
 }
+.category-cards .card a {
+    
+    text-decoration: none;
+
+}
+
+.category-cards .card a h3 {
+    color: #000;
+}
