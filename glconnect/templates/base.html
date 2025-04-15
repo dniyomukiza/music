@@ -21,20 +21,6 @@
                     </ul>
                 </nav>
             </div>
-            <div class="right">
-                <ul>
-                    <li>
-                        <a href="#" id="dropdownButton">▼</a>
-                        <div class="dropdown-menu" id="dropdownMenu">
-                            <a href="{{ url_for('prof.profile') }}">Music</a>
-                            <a href="{{ url_for('routes.home') }}">Radio</a>
-                            <a href="{{ url_for('routes2.news') }}">News</a>
-                            <a href="{{ url_for('blog.blogs') }}">Blogs</a>
-                            <a href="{{ url_for('routes1.findwords') }}">Language</a>
-                        </div>
-                    </li>
-                </ul>
-            </div>
         </div>
     </header>
     <audio controls>
@@ -89,22 +75,6 @@
     <footer>
         <p>&copy; 2024 GLC | All Rights Reserved</p>
     </footer>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-        const dropdownButton = document.getElementById("dropdownButton");
-        const dropdownMenu = document.getElementById("dropdownMenu");
-    
-        dropdownButton.addEventListener("click", function (event) {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle("show");
-        });
-    
-        document.addEventListener("click", function (event) {
-            if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
-                dropdownMenu.classList.remove("show");
-            }
-        });
-    });
     
 </script>
 </body>
