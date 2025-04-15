@@ -141,7 +141,7 @@ def view_writer(writer_id):
     
     if not writer:
         flash("Writer not found.", "warning")
-        return redirect(url_for('routes.index'))
+        return redirect(url_for('routes.home'))
 
     # Fetch books uploaded by this writer
     books = Book.query.filter_by(writer_id=writer.writer_id).all()
@@ -176,7 +176,7 @@ def delete_profile():
     try:
         db.session.commit()
         flash("Your profile and all associated data have been deleted.", "success")
-        return redirect(url_for('routes.index'))  # Redirect to home or another page
+        return redirect(url_for('routes.home'))  # Redirect to home or another page
     except Exception as e:
         db.session.rollback()
         flash(f"An error occurred: {e}", "danger")

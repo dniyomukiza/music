@@ -162,7 +162,7 @@ def artist_profile():
     artist = current_user.artist_profile
 
     if not artist:
-        return redirect(url_for("routes.index"))
+        return redirect(url_for("routes.home"))
 
     # Get songs uploaded by the artist (via artist_id) from Song model
     uploaded_songs = Song.query.filter_by(artist_id=artist.artist_id).all()
@@ -216,7 +216,7 @@ def delete_profile():
 
     if not artist:
         flash("Profile not found.", "warning")
-        return redirect(url_for('routes.index'))
+        return redirect(url_for('routes.home'))
 
     # Remove associated songs from the database
     songs = Song.query.filter_by(artist_id=artist.artist_id).all()
@@ -229,11 +229,11 @@ def delete_profile():
     try:
         db.session.commit()
         flash("Your profile and all associated data have been deleted.", "success")
-        return redirect(url_for('routes.index'))  # Redirect to home or another page
+        return redirect(url_for('routes.home'))  # Redirect to home or another page
     except Exception as e:
         db.session.rollback()
         flash(f"An error occurred: {e}", "danger")
-        return redirect(url_for('routes.index'))
+        return redirect(url_for('routes.home'))
     
 @music.route('/edit_profile', methods=['GET', 'POST'])
 @login_required

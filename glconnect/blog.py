@@ -24,7 +24,7 @@ def blogpost():
         db.session.add(post)
         db.session.commit()
         flash("Your post has been created!")
-        return redirect(url_for('routes.index'))
+        return redirect(url_for('routes.home'))
     return render_template("blogpost.html",title="New Post",form=form)
 
 @blog.errorhandler(401)

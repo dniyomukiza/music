@@ -5,8 +5,8 @@ bp = Blueprint('routes', __name__)
 def index():
     """Render the home page."""
     return render_template('landing.html')
-@bp.route('/landing')
-def landing():
+@bp.route('/home')
+def home():
     return render_template('home.html')
 @bp.route('/about')
 def about():
