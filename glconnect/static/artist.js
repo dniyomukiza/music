@@ -34,7 +34,7 @@ function addToPlaylist(songId, songName, userId) {
 // Save the newly added song to the backend
 function saveSongToBackend(songId, userId) {
     // Instead of sending the whole playlist, just send the newly added song
-    fetch('http://glconnect.onrender.com/art/add_to_playlist', {  // Use the add_to_playlist endpoint
+    fetch('https://glconnect.onrender.com/art/add_to_playlist', {  // Use the add_to_playlist endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_id: songId })  // Only send the new song
@@ -125,7 +125,7 @@ function savePlaylist(userId) {
 
     const songIds = playlist.map(song => song.id);
 
-    fetch('http://glconnect.onrender.com/art/save_playlist', {
+    fetch('https://glconnect.onrender.com/art/save_playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_ids: songIds })
@@ -137,7 +137,7 @@ function savePlaylist(userId) {
 
 // Delete song from playlist
 function deleteSongFromBackend(songId) {
-    fetch('http://glconnect.onrender.com/art/delete_song_from_playlist', {
+    fetch('https://glconnect.onrender.com/art/delete_song_from_playlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ song_id: songId })
