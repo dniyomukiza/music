@@ -152,7 +152,7 @@ function deleteSongFromBackend(songId) {
 
 // Fetch playlist from backend
 function fetchUserPlaylist(userId) {
-    fetch(`http://glconnect.onrender.com/art/get_playlist/${userId}`, {
+    fetch(`https://glconnect.onrender.com/art/get_playlist/${userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     })
