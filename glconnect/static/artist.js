@@ -152,7 +152,7 @@ function deleteSongFromBackend(songId) {
 
 // Fetch playlist from backend
 function fetchUserPlaylist(userId) {
-    fetch(`https://glconnect.onrender.com/art/get_playlist/${userId}`, {
+    fetch(`http://127.0.0.1:5000/art/get_playlist/${userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     })
@@ -192,13 +192,13 @@ function fetchUserPlaylist(userId) {
     })
     .catch(error => {
         console.error("Error fetching playlist:", error);
-        alert("There was an error fetching your playlist.Check if youare logged in");
+        alert("There was an error fetching your playlist.");
     });
 }
 
 // Play individual song
 function playSong(songId, artistName, songName, songUrl) {
-    const audioFilePath = songUrl || `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.ogg`;
+    const audioFilePath = songUrl || `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`;
     
     let audioElement = songAudioMap[songId];
 

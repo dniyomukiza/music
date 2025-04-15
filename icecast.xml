@@ -26,6 +26,7 @@
     </paths>
 
     <mount>
+        <mount-name>/gosp3</mount-name>
         <mount-name>/gospel</mount-name>
         <mount-name>/station</mount-name>
         <mount-name>/live</mount-name>

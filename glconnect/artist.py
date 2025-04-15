@@ -101,7 +101,7 @@ def get_playlist(user_id):
                 artist_name = "Unknown Artist"
 
             # Construct the song path using the artist and song name
-            song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.ogg"
+            song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.mp3"
             
             songs.append({
                 'song_id': song.id,

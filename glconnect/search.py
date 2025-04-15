@@ -15,7 +15,7 @@ class SongSearcher:
             return None  
 
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
-        song_path = os.path.join("static", "afro", f"{song.artist} - {song.name}.ogg")
+        song_path = os.path.join("static", "afro", f"{song.artist} - {song.name}.mp3")
 
         # Check if the file exists
         if not os.path.exists(song_path):
@@ -33,7 +33,7 @@ class SongSearcher:
             song_path = self.play_song(song)
             if song_path:
                 print("song path from songsearcher",song_path)
-                return song.name, song.artist, f"afro/{song.artist} - {song.name}.ogg"
+                return song.name, song.artist, f"afro/{song.artist} - {song.name}.mp3"
             else:
                 print("Song found in database, but file not found in static/songs directory.")
         else:
