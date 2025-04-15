@@ -5,17 +5,25 @@
     box-sizing: border-box;
 }
 
+/* Hero Images */
+.hero-images img {
+    width: 90%; 
+    max-height: 400px;  
+    object-fit: cover;  
+    margin: 10px;  
+}
+
 /* Body styles */
 body {
     font-family: 'Open Sans', sans-serif;
-    background-color: #000;
-    color: #fff;
+    background-color: #000;  
+    color: #fff; 
     overflow-x: hidden;
 }
 
 /* Header styles */
 header {
-    background-color: #222;
+    background-color: #222;  
     color: #fff;
     padding: 20px 0;
     position: sticky;
@@ -124,14 +132,6 @@ header {
     background-color: #ff5000;
 }
 
-/* Hero Images */
-.hero-images img {
-    width: 90%;
-    max-height: 400px;
-    object-fit: cover;
-    margin: 10px;
-}
-
 /* Categories Section */
 .categories {
     padding: 60px 20px;
@@ -141,67 +141,86 @@ header {
 /* Category Cards Layout */
 .category-cards {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: 20px;
-    flex-wrap: wrap;
 }
 
 /* Card Styling */
 .category-cards .card {
     background-color: #fff;
-    padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-align: center;
-    flex: 1 1 calc(33.333% - 20px); /* 3 per row with gap space */
+    flex: 1 1 calc(33.333% - 20px);
     box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 350px;
 }
 
-/* Card Images - FIXED IMAGE OVERFLOW */
+/* Image Styling */
 .category-cards .card img {
     width: 100%;
-    height: 200px;
+    max-height: 200px;
     object-fit: cover;
-    border-radius: 6px;
     display: block;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-    .category-cards .card {
-        flex: 1 1 calc(45% - 20px); /* 2 cards per row */
-    }
-}
-
-@media (max-width: 600px) {
-    .category-cards .card {
-        flex: 1 1 100%; /* 1 card per row */
-    }
-}
-
-/* Card Links */
+/* Link Styling Inside Cards */
 .category-cards .card a {
     text-decoration: none;
+    color: inherit;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 15px;
 }
 
 .category-cards .card a h3 {
     color: #000;
+    margin-bottom: 10px;
 }
 
-/* About Section */
+.category-cards .card p {
+    color: #333;
+    font-size: 16px;
+}
+
+/* Responsive Layout */
+@media (max-width: 1024px) {
+    .category-cards .card {
+        flex: 1 1 calc(45% - 20px);
+    }
+}
+
+@media (max-width: 600px) {
+    .category-cards {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .category-cards .card {
+        flex: 1 1 100%;
+    }
+}
+
 .about {
     background-color: #f9f9f9;
     padding: 60px 20px;
     text-align: center;
+    color: #000;
 }
 
-/* Contact Section */
 .contact {
     padding: 60px 20px;
     text-align: center;
 }
 
-/* Footer */
 footer {
     background-color: #222;
     color: #fff;
@@ -209,7 +228,6 @@ footer {
     padding: 20px 0;
 }
 
-/* Dropdown Menu */
 .dropdown-menu {
     display: none;
     position: absolute;
