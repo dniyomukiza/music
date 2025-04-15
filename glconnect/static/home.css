@@ -1,9 +1,11 @@
-
+/* General styles */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
+
+/* Hero Images */
 .hero-images img {
     width: 90%; 
     max-height: 400px;  
@@ -11,7 +13,7 @@
     margin: 10px;  
 }
 
-
+/* Body styles */
 body {
     font-family: 'Open Sans', sans-serif;
     background-color: #000;  
@@ -19,6 +21,7 @@ body {
     overflow-x: hidden;
 }
 
+/* Header styles */
 header {
     background-color: #222;  
     color: #fff;
@@ -28,6 +31,7 @@ header {
     z-index: 1000;
 }
 
+/* Container Layout */
 .container {
     display: grid;
     grid-template-columns: 1fr 3fr 1fr;
@@ -36,11 +40,13 @@ header {
     margin: 0 auto;
 }
 
+/* Left Side - Heading */
 .left h1 {
     font-family: 'Raleway', sans-serif;
     font-size: 36px;
 }
 
+/* Navigation - Middle */
 .middle nav ul {
     display: flex;
     justify-content: center;
@@ -63,6 +69,7 @@ header {
     color: #ff8c00;
 }
 
+/* Right Side - Links */
 .right ul {
     display: flex;
     justify-content: flex-end;
@@ -84,6 +91,7 @@ header {
     color: #ff8c00;
 }
 
+/* Hero Section */
 #hero {
     display: flex;
     justify-content: space-between;
@@ -124,26 +132,31 @@ header {
     background-color: #ff5000;
 }
 
+/* Categories Section */
 .categories {
     padding: 60px 20px;
     text-align: center;
 }
 
+/* Category Cards Layout */
 .category-cards {
     display: flex;
     justify-content: space-around;
     gap: 20px;
+    flex-wrap: wrap;  /* Allows the cards to wrap on smaller screens */
 }
 
+/* Card Styling */
 .category-cards .card {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-align: center;
-    width: 30%;
+    width: 30%; /* Default width for larger screens */
 }
 
+/* Card Image Styling */
 .category-cards .card img {
     width: 100%;
     border-radius: 8px;
@@ -151,9 +164,23 @@ header {
     object-fit: cover;
 }
 
+/* Card Title */
 .category-cards .card h3 {
     margin-top: 10px;
     font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .category-cards .card {
+        width: 45%;  /* 2 cards per row on medium screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .category-cards .card {
+        width: 100%;  /* 1 card per row on small screens */
+    }
 }
 
 .about {
@@ -197,10 +224,9 @@ footer {
 .dropdown-menu.show {
     display: block;
 }
-.category-cards .card a {
-    
-    text-decoration: none;
 
+.category-cards .card a {
+    text-decoration: none;
 }
 
 .category-cards .card a h3 {
