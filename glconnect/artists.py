@@ -45,7 +45,6 @@ def sanitize_url(url):
             return ""  # Invalid URL, return empty string
     return ""
 
-
 @music.route("/upload_song", methods=["GET", "POST"])
 @login_required
 def upload_song():
@@ -69,59 +68,32 @@ def upload_song():
         flash("No song file uploaded.", "error")
         return redirect(url_for("music.upload_song"))
 
-    if not allowed_file(song_file.filename):
-        flash("Only MP3 or OGG files are allowed.", "error")
+    if not song_file.filename.lower().endswith('.mp3'):
+        flash("Only MP3 files are allowed.", "error")
         return redirect(url_for("music.upload_song"))
 
     if song_file.content_length > MAX_FILE_SIZE:
         flash("File is too large. Maximum allowed size is 50 MB.", "error")
         return redirect(url_for("music.upload_song"))
 
-    # Query the Artist object by artist_name
     artist = Artist.query.filter_by(artist_name=artist_name).first()
-
     if not artist:
-        # If artist not found, flash error and return
         flash(f"Artist {artist_name} not found.", "error")
         return redirect(url_for("music.upload_song"))
 
-    # Secure file naming
+    # Secure and unique file naming
     base_filename = secure_filename(f"{artist_name} - {song_name}")
     mp3_filename = f"{base_filename}.mp3"
-    ogg_filename = f"{base_filename}.ogg"
-
     mp3_path = os.path.join(UPLOAD_FOLDER, mp3_filename)
-    ogg_path = os.path.join(UPLOAD_FOLDER, ogg_filename)
 
-    # Ensure unique filenames
     counter = 1
-    while os.path.exists(mp3_path) or os.path.exists(ogg_path):
+    while os.path.exists(mp3_path):
         mp3_filename = f"{base_filename} ({counter}).mp3"
-        ogg_filename = f"{base_filename} ({counter}).ogg"
         mp3_path = os.path.join(UPLOAD_FOLDER, mp3_filename)
-        ogg_path = os.path.join(UPLOAD_FOLDER, ogg_filename)
         counter += 1
 
-    # Ensure the upload directory exists
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-    # Save the song file (skip conversion if it's an .ogg file)
-    if song_file.filename.endswith('.ogg'):
-        song_file.save(ogg_path)
-        final_filename = ogg_filename
-    else:
-        song_file.save(mp3_path)
-        # Convert MP3 to OGG
-        try:
-            subprocess.run([
-                "ffmpeg", "-y", "-i", mp3_path, "-c:a", "libvorbis", ogg_path
-            ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print(f"Converted to OGG: {ogg_path}")
-            final_filename = ogg_filename
-        except subprocess.CalledProcessError as e:
-            print(f"FFmpeg error: {e.stderr.decode()}")
-            flash("Error converting file to OGG.", "error")
-            return redirect(url_for("music.upload_song"))
+    song_file.save(mp3_path)
 
     # Handle cover image
     if cover_image_file and cover_image_file.filename != "":
@@ -129,27 +101,26 @@ def upload_song():
         cover_path = os.path.join(UPLOAD_FOLDER, cover_filename)
         cover_image_file.save(cover_path)
     else:
-        cover_filename = "cover.webp"  # fallback default
+        cover_filename = "cover.webp"
 
-    # Save the song with artist_id
     new_song = Song_upload(
         name_song=song_name,
         name_artist=artist_name,
-        local_path=os.path.join("/static/song_uploads", final_filename),
+        local_path=os.path.join("/static/song_uploads", mp3_filename),
         cover_image=cover_filename,
         twitter_link=twitter_link,
         instagram_link=instagram_link,
         spotify_link=spotify_link,
         apple_music_link=apple_music_link,
-        artist_id=artist.artist_id  # Now we correctly set the artist_id
+        artist_id=artist.artist_id
     )
 
     try:
         db.session.add(new_song)
         db.session.commit()
-        flash("Song uploaded and converted successfully!" if song_file.filename.endswith('.mp3') else "Song uploaded successfully!", "success")
+        flash("MP3 song uploaded successfully!", "success")
     except Exception as e:
-        db.session.rollback()  # Rollback if there's an error during commit
+        db.session.rollback()
         flash("Database error occurred.", "error")
 
     return redirect(url_for("art.artist_profile", artist_id=artist.artist_id))
