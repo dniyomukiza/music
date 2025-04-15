@@ -141,7 +141,7 @@ header {
 /* Category Cards Layout */
 .category-cards {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     gap: 20px;
     flex-wrap: wrap;  /* Allows the cards to wrap on smaller screens */
 }
@@ -154,20 +154,14 @@ header {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-align: center;
     width: 30%; /* Default width for larger screens */
+    box-sizing: border-box; /* Ensures padding does not increase width */
 }
 
-/* Card Image Styling */
-.category-cards .card img {
-    width: 100%;
-    border-radius: 8px;
-    height: 200px;
-    object-fit: cover;
-}
-
-/* Card Title */
-.category-cards .card h3 {
-    margin-top: 10px;
-    font-weight: bold;
+/* Ensuring cards do not overflow in desktop view */
+@media (min-width: 1024px) {
+    .category-cards .card {
+        width: 30%; /* Adjust width if necessary */
+    }
 }
 
 /* Responsive Design */
@@ -182,6 +176,7 @@ header {
         width: 100%;  /* 1 card per row on small screens */
     }
 }
+
 
 .about {
     background-color: #f9f9f9;
