@@ -44,92 +44,64 @@
         <a href="{{ url_for('blog.contact') }}" class="btn">Get in Touch</a>
     </div>
     <style>
-        .info-sections {
-            max-width: 900px;
-            margin: 3rem auto;
-            padding: 0 1.5rem;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #2c3e50;
-        }
-    
-        .info-box {
-            background-color: #f9f9fb;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            margin-bottom: 2rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-    
-        .info-box:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        }
-    
-        .info-box h3 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            color: #1a1a1a;
-            border-left: 5px solid #0a58ca;
-            padding-left: 0.75rem;
-        }
-    
-        .info-box p {
-            font-size: 1.05rem;
-            line-height: 1.7;
-            color: #444;
-        }
-        .call-to-action {
-            background: linear-gradient(120deg, #0a58ca, #007bff);
-            color: white;
-            text-align: center;
-        }
-    
-        .call-to-action h3 {
-            color: white;
-        }
-    
-        .call-to-action p {
-            color: #f1f1f1;
-        }
-    
-        .call-to-action .btn {
-            display: inline-block;
-            margin-top: 1.5rem;
-            padding: 0.75rem 1.5rem;
-            background-color: #ffffff;
-            color: #0a58ca;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease-in-out;
-        }
-    
-        .call-to-action .btn:hover {
-            background-color: #e6ecf7;
-            color: #084298;
-            transform: scale(1.05);
-        }
+        
+     /* Hero content for mobile */
+.hero-content h2,
+.hero-content p {
+    font-size: 1.5rem;  /* Shrink the font size */
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
 
-        @media (max-width: 600px) {
-        .info-box {
-            padding: 1.2rem;
-        }
+/* Info sections */
+.info-sections {
+    max-width: 100%;
+    margin: 3rem auto;
+    padding: 0 1.5rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2c3e50;
+}
 
-        .info-box h3 {
-            font-size: 1.5rem;
-        }
+/* Info box for mobile view */
+.info-box {
+    background-color: #f9f9fb;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+}
 
-        .info-box p {
-            font-size: 1rem;
-        }
+/* Reduce padding and adjust font sizes on mobile */
+@media (max-width: 600px) {
+    .hero-content h2 {
+        font-size: 1.75rem; /* Shrink the font size */
+    }
 
-        .call-to-action .btn {
-            width: 100%;
-            font-size: 0.95rem;
-        }
+    .hero-content p {
+        font-size: 1rem;
+    }
+
+    .info-box {
+        padding: 1.5rem;
+        font-size: 0.95rem;  /* Slightly smaller text */
+    }
+
+    .info-box h3 {
+        font-size: 1.6rem;  /* Adjust heading size */
+    }
+
+    .info-box p {
+        font-size: 0.95rem;  /* Adjust text size */
+    }
+
+    /* Adjust call-to-action button for mobile */
+    .call-to-action .btn {
+        width: 100%; /* Make button full-width */
+        font-size: 1rem;
+    }
 }
 
     </style>
