@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
 </head>
 <body>
+    {% include 'messages.html' %}
     <div class="container">
         <h1>News Generator</h1>
         <form method="POST" action="{{ url_for('routes2.news') }}">

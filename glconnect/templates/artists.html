@@ -7,19 +7,25 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='artist.css') }}">
 </head>
 <body>
-
+    {% include 'messages.html' %}
     <div class="hero">
         <img src="{{ url_for('static', filename='images/' + artist.profile_pic) }}" class="profile-pic">
         <h1 class="artist-name">{{ artist.artist_name }}</h1>
         <p class="bio">{{ artist.bio }}</p>
         <div class="follow-links">
-            <a href="#">Edit profile</a>
+            <a href="{{ url_for('music.artist_edit') }}">Edit profile</a>
             <span> | </span>
             <a href="{{ url_for('music.delete_profile') }}">Delete profile</a>
             <span> | </span>
-            <a href="{ {url_for('music.upload_song') }}">Upload songs</a>
+            <a href="{{ url_for('music.upload_song') }}">Upload songs</a>
+
             <span> | </span>
-            <a href="{{ url_for('routes.index') }}">Back to homepage</a>
+            <a href="{{ url_for('art.artist_profile', artist_id=artist.artist_id) }}">Dashboard</a>
+            <span> | </span>
+            <a href="{{ url_for('routes.index') }}">Homepage</a>
+            <span> | </span>
+            <a href="{{ url_for('blog.logout') }}">Logout</a>
+
         </div>
         
     </div>
@@ -28,8 +34,12 @@
         {% for song in songs %}
         <div class="song-card">
             <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'default.jpg')) }}" class="song-cover">
-            <p class="song-title">{{ song.name }}</p>
-            <form action="{{ url_for('music.delete_song', song_id=song.id) }}" method="POST">
+            
+            <p class="song-title">
+                {{ song.name if song.name is defined else song.name_song }}
+            </p>
+            
+            <form action="{{ url_for('music.delete_song', song_id=song.id if song.id is defined else song.upload_id) }}" method="POST">
                 <button type="submit" class="btn delete-song-btn">Remove</button>
             </form>
         </div>

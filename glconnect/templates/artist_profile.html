@@ -8,9 +8,9 @@
     <script defer src="{{ url_for('static', filename='artist.js') }}"></script>
 </head>
 <body>
-
+    {% include 'messages.html' %}
     <div class="hero">
-        <img src="{{ url_for('static', filename='images/' + artist.profile_pic) }}" class="profile-pic">
+        <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" class="profile-pic">
         <h1 class="artist-name">{{ artist.artist_name }}</h1>
         <p class="bio">{{ artist.bio }}</p>
         <div class="follow-links">
@@ -22,14 +22,17 @@
         <h2>{{ artist.artist_name }}'s songs </h2>
         <div class="songs">
             {% for song in songs %}
-            <div class="song-card">
-                <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'photo3.webp')) }}" class="song-cover">
+                <div class="song-card">
+                    <!-- Check if song is from Song model or Song_upload model, adjust properties accordingly -->
+                    <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'photo3.webp')) }}" class="song-cover">
 
-                <p class="song-title">{{ song.name }}</p>
+                    <p class="song-title">{{ song.name if song.name else song.name_song }}</p>
         
-                <button onclick="addToPlaylist('{{ song.id }}', '{{ song.name }}')">➕ Add to Playlist</button>
-                <button onclick="shareSong('{{ song.id }}', '{{ song.name }}')">📤 Share</button>
-            </div>
+                    <button onclick="addToPlaylist('{{ song.id if song.id else song.upload_id }}', '{{ song.name if song.name else song.name_song }}')">➕ Add to Playlist</button>
+                    <button onclick="shareSong('{{ song.id if song.id else song.upload_id }}', '{{ song.name if song.name else song.name_song }}')">📤 Share</button>
+                </div>
+            {% else %}
+                <p>No songs found.</p>
             {% endfor %}
         </div>
     </div>

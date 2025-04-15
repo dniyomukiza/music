@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLCONNECT - Coming Soon</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Background Video Styles */
+        .background-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(248, 240, 227, 0.6);
+            z-index: 0;
+        }
+
+        /* Header Styles */
+        .header {
+            background-color: #f8f0e3;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between; /* This ensures the items are spread out */
+            align-items: center;
+            box-sizing: border-box;
+            border-bottom: 1px solid #ddd;
+            z-index: 10;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: flex-start; /* Align navigation to the left */
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            margin-right: 20px;
+            font-size: 1.3em;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: center;
+            flex-grow: 1; /* This makes the logo take up the available space between left and right elements */
+            text-align: center;
+        }
+
+        .platform-button-container {
+            display: flex;
+            justify-content: flex-end; /* Align button to the right */
+            align-items: center;
+        }
+
+        .platform-button {
+            background-color: transparent;
+            color: #333;
+            border: 1px solid #333;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            margin-left: 20px; /* Separate from potential adjacent elements */
+        }
+
+        /* Mobile Menu Styles (Hidden by default) */
+        .mobile-menu-button {
+            display: none;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .bar {
+            width: 25px;
+            height: 3px;
+            background-color: #333;
+            margin: 5px 0;
+            transition: 0.4s;
+        }
+
+        .mobile-nav {
+            display: none;
+            position: absolute;
+            top: 60px; /* Adjust based on header height */
+            left: 0;
+            width: 100%;
+            background-color: #f8f0e3;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .mobile-nav a {
+            color: #333;
+            text-decoration: none;
+            padding: 10px 0;
+            font-size: 1em;
+            width: 100%;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .mobile-nav a:last-child {
+            border-bottom: none;
+        }
+
+        /* Content Area Styles */
+        .content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #000;
+            z-index: 10;
+        }
+
+        .headline {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .coming-soon {
+            font-size: 4em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 20px;
+        }
+
+        /* Media Query for Mobile View */
+        @media (max-width: 768px) {
+            .header {
+                justify-content: space-between; /* Space out logo and menu button */
+            }
+
+            .nav-container {
+                display: none;
+            }
+
+            .platform-button-container {
+                display: none;
+            }
+
+            .mobile-menu-button {
+                display: block; /* Show mobile menu button */
+            }
+
+            .logo {
+                margin-right: 0; /* Reset logo margin for mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video autoplay loop muted class="background-video">
+            <source src="{{ url_for('static', filename='images/trial.mp4') }}">
+
+
+            Your browser does not support the video tag.
+        </video>
+        <div class="video-overlay"></div>
+        <div class="header">
+            <div class="nav-container">
+                <div class="nav-links">
+                    <a href="{{ url_for('routes.index') }}">Radio</a>
+                    <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+                    <a href="{{ url_for('prof.profile') }}">Music</a>
+                    <a href="{{ url_for('routes.index') }}">Podcasts</a>
+           
+                </div>
+            </div>
+            <div class="platform-button-container">
+                <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
+            </div>
+            <div class="mobile-menu-button" onclick="toggleMobileMenu()">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+        </div>
+        <div class="mobile-nav" id="mobileNav">
+            <a href="{{ url_for('routes.index') }}">Radio</a>
+            <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+            <a href="{{ url_for('prof.profile') }}">Music</a>
+            <a href="{{ url_for('routes.index') }}">Podcasts</a>
+            <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
+
+        </div>
+        <div class="content">
+            <h1 class="coming-soon">GLCONNECT</h1>
+            <h2 class="headline">THE EPICENTER OF PREMIUM CONTENT</h2>
+
+        </div>
+    </div>
+
+    <script>
+        function toggleMobileMenu() {
+            var mobileNav = document.getElementById("mobileNav");
+            mobileNav.style.display = (mobileNav.style.display === 'flex') ? 'none' : 'flex';
+        }
+    </script>
+</body>
+</html>

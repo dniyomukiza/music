@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/singlepost.css') }}">
 </head>
 <body>
+    {% include 'messages.html' %}
     <div class="post-container">
         <div class="post">
             {% if post.author == current_user %}

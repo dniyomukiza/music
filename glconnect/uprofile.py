@@ -30,5 +30,5 @@ def edit_profile():
                 current_user.profile_picture = filename
         
         db.session.commit()
-        return redirect(url_for("profile"))
+        return redirect(url_for("prof.profile"))
     return render_template("edit_profile.html", user=current_user)

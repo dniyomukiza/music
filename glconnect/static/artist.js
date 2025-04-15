@@ -192,7 +192,7 @@ function fetchUserPlaylist(userId) {
     })
     .catch(error => {
         console.error("Error fetching playlist:", error);
-        alert("There was an error fetching your playlist.");
+        alert("There was an error fetching your playlist.Check if youare logged in");
     });
 }
 

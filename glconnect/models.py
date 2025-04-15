@@ -138,3 +138,5 @@ class Song_upload(db.Model):
     instagram_link = db.Column(db.String(255), nullable=True)
     spotify_link = db.Column(db.String(255), nullable=True)
     apple_music_link = db.Column(db.String(255), nullable=True)
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
+    artist = db.relationship('Artist', backref='songs')

@@ -8,3 +8,4 @@ __pycache__
 /glconnect/__pycache__/
 migrations
 .vscode/
+/glconnect/static/song_uploads/

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block salutation %}
+{% include 'messages.html' %}
+<div class="edit-profile-container">
+    <h2 class="edit-profile-title">Edit Your Profile</h2>
+
+    <form action="{{ url_for('music.artist_edit') }}" method="POST" enctype="multipart/form-data" class="edit-profile-form">
+        <div class="form-group">
+            <label for="artist_name">🎤 Artist Name:</label>
+            <input type="text" id="artist_name" name="artist_name" value="{{ artist.artist_name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="bio">📝 Bio:</label>
+            <textarea id="bio" name="bio" placeholder="Tell us about you...">{{ artist.bio }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="profile_pic">Profile Picture:</label>
+            {% if artist.profile_pic %}
+            <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" alt="Current profile pic" style="max-width: 120px; display:block; margin-bottom:10px;">
+            {% endif %}
+            <input type="file" id="profile_pic" name="profile_pic" accept="image/*">
+        </div>
+
+        <button type="submit" class="btn save-btn">Save</button>
+    </form>
+
+    <style>
+        .edit-profile-container {
+            max-width: 600px;
+            margin: 0;
+            padding: 2rem;
+            background-color: #f9f9fc;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    
+        .edit-profile-title {
+            font-size: 2rem;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+    
+        .edit-profile-title::after {
+            content: '';
+            width: 60px;
+            height: 4px;
+            background: #0a58ca;
+            display: block;
+            margin: 0.5rem auto 0;
+            border-radius: 2px;
+        }
+    
+        .edit-profile-form .form-group {
+            margin-bottom: 1.2rem;
+        }
+    
+        .edit-profile-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #34495e;
+        }
+    
+        .edit-profile-form input[type="text"],
+        .edit-profile-form textarea,
+        .edit-profile-form input[type="file"] {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+    
+        .edit-profile-form textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+    
+        .save-btn {
+            display: block;
+            width: 100%;
+            background-color: #0a58ca;
+            color: white;
+            padding: 0.8rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+    
+        .save-btn:hover {
+            background-color: #084298;
+        }
+    
+        .edit-profile-form img {
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+    
+</div>
+{% endblock %}

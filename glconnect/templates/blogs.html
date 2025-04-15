@@ -7,10 +7,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
 </head>
 <body>
+    {% include 'messages.html' %}
     <div style="margin-bottom: 20px;">
         <div class="button-container">
             <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
-            <a href="{{ url_for('routes1.login') }}" class="btn">Create Blog</a>
+            <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Blog</a>
         </div>
 
         {% for post in posts.items %}
