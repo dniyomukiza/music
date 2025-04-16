@@ -1,112 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}GLC Streaming{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../static/home.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}GLC Streaming{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/home.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Open Sans', sans-serif;
+    }
+
+    header {
+      background-color: #060606;
+      color: white;
+      padding: 1rem 2rem;
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    nav ul {
+      display: flex;
+      gap: 1rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    nav ul li a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+    }
+
+    .menu-toggle {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .vertical-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: #f9f9fb;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      width: 200px;
+      border-radius: 8px;
+      padding: 1rem;
+      display: none;
+      z-index: 1500;
+    }
+
+    .vertical-menu ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .vertical-menu li {
+      margin: 0.5rem 0;
+    }
+
+    .vertical-menu a {
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+      display: block;
+      transition: all 0.3s ease;
+    }
+
+    .vertical-menu a:hover {
+      color: #0d47a1;
+      padding-left: 10px;
+    }
+
+    .show {
+      display: block;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background-color: #f1f1f1;
+      margin-top: 2rem;
+    }
+  </style>
 </head>
 <body>
 
-    <header>
-        <div class="container">
-            <div class="middle">
-                <nav>
-                    <ul>
-                        <li><a href="https://glconnect.onrender.com/about">About</a></li>
-                        <li><a href="https://glconnect.onrender.com/home">Home</a></li>
-                        <li><a href="https://glconnect.onrender.com/blog/contact">Contact</a></li>
-                        <li><a href="http://127.0.0.1:8001">API</a></li>
-                    </ul>
-                </nav>
-            </div>
-            <div class="right">
-                <ul>
-                    <li>
-                        <a href="#" id="dropdownButton">▼</a>
-                        <div class="dropdown-menu" id="dropdownMenu">
-                            <a href="{{ url_for('prof.profile') }}">Music</a>
-                            <a href="{{ url_for('routes.home') }}">Radio</a>
-                            <a href="{{ url_for('routes2.news') }}">News</a>
-                            <a href="{{ url_for('blog.blogs') }}">Blogs</a>
-                            <a href="{{ url_for('routes1.findwords') }}">Language</a>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </header>
-    <audio controls>
-        <source src="http://localhost:8000/station" type="audio/ogg">
-    </audio>
+<header>
+  <div class="nav-container">
+    <nav>
+      <ul>
+        <li><a href="https://glconnect.onrender.com/about">About</a></li>
+        <li><a href="https://glconnect.onrender.com/home">Home</a></li>
+        <li><a href="https://glconnect.onrender.com/blog/contact">Contact</a></li>
+        <li><a href="http://127.0.0.1:8001">API</a></li>
+      </ul>
+    </nav>
+    <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+    <div id="verticalMenu" class="vertical-menu">
+      <ul>
+        <li><a href="/music/artist_profile">🎵For artists</a></li>
+        <li><a href="/writer/profile">📰 For authors</a></li>
+        <li><a href="/blog/blogs">✍️ For bloggers</a></li>
+        <li><a href="/prof/uprofile">Others</a></li>
+      </ul>
+    </div>
+  </div>
+</header>
 
-    <main>
-        <section id="hero" class="hero">
-            {% block salutation %}
-            {% endblock %}
-            
-            {% block images %}
-            {% endblock %}
-        </section>
+<audio controls>
+  <source src="http://localhost:8000/station" type="audio/ogg">
+</audio>
 
-        <section id="categories" class="categories">
-            <div class="category-cards">
-                <div class="card">
-                    <a href="/prof/uprofile">
-                        <img src="/static/images/party.webp" alt="Category 1">
-                        <h3>Music</h3>
-                    </a>
-                </div>
-                <div class="card">
-                    <a href="/">
-                        <img src="/static/images/onair.webp" alt="Category 2">
-                        <h3>Radio</h3>
-                    </a>
-                </div>
-                <div class="card">
-                    <a href="/routes1/words">
-                        <img src="/static/images/photo3.webp" alt="Category 3">
-                        <h3>Language</h3>
-                    </a>
-                </div>
-                <div class="card">
-                    <a href="/blog/blogs">
-                        <img src="/static/images/landscape.jpg" alt="Category 3">
-                        <h3>Blogs</h3>
-                    </a>
-                </div>
-                <div class="card">
-                    <a href="/routes2/news">
-                        <img src="/static/images/news.avif" alt="Category 3">
-                        <h3>News</h3>
-                    </a>
-                </div>
-            </div>
-        </section>
-    </main>
+<main>
+  <section id="hero" class="hero">
+    {% block salutation %}
+    {% endblock %}
 
-    <footer>
-        <p>&copy; 2024 GLC | All Rights Reserved</p>
-    </footer>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-        const dropdownButton = document.getElementById("dropdownButton");
-        const dropdownMenu = document.getElementById("dropdownMenu");
-    
-        dropdownButton.addEventListener("click", function (event) {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle("show");
-        });
-    
-        document.addEventListener("click", function (event) {
-            if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
-                dropdownMenu.classList.remove("show");
-            }
-        });
-    });
-    
+    {% block images %}
+    {% endblock %}
+  </section>
+</main>
+
+<footer>
+    <p style="color: black;">&copy; 2024 GLC | All Rights Reserved</p>
+
+</footer>
+
+<script>
+  function toggleMenu() {
+    const menu = document.getElementById('verticalMenu');
+    menu.classList.toggle('show');
+  }
+
+  // Close menu if user clicks outside
+  document.addEventListener('click', function(event) {
+    const menu = document.getElementById('verticalMenu');
+    const toggle = document.querySelector('.menu-toggle');
+    if (!menu.contains(event.target) && !toggle.contains(event.target)) {
+      menu.classList.remove('show');
+    }
+  });
 </script>
+
 </body>
 </html>
 

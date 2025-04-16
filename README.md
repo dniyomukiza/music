@@ -86,4 +86,4 @@ To run the Flask app locally in debug mode:
         ```
 
 
-The Flask application should now be running locally at `http://127.0.0.1:5000`
+The Flask application should now be running locally at `https://glconnect.onrender.com`
