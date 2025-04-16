@@ -5,8 +5,154 @@
 {% endblock %}
 
 {% block images %}
-<div class="hero-images">
-    <img src="/static/images/photo1.avif" alt="Streaming Image 1">
-    <img src="/static/images/photo2.avif" alt="Streaming Image 2">
+
+<!-- Image Section -->
+<div class="hero-image-wrapper">
+  <img src="/static/images/photo1.avif" alt="Streaming Image 1" class="main-hero-image">
 </div>
+
+<!-- Carousel Section -->
+<section class="client-carousel">
+  <h2>✨ Featured Sponsors</h2>
+  <div class="carousel-container">
+    <div class="carousel-track" id="carousel-track">
+      <!-- Ad 1 - Image -->
+      <a href="https://client2.com" target="_blank" class="carousel-item">
+        <img src="/static/images/party.webp" alt="Client 1 Ad">
+      </a>
+
+      <!-- Ad 2 - Promotional Video -->
+      <a href="https://client2.com" target="_blank" class="carousel-item">
+        <video autoplay muted loop>
+          <source src="/static/images/photo3.webp" type="video/mp4">
+        </video>
+      </a>
+
+      <!-- Ad 3 - Banner -->
+      <a href="https://client4.com" target="_blank" class="carousel-item">
+        <img src="/static/images/landscape.jpg" alt="Client 3 Banner">
+      </a>
+
+      <a href="https://client3.com" target="_blank" class="carousel-item">
+        <img src="/static/images/news.avif" alt="Client 3 Banner">
+      </a>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <button class="carousel-btn prev" onclick="slideCarousel(-1)">&#10094;</button>
+    <button class="carousel-btn next" onclick="slideCarousel(1)">&#10095;</button>
+  </div>
+</section>
+
+<style>
+/* Hero Image */
+.hero-image-wrapper {
+  width: 100%;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.main-hero-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Carousel Styles */
+.client-carousel {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: #fdfdfd;
+  position: relative;
+  overflow: hidden;
+}
+
+.client-carousel h2 {
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+  color: #2c3e50;
+}
+
+.carousel-container {
+  position: relative;
+  max-width: 320px;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.6s ease;
+}
+
+.carousel-item {
+  min-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.carousel-item img,
+.carousel-item video {
+  max-width: 90%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #2c3e50;
+  color: white;
+  border: none;
+  font-size: 2rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  z-index: 10;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.carousel-btn:hover {
+  opacity: 1;
+}
+
+.carousel-btn.prev {
+  left: 10px;
+}
+
+.carousel-btn.next {
+  right: 10px;
+}
+
+/* Responsive: adjust max-width if needed */
+@media (max-width: 768px) {
+  .carousel-container {
+    max-width: 90%;
+  }
+}
+</style>
+
+<script>
+let currentSlide = 0;
+const track = document.getElementById("carousel-track");
+const totalSlides = document.querySelectorAll(".carousel-item").length;
+
+function slideCarousel(direction) {
+  currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+  track.style.transform = `translateX(-${currentSlide * 100}%)`;
+}
+
+// Auto-slide
+setInterval(() => {
+  slideCarousel(1);
+}, 3000);
+</script>
+
 {% endblock %}
