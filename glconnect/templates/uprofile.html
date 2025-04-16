@@ -15,8 +15,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
     
     <div class="profile-details">
-        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>User:</strong> {{ user.username }}</p>
         <p><strong>Role:</strong> {{ user.role }}</p>
+        <p>You can view artist/authors and navigate their products </p>
+        
     </div>
 
     {% if user.role == "artist" %}
@@ -142,8 +144,5 @@ document.getElementById("searchInput").addEventListener("keydown", function(even
 });
 
     </script>
-    
-    
-</script>
 
 {% endblock %}
