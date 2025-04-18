@@ -2,24 +2,17 @@ services:
   - type: web
     name: icecast2
     runtime: docker
-    image:
-      url: deepcomp/icecast2  # The image you're using
+    dockerfilePath: ./Dockerfileice  # Path to the Dockerfile in your repo
     plan: starter
 
-    # Mounting a persistent disk to the /etc/conf_files directory
+    # Mount a disk for persistent storage if needed (e.g., for logs or configurations)
     disk:
       name: icefiles
-      mountPath: /etc/conf_files/
-      sizeGB: 10
+      mountPath: /etc/conf_files/  # Mount location for persistent storage
+      sizeGB: 10  # Size of the mounted disk
 
-    # Build commands to copy the icecast.xml file from the current directory (cwd)
-    buildCommand: |
-      # Ensure the icecast.xml file is copied from the current directory (cwd) to the disk's mount path
-      cp ./icecast.xml /etc/conf_files/icecast.xml  # Copy icecast.xml to the mounted disk
-
-    # Start command to run Icecast using the custom configuration
-    startCommand: |
-      # Run Icecast with the icecast.xml file at the mounted path
-      icecast -c /etc/conf_files/icecast.xml  # Start Icecast using the custom config file
+    # Optional: Override the run command if needed, although CMD in the Dockerfile is usually sufficient
+    dockerCommand: |
+      icecast -c /etc/icecast.xml  # Ensure Icecast starts with the correct config
 
   
