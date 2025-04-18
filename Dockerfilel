@@ -1,0 +1,11 @@
+# Use the official Phasecorex Liquidsoap image as the base
+FROM phasecorex/liquidsoap:latest
+
+# Copy your local Liquidsoap scripts into the container
+COPY ./scripts /liqfolder/scripts
+
+# Set the working directory for the container
+WORKDIR /liqfolder/scripts
+
+# Specify the entry point for Liquidsoap to run the main script
+ENTRYPOINT ["/bin/user-entrypoint", "/app/liquidsoap", "/liqfolder/scripts/main.liq"]

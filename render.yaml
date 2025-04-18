@@ -3,27 +3,23 @@ services:
     name: icecast2
     runtime: image
     image:
-      url: deepcomp/icecast2
+      url: deepcomp/icecast2  # The image you're using
     plan: starter
-    envVars:
-      - key: PORT
-        value: 8000    
 
+    # Mounting a persistent disk to the /etc/conf_files directory
     disk:
-      name: icecast-data
-      mountPath: /etc/icecast
+      name: icefiles
+      mountPath: /etc/conf_files/
       sizeGB: 10
+
+    # Build commands to copy the icecast.xml file from the current directory (cwd)
+    buildCommand: |
+      # Ensure the icecast.xml file is copied from the current directory (cwd) to the disk's mount path
+      cp ./icecast.xml /etc/conf_files/icecast.xml  # Copy icecast.xml to the mounted disk
+
+    # Start command to run Icecast using the custom configuration
+    startCommand: |
+      # Run Icecast with the icecast.xml file at the mounted path
+      icecast -c /etc/conf_files/icecast.xml  # Start Icecast using the custom config file
+
   
-  - type: pserv
-    name: liquidsoap
-    runtime: image
-    image:
-      url: docker.io/phasecorex/liquidsoap:latest
-    plan: starter
-    dockerCommand: >
-      /bin/user-entrypoint /app/liquidsoap /liqfolder/scripts/main.liq
-    
-    disk:
-        name: liq-disk
-        mountPath: /liqfolder
-        sizeGB: 1

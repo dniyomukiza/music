@@ -15,4 +15,5 @@ EXPOSE 5000
 
 # Command to run the Python app
 CMD ["python", "run.py"]
+#CMD ["sh", "-c", "python run.py & uvicorn glconnect.voc:app --reload --host 0.0.0.0 --port 8001"]
 

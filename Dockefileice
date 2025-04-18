@@ -1,0 +1,11 @@
+# Use the official Deepcomp Icecast2 image as the base
+FROM deepcomp/icecast2:latest
+
+# Copy your local icecast.xml configuration into the container
+COPY icecast.xml /etc/icecast.xml
+
+# Expose port 8000 to allow access to Icecast's web interface and streams
+EXPOSE 8000
+
+# Start Icecast on container run
+CMD ["icecast", "-c", "/etc/icecast.xml"]
