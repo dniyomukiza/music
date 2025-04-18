@@ -21,4 +21,9 @@ services:
       url: docker.io/phasecorex/liquidsoap:latest
     plan: starter
     dockerCommand: >
-      liquidsoap /liqfolder/scripts/main.liq
+      /bin/user-entrypoint /app/liquidsoap /liqfolder/scripts/main.liq
+    
+    disk:
+        name: liq-disk
+        mountPath: /liqfolder
+        sizeGB: 1
