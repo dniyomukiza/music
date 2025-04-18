@@ -13,3 +13,12 @@ services:
       name: icecast-data
       mountPath: /etc/icecast
       sizeGB: 10
+  
+  - type: pserv
+    name: liquidsoap
+    runtime: image
+    image:
+      url: docker.io/phasecorex/liquidsoap:latest
+    plan: starter
+    dockerCommand: >
+      liquidsoap /liqfolder/scripts/main.liq
