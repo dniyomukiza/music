@@ -4,7 +4,7 @@ services:
     runtime: image
     image:
       url: deepcomp/icecast2
-    plan: free
+    plan: starter
     envVars:
       - key: PORT
         value: 8000    
