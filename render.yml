@@ -1,0 +1,55 @@
+services:
+  - type: private_service
+    name: app
+    env: docker
+    image: myapp:latest
+    plan: starter
+    ports:
+      - port: 5000  # Flask app will be served on port 5000
+      - port: 8001  # Uvicorn app will be served on port 8001
+    dockerCommand: >
+      sh -c "python run.py & uvicorn glconnect.voc:app --reload --host 0.0.0.0 --port 8001"
+    environment:
+      - key: FLASK_APP
+        value: run.py
+      - key: FLASK_ENV
+        value: development
+    volumes:
+      - mountPath: /usr/src/appdir
+        localPath: ./music-1
+    dependsOn:
+      - icecast2
+    networks:
+      - app_network
+
+  - type: private_service
+    name: icecast2
+    env: docker
+    image: deepcomp/icecast2
+    plan: starter
+    ports:
+      - port: 8000  # Icecast will listen on port 8000
+    dockerCommand: /usr/bin/icecast -c /etc/icecast.xml -b
+    volumes:
+      - mountPath: /etc/icecast.xml
+        localPath: ./icecast.xml
+    networks:
+      - app_network
+
+  - type: private_service
+    name: liquidsoap
+    env: docker
+    image: phasecorex/liquidsoap:latest
+    plan: starter
+    dockerCommand: liquidsoap /liqfolder/scripts/main.liq
+    dependsOn:
+      - icecast2
+    volumes:
+      - mountPath: /liqfolder
+        localPath: ./
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
