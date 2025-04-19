@@ -13,6 +13,6 @@ services:
 
     # Optional: Override the run command if needed, although CMD in the Dockerfile is usually sufficient
     dockerCommand: |
-      icecast -c /etc/icecast.xml  # Ensure Icecast starts with the correct config
+      icecast -c /etc/conf_files/icecast.xml  # Ensure Icecast starts with the correct config
 
   
