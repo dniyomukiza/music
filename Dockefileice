@@ -10,6 +10,5 @@ RUN ls -l /etc
 COPY icecast.xml /etc/icecast.xml
 RUN cat /etc/icecast.xml
 
-
 # Start Icecast with the custom configuration file
 CMD ["icecast", "-c", "/etc/icecast.xml"]
