@@ -2,7 +2,7 @@
 FROM deepcomp/icecast2:latest
 
 # Copy your local icecast.xml configuration into the container
-RUN chmod 644 /etc/icecast.xml
+
 RUN rm -f /etc/icecast.xml.sample
 RUN rm -f /etc/icecast.xml.sample
 # Debugging commands to check if the file was copied correctly
