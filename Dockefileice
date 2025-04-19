@@ -3,6 +3,12 @@ FROM deepcomp/icecast2:latest
 
 # Copy your local icecast.xml configuration into the container
 COPY icecast.xml /etc/icecast.xml
+RUN chmod 644 /etc/icecast.xml
+
+# Debugging commands to check if the file was copied correctly
+RUN ls -l /etc
+RUN cat /etc/icecast.xml
+
 
 # Start Icecast with the custom configuration file
 CMD ["icecast", "-c", "/etc/icecast.xml"]
