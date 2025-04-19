@@ -2,7 +2,7 @@ services:
   - type: web
     name: icecast2
     runtime: docker
-    dockerfilePath: ./Dockerfileice  # Path to the Dockerfile in your repo
+    dockerfilePath: ./Dockefileice  # Path to the Dockerfile in your repo
     plan: starter
 
     # Mount a disk for persistent storage if needed (e.g., for logs or configurations)
