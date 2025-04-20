@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: icecast22
+    name: liquidsoap
     runtime: docker
-    dockerfilePath: ./Dockefileice
+    dockerfilePath: ./Dockerfilel
     plan: starter
