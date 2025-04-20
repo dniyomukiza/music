@@ -5,7 +5,7 @@ RUN mkdir -p /liqfolder/scripts
 
 # Copy your Liquidsoap scripts from host into the image
 COPY scripts/ /liqfolder/scripts/
-
+EXPOSE 1234
 # Debug: List the contents of the directory at build time
 RUN echo "📂 Contents of /liqfolder/scripts:" && ls -la /liqfolder/scripts
 
