@@ -2,7 +2,7 @@
 
 services:
   app:
-    image: myapp:latest
+    image: didieryom//amdapp:latest
     container_name: myapp
     build:
       context: .
