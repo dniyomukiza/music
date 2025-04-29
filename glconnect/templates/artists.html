@@ -9,7 +9,7 @@
 <body>
     {% include 'messages.html' %}
     <div class="hero">
-        <img src="{{ url_for('static', filename='images/' + artist.profile_pic) }}" class="profile-pic">
+        <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" class="profile-pic">
         <h1 class="artist-name">{{ artist.artist_name }}</h1>
         <p class="bio">{{ artist.bio }}</p>
         <div class="follow-links">
