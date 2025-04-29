@@ -9,7 +9,7 @@ services:
     depends_on:
       - icecast2
     volumes:
-      - ./music-1:/usr/src/appdir
+      - ./music:/usr/src/appdir
     networks:
       - app_network
     command: >
