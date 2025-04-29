@@ -1,13 +1,28 @@
+/* Ensure the entire page uses full height */
+html, body {
+    height: 100%; 
+    margin: 0; 
+}
+
+/* Body should be a flex container with a column layout */
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure contact container takes up remaining space */
 .contact-container {
+    flex-grow: 1; 
     background-color: #ffffff9d;
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
     max-width: 600px;
     margin-left: 20px;
+    margin-right: 20px;  
 }
 
-
+/* Contact form styles */
 .contact-container h2 {
     font-size: 24px;
     font-weight: bold;
@@ -64,7 +79,7 @@
 }
 
 .form-input:not([rows]) {
-    width: 90%; 
+    width: 90%;
 }
 
 .form-input:focus {
@@ -101,11 +116,23 @@
 }
 
 .contact-container a {
-    color:black;
+    color: black;
     text-decoration: none; 
     font-weight: bold;
 }
 
 .contact-container a:hover {
     background-color: white;
+}
+
+/* Footer styles */
+footer {
+    width: 100%;
+    background-color: white;
+    color: black;
+    text-align: center;
+    padding: 20px 0;
+    position: relative;
+    bottom: 0;
+    margin-top: auto; 
 }
