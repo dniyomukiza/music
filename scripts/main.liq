@@ -24,7 +24,7 @@ radio = add([radio, switch([({ 0m0s }, clock)])])
 radio = mksafe(radio)
 
 # Uncomment this if you have a live input stream
-# live_show = input.harbor("http://167.172.224.239:8000/station")
+# live_show = input.harbor("http://localhost:8000/station")
 
 full = fallback(track_sensitive=false, [
   # live_show,
