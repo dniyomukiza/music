@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: icecast2
-    runtime: docker
-    dockerfilePath: ./Dockefileice
-    plan: starter
-
-  

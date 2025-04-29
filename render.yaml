@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: liquidsoap
-    runtime: docker
-    dockerfilePath: ./Dockerfilel
-    plan: starter
