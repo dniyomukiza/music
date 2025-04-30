@@ -46,7 +46,6 @@ numpy==2.0.2
 orjson==3.10.15
 packaging==24.2
 pandas==2.2.3
-panel==1.5.4
 param==2.1.1
 pillow==11.0.0
 platformdirs==4.3.6
