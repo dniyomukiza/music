@@ -13,7 +13,6 @@ RUN pip install -r requirements.txt
 # Expose the port if the app serves HTTP requests (e.g., Flask app)
 EXPOSE 5000
 
-# Command to run the Python app
-CMD ["python", "run.py"]
-#CMD ["sh", "-c", "python run.py & uvicorn glconnect.voc:app --reload --host 0.0.0.0 --port 8001"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "run:app"]
+
 
