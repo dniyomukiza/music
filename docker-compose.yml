@@ -41,6 +41,20 @@ services:
       - app_network
     command: /usr/bin/icecast -c /etc/icecast.xml -b
     
+  certbot:
+      image: certbot/certbot
+      container_name: certbot
+      volumes:
+        - ./certbot/www:/var/www/certbot
+        - ./certbot/conf:/etc/letsencrypt
+      entrypoint: >
+        sh -c "certbot certonly --webroot --webroot-path=/var/www/certbot
+        --email didyom1@gmail.com --agree-tos --no-eff-email
+        -d www.glc.cool"
+      depends_on:
+        - nginx
+      networks:
+        - app_network
 
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
