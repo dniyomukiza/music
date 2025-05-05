@@ -34,7 +34,7 @@ function addToPlaylist(songId, songName, userId) {
 // Save the newly added song to the backend
 function saveSongToBackend(songId, userId) {
     // Instead of sending the whole playlist, just send the newly added song
-    fetch('http://167.172.224.239:5000/art/add_to_playlist', {  // Use the add_to_playlist endpoint
+    fetch('https://www.glc.cool/art/add_to_playlist', {  // Use the add_to_playlist endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_id: songId })  // Only send the new song
@@ -125,7 +125,7 @@ function savePlaylist(userId) {
 
     const songIds = playlist.map(song => song.id);
 
-    fetch('http://167.172.224.239:5000/art/save_playlist', {
+    fetch('https://www.glc.cool/art/save_playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_ids: songIds })
@@ -137,7 +137,7 @@ function savePlaylist(userId) {
 
 // Delete song from playlist
 function deleteSongFromBackend(songId) {
-    fetch('http://167.172.224.239:5000/art/delete_song_from_playlist', {
+    fetch('https://www.glc.cool/art/delete_song_from_playlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ song_id: songId })
@@ -152,7 +152,7 @@ function deleteSongFromBackend(songId) {
 
 // Fetch playlist from backend
 function fetchUserPlaylist(userId) {
-    fetch(`http://167.172.224.239:5000/art/get_playlist/${userId}`, {
+    fetch(`https://www.glc.cool/art/get_playlist/${userId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     })
