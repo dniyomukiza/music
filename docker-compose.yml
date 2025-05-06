@@ -60,7 +60,17 @@ services:
     networks:
       - app_network
 
-
+  api_fastapi:
+    image: fastapi:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.uvi  
+    ports:
+      - "8001:8001"
+    depends_on:
+      - db
+    networks:
+      - app_network
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
     container_name: liquidsoap_service
