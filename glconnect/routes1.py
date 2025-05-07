@@ -9,7 +9,7 @@ from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager
 
 bp1 = Blueprint('routes1', __name__)
-API_URL = "http://127.0.0.1:8001/word/"
+API_URL = "https://www.glc.cool/word/"
 login_manager = LoginManager()
 @login_manager.user_loader
 def load_user(user_id):

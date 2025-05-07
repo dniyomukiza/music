@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}GLC Streaming{% endblock %}</title>
+  <title>{% block title %}GLC content streaming{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../static/home.css">
   <style>
@@ -99,19 +99,36 @@
 
 <header>
   <div class="nav-container">
+    <img src="{{ url_for('static', filename='images/logo.jpg') }}"
+     alt="Logo"
+     style="
+       width: 100%;
+       max-width: 100px;
+       height: auto;
+       border-radius: 30%;
+     "
+     onload="
+       if (window.innerWidth <= 768) {
+         this.style.maxWidth = '60px';
+       }
+     ">
+
+
     <nav>
+      
       <ul>
-        <li><a href="https://glconnect.onrender.com/about">About</a></li>
-        <li><a href="https://glconnect.onrender.com/home">Home</a></li>
-        <li><a href="https://glconnect.onrender.com/blog/contact">Contact</a></li>
-        <li><a href="http://127.0.0.1:8001">API</a></li>
+        <li><a href="https://www.glc.cool/about">About</a></li>
+        <li><a href="https://www.glc.cool/home">Home</a></li>
+        <!--<li><a href="https://www.glc.cool/blog/contact">Contact</a></li>-->
+        <li><a href="https://www.glc.cool/word">API</a></li>
       </ul>
     </nav>
     <div class="menu-toggle" onclick="toggleMenu()">☰</div>
     <div id="verticalMenu" class="vertical-menu">
       <ul>
-        <li><a href="/music/artist_profile">🎵For artists</a></li>
-        <li><a href="/writer/profile">📰 For authors</a></li>
+        <li><a href="/music/artist_profile">🎵 For artists</a></li>
+        <li><a href="/writer/profile">📚 For authors</a></li>
+        <li><a href="/writer/profile">🧠 For researchers</a></li>
         <li><a href="/blog/blogs">✍️ For bloggers</a></li>
         <li><a href="/prof/uprofile">Others</a></li>
       </ul>
@@ -120,7 +137,7 @@
 </header>
 
 <audio controls>
-  <source src="http://localhost:8000/station" type="audio/ogg">
+  <source src="https://www.glc.cool/station"type="audio/mpeg">
 </audio>
 
 <main>
@@ -153,7 +170,6 @@
     }
   });
 </script>
-
 </body>
 </html>
 
