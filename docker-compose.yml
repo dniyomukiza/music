@@ -67,6 +67,8 @@ services:
       dockerfile: Dockerfile.uvi  
     ports:
       - "8001:8001"
+    volumes:
+      - /etc/glconfig.json:/etc/glconfig.json 
     networks:
       - app_network
 

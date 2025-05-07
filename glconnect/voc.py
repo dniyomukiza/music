@@ -12,7 +12,7 @@ from sqlalchemy.orm import declarative_base
 
 # Load environment variables
 load_dotenv()
-db_url = os.getenv('DB_URL')  # Make sure to set this in your environment or config
+db_url = os.getenv('DB_URL')  
 
 # Set up the database engine and session
 engine = create_engine(db_url)  # Using the environment DB_URL
