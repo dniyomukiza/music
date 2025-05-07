@@ -8,6 +8,7 @@ services:
       - icecast2
     volumes:
       - ./music:/usr/src/appdir
+      - /etc/glconfig.json:/etc/glconfig.json 
     networks:
       - app_network
     command: >
@@ -69,6 +70,8 @@ services:
       - "8001:8001"
     networks:
       - app_network
+    volumes:
+      - /etc/glconfig.json:/etc/glconfig.json 
 
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
