@@ -61,18 +61,6 @@ services:
     networks:
       - app_network
 
-  api_fastapi:
-    image: fastapi:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.uvi  
-    ports:
-      - "8001:8001"
-    networks:
-      - app_network
-    volumes:
-      - /etc/glconfig.json:/etc/glconfig.json 
-
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
     container_name: liquidsoap_service
