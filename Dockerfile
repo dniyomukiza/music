@@ -20,4 +20,5 @@ RUN pip install -r requirements.txt
 EXPOSE 5000
 
 # Command to run the app (using gunicorn to serve)
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "run:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "run:app", "--timeout", "60"]
+

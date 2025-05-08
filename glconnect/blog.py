@@ -3,6 +3,7 @@ import json
 import smtplib
 from .models import *
 from .forms import *
+from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory
 from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
@@ -11,8 +12,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask_ckeditor import CKEditor,upload_success, upload_fail
 
-with open('/etc/glconfig.json') as json_file:
-    config = json.load(json_file)
+load_dotenv()
+'''with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)'''
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
@@ -113,10 +115,11 @@ def contact():
         def send_email():
             server = None
             try:
+                print("MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
+                print("MAIL_PASSWORD:", os.getenv("MAIL_PASSWORD"))
                 server = smtplib.SMTP('smtp.gmail.com', 587)
-                server.set_debuglevel(1) 
                 server.starttls()
-                server.login(config.get("MAIL_USERNAME"), config.get("MAIL_PASSWORD"))
+                server.login(os.getenv("MAIL_USERNAME"), os.getenv("MAIL_PASSWORD"))
 
                 # Create the email content
                 subject = 'EMAIL FROM USERS'
@@ -127,7 +130,7 @@ def contact():
                 message.attach(MIMEText(body, 'plain'))
 
                 # Send the email
-                server.sendmail(form.email.data, config.get("MAIL_USERNAME"), message.as_string())
+                server.sendmail(form.email.data, os.getenv("MAIL_USERNAME"), message.as_string())
                 
             except Exception as e:
                 flash(f"An error occurred while sending the email: {str(e)}", "error")
@@ -135,8 +138,7 @@ def contact():
                 flash("Thank you for reaching out, we will get back to you asap")
 
             finally:
-                if server:
-                    server.quit()
+                server.quit()
 
         send_email()
         form.process()
@@ -180,7 +182,7 @@ def upload():
     return upload_fail(message='No file uploaded', filename=None)
 
 client = ElevenLabs(
-    api_key=config.get("ELEVENLABS_API_KEY"),
+    api_key=os.getenv("ELEVENLABS_API_KEY"),
 )
 
 
