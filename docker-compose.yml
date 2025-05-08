@@ -15,6 +15,7 @@ services:
       sh -c "gunicorn -b 0.0.0.0:5000 run:app"
     ports:
       - "5000:5000"
+      - "8001:8001"
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=development
