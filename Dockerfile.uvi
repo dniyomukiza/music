@@ -3,7 +3,10 @@ FROM python:3.10-slim
 
 # Set the working directory inside the container
 WORKDIR /app
-
+# Copy the virtual environment into the container (myenv should be in the same directory as your Dockerfile)
+COPY myenv /appdir/myenv
+# Set the environment to use the virtualenv
+ENV PATH="/appdir/myenv/bin:$PATH"
 # Copy only the necessary files for the app to work
 COPY glconnect/voc.py /app/glconnect/voc.py           
 COPY glconnect/models.py /app/glconnect/models.py   
