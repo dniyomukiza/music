@@ -8,8 +8,10 @@ from flask_login import current_user, login_required, logout_user
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask_ckeditor import CKEditor,upload_success, upload_fail
-
+from dotenv import load_dotenv
 import smtplib
+
+load_dotenv()
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
@@ -113,7 +115,7 @@ def contact():
             try:
                 server = smtplib.SMTP('smtp.gmail.com', 587)
                 server.starttls()
-                server.login(os.environ.get("MAIL_USERNAME"), os.environ.get("MAIL_PASSWORD"))
+                server.login(os.getenv("MAIL_USERNAME"), os.getenv("MAIL_PASSWORD"))
 
                 # Create the email content
                 subject = 'EMAIL FROM USERS'
@@ -124,7 +126,7 @@ def contact():
                 message.attach(MIMEText(body, 'plain'))
 
                 # Send the email
-                server.sendmail(form.email.data, os.environ.get("MAIL_USERNAME"), message.as_string())
+                server.sendmail(form.email.data, os.getenv("MAIL_USERNAME"), message.as_string())
                 
             except Exception as e:
                 flash(f"An error occurred while sending the email: {str(e)}", "error")
