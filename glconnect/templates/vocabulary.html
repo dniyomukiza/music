@@ -6,7 +6,8 @@
     <div class="container">
         {% include 'messages.html' %}
         <h1>Learn Kinyarwanda</h1>
-        <form action="{{ url_for('routes1.findwords') }}" method="GET" class="search-form">
+        <form action="https://glc.cool:8001/word/" method="GET" class="search-form"></form>
+        <!--<form action="{{ url_for('routes1.findwords') }}" method="GET" class="search-form">-->
             <input type="text" placeholder="Search a word" name="word" required>
             <button type="submit">Search</button>
         </form>
