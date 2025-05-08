@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
-db_url = os.getenv('DB_URL')
+db_url = config.get('DB_URL')
 Base = declarative_base()
 
 # Connect to PostgreSQL using the URL from environment variables

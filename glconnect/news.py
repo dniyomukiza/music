@@ -1,4 +1,5 @@
 import os
+import json
 import openai
 import time
 from dotenv import load_dotenv
@@ -6,11 +7,11 @@ from google.cloud import texttospeech
 import sys
 import select
 
-# Load environment variables
-load_dotenv()
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 
 # Load your OpenAI API key from an environment variable
-openai.api_key = os.getenv("OPENAI_AI_KEY")
+openai.api_key = config.get("OPENAI_AI_KEY")
 
 # Check for API key
 if not openai.api_key:

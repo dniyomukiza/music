@@ -6,7 +6,7 @@ from langchain_xai import ChatXAI
 load_dotenv()
 
 # Retrieve the GROK_API key
-grok_api_key = os.getenv("GROK_API")
+grok_api_key = config.get("GROK_API")
 if not grok_api_key:
     raise ValueError("GROK_API environment variable is not set in the .env file.")
 

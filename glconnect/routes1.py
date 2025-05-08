@@ -1,5 +1,6 @@
 import requests
-import re,os
+import re
+import json
 import smtplib
 from glconnect.forms import *
 from glconnect.models import*
@@ -8,6 +9,8 @@ from flask import render_template, request, flash,redirect,url_for,current_app,B
 from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager
 
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 bp1 = Blueprint('routes1', __name__)
 API_URL = "https://www.glc.cool/word/"
 login_manager = LoginManager()
@@ -65,8 +68,8 @@ def register():
     return render_template('register.html', title='Register', form=form)
 
 def send_confirmation_email(to_email, confirm_url):
-    sender_email = os.getenv("MAIL_USERNAME")
-    app_password = os.getenv("MAIL_PASSWORD")
+    sender_email = config.get("MAIL_USERNAME")
+    app_password = config.get("MAIL_PASSWORD")
 
     subject = "Please verify your account"
     body = f"Click the link below to confirm your email:\n\n{confirm_url}"
@@ -205,8 +208,8 @@ def reset_password_request():
     return render_template('passreq.html', title='Reset Password', form=form)
   
 def send_reset_email(to_email, reset_url):
-    sender_email = os.getenv("MAIL_USERNAME")
-    app_password = os.getenv("MAIL_PASSWORD")
+    sender_email = config.get("MAIL_USERNAME")
+    app_password = config.get("MAIL_PASSWORD")
 
     subject = "Reset Your Password"
     body = f"Click the link below to reset your password:\n\n{reset_url}"

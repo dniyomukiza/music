@@ -8,7 +8,7 @@ load_dotenv()
 
 def start_icecast():
     """Start the Icecast server."""
-    icecast_config = os.getenv('ICECAST_CONFIG')
+    icecast_config = config.get('ICECAST_CONFIG')
     if not icecast_config:
         print("ICECAST_CONFIG is not set in the .env file")
         return

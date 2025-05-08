@@ -1,13 +1,14 @@
 import os
+import json
 from flask import Flask
 from subprocess import run
 from dotenv import load_dotenv
 from models import db, Song
 
-# Load environment variables
-load_dotenv()
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = "abarayon"
 db.init_app(app)
@@ -161,7 +162,7 @@ if __name__ == "__main__":
         renamer.clean_music_names(output_folder)
 
         # Download and convert audio
-        playlist_url = os.getenv("YT_DOWNLOADS")
+        playlist_url = config.get("YT_DOWNLOADS")
         print("playlist", playlist_url)
         if playlist_url:
             downloader = AudioDownloader(playlist_url=playlist_url, output_folder=output_folder)

@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 # Load your OpenAI API key from an environment variable
-openai.api_key = os.getenv("OPENAI_AI_KEY")
-bearer_token = os.getenv("BEARER_TOKEN")
+openai.api_key = config.get("OPENAI_AI_KEY")
+bearer_token = config.get("BEARER_TOKEN")
 
 # Check for API keys
 if not openai.api_key:

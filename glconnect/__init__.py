@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask
 from .models import db, User
 from .voc import insert_data
@@ -9,13 +10,12 @@ from flask_mail import Mail
 from dotenv import load_dotenv
 from flask_ckeditor import CKEditor
 
-# Load environment variables
-load_dotenv()
-
 # Initialize extensions
 mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 
 def create_app():
     app = Flask(__name__)
@@ -24,16 +24,16 @@ def create_app():
     app.config['CKEDITOR_SERVE_LOCAL'] = True
     app.config['CKEDITOR_PKG_TYPE'] = 'full'   
     # Mail configuration
-    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
-    app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
+    app.config['MAIL_SERVER'] = config.get('MAIL_SERVER')
+    app.config['MAIL_PORT'] = config.get('MAIL_PORT')
     app.config['MAIL_USE_SSL'] = True
     app.config['MAIL_USE_TLS'] = False
-    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+    app.config['MAIL_PASSWORD'] = config.get('MAIL_PASSWORD')
+    app.config['MAIL_USERNAME'] = config.get('MAIL_USERNAME')
+    app.config['MAIL_DEFAULT_SENDER'] = config.get('MAIL_DEFAULT_SENDER')
     
     # Database and JWT configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URL')
+    app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["JWT_SECRET_KEY"] = "abarayon"
 

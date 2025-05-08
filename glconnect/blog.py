@@ -1,4 +1,6 @@
 import os
+import json
+import smtplib
 from .models import *
 from .forms import *
 from elevenlabs.client import ElevenLabs
@@ -8,13 +10,11 @@ from flask_login import current_user, login_required, logout_user
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask_ckeditor import CKEditor,upload_success, upload_fail
-from dotenv import load_dotenv
-import smtplib
 
-load_dotenv()
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
-
 
 @blog.route("/blogpost",methods=['GET','POST'])
 @login_required
@@ -115,7 +115,7 @@ def contact():
             try:
                 server = smtplib.SMTP('smtp.gmail.com', 587)
                 server.starttls()
-                server.login(os.getenv("MAIL_USERNAME"), os.getenv("MAIL_PASSWORD"))
+                server.login(config.get("MAIL_USERNAME"), config.get("MAIL_PASSWORD"))
 
                 # Create the email content
                 subject = 'EMAIL FROM USERS'
@@ -126,7 +126,7 @@ def contact():
                 message.attach(MIMEText(body, 'plain'))
 
                 # Send the email
-                server.sendmail(form.email.data, os.getenv("MAIL_USERNAME"), message.as_string())
+                server.sendmail(form.email.data, config.get("MAIL_USERNAME"), message.as_string())
                 
             except Exception as e:
                 flash(f"An error occurred while sending the email: {str(e)}", "error")
@@ -178,7 +178,7 @@ def upload():
     return upload_fail(message='No file uploaded', filename=None)
 
 client = ElevenLabs(
-    api_key=os.getenv("ELEVENLABS_API_KEY"),
+    api_key=config.get("ELEVENLABS_API_KEY"),
 )
 
 
