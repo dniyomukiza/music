@@ -1,23 +1,21 @@
-# Start from the Python 3.10 slim image
+# Use slim Python 3.10 image
 FROM python:3.10-slim
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
-# Copy the virtual environment into the container (myenv should be in the same directory as your Dockerfile)
-COPY myenv /appdir/myenv
-# Set the environment to use the virtualenv
-ENV PATH="/appdir/myenv/bin:$PATH"
-# Copy only the necessary files for the app to work
-COPY glconnect/voc.py /app/glconnect/voc.py           
-COPY glconnect/models.py /app/glconnect/models.py   
-COPY requirements.txt /app/requirements.txt            
 
-# Install dependencies
+# Copy app code
+COPY glconnect /app/glconnect
+COPY requirements.txt .
+
+# Install dependencies inside the container
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port that the FastAPI app will run on
+# Expose port
 EXPOSE 8001
 
+# Run the app
 CMD ["uvicorn", "glconnect.voc:app", "--host", "0.0.0.0", "--port", "8001"]
+
 
 

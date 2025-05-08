@@ -115,8 +115,8 @@ def contact():
         def send_email():
             server = None
             try:
-                print("MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
-                print("MAIL_PASSWORD:", os.getenv("MAIL_PASSWORD"))
+                print("MAIL_USERNAME value:", os.getenv("MAIL_USERNAME"))
+                print("MAIL_PASSWORD value:", os.getenv("MAIL_PASSWORD"))
                 server = smtplib.SMTP('smtp.gmail.com', 587)
                 server.starttls()
                 server.login(os.getenv("MAIL_USERNAME"), os.getenv("MAIL_PASSWORD"))
