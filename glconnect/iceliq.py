@@ -1,10 +1,12 @@
 # services.py
 import os
+import json
 import subprocess
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 
 def start_icecast():
     """Start the Icecast server."""
