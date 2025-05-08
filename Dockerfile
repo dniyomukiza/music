@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
 
 # Run with gunicorn
-CMD ["gunicorn", "glconnect.voc:app", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8001", "--timeout", "60"]
+CMD ["sh", "-c", "gunicorn glconnect.voc:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8001 & uvicorn glconnect.voc:app --host 0.0.0.0 --port 5000"]
+
 
 
 
