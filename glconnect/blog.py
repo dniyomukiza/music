@@ -109,6 +109,7 @@ def contact():
     form = ContactForm()
     if form.validate_on_submit():
         def send_email():
+            server = None
             try:
                 server = smtplib.SMTP('smtp.gmail.com', 587)
                 server.starttls()
