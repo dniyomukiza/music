@@ -10,11 +10,11 @@ COPY . .
 # Install dependencies directly in container (no myenv)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the app port
-EXPOSE 5000
+# Expose the app ports for both Flask and FastAPI
+EXPOSE 5000 8001
 
-# Run with gunicorn
-CMD ["sh", "-c", "gunicorn glconnect.voc:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8001 & uvicorn glconnect.voc:app --host 0.0.0.0 --port 5000"]
+# Run Flask on port 5000 and FastAPI on port 8001 in background
+CMD ["sh", "-c", "gunicorn -b 0.0.0.0:5000 run:app & uvicorn glconnect.voc:app --host 0.0.0.0 --port 8001"]
 
 
 
