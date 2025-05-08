@@ -113,9 +113,8 @@ def contact():
         def send_email():
             server = None
             try:
-                print("MAIL_USERNAME:", config.get("MAIL_USERNAME"))
-                print("MAIL_PASSWORD:", config.get("MAIL_PASSWORD"))
                 server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.set_debuglevel(1) 
                 server.starttls()
                 server.login(config.get("MAIL_USERNAME"), config.get("MAIL_PASSWORD"))
 
@@ -136,7 +135,8 @@ def contact():
                 flash("Thank you for reaching out, we will get back to you asap")
 
             finally:
-                server.quit()
+                if server:
+                    server.quit()
 
         send_email()
         form.process()
