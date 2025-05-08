@@ -14,12 +14,7 @@ with open('/etc/glconfig.json') as json_file:
    config=json.load(json_file)
 
 # Load environment variables
-<<<<<<< HEAD
-db_url = config.get('DB_URL')  # Make sure to set this in your environment or config
-=======
-load_dotenv()
-db_url = os.getenv('DB_URL')  
->>>>>>> 30e12ea599c98bb84d32ecbc6c49c177e422f5d6
+db_url = config.get('DB_URL')  
 
 # Set up the database engine and session
 engine = create_engine(db_url)  # Using the environment DB_URL
