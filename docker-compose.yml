@@ -81,6 +81,7 @@ services:
       - "8002:8002"
     volumes:
       - ./glconnect:/app/glconnect
+      - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
 
