@@ -142,10 +142,15 @@ def findwords():
         return render_template('vocabulary.html', word=word_data)
     return render_template('vocabulary.html', word=None)
 
+API_URL = "https://www.glc.cool/word/"
+
 def word_details(word):
     try:
+        # Construct the full URL with the word
+        url = f"{API_URL}{word}"  # API_URL + word (e.g., https://www.glc.cool/word/{word})
+        
         # Make the API request
-        response = requests.get(API_URL + word)
+        response = requests.get(url)
         
         # If the request was successful, return the JSON response
         if response.status_code == 200:
@@ -155,7 +160,6 @@ def word_details(word):
     except requests.exceptions.RequestException as e:
         # In case of an error with the API request
         return {"error": f"Error fetching word details: {e}"}
-
 
 @bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
