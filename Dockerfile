@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000 8001
 
 # Run Flask on port 5000 and FastAPI on port 8001 in background
-CMD ["sh", "-c", "gunicorn -b 0.0.0.0:5000 run:app & uvicorn glconnect.voc:app --host 0.0.0.0 --port 8001"]
+CMD ["sh", "-c", "gunicorn -b 0.0.0.0:5000 run:app"]
 
 
 
