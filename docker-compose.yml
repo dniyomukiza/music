@@ -73,6 +73,17 @@ services:
       - app_network
     command: liquidsoap /liqfolder/scripts/main.liq
 
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.uvi
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./glconnect:/app/glconnect
+    networks:
+      - app_network
+
 networks:
   app_network:
     driver: bridge
