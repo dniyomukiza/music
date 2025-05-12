@@ -136,30 +136,33 @@ def playlist():
 
 @bp1.route('/words', methods=['GET', 'POST'])
 def findwords():
-    word = request.args.get('word')
+    word = None
+
+    if request.method == 'POST':
+        word = request.form.get('word')  # This correctly retrieves the word from the POSTed form
+        print(f"[DEBUG] Word received from form: {word}")
+    elif request.method == 'GET':
+        word = request.args.get('word')  # Optional: handle query string like /words?word=xxx
+        print(f"[DEBUG] Word received from query string: {word}")
     if word:
         word_data = word_details(word)
+        print(f"[DEBUG] Word data fetched from API: {word_data}")
         return render_template('vocabulary.html', word=word_data)
+    print("[DEBUG] No word submitted.")
     return render_template('vocabulary.html', word=None)
-
-API_URL = "https://www.glc.cool/word/"
 
 def word_details(word):
     try:
-        # Construct the full URL with the word
-        url = f"{API_URL}{word}"  # API_URL + word (e.g., https://www.glc.cool/word/{word})
-        
-        # Make the API request
+        url = f"{API_URL}{word}"
         response = requests.get(url)
-        
-        # If the request was successful, return the JSON response
         if response.status_code == 200:
             return response.json()
         else:
             return {"error": "Could not fetch details for this word"}
     except requests.exceptions.RequestException as e:
-        # In case of an error with the API request
         return {"error": f"Error fetching word details: {e}"}
+
+
 
 @bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
