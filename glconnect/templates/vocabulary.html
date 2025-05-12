@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 
 {% block images %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='./words.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='words.css') }}">
 
     <div class="container">
         {% include 'messages.html' %}
         <h1>Learn Kinyarwanda</h1>
-        <form action="https://glc.cool:8001/word/" method="GET" class="search-form"></form>
-        <!--<form action="{{ url_for('routes1.findwords') }}" method="GET" class="search-form">-->
+        
+        <!-- Form to search for a word -->
+        <form action="{{ url_for('bp1.findwords') }}" method="POST" class="search-form">
             <input type="text" placeholder="Search a word" name="word" required>
             <button type="submit">Search</button>
         </form>
