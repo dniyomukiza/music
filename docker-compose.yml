@@ -78,7 +78,7 @@ services:
       context: .
       dockerfile: Dockerfile.uvi
     ports:
-      - "8001:8001"
+      - "8002:8002"
     volumes:
       - ./glconnect:/app/glconnect
     networks:
