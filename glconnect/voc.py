@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from typing import Generator
 from sqlalchemy import create_engine
@@ -10,9 +11,11 @@ from dotenv import load_dotenv
 from glconnect.models import WordsData,db
 from sqlalchemy.orm import declarative_base
 
-load_dotenv()
 
-db_url = os.getenv('DB_URL')
+with open("/etc/glconfig.json") as f:
+    config = json.load(f)
+
+db_url = config.get("DB_URL")
 
 # Set up the database engine and session
 engine = create_engine(db_url)  # Using the environment DB_URL
