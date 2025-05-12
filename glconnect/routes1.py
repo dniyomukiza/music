@@ -139,16 +139,12 @@ def findwords():
     word = None
 
     if request.method == 'POST':
-        word = request.form.get('word')  # This correctly retrieves the word from the POSTed form
-        print(f"[DEBUG] Word received from form: {word}")
+        word = request.form.get('word')
     elif request.method == 'GET':
-        word = request.args.get('word')  # Optional: handle query string like /words?word=xxx
-        print(f"[DEBUG] Word received from query string: {word}")
+        word = request.args.get('word')
     if word:
         word_data = word_details(word)
-        print(f"[DEBUG] Word data fetched from API: {word_data}")
         return render_template('vocabulary.html', word=word_data)
-    print("[DEBUG] No word submitted.")
     return render_template('vocabulary.html', word=None)
 
 def word_details(word):
