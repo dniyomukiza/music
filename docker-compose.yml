@@ -72,11 +72,9 @@ services:
     networks:
       - app_network
     command: liquidsoap /liqfolder/scripts/main.liq
-
   fastapi:
-    build:
-      context: .
-      dockerfile: Dockerfile.uvi
+    image: fastapi:latest
+    container_name: fastapi
     ports:
       - "8002:8002"
     volumes:
@@ -84,6 +82,8 @@ services:
       - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
+
+ 
 
 networks:
   app_network:
