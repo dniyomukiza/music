@@ -4,8 +4,12 @@ __pycache__
 .DS_Store
 /glconnect/static/afro
 /glconnect/static/gosp3
+/glconnect/static/gospel2
 /glconnect/static/gospel
 /glconnect/static/mixes
 /glconnect/__pycache__/
 migrations
 .vscode/
+afro.m3u
+gosp3.m3u
+gospel.m3u
