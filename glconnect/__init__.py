@@ -31,7 +31,8 @@ def create_app():
     app.config['MAIL_PASSWORD'] = config.get('MAIL_PASSWORD')
     app.config['MAIL_USERNAME'] = config.get('MAIL_USERNAME')
     app.config['MAIL_DEFAULT_SENDER'] = config.get('MAIL_DEFAULT_SENDER')
-    
+    app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
+    app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
     # Database and JWT configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

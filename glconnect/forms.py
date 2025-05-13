@@ -1,11 +1,10 @@
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm,RecaptchaField
 from flask import flash
 from .models import User
 from flask_wtf.file import FileAllowed
 from flask_ckeditor import CKEditorField
 from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,TextAreaField,FileField,IntegerField
 from wtforms.validators import DataRequired, Email, EqualTo, Length,ValidationError,Optional
-
 class RegistrationForm(FlaskForm):
     fname = StringField('First Name', validators=[DataRequired()], render_kw={"placeholder": "First Name"})
     lname = StringField('Last Name', validators=[DataRequired()], render_kw={"placeholder": "Last Name"})
@@ -14,6 +13,7 @@ class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()], render_kw={"placeholder": "Email"})
     role = SelectField('Role', choices=[('artist', 'Artist'), ('writer', 'Writer'), ('blogger', 'Blogger'), ('other', 'Other')], default='other')
     submit = SubmitField('Sign up')
+    recap=RecaptchaField()
 
     def validate_username(self, username):
         user_exists = User.query.filter_by(username=username.data).first()
@@ -37,6 +37,7 @@ class SlangForm(FlaskForm):
     current = StringField('Current Meaning', validators=[DataRequired()])
     example = StringField('Example Sentence', validators=[DataRequired()])
     submit = SubmitField('Submit Slang')
+    recap=RecaptchaField()
 
     
 class ContactForm(FlaskForm):
@@ -45,15 +46,18 @@ class ContactForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     message = TextAreaField('Message', validators=[DataRequired(), Length(max=500)])
     submit = SubmitField('Submit')
+    recap=RecaptchaField()
 
 class PostForm(FlaskForm):
     title=StringField("Title",validators=[DataRequired()],render_kw={"placeholder":"Blog Title"})
     content = CKEditorField('Content')
     submit=SubmitField('Post')
+    recap=RecaptchaField()
 
 class ResetRequestForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     submit = SubmitField('Request Password Reset')
+    recap=RecaptchaField()
 
 class PasswordResetForm(FlaskForm):
     password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
@@ -66,6 +70,7 @@ class WriterProfileForm(FlaskForm):
     bio = TextAreaField('Bio')
     profile_picture = FileField('Profile Picture', validators=[FileAllowed(['jpg', 'jpeg', 'png'])])
     submit = SubmitField('Save Profile')
+    recap=RecaptchaField()
 
 class UploadBookForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired(), Length(min=3, max=200)])
@@ -74,3 +79,4 @@ class UploadBookForm(FlaskForm):
     purchase_link = StringField('Purchase Link', validators=[Optional(), Length(max=300)])
     cover_image = FileField('Cover Image', validators=[Optional()])
     submit = SubmitField('Upload Book')
+    recap=RecaptchaField()
