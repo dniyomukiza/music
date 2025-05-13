@@ -9,7 +9,7 @@ clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
 gosp3 = playlist("/liqfolder/gosp3.m3u")
 # === Time-based switching between day and night playlists ===
 radio = switch([
-  ({0w and true}, gosp3),  
+  ({1w and true}, gosp3),  
   ({ 6h-22h }, day),   # 6AM to 10PM = day
   ({ 22h-6h }, night)  # 10PM to 6AM = night
 ])
