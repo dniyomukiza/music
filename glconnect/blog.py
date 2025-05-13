@@ -1,6 +1,7 @@
 import os
 import json
 import smtplib
+import requests
 from .models import *
 from .forms import *
 from dotenv import load_dotenv
@@ -112,38 +113,46 @@ def delete_post(post_id):
 def contact():
     form = ContactForm()
     if form.validate_on_submit():
-        def send_email():
-            server = None
-            try:
-                print("MAIL_USERNAME value:", os.getenv("MAIL_USERNAME"))
-                print("MAIL_PASSWORD value:", os.getenv("MAIL_PASSWORD"))
-                server = smtplib.SMTP('smtp.gmail.com', 587)
-                server.starttls()
-                server.login(os.getenv("MAIL_USERNAME"), os.getenv("MAIL_PASSWORD"))
+        sender_email = form.email.data
+        sender_name = form.FirstName.data
+        message = form.message.data  # Adjust if your form has a `message` field
 
-                # Create the email content
-                subject = 'EMAIL FROM USERS'
-                body = f" First name: {form.FirstName.data} \n Last name: {form.LastName.data} \n Email: {form.email.data}\n Message: {form.message.data}"
-                message = MIMEMultipart()
-                message['From'] = form.email.data
-                message['Subject'] = subject
-                message.attach(MIMEText(body, 'plain'))
+        # Set your Mailtrap API token
+        api_token = os.getenv("MAIL_TRAP")
+        print("API Token:", os.getenv("MAIL_TRAP"))
+        recipient_email = os.getenv("MAIL_USERNAME")
 
-                # Send the email
-                server.sendmail(form.email.data, os.getenv("MAIL_USERNAME"), message.as_string())
-                
-            except Exception as e:
-                flash(f"An error occurred while sending the email: {str(e)}", "error")
-            else:
-                flash("Thank you for reaching out, we will get back to you asap")
+        # Build the payload for the raw email
+        payload = {
+            "from": {
+                "email": sender_email,
+                "name": sender_name
+            },
+            "to": [{
+                "email": recipient_email,
+                "name": "GLC Admin"
+            }],
+            "subject": "New Contact Form Submission",
+            "text": message
+        }
 
-            finally:
-                server.quit()
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Api-Token": api_token
+        }
 
-        send_email()
-        form.process()
-        
-    return render_template("contact.html", form=form)
+        # Send the request
+        response = requests.post("https://send.api.mailtrap.io/api/send", json=payload, headers=headers)
+
+        if response.status_code == 200:
+            flash('Your message has been sent!', 'success')
+        else:
+            flash(f'Failed to send message: {response.text}', 'danger')
+
+        return redirect(url_for('blog.contact'))
+
+    return render_template('contact.html', form=form)
 
 
 # Define the UPLOAD_FOLDER and ensure it exists
