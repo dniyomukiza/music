@@ -8,7 +8,7 @@ WORKDIR /app
 COPY glconnect/voc.py /app/glconnect/voc.py           
 COPY glconnect/models.py /app/glconnect/models.py   
 COPY requirements.txt /app/requirements.txt            
-
+RUN pip install uvicorn
 # Install dependencies
 #RUN pip install --no-cache-dir -r requirements.txt
 
