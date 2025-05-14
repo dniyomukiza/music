@@ -51,14 +51,14 @@ def update(post_id):
      post=Post.query.get_or_404(post_id)
      return render_template("singlepost.html",title=post.title, post=post)
 
-blog.route('/contact', methods=['GET', 'POST'])
+@blog.route('/contact', methods=['GET', 'POST'])
 def contact():
-    useremail=form.email.data
-    adminemail=os.getenv("MAIL_USERNAME")
-    api_key=os.getenv("MAIL_TRAP")
-    print(useremail,adminemail,api_key)
     form = ContactForm()
+    adminemail = os.getenv("MAIL_USERNAME")
+    api_key = os.getenv("MAIL_TRAP")
+    print(api_key)
     if form.validate_on_submit():
+        useremail = form.email.data
         try:
             # Create the Mail object
             mail = Mail(
@@ -141,52 +141,6 @@ def delete_post(post_id):
     db.session.commit() 
     flash(" You blog post has been deleted!")
     return redirect(url_for("blog.blogs"))
-
-@blog.route('/contact', methods=['GET', 'POST'])
-def contact():
-    form = ContactForm()
-    if form.validate_on_submit():
-        sender_email = form.email.data
-        sender_name = form.FirstName.data
-        message = form.message.data  # Adjust if your form has a `message` field
-
-        # Set your Mailtrap API token
-        api_token = os.getenv("MAIL_TRAP")
-        print("API Token:", os.getenv("MAIL_TRAP"))
-        recipient_email = os.getenv("MAIL_USERNAME")
-
-        # Build the payload for the raw email
-        payload = {
-            "from": {
-                "email": sender_email,
-                "name": sender_name
-            },
-            "to": [{
-                "email": recipient_email,
-                "name": "GLC Admin"
-            }],
-            "subject": "New Contact Form Submission",
-            "text": message
-        }
-
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "Api-Token": api_token
-        }
-
-        # Send the request
-        response = requests.post("https://send.api.mailtrap.io/api/send", json=payload, headers=headers)
-
-        if response.status_code == 200:
-            flash('Your message has been sent!', 'success')
-        else:
-            flash(f'Failed to send message: {response.text}', 'danger')
-
-        return redirect(url_for('blog.contact'))
-
-    return render_template('contact.html', form=form)
-
 
 # Define the UPLOAD_FOLDER and ensure it exists
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'glconnect', 'static', 'uploads')
