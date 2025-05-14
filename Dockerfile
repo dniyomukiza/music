@@ -8,7 +8,7 @@ WORKDIR /appdir
 COPY . .
 
 # Install dependencies directly in container (no myenv)
-#RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Expose the app ports for both Flask and FastAPI
 EXPOSE 5000 8001
