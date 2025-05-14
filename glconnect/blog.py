@@ -1,16 +1,14 @@
 import os
-import json
-import smtplib
+import mailtrap as mt
 import requests
 from .models import *
 from .forms import *
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
+from mailtrap import MailtrapClient, Mail, Address
 from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory
 from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
 from flask_login import current_user, login_required, logout_user
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from flask_ckeditor import CKEditor,upload_success, upload_fail
 
 load_dotenv()
@@ -53,6 +51,41 @@ def update(post_id):
      post=Post.query.get_or_404(post_id)
      return render_template("singlepost.html",title=post.title, post=post)
 
+blog.route('/contact', methods=['GET', 'POST'])
+def contact():
+    useremail=form.email.data
+    adminemail=os.getenv("MAIL_USERNAME")
+    api_key=os.getenv("MAIL_TRAP")
+    print(useremail,adminemail,api_key)
+    form = ContactForm()
+    if form.validate_on_submit():
+        try:
+            # Create the Mail object
+            mail = Mail(
+                sender=Address(email=useremail, name="GLC Website User"),
+                to=[Address(email=adminemail)],
+                subject="GLC user message",
+                text=(
+                    f"First name: {form.FirstName.data}\n"
+                    f"Last name: {form.LastName.data}\n"
+                    f"Email: {form.email.data}\n"
+                    f"Message: {form.message.data}"
+                ),
+                category="User Contact"
+            )
+
+            # Send email using Mailtrap API
+            client = MailtrapClient(token=api_key)
+            client.send(mail)
+
+        except Exception as e:
+            flash(f"An error occurred while sending the email: {str(e)}", "error")
+        else:
+            flash("Thank you for reaching out. We will get back to you ASAP.", "success")
+
+        form.process()  # Clear the form after submission
+
+    return render_template("contact.html", form=form)
 
 @blog.route('/logout')
 @login_required

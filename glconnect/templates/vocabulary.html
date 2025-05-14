@@ -17,7 +17,6 @@
             {% if word.error %}
                 <p class="error-message">{{ word.error }}</p>
             {% else %}
-                <h2>{{ word.word }}</h2>
                 <div class="definitions">
                     <h3>Definitions:</h3>
                     <ul>
@@ -33,8 +32,7 @@
                             <li>{{ pos }}</li>
                         {% endfor %}
                     </ul>
-                </div>
-                {% if word.basoma_phonetics %}
+                    {% if word.basoma_phonetics %}
                     <div class="phonetics">
                         <h3>Phonetics:</h3>
                         <ul>
@@ -44,6 +42,8 @@
                         </ul>
                     </div>
                 {% endif %}
+
+                </div>
                 {% if word.umzi_root %}
                     <div class="root">
                         <h3>Root:</h3>
