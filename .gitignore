@@ -7,9 +7,11 @@ __pycache__
 /glconnect/static/gospel2
 /glconnect/static/gospel
 /glconnect/static/mixes
+/glconnect/static/satmix
 /glconnect/__pycache__/
 migrations
 .vscode/
 afro.m3u
 gosp3.m3u
 gospel.m3u
+satmix.m3u

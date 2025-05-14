@@ -6,11 +6,16 @@ night = playlist("/liqfolder/mixes.m3u")            # Day playlist
 day= playlist("/liqfolder/afro.m3u")           # Night playlist
 jingles = playlist("/liqfolder/jingles.m3u")      # Jingles playlist
 clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
-
+gosp3 = playlist("/liqfolder/gosp3.m3u")
+satmix = playlist("/liqfolder/satmix.m3u")
 # === Time-based switching between day and night playlists ===
 radio = switch([
-  ({ 6h-22h }, day),   # 6AM to 10PM = day
-  ({ 22h-6h }, night)  # 10PM to 6AM = night
+  ({ 0w }, gosp3),
+  ({ 6w }, satmix),
+  ({ 7w }, satmix),
+  ({ 6h-22h }, day),  
+  ({ 22h-6h }, night),  
+  ({ true }, day)  
 ])
 radio = fallback([radio, default])  # Fallback to default if playlists fail
 
@@ -41,13 +46,21 @@ output.icecast(%mp3,
 )
 
 # === Gosp3 Stream Setup (MP3) ===
-gosp3 = playlist("/liqfolder/gosp3.m3u")
 gosp3_radio = mksafe(gosp3)
-
 output.icecast(%mp3,
   host="icecast2",
   port=8000,
   password="123",
   mount="gosp3",
   gosp3_radio
+)
+
+# === Saturday stream ===
+sat_radio = mksafe(satmix)
+output.icecast(%mp3,
+  host="icecast2",
+  port=8000,
+  password="123",
+  mount="satmix",
+  sat_radio
 )
