@@ -54,8 +54,8 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
-    adminemail = os.getenv("MAIL_USERNAME")
-    api_key = os.getenv("MAIL_TRAP")
+    adminemail = "nezajim63@gmail.com"#os.getenv("MAIL_USERNAME")
+    api_key = "226e20189690a95934a747828428dc79"#os.getenv("MAIL_TRAP")
     print(api_key)
     if form.validate_on_submit():
         useremail = form.email.data
