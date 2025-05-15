@@ -213,7 +213,7 @@ def reset_password_request():
             flash("A password reset link has been sent to your email.", "info")
         else:
             flash("No account is associated with this email. Please sign up.", "error")
-            return redirect(url_for('bp1.register'))
+            return redirect(url_for('routes1.register'))
 
     return render_template('passreq.html', title='Reset Password', form=form)
   

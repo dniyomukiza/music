@@ -61,7 +61,6 @@ def contact():
             mail = Mail(
                 sender=Address(email=sender, name="Message form GLC user"),
                 to=[Address(email=receiver)],
-                subject="GLC user message",
                 text=(
                     f"First name: {form.FirstName.data}\n"
                     f"Last name: {form.LastName.data}\n"
