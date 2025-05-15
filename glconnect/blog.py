@@ -54,16 +54,16 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
-    adminemail = "nezajim63@gmail.com"#os.getenv("MAIL_USERNAME")
-    api_key = "226e20189690a95934a747828428dc79"#os.getenv("MAIL_TRAP")
-    print(api_key)
+    sender = os.getenv("SENDER_MAIL")
+    receiver=os.getenv("RECEIVER_MAIL")
+    api_key = os.getenv("MAIL_TRAP")
+    print(api_key,receiver,sender)
     if form.validate_on_submit():
-        useremail = form.email.data
         try:
             # Create the Mail object
             mail = Mail(
-                sender=Address(email=useremail, name="GLC Website User"),
-                to=[Address(email=adminemail)],
+                sender=Address(email=sender, name="Message form GLC user"),
+                to=[Address(email=receiver)],
                 subject="GLC user message",
                 text=(
                     f"First name: {form.FirstName.data}\n"
@@ -73,7 +73,6 @@ def contact():
                 ),
                 category="User Contact"
             )
-
             # Send email using Mailtrap API
             client = MailtrapClient(token=api_key)
             client.send(mail)
@@ -83,7 +82,7 @@ def contact():
         else:
             flash("Thank you for reaching out. We will get back to you ASAP.", "success")
 
-        form.process()  # Clear the form after submission
+        form.process()
 
     return render_template("contact.html", form=form)
 

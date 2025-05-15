@@ -1,7 +1,8 @@
 import requests
-import re
+import re,os
 import json
 import smtplib
+from mailtrap import MailtrapClient, Mail, Address
 from glconnect.forms import *
 from glconnect.models import*
 from werkzeug.security import check_password_hash
@@ -68,19 +69,26 @@ def register():
     return render_template('register.html', title='Register', form=form)
 
 def send_confirmation_email(to_email, confirm_url):
-    sender_email = config.get("MAIL_USERNAME")
-    app_password = config.get("MAIL_PASSWORD")
-
-    subject = "Please verify your account"
-    body = f"Click the link below to confirm your email:\n\n{confirm_url}"
-
+    sender = os.getenv("SENDER_MAIL")
+    receiver=to_email
+    api_key = os.getenv("MAIL_TRAP")
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, app_password)
-            message = f"Subject: {subject}\n\n{body}"
-            server.sendmail(sender_email, to_email, message)
+        # Create the Mail object
+        mail = Mail(
+            sender=Address(email=sender, name="Please verify your account"),
+            to=[Address(email=receiver)],
+            subject="Please verify your account",
+            text=(
+                f"Click the link below to confirm your email:\n\n{confirm_url}"
+            ),
+            category="Verify email"
+        )
+        # Send email using Mailtrap API
+        client = MailtrapClient(token=api_key)
+        client.send(mail)
     except Exception as e:
-        print(f"SMTP error: {e}")
+        print("error occured while sinding email")
+
 
 @bp1.route('/confirm/<token>')
 def confirm_email(token):
@@ -211,16 +219,25 @@ def reset_password_request():
     return render_template('passreq.html', title='Reset Password', form=form)
   
 def send_reset_email(to_email, reset_url):
-    sender_email = config.get("MAIL_USERNAME")
-    app_password = config.get("MAIL_PASSWORD")
-
-    subject = "Reset Your Password"
-    body = f"Click the link below to reset your password:\n\n{reset_url}"
-
+    sender = os.getenv("SENDER_MAIL")
+    receiver=to_email
+    api_key = os.getenv("MAIL_TRAP")
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, app_password)
-            message = f"Subject: {subject}\n\n{body}"
-            server.sendmail(sender_email, to_email, message)
+        # Create the Mail object
+        mail = Mail(
+            sender=Address(email=sender, name="Reset Your Password"),
+            to=[Address(email=receiver)],
+            subject="Reset Your Password",
+            text=(
+                f"Click the link below to reset your password:\n\n{reset_url}"
+            ),
+            category="Reset password"
+        )
+        # Send email using Mailtrap API
+        client = MailtrapClient(token=api_key)
+        client.send(mail)
     except Exception as e:
-        print(f"SMTP error: {e}")
+        print("error occured while sinding email")
+
+
+

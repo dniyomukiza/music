@@ -24,13 +24,6 @@ def create_app():
     app.config['CKEDITOR_SERVE_LOCAL'] = True
     app.config['CKEDITOR_PKG_TYPE'] = 'full'   
     # Mail configuration
-    app.config['MAIL_SERVER'] = config.get('MAIL_SERVER')
-    app.config['MAIL_PORT'] = config.get('MAIL_PORT')
-    app.config['MAIL_USE_SSL'] = True
-    app.config['MAIL_USE_TLS'] = False
-    app.config['MAIL_PASSWORD'] = config.get('MAIL_PASSWORD')
-    app.config['MAIL_USERNAME'] = config.get('MAIL_USERNAME')
-    app.config['MAIL_DEFAULT_SENDER'] = config.get('MAIL_DEFAULT_SENDER')
     app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
     # Database and JWT configuration
