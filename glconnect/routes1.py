@@ -1,7 +1,6 @@
 import requests
 import re,os
 import json
-import smtplib
 from mailtrap import MailtrapClient, Mail, Address
 from glconnect.forms import *
 from glconnect.models import*
@@ -69,9 +68,9 @@ def register():
     return render_template('register.html', title='Register', form=form)
 
 def send_confirmation_email(to_email, confirm_url):
-    sender = os.getenv("SENDER_MAIL")
+    sender = config.get("SENDER_MAIL")
     receiver=to_email
-    api_key = os.getenv("MAIL_TRAP")
+    api_key = config.get("MAIL_TRAP")
     try:
         # Create the Mail object
         mail = Mail(
@@ -219,9 +218,9 @@ def reset_password_request():
     return render_template('passreq.html', title='Reset Password', form=form)
   
 def send_reset_email(to_email, reset_url):
-    sender = os.getenv("SENDER_MAIL")
+    sender = config.get("SENDER_MAIL")
     receiver=to_email
-    api_key = os.getenv("MAIL_TRAP")
+    api_key = config.get("MAIL_TRAP")
     try:
         # Create the Mail object
         mail = Mail(

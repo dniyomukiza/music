@@ -1,6 +1,5 @@
 import os
-import mailtrap as mt
-import requests
+import json
 from .models import *
 from .forms import *
 from dotenv import load_dotenv
@@ -10,10 +9,9 @@ from flask import redirect,url_for,render_template,request,flash,abort,send_from
 from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
 from flask_login import current_user, login_required, logout_user
 from flask_ckeditor import CKEditor,upload_success, upload_fail
-
 load_dotenv()
-'''with open('/etc/glconfig.json') as json_file:
-    config = json.load(json_file)'''
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
@@ -54,10 +52,9 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
-    sender = os.getenv("SENDER_MAIL")
-    receiver=os.getenv("RECEIVER_MAIL")
-    api_key = os.getenv("MAIL_TRAP")
-    print(api_key,receiver,sender)
+    sender = config.get("SENDER_MAIL")
+    receiver=config.get("RECEIVER_MAIL")
+    api_key = config.get("MAIL_TRAP")
     if form.validate_on_submit():
         try:
             # Create the Mail object
