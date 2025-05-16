@@ -48,24 +48,8 @@ class AudioDownloader:
         else:
             print(f"An error occurred during the download process.")
 
-    def convert_mp3_to_ogg(self):
-        for filename in os.listdir(self.output_folder):
-            if filename.endswith(".mp3"):
-                mp3_file = os.path.join(self.output_folder, filename)
-                ogg_file = os.path.join(self.output_folder, filename.replace(".mp3", ".ogg"))
-                command = ["ffmpeg", "-i", mp3_file, "-c:a", "libvorbis", ogg_file]
-                result = run(command)
-
-                if result.returncode == 0:
-                    print(f"Converted {mp3_file} to {ogg_file}")
-                    os.remove(mp3_file)  # Delete the MP3 file after successful conversion
-                    print(f"Deleted {mp3_file}")
-                else:
-                    print(f"Failed to convert {mp3_file} to {ogg_file}")
-
     def download_and_convert(self):
         self.download_audio()
-        self.convert_mp3_to_ogg()
 
 class MusicFileRenamer:
     @staticmethod
@@ -170,7 +154,7 @@ if __name__ == "__main__":
 
         # Ingest songs from an M3U playlist file
         m3u_file_path = '/Users/nididier/Documents/music-1/afro.m3u'
-        PlaylistIngestion.ingest_songs_from_m3u(m3u_file_path)
+        #PlaylistIngestion.ingest_songs_from_m3u(m3u_file_path)
 
         # Create or append to the M3U playlist after everything is done
         create_or_append_m3u_playlist(output_folder, "afro.m3u")
