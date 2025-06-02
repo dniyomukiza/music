@@ -36,7 +36,6 @@ function saveSongToBackend(songId, userId) {
     // Instead of sending the whole playlist, just send the newly added song
     fetch('https://www.glc.cool/art/add_to_playlist', {  // Use the add_to_playlist endpoint
         method: 'POST',
-        credentials: 'include', 
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_id: songId })  // Only send the new song
     })
@@ -128,7 +127,6 @@ function savePlaylist(userId) {
 
     fetch('https://www.glc.cool/art/save_playlist', {
         method: 'POST',
-        credentials: 'include', 
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_ids: songIds })
     })
@@ -141,7 +139,6 @@ function savePlaylist(userId) {
 function deleteSongFromBackend(songId) {
     fetch('https://www.glc.cool/art/delete_song_from_playlist', {
         method: 'DELETE',
-        credentials: 'include', 
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ song_id: songId })
     })
@@ -157,7 +154,6 @@ function deleteSongFromBackend(songId) {
 function fetchUserPlaylist(userId) {
     fetch(`https://www.glc.cool/art/get_playlist/${userId}`, {
         method: 'GET',
-        credentials: 'include', 
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     })
     .then(response => response.json())

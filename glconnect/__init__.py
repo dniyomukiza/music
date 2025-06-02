@@ -9,6 +9,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from dotenv import load_dotenv
 from flask_ckeditor import CKEditor
+from flask_cors import CORS
 
 # Initialize extensions
 mail = Mail()
@@ -19,6 +20,7 @@ with open('/etc/glconfig.json') as json_file:
 
 def create_app():
     app = Flask(__name__)
+    CORS(app, origins=["https://www.glc.cool"], supports_credentials=True)
     app.secret_key = os.urandom(24)
     ckeditor = CKEditor() 
     app.config['CKEDITOR_SERVE_LOCAL'] = True
