@@ -1,15 +1,14 @@
 import os
 import json
-from flask import Flask
+from flask import Flask,request
 from .models import db, User
-from .voc import insert_data
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
 from flask_mail import Mail
-from dotenv import load_dotenv
 from flask_ckeditor import CKEditor
 from flask_cors import CORS
+
 
 # Initialize extensions
 mail = Mail()
