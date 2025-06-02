@@ -1,45 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}technow{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/parent.css') }}">
+  <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/parent.css') }}">  -->
 
   {% block head %}
-  {{ ckeditor.load(pkg_type="full") }}  
-  <script src="https://cdn.ckeditor.com/4.25.1/full/ckeditor.js"></script>
-  {{ ckeditor.config() }} 
-  {{ ckeditor.load_code_theme() }}
   {% endblock %}
 </head>
 <body>
 
 <header class="header">
   <div class="header-background">
-      <a href="#" class="logo"></a> 
-    </div>
-    <nav>
-      <ul class="nav-links">
-        
-    </nav>
+    <a href="#" class="logo"></a>
+  </div>
+  <nav>
+    <ul class="nav-links">
+    </ul>
+  </nav>
 </header>
 
 <main class="content">
-    {% block content %}
+  {% block content %}
     <form method="post" enctype="multipart/form-data">
-        <textarea name="editor1" id="editor1"></textarea>
-        <button type="submit">Submit</button>
+      <textarea name="editor1" id="editor1" rows="10" cols="50" placeholder="Enter your text here..."></textarea>
+      <button type="submit">Submit</button>
     </form>
-    {% endblock %}
+  {% endblock %}
 </main>
-
-<script>
-    CKEDITOR.replace('editor1', {
-        filebrowserUploadUrl: "{{ url_for('blog.upload') }}",  
-        filebrowserUploadMethod: 'form'
-    });
-</script>
 
 </body>
 </html>
