@@ -52,7 +52,6 @@ class PostForm(FlaskForm):
     title=StringField("Title",validators=[DataRequired()],render_kw={"placeholder":"Blog Title"})
     content = CKEditorField('Content')
     submit=SubmitField('Post')
-    recap=RecaptchaField()
 
 class ResetRequestForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
