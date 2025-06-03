@@ -61,6 +61,7 @@ def contact():
             mail = Mail(
                 sender=Address(email=sender, name="Message form GLC user"),
                 to=[Address(email=receiver)],
+                subject="New Contact Form Submission",
                 text=(
                     f"First name: {form.FirstName.data}\n"
                     f"Last name: {form.LastName.data}\n"
@@ -74,7 +75,8 @@ def contact():
             client.send(mail)
 
         except Exception as e:
-            flash(f"An error occurred while sending the email: {str(e)}", "error")
+            print("This is the error that occured: ",e)
+            flash("An error occurred while sending the email")
         else:
             flash("Thank you for reaching out. We will get back to you ASAP.", "success")
 

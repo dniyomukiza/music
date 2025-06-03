@@ -4,10 +4,13 @@ let currentAudio = null;
 let currentPlaylistIndex = 0;
 const songAudioMap = new Map();
 
-// Helper: Encode URL for iOS Safari compatibility
 function encodeUrl(url) {
-    return encodeURI(url).replace(/#/g, '%23');
+    // First decode any existing encodings to get raw spaces etc.
+    const decodedUrl = decodeURIComponent(url);
+    // Then encode once properly
+    return encodeURI(decodedUrl).replace(/#/g, '%23');
 }
+
 
 // Toggle play/pause for a single song
 function togglePlayPause(songId) {
