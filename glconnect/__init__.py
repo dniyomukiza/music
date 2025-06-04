@@ -19,7 +19,7 @@ with open('/etc/glconfig.json') as json_file:
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, origins=["https://www.glc.cool"], supports_credentials=True)
+    '''CORS(app, origins=["https://www.glc.cool"], supports_credentials=True)
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
@@ -33,7 +33,7 @@ def create_app():
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_SAMESITE='None',
     SESSION_COOKIE_DOMAIN='.glc.cool'
-    )
+    )'''
 
     app.secret_key = os.urandom(24)
     ckeditor = CKEditor() 
