@@ -35,6 +35,13 @@ def create_app():
     SESSION_COOKIE_DOMAIN='.glc.cool'
     )'''
 
+    CORS(app, supports_credentials=True, origins=['https://www.glc.cool'])
+    app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_DOMAIN='.glc.cool'
+    )
     app.secret_key = os.urandom(24)
     ckeditor = CKEditor() 
     app.config['CKEDITOR_SERVE_LOCAL'] = True

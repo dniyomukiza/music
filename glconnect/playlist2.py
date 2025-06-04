@@ -49,6 +49,9 @@ def playlist2():
 @play.route('/add_to_playlist', methods=['POST'])
 @login_required
 def add_to_playlist():
+    print("Authenticated?", current_user.is_authenticated)
+    print("User ID?", getattr(current_user, 'user_id', 'NO user_id'))
+    print("User Object?", current_user)
     data = request.get_json()
     song_id = data.get('song_id')
 
@@ -63,7 +66,7 @@ def add_to_playlist():
     existing_entry = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
     if existing_entry:
         return jsonify({"status": "success", "message": "Song is already in your playlist."})
-
+    
     # Add song to user's playlist
     new_playlist_entry = Playlist(user_id=current_user.user_id, song_id=song.id)
     db.session.add(new_playlist_entry)
