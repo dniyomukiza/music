@@ -19,7 +19,7 @@ with open('/etc/glconfig.json') as json_file:
 
 def create_app():
     app = Flask(__name__)
-    '''CORS(app, origins=["https://www.glc.cool"], supports_credentials=True)
+    CORS(app, supports_credentials=True, origins=['https://www.glc.cool'])
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin')
@@ -29,18 +29,13 @@ def create_app():
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
             response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS,DELETE'
         return response
-    app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_DOMAIN='.glc.cool'
-    )'''
 
-    CORS(app, supports_credentials=True, origins=['https://www.glc.cool'])
+    # Configure session cookies for cross-site usage and security
     app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_DOMAIN='.glc.cool'
+        SESSION_COOKIE_SECURE=True, 
+        SESSION_COOKIE_SAMESITE='None',
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_DOMAIN='.glc.cool'
     )
     app.secret_key = os.urandom(24)
     ckeditor = CKEditor() 
