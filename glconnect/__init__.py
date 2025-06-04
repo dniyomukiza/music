@@ -31,7 +31,8 @@ def create_app():
         return response
     app.config.update(
     SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_SAMESITE='None'
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_DOMAIN='.glc.cool'
     )
 
     app.secret_key = os.urandom(24)
