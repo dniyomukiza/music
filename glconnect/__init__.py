@@ -25,7 +25,7 @@ def create_app():
         response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin') or '')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,DELETE')
         return response
     app.config.update(
     SESSION_COOKIE_SECURE=True,
