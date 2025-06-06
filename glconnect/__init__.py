@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask,request
+from flask import Flask,request,redirect
 from .models import db, User
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
@@ -19,6 +19,12 @@ with open('/etc/glconfig.json') as json_file:
 
 def create_app():
     app = Flask(__name__)
+    @app.before_request
+    def redirect_to_https():
+        if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+            url = request.url.replace("http://", "https://", 1)
+            return redirect(url, code=301)
+
     CORS(app, supports_credentials=True, origins=['https://www.glc.cool'])
     # Configure session cookies for cross-site usage and security
     app.config.update(
