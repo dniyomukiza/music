@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import os,subprocess
 from glconnect import db
+from urllib.parse import urlparse
 from glconnect.models import *
 
 music = Blueprint("music", __name__)
@@ -27,7 +28,7 @@ def sanitize_input(input_string):
         return sanitized_string
     return ""
 
-def sanitize_url(url):
+'''def sanitize_url(url):
     """Sanitize URL to ensure it starts with http:// or https://"""
     if url:
         # Remove any unwanted characters
@@ -43,8 +44,21 @@ def sanitize_url(url):
             return sanitized_url
         else:
             return ""  # Invalid URL, return empty string
-    return ""
+    return ""'''
+def sanitize_url(url):
+    """Sanitize and enforce HTTPS for URLs."""
+    if url:
+        sanitized_url = sanitize_input(url)
 
+        # Enforce https:// by default
+        if not sanitized_url.startswith('http://') and not sanitized_url.startswith('https://'):
+            sanitized_url = 'https://' + sanitized_url
+
+        # Validate URL structure
+        parsed = urlparse(sanitized_url)
+        if parsed.scheme in ['http', 'https'] and parsed.netloc:
+            return sanitized_url
+    return ""
 @music.route("/upload_song", methods=["GET", "POST"])
 @login_required
 def upload_song():
