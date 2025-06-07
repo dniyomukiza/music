@@ -1,65 +1,66 @@
 import os
 import json
-from flask import Flask,request,redirect
+from flask import Flask, request
 from .models import db, User
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_ckeditor import CKEditor
-from flask_cors import CORS
-
+from flask_session import Session
+from datetime import timedelta
 
 # Initialize extensions
 mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
+ckeditor = CKEditor()
+
+# Load configuration
 with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
 
 def create_app():
     app = Flask(__name__)
-    @app.before_request
-    def redirect_to_https():
-        if request.headers.get('X-Forwarded-Proto', 'http') != 'https':
-            url = request.url.replace("http://", "https://", 1)
-            return redirect(url, code=301)
-
-    CORS(app, supports_credentials=True, origins=['https://www.glc.cool'])
-    # Configure session cookies for cross-site usage and security
-    app.config.update(
-        SESSION_COOKIE_SECURE=True, 
-        SESSION_COOKIE_SAMESITE='None',
-    )
     
+    # Core configuration
     app.secret_key = os.urandom(24)
-    ckeditor = CKEditor() 
-    app.config['CKEDITOR_SERVE_LOCAL'] = True
-    app.config['CKEDITOR_PKG_TYPE'] = 'full'   
-    # Mail configuration
-    app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
-    app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
-    # Database and JWT configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["JWT_SECRET_KEY"] = "abarayon"
 
-    # Initialize extensions
+    # Session configuration
+    app.config['SESSION_TYPE'] = 'sqlalchemy'
+    app.config['SESSION_PERMANENT'] = True
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+    app.config['SESSION_SQLALCHEMY'] = db
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = True
+
+    # Mail & reCAPTCHA configuration
+    app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
+    app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
+
+    # CKEditor config
+    app.config['CKEDITOR_SERVE_LOCAL'] = True
+    app.config['CKEDITOR_PKG_TYPE'] = 'full'
+
+    # Initialize database and other extensions
     db.init_app(app)
     jwt.init_app(app)
     login_manager.init_app(app)
     ckeditor.init_app(app)
     mail.init_app(app)
-    
+    Session(app)  # <-- must be AFTER db.init_app(app)
+
     login_manager.login_view = 'routes1.login'
 
-    # Register user_loader globally
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
     with app.app_context():
-        # Import and register blueprints
+        # Register blueprints
         from .routes import bp 
         from .routes1 import bp1 
         from .routes2 import bp2
@@ -81,7 +82,8 @@ def create_app():
         app.register_blueprint(play, url_prefix='/playlist2')
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
-        # Ensure tables exist
+
+        # Ensure all tables are created, including session table
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()
         missing_tables = [table for table in db.metadata.tables.keys() if table not in existing_tables]
