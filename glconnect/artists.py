@@ -28,23 +28,6 @@ def sanitize_input(input_string):
         return sanitized_string
     return ""
 
-'''def sanitize_url(url):
-    """Sanitize URL to ensure it starts with http:// or https://"""
-    if url:
-        # Remove any unwanted characters
-        sanitized_url = sanitize_input(url)
-
-        # Ensure URL starts with http:// or https://
-        if not sanitized_url.startswith('http://') and not sanitized_url.startswith('https://'):
-            sanitized_url = 'http://' + sanitized_url
-        
-        # Check if the URL has a valid format
-        url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+')
-        if re.match(url_pattern, sanitized_url):
-            return sanitized_url
-        else:
-            return ""  # Invalid URL, return empty string
-    return ""'''
 def sanitize_url(url):
     """Sanitize and enforce HTTPS for URLs."""
     if url:
