@@ -13,10 +13,6 @@ from flask_cors import CORS
 mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
-@login_manager.unauthorized_handler
-def unauthorized_callback():
-    return jsonify({"message": "Unauthorized"}), 401
-
 
 with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
