@@ -68,10 +68,6 @@ def create_app():
         from .artist import art
         from .writer import writer
         from .book import book
-        CORS(art, supports_credentials=True, origins=[
-        "https://www.glc.cool",
-        "https://glc.cool"])
-
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
         app.register_blueprint(bp)

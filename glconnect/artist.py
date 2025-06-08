@@ -3,10 +3,13 @@ from flask import render_template, Blueprint,request,session,jsonify
 from flask_login import current_user
 from .models import*
 import urllib.parse
-from flask_cors import cross_origin
+from flask_cors import cross_origin,CORS
 
 
 art = Blueprint("art", __name__)
+CORS(art, supports_credentials=True, origins=[
+        "https://www.glc.cool",
+        "https://glc.cool"])
 
 @art.route('/artist/<int:artist_id>')
 def artist_profile(artist_id):
