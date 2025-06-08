@@ -5,7 +5,7 @@ from mailtrap import MailtrapClient, Mail, Address
 from glconnect.forms import *
 from glconnect.models import*
 from werkzeug.security import check_password_hash
-from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session
+from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g
 from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager
 
