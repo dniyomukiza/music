@@ -31,13 +31,13 @@ def create_app():
     )
 
     # Secret key for sessions
-    app.secret_key = os.urandom(24)
+    #app.secret_key = os.urandom(24)
 
     # CKEditor configuration
     ckeditor = CKEditor() 
     app.config['CKEDITOR_SERVE_LOCAL'] = True
     app.config['CKEDITOR_PKG_TYPE'] = 'full'
-
+    app.secret_key = config.get('SECRET_KEY')
     # Mail and recaptcha configuration
     app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
@@ -45,7 +45,6 @@ def create_app():
     # Database and JWT configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config["JWT_SECRET_KEY"] = "abarayon"
 
     # Initialize extensions
     db.init_app(app)
