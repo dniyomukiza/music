@@ -29,13 +29,10 @@ def create_app():
 
     # Secure session cookie configuration
     app.config.update(
-        SESSION_COOKIE_SECURE=True,       # Only send cookies over HTTPS
-        SESSION_COOKIE_SAMESITE='None',   # Allow cross-site cookies
-        JWT_SECRET_KEY="abarayon",        # Required for JWT
+        SESSION_COOKIE_SECURE=True, 
+        SESSION_COOKIE_SAMESITE='None',
+        JWT_SECRET_KEY="abarayon", 
     )
-
-    # Optional: Set cookie domain explicitly if needed
-    # app.config['SESSION_COOKIE_DOMAIN'] = '.glc.cool'
 
     # Secret key for sessions
     app.secret_key = os.urandom(24)

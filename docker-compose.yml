@@ -13,11 +13,12 @@ services:
       - app_network
     command: >
      sh -c "gunicorn --capture-output --enable-stdio-inheritance -b 0.0.0.0:5000 run:app"
-
+ 
     ports:
       - "5000:5000"
       - "8001:8001"
     environment:
+     - PYTHONUNBUFFERED=1
       - FLASK_APP=run.py
       - FLASK_ENV=development
 
