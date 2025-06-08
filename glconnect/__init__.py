@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, request
+from flask import Flask, request,jsonify
 from .models import db, User
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
@@ -13,6 +13,10 @@ from flask_cors import CORS
 mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
+@login_manager.unauthorized_handler
+def unauthorized_callback():
+    return jsonify({"message": "Unauthorized"}), 401
+
 
 with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
