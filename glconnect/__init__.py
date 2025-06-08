@@ -1,6 +1,7 @@
 import os
 import json
-from flask import Flask,request
+import re
+from flask import Flask, request
 from .models import db, User
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
@@ -9,45 +10,45 @@ from flask_mail import Mail
 from flask_ckeditor import CKEditor
 from flask_cors import CORS
 
-
 # Initialize extensions
 mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
+
 with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, supports_credentials=True, origins=['https://www.glc.cool'])
 
-    # Configure session cookies to allow secure cross-origin usage
+    # CORS configuration - allow both glc.cool and www.glc.cool
+    CORS(app, supports_credentials=True, origins=[
+        "https://glc.cool",
+        "https://www.glc.cool"
+    ])
+
+    # Secure session cookie configuration
     app.config.update(
         SESSION_COOKIE_SECURE=True,       # Only send cookies over HTTPS
         SESSION_COOKIE_SAMESITE='None',   # Allow cross-site cookies
-        JWT_SECRET_KEY="abarayon",           # Required if using Flask-JWT-Extended
+        JWT_SECRET_KEY="abarayon",        # Required for JWT
     )
 
     # Optional: Set cookie domain explicitly if needed
     # app.config['SESSION_COOKIE_DOMAIN'] = '.glc.cool'
 
-    @app.after_request
-    def apply_cors_headers(response):
-        # Match frontend origin exactly
-        response.headers['Access-Control-Allow-Origin'] = 'https://www.glc.cool'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        return response
-  
-     
+    # Secret key for sessions
     app.secret_key = os.urandom(24)
+
+    # CKEditor configuration
     ckeditor = CKEditor() 
     app.config['CKEDITOR_SERVE_LOCAL'] = True
-    app.config['CKEDITOR_PKG_TYPE'] = 'full'   
-    # Mail configuration
+    app.config['CKEDITOR_PKG_TYPE'] = 'full'
+
+    # Mail and recaptcha configuration
     app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
+
     # Database and JWT configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -59,10 +60,9 @@ def create_app():
     login_manager.init_app(app)
     ckeditor.init_app(app)
     mail.init_app(app)
-    
+
     login_manager.login_view = 'routes1.login'
 
-    # Register user_loader globally
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
@@ -90,6 +90,7 @@ def create_app():
         app.register_blueprint(play, url_prefix='/playlist2')
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
+
         # Ensure tables exist
         inspector = inspect(db.engine)
         existing_tables = inspector.get_table_names()
