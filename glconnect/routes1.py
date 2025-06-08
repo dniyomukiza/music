@@ -14,9 +14,14 @@ with open('/etc/glconfig.json') as json_file:
 bp1 = Blueprint('routes1', __name__)
 API_URL = "https://www.glc.cool/word/"
 login_manager = LoginManager()
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@bp1.before_app_request
+def load_logged_in_user():
+    g.user_id = session.get('user_id')
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
