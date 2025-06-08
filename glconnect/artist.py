@@ -3,6 +3,7 @@ from flask import render_template, Blueprint,request,session,jsonify
 from flask_login import current_user
 from .models import*
 import urllib.parse
+from flask_cors import cross_origin
 
 
 art = Blueprint("art", __name__)
@@ -121,6 +122,7 @@ import traceback
 from .models import Playlist, db  # Adjust import based on your structure
 
 @art.route('/delete_song_from_playlist', methods=['DELETE'])
+@cross_origin(origins="https://www.glc.cool", supports_credentials=True)
 @login_required
 def delete_song_from_playlist():
     try:
