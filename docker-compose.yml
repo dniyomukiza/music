@@ -12,7 +12,8 @@ services:
     networks:
       - app_network
     command: >
-      sh -c "gunicorn -b 0.0.0.0:5000 run:app"
+     sh -c "gunicorn --capture-output --enable-stdio-inheritance -b 0.0.0.0:5000 run:app"
+
     ports:
       - "5000:5000"
       - "8001:8001"

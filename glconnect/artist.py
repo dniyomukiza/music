@@ -115,31 +115,41 @@ def get_playlist(user_id):
 
     return jsonify({'playlist': songs}), 200
 
-@art.route('/delete_song_from_playlist', methods=['DELETE'])
-def delete_song_from_playlist():
-    data = request.get_json()
-    print(f"Request data: {data}")  # Log the data received from the frontend
-    
-    song_id = data.get('song_id')
-    if not song_id:
-        print("Song ID is missing!")
-        return jsonify({'message': 'song_id is required'}), 400
+from flask import request, jsonify
+from flask_login import current_user, login_required
+import traceback
+from .models import Playlist, db  # Adjust import based on your structure
 
+@art.route('/delete_song_from_playlist', methods=['DELETE'])
+@login_required
+def delete_song_from_playlist():
     try:
-        # Find the song in the database
-        song = Playlist.query.filter_by(song_id=song_id, user_id=current_user.user_id).first()
-        
+        data = request.get_json()
+        print(f"Request data: {data}")
+
+        song_id = data.get('song_id')
+        if not song_id:
+            print("Missing song_id!")
+            return jsonify({'message': 'song_id is required'}), 400
+
+        # Ensure current_user has user_id
+        user_id = getattr(current_user, 'user_id', None)
+        if not user_id:
+            print("User not authenticated or missing user_id")
+            return jsonify({'message': 'User not authenticated'}), 401
+
+        # Attempt to find and delete the song
+        song = Playlist.query.filter_by(song_id=song_id, user_id=user_id).first()
         if song:
-            print(f"Found song: {song}")  # Log the song being deleted
+            print(f"Deleting song: {song}")
             db.session.delete(song)
             db.session.commit()
-            print("Song deleted from playlist!")
-            return jsonify({'message': 'Song removed from playlist! Refresh page'}), 200
+            return jsonify({'message': 'Song removed from playlist!'}), 200
         else:
-            print(f"Song with ID {song_id} not found.")
-            return jsonify({'message': 'Song not found in playlist!'}), 404
+            print(f"Song with ID {song_id} not found for user_id {user_id}")
+            return jsonify({'message': 'Song not found in playlist'}), 404
+
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'message': f'Error: {str(e)}'}), 500
-
-
+        print("Exception occurred while deleting song:")
+        traceback.print_exc()
+        return jsonify({'message': 'Internal server error'}), 500
