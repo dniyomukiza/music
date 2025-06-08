@@ -22,8 +22,7 @@ def create_app():
     app = Flask(__name__)
 
     # CORS configuration - allow both glc.cool and www.glc.cool
-    CORS(app, supports_credentials=True, origins=[
-        "https://glc.cool",
+    CORS(art, supports_credentials=True, origins=[
         "https://www.glc.cool"
     ])
 
