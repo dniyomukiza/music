@@ -1,6 +1,5 @@
 import os
 import json
-import re
 from flask import Flask, request
 from .models import db, User
 from flask_jwt_extended import JWTManager
@@ -20,13 +19,6 @@ with open('/etc/glconfig.json') as json_file:
 
 def create_app():
     app = Flask(__name__)
-
-    # CORS configuration - allow both glc.cool and www.glc.cool
-    CORS(app, supports_credentials=True, origins=[
-        "https://www.glc.cool",
-        "https://glc.cool"
-    ])
-
     # Secure session cookie configuration
     app.config.update(
         SESSION_COOKIE_SECURE=True, 
@@ -76,6 +68,9 @@ def create_app():
         from .artist import art
         from .writer import writer
         from .book import book
+        CORS(art, supports_credentials=True, origins=[
+        "https://www.glc.cool",
+        "https://glc.cool"])
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
