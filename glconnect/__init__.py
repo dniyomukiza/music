@@ -23,7 +23,8 @@ def create_app():
 
     # CORS configuration - allow both glc.cool and www.glc.cool
     CORS(app, supports_credentials=True, origins=[
-        "https://www.glc.cool"
+        "https://www.glc.cool",
+        "https://glc.cool"
     ])
 
     # Secure session cookie configuration
