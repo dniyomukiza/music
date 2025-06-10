@@ -36,7 +36,7 @@ function addToPlaylist(songId, songName, userId) {
 
 // Save a new song to the backend
 function saveSongToBackend(songId, userId) {
-    fetch('https://www.glc.cool/art/add_to_playlist', {
+    fetch('/art/add_to_playlist', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -97,7 +97,7 @@ function savePlaylist(userId) {
     if (!playlist.length) return alert("Your playlist is empty!");
 
     const songIds = playlist.map(song => song.id);
-    fetch('https://www.glc.cool/art/save_playlist', {
+    fetch('/art/save_playlist', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -110,7 +110,7 @@ function savePlaylist(userId) {
 
 // Delete a song from backend and update UI
 function deleteSongFromBackend(songId) {
-    fetch('https://www.glc.cool/art/delete_song_from_playlist', {
+    fetch('/art/delete_song_from_playlist', {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -130,7 +130,7 @@ function deleteSongFromBackend(songId) {
 
 // Fetch playlist from backend
 function fetchUserPlaylist(userId) {
-    fetch(`https://www.glc.cool/art/get_playlist/${userId}`, {
+    fetch(`/art/get_playlist/${userId}`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
