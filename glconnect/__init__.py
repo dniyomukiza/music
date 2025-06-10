@@ -21,14 +21,13 @@ with open('/etc/glconfig.json') as json_file:
 def create_app():
     app = Flask(__name__)
 
-    # CORS configuration - allow both glc.cool and www.glc.cool
-    CORS(app, origins=["https://glc.cool", "https://www.glc.cool"])
+    CORS(app, origins=["https://glc.cool"], supports_credentials=True) # <-- ADD supports_credentials=True
 
     # Secure session cookie configuration
     app.config.update(
-        SESSION_COOKIE_SECURE=True, 
-        SESSION_COOKIE_SAMESITE='None',
-        JWT_SECRET_KEY="abarayon", 
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_SAMESITE='None', # This is correct for cross-site cookies with credentials
+        JWT_SECRET_KEY="abarayon",
     )
 
     # Secret key for sessions
