@@ -7,10 +7,6 @@ from flask_cors import CORS
 
 
 art = Blueprint("art", __name__)
-CORS(art, supports_credentials=True, origins=[
-        "https://www.glc.cool",
-        "https://glc.cool"])
-
 @art.route('/artist/<int:artist_id>')
 def artist_profile(artist_id):
     artist = Artist.query.get_or_404(artist_id)
