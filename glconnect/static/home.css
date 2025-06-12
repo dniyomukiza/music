@@ -100,6 +100,7 @@ header {
     padding: 60px 20px;
     color: #fff;
     margin-top: 0px;
+    width:150%;
 }
 
 .cta-btn {
@@ -211,4 +212,5 @@ footer {
     color: #fff;
     text-align: center;
     padding: 20px 0;
+    margin-right: -50vw;
 }
