@@ -132,7 +132,7 @@ def login():
                 return redirect(url_for('blog.blogs'))
             elif user.role=="artist":
                 return redirect(url_for('music.artist_profile'))
-            elif user.role=="writer":
+            elif user.role=="author":
                 return redirect(url_for('writer.writer_profile'))
             
             else:

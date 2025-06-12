@@ -188,12 +188,10 @@
 </head>
 <body>
     <div class="container">
-        <video autoplay loop muted class="background-video">
+        <!--<video autoplay loop muted class="background-video">
             <source src="{{ url_for('static', filename='images/trial.mp4') }}">
 
-
-            Your browser does not support the video tag.
-        </video>
+        </video>-->
         <div class="video-overlay"></div>
         <div class="header">
             <div class="nav-container">
@@ -208,7 +206,7 @@
                 </div>
             </div>
             <div class="platform-button-container">
-                <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
+                <a href="{{ url_for('routes.about') }}" class="platform-button">ABOUT</a>
             </div>
             <div class="mobile-menu-button" onclick="toggleMobileMenu()">
                 <div class="bar"></div>
