@@ -208,9 +208,9 @@ header {
 }
 
 footer {
-    background-color: #222;
+    background-color: white;
     color: #fff;
     text-align: center;
     padding: 20px 0;
-    margin-right: -50vw;
+    margin-right: -70vw;
 }
