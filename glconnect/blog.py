@@ -141,8 +141,6 @@ def delete_post(post_id):
 
 # Define the UPLOAD_FOLDER and ensure it exists
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'glconnect', 'static', 'uploads')
-print(f"File saved at: {UPLOAD_FOLDER}")
-
 # Route to serve uploaded files
 @blog.route('/files/<path:filename>')
 def files(filename):

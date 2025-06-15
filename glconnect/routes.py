@@ -5,9 +5,12 @@ from datetime import datetime, timezone
 bp = Blueprint('routes', __name__)
 @bp.before_request
 def log_request():
-    with open("visits.txt", "a") as f:
-        timestamp = datetime.now(timezone.utc).isoformat()
-        f.write(f"{timestamp} | {request.remote_addr} | {request.method} {request.path} | {request.headers.get('User-Agent')}\n")
+    try:
+        with open("visits.txt", "a") as f:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            f.write(f"{timestamp} | {request.remote_addr} | {request.method} {request.path} | {request.headers.get('User-Agent')}\n")
+    except Exception as ex:
+        print("Exception occured while logging: ",ex)
 @bp.route('/')
 def index():
     """Render the home page."""
