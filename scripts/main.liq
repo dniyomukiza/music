@@ -13,8 +13,8 @@ radio = switch([
   ({ 0w }, gosp3),
   ({ 6w }, satmix),
   ({ 7w }, satmix),
-  ({ 6h-22h }, day),  
-  ({ 22h-6h }, night),  
+  ({ 6h-22h }, night),  
+  ({ 22h-6h }, day),  
   ({ true }, day)  
 ])
 radio = fallback([radio, default])  # Fallback to default if playlists fail
