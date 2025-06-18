@@ -1,0 +1,12 @@
+2025-06-18T13:51:12.141476+00:00 | 127.0.0.1 | GET / | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:02:55.509068+00:00 | 127.0.0.1 | GET / | Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1
+2025-06-18T14:03:01.507649+00:00 | 127.0.0.1 | GET /home | Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1
+2025-06-18T14:04:52.627185+00:00 | 127.0.0.1 | GET / | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:04:55.353766+00:00 | 127.0.0.1 | GET /home | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:05:06.033668+00:00 | 127.0.0.1 | GET /home | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:05:18.767478+00:00 | 127.0.0.1 | GET /about | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:33:24.058264+00:00 | 127.0.0.1 | GET / | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:33:30.386374+00:00 | 127.0.0.1 | GET /home | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:33:44.831019+00:00 | 127.0.0.1 | GET /home | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:33:53.021857+00:00 | 127.0.0.1 | GET /about | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+2025-06-18T14:34:14.113663+00:00 | 127.0.0.1 | GET /home | Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
