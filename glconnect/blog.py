@@ -68,11 +68,6 @@ def contact():
                     f"Email: {form.email.data}\n"
                     f"Message: {form.message.data}"
                 ),
-
-                reply_to= {
-                "email": form.email.data,
-                "name": ""
-                },
                 category="User Contact"
             )
             # Send email using Mailtrap API
