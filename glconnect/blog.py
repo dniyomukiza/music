@@ -79,8 +79,7 @@ def contact():
             flash("An error occurred while sending the email")
         else:
             flash("Thank you for reaching out. We will get back to you ASAP.", "success")
-
-        form.process()
+            return redirect(url_for("blog.contact"))
 
     return render_template("contact.html", form=form)
 
