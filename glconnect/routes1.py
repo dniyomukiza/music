@@ -36,9 +36,12 @@ def register():
 
         # Validate username and password
         if len(new_user_username) < 5:
-            flash("Username must be at least 7 characters with one uppercase letter and a digit.", 'error')
-        elif len(new_user_password) < 8 or not re.search(r"[A-Z]+", new_user_password) or not re.search(r"[_@#$]+", new_user_password):
+            flash("Username must be at least 5 characters with one uppercase letter and a digit.", 'error')
+        elif len(new_user_password) < 8 \
+            or not re.search(r"[A-Z]", new_user_password) \
+            or not re.search(r"[^\w\s]", new_user_password):
             flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
+
         else:
             # Create user without confirmation
             new_user = User(
@@ -128,13 +131,21 @@ def login():
             login_user(user)
             session['user_id'] = user.user_id 
             flash('Login successful!', 'success')
+            
+            # Check for next parameter to redirect after login
+            next_page = request.args.get('next')
+            if next_page and next_page.startswith('/'):
+                return redirect(next_page)
+            
+            # Default role-based redirects
             if user.role=="blogger":
                 return redirect(url_for('blog.blogs'))
             elif user.role=="artist":
                 return redirect(url_for('music.artist_profile'))
             elif user.role=="author":
                 return redirect(url_for('writer.writer_profile'))
-            
+            elif user.role=="dreamer":
+                return redirect(url_for('dream.dream_input'))
             else:
                 return redirect(url_for('prof.profile'))
         else:
