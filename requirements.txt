@@ -116,3 +116,4 @@ xyzservices==2025.4.0
 yarl==1.20.0
 zstandard==0.23.0
 mailtrap==2.1.0
+flask-cors==6.0.0
