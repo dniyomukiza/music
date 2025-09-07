@@ -502,7 +502,7 @@ def create_tts_agent(script_key: str, audio_filename: str, voice: str, agent_nam
 async def run_agent(agent, input_text):
     session_service = InMemorySessionService()
     runner = Runner(app_name="news_agent", agent=agent, session_service=session_service)
-    session = await session_service.create_session(app_name="news_agent", user_id="user123")
+    session = session_service.create_session(app_name="news_agent", user_id="user123")
     final_response = ""
     async for event in runner.run_async(user_id=session.user_id, session_id=session.id, new_message=Content(role="user", parts=[Part(text=input_text)])):
         if event.is_final_response():
