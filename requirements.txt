@@ -24,6 +24,7 @@ googleapis-common-protos==1.70.0
 
 # Google ADK (custom package)
 google-adk==0.1.0
+deprecated==1.2.14
 
 # AI/ML
 openai==1.76.2
