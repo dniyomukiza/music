@@ -3,7 +3,6 @@ import json
 from .models import *
 from .forms import *
 from dotenv import load_dotenv
-from elevenlabs.client import ElevenLabs
 from mailtrap import MailtrapClient, Mail, Address
 from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory
 from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
