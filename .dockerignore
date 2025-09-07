@@ -85,8 +85,8 @@ certbot/
 *.crt
 *.key
 
-# Nginx configs
-nginx*.conf
+# Nginx configs (commented out to allow nginx.conf for Docker builds)
+# nginx*.conf
 
 # Scripts
 scripts/
