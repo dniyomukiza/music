@@ -170,10 +170,6 @@ def upload():
     
     return upload_fail(message='No file uploaded', filename=None)
 
-client = ElevenLabs(
-    api_key=os.getenv("ELEVENLABS_API_KEY"),
-)
-
 
 @blog.route("/play-audio/<int:post_id>")
 def play_audio(post_id):
