@@ -9,6 +9,14 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_ckeditor import CKEditor
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Debug: Check if Google credentials are loaded
+print(f"GOOGLE_APPLICATION_CREDENTIALS: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
+print(f"GOOGLE_API_KEY: {os.environ.get('GOOGLE_API_KEY')}")
 
 # Initialize extensions
 mail = Mail()
@@ -19,7 +27,7 @@ with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='static', static_url_path='/static')
 
     CORS(app, origins=["https://glc.cool"], supports_credentials=True) # <-- ADD supports_credentials=True
 
@@ -72,6 +80,7 @@ def create_app():
         from .artist import art
         from .writer import writer
         from .book import book
+        from .news_routes import news_bp
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
@@ -83,6 +92,7 @@ def create_app():
         app.register_blueprint(play, url_prefix='/playlist2')
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
+        app.register_blueprint(news_bp, url_prefix='/routes2/news')
 
         # Ensure tables exist
         inspector = inspect(db.engine)

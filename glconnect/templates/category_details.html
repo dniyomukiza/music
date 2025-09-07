@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ category }} - News Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .stat:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            font-weight: 500;
+        }
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .topic-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+        .topic-item:last-child {
+            border-bottom: none;
+        }
+        .topic-name {
+            font-weight: 500;
+        }
+        .topic-count {
+            color: #666;
+            font-size: 0.8em;
+        }
+        .search-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+        .search-item:last-child {
+            border-bottom: none;
+        }
+        .search-topic {
+            font-weight: 500;
+        }
+        .search-time {
+            color: #666;
+            font-size: 0.8em;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('news_bp.analytics') }}" class="back-link">← Back to Analytics Dashboard</a>
+        
+        <h1>{{ category }} Category Details</h1>
+        
+        <div class="grid">
+            <!-- Topics Card -->
+            <div class="card">
+                <h3>Topics in {{ category }}</h3>
+                {% for topic, count in topics %}
+                <div class="topic-item">
+                    <div class="topic-name">{{ topic }}</div>
+                    <div class="topic-count">{{ count }} searches</div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Recent Searches Card -->
+            <div class="card">
+                <h3>Recent {{ category }} Searches</h3>
+                {% for search in recent_searches %}
+                <div class="search-item">
+                    <div class="search-topic">{{ search.topic }}</div>
+                    <div class="search-time">{{ search.timestamp[:19] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Category Statistics</h3>
+            <div class="stat">
+                <span class="stat-label">Total Topics</span>
+                <span class="stat-value">{{ topics|length }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total Searches</span>
+                <span class="stat-value">{{ topics|sum(attribute='1') }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Most Popular Topic</span>
+                <span class="stat-value">{{ topics[0][0] if topics else 'N/A' }}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

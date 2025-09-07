@@ -18,10 +18,14 @@ if not openai.api_key:
     exit(1)
 
 # Set the path to your Google Cloud service account key file
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
+# Use the correct credentials file
+if os.path.exists("tts.json"):
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "tts.json"
+elif os.path.exists("textspeechdemo.json"):
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
 
-# Create the text-to-speech client
-client = texttospeech.TextToSpeechClient()
+# Create the text-to-speech client (lazy initialization)
+client = None
 @bp2.route("/news", methods=["GET", "POST"])
 def news():
     form = KeywordForm()
@@ -65,6 +69,10 @@ def news():
                 audio_encoding=texttospeech.AudioEncoding.MP3
             )
 
+            # Initialize client if needed
+            if client is None:
+                client = texttospeech.TextToSpeechClient()
+            
             response = client.synthesize_speech(
                 input=synthesis_input,
                 voice=voice,

@@ -3,36 +3,656 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Generator</title>
+    <title>GLC News Generator - Professional News Broadcasting</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .card-header h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .card-body {
+            padding: 40px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .feature-card p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .topic-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .topic-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .topic-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .topic-input::placeholder {
+            color: #999;
+        }
+
+        .topics-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            min-height: 50px;
+        }
+
+        .topic-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .topic-remove {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .topic-remove:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-section {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .loading-details {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .result-header h3 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .result-body {
+            padding: 30px;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            text-decoration: none;
+            color: white;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .analytics-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .analytics-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     {% include 'messages.html' %}
     <div class="container">
-        <h1>News Generator</h1>
-        <form method="POST" action="{{ url_for('routes2.news') }}">
-            {{ form.hidden_tag() }}
-            <div class="form-group">
-                {{ form.keyword.label }}<br>
-                {{ form.keyword(size=40) }}
+        <div class="header">
+            <h1><i class="fas fa-broadcast-tower"></i> GLC News Generator</h1>
+            <p>Professional AI-Powered News Broadcasting System</p>
+        </div>
+        
+        <div class="main-card">
+            <div class="card-header">
+                <h2><i class="fas fa-microphone"></i> Create Your News Broadcast</h2>
+                <p>Enter topics and let our AI create a professional news bulletin</p>
             </div>
-            <div class="form-group">
-                {{ form.submit() }}
-            </div>
-        </form>
-        {% if audio_file_path %}
-    <div class="news-result">
-        <h2>News about {{ form.keyword.data }}</h2>
-        <p>Click below to listen to the news:</p>
-        <audio controls>
-            <source src="{{ url_for('static', filename='news_audio.mp3') }}" type="audio/mp3">
-        </audio>
-        <p><a href="{{ url_for('static', filename='news_audio.mp3') }}" download>Download the Audio</a></p>
-    </div>
-    {% else %}
-        <p>Audio is still being processed. Please try again shortly.</p>
-    {% endif %}
             
+            <div class="card-body">
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-brain"></i></div>
+                        <h3>Smart Categorization</h3>
+                        <p>Topics are automatically grouped by category (Sports, Politics, Tech, etc.)</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-users"></i></div>
+                        <h3>Dedicated Reporters</h3>
+                        <p>One specialized reporter per category handles all related topics</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-clock"></i></div>
+                        <h3>Real-time Updates</h3>
+                        <p>Current time announcements for Los Angeles, New York, Brussels, and Central Time</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-music"></i></div>
+                        <h3>Professional Audio</h3>
+                        <p>High-quality TTS with jingles, transitions, and professional broadcast format</p>
+                    </div>
+                </div>
+
+                <form id="newsForm">
+                    <div class="input-section">
+                        <label for="topicInput" class="input-label">
+                            <i class="fas fa-plus-circle"></i> Add News Topics
+                        </label>
+                        <div class="topic-input-container">
+                            <input 
+                                type="text" 
+                                id="topicInput" 
+                                class="topic-input" 
+                                placeholder="Type a topic and press Enter (e.g., 'college football', 'election results', 'AI developments')"
+                                autocomplete="off"
+                            >
+                        </div>
+                        <div class="topics-display" id="topicsDisplay">
+                            <div class="empty-state">No topics added yet. Start typing above!</div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="generate-btn" id="generateBtn">
+                        <i class="fas fa-play"></i>
+                        Generate News Broadcast
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="loading-section" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Generating your professional news broadcast...</div>
+            <div class="loading-details">This may take 1-2 minutes. Please wait.</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="result-section" id="result">
+            <!-- Results will be populated here -->
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{{ url_for('news_bp.analytics') }}" class="analytics-link">
+                <i class="fas fa-chart-bar"></i>
+                View Analytics Dashboard
+            </a>
+        </div>
     </div>
+
+    <script>
+        let topics = [];
+        let progressInterval;
+
+        document.getElementById('topicInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTopic();
+            }
+        });
+
+        function addTopic() {
+            const input = document.getElementById('topicInput');
+            const topic = input.value.trim();
+            
+            if (topic && !topics.includes(topic)) {
+                topics.push(topic);
+                input.value = '';
+                updateTopicsDisplay();
+            }
+        }
+
+        function removeTopic(topicToRemove) {
+            topics = topics.filter(topic => topic !== topicToRemove);
+            updateTopicsDisplay();
+        }
+
+        function updateTopicsDisplay() {
+            const display = document.getElementById('topicsDisplay');
+            
+            if (topics.length === 0) {
+                display.innerHTML = '<div class="empty-state">No topics added yet. Start typing above!</div>';
+            } else {
+                display.innerHTML = topics.map(topic => `
+                    <div class="topic-tag">
+                        <span>${topic}</span>
+                        <button class="topic-remove" onclick="removeTopic('${topic}')" title="Remove topic">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        document.getElementById('newsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (topics.length === 0) {
+                alert('Please add at least one topic before generating news.');
+                return;
+            }
+            
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            // Show loading state
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            
+            // Start progress animation
+            startProgressAnimation();
+            
+            try {
+                // Start the broadcast generation
+                const response = await fetch('/routes2/news/broadcast', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ topics: topics })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Poll for completion
+                const taskId = data.task_id;
+                await pollForCompletion(taskId);
+                
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fas fa-play"></i> Generate News Broadcast';
+                stopProgressAnimation();
+            }
+        });
+        
+        function startProgressAnimation() {
+            const progressFill = document.getElementById('progressFill');
+            let progress = 0;
+            
+            progressInterval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress > 90) progress = 90;
+                progressFill.style.width = progress + '%';
+            }, 500);
+        }
+        
+        function stopProgressAnimation() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+            }
+        }
+        
+        async function pollForCompletion(taskId) {
+            const maxAttempts = 60; // 5 minutes max
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`/routes2/news/status/${taskId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        showSuccess(data);
+                        return;
+                    } else if (data.status === 'failed') {
+                        throw new Error(data.error || 'Generation failed');
+                    }
+                    
+                    // Wait 5 seconds before next poll
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    attempts++;
+                    
+                } catch (error) {
+                    throw error;
+                }
+            }
+            
+            throw new Error('Generation timed out. Please try again.');
+        }
+        
+        function showSuccess(data) {
+            const result = document.getElementById('result');
+            result.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3><i class="fas fa-check-circle"></i> News Broadcast Generated Successfully!</h3>
+                        <p>Your professional news bulletin is ready to listen</p>
+                    </div>
+                    <div class="result-body">
+                        <audio controls class="audio-player">
+                            <source src="${data.audio_file}" type="audio/mp3">
+                            <source src="${data.audio_file}" type="audio/aiff">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <a href="${data.audio_file}" download class="download-btn">
+                                <i class="fas fa-download"></i>
+                                Download Audio File
+                            </a>
+                        </div>
+                        ${data.audio_file.endsWith('.txt') ? `
+                            <div class="error-message">
+                                <strong>Note:</strong> Audio generation failed, but you can read the text version below:
+                                <pre style="margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; white-space: pre-wrap;">${data.summary || 'Text content not available'}</pre>
+                            </div>
+                        ` : ''}
+                        ${data.summary ? `<p style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;"><strong>Summary:</strong> ${data.summary}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            result.style.display = 'block';
+            result.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showError(message) {
+            const result = document.getElementById('result');
+            result.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+                    </div>
+                    <div class="result-body">
+                        <div class="error-message">${message}</div>
+                    </div>
+                </div>
+            `;
+            result.style.display = 'block';
+            result.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
 </body>
 </html>
