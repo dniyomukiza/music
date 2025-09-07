@@ -1,1 +1,92 @@
-/glconnect/static/gospel2
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+myenv/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README.md
+*.md
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Large static files that aren't needed in container
+glconnect/static/afro/
+glconnect/static/gospel/
+glconnect/static/gospel2/
+glconnect/static/mixes/
+glconnect/static/satmix/
+
+# Audio files
+*.mp3
+*.wav
+*.ogg
+*.m3u
+
+# Database files
+*.db
+*.sqlite
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Certificates
+certbot/
+*.pem
+*.crt
+*.key
+
+# Nginx configs
+nginx*.conf
+
+# Scripts
+scripts/

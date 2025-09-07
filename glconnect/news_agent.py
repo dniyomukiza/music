@@ -13,7 +13,7 @@ from google.genai.types import Content, Part
 
 from google.cloud import texttospeech
 from pydub import AudioSegment
-from transformers import pipeline
+from summa import summarizer
 
 load_dotenv()
 
@@ -27,12 +27,32 @@ def summarize_text(text: str) -> dict:
         A dictionary with 'summary': The summarized text.
     """
     try:
-        summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-        summary = summarizer(text, max_length=150, min_length=50, do_sample=False)[0]['summary_text']
-        return {"summary": summary}
+        # Use Summa for lightweight but effective text summarization
+        # Summa uses TextRank algorithm - much lighter than PyTorch/transformers
+        if not text or len(text.strip()) < 50:
+            return {"summary": text}
+        
+        # Generate summary with 20% of original text length
+        summary = summarizer.summarize(text, ratio=0.2)
+        
+        # If summarization fails or returns empty, fallback to simple extraction
+        if not summary or len(summary.strip()) < 20:
+            sentences = text.split('. ')
+            if len(sentences) <= 3:
+                summary = text
+            else:
+                summary = '. '.join(sentences[:3]) + '.'
+        
+        return {"summary": summary.strip()}
     except Exception as e:
         print(f"Error during text summarization: {e}")
-        return {"summary": f"Error: Could not summarize text. {e}"}
+        # Fallback to simple text extraction
+        sentences = text.split('. ')
+        if len(sentences) <= 3:
+            summary = text
+        else:
+            summary = '. '.join(sentences[:3]) + '.'
+        return {"summary": summary}
 
 
 # --- Define the Timezone Tool (as a callable function) ---

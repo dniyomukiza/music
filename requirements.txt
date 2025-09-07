@@ -27,9 +27,8 @@ google-adk==0.1.0
 
 # AI/ML
 openai==1.76.2
-transformers==4.44.2
-torch==2.4.1
 pydub==0.25.1
+summa==1.2.0
 
 # Document processing
 python-docx==1.1.0
