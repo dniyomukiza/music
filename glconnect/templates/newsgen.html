@@ -624,7 +624,7 @@
                                 Download Audio File
                             </a>
                         </div>
-                        ${data.audio_file.endsWith('.txt') ? `
+                        ${data.audio_file && data.audio_file.endsWith('.txt') ? `
                             <div class="error-message">
                                 <strong>Note:</strong> Audio generation failed, but you can read the text version below:
                                 <pre style="margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; white-space: pre-wrap;">${data.summary || 'Text content not available'}</pre>

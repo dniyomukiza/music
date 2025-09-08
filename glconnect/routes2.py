@@ -2,7 +2,7 @@ import os
 import json
 import openai
 from glconnect.forms import *
-from flask import render_template, request,Blueprint
+from flask import render_template, request, Blueprint, send_from_directory
 from glconnect.search import SongSearcher
 from google.cloud import texttospeech
 
@@ -98,11 +98,24 @@ def news():
     # Ensure audio file exists before passing to template (only if audio_file_path is not None)
     audio_file_ready = audio_file_path and os.path.exists(audio_file_path)
     
+    # Convert file path to URL for web serving
+    audio_file_url = None
+    if audio_file_ready:
+        # Convert absolute path to relative URL for static serving
+        audio_file_url = f"/static/{os.path.basename(audio_file_path)}"
+    
     # Render template and pass paths for news and audio
     return render_template(
         "newsgen.html",
         form=form,
+        audio_file=audio_file_url,
         audio_file_path=audio_file_path if audio_file_ready else None,
         news_file_path=news_file_path
     )
+
+@bp2.route('/static/<filename>')
+def serve_audio(filename):
+    """Serve audio files from the static directory"""
+    static_folder = os.path.join(os.getcwd(), 'glconnect/static')
+    return send_from_directory(static_folder, filename)
 
