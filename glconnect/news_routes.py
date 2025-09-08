@@ -32,6 +32,7 @@ class AudioFilePathNotFound(Exception):
 def cleanup_old_audio_files():
     """Clean up old audio files, keeping only jingle.wav and the most recent final_news_broadcast*.mp3"""
     print("DEBUG: Audio cleanup disabled for debugging - keeping all files")
+    print("DEBUG: PROTECTED FILES: jingle.wav and final_news_broadcast*.mp3 will NEVER be deleted")
     return  # Disabled for debugging
     
     try:
@@ -279,33 +280,43 @@ def extract_audio_path_from_output(output_text):
     print("DEBUG: No audio path found in output")
     return None
 
-def cleanup_temp_audio_files(keep_jingle=True):
-    """Clean up temporary audio files, keeping jingle.wav if specified."""
+def cleanup_temp_audio_files():
+    """Clean up temporary audio files, NEVER deleting jingle.wav or final_news_broadcast files."""
     audio_dir = "glconnect/static/audio"
     if not os.path.exists(audio_dir):
         return
     
     print("DEBUG: Cleaning up temporary audio files...")
+    print("DEBUG: PROTECTED FILES: jingle.wav and final_news_broadcast*.mp3 will NEVER be deleted")
     files_deleted = 0
     
     for filename in os.listdir(audio_dir):
         file_path = os.path.join(audio_dir, filename)
         
-        # Skip jingle.wav if keep_jingle is True
-        if keep_jingle and filename == "jingle.wav":
-            print(f"DEBUG: Keeping jingle.wav")
+        # NEVER delete jingle.wav - this is a protected file
+        if filename == "jingle.wav":
+            print(f"DEBUG: PROTECTED - Keeping jingle.wav")
             continue
             
-        # Delete all other audio files
-        if filename.endswith(('.mp3', '.wav', '.ogg', '.aiff')):
+        # NEVER delete final news broadcast files - these are protected files
+        if filename.startswith("final_news_broadcast"):
+            print(f"DEBUG: PROTECTED - Keeping final broadcast: {filename}")
+            continue
+            
+        # Only delete temporary audio files (intro, outro, transition, thank_you, category-specific files)
+        if (filename.endswith(('.mp3', '.wav', '.ogg', '.aiff')) and 
+            any(pattern in filename for pattern in ['intro_', 'outro_', 'transition_', 'thank_you_', '_audio.mp3', 'sports_', 'politics_', 'tech_', 'health_', 'finance_'])):
             try:
                 os.remove(file_path)
                 print(f"DEBUG: Deleted temporary audio file: {filename}")
                 files_deleted += 1
             except Exception as e:
                 print(f"DEBUG: Error deleting {filename}: {e}")
+        else:
+            print(f"DEBUG: Skipping file (not a temporary file): {filename}")
     
     print(f"DEBUG: Cleaned up {files_deleted} temporary audio files")
+    print("DEBUG: PROTECTED FILES REMAIN: jingle.wav and final_news_broadcast*.mp3")
 
 def run_generate_broadcast(task_id, topics):
     """Wrapper function to run generate_broadcast and store the result."""
@@ -371,8 +382,8 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['audio_file'] = audio_url
                 tasks[task_id]['summary'] = ""
             
-            # Clean up temporary audio files, keeping jingle.wav
-            cleanup_temp_audio_files(keep_jingle=True)
+            # Clean up temporary audio files (jingle.wav and final_news_broadcast*.mp3 are NEVER deleted)
+            cleanup_temp_audio_files()
             
             # Clean up old audio files after successful generation
             cleanup_old_audio_files()
