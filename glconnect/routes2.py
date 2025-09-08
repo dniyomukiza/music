@@ -17,12 +17,11 @@ if not openai.api_key:
     print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
     exit(1)
 
-# Set the path to your Google Cloud service account key file
-# Use the correct credentials file
-if os.path.exists("tts.json"):
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "tts.json"
-elif os.path.exists("textspeechdemo.json"):
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
+# Get Google API key from glconfig.json
+google_api_key = config.get("GOOGLE_API_KEY")
+
+# Get TTS credentials path from glconfig.json
+tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 
 # Create the text-to-speech client (lazy initialization)
 client = None
@@ -59,7 +58,10 @@ def news():
             print(f"News text saved to {news_file_path}")
 
             # Step 3: Generate speech using Google Cloud TTS
-            client = texttospeech.TextToSpeechClient()
+            # Load credentials from file and pass to client
+            from google.oauth2 import service_account
+            credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
+            client = texttospeech.TextToSpeechClient(credentials=credentials)
             synthesis_input = texttospeech.SynthesisInput(text=news_script)
             voice = texttospeech.VoiceSelectionParams(
                 language_code="en-US",
@@ -71,7 +73,9 @@ def news():
 
             # Initialize client if needed
             if client is None:
-                client = texttospeech.TextToSpeechClient()
+                from google.oauth2 import service_account
+                credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
+                client = texttospeech.TextToSpeechClient(credentials=credentials)
             
             response = client.synthesize_speech(
                 input=synthesis_input,

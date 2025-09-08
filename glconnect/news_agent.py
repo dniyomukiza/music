@@ -17,6 +17,25 @@ from summa import summarizer
 
 load_dotenv()
 
+# Load Google API key from glconfig.json
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
+
+# Get Google API key from glconfig.json
+google_api_key = config.get("GOOGLE_API_KEY")
+if not google_api_key:
+    print("Error: GOOGLE_API_KEY not found in glconfig.json")
+    exit(1)
+
+# Get TTS credentials path from glconfig.json
+tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+
+# Configure Google AI SDK
+import google.generativeai as genai
+genai.configure(api_key=google_api_key)
+
+# TTS credentials will be loaded when needed
+
 # --- Define the Summarization Tool (as a callable function) ---
 def summarize_text(text: str) -> dict:
     """
@@ -146,7 +165,10 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     # Clean the text before processing
     clean_text = clean_text_for_speech(text)
     
-    client = texttospeech.TextToSpeechClient()
+    # Load credentials from file and pass to client
+    from google.oauth2 import service_account
+    credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
+    client = texttospeech.TextToSpeechClient(credentials=credentials)
 
     synthesis_input = texttospeech.SynthesisInput(text=clean_text)
     audio_config = texttospeech.AudioConfig(
@@ -325,6 +347,7 @@ def create_news_reporter_agent(topic: str, voice: str, agent_name: str, output_k
     """Creates a news reporter agent for a specific topic."""
     return Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name=agent_name,
         description=f"An agent that generates a news script about {topic}.",
         instruction=f"""
@@ -351,6 +374,7 @@ def create_category_reporter_agent(category: str, topics: list[str], voice: str,
     topics_str = ", ".join(topics)
     return Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name=agent_name,
         description=f"An agent that generates a news script about {category} topics: {topics_str}.",
         instruction=f"""
@@ -379,6 +403,7 @@ def create_anchor_agent(topics: list[str], reporter_scripts: list[str]) -> Agent
     reporter_scripts_str = "\n".join(reporter_scripts)
     return Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="news_anchor_agent",
         description="Generates the anchor's script for the news bulletin.",
         instruction=f"""
@@ -491,6 +516,7 @@ def create_tts_agent(script_key: str, audio_filename: str, voice: str, agent_nam
     
     return Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name=agent_name,
         description=f"Converts the {script_key} to audio using the specified voice.",
         instruction=instruction,
@@ -518,6 +544,7 @@ def generate_broadcast(topics: list[str]) -> dict:
     # Categorization Agent
     categorization_agent = Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="categorization_agent",
         description="Categorizes news topics into sports, finance, politics, tech, and health.",
         instruction=f"""
@@ -661,6 +688,7 @@ def generate_broadcast(topics: list[str]) -> dict:
         # Create TTS agent with cleaned script content
         tts_agent = Agent(
             model="gemini-2.0-flash",
+            api_key=google_api_key,
             name=f"tts_{category}_reporter",
             description=f"Converts {category} report to audio.",
             instruction=f"""
@@ -700,6 +728,7 @@ def generate_broadcast(topics: list[str]) -> dict:
 
     final_audio_assembler_agent = Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="final_audio_assembler_agent",
         description="Combines all audio files into a single broadcast in the correct order.",
         instruction=f"""
@@ -727,6 +756,7 @@ def generate_broadcast(topics: list[str]) -> dict:
 
     summary_agent = Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="summary_agent",
         description="Summarizes the news reports.",
         instruction=f"""
@@ -765,6 +795,7 @@ def generate_broadcast(topics: list[str]) -> dict:
     # Create intro and outro TTS agents with actual script content
     intro_tts_agent = Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="tts_intro",
         description="Converts intro to audio.",
         instruction=f"""
@@ -781,6 +812,7 @@ def generate_broadcast(topics: list[str]) -> dict:
     
     outro_tts_agent = Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="tts_outro",
         description="Converts outro to audio.",
         instruction=f"""
@@ -797,6 +829,7 @@ def generate_broadcast(topics: list[str]) -> dict:
     
     thank_you_tts_agent = Agent(
         model="gemini-2.0-flash",
+        api_key=google_api_key,
         name="tts_thank_you",
         description="Converts thank you message to audio.",
         instruction=f"""
@@ -819,6 +852,7 @@ def generate_broadcast(topics: list[str]) -> dict:
         
         transition_tts_agent = Agent(
             model="gemini-2.0-flash",
+            api_key=google_api_key,
             name=agent_name,
             description=f"Converts transition {i+1} to audio.",
             instruction=f"""

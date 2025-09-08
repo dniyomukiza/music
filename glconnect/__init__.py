@@ -15,8 +15,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Debug: Check if Google credentials are loaded
-print(f"GOOGLE_APPLICATION_CREDENTIALS: {os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}")
-print(f"GOOGLE_API_KEY: {os.environ.get('GOOGLE_API_KEY')}")
+# Get Google API key from glconfig.json
+google_api_key = config.get("GOOGLE_API_KEY")
+print(f"GOOGLE_API_KEY from glconfig.json: {google_api_key}")
+print(f"GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)")
 
 # Initialize extensions
 mail = Mail()

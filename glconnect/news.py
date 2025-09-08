@@ -18,11 +18,17 @@ if not openai.api_key:
     print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
     exit(1)
 
-# Set the path to your Google Cloud service account key file
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
+# Get Google API key from glconfig.json
+google_api_key = config.get("GOOGLE_API_KEY")
+
+# Get TTS credentials path from glconfig.json
+tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 
 # Create the text-to-speech client
-client = texttospeech.TextToSpeechClient()
+# Load credentials from file and pass to client
+from google.oauth2 import service_account
+credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
+client = texttospeech.TextToSpeechClient(credentials=credentials)
 
 # Function to handle input with a timeout
 def input_with_timeout(prompt, timeout):
