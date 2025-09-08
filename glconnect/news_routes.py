@@ -260,18 +260,52 @@ def extract_audio_path_from_output(output_text):
     if not output_text:
         return None
     
-    # Look for the audio file path in the output using regex
-    # Pattern to match: glconnect/static/audio/final_news_broadcast_*.mp3
-    match = re.search(r'glconnect/static/audio/final_news_broadcast[^\s]*\.mp3', output_text)
-    if match:
-        return match.group(0)
+    print(f"DEBUG: Looking for audio path in output: {output_text}")
     
-    # Fallback: look for any .mp3 file path
-    match = re.search(r'[^\s]*\.mp3', output_text)
-    if match:
-        return match.group(0)
+    # Look for final news broadcast audio file in glconnect/static/audio/
+    patterns = [
+        r'glconnect/static/audio/final_news_broadcast[^\s]*\.mp3',
+        r'glconnect/static/audio/.*\.mp3',
+        r'static/audio/.*\.mp3',
+        r'final_news_broadcast[^\s]*\.mp3'
+    ]
     
+    for pattern in patterns:
+        match = re.search(pattern, output_text)
+        if match:
+            print(f"DEBUG: Found audio path with pattern {pattern}: {match.group(0)}")
+            return match.group(0)
+    
+    print("DEBUG: No audio path found in output")
     return None
+
+def cleanup_temp_audio_files(keep_jingle=True):
+    """Clean up temporary audio files, keeping jingle.wav if specified."""
+    audio_dir = "glconnect/static/audio"
+    if not os.path.exists(audio_dir):
+        return
+    
+    print("DEBUG: Cleaning up temporary audio files...")
+    files_deleted = 0
+    
+    for filename in os.listdir(audio_dir):
+        file_path = os.path.join(audio_dir, filename)
+        
+        # Skip jingle.wav if keep_jingle is True
+        if keep_jingle and filename == "jingle.wav":
+            print(f"DEBUG: Keeping jingle.wav")
+            continue
+            
+        # Delete all other audio files
+        if filename.endswith(('.mp3', '.wav', '.ogg', '.aiff')):
+            try:
+                os.remove(file_path)
+                print(f"DEBUG: Deleted temporary audio file: {filename}")
+                files_deleted += 1
+            except Exception as e:
+                print(f"DEBUG: Error deleting {filename}: {e}")
+    
+    print(f"DEBUG: Cleaned up {files_deleted} temporary audio files")
 
 def run_generate_broadcast(task_id, topics):
     """Wrapper function to run generate_broadcast and store the result."""
@@ -298,6 +332,19 @@ def run_generate_broadcast(task_id, topics):
                 default_path = "glconnect/static/audio/final_news_broadcast.mp3"
                 if os.path.exists(default_path):
                     audio_file_path = default_path
+                    print(f"DEBUG: Using default audio path: {audio_file_path}")
+                else:
+                    # Look for any .mp3 file in the audio directory
+                    audio_dir = "glconnect/static/audio"
+                    if os.path.exists(audio_dir):
+                        for file in os.listdir(audio_dir):
+                            if file.endswith('.mp3') and file != "jingle.wav":
+                                audio_file_path = os.path.join(audio_dir, file)
+                                print(f"DEBUG: Found audio file: {audio_file_path}")
+                                break
+                
+                if not audio_file_path:
+                    audio_file_path = default_path
                 else:
                     # Look for timestamped versions of the audio file
                     audio_dir = "glconnect/static/audio"
@@ -323,6 +370,9 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['status'] = 'completed'
                 tasks[task_id]['audio_file'] = audio_url
                 tasks[task_id]['summary'] = ""
+            
+            # Clean up temporary audio files, keeping jingle.wav
+            cleanup_temp_audio_files(keep_jingle=True)
             
             # Clean up old audio files after successful generation
             cleanup_old_audio_files()
