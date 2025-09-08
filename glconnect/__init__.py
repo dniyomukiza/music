@@ -14,6 +14,10 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Load configuration from glconfig.json
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
+
 # Debug: Check if Google credentials are loaded
 # Get Google API key from glconfig.json
 google_api_key = config.get("GOOGLE_API_KEY")

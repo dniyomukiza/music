@@ -51,6 +51,8 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
+    with open('/etc/glconfig.json') as json_file:
+        config = json.load(json_file)
     sender = config.get("SENDER_MAIL")
     receiver=config.get("RECEIVER_MAIL")
     api_key = config.get("MAIL_TRAP")

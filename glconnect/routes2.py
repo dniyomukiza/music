@@ -8,13 +8,14 @@ from google.cloud import texttospeech
 
 with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
-# Load your OpenAI API key from an environment variable
+
+# Load your OpenAI API key from glconfig.json
 openai.api_key = config.get("OPENAI_AI_KEY")
 bp2 = Blueprint('routes2', __name__)
 
 # Check for API key
 if not openai.api_key:
-    print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
+    print("API key not found. Please set the 'OPENAI_AI_KEY' in glconfig.json.")
     exit(1)
 
 # Get Google API key from glconfig.json

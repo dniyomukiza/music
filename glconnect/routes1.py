@@ -76,6 +76,8 @@ def register():
     return render_template('register.html', title='Register', form=form)
 
 def send_confirmation_email(to_email, confirm_url):
+    with open('/etc/glconfig.json') as json_file:
+        config = json.load(json_file)
     sender = config.get("SENDER_MAIL")
     receiver=to_email
     api_key = config.get("MAIL_TRAP")
@@ -234,6 +236,8 @@ def reset_password_request():
     return render_template('passreq.html', title='Reset Password', form=form)
   
 def send_reset_email(to_email, reset_url):
+    with open('/etc/glconfig.json') as json_file:
+        config = json.load(json_file)
     sender = config.get("SENDER_MAIL")
     receiver=to_email
     api_key = config.get("MAIL_TRAP")
