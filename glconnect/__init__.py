@@ -14,36 +14,37 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Load configuration from environment variables first, then fall back to glconfig.json
+# Load configuration - prioritize glconfig.json for remote Linux compatibility
 config = {}
 
-# Try environment variables first
-env_config = {
-    "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
-    "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
-    "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
-    "DB_URL": os.getenv("DB_URL"),
-    "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
-    "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
-}
-
-# Check if we have any environment variables set
-if any(env_config.values()):
+# Try glconfig.json first (for remote Linux)
+try:
+    with open('/etc/glconfig.json') as json_file:
+        config = json.load(json_file)
+    print("DEBUG: Loaded configuration from glconfig.json")
+except FileNotFoundError:
+    print("DEBUG: glconfig.json not found, trying environment variables")
+    # Fall back to environment variables if glconfig.json doesn't exist
+    config = {
+        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+        "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
+        "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
+        "DB_URL": os.getenv("DB_URL"),
+        "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
+        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
+    }
     print("DEBUG: Using environment variables for configuration")
-    config = env_config
-else:
-    print("DEBUG: No environment variables found, trying glconfig.json")
-    # Fall back to glconfig.json if no environment variables are set
-    try:
-        with open('/etc/glconfig.json') as json_file:
-            config = json.load(json_file)
-        print("DEBUG: Loaded configuration from glconfig.json")
-    except FileNotFoundError:
-        print("DEBUG: glconfig.json not found, using environment variables with defaults")
-        config = env_config
-    except Exception as e:
-        print(f"DEBUG: Error loading glconfig.json: {e}, using environment variables")
-        config = env_config
+except Exception as e:
+    print(f"DEBUG: Error loading glconfig.json: {e}, using environment variables")
+    config = {
+        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+        "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
+        "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
+        "DB_URL": os.getenv("DB_URL"),
+        "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
+        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
+    }
+    print("DEBUG: Using environment variables for configuration")
 
 # Debug: Check if Google credentials are loaded
 # Get Google API key from glconfig.json
