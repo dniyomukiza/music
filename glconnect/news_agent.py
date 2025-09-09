@@ -545,7 +545,26 @@ def create_tts_agent(script_key: str, audio_filename: str, voice: str, agent_nam
 async def run_agent(agent, input_text):
     session_service = InMemorySessionService()
     runner = Runner(app_name="news_agent", agent=agent, session_service=session_service)
-    session = await session_service.create_session(app_name="news_agent", user_id="user123")
+    
+    # Debug: Check if create_session is callable and inspect its signature
+    print(f"DEBUG: create_session callable: {callable(session_service.create_session)}")
+    print(f"DEBUG: create_session type: {type(session_service.create_session)}")
+    
+    # Try both sync and async versions of create_session
+    try:
+        # First try async version
+        session = await session_service.create_session(app_name="news_agent", user_id="user123")
+        print("DEBUG: Using async create_session")
+    except TypeError as e:
+        if "can't be used in 'await' expression" in str(e):
+            # Fall back to sync version
+            print(f"DEBUG: Async failed with error: {e}")
+            session = session_service.create_session(app_name="news_agent", user_id="user123")
+            print("DEBUG: Using sync create_session")
+        else:
+            print(f"DEBUG: Unexpected error: {e}")
+            raise e
+    
     final_response = ""
     
     # Debug: Check session object
