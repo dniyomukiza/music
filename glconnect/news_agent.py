@@ -206,14 +206,19 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     try:
         print(f"DEBUG: Attempting TTS for {output_filename} with text: '{clean_text[:100]}...'")
         print(f"DEBUG: Using voice: {voice_name}, rate: {speaking_rate}, pitch: {pitch}")
+        print(f"DEBUG: Text length: {len(clean_text)} characters")
         
         response = client.synthesize_speech(
             input=synthesis_input, voice=voice_params, audio_config=audio_config
         )
 
         print(f"DEBUG: TTS response received, audio content length: {len(response.audio_content) if response.audio_content else 'None'}")
+        print(f"DEBUG: Response type: {type(response)}")
+        print(f"DEBUG: Response attributes: {dir(response)}")
         
         if not response.audio_content:
+            print(f"ERROR: TTS returned empty audio content for {output_filename}")
+            print(f"DEBUG: Full response: {response}")
             raise Exception(f"TTS returned empty audio content for {output_filename}")
 
         output_dir = "glconnect/static/audio"
@@ -227,11 +232,16 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
         print(f"DEBUG: Audio content written to file: {full_path} ({file_size} bytes)")
         
         if file_size == 0:
+            print(f"ERROR: Audio file created but is empty (0 bytes) for {output_filename}")
+            print(f"DEBUG: Response audio_content type: {type(response.audio_content)}")
+            print(f"DEBUG: Response audio_content length: {len(response.audio_content) if response.audio_content else 'None'}")
             raise Exception(f"Audio file created but is empty (0 bytes) for {output_filename}")
             
         return {"audio_filepath": full_path}
     except Exception as e:
         print(f"ERROR during Text-to-Speech for {output_filename}: {e}")
+        print(f"DEBUG: Exception type: {type(e)}")
+        print(f"DEBUG: Exception details: {str(e)}")
         # Instead of returning an error string, raise the exception to be handled by the calling function
         raise Exception(f"TTS failed for {output_filename}: {e}")
 
