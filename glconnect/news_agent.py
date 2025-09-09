@@ -604,12 +604,12 @@ def create_anchor_agent(topics: list[str], reporter_scripts: list[str]) -> Agent
             Example JSON output (use the ACTUAL current time from get_timezone_info tool):
             ```json
             {{
-                "intro": "It's 6:20 PM in Los Angeles, 9:20 PM in New York City, 3:20 AM in Brussels and 8:20 PM central time, I am your anchor today, in this edition we are covering the latest in sports and finance.",
+                "intro": "It's 6:20 PM in Los Angeles, 9:20 PM in New York City, 3:20 AM in Brussels and 8:20 PM central time, I am your anchor today and welcome to GLC News , in this edition we are covering the latest in sports and finance.",
                 "transitions": [
                     "First up, we have Ernest with the latest on sports.",
                     "Next, Isabella brings us updates on finance."
                 ],
-                "outro": "That's all for today. Thanks for listening to GLC News."
+                "outro": "That wraps up today’s edition. Thank you for listening to GLC News. Stay tuned for more updatess. See you next time"
             }}
             ```
 
