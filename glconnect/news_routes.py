@@ -395,6 +395,21 @@ def run_generate_broadcast(task_id, topics):
                     else:
                         raise AudioFilePathNotFound("Audio file path not found in output and audio directory doesn't exist")
             
+            # Debug path information
+            print(f"DEBUG: Current working directory: {os.getcwd()}")
+            print(f"DEBUG: Audio file path to check: {audio_file_path}")
+            print(f"DEBUG: Audio file path exists: {os.path.exists(audio_file_path)}")
+            print(f"DEBUG: Audio file path is absolute: {os.path.isabs(audio_file_path)}")
+            
+            # Try to resolve the path if it's relative
+            if not os.path.isabs(audio_file_path):
+                abs_audio_file_path = os.path.abspath(audio_file_path)
+                print(f"DEBUG: Resolved absolute path: {abs_audio_file_path}")
+                print(f"DEBUG: Resolved path exists: {os.path.exists(abs_audio_file_path)}")
+                if os.path.exists(abs_audio_file_path):
+                    audio_file_path = abs_audio_file_path
+                    print(f"DEBUG: Using resolved absolute path: {audio_file_path}")
+            
             # Verify the audio file exists and has content before marking as completed
             # Add retry mechanism in case file is still being written
             max_retries = 10
@@ -459,7 +474,7 @@ def run_generate_broadcast(task_id, topics):
         print(f"Error in ADK agent news generation: {e}")
         with _tasks_lock:
             tasks[task_id]['status'] = 'failed'
-            tasks[task_id]['error'] = f"News generation failed: {e}"
+            tasks[task_id]['error'] = f"e : {e}"
 
 @news_bp.route('/')
 def index():
@@ -470,8 +485,33 @@ def serve_audio(filename):
     """Serve audio files from the glconnect/static/audio directory."""
     from flask import send_from_directory
     import os
-    audio_dir = os.path.join(os.getcwd(), 'glconnect', 'static', 'audio')
-    return send_from_directory(audio_dir, filename)
+    
+    # Try multiple possible audio directory locations
+    possible_dirs = [
+        os.path.join(os.getcwd(), 'glconnect', 'static', 'audio'),
+        os.path.abspath('glconnect/static/audio'),
+        '/usr/src/appdir/glconnect/static/audio',  # Docker container path
+        './glconnect/static/audio'
+    ]
+    
+    print(f"DEBUG: Looking for audio file: {filename}")
+    print(f"DEBUG: Current working directory: {os.getcwd()}")
+    
+    for audio_dir in possible_dirs:
+        print(f"DEBUG: Checking directory: {audio_dir}")
+        if os.path.exists(audio_dir):
+            full_path = os.path.join(audio_dir, filename)
+            print(f"DEBUG: Checking file: {full_path}")
+            if os.path.exists(full_path):
+                print(f"DEBUG: Found audio file at: {full_path}")
+                return send_from_directory(audio_dir, filename)
+            else:
+                print(f"DEBUG: File not found in {audio_dir}")
+        else:
+            print(f"DEBUG: Directory does not exist: {audio_dir}")
+    
+    print(f"ERROR: Audio file {filename} not found in any expected location")
+    return "Audio file not found", 404
 
 @news_bp.route('/broadcast', methods=['POST'])
 def broadcast():
