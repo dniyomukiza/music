@@ -70,21 +70,330 @@ def cleanup_old_audio_files():
         print(f"Error during audio cleanup: {e}")
 
 # --- Topic Relevance Filtering ---
-def is_relevant_topic(topic: str) -> bool:
+def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
     """
-    Determines if a topic is relevant for news reporting using intelligent validation.
-    This function is more permissive and relies on common sense rather than rigid keywords.
+    Determines if a topic is relevant for news reporting using flexible validation.
+    Returns (is_relevant, confidence_score, reason)
     """
     t = topic.strip().lower()
     if not t:
-        return False
+        print(f"DEBUG: Empty topic rejected")
+        return False, 0.0, "Empty topic"
     
-    # Always allow topics that are clearly news-related by common patterns
+    print(f"DEBUG: Checking topic relevance for: '{topic}'")
+    
+    # Strategy 1: AI-Powered Validation (Primary)
+    try:
+        is_relevant, confidence = validate_topic_with_ai_enhanced(topic)
+        if is_relevant is not None:
+            print(f"DEBUG: AI validation result: {is_relevant} (confidence: {confidence})")
+            return is_relevant, confidence, "AI validation"
+    except Exception as e:
+        print(f"DEBUG: AI validation failed: {e}, falling back to other strategies")
+    
+    # Strategy 2: Pattern-Based Validation
+    try:
+        is_relevant = validate_topic_with_patterns(topic)
+        if is_relevant:
+            return True, 0.7, "Pattern matching"
+    except Exception as e:
+        print(f"DEBUG: Pattern validation failed: {e}")
+    
+    # Strategy 3: Learning-Based Validation
+    try:
+        is_relevant, confidence = validate_topic_with_learning_enhanced(topic)
+        if is_relevant is not None:
+            print(f"DEBUG: Learning validation result: {is_relevant} (confidence: {confidence})")
+            return is_relevant, confidence, "Learning-based"
+    except Exception as e:
+        print(f"DEBUG: Learning validation failed: {e}")
+    
+    # Strategy 4: Flexible Default Rules
+    return apply_flexible_default_rules(topic)
+
+def apply_flexible_default_rules(topic: str) -> tuple[bool, float, str]:
+    """
+    Apply flexible default rules that are more permissive for unexpected topics.
+    """
+    t = topic.strip().lower()
+    
+    # Rule 1: Reject obvious non-news (very high confidence)
+    obvious_non_news = [
+        'hello', 'hi', 'test', 'testing', '123', 'abc', 'xyz',
+        'asdf', 'qwerty', 'password', 'admin', 'login', 'logout'
+    ]
+    
+    if t in obvious_non_news:
+        return False, 0.95, "Obvious non-news term"
+    
+    # Rule 2: Reject single characters or very short nonsense
+    if len(t) < 3:
+        return False, 0.8, "Too short"
+    
+    # Rule 3: Reject pure numbers or symbols
+    if t.isdigit() or not any(c.isalpha() for c in t):
+        return False, 0.9, "No alphabetic characters"
+    
+    # Rule 4: Check for personal/irrelevant patterns before accepting multi-word topics
+    personal_patterns = [
+        # Personal statements
+        r'\b(i am|i\'m|i will|i\'ll|i went|i go|i have|i\'ve|i want|i need|i like|i love|i hate)\b',
+        r'\b(going to|went to|coming from|leaving for|heading to)\b',
+        r'\b(my|me|myself|mine)\b',
+        r'\b(today i|yesterday i|tomorrow i)\b',
+        
+        # Personal activities
+        r'\b(school|work|home|store|restaurant|park|beach|gym|library|hospital|church)\b.*\b(going|went|coming|leaving|visiting)\b',
+        r'\b(eating|drinking|sleeping|watching|reading|playing|studying|working)\b',
+        
+        # Personal opinions/feelings
+        r'\b(just|really|so|very|quite|pretty)\b.*\b(good|bad|nice|great|terrible|awesome|amazing|beautiful|ugly|funny|sad|happy)\b',
+        r'\b(i think|i feel|i believe|i hope|i wish|i want|i need)\b',
+        
+        # Casual conversation
+        r'\b(how are you|what\'s up|hello|hi there|good morning|good evening|good night)\b',
+        r'\b(thanks|thank you|please|sorry|excuse me)\b',
+        
+        # Personal possessions/relationships
+        r'\b(my cat|my dog|my car|my house|my family|my friend|my boyfriend|my girlfriend)\b',
+        r'\b(this is|that is|here is|there is)\b.*\b(my|mine|me)\b',
+        
+        # Questions about personal matters
+        r'\b(what should i|how do i|where can i|when should i|why did i)\b',
+        r'\b(can you help|do you know|is it ok|should i)\b'
+    ]
+    
+    import re
+    for pattern in personal_patterns:
+        if re.search(pattern, t, re.IGNORECASE):
+            return False, 0.8, "Personal/irrelevant statement"
+    
+    # Rule 4b: Accept multi-word topics only if they contain news indicators
+    if len(t.split()) >= 2:
+        # Check if it contains any news-related terms
+        news_indicators = [
+            'war', 'crisis', 'election', 'protest', 'attack', 'disaster', 'outbreak',
+            'pandemic', 'recession', 'inflation', 'corruption', 'scandal', 'investigation',
+            'breaking', 'urgent', 'developing', 'latest', 'recent', 'announces', 'declares',
+            'confirms', 'denies', 'warns', 'calls', 'says', 'reports', 'reveals',
+            'ukraine', 'russia', 'china', 'congo', 'nigeria', 'brazil', 'europe', 'asia',
+            'america', 'africa', 'middle east', 'united states', 'united kingdom'
+        ]
+        
+        has_news_indicator = any(indicator in t for indicator in news_indicators)
+        if has_news_indicator:
+            return True, 0.7, "Multi-word topic with news indicators"
+        else:
+            # For multi-word topics without clear news indicators, be more cautious
+            return True, 0.4, "Multi-word topic (low confidence - may not be news)"
+    
+    # Rule 5: Accept single words that could be news-related
+    potential_news_words = [
+        'war', 'peace', 'crisis', 'election', 'protest', 'attack', 'disaster',
+        'breakthrough', 'discovery', 'outbreak', 'pandemic', 'recession',
+        'inflation', 'unemployment', 'corruption', 'scandal', 'investigation'
+    ]
+    
+    if t in potential_news_words:
+        return True, 0.7, "Potential news word"
+    
+    # Rule 6: Accept anything else (ultra-permissive fallback)
+    # This ensures we don't reject potentially valid topics
+    return True, 0.5, "Default acceptance (ultra-permissive)"
+
+def validate_topic_with_patterns(topic: str) -> bool:
+    """
+    Additional pattern-based validation for edge cases.
+    """
+    t = topic.strip().lower()
+    
+    # Pattern 1: News-like structure (Subject + Action/Event)
+    # Examples: "Biden announces", "Stock market crashes", "Earthquake hits"
+    import re
+    news_patterns = [
+        r'\w+\s+(announces?|declares?|confirms?|denies?|warns?|urges?|calls?|says?)',
+        r'\w+\s+(crashes?|rises?|falls?|increases?|decreases?|grows?|shrinks?)',
+        r'\w+\s+(hits?|strikes?|affects?|impacts?|influences?)',
+        r'\w+\s+(outbreak|epidemic|pandemic|crisis|emergency)',
+        r'\w+\s+(election|vote|referendum|summit|meeting|talks?)',
+        r'\w+\s+(protest|demonstration|strike|riot)',
+        r'\w+\s+(attack|bombing|shooting|explosion)',
+        r'\w+\s+(discovery|breakthrough|invention|innovation)',
+    ]
+    
+    for pattern in news_patterns:
+        if re.search(pattern, t):
+            print(f"DEBUG: Topic accepted - matched news pattern: '{pattern}'")
+            return True
+    
+    # Pattern 2: Geographic + Event structure
+    # Examples: "Ukraine war", "Congo outbreak", "China trade"
+    geo_event_pattern = r'^\w+\s+(war|conflict|crisis|outbreak|election|protest|attack|disaster|breakthrough)'
+    if re.search(geo_event_pattern, t):
+        print(f"DEBUG: Topic accepted - matched geo-event pattern")
+        return True
+    
+    # Pattern 3: Time-sensitive indicators
+    time_indicators = ['latest', 'breaking', 'urgent', 'developing', 'recent', 'new', 'today', 'yesterday']
+    for indicator in time_indicators:
+        if indicator in t:
+            print(f"DEBUG: Topic accepted - matched time indicator: '{indicator}'")
+            return True
+    
+    return False
+
+def validate_topic_with_learning(topic: str) -> bool:
+    """
+    Learning-based validation using historical data and user feedback.
+    """
+    # Check if similar topics were previously accepted
+    # This could be expanded to use ML models trained on historical data
+    
+    # For now, return None to indicate no learning-based decision
+    return None
+
+def log_validation_feedback(topic: str, was_accepted: bool, user_feedback: str = None):
+    """
+    Log user feedback about topic validation for continuous improvement.
+    """
+    feedback_data = {
+        'topic': topic,
+        'was_accepted': was_accepted,
+        'user_feedback': user_feedback,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # Store feedback for analysis (could be saved to database)
+    print(f"DEBUG: Validation feedback logged: {feedback_data}")
+    
+    # This could be used to improve the validation system over time
+    # For example, if users consistently say a topic should be accepted/rejected,
+    # we could adjust the validation logic accordingly
+
+def get_validation_suggestions(topic: str) -> list[str]:
+    """
+    Provide suggestions for improving topic relevance if rejected.
+    """
+    suggestions = []
+    t = topic.strip().lower()
+    
+    # Check if it's a personal statement
+    personal_indicators = ['i am', 'i\'m', 'i will', 'i went', 'i go', 'my', 'me', 'going to', 'how are you']
+    if any(indicator in t for indicator in personal_indicators):
+        suggestions.append("This appears to be a personal statement. Try news topics like 'Ebola outbreak in Congo' or 'Ukraine war updates'")
+        suggestions.append("Focus on public events, politics, economy, world affairs, disasters, or current events")
+        return suggestions
+    
+    if len(t.split()) < 2:
+        suggestions.append("Try adding more descriptive words (e.g., 'Biden announces new policy' instead of 'Biden')")
+    
+    if not any(word in t for word in ['outbreak', 'crisis', 'election', 'war', 'protest', 'disaster', 'breakthrough']):
+        suggestions.append("Consider adding action words like 'outbreak', 'crisis', 'election', 'war', 'protest'")
+    
+    if not any(word in t for word in ['latest', 'breaking', 'urgent', 'developing', 'recent']):
+        suggestions.append("Add time-sensitive words like 'latest', 'breaking', 'urgent', 'developing'")
+    
+    if not any(word in t for word in ['ukraine', 'china', 'russia', 'congo', 'nigeria', 'brazil']):
+        suggestions.append("Include geographic context (e.g., 'Ukraine war', 'Congo outbreak')")
+    
+    return suggestions
+
+def validate_topic_with_user_override(topic: str, user_override: bool = None) -> tuple[bool, float, str]:
+    """
+    Validate topic with optional user override for edge cases.
+    """
+    if user_override is not None:
+        # User explicitly overrides the validation
+        confidence = 0.8 if user_override else 0.2
+        reason = "User override"
+        print(f"DEBUG: User override applied: {user_override}")
+        return user_override, confidence, reason
+    
+    # Use normal validation
+    return is_relevant_topic(topic)
+
+def get_topic_validation_info(topic: str) -> dict:
+    """
+    Get comprehensive validation information for a topic.
+    """
+    is_relevant, confidence, reason = is_relevant_topic(topic)
+    
+    return {
+        'topic': topic,
+        'is_relevant': is_relevant,
+        'confidence': confidence,
+        'reason': reason,
+        'suggestions': get_validation_suggestions(topic) if not is_relevant else [],
+        'can_override': confidence < 0.8,  # Allow override for uncertain cases
+        'validation_timestamp': datetime.now().isoformat()
+    }
+
+def validate_topic_with_ai_enhanced(topic: str) -> tuple[bool, float]:
+    """
+    Uses AI to determine if a topic is relevant for news reporting with confidence scoring.
+    Returns (is_relevant, confidence) or (None, 0.0) if AI couldn't determine
+    """
+    import google.generativeai as genai
+    from glconnect import config
+    
+    try:
+        # Configure Gemini
+        genai.configure(api_key=config.get("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        prompt = f"""
+        Determine if this topic is relevant for news reporting. Consider:
+        - Is it a current event, news story, or public interest topic?
+        - Would it be covered by news media?
+        - Is it something people would want to hear about in a news broadcast?
+        - Is it a personal statement, opinion, or private matter? (These should be NO)
+        - Is it about public events, politics, economy, world affairs, disasters, etc.? (These should be YES)
+        
+        Examples of NO: "I am going to school", "My cat is cute", "I like pizza", "How are you?"
+        Examples of YES: "Ebola outbreak in Congo", "Ukraine war updates", "Stock market crash", "Election results"
+        
+        Topic: "{topic}"
+        
+        Respond with ONLY one word: "YES" or "NO"
+        If you're unsure, respond "UNCERTAIN"
+        """
+        
+        response = model.generate_content(prompt)
+        result = response.text.strip().upper()
+        
+        if result == "YES":
+            return True, 0.9  # High confidence for AI acceptance
+        elif result == "NO":
+            return False, 0.9  # High confidence for AI rejection
+        else:
+            print(f"DEBUG: AI returned uncertain result: {result}")
+            return None, 0.0
+            
+    except Exception as e:
+        print(f"DEBUG: AI validation error: {e}")
+        return None, 0.0
+
+def validate_topic_with_learning_enhanced(topic: str) -> tuple[bool, float]:
+    """
+    Learning-based validation with confidence scoring.
+    """
+    # This could be enhanced to use ML models trained on historical data
+    # For now, return None to indicate no learning-based decision
+    return None, 0.0
+
+def validate_topic_with_keywords(topic: str) -> bool:
+    """
+    Fallback keyword-based validation with enhanced patterns.
+    """
+    t = topic.strip().lower()
+    
+    # Enhanced news indicators (keeping some key ones for fallback)
     news_indicators = [
-        # Geographic/country names (common in news)
+        # Geographic/country names (expanded)
         'venezuela', 'ukraine', 'russia', 'china', 'iran', 'israel', 'palestine', 'syria', 'afghanistan',
         'north korea', 'cuba', 'mexico', 'canada', 'france', 'germany', 'uk', 'japan', 'india', 'brazil',
         'australia', 'south korea', 'taiwan', 'turkey', 'saudi arabia', 'egypt', 'nigeria', 'south africa',
+        'congo', 'democratic republic', 'drc', 'central africa', 'west africa', 'east africa',
         
         # News event types
         'tensions', 'crisis', 'conflict', 'war', 'peace', 'talks', 'negotiations', 'summit', 'meeting',
@@ -103,6 +412,8 @@ def is_relevant_topic(topic: str) -> bool:
         # Natural disasters and emergencies
         'earthquake', 'hurricane', 'flood', 'drought', 'wildfire', 'tsunami', 'volcano',
         'pandemic', 'outbreak', 'epidemic', 'disease', 'virus', 'health emergency',
+        'ebola', 'malaria', 'cholera', 'measles', 'polio', 'tuberculosis', 'hiv', 'aids',
+        'covid', 'coronavirus', 'sars', 'mers', 'zika', 'dengue', 'yellow fever',
         
         # Technology and science
         'breakthrough', 'discovery', 'research', 'study', 'innovation', 'invention',
@@ -121,30 +432,98 @@ def is_relevant_topic(topic: str) -> bool:
     # Check if topic contains any news indicators
     for indicator in news_indicators:
         if indicator in t:
+            print(f"DEBUG: Topic accepted - matched news indicator: '{indicator}'")
+            return True
+    
+    # Additional health-related pattern matching
+    health_patterns = ['outbreak', 'epidemic', 'pandemic', 'disease', 'virus', 'health', 'medical', 'hospital', 'doctor']
+    for pattern in health_patterns:
+        if pattern in t:
+            print(f"DEBUG: Topic accepted - matched health pattern: '{pattern}'")
             return True
     
     # Allow topics that are 2+ words (likely to be descriptive news topics)
     if len(t.split()) >= 2:
+        print(f"DEBUG: Topic accepted - 2+ words: {len(t.split())} words")
         return True
     
     # Allow single words that are clearly news-related
     clear_news_words = {
-        'politics', 'economy', 'sports', 'technology', 'health', 'world', 'local', 'national',
+        'politics',"war","war",'economy', 'sports', 'technology', 'health', 'world', 'local', 'national',
         'international', 'business', 'finance', 'science', 'education', 'entertainment',
-        'crime', 'law', 'military', 'defense', 'security', 'environment', 'climate'
+        'crime', 'law', 'military', 'defense', 'security', 'environment', 'climate',"international","trade"
     }
     
     if t in clear_news_words:
+        print(f"DEBUG: Topic accepted - clear news word: '{t}'")
         return True
     
     # If we get here, it's likely not a news topic
+    print(f"DEBUG: Topic rejected - no matching patterns found for: '{topic}'")
     return False
 
 def categorize_topic(topic: str) -> str:
     """
-    Categorizes a topic into one of the main news categories.
+    Categorizes a topic into one of the main news categories using AI.
+    Falls back to keyword matching if AI fails.
     Returns the category name.
     """
+    try:
+        # Try AI-powered categorization first
+        return categorize_topic_ai(topic)
+    except Exception as e:
+        print(f"AI categorization failed for '{topic}': {e}")
+        # Fallback to keyword-based categorization
+        return categorize_topic_keywords(topic)
+
+def categorize_topic_ai(topic: str) -> str:
+    """
+    AI-powered categorization using Google's Gemini model.
+    More accurate and handles context better than keyword matching.
+    """
+    import google.generativeai as genai
+    from glconnect import config
+    
+    # Configure Gemini
+    genai.configure(api_key=config.get("GOOGLE_API_KEY"))
+    model = genai.GenerativeModel('gemini-2.0-flash')
+    
+    prompt = f"""
+    Categorize this news topic into exactly one of these categories:
+    - Politics
+    - Economy  
+    - Sports
+    - Technology
+    - Health & Science
+    - World & International
+    - Crime & Law
+    - Entertainment
+    - Other
+    
+    Topic: "{topic}"
+    
+    Consider the context and meaning, not just keywords. 
+    Return only the category name, nothing else.
+    """
+    
+    response = model.generate_content(prompt)
+    category = response.text.strip()
+    
+    # Validate the response
+    valid_categories = ['Politics', 'Economy', 'Sports', 'Technology', 
+                       'Health & Science', 'World & International', 
+                       'Crime & Law', 'Entertainment', 'Other']
+    
+    if category in valid_categories:
+        return category
+    else:
+        raise ValueError(f"Invalid category returned: {category}")
+
+def categorize_topic_keywords(topic: str) -> str:
+    """
+    Fallback keyword-based categorization (original method).
+    """
+    import re
     t = topic.strip().lower()
     
     # Politics and government
@@ -168,7 +547,7 @@ def categorize_topic(topic: str) -> str:
     tech_keywords = ['technology', 'tech', 'ai', 'artificial intelligence', 'software', 'hardware',
                     'internet', 'cybersecurity', 'startup', 'gadgets', 'innovation', 'invention',
                     'breakthrough', 'discovery', 'research', 'study', 'digital', 'online', 'app',
-                    'smartphone', 'computer', 'robot', 'automation', 'blockchain', 'data']
+                    'smartphone', 'computer', 'robot', 'automation', 'blockchain']
     
     # Health and science
     health_keywords = ['health', 'medicine', 'medical', 'covid', 'pandemic', 'vaccine', 'public health',
@@ -179,50 +558,55 @@ def categorize_topic(topic: str) -> str:
     # World and international
     world_keywords = ['world', 'international', 'geopolitics', 'war', 'conflict', 'military', 'defense',
                      'security', 'terrorism', 'un', 'nato', 'sanctions', 'embargo', 'diplomacy',
-                     'immigration', 'refugee', 'border', 'attack', 'bombing', 'shooting', 'crisis',
-                     'tensions', 'peace', 'talks', 'negotiations', 'summit', 'meeting']
+                     'immigration', 'refugee', 'refugees', 'border', 'attack', 'bombing', 'shooting', 'crisis',
+                     'tensions', 'peace', 'talks', 'negotiations', 'summit', 'meeting', 'ukraine', 'ukrainian']
     
     # Crime and law
     crime_keywords = ['crime', 'law', 'legal', 'court', 'lawsuit', 'police', 'trial', 'verdict',
                      'supreme court', 'arrest', 'sentence', 'prison', 'jail', 'corruption', 'scandal',
-                     'investigation', 'evidence', 'witness', 'jury', 'judge', 'lawyer', 'attorney']
+                     'investigation', 'evidence', 'witness', 'jury', 'judge', 'lawyer', 'attorney', 'killed', 'murder']
     
     # Entertainment
     entertainment_keywords = ['entertainment', 'movies', 'film', 'music', 'culture', 'festival', 'awards',
                              'oscar', 'grammy', 'celebrity', 'actor', 'singer', 'artist', 'director',
                              'producer', 'album', 'song', 'concert', 'theater', 'broadway', 'tv', 'show']
     
-    # Check each category
+    # Helper function to check for word boundaries
+    def has_keyword(text, keyword):
+        pattern = r'\b' + re.escape(keyword) + r'\b'
+        return bool(re.search(pattern, text))
+    
+    # Check each category with word boundary matching
     for keyword in politics_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Politics'
     
     for keyword in economy_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Economy'
     
     for keyword in sports_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Sports'
     
     for keyword in tech_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Technology'
     
     for keyword in health_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Health & Science'
     
     for keyword in world_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'World & International'
     
     for keyword in crime_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Crime & Law'
     
     for keyword in entertainment_keywords:
-        if keyword in t:
+        if has_keyword(t, keyword):
             return 'Entertainment'
     
     # Default to "Other" if no category matches
@@ -230,7 +614,7 @@ def categorize_topic(topic: str) -> str:
 
 def track_search_analytics(topics: list[str]):
     """
-    Tracks search analytics for the given topics.
+    Tracks search analytics for the given topics with improved categorization.
     """
     current_time = datetime.now()
     current_date = current_time.strftime('%Y-%m-%d')
@@ -244,17 +628,44 @@ def track_search_analytics(topics: list[str]):
                 'date': current_date
             })
             
-            # Categorize the topic
-            category = categorize_topic(topic)
+            # Categorize the topic with confidence tracking
+            category, confidence = categorize_topic_with_confidence(topic)
             
             # Update counts
             analytics_data['category_counts'][category] += 1
             analytics_data['topic_counts'][topic] += 1
             analytics_data['daily_searches'][current_date] += 1
             
-            # Add to category topics
+            # Add to category topics with confidence
             if topic not in analytics_data['category_topics'][category]:
                 analytics_data['category_topics'][category].append(topic)
+            
+            # Track categorization confidence for monitoring
+            if 'categorization_confidence' not in analytics_data:
+                analytics_data['categorization_confidence'] = []
+            
+            analytics_data['categorization_confidence'].append({
+                'topic': topic,
+                'category': category,
+                'confidence': confidence,
+                'timestamp': current_time.isoformat()
+            })
+
+def categorize_topic_with_confidence(topic: str) -> tuple[str, float]:
+    """
+    Categorizes a topic and returns both category and confidence score.
+    """
+    try:
+        # Try AI categorization first
+        category = categorize_topic_ai(topic)
+        confidence = 0.9  # High confidence for AI categorization
+        return category, confidence
+    except Exception as e:
+        print(f"AI categorization failed for '{topic}': {e}")
+        # Fallback to keyword categorization
+        category = categorize_topic_keywords(topic)
+        confidence = 0.6  # Lower confidence for keyword matching
+        return category, confidence
 
 def extract_audio_path_from_output(output_text):
     """Extract audio file path from agent output text or filesystem."""
@@ -522,7 +933,13 @@ def broadcast():
     else:
         topics = [topic.strip() for topic in data['topics']]
     # Filter to only relevant topics
-    relevant_topics = [t for t in topics if is_relevant_topic(t)]
+    relevant_topics = []
+    for topic in topics:
+        is_relevant, confidence, reason = is_relevant_topic(topic)
+        if is_relevant:
+            relevant_topics.append(topic)
+        else:
+            print(f"DEBUG: Topic '{topic}' rejected: {reason} (confidence: {confidence})")
 
     if not relevant_topics:
         return jsonify({'error': 'No relevant news topics detected. Please enter news-related topics like politics, economy, sports, technology, health, world, etc.'}), 400
@@ -631,7 +1048,7 @@ def task_status(task_id):
 
 @news_bp.route('/analytics')
 def analytics():
-    """Main analytics page showing dominant topics by category."""
+    """Main analytics page showing dominant topics by category with LLM categorization."""
     with _analytics_lock:
         # Get category counts sorted by frequency
         category_data = dict(analytics_data['category_counts'])
@@ -651,22 +1068,27 @@ def analytics():
             daily_trends.append({'date': date, 'count': count})
         daily_trends.reverse()
         
+        # Get categorization confidence statistics
+        confidence_stats = get_categorization_stats()
+        
         return render_template('analytics.html', 
                              categories=sorted_categories,
                              total_searches=total_searches,
                              recent_searches=recent_searches,
-                             daily_trends=daily_trends)
+                             daily_trends=daily_trends,
+                             confidence_stats=confidence_stats)
 
 @news_bp.route('/analytics/category/<category>')
 def category_details(category):
-    """Detailed view of topics within a specific category."""
+    """Detailed view of topics within a specific category with LLM categorization."""
     with _analytics_lock:
         # Get topics for this category
         category_topics = analytics_data['category_topics'].get(category, [])
         
-        # Get topic counts for this category
+        # Get topic counts for this category using LLM categorization
         topic_counts = {}
         for search in analytics_data['search_history']:
+            # Use the new LLM categorization
             if categorize_topic(search['topic']) == category:
                 topic = search['topic']
                 topic_counts[topic] = topic_counts.get(topic, 0) + 1
@@ -680,18 +1102,166 @@ def category_details(category):
             if categorize_topic(search['topic']) == category
         ]
         
+        # Get confidence statistics for this category
+        category_confidence = get_category_confidence_stats(category)
+        
         return render_template('category_details.html',
                              category=category,
                              topics=sorted_topics,
-                             recent_searches=recent_category_searches)
+                             recent_searches=recent_category_searches,
+                             category_confidence=category_confidence)
+
+def get_categorization_stats():
+    """Get overall categorization statistics including confidence scores."""
+    if 'categorization_confidence' not in analytics_data:
+        return {
+            'total_categorizations': 0,
+            'ai_categorizations': 0,
+            'keyword_categorizations': 0,
+            'average_confidence': 0.0,
+            'high_confidence_count': 0,
+            'low_confidence_count': 0
+        }
+    
+    confidences = analytics_data['categorization_confidence']
+    total = len(confidences)
+    
+    if total == 0:
+        return {
+            'total_categorizations': 0,
+            'ai_categorizations': 0,
+            'keyword_categorizations': 0,
+            'average_confidence': 0.0,
+            'high_confidence_count': 0,
+            'low_confidence_count': 0
+        }
+    
+    ai_count = sum(1 for c in confidences if c['confidence'] >= 0.8)
+    keyword_count = total - ai_count
+    avg_confidence = sum(c['confidence'] for c in confidences) / total
+    high_confidence = sum(1 for c in confidences if c['confidence'] >= 0.8)
+    low_confidence = sum(1 for c in confidences if c['confidence'] < 0.7)
+    
+    return {
+        'total_categorizations': total,
+        'ai_categorizations': ai_count,
+        'keyword_categorizations': keyword_count,
+        'average_confidence': round(avg_confidence, 2),
+        'high_confidence_count': high_confidence,
+        'low_confidence_count': low_confidence
+    }
+
+def get_category_confidence_stats(category):
+    """Get confidence statistics for a specific category."""
+    if 'categorization_confidence' not in analytics_data:
+        return {
+            'category_total': 0,
+            'category_avg_confidence': 0.0,
+            'ai_categorizations': 0,
+            'keyword_categorizations': 0
+        }
+    
+    category_confidences = [
+        c for c in analytics_data['categorization_confidence'] 
+        if c['category'] == category
+    ]
+    
+    if not category_confidences:
+        return {
+            'category_total': 0,
+            'category_avg_confidence': 0.0,
+            'ai_categorizations': 0,
+            'keyword_categorizations': 0
+        }
+    
+    total = len(category_confidences)
+    avg_confidence = sum(c['confidence'] for c in category_confidences) / total
+    ai_count = sum(1 for c in category_confidences if c['confidence'] >= 0.8)
+    keyword_count = total - ai_count
+    
+    return {
+        'category_total': total,
+        'category_avg_confidence': round(avg_confidence, 2),
+        'ai_categorizations': ai_count,
+        'keyword_categorizations': keyword_count
+    }
 
 @news_bp.route('/api/analytics/summary')
 def analytics_summary():
-    """API endpoint for analytics summary data."""
+    """API endpoint for analytics summary data with LLM categorization stats."""
     with _analytics_lock:
+        confidence_stats = get_categorization_stats()
         return jsonify({
             'total_searches': sum(analytics_data['category_counts'].values()),
             'category_counts': dict(analytics_data['category_counts']),
             'top_topics': dict(Counter(analytics_data['topic_counts']).most_common(10)),
-            'daily_searches': dict(analytics_data['daily_searches'])
+            'daily_searches': dict(analytics_data['daily_searches']),
+            'categorization_stats': confidence_stats
         })
+
+@news_bp.route('/api/validate-topic', methods=['POST'])
+def validate_topic_api():
+    """API endpoint for topic validation with user override capability."""
+    try:
+        data = request.get_json()
+        topic = data.get('topic', '').strip()
+        user_override = data.get('user_override')  # Optional: True/False/None
+        
+        if not topic:
+            return jsonify({'error': 'Topic is required'}), 400
+        
+        # Validate topic with optional user override
+        is_relevant, confidence, reason = validate_topic_with_user_override(topic, user_override)
+        
+        # Get comprehensive validation info
+        validation_info = get_topic_validation_info(topic)
+        
+        # Log user feedback if override was used
+        if user_override is not None:
+            log_validation_feedback(topic, is_relevant, f"User override: {user_override}")
+        
+        return jsonify({
+            'topic': topic,
+            'is_relevant': is_relevant,
+            'confidence': confidence,
+            'reason': reason,
+            'suggestions': validation_info['suggestions'],
+            'can_override': validation_info['can_override'],
+            'validation_timestamp': validation_info['validation_timestamp']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Validation failed: {str(e)}'}), 500
+
+@news_bp.route('/api/override-topic', methods=['POST'])
+def override_topic_api():
+    """API endpoint for users to override topic validation decisions."""
+    try:
+        data = request.get_json()
+        topic = data.get('topic', '').strip()
+        override_decision = data.get('override_decision')  # True/False
+        user_feedback = data.get('user_feedback', '')  # Optional explanation
+        
+        if not topic:
+            return jsonify({'error': 'Topic is required'}), 400
+        
+        if override_decision is None:
+            return jsonify({'error': 'Override decision is required'}), 400
+        
+        # Log the override decision
+        log_validation_feedback(topic, override_decision, user_feedback)
+        
+        # Re-validate with override
+        is_relevant, confidence, reason = validate_topic_with_user_override(topic, override_decision)
+        
+        return jsonify({
+            'topic': topic,
+            'is_relevant': is_relevant,
+            'confidence': confidence,
+            'reason': reason,
+            'override_applied': True,
+            'user_feedback': user_feedback
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Override failed: {str(e)}'}), 500

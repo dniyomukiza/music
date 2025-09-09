@@ -179,6 +179,42 @@
             color: #999;
         }
 
+        .topic-input.invalid {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .topic-input.valid {
+            border-color: #28a745;
+            background: #f8fff8;
+        }
+
+        .validation-feedback {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .validation-feedback.invalid {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .validation-feedback.valid {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .validation-feedback.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
         .topics-display {
             display: flex;
             flex-wrap: wrap;
@@ -197,6 +233,18 @@
             gap: 8px;
             font-size: 0.9rem;
             animation: slideIn 0.3s ease;
+        }
+
+        .topic-tag.invalid {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .topic-tag.valid {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .topic-tag.warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
         }
 
         @keyframes slideIn {
@@ -227,6 +275,57 @@
         .topic-remove:hover {
             background: rgba(255,255,255,0.3);
             transform: scale(1.1);
+        }
+
+        .topic-suggestions {
+            margin-top: 8px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .topic-suggestions h4 {
+            margin: 0 0 8px 0;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        .topic-suggestions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .topic-suggestions li {
+            margin-bottom: 4px;
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+
+        .validation-summary {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .validation-summary.has-errors {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .validation-summary.has-warnings {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .validation-summary.all-valid {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
         }
 
         .generate-btn {
@@ -456,10 +555,13 @@
                                 placeholder="Type a topic and press Enter (e.g., 'college football', 'election results', 'AI developments')"
                                 autocomplete="off"
                             >
+                            <div id="validationFeedback" class="validation-feedback"></div>
+                            <div id="topicSuggestions" class="topic-suggestions"></div>
                         </div>
                         <div class="topics-display" id="topicsDisplay">
                             <div class="empty-state">No topics added yet. Start typing above!</div>
                         </div>
+                        <div id="validationSummary" class="validation-summary"></div>
                     </div>
                     
                     <button type="submit" class="generate-btn" id="generateBtn">
@@ -493,7 +595,28 @@
 
     <script>
         let topics = [];
+        let topicValidations = {};
         let progressInterval;
+        let validationTimeout;
+
+        // Real-time validation as user types
+        document.getElementById('topicInput').addEventListener('input', function(e) {
+            const topic = e.target.value.trim();
+            
+            // Clear previous timeout
+            if (validationTimeout) {
+                clearTimeout(validationTimeout);
+            }
+            
+            // Debounce validation (wait 500ms after user stops typing)
+            validationTimeout = setTimeout(() => {
+                if (topic) {
+                    validateTopicRealTime(topic);
+                } else {
+                    clearValidationFeedback();
+                }
+            }, 500);
+        });
 
         document.getElementById('topicInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -502,6 +625,68 @@
             }
         });
 
+        async function validateTopicRealTime(topic) {
+            try {
+                const response = await fetch('/routes2/news/validate-topic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ topic: topic })
+                });
+                
+                const data = await response.json();
+                showValidationFeedback(topic, data);
+            } catch (error) {
+                console.error('Validation error:', error);
+            }
+        }
+
+        function showValidationFeedback(topic, validationData) {
+            const input = document.getElementById('topicInput');
+            const feedback = document.getElementById('validationFeedback');
+            const suggestions = document.getElementById('topicSuggestions');
+            
+            // Clear previous classes
+            input.classList.remove('valid', 'invalid');
+            feedback.classList.remove('valid', 'invalid', 'warning');
+            feedback.style.display = 'none';
+            suggestions.style.display = 'none';
+            
+            if (validationData.is_relevant) {
+                input.classList.add('valid');
+                feedback.classList.add('valid');
+                feedback.innerHTML = `<i class="fas fa-check-circle"></i> Great! This looks like a valid news topic.`;
+                feedback.style.display = 'block';
+            } else {
+                input.classList.add('invalid');
+                feedback.classList.add('invalid');
+                feedback.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${validationData.reason}`;
+                feedback.style.display = 'block';
+                
+                if (validationData.suggestions && validationData.suggestions.length > 0) {
+                    suggestions.innerHTML = `
+                        <h4><i class="fas fa-lightbulb"></i> Suggestions:</h4>
+                        <ul>
+                            ${validationData.suggestions.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    `;
+                    suggestions.style.display = 'block';
+                }
+            }
+        }
+
+        function clearValidationFeedback() {
+            const input = document.getElementById('topicInput');
+            const feedback = document.getElementById('validationFeedback');
+            const suggestions = document.getElementById('topicSuggestions');
+            
+            input.classList.remove('valid', 'invalid');
+            feedback.classList.remove('valid', 'invalid', 'warning');
+            feedback.style.display = 'none';
+            suggestions.style.display = 'none';
+        }
+
         function addTopic() {
             const input = document.getElementById('topicInput');
             const topic = input.value.trim();
@@ -509,7 +694,9 @@
             if (topic && !topics.includes(topic)) {
                 topics.push(topic);
                 input.value = '';
+                clearValidationFeedback();
                 updateTopicsDisplay();
+                validateAllTopics();
             }
         }
 
@@ -524,14 +711,86 @@
             if (topics.length === 0) {
                 display.innerHTML = '<div class="empty-state">No topics added yet. Start typing above!</div>';
             } else {
-                display.innerHTML = topics.map(topic => `
-                    <div class="topic-tag">
-                        <span>${topic}</span>
-                        <button class="topic-remove" onclick="removeTopic('${topic}')" title="Remove topic">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                `).join('');
+                display.innerHTML = topics.map(topic => {
+                    const validation = topicValidations[topic];
+                    let statusClass = '';
+                    let statusIcon = '';
+                    
+                    if (validation) {
+                        if (validation.is_relevant) {
+                            statusClass = 'valid';
+                            statusIcon = '<i class="fas fa-check-circle"></i>';
+                        } else {
+                            statusClass = 'invalid';
+                            statusIcon = '<i class="fas fa-exclamation-triangle"></i>';
+                        }
+                    }
+                    
+                    return `
+                        <div class="topic-tag ${statusClass}">
+                            ${statusIcon}
+                            <span>${topic}</span>
+                            <button class="topic-remove" onclick="removeTopic('${topic}')" title="Remove topic">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function validateAllTopics() {
+            const validationPromises = topics.map(async (topic) => {
+                try {
+                    const response = await fetch('/routes2/news/validate-topic', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ topic: topic })
+                    });
+                    
+                    const data = await response.json();
+                    topicValidations[topic] = data;
+                    return { topic, validation: data };
+                } catch (error) {
+                    console.error(`Validation error for topic "${topic}":`, error);
+                    return { topic, validation: { is_relevant: false, reason: 'Validation error' } };
+                }
+            });
+            
+            const results = await Promise.all(validationPromises);
+            updateTopicsDisplay();
+            updateValidationSummary(results);
+        }
+
+        function updateValidationSummary(results) {
+            const summary = document.getElementById('validationSummary');
+            const validTopics = results.filter(r => r.validation.is_relevant);
+            const invalidTopics = results.filter(r => !r.validation.is_relevant);
+            
+            if (invalidTopics.length === 0) {
+                summary.className = 'validation-summary all-valid';
+                summary.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    <strong>All topics look good!</strong> Ready to generate news broadcast.
+                `;
+                summary.style.display = 'block';
+            } else if (validTopics.length === 0) {
+                summary.className = 'validation-summary has-errors';
+                summary.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>No valid topics found.</strong> Please add news-related topics like politics, economy, sports, technology, health, world, etc.
+                `;
+                summary.style.display = 'block';
+            } else {
+                summary.className = 'validation-summary has-warnings';
+                summary.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Some topics may not be suitable:</strong> ${invalidTopics.map(t => `"${t.topic}"`).join(', ')}. 
+                    Only valid topics will be processed.
+                `;
+                summary.style.display = 'block';
             }
         }
 
@@ -540,6 +799,17 @@
             
             if (topics.length === 0) {
                 alert('Please add at least one topic before generating news.');
+                return;
+            }
+            
+            // Filter to only valid topics
+            const validTopics = topics.filter(topic => {
+                const validation = topicValidations[topic];
+                return validation && validation.is_relevant;
+            });
+            
+            if (validTopics.length === 0) {
+                alert('No valid news topics found. Please add relevant topics like politics, economy, sports, technology, health, world, etc.');
                 return;
             }
             
@@ -563,7 +833,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ topics: topics })
+                    body: JSON.stringify({ topics: validTopics })
                 });
                 
                 const data = await response.json();

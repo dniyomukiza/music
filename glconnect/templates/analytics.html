@@ -366,14 +366,35 @@
         
         <!-- Main Dashboard -->
         <div class="dashboard">
+            <!-- AI Categorization Stats Card -->
+            <div class="card">
+                <h3><i class="fas fa-brain"></i> AI Categorization Stats</h3>
+                <div class="stat">
+                    <span class="stat-label">Total Categorizations</span>
+                    <span class="stat-value">{{ confidence_stats.total_categorizations }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">AI-Powered</span>
+                    <span class="stat-value">{{ confidence_stats.ai_categorizations }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Keyword Fallback</span>
+                    <span class="stat-value">{{ confidence_stats.keyword_categorizations }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Avg Confidence</span>
+                    <span class="stat-value">{{ confidence_stats.average_confidence }}</span>
+                </div>
+            </div>
+            
             <!-- Top Categories Card -->
             <div class="card">
                 <h3><i class="fas fa-trophy"></i> Top Categories</h3>
                 {% for category, count in categories[:5] %}
                 <div class="stat">
                     <a href="{{ url_for('news_bp.category_details', category=category) }}" class="category-link">
-                        <i class="fas fa-{{ 'newspaper' if category == 'politics' else 'football' if category == 'sports' else 'chart-line' if category == 'finance' else 'laptop' if category == 'tech' else 'heartbeat' if category == 'health' else 'globe' }}"></i>
-                        {{ category.title() }}
+                        <i class="fas fa-{{ 'newspaper' if category == 'Politics' else 'football' if category == 'Sports' else 'chart-line' if category == 'Economy' else 'laptop' if category == 'Technology' else 'heartbeat' if category == 'Health & Science' else 'globe' if category == 'World & International' else 'gavel' if category == 'Crime & Law' else 'star' if category == 'Entertainment' else 'question' }}"></i>
+                        {{ category }}
                     </a>
                     <span class="stat-value">{{ count }}</span>
                 </div>
@@ -421,8 +442,8 @@
                 <div class="search-item">
                     <div class="search-topic">
                         <a href="{{ url_for('news_bp.category_details', category=category) }}" class="category-link">
-                            <i class="fas fa-{{ 'newspaper' if category == 'politics' else 'football' if category == 'sports' else 'chart-line' if category == 'finance' else 'laptop' if category == 'tech' else 'heartbeat' if category == 'health' else 'globe' }}"></i>
-                            {{ category.title() }}
+                            <i class="fas fa-{{ 'newspaper' if category == 'Politics' else 'football' if category == 'Sports' else 'chart-line' if category == 'Economy' else 'laptop' if category == 'Technology' else 'heartbeat' if category == 'Health & Science' else 'globe' if category == 'World & International' else 'gavel' if category == 'Crime & Law' else 'star' if category == 'Entertainment' else 'question' }}"></i>
+                            {{ category }}
                         </a>
                     </div>
                     <div class="search-time">{{ count }} searches</div>

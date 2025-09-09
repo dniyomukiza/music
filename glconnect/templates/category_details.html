@@ -139,6 +139,27 @@
                 <span class="stat-value">{{ topics[0][0] if topics else 'N/A' }}</span>
             </div>
         </div>
+        
+        <!-- AI Categorization Stats for this Category -->
+        <div class="card">
+            <h3><i class="fas fa-brain"></i> AI Categorization Stats</h3>
+            <div class="stat">
+                <span class="stat-label">Category Total</span>
+                <span class="stat-value">{{ category_confidence.category_total }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">AI-Powered</span>
+                <span class="stat-value">{{ category_confidence.ai_categorizations }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Keyword Fallback</span>
+                <span class="stat-value">{{ category_confidence.keyword_categorizations }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Avg Confidence</span>
+                <span class="stat-value">{{ category_confidence.category_avg_confidence }}</span>
+            </div>
+        </div>
     </div>
 </body>
 </html>
