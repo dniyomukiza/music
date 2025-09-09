@@ -14,9 +14,15 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Load configuration from glconfig.json
-with open('/etc/glconfig.json') as json_file:
-    config = json.load(json_file)
+# Load configuration from environment variables
+config = {
+    "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+    "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
+    "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
+    "DB_URL": os.getenv("DB_URL"),
+    "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
+    "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
+}
 
 # Debug: Check if Google credentials are loaded
 # Get Google API key from glconfig.json
