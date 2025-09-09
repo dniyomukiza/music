@@ -378,6 +378,18 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
     Returns:
         A dictionary with 'combined_audio_filepath': The full path to the combined audio file.
     """
+    # Debug: Check FFmpeg availability
+    try:
+        import subprocess
+        result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            print(f"DEBUG: FFmpeg is available - version: {result.stdout.split('ffmpeg version')[1].split()[0] if 'ffmpeg version' in result.stdout else 'unknown'}")
+        else:
+            print(f"DEBUG: FFmpeg check failed - return code: {result.returncode}")
+    except Exception as e:
+        print(f"DEBUG: FFmpeg check failed with exception: {e}")
+        print(f"DEBUG: This might cause AudioSegment export issues")
+    
     try:
         combined_audio = AudioSegment.empty()
         jingle_path = "glconnect/static/audio/jingle.wav"
