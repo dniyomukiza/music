@@ -7,8 +7,12 @@ from google.cloud import texttospeech
 import sys
 import select
 
-# Load your OpenAI API key from environment variables
-openai.api_key = os.getenv("OPENAI_AI_KEY")
+# Load configuration from glconfig.json
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
+
+# Load your OpenAI API key from glconfig.json
+openai.api_key = config.get("OPENAI_AI_KEY")
 
 # Check for API key
 if not openai.api_key:
@@ -16,10 +20,10 @@ if not openai.api_key:
     exit(1)
 
 # Get Google API key from glconfig.json
-google_api_key = os.getenv("GOOGLE_API_KEY")
+google_api_key = config.get("GOOGLE_API_KEY")
 
 # Get TTS credentials path from glconfig.json
-tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 
 # Create the text-to-speech client
 # Load credentials from file and pass to client

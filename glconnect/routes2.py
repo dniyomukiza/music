@@ -19,10 +19,10 @@ if not openai.api_key:
     exit(1)
 
 # Get Google API key from glconfig.json
-google_api_key = os.getenv("GOOGLE_API_KEY")
+google_api_key = config.get("GOOGLE_API_KEY")
 
 # Get TTS credentials path from glconfig.json
-tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 
 # Create the text-to-speech client (lazy initialization)
 client = None
