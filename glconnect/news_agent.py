@@ -27,8 +27,10 @@ if not google_api_key:
     print("Error: GOOGLE_API_KEY not found in glconfig.json")
     exit(1)
 
-# Get TTS credentials path from glconfig.json
+# Get TTS credentials path from environment variables
 tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+print(f"DEBUG: GOOGLE_APPLICATION_CREDENTIALS env var: {os.getenv('GOOGLE_APPLICATION_CREDENTIALS')}")
+print(f"DEBUG: Using TTS credentials path: {tts_credentials_path}")
 
 # Configure Google AI SDK
 import google.generativeai as genai
@@ -172,6 +174,16 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     from google.oauth2 import service_account
     print(f"DEBUG: Loading TTS credentials from: {tts_credentials_path}")
     print(f"DEBUG: Credentials file exists: {os.path.exists(tts_credentials_path)}")
+    
+    # Check if credentials file exists, if not try default path
+    if not os.path.exists(tts_credentials_path):
+        print(f"DEBUG: Credentials file not found at {tts_credentials_path}, trying default 'tts.json'")
+        tts_credentials_path = "tts.json"
+        print(f"DEBUG: Trying default path: {tts_credentials_path}")
+        print(f"DEBUG: Default credentials file exists: {os.path.exists(tts_credentials_path)}")
+    
+    if not os.path.exists(tts_credentials_path):
+        raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
     
     credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
     client = texttospeech.TextToSpeechClient(credentials=credentials)
