@@ -89,6 +89,40 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
+        .clickable-card {
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .clickable-card:hover {
+            border-color: #667eea;
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .card-hover-effect {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            color: #667eea;
+            font-size: 1.5rem;
+        }
+
+        .clickable-card:hover .card-hover-effect {
+            opacity: 1;
+            right: 15px;
+        }
+
+        .clickable-card:hover .feature-icon {
+            color: #667eea;
+            transform: scale(1.1);
+        }
+
         .feature-icon {
             font-size: 2.5rem;
             color: #667eea;
@@ -388,30 +422,28 @@
         <div class="main-card">
             <div class="card-header">
                 <h2><i class="fas fa-microphone"></i> Create Your News Broadcast</h2>
-                <p>Enter topics and let our AI create a professional news bulletin</p>
+                <p>Enter topics of your interestand let our AI create a professional news bulletin</p>
             </div>
             
             <div class="card-body">
                 <div class="features-grid">
                     <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-brain"></i></div>
-                        <h3>Smart Categorization</h3>
-                        <p>Topics are automatically grouped by category (Sports, Politics, Tech, etc.)</p>
-                    </div>
-                    <div class="feature-card">
                         <div class="feature-icon"><i class="fas fa-users"></i></div>
                         <h3>Dedicated Reporters</h3>
-                        <p>One specialized reporter per category handles all related topics</p>
+                        <p>One AI specialized agents process all your topics by category to generate a fullprofessional news bulletin</p>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-clock"></i></div>
-                        <h3>Real-time Updates</h3>
-                        <p>Current time announcements for Los Angeles, New York, Brussels, and Central Time</p>
+                    <div class="feature-card clickable-card" onclick="goToAnalytics()">
+                        <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                        <h3>Real-time insights</h3>
+                        <p>Get real-time news insights to stay current with trending topics</p>
+                        <div class="card-hover-effect">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon"><i class="fas fa-music"></i></div>
                         <h3>Professional Audio</h3>
-                        <p>High-quality TTS with jingles, transitions, and professional broadcast format</p>
+                        <p>High-quality news audio with jingles, transitions, in a professional broadcast format</p>
                     </div>
                 </div>
 
@@ -652,6 +684,10 @@
             `;
             result.style.display = 'block';
             result.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function goToAnalytics() {
+            window.location.href = '{{ url_for("news_bp.analytics") }}';
         }
     </script>
 </body>

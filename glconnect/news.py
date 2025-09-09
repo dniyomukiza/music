@@ -7,8 +7,8 @@ from google.cloud import texttospeech
 import sys
 import select
 
-with open('/etc/glconfig.json') as json_file:
-    config = json.load(json_file)
+from .config_utils import load_config
+config = load_config()
 
 # Load your OpenAI API key from glconfig.json
 openai.api_key = config.get("OPENAI_AI_KEY")

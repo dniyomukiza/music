@@ -257,7 +257,7 @@ def track_search_analytics(topics: list[str]):
                 analytics_data['category_topics'][category].append(topic)
 
 def extract_audio_path_from_output(output_text):
-    """Extract audio file path from agent output text."""
+    """Extract audio file path from agent output text or filesystem."""
     if not output_text:
         return None
     
@@ -277,7 +277,28 @@ def extract_audio_path_from_output(output_text):
             print(f"DEBUG: Found audio path with pattern {pattern}: {match.group(0)}")
             return match.group(0)
     
-    print("DEBUG: No audio path found in output")
+    # If no path found in output, check filesystem for generated files
+    print("DEBUG: No audio path found in output, checking filesystem...")
+    audio_dir = "glconnect/static/audio"
+    if os.path.exists(audio_dir):
+        # Look for final_news_broadcast files
+        import glob
+        final_broadcast_files = glob.glob(os.path.join(audio_dir, "final_news_broadcast*.mp3"))
+        if final_broadcast_files:
+            # Get the most recent file
+            latest_file = max(final_broadcast_files, key=os.path.getctime)
+            print(f"DEBUG: Found audio file in filesystem: {latest_file}")
+            return latest_file
+        
+        # Look for any MP3 files as fallback
+        mp3_files = glob.glob(os.path.join(audio_dir, "*.mp3"))
+        if mp3_files:
+            # Get the most recent file
+            latest_file = max(mp3_files, key=os.path.getctime)
+            print(f"DEBUG: Found MP3 file in filesystem: {latest_file}")
+            return latest_file
+    
+    print("DEBUG: No audio path found in output or filesystem")
     return None
 
 def cleanup_temp_audio_files():
@@ -329,6 +350,8 @@ def run_generate_broadcast(task_id, topics):
         print(f"Starting ADK agent news generation for topics: {topics}")
         output = generate_broadcast(topics)
         print("ADK agent system completed successfully")
+        print(f"DEBUG: Output type: {type(output)}")
+        print(f"DEBUG: Output content: {str(output)[:500]}...")
         
         # The agent returns a string, not a dictionary
         if isinstance(output, str):
@@ -372,6 +395,33 @@ def run_generate_broadcast(task_id, topics):
                     else:
                         raise AudioFilePathNotFound("Audio file path not found in output and audio directory doesn't exist")
             
+            # Verify the audio file exists and has content before marking as completed
+            # Add retry mechanism in case file is still being written
+            max_retries = 10
+            retry_delay = 1  # seconds
+            
+            for attempt in range(max_retries):
+                if os.path.exists(audio_file_path):
+                    file_size = os.path.getsize(audio_file_path)
+                    if file_size > 0:
+                        print(f"DEBUG: Audio file verified - {audio_file_path} ({file_size} bytes)")
+                        break
+                    else:
+                        print(f"DEBUG: Audio file exists but is empty (0 bytes), attempt {attempt + 1}/{max_retries}")
+                else:
+                    print(f"DEBUG: Audio file does not exist yet, attempt {attempt + 1}/{max_retries}")
+                
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+            else:
+                # If we get here, all retries failed
+                if not os.path.exists(audio_file_path):
+                    raise AudioFilePathNotFound(f"Audio file does not exist after {max_retries} attempts: {audio_file_path}")
+                else:
+                    file_size = os.path.getsize(audio_file_path)
+                    raise AudioFilePathNotFound(f"Audio file is empty (0 bytes) after {max_retries} attempts: {audio_file_path}")
+            
             # Convert the file path to a URL that can be served by Flask
             filename = os.path.basename(audio_file_path)
             audio_url = f"/routes2/news/audio/{filename}"
@@ -382,11 +432,12 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['audio_file'] = audio_url
                 tasks[task_id]['summary'] = ""
             
+            # Clean up old audio files after successful generation (but keep the current one)
+            cleanup_old_audio_files()
+            
             # Clean up temporary audio files (jingle.wav and final_news_broadcast*.mp3 are NEVER deleted)
             cleanup_temp_audio_files()
             
-            # Clean up old audio files after successful generation
-            cleanup_old_audio_files()
             print("ADK agent system completed successfully!")
             return
         else:
@@ -458,6 +509,30 @@ def task_status(task_id):
     if task['status'] == 'completed':
         # Handle the new task structure with direct audio_file and summary
         if 'audio_file' in task:
+            # Verify the audio file still exists before returning it
+            audio_file_path = task['audio_file']
+            if audio_file_path.startswith('/routes2/news/audio/'):
+                # Convert URL back to file path for verification
+                filename = audio_file_path.replace('/routes2/news/audio/', '')
+                actual_file_path = os.path.join('glconnect', 'static', 'audio', filename)
+                
+                if not os.path.exists(actual_file_path):
+                    print(f"DEBUG: Audio file not found on disk: {actual_file_path}")
+                    return jsonify({
+                        'status': 'failed',
+                        'error': 'Audio file not found on disk'
+                    })
+                
+                file_size = os.path.getsize(actual_file_path)
+                if file_size == 0:
+                    print(f"DEBUG: Audio file is empty: {actual_file_path}")
+                    return jsonify({
+                        'status': 'failed',
+                        'error': 'Audio file is empty'
+                    })
+                
+                print(f"DEBUG: Audio file verified for UI - {actual_file_path} ({file_size} bytes)")
+            
             return jsonify({
                 'status': 'completed',
                 'audio_file': task['audio_file'],
