@@ -2,7 +2,7 @@
 FROM python:3.10-slim
 
 # Set the working directory
-WORKDIR /appdir
+WORKDIR /usr/src/appdir
 
 # Install system dependencies first (for better caching)
 RUN apt-get update && apt-get install -y \

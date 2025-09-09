@@ -29,8 +29,7 @@ mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
 
-with open('/etc/glconfig.json') as json_file:
-    config = json.load(json_file)
+# Use the same config loaded above
 
 def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='/static')

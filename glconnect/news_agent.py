@@ -18,8 +18,8 @@ from summa import summarizer
 load_dotenv()
 
 # Load Google API key from glconfig.json
-from .config_utils import load_config
-config = load_config()
+with open('/etc/glconfig.json') as json_file:
+    config = json.load(json_file)
 
 # Get Google API key from glconfig.json
 google_api_key = config.get("GOOGLE_API_KEY")
