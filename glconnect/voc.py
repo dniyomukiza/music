@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import FastAPI, HTTPException, Depends
 import os
+import json
 from dotenv import load_dotenv
 from glconnect.models import WordsData,db
 from sqlalchemy.orm import declarative_base
@@ -15,7 +16,17 @@ from sqlalchemy.orm import declarative_base
 # Load environment variables
 load_dotenv()
 
+# Try environment variable first, then fall back to glconfig.json
 db_url = os.getenv("DB_URL")
+if not db_url:
+    try:
+        with open('/etc/glconfig.json') as json_file:
+            config = json.load(json_file)
+        db_url = config.get("DB_URL")
+        print("DEBUG: Loaded DB_URL from glconfig.json")
+    except Exception as e:
+        print(f"DEBUG: Error loading DB_URL from glconfig.json: {e}")
+        db_url = os.getenv("DB_URL")
 
 # Set up the database engine and session
 engine = create_engine(db_url)  # Using the environment DB_URL
