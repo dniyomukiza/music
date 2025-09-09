@@ -210,9 +210,30 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
         test_audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
         test_response = client.synthesize_speech(input=test_input, voice=test_voice, audio_config=test_audio_config)
         print(f"DEBUG: TTS API test successful - response length: {len(test_response.audio_content) if test_response.audio_content else 'None'}")
+        
+        # Additional test - try to write the test response to verify filesystem works
+        if test_response.audio_content:
+            test_output_dir = os.path.abspath("glconnect/static/audio")
+            os.makedirs(test_output_dir, mode=0o755, exist_ok=True)
+            test_file_path = os.path.join(test_output_dir, "test_tts.mp3")
+            with open(test_file_path, "wb") as test_file:
+                test_file.write(test_response.audio_content)
+                test_file.flush()
+                os.fsync(test_file.fileno())
+            test_file_size = os.path.getsize(test_file_path)
+            print(f"DEBUG: Test file written successfully - size: {test_file_size} bytes")
+            # Clean up test file
+            try:
+                os.remove(test_file_path)
+                print(f"DEBUG: Test file cleaned up")
+            except:
+                pass
+        else:
+            print(f"DEBUG: TTS API test returned empty content - this indicates a problem with the API")
     except Exception as e:
         print(f"DEBUG: TTS API test failed: {e}")
         print(f"DEBUG: This indicates a problem with Google Cloud TTS API access")
+        print(f"DEBUG: Exception details: {type(e).__name__}: {str(e)}")
 
     synthesis_input = texttospeech.SynthesisInput(text=clean_text)
     audio_config = texttospeech.AudioConfig(
@@ -238,20 +259,67 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
         print(f"DEBUG: Response type: {type(response)}")
         print(f"DEBUG: Response attributes: {dir(response)}")
         
-        if not response.audio_content:
+        # Additional debugging for audio content
+        if response.audio_content:
+            print(f"DEBUG: Audio content type: {type(response.audio_content)}")
+            print(f"DEBUG: Audio content first 20 bytes: {response.audio_content[:20] if len(response.audio_content) > 20 else response.audio_content}")
+            print(f"DEBUG: Audio content is bytes: {isinstance(response.audio_content, bytes)}")
+        else:
             print(f"ERROR: TTS returned empty audio content for {output_filename}")
             print(f"DEBUG: Full response: {response}")
+            print(f"DEBUG: Response has audio_content attribute: {hasattr(response, 'audio_content')}")
+            if hasattr(response, 'audio_content'):
+                print(f"DEBUG: audio_content is None: {response.audio_content is None}")
+                print(f"DEBUG: audio_content is empty: {response.audio_content == b''}")
             raise Exception(f"TTS returned empty audio content for {output_filename}")
 
-        output_dir = "glconnect/static/audio"
-        os.makedirs(output_dir, exist_ok=True)
+        # Use absolute paths for better cross-platform compatibility
+        output_dir = os.path.abspath("glconnect/static/audio")
+        print(f"DEBUG: Creating output directory: {output_dir}")
+        
+        # Ensure directory exists with proper permissions
+        try:
+            os.makedirs(output_dir, mode=0o755, exist_ok=True)
+            print(f"DEBUG: Directory created/exists: {output_dir}")
+        except Exception as e:
+            print(f"DEBUG: Error creating directory: {e}")
+            # Try alternative path
+            output_dir = os.path.abspath("./glconnect/static/audio")
+            os.makedirs(output_dir, mode=0o755, exist_ok=True)
+            print(f"DEBUG: Using alternative directory: {output_dir}")
+        
         full_path = os.path.join(output_dir, output_filename)
-
-        with open(full_path, "wb") as out:
-            out.write(response.audio_content)
+        print(f"DEBUG: Full output path: {full_path}")
+        print(f"DEBUG: Path exists before write: {os.path.exists(os.path.dirname(full_path))}")
+        
+        # Write with explicit error handling
+        try:
+            with open(full_path, "wb") as out:
+                bytes_written = out.write(response.audio_content)
+                print(f"DEBUG: Bytes written to file: {bytes_written}")
+                out.flush()  # Force flush to disk
+                os.fsync(out.fileno())  # Force sync to filesystem
+        except Exception as e:
+            print(f"DEBUG: Error writing file: {e}")
+            # Try alternative approach
+            try:
+                with open(full_path, "wb") as out:
+                    out.write(response.audio_content)
+                    out.flush()
+                    os.fsync(out.fileno())
+                print(f"DEBUG: Alternative write successful")
+            except Exception as e2:
+                print(f"DEBUG: Alternative write also failed: {e2}")
+                raise e2
+        
+        # Verify file was written correctly
+        if not os.path.exists(full_path):
+            print(f"ERROR: File was not created at {full_path}")
+            raise Exception(f"File was not created at {full_path}")
         
         file_size = os.path.getsize(full_path)
         print(f"DEBUG: Audio content written to file: {full_path} ({file_size} bytes)")
+        print(f"DEBUG: File permissions: {oct(os.stat(full_path).st_mode)}")
         
         if file_size == 0:
             print(f"ERROR: Audio file created but is empty (0 bytes) for {output_filename}")
@@ -348,8 +416,22 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
                 continue
 
             try:
+                print(f"DEBUG: Loading audio segment: {f_path_clean}")
+                if os.path.exists(f_path_clean):
+                    file_size = os.path.getsize(f_path_clean)
+                    print(f"DEBUG: Segment file size: {file_size} bytes")
+                    if file_size == 0:
+                        print(f"WARNING: Segment file is empty: {f_path_clean}")
+                        continue
+                else:
+                    print(f"WARNING: Segment file does not exist: {f_path_clean}")
+                    continue
+                
                 audio_segment = AudioSegment.from_file(f_path_clean, format="mp3")
+                print(f"DEBUG: Loaded segment - duration: {audio_segment.duration_seconds}s, channels: {audio_segment.channels}")
                 combined_audio += audio_segment
+                print(f"DEBUG: Added to combined audio - total duration: {combined_audio.duration_seconds}s")
+                
                 try:
                     if str(f_path_clean).lower().endswith('.mp3'):
                         input_mp3_paths.append(os.path.abspath(f_path_clean))
@@ -385,7 +467,28 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
 
         full_path = os.path.join(output_dir, unique_output_filename)
 
-        combined_audio.export(full_path, format="mp3")
+        print(f"DEBUG: About to export combined audio to: {full_path}")
+        print(f"DEBUG: Combined audio duration: {combined_audio.duration_seconds} seconds")
+        print(f"DEBUG: Combined audio channels: {combined_audio.channels}")
+        print(f"DEBUG: Combined audio frame rate: {combined_audio.frame_rate}")
+        
+        try:
+            combined_audio.export(full_path, format="mp3")
+            print(f"DEBUG: Export completed successfully")
+        except Exception as e:
+            print(f"DEBUG: Export failed: {e}")
+            raise e
+        
+        # Verify the file was written correctly
+        if os.path.exists(full_path):
+            file_size = os.path.getsize(full_path)
+            print(f"DEBUG: Combined audio file written - {full_path} ({file_size} bytes)")
+            if file_size == 0:
+                print(f"ERROR: Combined audio file is empty after export!")
+                raise Exception(f"Combined audio file is empty after export: {full_path}")
+        else:
+            print(f"ERROR: Combined audio file was not created!")
+            raise Exception(f"Combined audio file was not created: {full_path}")
 
         # Scoped cleanup: remove only the specific input mp3s used for this combination
         try:
