@@ -177,6 +177,8 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
     print(f"DEBUG: Loading TTS credentials from: {tts_credentials_path}")
     print(f"DEBUG: Credentials file exists: {os.path.exists(tts_credentials_path)}")
+    print(f"DEBUG: Current working directory: {os.getcwd()}")
+    print(f"DEBUG: Environment: {os.getenv('FLASK_ENV', 'production')}")
     
     # Check if credentials file exists, if not try default path
     if not os.path.exists(tts_credentials_path):
@@ -188,9 +190,29 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     if not os.path.exists(tts_credentials_path):
         raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
     
+    # Debug: Check credentials file content
+    try:
+        with open(tts_credentials_path, 'r') as f:
+            creds_content = f.read()
+            print(f"DEBUG: Credentials file size: {len(creds_content)} bytes")
+            print(f"DEBUG: Credentials file starts with: {creds_content[:100]}...")
+    except Exception as e:
+        print(f"DEBUG: Error reading credentials file: {e}")
+    
     credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
     client = texttospeech.TextToSpeechClient(credentials=credentials)
     print(f"DEBUG: TTS client created successfully")
+    
+    # Test TTS API with a simple call to verify it's working
+    try:
+        test_input = texttospeech.SynthesisInput(text="test")
+        test_voice = texttospeech.VoiceSelectionParams(language_code="en-US", name="en-US-Standard-A")
+        test_audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+        test_response = client.synthesize_speech(input=test_input, voice=test_voice, audio_config=test_audio_config)
+        print(f"DEBUG: TTS API test successful - response length: {len(test_response.audio_content) if test_response.audio_content else 'None'}")
+    except Exception as e:
+        print(f"DEBUG: TTS API test failed: {e}")
+        print(f"DEBUG: This indicates a problem with Google Cloud TTS API access")
 
     synthesis_input = texttospeech.SynthesisInput(text=clean_text)
     audio_config = texttospeech.AudioConfig(
