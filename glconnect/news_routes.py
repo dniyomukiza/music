@@ -1265,3 +1265,71 @@ def override_topic_api():
         
     except Exception as e:
         return jsonify({'error': f'Override failed: {str(e)}'}), 500
+
+@news_bp.route('/api/audio-files')
+def get_audio_files():
+    """API endpoint to get list of available audio files."""
+    try:
+        import os
+        from flask import current_app
+        
+        audio_files = []
+        
+        # Check static/audio directory
+        static_audio_dir = os.path.join(current_app.static_folder, 'audio')
+        if os.path.exists(static_audio_dir):
+            for filename in os.listdir(static_audio_dir):
+                if filename.lower().endswith(('.mp3', '.wav', '.ogg', '.m4a')):
+                    # Skip jingle.wav - it's a system file that should never be revealed
+                    if filename.lower() == 'jingle.wav':
+                        continue
+                        
+                    file_path = os.path.join(static_audio_dir, filename)
+                    file_size = os.path.getsize(file_path)
+                    file_time = os.path.getmtime(file_path)
+                    
+                    audio_files.append({
+                        'filename': filename,
+                        'url': f'/routes2/news/audio/{filename}',
+                        'size': file_size,
+                        'modified': file_time,
+                        'type': 'static'
+                    })
+        
+        # Check for generated news broadcast files in other locations
+        # Look for files with news broadcast patterns
+        import glob
+        broadcast_patterns = [
+            'news_broadcast_*.mp3',
+            'news_broadcast_*.wav',
+            'broadcast_*.mp3',
+            'broadcast_*.wav'
+        ]
+        
+        for pattern in broadcast_patterns:
+            for file_path in glob.glob(os.path.join(current_app.root_path, '..', pattern)):
+                if os.path.exists(file_path):
+                    filename = os.path.basename(file_path)
+                    file_size = os.path.getsize(file_path)
+                    file_time = os.path.getmtime(file_path)
+                    
+                    # Create a URL for the file (you might need to adjust this based on your setup)
+                    audio_files.append({
+                        'filename': filename,
+                        'url': f'/routes2/news/audio/{filename}',
+                        'size': file_size,
+                        'modified': file_time,
+                        'type': 'generated'
+                    })
+        
+        # Sort by modification time (newest first)
+        audio_files.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return jsonify({
+            'audio_files': audio_files,
+            'count': len(audio_files)
+        })
+        
+    except Exception as e:
+        print(f"Error getting audio files: {e}")
+        return jsonify({'error': 'Failed to get audio files'}), 500

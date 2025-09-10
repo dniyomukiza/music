@@ -328,6 +328,162 @@
             color: #155724;
         }
 
+        .feature-card.clickable {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card.clickable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .audio-files-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            display: none;
+        }
+
+        .audio-files-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .audio-files-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+        }
+
+        .audio-files-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .audio-files-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .audio-file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+
+        .audio-file-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .audio-file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .audio-file-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .audio-file-details {
+            flex: 1;
+        }
+
+        .audio-file-name {
+            font-weight: 600;
+            color: #495057;
+            margin: 0 0 4px 0;
+            font-size: 0.95rem;
+        }
+
+        .audio-file-meta {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        .audio-file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .audio-action-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .audio-play-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .audio-play-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .audio-download-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .audio-download-btn:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .audio-loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .audio-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .audio-empty i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
         .generate-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -535,10 +691,21 @@
                             <i class="fas fa-arrow-right"></i>
                         </div>
                     </div>
-                    <div class="feature-card">
+                    <div class="feature-card clickable" id="professionalAudioCard">
                         <div class="feature-icon"><i class="fas fa-music"></i></div>
                         <h3>Professional Audio</h3>
                         <p>High-quality news audio with jingles, transitions, in a professional broadcast format</p>
+                        <div class="audio-files-section" id="audioFilesSection">
+                            <div class="audio-files-header">
+                                <h4 class="audio-files-title">Available Audio Files</h4>
+                                <span class="audio-files-count" id="audioFilesCount">0 files</span>
+                            </div>
+                            <div class="audio-files-list" id="audioFilesList">
+                                <div class="audio-loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading audio files...
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -598,6 +765,109 @@
         let topicValidations = {};
         let progressInterval;
         let validationTimeout;
+        let audioFilesLoaded = false;
+
+        // Professional Audio click handler
+        document.getElementById('professionalAudioCard').addEventListener('click', function() {
+            const audioSection = document.getElementById('audioFilesSection');
+            const isVisible = audioSection.style.display !== 'none';
+            
+            if (isVisible) {
+                // Hide the section
+                audioSection.style.display = 'none';
+            } else {
+                // Show the section and load audio files
+                audioSection.style.display = 'block';
+                if (!audioFilesLoaded) {
+                    loadAudioFiles();
+                }
+            }
+        });
+
+        // Load audio files from API
+        async function loadAudioFiles() {
+            const audioFilesList = document.getElementById('audioFilesList');
+            const audioFilesCount = document.getElementById('audioFilesCount');
+            
+            try {
+                const response = await fetch('/routes2/news/api/audio-files');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                audioFilesLoaded = true;
+                audioFilesCount.textContent = `${data.count} file${data.count !== 1 ? 's' : ''}`;
+                
+                if (data.audio_files.length === 0) {
+                    audioFilesList.innerHTML = `
+                        <div class="audio-empty">
+                            <i class="fas fa-music"></i>
+                            <h4>No audio files found</h4>
+                            <p>Generate some news broadcasts to see audio files here</p>
+                        </div>
+                    `;
+                } else {
+                    audioFilesList.innerHTML = data.audio_files.map(file => {
+                        const fileSize = formatFileSize(file.size);
+                        const modifiedDate = new Date(file.modified * 1000).toLocaleDateString();
+                        const fileType = file.type === 'generated' ? 'Generated' : 'Static';
+                        
+                        return `
+                            <div class="audio-file-item">
+                                <div class="audio-file-info">
+                                    <div class="audio-file-icon">
+                                        <i class="fas fa-file-audio"></i>
+                                    </div>
+                                    <div class="audio-file-details">
+                                        <div class="audio-file-name">${file.filename}</div>
+                                        <div class="audio-file-meta">
+                                            ${fileSize} • ${modifiedDate} • ${fileType}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="audio-file-actions">
+                                    <button class="audio-action-btn audio-play-btn" onclick="playAudio('${file.url}')">
+                                        <i class="fas fa-play"></i> Play
+                                    </button>
+                                    <a href="${file.url}" class="audio-action-btn audio-download-btn" download>
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Error loading audio files:', error);
+                audioFilesList.innerHTML = `
+                    <div class="audio-empty">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h4>Error loading audio files</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Format file size for display
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Play audio function
+        function playAudio(url) {
+            const audio = new Audio(url);
+            audio.play().catch(error => {
+                console.error('Error playing audio:', error);
+                alert('Error playing audio file. Please try downloading it instead.');
+            });
+        }
 
         // Real-time validation as user types
         document.getElementById('topicInput').addEventListener('input', function(e) {
