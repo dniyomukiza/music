@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Community Dictionary{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-users"></i> Community Dictionary</h2>
+            <p class="text-muted">Words contributed by our community members</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ stats.total_words }}</h4>
+                            <p class="mb-0">Community Words</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-book fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ words|length }}</h4>
+                            <p class="mb-0">Approved Words</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ stats.version }}</h4>
+                            <p class="mb-0">Version</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-code-branch fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search words or meanings...">
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary" onclick="filterWords()">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Words List -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Community Words</h5>
+                </div>
+                <div class="card-body">
+                    {% if words %}
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="wordsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Word</th>
+                                        <th>Meaning</th>
+                                        <th>Part of Speech</th>
+                                        <th>Example</th>
+                                        <th>Contributor</th>
+                                        <th>Date Added</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for word in words %}
+                                    <tr data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
+                                        <td><strong>{{ word.word }}</strong></td>
+                                        <td>{{ word.meaning }}</td>
+                                        <td>
+                                            {% if word.part_of_speech %}
+                                                <span class="badge badge-secondary">{{ word.part_of_speech }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if word.example_sentence %}
+                                                <small class="text-muted">{{ word.example_sentence[:50] }}{% if word.example_sentence|length > 50 %}...{% endif %}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ word.contributor_name }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ word.approved_at[:10] if word.approved_at else '-' }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No community words yet</h5>
+                            <p class="text-muted">Be the first to contribute a word!</p>
+                            <a href="{{ url_for('bp1.words') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Contribute a Word
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('bp1.words') }}" class="btn btn-primary">
+                            <i class="fas fa-book"></i> Main Dictionary
+                        </a>
+                        <a href="{{ url_for('bp1.words') }}" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Contribute Word
+                        </a>
+                        <button class="btn btn-info" onclick="location.reload()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterWords() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#wordsTable tbody tr');
+    
+    rows.forEach(row => {
+        const word = row.dataset.word;
+        const meaning = row.dataset.meaning;
+        
+        const matchesSearch = !searchTerm || word.includes(searchTerm) || meaning.includes(searchTerm);
+        
+        if (matchesSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Search as you type
+document.getElementById('searchInput').addEventListener('input', filterWords);
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}
+

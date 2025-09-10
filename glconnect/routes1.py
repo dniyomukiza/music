@@ -5,9 +5,9 @@ from mailtrap import MailtrapClient, Mail, Address
 from glconnect.forms import *
 from glconnect.models import*
 from werkzeug.security import check_password_hash
-from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g
+from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g,jsonify
 from itsdangerous import URLSafeTimedSerializer
-from flask_login import login_user,LoginManager
+from flask_login import login_user,LoginManager,login_required,current_user
 
 with open('/etc/glconfig.json') as json_file:
     config = json.load(json_file)
@@ -183,7 +183,287 @@ def word_details(word):
     except requests.exceptions.RequestException as e:
         return {"error": f"Error fetching word details: {e}"}
 
+@bp1.route('/contribute-word', methods=['POST'])
+def contribute_word():
+    """Handle word contribution submissions."""
+    try:
+        from .models import WordContribution, WordsData, db
+        from flask_login import current_user
+        from datetime import datetime, timezone
+        
+        # Get form data
+        word = request.form.get('word', '').strip()
+        meaning = request.form.get('meaning', '').strip()
+        example_sentence = request.form.get('example_sentence', '').strip()
+        part_of_speech = request.form.get('part_of_speech', '').strip()
+        phonetics = request.form.get('phonetics', '').strip()
+        contributor_name = request.form.get('contributor_name', '').strip()
+        
+        # Validate required fields
+        if not word or not meaning:
+            return jsonify({
+                'success': False,
+                'message': 'Word and meaning are required fields.'
+            }), 400
+        
+        # Check if word already exists in the main dictionary
+        existing_word = WordsData.query.filter_by(word=word.lower()).first()
+        if existing_word:
+            return jsonify({
+                'success': False,
+                'message': f'The word "{word}" already exists in our dictionary.'
+            }), 400
+        
+        # Check if word already has a pending contribution
+        pending_contribution = WordContribution.query.filter_by(
+            word=word.lower(), 
+            status='pending'
+        ).first()
+        if pending_contribution:
+            return jsonify({
+                'success': False,
+                'message': f'A contribution for "{word}" is already pending review.'
+            }), 400
+        
+        # Create new contribution
+        contribution = WordContribution(
+            word=word.lower(),
+            meaning=meaning,
+            example_sentence=example_sentence if example_sentence else None,
+            part_of_speech=part_of_speech if part_of_speech else None,
+            phonetics=phonetics if phonetics else None,
+            contributor_id=current_user.user_id if current_user.is_authenticated else None,
+            contributor_name=contributor_name if contributor_name else 'Anonymous',
+            status='pending'
+        )
+        
+        db.session.add(contribution)
+        db.session.commit()
+        
+        print(f"DEBUG: New word contribution submitted: '{word}' by {contributor_name or 'Anonymous'}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Contribution submitted successfully! It will be reviewed before being added to the dictionary.'
+        })
+        
+    except Exception as e:
+        print(f"Error in contribute_word: {e}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while submitting your contribution. Please try again.'
+        }), 500
 
+@bp1.route('/admin/contributions')
+@login_required
+def admin_contributions():
+    """Admin page to review word contributions."""
+    from .models import WordContribution, db
+    from flask_login import current_user
+    
+    # Check if user is admin
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('routes1.findwords'))
+    
+    # Get all pending contributions
+    pending_contributions = WordContribution.query.filter_by(status='pending').order_by(WordContribution.created_at.desc()).all()
+    
+    return render_template('admin_contributions.html', contributions=pending_contributions)
+
+@bp1.route('/admin/approve-contribution/<int:contribution_id>', methods=['POST'])
+@login_required
+def approve_contribution(contribution_id):
+    """Approve a word contribution and add it to the main dictionary."""
+    try:
+        from .models import WordContribution, WordsData, db
+        from flask_login import current_user
+        from datetime import datetime, timezone
+        
+        # Check if user is admin
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        
+        # Get the contribution
+        contribution = WordContribution.query.get_or_404(contribution_id)
+        
+        if contribution.status != 'pending':
+            return jsonify({'success': False, 'message': 'Contribution already processed'}), 400
+        
+        # Add to community dictionary (separate from main dictionary)
+        from .community_dictionary_manager import community_dictionary_manager
+        
+        word_data = {
+            "word": contribution.word,
+            "meaning": contribution.meaning,
+            "example_sentence": contribution.example_sentence or "",
+            "part_of_speech": contribution.part_of_speech or "",
+            "phonetics": contribution.phonetics or "",
+            "contributor_name": contribution.contributor_name or "Anonymous",
+            "approved_by": current_user.username or "Admin"
+        }
+        
+        success = community_dictionary_manager.add_word(word_data)
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'message': 'Error saving word to community dictionary. Word may already exist.'
+            }), 500
+        
+        # Update contribution status
+        contribution.status = 'approved'
+        contribution.reviewed_at = datetime.now(timezone.utc)
+        contribution.reviewer_id = current_user.user_id
+        contribution.admin_notes = request.json.get('admin_notes', '') if request.is_json else ''
+        
+        db.session.commit()
+        
+        print(f"DEBUG: Contribution approved: '{contribution.word}' by admin {current_user.username}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Word "{contribution.word}" has been approved and added to the community dictionary.'
+        })
+        
+    except Exception as e:
+        print(f"Error in approve_contribution: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error approving contribution'}), 500
+
+@bp1.route('/admin/reject-contribution/<int:contribution_id>', methods=['POST'])
+@login_required
+def reject_contribution(contribution_id):
+    """Reject a word contribution."""
+    try:
+        from .models import WordContribution, db
+        from flask_login import current_user
+        from datetime import datetime, timezone
+        
+        # Check if user is admin
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        
+        # Get the contribution
+        contribution = WordContribution.query.get_or_404(contribution_id)
+        
+        if contribution.status != 'pending':
+            return jsonify({'success': False, 'message': 'Contribution already processed'}), 400
+        
+        # Update contribution status
+        contribution.status = 'rejected'
+        contribution.reviewed_at = datetime.now(timezone.utc)
+        contribution.reviewer_id = current_user.user_id
+        contribution.admin_notes = request.json.get('admin_notes', '') if request.is_json else ''
+        
+        db.session.commit()
+        
+        print(f"DEBUG: Contribution rejected: '{contribution.word}' by admin {current_user.username}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Contribution for "{contribution.word}" has been rejected.'
+        })
+        
+    except Exception as e:
+        print(f"Error in reject_contribution: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error rejecting contribution'}), 500
+
+@bp1.route('/api/game-words')
+def get_game_words():
+    """Get random words for the matching game from the original dictionary only."""
+    try:
+        from .models import WordsData
+        import random
+        
+        # Get words from original database only
+        all_words = WordsData.query.all()
+        
+        if len(all_words) < 6:
+            return jsonify({
+                'success': False,
+                'message': 'Not enough words in dictionary for the game. Need at least 6 words.'
+            }), 400
+        
+        # Select 6 random words
+        selected_words = random.sample(all_words, 6)
+        
+        # Prepare game data
+        game_words = []
+        for word in selected_words:
+            # Extract English meaning (usually the last item in the array)
+            if word.igisobanuro_meaning:
+                # Get the last meaning which should be English
+                meaning = word.igisobanuro_meaning[-1]
+            else:
+                meaning = "No meaning available"
+            
+            game_words.append({
+                'id': word.id,
+                'word': word.word,
+                'meaning': meaning,
+                'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
+            })
+        
+        # Shuffle the meanings to make it challenging
+        meanings = [word['meaning'] for word in game_words]
+        random.shuffle(meanings)
+        
+        # Debug logging removed for better performance
+        
+        return jsonify({
+            'success': True,
+            'words': game_words,
+            'meanings': meanings
+        })
+        
+    except Exception as e:
+        print(f"Error in get_game_words: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching words for the game'
+        }), 500
+
+@bp1.route('/admin/community-dictionary')
+@login_required
+def community_dictionary():
+    """View community dictionary (admin only)."""
+    try:
+        from .community_dictionary_manager import community_dictionary_manager
+        
+        # Check if user is admin
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        
+        stats = community_dictionary_manager.get_stats()
+        words = community_dictionary_manager.get_all_words()
+        
+        return render_template('community_dictionary.html', 
+                             stats=stats, 
+                             words=words)
+        
+    except Exception as e:
+        print(f"Error in community_dictionary: {e}")
+        return jsonify({'success': False, 'message': 'Error loading community dictionary'}), 500
+
+@bp1.route('/community-dictionary')
+def view_community_dictionary():
+    """View community dictionary (public read-only)."""
+    try:
+        from .community_dictionary_manager import community_dictionary_manager
+        
+        stats = community_dictionary_manager.get_stats()
+        words = community_dictionary_manager.get_all_words()
+        
+        return render_template('community_dictionary_public.html', 
+                             stats=stats, 
+                             words=words)
+        
+    except Exception as e:
+        print(f"Error in view_community_dictionary: {e}")
+        return jsonify({'success': False, 'message': 'Error loading community dictionary'}), 500
 
 @bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):

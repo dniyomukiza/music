@@ -72,7 +72,28 @@ class SlangWords(db.Model):
     example = Column(String, nullable=False)       
     created_by = Column(String, nullable=True)      
     created_at = Column(String, nullable=False)
-    approved = Column(Integer, default=0) 
+    approved = Column(Integer, default=0)
+
+class WordContribution(db.Model):
+    __tablename__ = 'word_contributions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    word = db.Column(db.String(100), nullable=False)
+    meaning = db.Column(db.Text, nullable=False)
+    example_sentence = db.Column(db.Text, nullable=True)
+    part_of_speech = db.Column(db.String(50), nullable=True)
+    phonetics = db.Column(db.String(100), nullable=True)
+    contributor_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
+    contributor_name = db.Column(db.String(100), nullable=True)  # For anonymous contributions
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    admin_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
+    
+    # Relationships
+    contributor = db.relationship('User', foreign_keys=[contributor_id], backref='word_contributions')
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id], backref='reviewed_contributions') 
        
 class Playlist(db.Model):
     __tablename__ = 'playlists'

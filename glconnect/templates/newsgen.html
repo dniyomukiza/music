@@ -345,6 +345,9 @@
             border-radius: 12px;
             border: 1px solid #e9ecef;
             display: none;
+            width: 100%;
+            box-sizing: border-box; /* Include padding in width calculation */
+            overflow-x: hidden; /* Prevent horizontal overflow */
         }
 
         .audio-files-header {
@@ -384,6 +387,8 @@
             border-radius: 8px;
             border: 1px solid #e9ecef;
             transition: all 0.2s ease;
+            min-width: 0; /* Allow flex items to shrink */
+            overflow: hidden; /* Prevent content from overflowing */
         }
 
         .audio-file-item:hover {
@@ -396,6 +401,8 @@
             align-items: center;
             gap: 12px;
             flex: 1;
+            min-width: 0; /* Allow flex item to shrink */
+            overflow: hidden; /* Prevent content from overflowing */
         }
 
         .audio-file-icon {
@@ -412,6 +419,8 @@
 
         .audio-file-details {
             flex: 1;
+            min-width: 0; /* Allow flex item to shrink */
+            overflow: hidden; /* Prevent content from overflowing */
         }
 
         .audio-file-name {
@@ -419,6 +428,9 @@
             color: #495057;
             margin: 0 0 4px 0;
             font-size: 0.95rem;
+            white-space: nowrap; /* Prevent text wrapping */
+            overflow: hidden; /* Hide overflow text */
+            text-overflow: ellipsis; /* Show ... for overflow text */
         }
 
         .audio-file-meta {
@@ -430,6 +442,8 @@
         .audio-file-actions {
             display: flex;
             gap: 8px;
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+            margin-left: 12px; /* Add some space from the file info */
         }
 
         .audio-action-btn {
@@ -482,6 +496,30 @@
             font-size: 3rem;
             margin-bottom: 15px;
             opacity: 0.5;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 768px) {
+            .audio-file-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            .audio-file-info {
+                width: 100%;
+            }
+            
+            .audio-file-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-left: 0;
+            }
+            
+            .audio-action-btn {
+                flex: 1;
+                justify-content: center;
+            }
         }
 
         .generate-btn {

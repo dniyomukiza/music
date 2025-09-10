@@ -12,6 +12,13 @@
             <input type="text" placeholder="Search a word" name="word" required>
             <button type="submit">Search</button>
         </form>
+        
+        <!-- Community Dictionary Link -->
+        <div class="text-center mb-4">
+            <a href="{{ url_for('bp1.view_community_dictionary') }}" class="btn btn-info">
+                <i class="fas fa-users"></i> View Community Dictionary
+            </a>
+        </div>
 
         {% if word %}
             {% if word.error %}
@@ -60,6 +67,427 @@
         {% else %}
             <p>No word found. Please try again.</p>
         {% endif %}
+        
+        <!-- Word Matching Game Section -->
+        <div class="game-section">
+            <h3>🎮 Word Matching Game</h3>
+            <p>Test your Kinyarwanda knowledge! Match the words with their meanings in 60 seconds!</p>
+            
+            <div class="game-controls">
+                <button id="startGameBtn" class="start-game-btn">
+                    <i class="fas fa-play"></i> Start Game
+                </button>
+                <button id="resetGameBtn" class="reset-game-btn" style="display: none;">
+                    <i class="fas fa-redo"></i> Play Again
+                </button>
+            </div>
+            
+            <div id="gameArea" class="game-area" style="display: none;">
+                <div class="game-header">
+                    <div class="game-stats">
+                        <div class="score-display">
+                            <i class="fas fa-star"></i>
+                            <span id="gameScore">0</span> points
+                        </div>
+                        <div class="timer-display">
+                            <i class="fas fa-clock"></i>
+                            <span id="gameTimer">60</span>s
+                        </div>
+                    </div>
+                    <div class="game-progress">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <span id="progressText">0/6 matches</span>
+                    </div>
+                </div>
+                
+                <div class="game-board">
+                    <div class="words-column">
+                        <h4>Kinyarwanda Words</h4>
+                        <div id="wordsContainer" class="words-container">
+                            <!-- Words will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div class="meanings-column">
+                        <h4>English Meanings</h4>
+                        <div id="meaningsContainer" class="meanings-container">
+                            <!-- Meanings will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="gameResult" class="game-result" style="display: none;">
+                    <div class="result-content">
+                        <h3 id="resultTitle">Game Over!</h3>
+                        <p id="resultMessage">You scored <span id="finalScore">0</span> points!</p>
+                        <div class="result-actions">
+                            <button id="playAgainBtn" class="play-again-btn">
+                                <i class="fas fa-play"></i> Play Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Contribution Section -->
+        <div class="contribution-section">
+            <h3>Contribute a New Word</h3>
+            <p>Help expand our Kinyarwanda dictionary by contributing new words and meanings!</p>
+            
+            <form id="contributionForm" class="contribution-form">
+                <div class="form-group">
+                    <label for="contributeWord">Word in Kinyarwanda:</label>
+                    <input type="text" id="contributeWord" name="word" required placeholder="Enter the Kinyarwanda word">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contributeMeaning">Meaning/Definition:</label>
+                    <textarea id="contributeMeaning" name="meaning" required placeholder="Provide the meaning or definition in English"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contributeExample">Example Sentence (optional):</label>
+                    <textarea id="contributeExample" name="example_sentence" placeholder="Provide an example sentence using this word"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contributePOS">Part of Speech:</label>
+                        <select id="contributePOS" name="part_of_speech">
+                            <option value="">Select...</option>
+                            <option value="noun">Noun</option>
+                            <option value="verb">Verb</option>
+                            <option value="adjective">Adjective</option>
+                            <option value="adverb">Adverb</option>
+                            <option value="pronoun">Pronoun</option>
+                            <option value="preposition">Preposition</option>
+                            <option value="conjunction">Conjunction</option>
+                            <option value="interjection">Interjection</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contributePhonetics">Phonetics (optional):</label>
+                        <input type="text" id="contributePhonetics" name="phonetics" placeholder="e.g., /mu-ga-bo/">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contributorName">Your Name (optional):</label>
+                    <input type="text" id="contributorName" name="contributor_name" placeholder="Leave blank for anonymous">
+                </div>
+                
+                <button type="submit" class="submit-btn">Submit Contribution</button>
+            </form>
+            
+            <div id="contributionMessage" class="contribution-message" style="display: none;"></div>
+        </div>
     </div>
+
+    <script>
+        // Word Matching Game Logic
+        class WordMatchingGame {
+            constructor() {
+                this.gameData = null;
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 60;
+                this.timer = null;
+                this.gameActive = false;
+                this.correctPairs = new Map();
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('resetGameBtn').addEventListener('click', () => this.resetGame());
+                document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
+            }
+            
+            async startGame() {
+                try {
+                    console.log('Starting game...');
+                    
+                    // Show loading state
+                    const startBtn = document.getElementById('startGameBtn');
+                    startBtn.disabled = true;
+                    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                    
+                    console.log('Fetching game data...');
+                    const startTime = Date.now();
+                    
+                    // Fetch game data
+                    const response = await fetch('/routes1/api/game-words');
+                    const data = await response.json();
+                    
+                    const loadTime = Date.now() - startTime;
+                    console.log(`Game data loaded in ${loadTime}ms`);
+                    
+                    if (!data.success) {
+                        throw new Error(data.message);
+                    }
+                    
+                    this.gameData = data;
+                    console.log('Game data received:', data);
+                    this.setupGame();
+                    console.log('Game setup complete');
+                    this.showGameArea();
+                    console.log('Game area shown');
+                    this.startTimer();
+                    console.log('Timer started');
+                    
+                } catch (error) {
+                    alert('Error loading game: ' + error.message);
+                    this.resetButtons();
+                }
+            }
+            
+            setupGame() {
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 60;
+                this.gameActive = true;
+                this.correctPairs.clear();
+                
+                // Create correct pairs mapping
+                this.gameData.words.forEach(word => {
+                    this.correctPairs.set(word.word, word.meaning);
+                });
+                
+                this.renderWords();
+                this.renderMeanings();
+                this.updateUI();
+            }
+            
+            renderWords() {
+                const container = document.getElementById('wordsContainer');
+                container.innerHTML = '';
+                
+                this.gameData.words.forEach(word => {
+                    const wordElement = document.createElement('div');
+                    wordElement.className = 'game-word';
+                    wordElement.textContent = word.word;
+                    wordElement.draggable = true;
+                    wordElement.dataset.word = word.word;
+                    
+                    wordElement.addEventListener('dragstart', (e) => this.handleDragStart(e));
+                    wordElement.addEventListener('dragend', (e) => this.handleDragEnd(e));
+                    
+                    container.appendChild(wordElement);
+                });
+            }
+            
+            renderMeanings() {
+                const container = document.getElementById('meaningsContainer');
+                container.innerHTML = '';
+                
+                this.gameData.meanings.forEach(meaning => {
+                    const meaningElement = document.createElement('div');
+                    meaningElement.className = 'game-meaning';
+                    meaningElement.textContent = meaning;
+                    meaningElement.dataset.meaning = meaning;
+                    
+                    meaningElement.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    meaningElement.addEventListener('drop', (e) => this.handleDrop(e));
+                    
+                    container.appendChild(meaningElement);
+                });
+            }
+            
+            handleDragStart(e) {
+                if (!this.gameActive) return;
+                e.target.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', e.target.dataset.word);
+            }
+            
+            handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+            }
+            
+            handleDragOver(e) {
+                if (!this.gameActive) return;
+                e.preventDefault();
+            }
+            
+            handleDrop(e) {
+                if (!this.gameActive) return;
+                e.preventDefault();
+                
+                const word = e.dataTransfer.getData('text/plain');
+                const meaning = e.target.dataset.meaning;
+                
+                // Find the word element
+                const wordElement = document.querySelector(`[data-word="${word}"]`);
+                
+                if (this.correctPairs.get(word) === meaning) {
+                    // Correct match!
+                    this.score += 10;
+                    this.matches++;
+                    
+                    wordElement.classList.add('matched');
+                    e.target.classList.add('matched');
+                    
+                    // Disable both elements
+                    wordElement.draggable = false;
+                    wordElement.style.cursor = 'default';
+                    e.target.style.cursor = 'default';
+                    
+                    // Remove event listeners
+                    wordElement.removeEventListener('dragstart', this.handleDragStart);
+                    wordElement.removeEventListener('dragend', this.handleDragEnd);
+                    e.target.removeEventListener('dragover', this.handleDragOver);
+                    e.target.removeEventListener('drop', this.handleDrop);
+                    
+                } else {
+                    // Incorrect match
+                    this.score = Math.max(0, this.score - 5);
+                    
+                    wordElement.classList.add('incorrect');
+                    e.target.classList.add('incorrect');
+                    
+                    // Remove incorrect styling after animation
+                    setTimeout(() => {
+                        wordElement.classList.remove('incorrect');
+                        e.target.classList.remove('incorrect');
+                    }, 500);
+                }
+                
+                this.updateUI();
+                
+                // Check if game is complete
+                if (this.matches === 6) {
+                    this.endGame(true);
+                }
+            }
+            
+            startTimer() {
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateUI();
+                    
+                    if (this.timeLeft <= 0) {
+                        this.endGame(false);
+                    }
+                }, 1000);
+            }
+            
+            endGame(won) {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                const resultDiv = document.getElementById('gameResult');
+                const resultTitle = document.getElementById('resultTitle');
+                const resultMessage = document.getElementById('resultMessage');
+                const finalScore = document.getElementById('finalScore');
+                
+                if (won) {
+                    resultTitle.textContent = '🎉 Congratulations!';
+                    resultMessage.innerHTML = `You completed all matches!<br>Final Score: <span id="finalScore">${this.score}</span> points!`;
+                } else {
+                    resultTitle.textContent = '⏰ Time\'s Up!';
+                    resultMessage.innerHTML = `You matched ${this.matches}/6 words<br>Final Score: <span id="finalScore">${this.score}</span> points!`;
+                }
+                
+                finalScore.textContent = this.score;
+                resultDiv.style.display = 'flex';
+                
+                // Show reset button
+                document.getElementById('resetGameBtn').style.display = 'inline-block';
+            }
+            
+            resetGame() {
+                // Hide game area and result
+                document.getElementById('gameArea').style.display = 'none';
+                document.getElementById('gameResult').style.display = 'none';
+                document.getElementById('resetGameBtn').style.display = 'none';
+                
+                // Reset buttons
+                this.resetButtons();
+                
+                // Clear game data
+                this.gameData = null;
+                this.gameActive = false;
+            }
+            
+            resetButtons() {
+                const startBtn = document.getElementById('startGameBtn');
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-play"></i> Start Game';
+            }
+            
+            showGameArea() {
+                document.getElementById('gameArea').style.display = 'block';
+            }
+            
+            updateUI() {
+                document.getElementById('gameScore').textContent = this.score;
+                document.getElementById('gameTimer').textContent = this.timeLeft;
+                document.getElementById('progressText').textContent = `${this.matches}/6 matches`;
+                
+                const progressFill = document.getElementById('progressFill');
+                const progressPercent = (this.matches / 6) * 100;
+                progressFill.style.width = `${progressPercent}%`;
+            }
+        }
+        
+        // Initialize the game when page loads
+        const wordMatchingGame = new WordMatchingGame();
+
+        // Contribution form handling
+        document.getElementById('contributionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = document.querySelector('.submit-btn');
+            const messageDiv = document.getElementById('contributionMessage');
+            
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            messageDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/routes1/contribute-word', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageDiv.className = 'contribution-message success';
+                    messageDiv.innerHTML = `
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Thank you!</strong> Your contribution has been submitted and is pending approval. 
+                        We'll review it and add it to the dictionary if it's not already there.
+                    `;
+                    messageDiv.style.display = 'block';
+                    this.reset(); // Clear the form
+                } else {
+                    messageDiv.className = 'contribution-message error';
+                    messageDiv.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Error:</strong> ${data.message || 'Failed to submit contribution. Please try again.'}
+                    `;
+                    messageDiv.style.display = 'block';
+                }
+            } catch (error) {
+                messageDiv.className = 'contribution-message error';
+                messageDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Error:</strong> Failed to submit contribution. Please check your connection and try again.
+                `;
+                messageDiv.style.display = 'block';
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Contribution';
+            }
+        });
+    </script>
 
 {% endblock %}
