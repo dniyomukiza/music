@@ -426,6 +426,88 @@ def get_game_words():
             'message': 'Error fetching words for the game'
         }), 500
 
+@bp1.route('/api/picture-word-game')
+def get_picture_word_game():
+    """Get words and generate images for picture-word matching game."""
+    try:
+        from .models import WordsData
+        import random
+        import google.generativeai as genai
+        import base64
+        import io
+        from PIL import Image
+        
+        # Configure Gemini
+        genai.configure(api_key=current_app.config.get('GOOGLE_API_KEY'))
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Get words from original database
+        all_words = WordsData.query.all()
+        
+        if len(all_words) < 4:
+            return jsonify({
+                'success': False,
+                'message': 'Not enough words in dictionary for the game. Need at least 4 words.'
+            }), 400
+        
+        # Select 4 random words
+        selected_words = random.sample(all_words, 4)
+        
+        # Prepare game data
+        game_data = []
+        for word in selected_words:
+            # Extract English meaning (usually the last item in the array)
+            if word.igisobanuro_meaning:
+                meaning = word.igisobanuro_meaning[-1]
+            else:
+                meaning = "No meaning available"
+            
+            # Generate image using Gemini
+            try:
+                prompt = f"Create a simple, clear illustration of: {meaning}. The image should be suitable for a language learning game, with a clean background and clear visual representation."
+                response = model.generate_content(prompt)
+                
+                # For now, we'll use a placeholder approach since Gemini image generation
+                # might need different handling. We'll create a simple text-based representation
+                image_data = {
+                    'type': 'text_placeholder',
+                    'description': meaning,
+                    'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
+                }
+                
+            except Exception as e:
+                print(f"Error generating image for {word.word}: {e}")
+                # Fallback to text placeholder
+                image_data = {
+                    'type': 'text_placeholder',
+                    'description': meaning,
+                    'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
+                }
+            
+            game_data.append({
+                'id': word.id,
+                'word': word.word,
+                'meaning': meaning,
+                'image': image_data,
+                'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
+            })
+        
+        # Shuffle the data to randomize positions
+        random.shuffle(game_data)
+        
+        return jsonify({
+            'success': True,
+            'game_data': game_data,
+            'total_words': len(game_data)
+        })
+        
+    except Exception as e:
+        print(f"Error in get_picture_word_game: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Error generating picture-word game'
+        }), 500
+
 @bp1.route('/admin/community-dictionary')
 @login_required
 def community_dictionary():

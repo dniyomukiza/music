@@ -3,21 +3,74 @@
 {% block images %}
     <link rel="stylesheet" href="{{ url_for('static', filename='words.css') }}">
 
-    <div class="container">
+    <div class="language-page">
         {% include 'messages.html' %}
-        <!-- <h1>Learn Kinyarwanda</h1>-->
         
-        <!-- Form to search for a word -->
-        <form action="{{ url_for('routes1.findwords') }}" method="POST" class="search-form">
-            <input type="text" placeholder="Search a word" name="word" required>
-            <button type="submit">Search</button>
-        </form>
-        
-        <!-- Community Dictionary Link -->
-        <div class="text-center mb-4">
-            <a href="{{ url_for('routes1.community_dictionary_public') }}" class="btn btn-info">
-                <i class="fas fa-users"></i> View Community Dictionary
-            </a>
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title">
+                        <span class="title-main">Learn Kinyarwanda</span>
+                        <span class="title-sub">Master the beautiful language of Rwanda</span>
+                    </h1>
+                    <p class="hero-description">
+                        Discover, play, and contribute to the rich vocabulary of Kinyarwanda. 
+                        Join thousands of learners in this interactive journey!
+                    </p>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">10,000+</span>
+                            <span class="stat-label">Words</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">2</span>
+                            <span class="stat-label">Games</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">500+</span>
+                            <span class="stat-label">Learners</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="floating-elements">
+                        <div class="floating-word">Muraho</div>
+                        <div class="floating-word">Mwaramutse</div>
+                        <div class="floating-word">Murakoze</div>
+                        <div class="floating-word">Amahoro</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-card search-card">
+                <div class="card-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>Word Search</h3>
+                <p>Look up any Kinyarwanda word instantly</p>
+                <form action="{{ url_for('routes1.findwords') }}" method="POST" class="search-form">
+                    <input type="text" placeholder="Search a word..." name="word" required>
+                    <button type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="action-card community-card">
+                <div class="card-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>Community Dictionary</h3>
+                <p>Explore words contributed by our community</p>
+                <a href="{{ url_for('routes1.community_dictionary_public') }}" class="card-button">
+                    <i class="fas fa-arrow-right"></i>
+                    Explore Now
+                </a>
+            </div>
         </div>
 
         {% if word %}
@@ -68,18 +121,86 @@
             <p>No word found. Please try again.</p>
         {% endif %}
         
-        <!-- Word Matching Game Section -->
-        <div class="game-section">
-            <h3>🎮 Word Matching Game</h3>
-            <p>Test your Kinyarwanda knowledge! Match the words with their meanings in 60 seconds!</p>
+        <!-- Games Section -->
+        <div class="games-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-gamepad"></i>
+                    Interactive Learning Games
+                </h2>
+                <p class="section-subtitle">Master Kinyarwanda through fun, engaging games</p>
+            </div>
             
-            <div class="game-controls">
-                <button id="startGameBtn" class="start-game-btn">
-                    <i class="fas fa-play"></i> Start Game
-                </button>
-                <button id="resetGameBtn" class="reset-game-btn" style="display: none;">
-                    <i class="fas fa-redo"></i> Play Again
-                </button>
+            <div class="games-grid">
+                <!-- Word Matching Game -->
+                <div class="game-card word-matching-card">
+                    <div class="game-header">
+                        <div class="game-icon">
+                            <i class="fas fa-puzzle-piece"></i>
+                        </div>
+                        <div class="game-info">
+                            <h3>Word Matching</h3>
+                            <p>Match Kinyarwanda words with English meanings</p>
+                        </div>
+                    </div>
+                    <div class="game-stats">
+                        <div class="stat">
+                            <i class="fas fa-clock"></i>
+                            <span>60s</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-star"></i>
+                            <span>6 words</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-trophy"></i>
+                            <span>+10/-5</span>
+                        </div>
+                    </div>
+                    <div class="game-controls">
+                        <button id="startGameBtn" class="game-play-btn">
+                            <i class="fas fa-play"></i> Start Game
+                        </button>
+                        <button id="resetGameBtn" class="game-reset-btn" style="display: none;">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Picture-Word Matching Game -->
+                <div class="game-card picture-matching-card">
+                    <div class="game-header">
+                        <div class="game-icon">
+                            <i class="fas fa-images"></i>
+                        </div>
+                        <div class="game-info">
+                            <h3>Picture Matching</h3>
+                            <p>Match Kinyarwanda words with their pictures</p>
+                        </div>
+                    </div>
+                    <div class="game-stats">
+                        <div class="stat">
+                            <i class="fas fa-clock"></i>
+                            <span>45s</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-image"></i>
+                            <span>4 words</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-trophy"></i>
+                            <span>+10/-2</span>
+                        </div>
+                    </div>
+                    <div class="game-controls">
+                        <button id="startPictureGame" class="game-play-btn">
+                            <i class="fas fa-play"></i> Start Game
+                        </button>
+                        <button id="resetPictureGame" class="game-reset-btn" style="display: none;">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div id="gameArea" class="game-area" style="display: none;">
@@ -132,10 +253,84 @@
             </div>
         </div>
 
+        <!-- Picture-Word Matching Game -->
+        <div class="game-section">
+            <h3><i class="fas fa-images"></i> Picture-Word Matching Game</h3>
+            <p>Match Kinyarwanda words with their corresponding pictures!</p>
+            
+            <div class="game-controls">
+                <button id="startPictureGame" class="btn btn-success">
+                    <i class="fas fa-play"></i> Start Picture Game
+                </button>
+                <button id="resetPictureGame" class="btn btn-secondary" disabled>
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+            
+            <div class="game-info">
+                <div class="score-display">
+                    <span>Score: <span id="pictureGameScore">0</span></span>
+                </div>
+                <div class="timer-display">
+                    <span>Time: <span id="pictureGameTimer">45</span>s</span>
+                </div>
+            </div>
+            
+            <div id="pictureGameArea" class="picture-game-area" style="display: none;">
+                <div class="game-progress">
+                    <div class="progress-bar">
+                        <div id="pictureProgressFill" class="progress-fill"></div>
+                    </div>
+                    <span id="pictureProgressText">0/4</span>
+                </div>
+                
+                <div class="picture-game-grid">
+                    <div class="pictures-column">
+                        <h4>Pictures</h4>
+                        <div id="picturesContainer" class="pictures-container">
+                            <!-- Pictures will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div class="words-column">
+                        <h4>Kinyarwanda Words</h4>
+                        <div id="pictureWordsContainer" class="picture-words-container">
+                            <!-- Words will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="pictureGameResult" class="game-result" style="display: none;">
+                <h3>Picture Game Complete!</h3>
+                <p>Your Score: <span id="pictureFinalScore">0</span></p>
+                <p>Time Taken: <span id="pictureFinalTime">0</span>s</p>
+                <button id="playPictureAgain" class="btn btn-success">
+                    <i class="fas fa-play"></i> Play Again
+                </button>
+            </div>
+        </div>
+
         <!-- Word Contribution Section -->
         <div class="contribution-section">
-            <h3>Contribute a New Word</h3>
-            <p>Help expand our Kinyarwanda dictionary by contributing new words and meanings!</p>
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Contribute to the Community
+                </h2>
+                <p class="section-subtitle">Help expand our Kinyarwanda dictionary with your knowledge</p>
+            </div>
+            
+            <div class="contribution-card">
+                <div class="contribution-header">
+                    <div class="contribution-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <div class="contribution-info">
+                        <h3>Share Your Knowledge</h3>
+                        <p>Know a Kinyarwanda word that's not in our dictionary? Share it with the community!</p>
+                    </div>
+                </div>
             
             <form id="contributionForm" class="contribution-form">
                 <div class="form-group">
@@ -433,9 +628,257 @@
                 progressFill.style.width = `${progressPercent}%`;
             }
         }
+
+        // Picture-Word Matching Game Class
+        class PictureWordMatchingGame {
+            constructor() {
+                this.gameData = null;
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 45;
+                this.timer = null;
+                this.gameActive = false;
+                this.selectedPicture = null;
+                this.selectedWord = null;
+                this.correctPairs = new Map();
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('startPictureGame').addEventListener('click', () => this.startGame());
+                document.getElementById('resetPictureGame').addEventListener('click', () => this.resetGame());
+                document.getElementById('playPictureAgain').addEventListener('click', () => this.startGame());
+            }
+            
+            async startGame() {
+                try {
+                    console.log('Starting Picture-Word Matching Game...');
+                    const response = await fetch('/routes1/api/picture-word-game');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.gameData = data.game_data;
+                        this.score = 0;
+                        this.matches = 0;
+                        this.timeLeft = 45;
+                        this.gameActive = true;
+                        this.selectedPicture = null;
+                        this.selectedWord = null;
+                        this.correctPairs.clear();
+                        
+                        this.renderGame();
+                        this.startTimer();
+                        this.updateUI();
+                        
+                        document.getElementById('pictureGameArea').style.display = 'block';
+                        document.getElementById('startPictureGame').disabled = true;
+                        document.getElementById('resetPictureGame').disabled = false;
+                    } else {
+                        alert('Error loading game: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error starting picture game:', error);
+                    alert('Error starting game. Please try again.');
+                }
+            }
+            
+            renderGame() {
+                const picturesContainer = document.getElementById('picturesContainer');
+                const wordsContainer = document.getElementById('pictureWordsContainer');
+                
+                picturesContainer.innerHTML = '';
+                wordsContainer.innerHTML = '';
+                
+                // Shuffle the game data
+                const shuffledData = [...this.gameData].sort(() => Math.random() - 0.5);
+                
+                // Create picture cards
+                shuffledData.forEach((item, index) => {
+                    const pictureCard = document.createElement('div');
+                    pictureCard.className = 'picture-card';
+                    pictureCard.dataset.wordId = item.id;
+                    pictureCard.dataset.index = index;
+                    
+                    // Create picture placeholder with color and description
+                    const picturePlaceholder = document.createElement('div');
+                    picturePlaceholder.className = 'picture-placeholder';
+                    picturePlaceholder.style.backgroundColor = item.image.color;
+                    picturePlaceholder.textContent = item.image.description;
+                    
+                    pictureCard.appendChild(picturePlaceholder);
+                    pictureCard.addEventListener('click', () => this.selectPicture(pictureCard, item.id));
+                    
+                    picturesContainer.appendChild(pictureCard);
+                });
+                
+                // Create word cards
+                shuffledData.forEach((item, index) => {
+                    const wordCard = document.createElement('div');
+                    wordCard.className = 'picture-word-card';
+                    wordCard.dataset.wordId = item.id;
+                    wordCard.dataset.index = index;
+                    
+                    const wordText = document.createElement('div');
+                    wordText.className = 'picture-word-text';
+                    wordText.textContent = item.word;
+                    
+                    const wordMeaning = document.createElement('div');
+                    wordMeaning.className = 'picture-word-meaning';
+                    wordMeaning.textContent = item.meaning;
+                    
+                    wordCard.appendChild(wordText);
+                    wordCard.appendChild(wordMeaning);
+                    wordCard.addEventListener('click', () => this.selectWord(wordCard, item.id));
+                    
+                    wordsContainer.appendChild(wordCard);
+                });
+            }
+            
+            selectPicture(card, wordId) {
+                if (!this.gameActive || this.correctPairs.has(wordId)) return;
+                
+                // Clear previous selection
+                document.querySelectorAll('.picture-card.selected').forEach(c => c.classList.remove('selected'));
+                
+                this.selectedPicture = { card, wordId };
+                card.classList.add('selected');
+                
+                this.checkMatch();
+            }
+            
+            selectWord(card, wordId) {
+                if (!this.gameActive || this.correctPairs.has(wordId)) return;
+                
+                // Clear previous selection
+                document.querySelectorAll('.picture-word-card.selected').forEach(c => c.classList.remove('selected'));
+                
+                this.selectedWord = { card, wordId };
+                card.classList.add('selected');
+                
+                this.checkMatch();
+            }
+            
+            checkMatch() {
+                if (this.selectedPicture && this.selectedWord) {
+                    if (this.selectedPicture.wordId === this.selectedWord.wordId) {
+                        // Correct match!
+                        this.correctMatch();
+                    } else {
+                        // Wrong match
+                        this.wrongMatch();
+                    }
+                    
+                    // Clear selections
+                    this.selectedPicture = null;
+                    this.selectedWord = null;
+                }
+            }
+            
+            correctMatch() {
+                this.score += 10;
+                this.matches++;
+                this.correctPairs.set(this.selectedPicture.wordId, true);
+                
+                // Mark cards as correct
+                this.selectedPicture.card.classList.add('correct');
+                this.selectedWord.card.classList.add('correct');
+                
+                // Remove click handlers
+                this.selectedPicture.card.style.pointerEvents = 'none';
+                this.selectedWord.card.style.pointerEvents = 'none';
+                
+                this.updateUI();
+                
+                // Check if game is complete
+                if (this.matches === this.gameData.length) {
+                    this.endGame();
+                }
+            }
+            
+            wrongMatch() {
+                this.score = Math.max(0, this.score - 2);
+                
+                // Mark cards as wrong temporarily
+                this.selectedPicture.card.classList.add('wrong');
+                this.selectedWord.card.classList.add('wrong');
+                
+                setTimeout(() => {
+                    this.selectedPicture.card.classList.remove('wrong', 'selected');
+                    this.selectedWord.card.classList.remove('wrong', 'selected');
+                }, 1000);
+                
+                this.updateUI();
+            }
+            
+            startTimer() {
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateUI();
+                    
+                    if (this.timeLeft <= 0) {
+                        this.endGame();
+                    }
+                }, 1000);
+            }
+            
+            endGame() {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                document.getElementById('pictureGameArea').style.display = 'none';
+                document.getElementById('pictureGameResult').style.display = 'block';
+                document.getElementById('pictureFinalScore').textContent = this.score;
+                document.getElementById('pictureFinalTime').textContent = 45 - this.timeLeft;
+                
+                // Show result message
+                let message = '';
+                if (this.matches === this.gameData.length) {
+                    message = 'Perfect! You matched all the pictures!';
+                } else if (this.matches >= this.gameData.length * 0.7) {
+                    message = 'Great job! You matched most of the pictures!';
+                } else {
+                    message = 'Good try! Keep practicing to improve!';
+                }
+                
+                document.querySelector('#pictureGameResult p').textContent = message;
+            }
+            
+            resetGame() {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                document.getElementById('pictureGameArea').style.display = 'none';
+                document.getElementById('pictureGameResult').style.display = 'none';
+                document.getElementById('startPictureGame').disabled = false;
+                document.getElementById('resetPictureGame').disabled = true;
+                
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 45;
+                this.selectedPicture = null;
+                this.selectedWord = null;
+                this.correctPairs.clear();
+                
+                this.updateUI();
+            }
+            
+            updateUI() {
+                document.getElementById('pictureGameScore').textContent = this.score;
+                document.getElementById('pictureGameTimer').textContent = this.timeLeft;
+                document.getElementById('pictureProgressText').textContent = `${this.matches}/${this.gameData ? this.gameData.length : 0}`;
+                
+                const progressFill = document.getElementById('pictureProgressFill');
+                if (this.gameData) {
+                    const progress = (this.matches / this.gameData.length) * 100;
+                    progressFill.style.width = `${progress}%`;
+                }
+            }
+        }
         
-        // Initialize the game when page loads
+        // Initialize the games when page loads
         const wordMatchingGame = new WordMatchingGame();
+        const pictureWordMatchingGame = new PictureWordMatchingGame();
 
         // Contribution form handling
         document.getElementById('contributionForm').addEventListener('submit', async function(e) {
