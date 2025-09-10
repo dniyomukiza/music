@@ -8,11 +8,18 @@ services:
       - icecast2
     volumes:
       - .:/usr/src/appdir
-      - /etc/glconfig.json:/etc/glconfig.json 
+      - ./glconfig.json:/etc/glconfig.json 
     networks:
       - app_network
     command: >
-     sh -c "gunicorn --capture-output --enable-stdio-inheritance -b 0.0.0.0:5000 run:app"
+     sh -c "gunicorn --config gunicorn.conf.py --capture-output --enable-stdio-inheritance run:app"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    restart: unless-stopped
  
     ports:
       - "5000:5000"

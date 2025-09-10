@@ -84,8 +84,20 @@ def create_app():
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
 
     # Database and JWT configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
+    db_url = config.get('DB_URL')
+    if db_url and 'postgresql://' in db_url:
+        # Add SSL configuration for PostgreSQL
+        if '?' in db_url:
+            db_url += '&sslmode=require'
+        else:
+            db_url += '?sslmode=require'
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
     app.config["JWT_SECRET_KEY"] = "abarayon"
 
     # Initialize extensions

@@ -174,13 +174,37 @@ def findwords():
 
 def word_details(word):
     try:
-        url = f"{API_URL}{word}"
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
+        from .models import WordsData
+        
+        # Search for the word in the local database
+        word_data = WordsData.query.filter(WordsData.word == word.lower()).first()
+        
+        if word_data:
+            # Extract English meaning properly
+            meaning = "No meaning available"
+            if word_data.igisobanuro_meaning and len(word_data.igisobanuro_meaning) > 0:
+                last_meaning_array = word_data.igisobanuro_meaning[-1]
+                if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                    meaning = last_meaning_array[-1]  # English is usually last
+                elif isinstance(last_meaning_array, str):
+                    meaning = last_meaning_array
+            
+            return {
+                "word": word_data.word,
+                "umuzi_root": word_data.umuzi_root,
+                "basoma_phonetics": word_data.basoma_phonetics,
+                "bandika_writing": word_data.bandika_writing,
+                "icyiciro_pos": word_data.icyiciro_pos,
+                "igisobanuro_meaning": word_data.igisobanuro_meaning,
+                "english_meaning": meaning
+            }
         else:
-            return {"error": "Could not fetch details for this word"}
-    except requests.exceptions.RequestException as e:
+            return {"error": "Word not found in dictionary"}
+            
+    except Exception as e:
+        print(f"Error in word_details: {e}")
+        import traceback
+        traceback.print_exc()
         return {"error": f"Error fetching word details: {e}"}
 
 @bp1.route('/contribute-word', methods=['POST'])
@@ -393,10 +417,16 @@ def get_game_words():
         # Prepare game data
         game_words = []
         for word in selected_words:
-            # Extract English meaning (usually the last item in the array)
-            if word.igisobanuro_meaning:
-                # Get the last meaning which should be English
-                meaning = word.igisobanuro_meaning[-1]
+            # Extract English meaning (usually the last item in the last array)
+            if word.igisobanuro_meaning and len(word.igisobanuro_meaning) > 0:
+                # Get the last meaning array and extract the English translation (last item)
+                last_meaning_array = word.igisobanuro_meaning[-1]
+                if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                    meaning = last_meaning_array[-1]  # English is usually last
+                elif isinstance(last_meaning_array, str):
+                    meaning = last_meaning_array
+                else:
+                    meaning = "No meaning available"
             else:
                 meaning = "No meaning available"
             
@@ -421,10 +451,63 @@ def get_game_words():
         
     except Exception as e:
         print(f"Error in get_game_words: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': 'Error fetching words for the game'
+            'message': f'Error fetching words for the game: {str(e)}'
         }), 500
+
+@bp1.route('/api/search-word')
+def search_word_api():
+    """API endpoint for word search."""
+    word = request.args.get('word', '').strip()
+    if not word:
+        return jsonify({'success': False, 'message': 'No word provided'}), 400
+    
+    try:
+        from .models import WordsData
+        
+        # Search for the word in the local database (case-insensitive)
+        word_data = WordsData.query.filter(WordsData.word.ilike(f'%{word.lower()}%')).first()
+        
+        if word_data:
+            # Extract English meaning properly
+            meaning = "No meaning available"
+            if word_data.igisobanuro_meaning and len(word_data.igisobanuro_meaning) > 0:
+                last_meaning_array = word_data.igisobanuro_meaning[-1]
+                if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                    meaning = last_meaning_array[-1]  # English is usually last
+                elif isinstance(last_meaning_array, str):
+                    meaning = last_meaning_array
+            
+            return jsonify({
+                'success': True,
+                'word': {
+                    "word": word_data.word,
+                    "umuzi_root": word_data.umuzi_root,
+                    "basoma_phonetics": word_data.basoma_phonetics,
+                    "bandika_writing": word_data.bandika_writing,
+                    "icyiciro_pos": word_data.icyiciro_pos,
+                    "igisobanuro_meaning": word_data.igisobanuro_meaning,
+                    "english_meaning": meaning
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Word not found in dictionary'
+            }), 404
+            
+    except Exception as e:
+        print(f"Error in search_word_api: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Error searching for word: {str(e)}'
+        }), 500
+
 
 @bp1.route('/api/picture-word-game')
 def get_picture_word_game():
@@ -456,9 +539,16 @@ def get_picture_word_game():
         # Prepare game data
         game_data = []
         for word in selected_words:
-            # Extract English meaning (usually the last item in the array)
-            if word.igisobanuro_meaning:
-                meaning = word.igisobanuro_meaning[-1]
+            # Extract English meaning (usually the last item in the last array)
+            if word.igisobanuro_meaning and len(word.igisobanuro_meaning) > 0:
+                # Get the last meaning array and extract the English translation (last item)
+                last_meaning_array = word.igisobanuro_meaning[-1]
+                if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                    meaning = last_meaning_array[-1]  # English is usually last
+                elif isinstance(last_meaning_array, str):
+                    meaning = last_meaning_array
+                else:
+                    meaning = "No meaning available"
             else:
                 meaning = "No meaning available"
             

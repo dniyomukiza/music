@@ -4,6 +4,15 @@ FROM python:3.10-slim
 # Set the working directory
 WORKDIR /usr/src/appdir
 
+# Set environment variables for memory optimization
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV MALLOC_ARENA_MAX=2
+ENV MALLOC_MMAP_THRESHOLD_=131072
+ENV MALLOC_TRIM_THRESHOLD_=131072
+ENV MALLOC_TOP_PAD_=131072
+ENV MALLOC_MMAP_MAX_=65536
+
 # Install system dependencies first (for better caching)
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -14,8 +23,7 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first for better Docker layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
-# Add verbose output and no cache to see progress
+# Install Python dependencies with memory optimization
 RUN pip install --no-cache-dir --verbose -r requirements.txt
 
 # Verify FFmpeg installation (ffprobe is included with ffmpeg)
@@ -23,6 +31,11 @@ RUN ffmpeg -version && ffprobe -version
 
 # Copy the rest of the application code
 COPY . .
+
+# Create a non-root user for security and memory efficiency
+RUN useradd --create-home --shell /bin/bash appuser && \
+    chown -R appuser:appuser /usr/src/appdir
+USER appuser
 
 # Expose the app ports for both Flask and FastAPI
 EXPOSE 5000 8001
