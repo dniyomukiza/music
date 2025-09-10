@@ -5,7 +5,7 @@ import subprocess
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-with open('/etc/glconfig.json') as json_file:
+with open('/usr/src/appdir/glconfig.json') as json_file:
     config = json.load(json_file)
 
 def start_icecast():

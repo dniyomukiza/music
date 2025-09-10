@@ -5,7 +5,7 @@ from subprocess import run
 from dotenv import load_dotenv
 from models import db, Song
 
-with open('/etc/glconfig.json') as json_file:
+with open('/usr/src/appdir/glconfig.json') as json_file:
     config = json.load(json_file)
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
