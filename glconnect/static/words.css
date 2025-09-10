@@ -605,6 +605,11 @@
     color: white;
 }
 
+.contribute-card .card-icon {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+}
+
 .community-card .card-icon {
     background: linear-gradient(135deg, #f093fb, #f5576c);
     color: white;
@@ -837,10 +842,466 @@
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* Contribution Section */
-.contribution-section {
+/* Word Search Results */
+.word-results-section {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+}
+
+.error-card {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+    border-radius: 20px;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+}
+
+.error-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.error-content h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.error-content p {
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.error-suggestion {
+    font-style: italic;
+    opacity: 0.8;
+}
+
+.word-detail-card {
     background: white;
-    padding: 4rem 2rem;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+}
+
+.word-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.word-title h2 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.word-pos {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.pos-tag {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.word-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: #f8f9fa;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.word-content {
+    display: grid;
+    gap: 2rem;
+}
+
+.meaning-section, .phonetics-section, .root-section, .writing-section {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 1.5rem;
+}
+
+.meaning-section h3, .phonetics-section h3, .root-section h3, .writing-section h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.meaning-section h3 i {
+    color: #667eea;
+}
+
+.phonetics-section h3 i {
+    color: #f093fb;
+}
+
+.root-section h3 i {
+    color: #4CAF50;
+}
+
+.writing-section h3 i {
+    color: #ff9800;
+}
+
+.meanings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.meaning-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.meaning-number {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.meaning-text {
+    color: #333;
+    line-height: 1.5;
+}
+
+.phonetics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.phonetic-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.phonetic-key {
+    font-weight: 600;
+    color: #f093fb;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.phonetic-value {
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.root-text, .writing-text {
+    color: #333;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    margin: 0;
+}
+
+/* Contribution Link Section */
+.contribution-link-section {
+    background: white;
+    padding: 3rem 2rem;
+}
+
+.contribution-link-card {
+    max-width: 800px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 20px;
+    padding: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.contribution-link-card:hover {
+    transform: translateY(-5px);
+}
+
+.link-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.link-content {
+    flex: 1;
+    color: white;
+}
+
+.link-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.link-content p {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.9;
+}
+
+.contribution-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.contribution-link-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.contribution-link-btn i {
+    transition: transform 0.3s ease;
+}
+
+.contribution-link-btn:hover i {
+    transform: translateX(3px);
+}
+
+/* Picture-Word Matching Game Styles */
+.picture-game-area {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.picture-game-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.pictures-column, .words-column {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.pictures-column h4, .words-column h4 {
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.pictures-container, .picture-words-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.picture-card, .picture-word-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    text-align: center;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.picture-card:hover, .picture-word-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border-color: #667eea;
+}
+
+.picture-card.selected, .picture-word-card.selected {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: scale(1.05);
+}
+
+.picture-card.matched, .picture-word-card.matched {
+    background: #d4edda;
+    border-color: #28a745;
+    opacity: 0.7;
+}
+
+.picture-placeholder {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 8px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.picture-word-text {
+    font-weight: 700;
+    color: #333;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.picture-word-meaning {
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.game-progress {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-weight: 600;
+    color: #333;
+    min-width: 50px;
+}
+
+/* Responsive Design for Picture Game */
+@media (max-width: 768px) {
+    .picture-game-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .pictures-container, .picture-words-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .picture-card, .picture-word-card {
+        min-height: 60px;
+    }
+}
+
+/* Responsive Design for Contribution Link */
+@media (max-width: 768px) {
+    .contribution-link-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .link-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .link-content h3 {
+        font-size: 1.5rem;
+    }
 }
 
 .contribution-card {
@@ -1082,6 +1543,24 @@
     
     .game-controls {
         flex-direction: column;
+    }
+    
+    .word-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .word-actions {
+        align-self: flex-start;
+    }
+    
+    .phonetics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .error-card {
+        flex-direction: column;
+        text-align: center;
     }
 }
 

@@ -72,7 +72,8 @@ def cleanup_old_audio_files():
 # --- Topic Relevance Filtering ---
 def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
     """
-    Determines if a topic is relevant for news reporting using flexible validation.
+    Proactive news topic validation - designed to accept legitimate news topics
+    and only reject clearly irrelevant content. Uses "Accept First, Verify Later" approach.
     Returns (is_relevant, confidence_score, reason)
     """
     t = topic.strip().lower()
@@ -80,26 +81,38 @@ def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
         print(f"DEBUG: Empty topic rejected")
         return False, 0.0, "Empty topic"
     
-    print(f"DEBUG: Checking topic relevance for: '{topic}'")
+    print(f"DEBUG: Proactive validation for: '{topic}'")
     
-    # Strategy 1: AI-Powered Validation (Primary)
+    # PROACTIVE STRATEGY 1: Quick Rejection of Obviously Non-News
+    # Only reject things that are clearly not news-related
+    if is_obviously_not_news(topic):
+        print(f"DEBUG: Topic rejected as obviously non-news")
+        return False, 0.95, "Obviously non-news content"
+    
+    # PROACTIVE STRATEGY 2: Quick Acceptance of News Indicators
+    # Accept topics that have clear news indicators
+    if has_strong_news_indicators(topic):
+        print(f"DEBUG: Topic accepted - strong news indicators")
+        return True, 0.9, "Strong news indicators detected"
+    
+    # PROACTIVE STRATEGY 3: AI Validation (with fallback to acceptance)
     try:
         is_relevant, confidence = validate_topic_with_ai_enhanced(topic)
         if is_relevant is not None:
             print(f"DEBUG: AI validation result: {is_relevant} (confidence: {confidence})")
             return is_relevant, confidence, "AI validation"
     except Exception as e:
-        print(f"DEBUG: AI validation failed: {e}, falling back to other strategies")
+        print(f"DEBUG: AI validation failed: {e}, defaulting to acceptance")
     
-    # Strategy 2: Pattern-Based Validation
+    # PROACTIVE STRATEGY 4: Pattern-Based Validation (with fallback to acceptance)
     try:
         is_relevant = validate_topic_with_patterns(topic)
         if is_relevant:
-            return True, 0.7, "Pattern matching"
+            return True, 0.8, "Pattern matching"
     except Exception as e:
         print(f"DEBUG: Pattern validation failed: {e}")
     
-    # Strategy 3: Learning-Based Validation
+    # PROACTIVE STRATEGY 5: Learning-Based Validation (with fallback to acceptance)
     try:
         is_relevant, confidence = validate_topic_with_learning_enhanced(topic)
         if is_relevant is not None:
@@ -108,98 +121,174 @@ def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
     except Exception as e:
         print(f"DEBUG: Learning validation failed: {e}")
     
-    # Strategy 4: Flexible Default Rules
-    return apply_flexible_default_rules(topic)
+    # PROACTIVE STRATEGY 6: Default to ACCEPTANCE (Ultra-Permissive)
+    # Only reject if we're absolutely certain it's not news
+    return apply_proactive_default_rules(topic)
 
-def apply_flexible_default_rules(topic: str) -> tuple[bool, float, str]:
+def is_obviously_not_news(topic: str) -> bool:
     """
-    Apply flexible default rules that are more permissive for unexpected topics.
+    Only reject topics that are obviously not news-related.
+    This is a very restrictive filter - only reject clear non-news.
     """
     t = topic.strip().lower()
     
-    # Rule 1: Reject obvious non-news (very high confidence)
+    # Only reject very obvious non-news patterns
     obvious_non_news = [
-        'hello', 'hi', 'test', 'testing', '123', 'abc', 'xyz',
-        'asdf', 'qwerty', 'password', 'admin', 'login', 'logout'
+        # Single characters or very short nonsense
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+        'ab', 'cd', 'ef', 'gh', 'ij', 'kl', 'mn', 'op', 'qr', 'st', 'uv', 'wx', 'yz',
+        'abc', 'def', 'ghi', 'jkl', 'mno', 'pqr', 'stu', 'vwx', 'yz',
+        'asdf', 'qwerty', 'zxcv', 'hjkl', 'fghj', 'tyui', 'uiop', 'asdf', 'qwer',
+        
+        # Very obvious non-news terms
+        'hello', 'hi', 'hey', 'test', 'testing', '123', 'abc', 'xyz',
+        'password', 'admin', 'login', 'logout', 'user', 'guest',
+        'lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur',
+        
+        # Pure gibberish
+        'asdfasdf', 'qwertyuiop', 'zxcvbnm', 'hjklhjkl',
+        'aaaaaaaa', 'bbbbbbbb', 'cccccccc', 'dddddddd',
+        '11111111', '22222222', '33333333', '44444444',
     ]
     
     if t in obvious_non_news:
-        return False, 0.95, "Obvious non-news term"
+        return True
     
-    # Rule 2: Reject single characters or very short nonsense
-    if len(t) < 3:
-        return False, 0.8, "Too short"
-    
-    # Rule 3: Reject pure numbers or symbols
+    # Reject pure numbers or symbols
     if t.isdigit() or not any(c.isalpha() for c in t):
-        return False, 0.9, "No alphabetic characters"
+        return True
     
-    # Rule 4: Check for personal/irrelevant patterns before accepting multi-word topics
+    # Reject very short topics (less than 3 characters)
+    if len(t) < 3:
+        return True
+    
+    return False
+
+def has_strong_news_indicators(topic: str) -> bool:
+    """
+    Quickly accept topics that have strong news indicators.
+    This is a very permissive filter - accept anything that looks like news.
+    """
+    t = topic.strip().lower()
+    
+    # Strong news indicators - if any of these are present, accept immediately
+    strong_indicators = [
+        # Major companies and organizations
+        'apple', 'google', 'microsoft', 'amazon', 'meta', 'facebook', 'tesla', 'spacex',
+        'netflix', 'disney', 'warner', 'sony', 'nintendo', 'intel', 'nvidia', 'amd',
+        'samsung', 'huawei', 'xiaomi', 'oneplus', 'oppo', 'vivo', 'realme',
+        
+        # Political figures and leaders
+        'trump', 'biden', 'harris', 'putin', 'xi', 'jinping', 'modi', 'macron',
+        'merkel', 'johnson', 'trudeau', 'moon', 'abe', 'kishida', 'erdogan',
+        'president', 'prime minister', 'minister', 'senator', 'governor', 'mayor',
+        'congress', 'parliament', 'senate', 'house', 'assembly', 'council',
+        
+        # Countries and regions
+        'america', 'usa', 'united states', 'china', 'russia', 'ukraine', 'israel',
+        'palestine', 'iran', 'north korea', 'south korea', 'japan', 'india',
+        'brazil', 'mexico', 'canada', 'australia', 'germany', 'france', 'uk',
+        'united kingdom', 'italy', 'spain', 'poland', 'turkey', 'saudi arabia',
+        'egypt', 'nigeria', 'south africa', 'congo', 'democratic republic',
+        'europe', 'asia', 'africa', 'middle east', 'latin america',
+        
+        # News events and actions
+        'war', 'conflict', 'crisis', 'attack', 'bombing', 'shooting', 'explosion',
+        'election', 'vote', 'referendum', 'summit', 'meeting', 'talks', 'negotiations',
+        'protest', 'demonstration', 'strike', 'riot', 'coup', 'revolution',
+        'outbreak', 'epidemic', 'pandemic', 'disaster', 'earthquake', 'hurricane',
+        'flood', 'drought', 'wildfire', 'tsunami', 'volcano', 'tornado',
+        
+        # Economic terms
+        'recession', 'inflation', 'unemployment', 'gdp', 'growth', 'decline',
+        'market crash', 'boom', 'bust', 'currency', 'dollar', 'euro', 'pound',
+        'yen', 'yuan', 'cryptocurrency', 'bitcoin', 'ethereum', 'crypto',
+        'stock', 'shares', 'trading', 'investment', 'banking', 'finance',
+        
+        # Technology and innovation
+        'ai', 'artificial intelligence', 'machine learning', 'blockchain',
+        'quantum', 'nuclear', 'space', 'rocket', 'satellite', 'internet',
+        'cyber', 'hack', 'breach', 'security', 'privacy', 'data',
+        'unveiled', 'launched', 'released', 'announced', 'developed',
+        'invented', 'discovered', 'breakthrough', 'innovation', 'patent',
+        
+        # Social and cultural
+        'immigration', 'refugee', 'border', 'security', 'terrorism',
+        'corruption', 'scandal', 'investigation', 'arrest', 'trial',
+        'verdict', 'sentence', 'prison', 'jail', 'court', 'judge',
+        'human rights', 'freedom', 'democracy', 'authoritarian', 'dictator',
+        
+        # Time indicators
+        'breaking', 'urgent', 'developing', 'latest', 'recent', 'today',
+        'yesterday', 'tomorrow', 'this week', 'this month', 'this year',
+        'just in', 'live', 'ongoing', 'continuing', 'update',
+        
+        # Media and communication
+        'reports', 'sources', 'officials', 'spokesperson', 'statement',
+        'press conference', 'briefing', 'interview', 'exclusive',
+        'confirmed', 'denied', 'warned', 'urged', 'called', 'said',
+        'announced', 'declared', 'revealed', 'exposed', 'leaked',
+    ]
+    
+    # Check if any strong indicator is present
+    for indicator in strong_indicators:
+        if indicator in t:
+            return True
+    
+    # Check for news-like patterns
+    import re
+    news_patterns = [
+        r'\w+\s+(announces?|declares?|confirms?|denies?|warns?|urges?|calls?|says?)',
+        r'\w+\s+(unveiled?|launched?|released?|developed?|invented?|discovered?)',
+        r'\w+\s+(dinned?|visited?|met|spoke|addressed?|attended?|participated?)',
+        r'\w+\s+(crashes?|rises?|falls?|increases?|decreases?|grows?|shrinks?)',
+        r'\w+\s+(hits?|strikes?|affects?|impacts?|influences?)',
+        r'\w+\s+(outbreak|epidemic|pandemic|crisis|emergency)',
+        r'\w+\s+(election|vote|referendum|summit|meeting|talks?)',
+        r'\w+\s+(protest|demonstration|strike|riot)',
+        r'\w+\s+(attack|bombing|shooting|explosion)',
+        r'\w+\s+(discovery|breakthrough|invention|innovation)',
+    ]
+    
+    for pattern in news_patterns:
+        if re.search(pattern, t):
+            return True
+    
+    return False
+
+def apply_proactive_default_rules(topic: str) -> tuple[bool, float, str]:
+    """
+    Proactive default rules - DEFAULT TO ACCEPTANCE unless clearly non-news.
+    This is the final fallback that should accept most legitimate topics.
+    """
+    t = topic.strip().lower()
+    
+    # Only reject if we're absolutely certain it's not news
+    # This is a very permissive approach
+    
+    # Rule 1: Reject obvious non-news (already handled by is_obviously_not_news)
+    # Rule 2: Reject very personal statements (but be careful not to reject news)
     personal_patterns = [
-        # Personal statements
-        r'\b(i am|i\'m|i will|i\'ll|i went|i go|i have|i\'ve|i want|i need|i like|i love|i hate)\b',
-        r'\b(going to|went to|coming from|leaving for|heading to)\b',
-        r'\b(my|me|myself|mine)\b',
-        r'\b(today i|yesterday i|tomorrow i)\b',
-        
-        # Personal activities
-        r'\b(school|work|home|store|restaurant|park|beach|gym|library|hospital|church)\b.*\b(going|went|coming|leaving|visiting)\b',
-        r'\b(eating|drinking|sleeping|watching|reading|playing|studying|working)\b',
-        
-        # Personal opinions/feelings
-        r'\b(just|really|so|very|quite|pretty)\b.*\b(good|bad|nice|great|terrible|awesome|amazing|beautiful|ugly|funny|sad|happy)\b',
-        r'\b(i think|i feel|i believe|i hope|i wish|i want|i need)\b',
-        
-        # Casual conversation
-        r'\b(how are you|what\'s up|hello|hi there|good morning|good evening|good night)\b',
-        r'\b(thanks|thank you|please|sorry|excuse me)\b',
-        
-        # Personal possessions/relationships
+        # Very personal statements that are clearly not news
+        r'\b(i am|i\'m|i will|i\'ll|i went|i go|i have|i\'ve|i want|i need|i like|i love|i hate)\b.*\b(going to|went to|coming from|leaving for|heading to)\b',
         r'\b(my cat|my dog|my car|my house|my family|my friend|my boyfriend|my girlfriend)\b',
         r'\b(this is|that is|here is|there is)\b.*\b(my|mine|me)\b',
-        
-        # Questions about personal matters
         r'\b(what should i|how do i|where can i|when should i|why did i)\b',
-        r'\b(can you help|do you know|is it ok|should i)\b'
+        r'\b(can you help|do you know|is it ok|should i)\b',
+        r'\b(how are you|what\'s up|hello|hi there|good morning|good evening|good night)\b',
+        r'\b(thanks|thank you|please|sorry|excuse me)\b',
     ]
     
     import re
     for pattern in personal_patterns:
         if re.search(pattern, t, re.IGNORECASE):
-            return False, 0.8, "Personal/irrelevant statement"
+            return False, 0.8, "Personal statement (not news)"
     
-    # Rule 4b: Accept multi-word topics only if they contain news indicators
-    if len(t.split()) >= 2:
-        # Check if it contains any news-related terms
-        news_indicators = [
-            'war', 'crisis', 'election', 'protest', 'attack', 'disaster', 'outbreak',
-            'pandemic', 'recession', 'inflation', 'corruption', 'scandal', 'investigation',
-            'breaking', 'urgent', 'developing', 'latest', 'recent', 'announces', 'declares',
-            'confirms', 'denies', 'warns', 'calls', 'says', 'reports', 'reveals',
-            'ukraine', 'russia', 'china', 'congo', 'nigeria', 'brazil', 'europe', 'asia',
-            'america', 'africa', 'middle east', 'united states', 'united kingdom'
-        ]
-        
-        has_news_indicator = any(indicator in t for indicator in news_indicators)
-        if has_news_indicator:
-            return True, 0.7, "Multi-word topic with news indicators"
-        else:
-            # For multi-word topics without clear news indicators, be more cautious
-            return True, 0.4, "Multi-word topic (low confidence - may not be news)"
-    
-    # Rule 5: Accept single words that could be news-related
-    potential_news_words = [
-        'war', 'peace', 'crisis', 'election', 'protest', 'attack', 'disaster',
-        'breakthrough', 'discovery', 'outbreak', 'pandemic', 'recession',
-        'inflation', 'unemployment', 'corruption', 'scandal', 'investigation'
-    ]
-    
-    if t in potential_news_words:
-        return True, 0.7, "Potential news word"
-    
-    # Rule 6: Accept anything else (ultra-permissive fallback)
-    # This ensures we don't reject potentially valid topics
-    return True, 0.5, "Default acceptance (ultra-permissive)"
+    # Rule 3: Accept anything else (ultra-permissive)
+    # If we've made it this far, it's likely news or news-related
+    return True, 0.7, "Default acceptance (proactive approach)"
+
 
 def validate_topic_with_patterns(topic: str) -> bool:
     """
@@ -219,6 +308,12 @@ def validate_topic_with_patterns(topic: str) -> bool:
         r'\w+\s+(protest|demonstration|strike|riot)',
         r'\w+\s+(attack|bombing|shooting|explosion)',
         r'\w+\s+(discovery|breakthrough|invention|innovation)',
+        # Technology and business patterns
+        r'(apple|google|microsoft|amazon|meta|tesla)\s+(unveiled?|launched?|released?|announced?)',
+        r'\w+\s+(unveiled?|launched?|released?|developed?|invented?|discovered?)',
+        # Political and public figure patterns
+        r'(trump|biden|president|minister|senator|governor)\s+(dinned?|visited?|met|spoke|addressed?)',
+        r'\w+\s+(dinned?|visited?|met|spoke|addressed?|attended?|participated?)',
     ]
     
     for pattern in news_patterns:

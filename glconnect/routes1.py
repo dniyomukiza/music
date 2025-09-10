@@ -547,6 +547,33 @@ def community_dictionary_public():
         print(f"Error in community_dictionary_public: {e}")
         return jsonify({'success': False, 'message': 'Error loading community dictionary'}), 500
 
+@bp1.route('/contribute-word')
+def contribute_word_page():
+    """Dedicated page for word contribution"""
+    return render_template('contribute_word.html')
+
+
+@bp1.route('/api/community-stats')
+def get_community_stats():
+    """API endpoint to get community dictionary statistics"""
+    try:
+        from .community_dictionary_manager import community_dictionary_manager
+        
+        stats = community_dictionary_manager.get_stats()
+        
+        # Get pending contributions count
+        pending_count = WordContribution.query.filter_by(status='pending').count()
+        stats['pending_words'] = pending_count
+        
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({
+            'total_words': 0,
+            'approved_words': 0,
+            'pending_words': 0,
+            'error': str(e)
+        })
+
 @bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:

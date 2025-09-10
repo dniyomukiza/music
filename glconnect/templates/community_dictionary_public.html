@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Community Dictionary{% endblock %}
+{% block title %}Community Dictionary - Language Learning{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="community-dictionary-page">
+    <div class="container mt-4">
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fas fa-users"></i> Community Dictionary</h2>
@@ -87,10 +88,10 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-list"></i> Community Words</h5>
+                    <h5><i class="fas fa-list"></i> Community Words ({{ words|length if words else 0 }} words)</h5>
                 </div>
                 <div class="card-body">
-                    {% if words %}
+                    {% if words and words|length > 0 %}
                         <div class="table-responsive">
                             <table class="table table-striped" id="wordsTable">
                                 <thead>
@@ -122,7 +123,7 @@
                                                 <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
-                                        <td>{{ word.contributor_name }}</td>
+                                        <td>{{ word.contributor_name if word.contributor_name else 'Anonymous' }}</td>
                                         <td>
                                             <small class="text-muted">
                                                 {{ word.approved_at[:10] if word.approved_at else '-' }}
@@ -138,7 +139,7 @@
                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No community words yet</h5>
                             <p class="text-muted">Be the first to contribute a word!</p>
-                            <a href="{{ url_for('routes1.words') }}" class="btn btn-primary">
+                            <a href="{{ url_for('routes1.contribute_word_page') }}" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Contribute a Word
                             </a>
                         </div>
@@ -160,7 +161,7 @@
                         <a href="{{ url_for('routes1.words') }}" class="btn btn-primary">
                             <i class="fas fa-book"></i> Main Dictionary
                         </a>
-                        <a href="{{ url_for('routes1.words') }}" class="btn btn-success">
+                        <a href="{{ url_for('routes1.contribute_word_page') }}" class="btn btn-success">
                             <i class="fas fa-plus"></i> Contribute Word
                         </a>
                         <button class="btn btn-info" onclick="location.reload()">
@@ -170,6 +171,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </div>
 
@@ -197,23 +199,191 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 </script>
 
 <style>
+.community-dictionary-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.community-dictionary-page .container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.community-dictionary-page h2 {
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.community-dictionary-page h2 i {
+    color: #667eea;
+}
+
 .card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
 }
 
 .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 2px solid #667eea;
+    border-radius: 15px 15px 0 0 !important;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-header h5 i {
+    color: #667eea;
+}
+
+.table {
+    margin-bottom: 0;
 }
 
 .table th {
     border-top: none;
     font-weight: 600;
+    background: #f8f9fa;
+    color: #333;
+    padding: 1rem;
+}
+
+.table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
 }
 
 .badge {
     font-size: 0.75em;
+    padding: 0.5em 0.75em;
+    border-radius: 10px;
+}
+
+.badge-secondary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border: none;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    border: none;
+}
+
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.text-center.py-4 {
+    padding: 3rem 2rem !important;
+}
+
+.text-center.py-4 i {
+    color: #667eea !important;
+}
+
+.text-center.py-4 h5 {
+    color: #333 !important;
+    font-weight: 600;
+}
+
+.text-center.py-4 p {
+    color: #666 !important;
+    font-size: 1.1rem;
+}
+
+/* Statistics Cards */
+.card.bg-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+}
+
+.card.bg-success {
+    background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+}
+
+.card.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+}
+
+.card-body h4 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.card-body p {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .community-dictionary-page .container {
+        margin: 1rem;
+        padding: 1rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+    }
 }
 </style>
 {% endblock %}

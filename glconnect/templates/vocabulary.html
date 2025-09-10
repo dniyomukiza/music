@@ -12,7 +12,7 @@
                 <div class="hero-text">
                     <h1 class="hero-title">
                         <span class="title-main">Learn Kinyarwanda</span>
-                        <span class="title-sub">Master the beautiful language of Rwanda</span>
+                       
                     </h1>
                     <p class="hero-description">
                         Discover, play, and contribute to the rich vocabulary of Kinyarwanda. 
@@ -60,6 +60,18 @@
                 </form>
             </div>
             
+            <div class="action-card contribute-card">
+                <div class="card-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <h3>Contribute Words</h3>
+                <p>Share new Kinyarwanda words with the community</p>
+                <a href="{{ url_for('routes1.contribute_word_page') }}" class="card-button">
+                    <i class="fas fa-arrow-right"></i>
+                    Contribute Now
+                </a>
+            </div>
+            
             <div class="action-card community-card">
                 <div class="card-icon">
                     <i class="fas fa-users"></i>
@@ -73,52 +85,89 @@
             </div>
         </div>
 
+        <!-- Word Search Results -->
         {% if word %}
-            {% if word.error %}
-                <p class="error-message">{{ word.error }}</p>
-            {% else %}
-                <h2>{{ word.word }}</h2>
-                <div class="definitions">
-                    <h3>Definitions:</h3>
-                    <ul>
-                        {% for meaning in word.igisobanuro_meaning %}
-                            <li>{{ meaning }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="part-of-speech">
-                    <h3>Part of Speech:</h3>
-                    <ul>
-                        {% for pos in word.icyiciro_pos %}
-                            <li>{{ pos }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% if word.basoma_phonetics %}
-                    <div class="phonetics">
-                        <h3>Phonetics:</h3>
-                        <ul>
-                            {% for key, phonetic in word.basoma_phonetics.items() %}
-                                <li><strong>{{ key }}:</strong> {{ phonetic }}</li>
-                            {% endfor %}
-                        </ul>
+            <div class="word-results-section">
+                {% if word.error %}
+                    <div class="error-card">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="error-content">
+                            <h3>Word Not Found</h3>
+                            <p>{{ word.error }}</p>
+                            <p class="error-suggestion">Try checking your spelling or search for a different word.</p>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="word-detail-card">
+                        <div class="word-header">
+                            <div class="word-title">
+                                <h2>{{ word.word }}</h2>
+                                {% if word.icyiciro_pos %}
+                                    <div class="word-pos">
+                                        {% for pos in word.icyiciro_pos %}
+                                            <span class="pos-tag">{{ pos }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="word-actions">
+                                <button class="action-btn" onclick="speakWord('{{ word.word }}')">
+                                    <i class="fas fa-volume-up"></i>
+                                </button>
+                                <button class="action-btn" onclick="copyWord('{{ word.word }}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="word-content">
+                            {% if word.igisobanuro_meaning %}
+                                <div class="meaning-section">
+                                    <h3><i class="fas fa-book"></i> Definitions</h3>
+                                    <div class="meanings-list">
+                                        {% for meaning in word.igisobanuro_meaning %}
+                                            <div class="meaning-item">
+                                                <span class="meaning-number">{{ loop.index }}</span>
+                                                <span class="meaning-text">{{ meaning }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if word.basoma_phonetics %}
+                                <div class="phonetics-section">
+                                    <h3><i class="fas fa-microphone"></i> Phonetics</h3>
+                                    <div class="phonetics-grid">
+                                        {% for key, phonetic in word.basoma_phonetics.items() %}
+                                            <div class="phonetic-item">
+                                                <span class="phonetic-key">{{ key }}</span>
+                                                <span class="phonetic-value">{{ phonetic }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if word.umzi_root %}
+                                <div class="root-section">
+                                    <h3><i class="fas fa-seedling"></i> Root</h3>
+                                    <p class="root-text">{{ word.umzi_root }}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if word.bandika_writing %}
+                                <div class="writing-section">
+                                    <h3><i class="fas fa-pen"></i> Bandika Writing</h3>
+                                    <p class="writing-text">{{ word.bandika_writing }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 {% endif %}
-                {% if word.umzi_root %}
-                    <div class="root">
-                        <h3>Root:</h3>
-                        <p>{{ word.umzi_root }}</p>
-                    </div>
-                {% endif %}
-                {% if word.bandika_writing %}
-                    <div class="bandika-writing">
-                        <h3>Bandika Writing:</h3>
-                        <p>{{ word.bandika_writing }}</p>
-                    </div>
-                {% endif %}
-            {% endif %}
-        {% else %}
-            <p>No word found. Please try again.</p>
+            </div>
         {% endif %}
         
         <!-- Games Section -->
@@ -259,10 +308,10 @@
             <p>Match Kinyarwanda words with their corresponding pictures!</p>
             
             <div class="game-controls">
-                <button id="startPictureGame" class="btn btn-success">
+                <button id="startPictureGameMain" class="btn btn-success">
                     <i class="fas fa-play"></i> Start Picture Game
                 </button>
-                <button id="resetPictureGame" class="btn btn-secondary" disabled>
+                <button id="resetPictureGameMain" class="btn btn-secondary" disabled>
                     <i class="fas fa-redo"></i> Reset
                 </button>
             </div>
@@ -311,74 +360,21 @@
             </div>
         </div>
 
-        <!-- Word Contribution Section -->
-        <div class="contribution-section">
-            <div class="section-header">
-                <h2 class="section-title">
+        <!-- Community Contribution Link -->
+        <div class="contribution-link-section">
+            <div class="contribution-link-card">
+                <div class="link-icon">
                     <i class="fas fa-plus-circle"></i>
-                    Contribute to the Community
-                </h2>
-                <p class="section-subtitle">Help expand our Kinyarwanda dictionary with your knowledge</p>
+                </div>
+                <div class="link-content">
+                    <h3>Contribute to the Community</h3>
+                    <p>Help expand our Kinyarwanda dictionary with your knowledge</p>
+                    <a href="{{ url_for('routes1.contribute_word_page') }}" class="contribution-link-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Share Your Words
+                    </a>
+                </div>
             </div>
-            
-            <div class="contribution-card">
-                <div class="contribution-header">
-                    <div class="contribution-icon">
-                        <i class="fas fa-lightbulb"></i>
-                    </div>
-                    <div class="contribution-info">
-                        <h3>Share Your Knowledge</h3>
-                        <p>Know a Kinyarwanda word that's not in our dictionary? Share it with the community!</p>
-                    </div>
-                </div>
-            
-            <form id="contributionForm" class="contribution-form">
-                <div class="form-group">
-                    <label for="contributeWord">Word in Kinyarwanda:</label>
-                    <input type="text" id="contributeWord" name="word" required placeholder="Enter the Kinyarwanda word">
-                </div>
-                
-                <div class="form-group">
-                    <label for="contributeMeaning">Meaning/Definition:</label>
-                    <textarea id="contributeMeaning" name="meaning" required placeholder="Provide the meaning or definition in English"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="contributeExample">Example Sentence (optional):</label>
-                    <textarea id="contributeExample" name="example_sentence" placeholder="Provide an example sentence using this word"></textarea>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="contributePOS">Part of Speech:</label>
-                        <select id="contributePOS" name="part_of_speech">
-                            <option value="">Select...</option>
-                            <option value="noun">Noun</option>
-                            <option value="verb">Verb</option>
-                            <option value="adjective">Adjective</option>
-                            <option value="adverb">Adverb</option>
-                            <option value="pronoun">Pronoun</option>
-                            <option value="preposition">Preposition</option>
-                            <option value="conjunction">Conjunction</option>
-                            <option value="interjection">Interjection</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="contributePhonetics">Phonetics (optional):</label>
-                        <input type="text" id="contributePhonetics" name="phonetics" placeholder="e.g., /mu-ga-bo/">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="contributorName">Your Name (optional):</label>
-                    <input type="text" id="contributorName" name="contributor_name" placeholder="Leave blank for anonymous">
-                </div>
-                
-                <button type="submit" class="submit-btn">Submit Contribution</button>
-            </form>
-            
-            <div id="contributionMessage" class="contribution-message" style="display: none;"></div>
         </div>
     </div>
 
@@ -648,6 +644,8 @@
             initializeEventListeners() {
                 document.getElementById('startPictureGame').addEventListener('click', () => this.startGame());
                 document.getElementById('resetPictureGame').addEventListener('click', () => this.resetGame());
+                document.getElementById('startPictureGameMain').addEventListener('click', () => this.startGame());
+                document.getElementById('resetPictureGameMain').addEventListener('click', () => this.resetGame());
                 document.getElementById('playPictureAgain').addEventListener('click', () => this.startGame());
             }
             
@@ -674,6 +672,8 @@
                         document.getElementById('pictureGameArea').style.display = 'block';
                         document.getElementById('startPictureGame').disabled = true;
                         document.getElementById('resetPictureGame').disabled = false;
+                        document.getElementById('startPictureGameMain').disabled = true;
+                        document.getElementById('resetPictureGameMain').disabled = false;
                     } else {
                         alert('Error loading game: ' + data.message);
                     }
@@ -852,6 +852,8 @@
                 document.getElementById('pictureGameResult').style.display = 'none';
                 document.getElementById('startPictureGame').disabled = false;
                 document.getElementById('resetPictureGame').disabled = true;
+                document.getElementById('startPictureGameMain').disabled = false;
+                document.getElementById('resetPictureGameMain').disabled = true;
                 
                 this.score = 0;
                 this.matches = 0;
@@ -880,57 +882,36 @@
         const wordMatchingGame = new WordMatchingGame();
         const pictureWordMatchingGame = new PictureWordMatchingGame();
 
-        // Contribution form handling
-        document.getElementById('contributionForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const submitBtn = document.querySelector('.submit-btn');
-            const messageDiv = document.getElementById('contributionMessage');
-            
-            // Disable submit button and show loading
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-            messageDiv.style.display = 'none';
-            
-            try {
-                const response = await fetch('/routes1/contribute-word', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    messageDiv.className = 'contribution-message success';
-                    messageDiv.innerHTML = `
-                        <i class="fas fa-check-circle"></i>
-                        <strong>Thank you!</strong> Your contribution has been submitted and is pending approval. 
-                        We'll review it and add it to the dictionary if it's not already there.
-                    `;
-                    messageDiv.style.display = 'block';
-                    this.reset(); // Clear the form
-                } else {
-                    messageDiv.className = 'contribution-message error';
-                    messageDiv.innerHTML = `
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Error:</strong> ${data.message || 'Failed to submit contribution. Please try again.'}
-                    `;
-                    messageDiv.style.display = 'block';
-                }
-            } catch (error) {
-                messageDiv.className = 'contribution-message error';
-                messageDiv.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Error:</strong> Failed to submit contribution. Please check your connection and try again.
-                `;
-                messageDiv.style.display = 'block';
-            } finally {
-                // Re-enable submit button
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Contribution';
+        // Word action functions
+        function speakWord(word) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'rw-RW'; // Kinyarwanda language code
+                utterance.rate = 0.8;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis not supported in this browser');
             }
-        });
+        }
+
+        function copyWord(word) {
+            navigator.clipboard.writeText(word).then(() => {
+                // Show a temporary success message
+                const button = event.target.closest('.action-btn');
+                const originalIcon = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalIcon;
+                    button.style.background = '';
+                }, 2000);
+            }).catch(() => {
+                alert('Failed to copy word to clipboard');
+            });
+        }
+
     </script>
 
 {% endblock %}
