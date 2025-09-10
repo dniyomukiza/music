@@ -6,7 +6,7 @@ from flask import render_template, request, Blueprint, send_from_directory
 from glconnect.search import SongSearcher
 from google.cloud import texttospeech
 
-with open('/usr/src/appdir/glconfig.json') as json_file:
+with open('glconfig.json') as json_file:
     config = json.load(json_file)
 
 # Load your OpenAI API key from glconfig.json
