@@ -1655,6 +1655,28 @@ p {
     text-decoration: none;
 }
 
+/* Analytics card styling */
+.analytics-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.analytics-card .card-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.analytics-card .card-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.analytics-card .card-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
 /* Responsive design for community stats */
 @media (max-width: 768px) {
     .community-stats-section {

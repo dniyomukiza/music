@@ -8,7 +8,7 @@ services:
       - icecast2
     volumes:
       - .:/usr/src/appdir
-      - ./glconfig.json:/etc/glconfig.json 
+      - ./glconfig.json:/etc/glconfig.json:ro 
     networks:
       - app_network
     command: >

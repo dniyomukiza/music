@@ -126,6 +126,7 @@ def create_app():
         from .writer import writer
         from .book import book
         from .news_routes import news_bp
+        from .analytics_routes import usage_analytics_bp
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
@@ -138,6 +139,7 @@ def create_app():
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
         app.register_blueprint(news_bp, url_prefix='/routes2/news')
+        app.register_blueprint(usage_analytics_bp, url_prefix='/usage-analytics')
 
         # Ensure tables exist
         inspector = inspect(db.engine)
