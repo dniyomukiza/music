@@ -449,7 +449,7 @@ def community_dictionary():
         return jsonify({'success': False, 'message': 'Error loading community dictionary'}), 500
 
 @bp1.route('/community-dictionary')
-def view_community_dictionary():
+def community_dictionary_public():
     """View community dictionary (public read-only)."""
     try:
         from .community_dictionary_manager import community_dictionary_manager
@@ -462,7 +462,7 @@ def view_community_dictionary():
                              words=words)
         
     except Exception as e:
-        print(f"Error in view_community_dictionary: {e}")
+        print(f"Error in community_dictionary_public: {e}")
         return jsonify({'success': False, 'message': 'Error loading community dictionary'}), 500
 
 @bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
