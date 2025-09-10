@@ -138,7 +138,7 @@
                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No community words yet</h5>
                             <p class="text-muted">Be the first to contribute a word!</p>
-                            <a href="{{ url_for('bp1.words') }}" class="btn btn-primary">
+                            <a href="{{ url_for('routes1.words') }}" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Contribute a Word
                             </a>
                         </div>
@@ -157,10 +157,10 @@
                 </div>
                 <div class="card-body">
                     <div class="btn-group" role="group">
-                        <a href="{{ url_for('bp1.words') }}" class="btn btn-primary">
+                        <a href="{{ url_for('routes1.words') }}" class="btn btn-primary">
                             <i class="fas fa-book"></i> Main Dictionary
                         </a>
-                        <a href="{{ url_for('bp1.words') }}" class="btn btn-success">
+                        <a href="{{ url_for('routes1.words') }}" class="btn btn-success">
                             <i class="fas fa-plus"></i> Contribute Word
                         </a>
                         <button class="btn btn-info" onclick="location.reload()">
