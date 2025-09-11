@@ -10,13 +10,14 @@ backlog = 2048
 workers = 2  # Reduced from default to save memory
 worker_class = "sync"
 worker_connections = 1000
-timeout = 30
+timeout = 60  # Increased timeout to prevent worker kills
 keepalive = 2
 
 # Memory management
-max_requests = 1000  # Restart workers after 1000 requests to prevent memory leaks
-max_requests_jitter = 100  # Add randomness to prevent all workers restarting at once
+max_requests = 500  # Restart workers more frequently to prevent memory leaks
+max_requests_jitter = 50  # Add randomness to prevent all workers restarting at once
 preload_app = True  # Load application before forking workers
+worker_memory_limit = 200  # Kill workers that exceed 200MB memory usage
 
 # Logging
 accesslog = "-"

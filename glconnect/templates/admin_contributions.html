@@ -59,6 +59,9 @@
                     </div>
                     
                     <div class="contribution-actions">
+                        <button class="edit-btn" onclick="editContribution({{ contribution.id }})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
                         <button class="approve-btn" onclick="approveContribution({{ contribution.id }})">
                             <i class="fas fa-check"></i> Approve
                         </button>
@@ -76,6 +79,65 @@
                 <p>All contributions have been reviewed.</p>
             </div>
         {% endif %}
+    </div>
+
+    <!-- Edit Contribution Modal -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Word Contribution</h3>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editContributionId">
+                    
+                    <div class="form-group">
+                        <label for="editWord">Word *</label>
+                        <input type="text" id="editWord" name="word" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editMeaning">Meaning *</label>
+                        <textarea id="editMeaning" name="meaning" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editExample">Example Sentence</label>
+                        <textarea id="editExample" name="example_sentence" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editPartOfSpeech">Part of Speech</label>
+                        <select id="editPartOfSpeech" name="part_of_speech">
+                            <option value="">Select...</option>
+                            <option value="noun">Noun</option>
+                            <option value="verb">Verb</option>
+                            <option value="adjective">Adjective</option>
+                            <option value="adverb">Adverb</option>
+                            <option value="pronoun">Pronoun</option>
+                            <option value="preposition">Preposition</option>
+                            <option value="conjunction">Conjunction</option>
+                            <option value="interjection">Interjection</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editPhonetics">Phonetics</label>
+                        <input type="text" id="editPhonetics" name="phonetics">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editContributorName">Contributor Name</label>
+                        <input type="text" id="editContributorName" name="contributor_name">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
     </div>
 
     <style>
@@ -147,13 +209,23 @@
             justify-content: flex-end;
         }
         
-        .approve-btn, .reject-btn {
+        .approve-btn, .reject-btn, .edit-btn {
             padding: 10px 20px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s ease;
+        }
+        
+        .edit-btn {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .edit-btn:hover {
+            background: #e0a800;
+            transform: translateY(-1px);
         }
         
         .approve-btn {
@@ -191,6 +263,123 @@
         .no-contributions h3 {
             margin-bottom: 10px;
         }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
     </style>
 
     <script>
@@ -204,7 +393,8 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
+                    },
+                    credentials: 'include'
                 });
                 
                 const data = await response.json();
@@ -231,6 +421,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         admin_notes: reason || ''
                     })
@@ -247,6 +438,90 @@
                 }
             } catch (error) {
                 alert('Error rejecting contribution: ' + error.message);
+            }
+        }
+        
+        // Edit contribution functions
+        function editContribution(contributionId) {
+            // Find the contribution card to get current data
+            const contributionCard = document.getElementById(`contribution-${contributionId}`);
+            if (!contributionCard) {
+                alert('Contribution not found');
+                return;
+            }
+            
+            // Extract current data from the card
+            const word = contributionCard.querySelector('h3').textContent;
+            const meaning = contributionCard.querySelector('.field:nth-child(2) p').textContent;
+            const exampleSentence = contributionCard.querySelector('.field:nth-child(3) p')?.textContent || '';
+            const partOfSpeech = contributionCard.querySelector('.field:nth-child(4) p')?.textContent || '';
+            const phonetics = contributionCard.querySelector('.field:nth-child(5) p')?.textContent || '';
+            const contributorName = contributionCard.querySelector('.contributor').textContent.replace('By: ', '');
+            
+            // Populate the edit form
+            document.getElementById('editContributionId').value = contributionId;
+            document.getElementById('editWord').value = word;
+            document.getElementById('editMeaning').value = meaning;
+            document.getElementById('editExample').value = exampleSentence;
+            document.getElementById('editPartOfSpeech').value = partOfSpeech;
+            document.getElementById('editPhonetics').value = phonetics;
+            document.getElementById('editContributorName').value = contributorName;
+            
+            // Show the modal
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        async function saveEdit() {
+            const contributionId = document.getElementById('editContributionId').value;
+            const formData = {
+                word: document.getElementById('editWord').value,
+                meaning: document.getElementById('editMeaning').value,
+                example_sentence: document.getElementById('editExample').value,
+                part_of_speech: document.getElementById('editPartOfSpeech').value,
+                phonetics: document.getElementById('editPhonetics').value,
+                contributor_name: document.getElementById('editContributorName').value
+            };
+            
+            // Validate required fields
+            if (!formData.word.trim() || !formData.meaning.trim()) {
+                alert('Word and Meaning are required fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/routes1/admin/edit-contribution/${contributionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    closeEditModal();
+                    // Reload the page to show updated data
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error editing contribution: ' + error.message);
+            }
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
             }
         }
     </script>

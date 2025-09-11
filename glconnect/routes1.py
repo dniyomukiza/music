@@ -396,6 +396,74 @@ def reject_contribution(contribution_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': 'Error rejecting contribution'}), 500
 
+@bp1.route('/admin/edit-contribution/<int:contribution_id>', methods=['POST'])
+@login_required
+def edit_contribution(contribution_id):
+    """Edit a word contribution before approval."""
+    try:
+        from .models import WordContribution, db
+        from flask_login import current_user
+        from datetime import datetime, timezone
+        
+        # Check if user is admin
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+        
+        # Get the contribution
+        contribution = WordContribution.query.get_or_404(contribution_id)
+        
+        if contribution.status != 'pending':
+            return jsonify({'success': False, 'message': 'Contribution already processed'}), 400
+        
+        # Get updated data from request
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided'}), 400
+        
+        # Update contribution fields
+        if 'word' in data:
+            contribution.word = data['word']
+        if 'meaning' in data:
+            contribution.meaning = data['meaning']
+        if 'example_sentence' in data:
+            contribution.example_sentence = data['example_sentence']
+        if 'part_of_speech' in data:
+            contribution.part_of_speech = data['part_of_speech']
+        if 'phonetics' in data:
+            contribution.phonetics = data['phonetics']
+        if 'contributor_name' in data:
+            contribution.contributor_name = data['contributor_name']
+        
+        # Add admin notes about the edit
+        edit_note = f"Edited by {current_user.username} on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')}"
+        if contribution.admin_notes:
+            contribution.admin_notes += f"\n{edit_note}"
+        else:
+            contribution.admin_notes = edit_note
+        
+        db.session.commit()
+        
+        print(f"DEBUG: Contribution edited: '{contribution.word}' by admin {current_user.username}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Contribution for "{contribution.word}" has been updated.',
+            'contribution': {
+                'id': contribution.id,
+                'word': contribution.word,
+                'meaning': contribution.meaning,
+                'example_sentence': contribution.example_sentence,
+                'part_of_speech': contribution.part_of_speech,
+                'phonetics': contribution.phonetics,
+                'contributor_name': contribution.contributor_name
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error in edit_contribution: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error editing contribution'}), 500
+
 @bp1.route('/api/game-words')
 def get_game_words():
     """Get random words for the matching game from the original dictionary only."""
@@ -525,27 +593,13 @@ def search_word_api():
 
 @bp1.route('/api/picture-word-game')
 def get_picture_word_game():
-    """Get words and generate images for picture-word matching game using Gemini API."""
+    """Get words for picture-word matching game (simplified version without image generation)."""
     import gc  # For garbage collection
+    import time
+    
     try:
         from .models import WordsData, db
         import random
-        from google import genai
-        from google.genai import types
-        from PIL import Image
-        from io import BytesIO
-        import os
-        import base64
-        
-        # Configure Gemini API
-        google_api_key = os.getenv("GOOGLE_API_KEY")
-        if not google_api_key:
-            return jsonify({
-                'success': False,
-                'message': 'Google API key not configured'
-            }), 500
-            
-        client = genai.Client(api_key=google_api_key)
         
         # Get total count first
         total_count = WordsData.query.count()
@@ -556,138 +610,101 @@ def get_picture_word_game():
                 'message': 'Not enough words in dictionary for the game. Need at least 4 words.'
             }), 400
         
-        # Try to get 4 random words efficiently, then filter for suitable ones
-        max_attempts = 10
-        selected_words = []
-        
-        for attempt in range(max_attempts):
-            try:
-                # Get random words
-                offset = random.randint(0, max(0, total_count - 4))
-                candidate_words = WordsData.query.order_by(WordsData.id).offset(offset).limit(8).all()  # Get more to have better selection
-                
-                # Filter for suitable words (nouns with English meaning)
-                for word in candidate_words:
-                    # Check if it's a noun
-                    is_noun = word.icyiciro_pos and 'noun' in word.icyiciro_pos
-                    if not is_noun:
-                        continue
-                        
-                    # Check if it has English meaning
-                    meaning = "No meaning available"
-                    if word.igisobanuro_meaning and len(word.igisobanuro_meaning) > 0:
-                        last_meaning_array = word.igisobanuro_meaning[-1]
-                        if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
-                            meaning = last_meaning_array[-1]  # English is usually last
-                        elif isinstance(last_meaning_array, str):
-                            meaning = last_meaning_array
-                    
-                    if meaning != "No meaning available":
-                        selected_words.append(word)
-                        if len(selected_words) >= 4:
-                            break
-                
-                if len(selected_words) >= 4:
-                    break
-                    
-            except Exception as e:
-                print(f"Attempt {attempt + 1} failed: {e}")
-                continue
-        
-        if len(selected_words) < 4:
-            return jsonify({
-                'success': False,
-                'message': f'Not enough suitable words for the picture game. Found {len(selected_words)} nouns with English meanings, need at least 4.'
-            }), 400
-        
-        # Take only the first 4 selected words
-        selected_words = selected_words[:4]
-        
-        # Prepare game data - all selected words are guaranteed to be nouns with English meaning
-        game_data = []
-        
-        # Process words one by one to manage memory
-        for i, word in enumerate(selected_words):
-            # Extract English meaning (already verified to exist)
-            last_meaning_array = word.igisobanuro_meaning[-1]
-            if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
-                meaning = last_meaning_array[-1]  # English is usually last
-            else:
-                meaning = last_meaning_array  # Direct string
+        # Get 4 random words (simplified version without image generation)
+        try:
+            # Get random words with optimized query - only select needed fields
+            offset = random.randint(0, max(0, total_count - 4))
+            candidate_words = WordsData.query.with_entities(
+                WordsData.id, 
+                WordsData.word, 
+                WordsData.icyiciro_pos, 
+                WordsData.igisobanuro_meaning
+            ).order_by(WordsData.id).offset(offset).limit(8).all()
             
-            # Generate image using Gemini API (all words are nouns with meaning)
-            try:
-                # Create a detailed prompt for image generation
-                prompt = f"Create a simple, clear, colorful illustration of: {meaning}. The image should be suitable for a language learning game, showing the object clearly without text or labels. Make it educational and child-friendly."
+            # Filter for suitable words (nouns with English meaning)
+            selected_words = []
+            for word in candidate_words:
+                # Check if it's a noun
+                is_noun = word.icyiciro_pos and 'noun' in word.icyiciro_pos
+                if not is_noun:
+                    continue
+                    
+                # Check if it has English meaning
+                meaning = "No meaning available"
+                if word.igisobanuro_meaning and len(word.igisobanuro_meaning) > 0:
+                    last_meaning_array = word.igisobanuro_meaning[-1]
+                    if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                        meaning = last_meaning_array[-1]  # English is usually last
+                    elif isinstance(last_meaning_array, str):
+                        meaning = last_meaning_array
                 
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash-image-preview",
-                    contents=[prompt],
-                )
-                
-                # Extract image data from response
-                image_generated = False
-                for part in response.candidates[0].content.parts:
-                    if part.inline_data is not None:
-                        # Convert image data to base64 for data URL
-                        image_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
-                        image_data = {
-                            'type': 'generated_image',
-                            'data_url': f"data:image/png;base64,{image_base64}",
-                            'description': meaning,
-                            'is_noun': True,
-                            'icon': '🖼️'
-                        }
-                        image_generated = True
+                if meaning != "No meaning available":
+                    selected_words.append(word)
+                    if len(selected_words) >= 4:
                         break
-                
-                if not image_generated:
-                    # No image data found, use enhanced placeholder
-                    image_data = {
-                        'type': 'enhanced_placeholder',
-                        'description': meaning,
-                        'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
-                        'is_noun': True,
-                        'icon': '🖼️'
-                    }
-                
-            except Exception as e:
-                print(f"Error generating image for {meaning}: {e}")
-                # Fallback to enhanced text placeholder
-                image_data = {
-                    'type': 'enhanced_placeholder',
-                    'description': meaning,
-                    'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
-                    'is_noun': True,
-                    'icon': '📝'
-                }
             
-            game_data.append({
-                'id': word.id,
-                'word': word.word,
-                'meaning': meaning,
-                'image': image_data,
-                'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
+            if len(selected_words) < 4:
+                return jsonify({
+                    'success': False,
+                    'message': f'Not enough suitable words for the picture game. Found {len(selected_words)} nouns with English meanings, need at least 4.'
+                }), 400
+            
+            # Take only the first 4 selected words
+            selected_words = selected_words[:4]
+            
+            # Prepare game data with simple placeholders instead of generated images
+            game_data = []
+            colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
+            icons = ['🏠', '🌳', '🍎', '🚗', '📚', '🎵', '⚽', '🐕']
+            
+            for i, word in enumerate(selected_words):
+                # Extract English meaning
+                last_meaning_array = word.igisobanuro_meaning[-1]
+                if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                    meaning = last_meaning_array[-1]  # English is usually last
+                else:
+                    meaning = last_meaning_array  # Direct string
+                
+                # Create simple placeholder image data
+                image_data = {
+                    'type': 'simple_placeholder',
+                    'description': meaning,
+                    'color': colors[i % len(colors)],
+                    'icon': icons[i % len(icons)],
+                    'is_noun': True
+                }
+                
+                game_data.append({
+                    'id': word.id,
+                    'word': word.word,
+                    'meaning': meaning,
+                    'image': image_data,
+                    'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
+                })
+            
+            # Shuffle the data to randomize positions
+            random.shuffle(game_data)
+            
+            # Force garbage collection to free memory
+            gc.collect()
+            
+            return jsonify({
+                'success': True,
+                'game_data': game_data,
+                'total_words': len(game_data)
             })
             
-            # Force garbage collection after each image generation to manage memory
-            if i % 2 == 0:  # Every 2 images
-                gc.collect()
-        
-        # Shuffle the data to randomize positions
-        random.shuffle(game_data)
-        
-        # Force garbage collection to free memory
-        gc.collect()
-        
-        return jsonify({
-            'success': True,
-            'game_data': game_data,
-            'total_words': len(game_data)
-        })
+        except Exception as e:
+            print(f"Error selecting words: {e}")
+            gc.collect()  # Clean up memory on error
+            return jsonify({
+                'success': False,
+                'message': 'Error selecting words for the game'
+            }), 500
         
     except Exception as e:
         print(f"Error in get_picture_word_game: {e}")
+        gc.collect()  # Clean up memory on error
         return jsonify({
             'success': False,
             'message': 'Error generating picture-word game'

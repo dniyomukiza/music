@@ -1052,7 +1052,9 @@ def run_generate_broadcast(task_id, topics):
 
 @news_bp.route('/')
 def index():
-    return render_template('newsgen.html')
+    from .forms import KeywordForm
+    form = KeywordForm()
+    return render_template('newsgen.html', form=form)
 
 @news_bp.route('/audio/<filename>')
 def serve_audio(filename):

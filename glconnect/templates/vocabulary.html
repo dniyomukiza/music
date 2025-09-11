@@ -601,16 +601,32 @@
             async startGame() {
                 try {
                     console.log('Starting Picture-Word Matching Game...');
-                    const response = await fetch('/routes1/api/picture-word-game');
-                    console.log('Picture game response status:', response.status);
-                    console.log('Picture game response headers:', response.headers);
                     
-                    const responseText = await response.text();
-                    console.log('Picture game raw response:', responseText.substring(0, 200) + '...');
+                    // Clear any existing game data to free memory
+                    this.gameData = null;
+                    this.correctPairs.clear();
+                    
+                    // Force garbage collection if available
+                    if (window.gc) {
+                        window.gc();
+                    }
+                    
+                    // Create AbortController for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                    
+                    const response = await fetch('/routes1/api/picture-word-game', {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    console.log('Picture game response status:', response.status);
                     
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    
+                    const responseText = await response.text();
+                    console.log('Picture game response length:', responseText.length);
                     
                     const data = JSON.parse(responseText);
                     
@@ -630,12 +646,27 @@
                         document.getElementById('pictureGameArea').style.display = 'block';
                         document.getElementById('startPictureGameMain').disabled = true;
                         document.getElementById('resetPictureGameMain').disabled = false;
+                        
+                        // Clear response data to free memory
+                        responseText = null;
                     } else {
                         alert('Error loading game: ' + data.message);
                     }
                 } catch (error) {
                     console.error('Error starting picture game:', error);
-                    alert('Error starting game. Please try again.');
+                    
+                    if (error.name === 'AbortError') {
+                        alert('Game request timed out. Please try again.');
+                    } else {
+                        alert('Error starting game. Please try again.');
+                    }
+                    
+                    // Clean up on error
+                    this.gameData = null;
+                    this.correctPairs.clear();
+                    if (window.gc) {
+                        window.gc();
+                    }
                 }
             }
             
@@ -643,8 +674,19 @@
                 const picturesContainer = document.getElementById('picturesContainer');
                 const wordsContainer = document.getElementById('pictureWordsContainer');
                 
+                if (!picturesContainer || !wordsContainer) {
+                    console.error('Game containers not found');
+                    return;
+                }
+                
+                // Clear containers and free memory
                 picturesContainer.innerHTML = '';
                 wordsContainer.innerHTML = '';
+                
+                // Force garbage collection if available
+                if (window.gc) {
+                    window.gc();
+                }
                 
                 // Shuffle the game data
                 const shuffledData = [...this.gameData].sort(() => Math.random() - 0.5);
@@ -669,7 +711,7 @@
                         pictureImg.style.borderRadius = '8px';
                         
                         pictureCard.appendChild(pictureImg);
-                    } else if (item.image.type === 'enhanced_placeholder') {
+                    } else if (item.image.type === 'simple_placeholder' || item.image.type === 'enhanced_placeholder') {
                         // Enhanced placeholder for nouns (with icon)
                         const picturePlaceholder = document.createElement('div');
                         picturePlaceholder.className = 'picture-placeholder enhanced';
@@ -837,6 +879,12 @@
                 this.gameActive = false;
                 clearInterval(this.timer);
                 
+                // Clear DOM elements to free memory
+                const picturesContainer = document.getElementById('picturesContainer');
+                const wordsContainer = document.getElementById('pictureWordsContainer');
+                if (picturesContainer) picturesContainer.innerHTML = '';
+                if (wordsContainer) wordsContainer.innerHTML = '';
+                
                 document.getElementById('pictureGameArea').style.display = 'none';
                 document.getElementById('pictureGameResult').style.display = 'block';
                 document.getElementById('pictureFinalScore').textContent = this.score;
@@ -853,11 +901,26 @@
                 }
                 
                 document.querySelector('#pictureGameResult p').textContent = message;
+                
+                // Clear game data to free memory
+                this.gameData = null;
+                this.correctPairs.clear();
+                
+                // Force garbage collection
+                if (window.gc) {
+                    window.gc();
+                }
             }
             
             resetGame() {
                 this.gameActive = false;
                 clearInterval(this.timer);
+                
+                // Clear DOM elements to free memory
+                const picturesContainer = document.getElementById('picturesContainer');
+                const wordsContainer = document.getElementById('pictureWordsContainer');
+                if (picturesContainer) picturesContainer.innerHTML = '';
+                if (wordsContainer) wordsContainer.innerHTML = '';
                 
                 document.getElementById('pictureGameArea').style.display = 'none';
                 document.getElementById('pictureGameResult').style.display = 'none';
@@ -869,6 +932,7 @@
                 this.timeLeft = 45;
                 this.draggedWordId = null;
                 this.correctPairs.clear();
+                this.gameData = null; // Clear game data to free memory
                 
                 this.updateUI();
             }
