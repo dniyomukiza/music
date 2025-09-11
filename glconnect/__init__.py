@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from datetime import datetime, timezone
 from flask import Flask, request
 from .models import db, User
 from flask_jwt_extended import JWTManager
@@ -92,6 +93,48 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Add logging for all requests at app level
+    @app.before_request
+    def log_request():
+        try:
+            with open("visits.txt", "a") as f:
+                # Get current time in a more readable format
+                now = datetime.now(timezone.utc)
+                timestamp = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+                
+                # Get user agent and extract browser info
+                user_agent = request.headers.get('User-Agent', 'Unknown')
+                browser = "Unknown"
+                if 'Chrome' in user_agent:
+                    browser = "Chrome"
+                elif 'Firefox' in user_agent:
+                    browser = "Firefox"
+                elif 'Safari' in user_agent:
+                    browser = "Safari"
+                elif 'Edge' in user_agent:
+                    browser = "Edge"
+                elif 'curl' in user_agent:
+                    browser = "curl"
+                elif 'Norton' in user_agent:
+                    browser = "Norton"
+                
+                # Get device type
+                device = "Desktop"
+                if 'Mobile' in user_agent or 'Android' in user_agent:
+                    device = "Mobile"
+                elif 'iPhone' in user_agent or 'iPad' in user_agent:
+                    device = "Mobile"
+                
+                # Format the log entry in a more readable way
+                f.write(f"[{timestamp}] {request.method} {request.path}\n")
+                f.write(f"    IP: {request.remote_addr}\n")
+                f.write(f"    Browser: {browser}\n")
+                f.write(f"    Device: {device}\n")
+                f.write(f"    User-Agent: {user_agent}\n")
+                f.write("-" * 80 + "\n")
+        except Exception as ex:
+            print("Exception occurred while logging: ", ex)
+
     with app.app_context():
         # Import and register blueprints
         from .routes import bp 
@@ -105,7 +148,6 @@ def create_app():
         from .writer import writer
         from .book import book
         from .news_routes import news_bp
-        from .analytics_routes import usage_analytics_bp
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
@@ -118,7 +160,6 @@ def create_app():
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
         app.register_blueprint(news_bp, url_prefix='/routes2/news')
-        app.register_blueprint(usage_analytics_bp, url_prefix='/usage-analytics')
 
         # Ensure tables exist
         inspector = inspect(db.engine)

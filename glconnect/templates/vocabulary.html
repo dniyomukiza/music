@@ -84,17 +84,6 @@
                 </a>
             </div>
             
-            <div class="action-card analytics-card">
-                <div class="card-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h3>Analytics Dashboard</h3>
-                <p>View detailed usage statistics and insights</p>
-                <a href="/usage-analytics/" class="card-button">
-                    <i class="fas fa-arrow-right"></i>
-                    View Analytics
-                </a>
-            </div>
         </div>
 
         <!-- Word Search Results -->
@@ -372,36 +361,6 @@
             </div>
         </div>
 
-        <!-- Learning Progress Section -->
-        <div class="community-stats-section">
-            <div class="stats-card">
-                <div class="stats-icon">
-                    <i class="fas fa-trophy"></i>
-                </div>
-                <div class="stats-content">
-                    <h3>Your Learning Progress</h3>
-                    <p>Track your vocabulary growth and learning achievements</p>
-                    <a href="{{ url_for('routes1.community_dictionary') }}" class="stats-link-btn">
-                        <i class="fas fa-arrow-right"></i>
-                        View Progress
-                    </a>
-                </div>
-            </div>
-            
-            <div class="learning-resources-card">
-                <div class="resources-icon">
-                    <i class="fas fa-book-open"></i>
-                </div>
-                <div class="resources-content">
-                    <h3>Study Materials</h3>
-                    <p>Access grammar guides, pronunciation tips, and study tools</p>
-                    <a href="{{ url_for('routes1.findwords') }}" class="resources-link-btn">
-                        <i class="fas fa-arrow-right"></i>
-                        Study Now
-                    </a>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -679,7 +638,17 @@
                 try {
                     console.log('Starting Picture-Word Matching Game...');
                     const response = await fetch('/routes1/api/picture-word-game');
-                    const data = await response.json();
+                    console.log('Picture game response status:', response.status);
+                    console.log('Picture game response headers:', response.headers);
+                    
+                    const responseText = await response.text();
+                    console.log('Picture game raw response:', responseText.substring(0, 200) + '...');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = JSON.parse(responseText);
                     
                     if (data.success) {
                         this.gameData = data.game_data;

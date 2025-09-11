@@ -452,8 +452,6 @@ def get_game_words():
         
     except Exception as e:
         print(f"Error in get_game_words: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': f'Error fetching words for the game: {str(e)}'
@@ -516,14 +514,6 @@ def get_picture_word_game():
     try:
         from .models import WordsData
         import random
-        import google.generativeai as genai
-        import base64
-        import io
-        from PIL import Image
-        
-        # Configure Gemini
-        genai.configure(api_key=current_app.config.get('GOOGLE_API_KEY'))
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Get words from original database
         all_words = WordsData.query.all()
@@ -553,27 +543,12 @@ def get_picture_word_game():
             else:
                 meaning = "No meaning available"
             
-            # Generate image using Gemini
-            try:
-                prompt = f"Create a simple, clear illustration of: {meaning}. The image should be suitable for a language learning game, with a clean background and clear visual representation."
-                response = model.generate_content(prompt)
-                
-                # For now, we'll use a placeholder approach since Gemini image generation
-                # might need different handling. We'll create a simple text-based representation
-                image_data = {
-                    'type': 'text_placeholder',
-                    'description': meaning,
-                    'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
-                }
-                
-            except Exception as e:
-                print(f"Error generating image for {word.word}: {e}")
-                # Fallback to text placeholder
-                image_data = {
-                    'type': 'text_placeholder',
-                    'description': meaning,
-                    'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
-                }
+            # Create text-based placeholder (no external API calls)
+            image_data = {
+                'type': 'text_placeholder',
+                'description': meaning,
+                'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
+            }
             
             game_data.append({
                 'id': word.id,
