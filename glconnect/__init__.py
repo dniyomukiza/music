@@ -19,7 +19,7 @@ config = {}
 
 # Try glconfig.json first (for remote Linux)
 try:
-    with open('/etc/glconfig.json') as json_file:
+    with open('/usr/src/appdir/config/glconfig.json') as json_file:
         config = json.load(json_file)
     print("DEBUG: Loaded configuration from glconfig.json")
 except FileNotFoundError:
