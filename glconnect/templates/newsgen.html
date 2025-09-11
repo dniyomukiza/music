@@ -214,6 +214,83 @@
             color: #856404;
             border: 1px solid #ffeaa7;
         }
+        
+        .validation-success {
+            color: #28a745;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .validation-error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .validation-suggestions {
+            margin-top: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .validation-suggestions ul {
+            margin: 4px 0 0 0;
+            padding-left: 20px;
+        }
+        
+        .validation-suggestions li {
+            margin: 2px 0;
+        }
+
+        .topic-input.valid {
+            border-color: #28a745;
+            box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+        }
+
+        .topic-input.invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+        }
+
+        /* Server-side validation error styles */
+        .validation-error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .validation-error i {
+            margin-right: 8px;
+        }
+
+        .validation-suggestions {
+            margin-top: 8px;
+            font-size: 0.85rem;
+        }
+
+        .validation-suggestions ul {
+            margin: 4px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .validation-suggestions li {
+            margin: 2px 0;
+        }
 
         .topics-display {
             display: flex;
@@ -747,7 +824,49 @@
                     </div>
                 </div>
 
-                <form id="newsForm">
+                <!-- Flask Form for server-side validation -->
+                <form method="POST" id="flaskForm">
+                    {{ form.hidden_tag() }}
+                    <div class="input-section">
+                        <label for="keyword" class="input-label">
+                            <i class="fas fa-newspaper"></i> Enter News Topic
+                        </label>
+                        <div class="topic-input-container">
+                            {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
+                            {% if form.keyword.errors %}
+                                <div class="validation-error">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>{{ form.keyword.errors[0] }}</span>
+                                </div>
+                            {% endif %}
+                            {% if validation_error %}
+                                <div class="validation-error">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>{{ validation_error }}</span>
+                                    <div class="validation-suggestions">
+                                        <strong>Try topics like:</strong>
+                                        <ul>
+                                            <li>Politics, elections, government</li>
+                                            <li>Economy, business, markets</li>
+                                            <li>International affairs, conflicts</li>
+                                            <li>Health, science, technology</li>
+                                            <li>Sports, entertainment, culture</li>
+                                            <li>Natural disasters, emergencies</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="generate-btn">
+                        <i class="fas fa-play"></i>
+                        Generate News Broadcast
+                    </button>
+                </form>
+
+                <!-- JavaScript Form for advanced features -->
+                <form id="newsForm" style="display: none;">
                     <div class="input-section">
                         <label for="topicInput" class="input-label">
                             <i class="fas fa-plus-circle"></i> Add News Topics
@@ -935,7 +1054,7 @@
 
         async function validateTopicRealTime(topic) {
             try {
-                const response = await fetch('/routes2/news/validate-topic', {
+                const response = await fetch('/routes2/news/api/validate-news-topic', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -947,41 +1066,54 @@
                 showValidationFeedback(topic, data);
             } catch (error) {
                 console.error('Validation error:', error);
+                showValidationFeedback(topic, {
+                    valid: false,
+                    error: 'Validation service unavailable. Please try again.'
+                });
             }
         }
 
         function showValidationFeedback(topic, validationData) {
-            const input = document.getElementById('topicInput');
             const feedback = document.getElementById('validationFeedback');
-            const suggestions = document.getElementById('topicSuggestions');
+            const input = document.getElementById('topicInput');
             
-            // Clear previous classes
-            input.classList.remove('valid', 'invalid');
-            feedback.classList.remove('valid', 'invalid', 'warning');
-            feedback.style.display = 'none';
-            suggestions.style.display = 'none';
-            
-            if (validationData.is_relevant) {
+            if (validationData.valid) {
+                feedback.innerHTML = `
+                    <div class="validation-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span>✅ Valid news topic - ready for generation</span>
+                    </div>
+                `;
+                input.classList.remove('invalid');
                 input.classList.add('valid');
-                feedback.classList.add('valid');
-                feedback.innerHTML = `<i class="fas fa-check-circle"></i> Great! This looks like a valid news topic.`;
-                feedback.style.display = 'block';
             } else {
+                const errorMsg = validationData.error || 'Not a valid news topic';
+                feedback.innerHTML = `
+                    <div class="validation-error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>❌ ${errorMsg}</span>
+                        <div class="validation-suggestions">
+                            <strong>Try topics like:</strong>
+                            <ul>
+                                <li>Politics, elections, government</li>
+                                <li>Economy, business, markets</li>
+                                <li>International affairs, conflicts</li>
+                                <li>Health, science, technology</li>
+                                <li>Sports, entertainment, culture</li>
+                                <li>Natural disasters, emergencies</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                input.classList.remove('valid');
                 input.classList.add('invalid');
-                feedback.classList.add('invalid');
-                feedback.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${validationData.reason}`;
-                feedback.style.display = 'block';
-                
-                if (validationData.suggestions && validationData.suggestions.length > 0) {
-                    suggestions.innerHTML = `
-                        <h4><i class="fas fa-lightbulb"></i> Suggestions:</h4>
-                        <ul>
-                            ${validationData.suggestions.map(s => `<li>${s}</li>`).join('')}
-                        </ul>
-                    `;
-                    suggestions.style.display = 'block';
-                }
             }
+            
+            // Auto-hide feedback after 5 seconds
+            setTimeout(() => {
+                feedback.innerHTML = '';
+                input.classList.remove('valid', 'invalid');
+            }, 5000);
         }
 
         function clearValidationFeedback() {
@@ -1050,7 +1182,7 @@
         async function validateAllTopics() {
             const validationPromises = topics.map(async (topic) => {
                 try {
-                    const response = await fetch('/routes2/news/validate-topic', {
+                    const response = await fetch('/routes2/news/api/validate-news-topic', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1059,8 +1191,14 @@
                     });
                     
                     const data = await response.json();
-                    topicValidations[topic] = data;
-                    return { topic, validation: data };
+                    // Convert to legacy format for compatibility
+                    const legacyData = {
+                        is_relevant: data.valid,
+                        reason: data.valid ? 'Valid news topic' : data.error,
+                        confidence: 0.95
+                    };
+                    topicValidations[topic] = legacyData;
+                    return { topic, validation: legacyData };
                 } catch (error) {
                     console.error(`Validation error for topic "${topic}":`, error);
                     return { topic, validation: { is_relevant: false, reason: 'Validation error' } };

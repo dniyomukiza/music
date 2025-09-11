@@ -620,8 +620,7 @@
                         this.matches = 0;
                         this.timeLeft = 45;
                         this.gameActive = true;
-                        this.selectedPicture = null;
-                        this.selectedWord = null;
+                        this.draggedWordId = null;
                         this.correctPairs.clear();
                         
                         this.renderGame();
@@ -650,10 +649,10 @@
                 // Shuffle the game data
                 const shuffledData = [...this.gameData].sort(() => Math.random() - 0.5);
                 
-                // Create picture cards
+                // Create picture cards (drop zones)
                 shuffledData.forEach((item, index) => {
                     const pictureCard = document.createElement('div');
-                    pictureCard.className = 'picture-card';
+                    pictureCard.className = 'picture-card drop-zone';
                     pictureCard.dataset.wordId = item.id;
                     pictureCard.dataset.index = index;
                     
@@ -689,16 +688,22 @@
                         pictureCard.appendChild(picturePlaceholder);
                     }
                     
-                    pictureCard.addEventListener('click', () => this.selectPicture(pictureCard, item.id));
+                    // Add drop zone functionality
+                    pictureCard.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    pictureCard.addEventListener('drop', (e) => this.handleDrop(e, item.id));
+                    pictureCard.addEventListener('dragenter', (e) => this.handleDragEnter(e));
+                    pictureCard.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                    
                     picturesContainer.appendChild(pictureCard);
                 });
                 
-                // Create word cards
+                // Create word cards (draggable)
                 shuffledData.forEach((item, index) => {
                     const wordCard = document.createElement('div');
-                    wordCard.className = 'picture-word-card';
+                    wordCard.className = 'picture-word-card draggable';
                     wordCard.dataset.wordId = item.id;
                     wordCard.dataset.index = index;
+                    wordCard.draggable = true;
                     
                     const wordText = document.createElement('div');
                     wordText.className = 'picture-word-text';
@@ -710,64 +715,89 @@
                     
                     wordCard.appendChild(wordText);
                     wordCard.appendChild(wordMeaning);
-                    wordCard.addEventListener('click', () => this.selectWord(wordCard, item.id));
+                    
+                    // Add drag functionality
+                    wordCard.addEventListener('dragstart', (e) => this.handleDragStart(e, item.id));
+                    wordCard.addEventListener('dragend', (e) => this.handleDragEnd(e));
                     
                     wordsContainer.appendChild(wordCard);
                 });
             }
             
-            selectPicture(card, wordId) {
-                if (!this.gameActive || this.correctPairs.has(wordId)) return;
+            // Drag and Drop Methods
+            handleDragStart(e, wordId) {
+                if (!this.gameActive || this.correctPairs.has(wordId)) {
+                    e.preventDefault();
+                    return;
+                }
                 
-                // Clear previous selection
-                document.querySelectorAll('.picture-card.selected').forEach(c => c.classList.remove('selected'));
-                
-                this.selectedPicture = { card, wordId };
-                card.classList.add('selected');
-                
-                this.checkMatch();
+                this.draggedWordId = wordId;
+                e.target.style.opacity = '0.5';
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', e.target.outerHTML);
             }
             
-            selectWord(card, wordId) {
-                if (!this.gameActive || this.correctPairs.has(wordId)) return;
-                
-                // Clear previous selection
-                document.querySelectorAll('.picture-word-card.selected').forEach(c => c.classList.remove('selected'));
-                
-                this.selectedWord = { card, wordId };
-                card.classList.add('selected');
-                
-                this.checkMatch();
+            handleDragEnd(e) {
+                e.target.style.opacity = '1';
+                this.draggedWordId = null;
             }
             
-            checkMatch() {
-                if (this.selectedPicture && this.selectedWord) {
-                    if (this.selectedPicture.wordId === this.selectedWord.wordId) {
-                        // Correct match!
-                        this.correctMatch();
-                    } else {
-                        // Wrong match
-                        this.wrongMatch();
-                    }
-                    
-                    // Clear selections
-                    this.selectedPicture = null;
-                    this.selectedWord = null;
+            handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            }
+            
+            handleDragEnter(e) {
+                e.preventDefault();
+                if (this.draggedWordId && !this.correctPairs.has(parseInt(e.currentTarget.dataset.wordId))) {
+                    e.currentTarget.classList.add('drag-over');
                 }
             }
             
-            correctMatch() {
+            handleDragLeave(e) {
+                e.currentTarget.classList.remove('drag-over');
+            }
+            
+            handleDrop(e, pictureWordId) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+                
+                if (!this.draggedWordId || this.correctPairs.has(pictureWordId)) {
+                    return;
+                }
+                
+                // Check if the dragged word matches the picture
+                if (this.draggedWordId === pictureWordId) {
+                    // Correct match!
+                    this.correctMatch(this.draggedWordId, e.currentTarget);
+                } else {
+                    // Wrong match
+                    this.wrongMatch();
+                }
+                
+                this.draggedWordId = null;
+            }
+            
+            correctMatch(wordId, pictureCard) {
                 this.score += 10;
                 this.matches++;
-                this.correctPairs.set(this.selectedPicture.wordId, true);
+                this.correctPairs.set(wordId, true);
+                
+                // Find the corresponding word card
+                const wordCard = document.querySelector(`[data-word-id="${wordId}"].picture-word-card`);
                 
                 // Mark cards as correct
-                this.selectedPicture.card.classList.add('correct');
-                this.selectedWord.card.classList.add('correct');
+                pictureCard.classList.add('correct');
+                if (wordCard) {
+                    wordCard.classList.add('correct');
+                }
                 
-                // Remove click handlers
-                this.selectedPicture.card.style.pointerEvents = 'none';
-                this.selectedWord.card.style.pointerEvents = 'none';
+                // Remove drag functionality and make cards unclickable
+                pictureCard.style.pointerEvents = 'none';
+                if (wordCard) {
+                    wordCard.draggable = false;
+                    wordCard.style.opacity = '0.7';
+                }
                 
                 this.updateUI();
                 
@@ -780,14 +810,14 @@
             wrongMatch() {
                 this.score = Math.max(0, this.score - 2);
                 
-                // Mark cards as wrong temporarily
-                this.selectedPicture.card.classList.add('wrong');
-                this.selectedWord.card.classList.add('wrong');
-                
-                setTimeout(() => {
-                    this.selectedPicture.card.classList.remove('wrong', 'selected');
-                    this.selectedWord.card.classList.remove('wrong', 'selected');
-                }, 1000);
+                // Find the dragged word card and mark it as wrong temporarily
+                const wordCard = document.querySelector(`[data-word-id="${this.draggedWordId}"].picture-word-card`);
+                if (wordCard) {
+                    wordCard.classList.add('wrong');
+                    setTimeout(() => {
+                        wordCard.classList.remove('wrong');
+                    }, 1000);
+                }
                 
                 this.updateUI();
             }
@@ -837,8 +867,7 @@
                 this.score = 0;
                 this.matches = 0;
                 this.timeLeft = 45;
-                this.selectedPicture = null;
-                this.selectedWord = null;
+                this.draggedWordId = null;
                 this.correctPairs.clear();
                 
                 this.updateUI();

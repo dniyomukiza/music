@@ -526,14 +526,16 @@ def search_word_api():
 @bp1.route('/api/picture-word-game')
 def get_picture_word_game():
     """Get words and generate images for picture-word matching game using Gemini API."""
+    import gc  # For garbage collection
     try:
         from .models import WordsData, db
         import random
-        import google.generativeai as genai
-        import base64
-        import io
+        from google import genai
+        from google.genai import types
         from PIL import Image
+        from io import BytesIO
         import os
+        import base64
         
         # Configure Gemini API
         google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -543,7 +545,7 @@ def get_picture_word_game():
                 'message': 'Google API key not configured'
             }), 500
             
-        genai.configure(api_key=google_api_key)
+        client = genai.Client(api_key=google_api_key)
         
         # Get total count first
         total_count = WordsData.query.count()
@@ -603,7 +605,9 @@ def get_picture_word_game():
         
         # Prepare game data - all selected words are guaranteed to be nouns with English meaning
         game_data = []
-        for word in selected_words:
+        
+        # Process words one by one to manage memory
+        for i, word in enumerate(selected_words):
             # Extract English meaning (already verified to exist)
             last_meaning_array = word.igisobanuro_meaning[-1]
             if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
@@ -613,49 +617,32 @@ def get_picture_word_game():
             
             # Generate image using Gemini API (all words are nouns with meaning)
             try:
-                model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
-                
                 # Create a detailed prompt for image generation
-                prompt = f"Generate a simple, clear, colorful illustration of: {meaning}. The image should be suitable for a language learning game, showing the object clearly without text or labels. Make it educational and child-friendly."
+                prompt = f"Create a simple, clear, colorful illustration of: {meaning}. The image should be suitable for a language learning game, showing the object clearly without text or labels. Make it educational and child-friendly."
                 
-                response = model.generate_content(prompt)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-image-preview",
+                    contents=[prompt],
+                )
                 
                 # Extract image data from response
-                if response and hasattr(response, 'candidates') and response.candidates:
-                    candidate = response.candidates[0]
-                    if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
-                        for part in candidate.content.parts:
-                            if hasattr(part, 'inline_data') and part.inline_data:
-                                # Convert base64 image data to data URL
-                                image_base64 = part.inline_data.data
-                                image_data = {
-                                    'type': 'generated_image',
-                                    'data_url': f"data:image/png;base64,{image_base64}",
-                                    'description': meaning,
-                                    'is_noun': True,
-                                    'icon': '🖼️'
-                                }
-                                break
-                        else:
-                            # No image data found, use enhanced placeholder
-                            image_data = {
-                                'type': 'enhanced_placeholder',
-                                'description': meaning,
-                                'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
-                                'is_noun': True,
-                                'icon': '🖼️'
-                            }
-                    else:
-                        # No valid response structure, use enhanced placeholder
+                image_generated = False
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data is not None:
+                        # Convert image data to base64 for data URL
+                        image_base64 = base64.b64encode(part.inline_data.data).decode('utf-8')
                         image_data = {
-                            'type': 'enhanced_placeholder',
+                            'type': 'generated_image',
+                            'data_url': f"data:image/png;base64,{image_base64}",
                             'description': meaning,
-                            'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
                             'is_noun': True,
                             'icon': '🖼️'
                         }
-                else:
-                    # No response, use enhanced placeholder
+                        image_generated = True
+                        break
+                
+                if not image_generated:
+                    # No image data found, use enhanced placeholder
                     image_data = {
                         'type': 'enhanced_placeholder',
                         'description': meaning,
@@ -682,9 +669,16 @@ def get_picture_word_game():
                 'image': image_data,
                 'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
             })
+            
+            # Force garbage collection after each image generation to manage memory
+            if i % 2 == 0:  # Every 2 images
+                gc.collect()
         
         # Shuffle the data to randomize positions
         random.shuffle(game_data)
+        
+        # Force garbage collection to free memory
+        gc.collect()
         
         return jsonify({
             'success': True,

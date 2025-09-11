@@ -27,11 +27,45 @@ client = None
 def news():
     form = KeywordForm()
     audio_file_path = None
-    news_file_path = None  
+    news_file_path = None
+    validation_error = None
     
     if form.validate_on_submit():
         keyword = form.keyword.data
         print(f"Form keyword: {form.keyword.data}")
+        
+        # Step 0: Validate topic using NewsTopicValidationAgent
+        try:
+            from .news_routes import get_validation_agent
+            validation_agent = get_validation_agent()
+            is_valid, error_message = validation_agent.validate_topic(keyword)
+            
+            if not is_valid:
+                validation_error = error_message
+                print(f"❌ Topic validation failed: {error_message}")
+                # Return early with error message
+                return render_template(
+                    "newsgen.html",
+                    form=form,
+                    validation_error=validation_error,
+                    audio_file=None,
+                    audio_file_path=None,
+                    news_file_path=None
+                )
+            else:
+                print(f"✅ Topic validation passed: {keyword}")
+                
+        except Exception as e:
+            print(f"Error during topic validation: {e}")
+            validation_error = f"Validation error: {str(e)}"
+            return render_template(
+                "newsgen.html",
+                form=form,
+                validation_error=validation_error,
+                audio_file=None,
+                audio_file_path=None,
+                news_file_path=None
+            )
         
         try:
             # Step 1: Generate news content using OpenAI API

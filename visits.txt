@@ -469,3 +469,105 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-09-11 18:39:29 UTC] HEAD /routes1/api/picture-word-game
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:40:04 UTC] GET /routes1/api/picture-word-game
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:41:21 UTC] GET /routes1/api/picture-word-game
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:41:57 UTC] HEAD /vocabulary
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:42:07 UTC] HEAD /words
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:42:15 UTC] HEAD /routes1/words
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:42:31 UTC] HEAD /test_images.html
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:42:39 UTC] GET /routes1/api/picture-word-game
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:44:14 UTC] GET /routes1/words
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:55:46 UTC] POST /routes2/news/validate-topic
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:56:01 UTC] POST /routes2/news/api/validate-topic
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:56:09 UTC] POST /routes2/news/api/validate-topic
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:58:53 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:59:01 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 18:59:10 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 19:03:47 UTC] POST /routes2/news
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-11 19:03:52 UTC] POST /routes2/news
+    IP: 172.19.0.4
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------

@@ -72,8 +72,7 @@ def cleanup_old_audio_files():
 # --- Topic Relevance Filtering ---
 def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
     """
-    Proactive news topic validation - designed to accept legitimate news topics
-    and only reject clearly irrelevant content. Uses "Accept First, Verify Later" approach.
+    Enhanced news topic validation using Gemini AI as primary validator.
     Returns (is_relevant, confidence_score, reason)
     """
     t = topic.strip().lower()
@@ -81,38 +80,42 @@ def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
         print(f"DEBUG: Empty topic rejected")
         return False, 0.0, "Empty topic"
     
-    print(f"DEBUG: Proactive validation for: '{topic}'")
+    print(f"DEBUG: Enhanced validation for: '{topic}'")
     
-    # PROACTIVE STRATEGY 1: Quick Rejection of Obviously Non-News
-    # Only reject things that are clearly not news-related
+    # STRATEGY 1: Quick Rejection of Obviously Non-News
     if is_obviously_not_news(topic):
         print(f"DEBUG: Topic rejected as obviously non-news")
         return False, 0.95, "Obviously non-news content"
     
-    # PROACTIVE STRATEGY 2: Quick Acceptance of News Indicators
-    # Accept topics that have clear news indicators
-    if has_strong_news_indicators(topic):
-        print(f"DEBUG: Topic accepted - strong news indicators")
-        return True, 0.9, "Strong news indicators detected"
-    
-    # PROACTIVE STRATEGY 3: AI Validation (with fallback to acceptance)
+    # STRATEGY 2: Gemini AI Validation (Primary method)
     try:
         is_relevant, confidence = validate_topic_with_ai_enhanced(topic)
         if is_relevant is not None:
-            print(f"DEBUG: AI validation result: {is_relevant} (confidence: {confidence})")
-            return is_relevant, confidence, "AI validation"
+            print(f"DEBUG: Gemini validation result: {is_relevant} (confidence: {confidence})")
+            if is_relevant:
+                return True, confidence, "Gemini AI validation - Valid news topic"
+            else:
+                return False, confidence, "Gemini AI validation - Not a valid news topic"
     except Exception as e:
-        print(f"DEBUG: AI validation failed: {e}, defaulting to acceptance")
+        print(f"DEBUG: Gemini validation failed: {e}, trying fallback methods")
     
-    # PROACTIVE STRATEGY 4: Pattern-Based Validation (with fallback to acceptance)
+    # STRATEGY 3: Fallback to Pattern-Based Validation
     try:
         is_relevant = validate_topic_with_patterns(topic)
         if is_relevant:
-            return True, 0.8, "Pattern matching"
+            return True, 0.8, "Pattern matching (fallback)"
     except Exception as e:
         print(f"DEBUG: Pattern validation failed: {e}")
     
-    # PROACTIVE STRATEGY 5: Learning-Based Validation (with fallback to acceptance)
+    # STRATEGY 4: Fallback to Keyword-Based Validation
+    try:
+        is_relevant = validate_topic_with_keywords(topic)
+        if is_relevant:
+            return True, 0.7, "Keyword matching (fallback)"
+    except Exception as e:
+        print(f"DEBUG: Keyword validation failed: {e}")
+    
+    # STRATEGY 5: Learning-Based Validation (with fallback to acceptance)
     try:
         is_relevant, confidence = validate_topic_with_learning_enhanced(topic)
         if is_relevant is not None:
@@ -423,49 +426,114 @@ def get_topic_validation_info(topic: str) -> dict:
         'validation_timestamp': datetime.now().isoformat()
     }
 
+class NewsTopicValidationAgent:
+    """
+    Dedicated agent for validating news topics using Gemini AI.
+    Simple interface: returns True/False with clear error messages.
+    """
+    
+    def __init__(self):
+        self.api_key = os.getenv("GOOGLE_API_KEY")
+        if not self.api_key:
+            raise ValueError("Google API key not found")
+        
+        from google import genai
+        self.client = genai.Client(api_key=self.api_key)
+    
+    def validate_topic(self, topic: str) -> tuple[bool, str]:
+        """
+        Validates if a topic is suitable for news generation.
+        Returns (is_valid, error_message)
+        """
+        try:
+            # Clean and validate input
+            topic = topic.strip()
+            if not topic:
+                return False, "Topic cannot be empty"
+            
+            if len(topic) < 3:
+                return False, "Topic must be at least 3 characters long"
+            
+            # Call Gemini for validation
+            prompt = f"""
+            You are a news editor. Determine if this topic is suitable for news reporting.
+
+            VALID NEWS TOPICS:
+            - Current events, breaking news, ongoing stories
+            - Politics, government, elections, policy changes  
+            - Economy, business, markets, financial news
+            - International affairs, conflicts, diplomacy
+            - Natural disasters, emergencies, public safety
+            - Health outbreaks, medical breakthroughs, public health
+            - Technology developments, scientific discoveries
+            - Sports events, entertainment news, cultural events
+            - Social issues, protests, human rights
+            - Environmental news, climate change
+            - Crime, legal proceedings, court cases
+            - Education, research, academic news
+
+            INVALID TOPICS:
+            - Personal statements ("I am going to school")
+            - Personal opinions ("I like pizza")
+            - Private matters ("My cat is cute")
+            - Questions ("How are you?")
+            - Nonsensical text
+            - Single words without context
+            - Personal conversations or greetings
+
+            Topic: "{topic}"
+
+            Respond with ONLY: YES or NO
+            """
+            
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=[prompt],
+            )
+            
+            result = response.candidates[0].content.parts[0].text.strip().upper()
+            
+            if result == "YES":
+                print(f"✅ NewsTopicValidationAgent: '{topic}' is VALID")
+                return True, ""
+            elif result == "NO":
+                error_msg = f"'{topic}' is not a valid news topic. Please enter topics like politics, economy, sports, technology, health, world affairs, etc."
+                print(f"❌ NewsTopicValidationAgent: '{topic}' is INVALID")
+                return False, error_msg
+            else:
+                print(f"⚠️ NewsTopicValidationAgent: Unexpected response '{result}' for topic '{topic}'")
+                return False, f"Unable to validate topic. Please try a different topic."
+                
+        except Exception as e:
+            print(f"🚨 NewsTopicValidationAgent error for '{topic}': {e}")
+            return False, f"Validation error. Please try again."
+
+# Global validation agent instance
+validation_agent = None
+
+def get_validation_agent():
+    """Get or create the validation agent instance."""
+    global validation_agent
+    if validation_agent is None:
+        validation_agent = NewsTopicValidationAgent()
+    return validation_agent
+
 def validate_topic_with_ai_enhanced(topic: str) -> tuple[bool, float]:
     """
-    Uses AI to determine if a topic is relevant for news reporting with confidence scoring.
-    Returns (is_relevant, confidence) or (None, 0.0) if AI couldn't determine
+    Legacy function for backward compatibility.
+    Now uses the NewsTopicValidationAgent.
     """
-    import google.generativeai as genai
-    from glconnect import config
-    
     try:
-        # Configure Gemini
-        genai.configure(api_key=config.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        agent = get_validation_agent()
+        is_valid, error_msg = agent.validate_topic(topic)
         
-        prompt = f"""
-        Determine if this topic is relevant for news reporting. Consider:
-        - Is it a current event, news story, or public interest topic?
-        - Would it be covered by news media?
-        - Is it something people would want to hear about in a news broadcast?
-        - Is it a personal statement, opinion, or private matter? (These should be NO)
-        - Is it about public events, politics, economy, world affairs, disasters, etc.? (These should be YES)
-        
-        Examples of NO: "I am going to school", "My cat is cute", "I like pizza", "How are you?"
-        Examples of YES: "Ebola outbreak in Congo", "Ukraine war updates", "Stock market crash", "Election results"
-        
-        Topic: "{topic}"
-        
-        Respond with ONLY one word: "YES" or "NO"
-        If you're unsure, respond "UNCERTAIN"
-        """
-        
-        response = model.generate_content(prompt)
-        result = response.text.strip().upper()
-        
-        if result == "YES":
-            return True, 0.9  # High confidence for AI acceptance
-        elif result == "NO":
-            return False, 0.9  # High confidence for AI rejection
+        if is_valid:
+            return True, 0.95
         else:
-            print(f"DEBUG: AI returned uncertain result: {result}")
-            return None, 0.0
+            return False, 0.95
             
     except Exception as e:
-        print(f"DEBUG: AI validation error: {e}")
+        print(f"DEBUG: Validation agent error: {e}")
         return None, 0.0
 
 def validate_topic_with_learning_enhanced(topic: str) -> tuple[bool, float]:
@@ -1296,37 +1364,84 @@ def analytics_summary():
 
 @news_bp.route('/api/validate-topic', methods=['POST'])
 def validate_topic_api():
-    """API endpoint for topic validation with user override capability."""
+    """Simplified API endpoint using NewsTopicValidationAgent."""
     try:
         data = request.get_json()
         topic = data.get('topic', '').strip()
-        user_override = data.get('user_override')  # Optional: True/False/None
         
         if not topic:
-            return jsonify({'error': 'Topic is required'}), 400
+            return jsonify({
+                'is_relevant': False,
+                'reason': 'Topic is required',
+                'error': 'Topic cannot be empty'
+            }), 400
         
-        # Validate topic with optional user override
-        is_relevant, confidence, reason = validate_topic_with_user_override(topic, user_override)
+        # Use the validation agent
+        agent = get_validation_agent()
+        is_valid, error_message = agent.validate_topic(topic)
         
-        # Get comprehensive validation info
-        validation_info = get_topic_validation_info(topic)
-        
-        # Log user feedback if override was used
-        if user_override is not None:
-            log_validation_feedback(topic, is_relevant, f"User override: {user_override}")
-        
-        return jsonify({
-            'topic': topic,
-            'is_relevant': is_relevant,
-            'confidence': confidence,
-            'reason': reason,
-            'suggestions': validation_info['suggestions'],
-            'can_override': validation_info['can_override'],
-            'validation_timestamp': validation_info['validation_timestamp']
-        })
+        if is_valid:
+            return jsonify({
+                'topic': topic,
+                'is_relevant': True,
+                'reason': 'Valid news topic',
+                'confidence': 0.95,
+                'validation_timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'topic': topic,
+                'is_relevant': False,
+                'reason': error_message,
+                'confidence': 0.95,
+                'validation_timestamp': datetime.now().isoformat()
+            })
         
     except Exception as e:
-        return jsonify({'error': f'Validation failed: {str(e)}'}), 500
+        print(f"Validation API error: {e}")
+        return jsonify({
+            'is_relevant': False,
+            'reason': 'Validation service unavailable',
+            'error': f'Validation failed: {str(e)}'
+        }), 500
+
+@news_bp.route('/api/validate-news-topic', methods=['POST'])
+def validate_news_topic_api():
+    """
+    Direct validation endpoint for news generation flow.
+    Returns simple True/False with error message.
+    """
+    try:
+        data = request.get_json()
+        topic = data.get('topic', '').strip()
+        
+        if not topic:
+            return jsonify({
+                'valid': False,
+                'error': 'Topic is required'
+            }), 400
+        
+        # Use the validation agent
+        agent = get_validation_agent()
+        is_valid, error_message = agent.validate_topic(topic)
+        
+        if is_valid:
+            return jsonify({
+                'valid': True,
+                'message': 'Topic is valid for news generation'
+            })
+        else:
+            return jsonify({
+                'valid': False,
+                'error': error_message
+            })
+        
+    except Exception as e:
+        print(f"News topic validation error: {e}")
+        return jsonify({
+            'valid': False,
+            'error': 'Validation service unavailable. Please try again.'
+        }), 500
 
 @news_bp.route('/api/override-topic', methods=['POST'])
 def override_topic_api():
