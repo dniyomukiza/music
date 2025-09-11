@@ -7,7 +7,8 @@ services:
     depends_on:
       - icecast2
     volumes:
-      - .:/usr/src/appdir 
+      - .:/usr/src/appdir
+      - ./glconfig.json:/etc/glconfig.json:ro 
     networks:
       - app_network
     command: >
