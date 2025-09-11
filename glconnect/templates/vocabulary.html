@@ -657,15 +657,39 @@
                     pictureCard.dataset.wordId = item.id;
                     pictureCard.dataset.index = index;
                     
-                    // Create picture placeholder with color and description
-                    const picturePlaceholder = document.createElement('div');
-                    picturePlaceholder.className = 'picture-placeholder';
-                    picturePlaceholder.style.backgroundColor = item.image.color;
-                    picturePlaceholder.textContent = item.image.description;
+                    // Create picture based on type
+                    if (item.image.type === 'generated_image' && item.image.data_url) {
+                        // Use generated image from Gemini API
+                        const pictureImg = document.createElement('img');
+                        pictureImg.className = 'picture-generated';
+                        pictureImg.src = item.image.data_url;
+                        pictureImg.alt = item.image.description;
+                        pictureImg.style.width = '100%';
+                        pictureImg.style.height = '100%';
+                        pictureImg.style.objectFit = 'cover';
+                        pictureImg.style.borderRadius = '8px';
+                        
+                        pictureCard.appendChild(pictureImg);
+                    } else if (item.image.type === 'enhanced_placeholder') {
+                        // Enhanced placeholder for nouns (with icon)
+                        const picturePlaceholder = document.createElement('div');
+                        picturePlaceholder.className = 'picture-placeholder enhanced';
+                        picturePlaceholder.style.backgroundColor = item.image.color;
+                        picturePlaceholder.innerHTML = `
+                            <div class="placeholder-icon">${item.image.icon}</div>
+                            <div class="placeholder-text">${item.image.description}</div>
+                        `;
+                        pictureCard.appendChild(picturePlaceholder);
+                    } else {
+                        // Regular text placeholder for non-nouns
+                        const picturePlaceholder = document.createElement('div');
+                        picturePlaceholder.className = 'picture-placeholder';
+                        picturePlaceholder.style.backgroundColor = item.image.color;
+                        picturePlaceholder.textContent = item.image.description;
+                        pictureCard.appendChild(picturePlaceholder);
+                    }
                     
-                    pictureCard.appendChild(picturePlaceholder);
                     pictureCard.addEventListener('click', () => this.selectPicture(pictureCard, item.id));
-                    
                     picturesContainer.appendChild(pictureCard);
                 });
                 

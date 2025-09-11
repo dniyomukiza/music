@@ -525,10 +525,25 @@ def search_word_api():
 
 @bp1.route('/api/picture-word-game')
 def get_picture_word_game():
-    """Get words and generate images for picture-word matching game."""
+    """Get words and generate images for picture-word matching game using Gemini API."""
     try:
-        from .models import WordsData
+        from .models import WordsData, db
         import random
+        import google.generativeai as genai
+        import base64
+        import io
+        from PIL import Image
+        import os
+        
+        # Configure Gemini API
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        if not google_api_key:
+            return jsonify({
+                'success': False,
+                'message': 'Google API key not configured'
+            }), 500
+            
+        genai.configure(api_key=google_api_key)
         
         # Get total count first
         total_count = WordsData.query.count()
@@ -539,46 +554,126 @@ def get_picture_word_game():
                 'message': 'Not enough words in dictionary for the game. Need at least 4 words.'
             }), 400
         
-        # Get 4 random words with fallback mechanism
-        try:
-            # Try the optimized approach first
-            offset = random.randint(0, max(0, total_count - 4))
-            selected_words = WordsData.query.order_by(WordsData.id).offset(offset).limit(4).all()
-            
-            # If we didn't get enough words, get more
-            if len(selected_words) < 4:
-                additional_needed = 4 - len(selected_words)
-                additional_words = WordsData.query.filter(
-                    ~WordsData.id.in_([w.id for w in selected_words])
-                ).limit(additional_needed).all()
-                selected_words.extend(additional_words)
-        except Exception as e:
-            print(f"Picture game query failed: {e}, using fallback")
-            # Fallback: get first 4 words (simple and reliable)
-            selected_words = WordsData.query.limit(4).all()
+        # Try to get 4 random words efficiently, then filter for suitable ones
+        max_attempts = 10
+        selected_words = []
         
-        # Prepare game data
+        for attempt in range(max_attempts):
+            try:
+                # Get random words
+                offset = random.randint(0, max(0, total_count - 4))
+                candidate_words = WordsData.query.order_by(WordsData.id).offset(offset).limit(8).all()  # Get more to have better selection
+                
+                # Filter for suitable words (nouns with English meaning)
+                for word in candidate_words:
+                    # Check if it's a noun
+                    is_noun = word.icyiciro_pos and 'noun' in word.icyiciro_pos
+                    if not is_noun:
+                        continue
+                        
+                    # Check if it has English meaning
+                    meaning = "No meaning available"
+                    if word.igisobanuro_meaning and len(word.igisobanuro_meaning) > 0:
+                        last_meaning_array = word.igisobanuro_meaning[-1]
+                        if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                            meaning = last_meaning_array[-1]  # English is usually last
+                        elif isinstance(last_meaning_array, str):
+                            meaning = last_meaning_array
+                    
+                    if meaning != "No meaning available":
+                        selected_words.append(word)
+                        if len(selected_words) >= 4:
+                            break
+                
+                if len(selected_words) >= 4:
+                    break
+                    
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                continue
+        
+        if len(selected_words) < 4:
+            return jsonify({
+                'success': False,
+                'message': f'Not enough suitable words for the picture game. Found {len(selected_words)} nouns with English meanings, need at least 4.'
+            }), 400
+        
+        # Take only the first 4 selected words
+        selected_words = selected_words[:4]
+        
+        # Prepare game data - all selected words are guaranteed to be nouns with English meaning
         game_data = []
         for word in selected_words:
-            # Extract English meaning (usually the last item in the last array)
-            if word.igisobanuro_meaning and len(word.igisobanuro_meaning) > 0:
-                # Get the last meaning array and extract the English translation (last item)
-                last_meaning_array = word.igisobanuro_meaning[-1]
-                if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
-                    meaning = last_meaning_array[-1]  # English is usually last
-                elif isinstance(last_meaning_array, str):
-                    meaning = last_meaning_array
-                else:
-                    meaning = "No meaning available"
+            # Extract English meaning (already verified to exist)
+            last_meaning_array = word.igisobanuro_meaning[-1]
+            if isinstance(last_meaning_array, list) and len(last_meaning_array) > 0:
+                meaning = last_meaning_array[-1]  # English is usually last
             else:
-                meaning = "No meaning available"
+                meaning = last_meaning_array  # Direct string
             
-            # Create text-based placeholder (no external API calls)
-            image_data = {
-                'type': 'text_placeholder',
-                'description': meaning,
-                'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
-            }
+            # Generate image using Gemini API (all words are nouns with meaning)
+            try:
+                model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
+                
+                # Create a detailed prompt for image generation
+                prompt = f"Generate a simple, clear, colorful illustration of: {meaning}. The image should be suitable for a language learning game, showing the object clearly without text or labels. Make it educational and child-friendly."
+                
+                response = model.generate_content(prompt)
+                
+                # Extract image data from response
+                if response and hasattr(response, 'candidates') and response.candidates:
+                    candidate = response.candidates[0]
+                    if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'inline_data') and part.inline_data:
+                                # Convert base64 image data to data URL
+                                image_base64 = part.inline_data.data
+                                image_data = {
+                                    'type': 'generated_image',
+                                    'data_url': f"data:image/png;base64,{image_base64}",
+                                    'description': meaning,
+                                    'is_noun': True,
+                                    'icon': '🖼️'
+                                }
+                                break
+                        else:
+                            # No image data found, use enhanced placeholder
+                            image_data = {
+                                'type': 'enhanced_placeholder',
+                                'description': meaning,
+                                'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
+                                'is_noun': True,
+                                'icon': '🖼️'
+                            }
+                    else:
+                        # No valid response structure, use enhanced placeholder
+                        image_data = {
+                            'type': 'enhanced_placeholder',
+                            'description': meaning,
+                            'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
+                            'is_noun': True,
+                            'icon': '🖼️'
+                        }
+                else:
+                    # No response, use enhanced placeholder
+                    image_data = {
+                        'type': 'enhanced_placeholder',
+                        'description': meaning,
+                        'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
+                        'is_noun': True,
+                        'icon': '🖼️'
+                    }
+                
+            except Exception as e:
+                print(f"Error generating image for {meaning}: {e}")
+                # Fallback to enhanced text placeholder
+                image_data = {
+                    'type': 'enhanced_placeholder',
+                    'description': meaning,
+                    'color': random.choice(['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']),
+                    'is_noun': True,
+                    'icon': '📝'
+                }
             
             game_data.append({
                 'id': word.id,
