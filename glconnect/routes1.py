@@ -9,8 +9,11 @@ from flask import render_template, request, flash,redirect,url_for,current_app,B
 from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager,login_required,current_user
 
-with open('/usr/src/appdir/config/glconfig.json') as json_file:
-    config = json.load(json_file)
+# Load configuration from environment variables
+config = {
+    "SENDER_MAIL": os.getenv("SENDER_MAIL"),
+    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD")
+}
 bp1 = Blueprint('routes1', __name__)
 API_URL = "https://www.glc.cool/word/"
 login_manager = LoginManager()
@@ -76,9 +79,7 @@ def register():
     return render_template('register.html', title='Register', form=form)
 
 def send_confirmation_email(to_email, confirm_url):
-    with open('/usr/src/appdir/config/glconfig.json') as json_file:
-        config = json.load(json_file)
-    sender = config.get("SENDER_MAIL")
+    sender = os.getenv("SENDER_MAIL")
     receiver=to_email
     api_key = config.get("MAIL_TRAP")
     try:
@@ -715,9 +716,7 @@ def reset_password_request():
     return render_template('passreq.html', title='Reset Password', form=form)
   
 def send_reset_email(to_email, reset_url):
-    with open('/usr/src/appdir/config/glconfig.json') as json_file:
-        config = json.load(json_file)
-    sender = config.get("SENDER_MAIL")
+    sender = os.getenv("SENDER_MAIL")
     receiver=to_email
     api_key = config.get("MAIL_TRAP")
     try:

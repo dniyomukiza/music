@@ -14,37 +14,16 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Load configuration - prioritize glconfig.json for remote Linux compatibility
-config = {}
-
-# Try glconfig.json first (for remote Linux)
-try:
-    with open('/usr/src/appdir/config/glconfig.json') as json_file:
-        config = json.load(json_file)
-    print("DEBUG: Loaded configuration from glconfig.json")
-except FileNotFoundError:
-    print("DEBUG: glconfig.json not found, trying environment variables")
-    # Fall back to environment variables if glconfig.json doesn't exist
-    config = {
-        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
-        "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
-        "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
-        "DB_URL": os.getenv("DB_URL"),
-        "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
-        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
-    }
-    print("DEBUG: Using environment variables for configuration")
-except Exception as e:
-    print(f"DEBUG: Error loading glconfig.json: {e}, using environment variables")
-    config = {
-        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
-        "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
-        "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
-        "DB_URL": os.getenv("DB_URL"),
-        "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
-        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
-    }
-    print("DEBUG: Using environment variables for configuration")
+# Load configuration from environment variables (more reliable than file mounting)
+config = {
+    "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+    "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
+    "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
+    "DB_URL": os.getenv("DB_URL"),
+    "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
+    "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
+}
+print("DEBUG: Using environment variables for configuration")
 
 # Debug: Check if Google credentials are loaded
 # Get Google API key from glconfig.json

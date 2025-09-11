@@ -9,8 +9,11 @@ from flask import Blueprint,render_template,request,flash,redirect,url_for,send_
 from flask_login import current_user, login_required, logout_user
 from flask_ckeditor import CKEditor,upload_success, upload_fail
 load_dotenv()
-with open('/usr/src/appdir/config/glconfig.json') as json_file:
-    config = json.load(json_file)
+# Load configuration from environment variables
+config = {
+    "SENDER_MAIL": os.getenv("SENDER_MAIL"),
+    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD")
+}
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
@@ -51,9 +54,7 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
-    with open('/usr/src/appdir/config/glconfig.json') as json_file:
-        config = json.load(json_file)
-    sender = config.get("SENDER_MAIL")
+    sender = os.getenv("SENDER_MAIL")
     receiver=config.get("RECEIVER_MAIL")
     api_key = config.get("MAIL_TRAP")
     if form.validate_on_submit():

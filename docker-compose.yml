@@ -8,7 +8,6 @@ services:
       - icecast2
     volumes:
       - .:/usr/src/appdir
-      - ./glconfig.json:/usr/src/appdir/config/glconfig.json:ro 
     networks:
       - app_network
     command: >
@@ -28,12 +27,14 @@ services:
      - PYTHONUNBUFFERED=1
       - FLASK_APP=run.py
       - FLASK_ENV=development
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - OPENAI_AI_KEY=${OPENAI_AI_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-tts.json}
-      - DB_URL=${DB_URL}
-      - RECAPTCHAPUB=${RECAPTCHAPUB}
-      - RECAPTCHAPRIV=${RECAPTCHAPRIV}
+      - GOOGLE_API_KEY=AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+      - OPENAI_AI_KEY=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
+      - GOOGLE_APPLICATION_CREDENTIALS=tts.json
+      - DB_URL=postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr
+      - SENDER_MAIL=info@ndotonic.com
+      - SENDER_PASSWORD=uivaqvvdohjovkhi
+      - RECAPTCHAPUB=6LfdZjgrAAAAADyijAp1kSulPN7ZFAWk01fJzaPz
+      - RECAPTCHAPRIV=6LfdZjgrAAAAAI2jKpHvpDeXAKK0IuhMMXjul-RK
 
   nginx:
       image: custom-nginx

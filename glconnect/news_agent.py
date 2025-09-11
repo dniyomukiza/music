@@ -17,19 +17,15 @@ from summa import summarizer
 
 load_dotenv()
 
-# Load Google API key from glconfig.json
-with open('/usr/src/appdir/config/glconfig.json') as json_file:
-    config = json.load(json_file)
-
-# Get Google API key from glconfig.json
-google_api_key = config.get("GOOGLE_API_KEY")
+# Load Google API key from environment variables
+google_api_key = os.getenv("GOOGLE_API_KEY")
 if not google_api_key:
     print("Error: GOOGLE_API_KEY not found in glconfig.json")
     exit(1)
 
-# Get TTS credentials path from glconfig.json
-tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
-print(f"DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: {config.get('GOOGLE_APPLICATION_CREDENTIALS')}")
+# Get TTS credentials path from environment variables
+tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+print(f"DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: {tts_credentials_path}")
 print(f"DEBUG: Using TTS credentials path: {tts_credentials_path}")
 
 # Configure Google AI SDK
