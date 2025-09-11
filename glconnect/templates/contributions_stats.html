@@ -181,6 +181,46 @@
 .badge {
     font-size: 0.75em;
 }
+
+/* Button Group Styling */
+.btn-group {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+.btn-group .btn {
+    flex: 1;
+    min-width: 150px;
+    margin: 0 !important;
+    border-radius: 10px !important;
+}
+
+/* Override Bootstrap's default btn-group behavior */
+.btn-group > .btn:not(:last-child):not(.dropdown-toggle) {
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+.btn-group > .btn:not(:first-child) {
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        min-width: auto;
+    }
+}
 </style>
 {% endblock %}
 

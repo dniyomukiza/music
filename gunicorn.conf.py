@@ -7,17 +7,17 @@ bind = "0.0.0.0:5000"
 backlog = 2048
 
 # Worker processes
-workers = 2  # Reduced from default to save memory
+workers = 1  # Further reduced to single worker for memory-constrained environments
 worker_class = "sync"
-worker_connections = 1000
-timeout = 60  # Increased timeout to prevent worker kills
+worker_connections = 500  # Reduced connections per worker
+timeout = 120  # Increased timeout for memory-intensive operations
 keepalive = 2
 
 # Memory management
-max_requests = 500  # Restart workers more frequently to prevent memory leaks
-max_requests_jitter = 50  # Add randomness to prevent all workers restarting at once
-preload_app = True  # Load application before forking workers
-worker_memory_limit = 200  # Kill workers that exceed 200MB memory usage
+max_requests = 100  # Restart workers more frequently to prevent memory leaks
+max_requests_jitter = 20  # Add randomness to prevent all workers restarting at once
+preload_app = False  # Disable preload to reduce initial memory usage
+worker_memory_limit = 150  # Reduced memory limit for container environments
 
 # Logging
 accesslog = "-"
@@ -38,9 +38,28 @@ worker_tmp_dir = "/dev/shm"  # Use shared memory for temporary files
 
 # Environment variables for memory optimization
 raw_env = [
-    'MALLOC_ARENA_MAX=2',
-    'MALLOC_MMAP_THRESHOLD_=131072',
-    'MALLOC_TRIM_THRESHOLD_=131072',
-    'MALLOC_TOP_PAD_=131072',
-    'MALLOC_MMAP_MAX_=65536',
+    'MALLOC_ARENA_MAX=1',  # Reduce memory fragmentation
+    'MALLOC_MMAP_THRESHOLD_=65536',  # Smaller threshold
+    'MALLOC_TRIM_THRESHOLD_=65536',  # More aggressive trimming
+    'MALLOC_TOP_PAD_=65536',  # Reduced padding
+    'MALLOC_MMAP_MAX_=32768',  # Fewer memory mappings
+    'PYTHONHASHSEED=0',  # Consistent hashing
+    'PYTHONDONTWRITEBYTECODE=1',  # Don't write .pyc files
+    'PYTHONUNBUFFERED=1',  # Unbuffered output
 ]
+
+# Additional memory optimizations
+def on_starting(server):
+    """Called just before the master process is initialized."""
+    import gc
+    gc.set_threshold(100, 10, 10)  # More aggressive garbage collection
+
+def worker_int(worker):
+    """Called just after a worker has been forked."""
+    import gc
+    gc.set_threshold(50, 5, 5)  # Even more aggressive GC in workers
+
+def max_requests_jitter_handler(worker):
+    """Called when max_requests is reached."""
+    import gc
+    gc.collect()  # Force garbage collection before restart

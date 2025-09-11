@@ -788,7 +788,7 @@
         <div class="main-card">
             <div class="card-header">
                 <h2><i class="fas fa-microphone"></i> Create Your News Broadcast</h2>
-                <p>Enter topics of your interestand let our AI create a professional news bulletin</p>
+                <p>Enter topics of your interest and let our AI create a professional news bulletin</p>
             </div>
             
             <div class="card-body">
@@ -825,7 +825,7 @@
                 </div>
 
                 <!-- Flask Form for server-side validation -->
-                <form method="POST" id="flaskForm">
+                <form method="POST" id="flaskForm" action="/routes2/news">
                     {{ form.hidden_tag() }}
                     <div class="input-section">
                         <label for="keyword" class="input-label">
@@ -1050,6 +1050,23 @@
                 e.preventDefault();
                 addTopic();
             }
+        });
+
+        // Handle Enter key for Flask form
+        document.getElementById('keyword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                console.log('Enter key pressed, submitting Flask form...');
+                document.getElementById('flaskForm').submit();
+            }
+        });
+
+        // Also handle form submission for debugging
+        document.getElementById('flaskForm').addEventListener('submit', function(e) {
+            console.log('Flask form submitted');
+            console.log('Form method:', this.method);
+            console.log('Form action:', this.action);
+            console.log('Keyword value:', document.getElementById('keyword').value);
         });
 
         async function validateTopicRealTime(topic) {

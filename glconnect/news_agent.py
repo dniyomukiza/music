@@ -78,7 +78,7 @@ def summarize_text(text: str) -> dict:
 # --- Define the Timezone Tool (as a callable function) ---
 def get_timezone_info() -> dict:
     """
-    Gets the current time in Los Angeles, New York City, Brussels, and Central Time.
+    Gets the current time in Pacific time, Eastern time, and Central Time.
     Returns:
         A dictionary with 'timezone_info': A formatted string with current times in natural news anchor style.
     """
@@ -89,7 +89,6 @@ def get_timezone_info() -> dict:
         # Define timezones
         la_tz = pytz.timezone('America/Los_Angeles')
         ny_tz = pytz.timezone('America/New_York')
-        brussels_tz = pytz.timezone('Europe/Brussels')
         central_tz = pytz.timezone('America/Chicago')
         
         # Get current UTC time - ensure we get the current time
@@ -99,12 +98,10 @@ def get_timezone_info() -> dict:
         # Convert to each timezone
         la_time = utc_now.astimezone(la_tz)
         ny_time = utc_now.astimezone(ny_tz)
-        brussels_time = utc_now.astimezone(brussels_tz)
         central_time = utc_now.astimezone(central_tz)
         
-        print(f"DEBUG: LA time: {la_time.strftime('%H:%M')} -> {la_time.strftime('%I:%M %p')}")
-        print(f"DEBUG: NY time: {ny_time.strftime('%H:%M')} -> {ny_time.strftime('%I:%M %p')}")
-        print(f"DEBUG: Brussels time: {brussels_time.strftime('%H:%M')} -> {brussels_time.strftime('%I:%M %p')}")
+        print(f"DEBUG: Pacific time: {la_time.strftime('%H:%M')} -> {la_time.strftime('%I:%M %p')}")
+        print(f"DEBUG: Eastern time: {ny_time.strftime('%H:%M')} -> {ny_time.strftime('%I:%M %p')}")
         print(f"DEBUG: Central time: {central_time.strftime('%H:%M')} -> {central_time.strftime('%I:%M %p')}")
         
         # Format times in natural news anchor style
@@ -132,12 +129,11 @@ def get_timezone_info() -> dict:
             # Always use the format "X:XX AM/PM" for consistency
             return f"{hour_12}:{minute_str} {period}"
         
-        la_formatted = format_time_for_anchor(la_time)
-        ny_formatted = format_time_for_anchor(ny_time)
-        brussels_formatted = format_time_for_anchor(brussels_time)
+        pacific_formatted = format_time_for_anchor(la_time)
+        eastern_formatted = format_time_for_anchor(ny_time)
         central_formatted = format_time_for_anchor(central_time)
         
-        timezone_info = f"It's {la_formatted} in Los Angeles, it's {ny_formatted} in New York City, it's {brussels_formatted} in Brussels and it's {central_formatted} central time"
+        timezone_info = f"It's {pacific_formatted} Pacific time, {eastern_formatted} Eastern time, and {central_formatted} Central time"
         
         print(f"DEBUG: Final timezone info: {timezone_info}")
         print("=" * 50)
@@ -589,23 +585,23 @@ def create_anchor_agent(topics: list[str], reporter_scripts: list[str]) -> Agent
             The reporters' scripts are: {reporter_scripts_str}.
 
             CRITICAL: You MUST call the 'get_timezone_info' tool FIRST before creating any script. 
-            This tool will give you the current time in Los Angeles, New York City, Brussels, and Central Time.
+            This tool will give you the current time in Pacific time, Eastern time, and Central Time.
             Use the EXACT time information returned by this tool - do not make up or guess times.
 
             Your output MUST be a JSON object with three keys: 'intro', 'transitions', and 'outro'.
-            - 'intro': Start with the EXACT timezone information from the get_timezone_info tool, then introduce yourself as the anchor, and briefly introduce the main topics. Format: "It's [X:XX AM/PM] in Los Angeles, [X:XX AM/PM] in New York City, [X:XX AM/PM] in Brussels and [X:XX AM/PM] central time, I am your anchor today, in this edition we are covering..."
+            - 'intro': Start with the EXACT timezone information from the get_timezone_info tool, then introduce yourself as the anchor, and briefly introduce the main topics. Format: "It's [X:XX AM/PM] Pacific time, [X:XX AM/PM] Eastern time, and [X:XX AM/PM] Central time, I am your anchor today, in this edition we are covering..."
             - 'transitions': A list of strings, where each string is an introduction for a reporter. For example: ["First up, we have Ernest with the latest on sports.", "Next, Isabella brings us updates on finance."]
             - 'outro': A brief summary of the news covered, thanking the listeners. End with "Thanks for listening to GLC News."
 
             Example JSON output (use the ACTUAL current time from get_timezone_info tool):
             ```json
             {{
-                "intro": "It's 6:20 PM in Los Angeles, 9:20 PM in New York City, 3:20 AM in Brussels and 8:20 PM central time, I am your anchor today and welcome to GLC News , in this edition we are covering the latest in sports and finance.",
+                "intro": "It's 6:20 PM Pacific time, 9:20 PM Eastern time, and 8:20 PM Central time, I am your anchor today and welcome to GLC News, in this edition we are covering the latest in sports and finance.",
                 "transitions": [
                     "First up, we have Ernest with the latest on sports.",
                     "Next, Isabella brings us updates on finance."
                 ],
-                "outro": "That wraps up today’s edition. Thank you for listening to GLC News. Stay tuned for more updatess. See you next time"
+                "outro": "That wraps up today's edition. Thank you for listening to GLC News. Stay tuned for more updates. See you next time"
             }}
             ```
 
@@ -736,9 +732,13 @@ async def run_agent(agent, input_text):
     return final_response
 
 def generate_broadcast(topics: list[str]) -> dict:
+    import gc
     if not topics:
         print("No topics entered. Exiting.")
         return
+    
+    # Force garbage collection at start
+    gc.collect()
 
     # Categorization Agent
     categorization_agent = Agent(
@@ -1081,6 +1081,10 @@ def generate_broadcast(topics: list[str]) -> dict:
     )
     print("DEBUG: Executing final output phase...")
     final_output = asyncio.run(run_agent(final_output_phase, ""))
+    
+    # Force garbage collection to free memory
+    gc.collect()
+    
     return final_output
 
 

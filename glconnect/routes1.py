@@ -593,37 +593,56 @@ def search_word_api():
 
 @bp1.route('/api/picture-word-game')
 def get_picture_word_game():
-    """Get words for picture-word matching game (simplified version without image generation)."""
+    """Get words for picture-word matching game with Gemini-generated images."""
     import gc  # For garbage collection
     import time
+    import os
+    import base64
     
     try:
         from .models import WordsData, db
         import random
+        from google import genai
+        from google.genai import types
+        from PIL import Image
+        from io import BytesIO
+        
+        # Initialize Gemini client
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        if not google_api_key:
+            return jsonify({
+                'success': False,
+                'message': 'Google API key not configured'
+            }), 500
+            
+        client = genai.Client(api_key=google_api_key)
         
         # Get total count first
         total_count = WordsData.query.count()
         
-        if total_count < 4:
+        if total_count < 3:
             return jsonify({
                 'success': False,
-                'message': 'Not enough words in dictionary for the game. Need at least 4 words.'
+                'message': 'Not enough words in dictionary for the game. Need at least 3 words.'
             }), 400
         
-        # Get 4 random words (simplified version without image generation)
+        # Get 3 random words (reduced from 4 to save memory)
         try:
             # Get random words with optimized query - only select needed fields
-            offset = random.randint(0, max(0, total_count - 4))
+            offset = random.randint(0, max(0, total_count - 3))
             candidate_words = WordsData.query.with_entities(
                 WordsData.id, 
                 WordsData.word, 
                 WordsData.icyiciro_pos, 
                 WordsData.igisobanuro_meaning
-            ).order_by(WordsData.id).offset(offset).limit(8).all()
+            ).order_by(WordsData.id).offset(offset).limit(6).all()
             
             # Filter for suitable words (nouns with English meaning)
             selected_words = []
             for word in candidate_words:
+                if len(selected_words) >= 3:  # Only need 3 words
+                    break
+                    
                 # Check if it's a noun
                 is_noun = word.icyiciro_pos and 'noun' in word.icyiciro_pos
                 if not is_noun:
@@ -640,22 +659,18 @@ def get_picture_word_game():
                 
                 if meaning != "No meaning available":
                     selected_words.append(word)
-                    if len(selected_words) >= 4:
-                        break
             
-            if len(selected_words) < 4:
+            if len(selected_words) < 3:
                 return jsonify({
                     'success': False,
-                    'message': f'Not enough suitable words for the picture game. Found {len(selected_words)} nouns with English meanings, need at least 4.'
+                    'message': f'Not enough suitable words for the picture game. Found {len(selected_words)} nouns with English meanings, need at least 3.'
                 }), 400
             
-            # Take only the first 4 selected words
-            selected_words = selected_words[:4]
+            # Take only the first 3 selected words
+            selected_words = selected_words[:3]
             
-            # Prepare game data with simple placeholders instead of generated images
+            # Create game data with Gemini-generated images
             game_data = []
-            colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
-            icons = ['🏠', '🌳', '🍎', '🚗', '📚', '🎵', '⚽', '🐕']
             
             for i, word in enumerate(selected_words):
                 # Extract English meaning
@@ -665,28 +680,83 @@ def get_picture_word_game():
                 else:
                     meaning = last_meaning_array  # Direct string
                 
-                # Create simple placeholder image data
-                image_data = {
-                    'type': 'simple_placeholder',
-                    'description': meaning,
-                    'color': colors[i % len(colors)],
-                    'icon': icons[i % len(icons)],
-                    'is_noun': True
-                }
-                
-                game_data.append({
-                    'id': word.id,
-                    'word': word.word,
-                    'meaning': meaning,
-                    'image': image_data,
-                    'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
-                })
+                try:
+                    # Generate image using Gemini
+                    prompt = f"Create a simple, clear picture of {meaning.lower()}. Make it colorful and easy to recognize for a word matching game."
+                    
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash-image-preview",
+                        contents=[prompt],
+                    )
+                    
+                    # Process the generated image
+                    image_data = None
+                    for part in response.candidates[0].content.parts:
+                        if part.inline_data is not None:
+                            # Convert to base64 for web display
+                            image_bytes = part.inline_data.data
+                            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+                            
+                            image_data = {
+                                'type': 'generated_image',
+                                'data_url': f"data:image/png;base64,{image_b64}",
+                                'description': meaning,
+                                'is_noun': True
+                            }
+                            break
+                    
+                    # Fallback to simple placeholder if image generation fails
+                    if not image_data:
+                        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1']
+                        icons = ['🏠', '🌳', '🍎']
+                        image_data = {
+                            'type': 'simple_placeholder',
+                            'description': meaning,
+                            'color': colors[i % len(colors)],
+                            'icon': icons[i % len(icons)],
+                            'is_noun': True
+                        }
+                    
+                    game_data.append({
+                        'id': word.id,
+                        'word': word.word,
+                        'meaning': meaning,
+                        'image': image_data,
+                        'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
+                    })
+                    
+                except Exception as img_error:
+                    print(f"Error generating image for {word.word}: {img_error}")
+                    # Fallback to simple placeholder
+                    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1']
+                    icons = ['🏠', '🌳', '🍎']
+                    image_data = {
+                        'type': 'simple_placeholder',
+                        'description': meaning,
+                        'color': colors[i % len(colors)],
+                        'icon': icons[i % len(icons)],
+                        'is_noun': True
+                    }
+                    
+                    game_data.append({
+                        'id': word.id,
+                        'word': word.word,
+                        'meaning': meaning,
+                        'image': image_data,
+                        'part_of_speech': word.icyiciro_pos[0] if word.icyiciro_pos else None
+                    })
             
             # Shuffle the data to randomize positions
             random.shuffle(game_data)
             
             # Force garbage collection to free memory
             gc.collect()
+            
+            # Clear large variables to free memory
+            if 'selected_words' in locals():
+                del selected_words
+            if 'words_data' in locals():
+                del words_data
             
             return jsonify({
                 'success': True,

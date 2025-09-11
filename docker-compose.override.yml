@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    # Memory optimizations for container environments
+    deploy:
+      resources:
+        limits:
+          memory: 512M  # Increased from default
+        reservations:
+          memory: 256M  # Minimum memory reservation
+    
+    # Environment variables for memory optimization
+    environment:
+      - MALLOC_ARENA_MAX=1
+      - MALLOC_MMAP_THRESHOLD_=65536
+      - MALLOC_TRIM_THRESHOLD_=65536
+      - MALLOC_TOP_PAD_=65536
+      - MALLOC_MMAP_MAX_=32768
+      - PYTHONHASHSEED=0
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - GUNICORN_WORKERS=1
+      - GUNICORN_WORKER_MEMORY_LIMIT=150
+    
+    # Health check to restart if memory usage is too high
+    healthcheck:
+      test: ["CMD", "python", "memory_monitor.py", "10"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Shared memory for temporary files
+    shm_size: 64m

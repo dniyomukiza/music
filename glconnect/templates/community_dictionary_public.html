@@ -272,10 +272,49 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 .table td {
     padding: 1rem;
     vertical-align: middle;
+    color: #333;
+    background-color: white;
 }
 
 .table tbody tr:hover {
     background-color: #f8f9fa;
+}
+
+.table tbody tr:hover td {
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+/* Ensure text visibility in all table cells */
+.table td strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.table td .text-muted {
+    color: #6c757d !important;
+}
+
+.table td .badge {
+    color: white;
+}
+
+/* Fix any potential text overlap issues */
+.table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.table td:nth-child(2) {
+    white-space: normal;
+    max-width: 300px;
+}
+
+.table td:nth-child(3) {
+    white-space: normal;
+    max-width: 400px;
 }
 
 .badge {
@@ -369,6 +408,33 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     opacity: 0.9;
 }
 
+/* Button Group Styling */
+.btn-group {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+.btn-group .btn {
+    flex: 1;
+    min-width: 150px;
+    margin: 0 !important;
+    border-radius: 10px !important;
+}
+
+/* Override Bootstrap's default btn-group behavior */
+.btn-group > .btn:not(:last-child):not(.dropdown-toggle) {
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+.btn-group > .btn:not(:first-child) {
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .community-dictionary-page .container {
@@ -383,6 +449,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     
     .btn-group .btn {
         width: 100%;
+        min-width: auto;
     }
 }
 </style>
