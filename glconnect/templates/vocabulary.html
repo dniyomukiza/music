@@ -217,40 +217,6 @@
                     </div>
                 </div>
                 
-                <!-- Picture-Word Matching Game -->
-                <div class="game-card picture-matching-card">
-                    <div class="game-header">
-                        <div class="game-icon">
-                            <i class="fas fa-images"></i>
-                        </div>
-                        <div class="game-info">
-                            <h3>Picture Matching</h3>
-                            <p>Match Kinyarwanda words with their pictures</p>
-                        </div>
-                    </div>
-                    <div class="game-stats">
-                        <div class="stat">
-                            <i class="fas fa-clock"></i>
-                            <span>45s</span>
-                        </div>
-                        <div class="stat">
-                            <i class="fas fa-image"></i>
-                            <span>4 words</span>
-                        </div>
-                        <div class="stat">
-                            <i class="fas fa-trophy"></i>
-                            <span>+10/-2</span>
-                        </div>
-                    </div>
-                    <div class="game-controls">
-                        <button id="startPictureGame" class="game-play-btn">
-                            <i class="fas fa-play"></i> Start Game
-                        </button>
-                        <button id="resetPictureGame" class="game-reset-btn" style="display: none;">
-                            <i class="fas fa-redo"></i> Reset
-                        </button>
-                    </div>
-                </div>
             </div>
             
             <div id="gameArea" class="game-area" style="display: none;">
@@ -627,8 +593,6 @@
             }
             
             initializeEventListeners() {
-                document.getElementById('startPictureGame').addEventListener('click', () => this.startGame());
-                document.getElementById('resetPictureGame').addEventListener('click', () => this.resetGame());
                 document.getElementById('startPictureGameMain').addEventListener('click', () => this.startGame());
                 document.getElementById('resetPictureGameMain').addEventListener('click', () => this.resetGame());
                 document.getElementById('playPictureAgain').addEventListener('click', () => this.startGame());
@@ -665,8 +629,6 @@
                         this.updateUI();
                         
                         document.getElementById('pictureGameArea').style.display = 'block';
-                        document.getElementById('startPictureGame').disabled = true;
-                        document.getElementById('resetPictureGame').disabled = false;
                         document.getElementById('startPictureGameMain').disabled = true;
                         document.getElementById('resetPictureGameMain').disabled = false;
                     } else {
@@ -845,8 +807,6 @@
                 
                 document.getElementById('pictureGameArea').style.display = 'none';
                 document.getElementById('pictureGameResult').style.display = 'none';
-                document.getElementById('startPictureGame').disabled = false;
-                document.getElementById('resetPictureGame').disabled = true;
                 document.getElementById('startPictureGameMain').disabled = false;
                 document.getElementById('resetPictureGameMain').disabled = true;
                 

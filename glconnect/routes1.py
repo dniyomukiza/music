@@ -217,8 +217,8 @@ def contribute_word():
         from datetime import datetime, timezone
         
         # Get form data
-        word = request.form.get('word', '').strip()
-        meaning = request.form.get('meaning', '').strip()
+        word = request.form.get('kinyarwanda_word', '').strip()
+        meaning = request.form.get('english_meaning', '').strip()
         example_sentence = request.form.get('example_sentence', '').strip()
         part_of_speech = request.form.get('part_of_speech', '').strip()
         phonetics = request.form.get('phonetics', '').strip()
@@ -403,17 +403,32 @@ def get_game_words():
         from .models import WordsData
         import random
         
-        # Get words from original database only
-        all_words = WordsData.query.all()
+        # Get total count first
+        total_count = WordsData.query.count()
         
-        if len(all_words) < 6:
+        if total_count < 6:
             return jsonify({
                 'success': False,
                 'message': 'Not enough words in dictionary for the game. Need at least 6 words.'
             }), 400
         
-        # Select 6 random words
-        selected_words = random.sample(all_words, 6)
+        # Get 6 random words with fallback mechanism
+        try:
+            # Try the optimized approach first
+            offset = random.randint(0, max(0, total_count - 6))
+            selected_words = WordsData.query.order_by(WordsData.id).offset(offset).limit(6).all()
+            
+            # If we didn't get enough words, get more
+            if len(selected_words) < 6:
+                additional_needed = 6 - len(selected_words)
+                additional_words = WordsData.query.filter(
+                    ~WordsData.id.in_([w.id for w in selected_words])
+                ).limit(additional_needed).all()
+                selected_words.extend(additional_words)
+        except Exception as e:
+            print(f"Word game query failed: {e}, using fallback")
+            # Fallback: get first 6 words (simple and reliable)
+            selected_words = WordsData.query.limit(6).all()
         
         # Prepare game data
         game_words = []
@@ -515,17 +530,32 @@ def get_picture_word_game():
         from .models import WordsData
         import random
         
-        # Get words from original database
-        all_words = WordsData.query.all()
+        # Get total count first
+        total_count = WordsData.query.count()
         
-        if len(all_words) < 4:
+        if total_count < 4:
             return jsonify({
                 'success': False,
                 'message': 'Not enough words in dictionary for the game. Need at least 4 words.'
             }), 400
         
-        # Select 4 random words
-        selected_words = random.sample(all_words, 4)
+        # Get 4 random words with fallback mechanism
+        try:
+            # Try the optimized approach first
+            offset = random.randint(0, max(0, total_count - 4))
+            selected_words = WordsData.query.order_by(WordsData.id).offset(offset).limit(4).all()
+            
+            # If we didn't get enough words, get more
+            if len(selected_words) < 4:
+                additional_needed = 4 - len(selected_words)
+                additional_words = WordsData.query.filter(
+                    ~WordsData.id.in_([w.id for w in selected_words])
+                ).limit(additional_needed).all()
+                selected_words.extend(additional_words)
+        except Exception as e:
+            print(f"Picture game query failed: {e}, using fallback")
+            # Fallback: get first 4 words (simple and reliable)
+            selected_words = WordsData.query.limit(4).all()
         
         # Prepare game data
         game_data = []
