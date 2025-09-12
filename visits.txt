@@ -1015,3 +1015,105 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-09-12 19:13:50 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:13:55 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:00 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:04 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:14 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:19 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:24 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:28 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:34 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:14:39 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:15:55 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:17:01 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:17:09 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:17:15 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:17:23 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:17:32 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:17:38 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
