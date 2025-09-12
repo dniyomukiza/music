@@ -1363,3 +1363,63 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-09-12 23:24:02 UTC] HEAD /routes2/news/analytics
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:24:05 UTC] GET /routes2/news/analytics
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:24:08 UTC] HEAD /routes2/analytics
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:26:15 UTC] GET /routes1/community-dictionary
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:26:21 UTC] GET /routes1/community-dictionary
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:27:11 UTC] GET /routes1/community-dictionary
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:27:19 UTC] GET /routes1/community-dictionary
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:27:22 UTC] GET /routes1/community-dictionary
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:28:07 UTC] GET /routes1/community-dictionary
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 23:28:10 UTC] GET /routes1/admin/contributions
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------

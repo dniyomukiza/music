@@ -86,8 +86,8 @@
                         </div>
 
                         <!-- Mobile Card View -->
-                        <div class="d-lg-none mobile-words-container" id="mobileWordsList" style="display: block;">
-                            <div class="alert alert-info d-block d-lg-none" style="margin-bottom: 1rem;">
+                        <div class="mobile-words-container" id="mobileWordsList" style="display: block !important; visibility: visible !important; opacity: 1 !important;">
+                            <div class="alert alert-info" style="margin-bottom: 1rem; display: block !important;">
                                 <i class="fas fa-mobile-alt"></i> Mobile View - {{ words|length if words else 0 }} words available
                             </div>
                             {% for word in words %}
@@ -216,34 +216,71 @@ document.addEventListener('DOMContentLoaded', function() {
     // Force mobile cards to be visible
     const mobileWordsList = document.getElementById('mobileWordsList');
     if (mobileWordsList) {
-        mobileWordsList.style.display = 'block !important';
-        mobileWordsList.style.visibility = 'visible !important';
-        mobileWordsList.style.opacity = '1 !important';
-        mobileWordsList.classList.remove('d-lg-none');
+        // Remove all Bootstrap classes that might hide content
+        mobileWordsList.classList.remove('d-lg-none', 'd-none');
         mobileWordsList.classList.add('d-block');
+        
+        // Force visibility with inline styles
+        mobileWordsList.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important; height: auto !important; overflow: visible !important;';
         
         // Ensure all word cards are visible
         const wordCards = mobileWordsList.querySelectorAll('.word-card');
         wordCards.forEach(card => {
-            card.style.display = 'block !important';
-            card.style.visibility = 'visible !important';
-            card.style.opacity = '1 !important';
             card.classList.remove('d-none');
             card.classList.add('d-block');
+            card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important; margin-bottom: 1rem !important;';
+            
+            // Force card and card-body visibility
+            const cardElement = card.querySelector('.card');
+            if (cardElement) {
+                cardElement.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important;';
+            }
+            
+            const cardBody = card.querySelector('.card-body');
+            if (cardBody) {
+                cardBody.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important;';
+            }
         });
     }
     
     // Force desktop table to be hidden on mobile
     const desktopTable = document.querySelector('.d-none.d-lg-block');
     if (desktopTable && window.innerWidth <= 991) {
-        desktopTable.style.display = 'none !important';
+        desktopTable.style.cssText = 'display: none !important;';
     }
     
     // Debug: Log mobile view status
     console.log('Mobile words list element:', mobileWordsList);
     console.log('Word cards found:', wordCards ? wordCards.length : 0);
     console.log('Window width:', window.innerWidth);
+    console.log('Mobile container computed style:', mobileWordsList ? window.getComputedStyle(mobileWordsList).display : 'not found');
 });
+
+// Function to force mobile content visibility
+function forceMobileVisibility() {
+    const mobileWordsList = document.getElementById('mobileWordsList');
+    if (mobileWordsList && window.innerWidth <= 991) {
+        // Force container visibility
+        mobileWordsList.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; height: auto !important; overflow: visible !important; background: white !important; padding: 10px !important;';
+        
+        // Force all word cards visibility
+        const wordCards = mobileWordsList.querySelectorAll('.word-card');
+        wordCards.forEach(card => {
+            card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; margin-bottom: 15px !important; background: white !important; border: 1px solid #ddd !important; border-radius: 8px !important; padding: 10px !important;';
+            
+            // Force card and card-body visibility
+            const cardElement = card.querySelector('.card');
+            if (cardElement) {
+                cardElement.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: white !important;';
+            }
+            
+            const cardBody = card.querySelector('.card-body');
+            if (cardBody) {
+                cardBody.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: white !important;';
+            }
+        });
+    }
+}
 
 // Additional mobile view fix on window resize
 window.addEventListener('resize', function() {
@@ -252,35 +289,25 @@ window.addEventListener('resize', function() {
     
     if (window.innerWidth <= 991) {
         // Show mobile content
-        if (mobileWordsList) {
-            mobileWordsList.style.display = 'block !important';
-            mobileWordsList.style.visibility = 'visible !important';
-            mobileWordsList.style.opacity = '1 !important';
-            mobileWordsList.classList.remove('d-lg-none');
-            mobileWordsList.classList.add('d-block');
-            
-            const wordCards = mobileWordsList.querySelectorAll('.word-card');
-            wordCards.forEach(card => {
-                card.style.display = 'block !important';
-                card.style.visibility = 'visible !important';
-                card.style.opacity = '1 !important';
-            });
-        }
+        forceMobileVisibility();
         
         // Hide desktop table
         if (desktopTable) {
-            desktopTable.style.display = 'none !important';
+            desktopTable.style.cssText = 'display: none !important;';
         }
     } else {
         // Show desktop content
         if (desktopTable) {
-            desktopTable.style.display = 'block !important';
+            desktopTable.style.cssText = 'display: block !important;';
         }
         if (mobileWordsList) {
-            mobileWordsList.style.display = 'none !important';
+            mobileWordsList.style.cssText = 'display: none !important;';
         }
     }
 });
+
+// Run force visibility every 500ms to ensure content stays visible
+setInterval(forceMobileVisibility, 500);
 </script>
 
 <style>
@@ -397,6 +424,57 @@ window.addEventListener('resize', function() {
     position: relative !important;
     z-index: 10 !important;
     background: transparent !important;
+    height: auto !important;
+    min-height: 100px !important;
+    overflow: visible !important;
+}
+
+/* Override ALL Bootstrap responsive classes that might hide content */
+@media (max-width: 991px) {
+    .d-lg-none {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    .d-none.d-lg-block {
+        display: none !important;
+    }
+    
+    /* Force all mobile content to be visible */
+    .mobile-words-container,
+    .mobile-words-container * {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .mobile-words-container .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 1rem !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    .mobile-words-container .card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    .mobile-words-container .card-body {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
 }
 
 /* Additional mobile fixes */
@@ -407,6 +485,9 @@ window.addEventListener('resize', function() {
         opacity: 1 !important;
         position: relative !important;
         z-index: 10 !important;
+        height: auto !important;
+        min-height: 200px !important;
+        overflow: visible !important;
     }
     
     .mobile-words-container .word-card {
@@ -416,6 +497,28 @@ window.addEventListener('resize', function() {
         margin-bottom: 1rem;
         position: relative !important;
         z-index: 10 !important;
+        height: auto !important;
+        min-height: 50px !important;
+    }
+    
+    .mobile-words-container .card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        height: auto !important;
+        min-height: 50px !important;
+    }
+    
+    .mobile-words-container .card-body {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        height: auto !important;
+        min-height: 30px !important;
     }
     
     /* Override any Bootstrap hiding classes */
@@ -423,10 +526,50 @@ window.addEventListener('resize', function() {
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
+        height: auto !important;
+        overflow: visible !important;
     }
     
     .d-none.d-lg-block {
         display: none !important;
+    }
+    
+    /* Force all text content to be visible */
+    .mobile-words-container * {
+        color: inherit !important;
+        background: transparent !important;
+    }
+}
+
+/* Ultra-aggressive mobile fix for very small screens */
+@media (max-width: 480px) {
+    .mobile-words-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 999 !important;
+        height: auto !important;
+        min-height: 300px !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 10px !important;
+        margin: 10px 0 !important;
+    }
+    
+    .mobile-words-container .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 15px !important;
+        position: relative !important;
+        z-index: 999 !important;
+        height: auto !important;
+        min-height: 80px !important;
+        background: white !important;
+        border: 1px solid #ddd !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
     }
 }
 
