@@ -843,6 +843,62 @@
         .result-section {
             display: none;
             margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .result-content {
+            text-align: center;
+        }
+
+        .result-content h3 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .audio-player-container {
+            margin: 20px 0;
+        }
+
+        .audio-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .audio-actions .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .audio-actions .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .audio-actions .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .generation-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        .generation-info p {
+            margin: 5px 0;
+            color: #495057;
         }
 
         .result-card {
@@ -1074,10 +1130,15 @@
                         </label>
                         <div class="topic-input-container">
                             <div class="input-group">
-                                {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter or tap Generate (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
+                                {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter or tap Add (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
                                 <button type="submit" class="generate-btn-mobile" id="generateBtnMobile">
-                                    <i class="fas fa-play"></i>
-                                    <span class="btn-text">Generate</span>
+                                    <i class="fas fa-plus"></i>
+                                    <span class="btn-text">Add Topic</span>
+                                </button>
+                            </div>
+                            <div style="margin-top: 15px; text-align: center;">
+                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
+                                    <i class="fas fa-play"></i> Generate News
                                 </button>
                             </div>
                             {% if form.keyword.errors %}
@@ -1105,11 +1166,6 @@
                             {% endif %}
                         </div>
                     </div>
-                    
-                    <button type="submit" class="generate-btn">
-                        <i class="fas fa-plus"></i>
-                        Add Topic
-                    </button>
                 </form>
                 
                 <!-- Success/Error Messages -->
@@ -1135,11 +1191,6 @@
                     <div id="addedTopicsContainer" class="added-topics-container">
                         <!-- Topics will be added here -->
                     </div>
-                    <div style="margin-top: 15px;">
-                        <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
-                            <i class="fas fa-play"></i> Generate News Broadcast
-                        </button>
-                    </div>
                 </div>
 
                 <!-- JavaScript Form for advanced features -->
@@ -1159,7 +1210,12 @@
                                 >
                                 <button type="button" class="add-topic-btn" id="addTopicBtn">
                                     <i class="fas fa-plus"></i>
-                                    <span class="btn-text">Add</span>
+                                    <span class="btn-text">Add Topic</span>
+                                </button>
+                            </div>
+                            <div style="margin-top: 15px; text-align: center;">
+                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
+                                    <i class="fas fa-play"></i> Generate News
                                 </button>
                             </div>
                             <div id="validationFeedback" class="validation-feedback"></div>
@@ -1181,11 +1237,6 @@
                             <!-- Approved topics will be added here -->
                         </div>
                     </div>
-                    
-                    <button type="button" class="generate-btn" id="generateBtn" disabled>
-                        <i class="fas fa-play"></i>
-                        <span id="generateBtnText">Generate News Broadcast</span>
-                    </button>
                 </form>
             </div>
         </div>
@@ -1356,10 +1407,10 @@
             }
         });
 
-        // Handle mobile Generate button click
+        // Handle mobile Add button click
         document.getElementById('generateBtnMobile').addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('Mobile Generate button clicked, submitting Flask form...');
+            console.log('Mobile Add button clicked, submitting Flask form...');
             document.getElementById('flaskForm').submit();
         });
 
@@ -1532,8 +1583,7 @@
             const display = document.getElementById('topicsDisplay');
             const approvedSection = document.getElementById('approvedTopicsSection');
             const approvedList = document.getElementById('approvedTopicsList');
-            const generateBtn = document.getElementById('generateBtn');
-            const generateBtnText = document.getElementById('generateBtnText');
+            // Button references removed - using only input group Add button
             
             // Separate valid and invalid topics
             const validTopics = [];
@@ -1589,14 +1639,7 @@
                 }).join('');
             }
             
-            // Update generate button
-            if (approvedTopics.length > 0) {
-                generateBtn.disabled = false;
-                generateBtnText.textContent = `Generate News Broadcast (${approvedTopics.length} topic${approvedTopics.length > 1 ? 's' : ''})`;
-            } else {
-                generateBtn.disabled = true;
-                generateBtnText.textContent = 'Add topics to generate news';
-            }
+            // Button state management removed - using only input group Add button
         }
 
         async function validateAllTopics() {
@@ -1641,7 +1684,7 @@
                 summary.className = 'validation-summary all-valid';
                 summary.innerHTML = `
                     <i class="fas fa-check-circle"></i>
-                    <strong>All topics approved!</strong> Ready to generate news broadcast.
+                    <strong>All topics approved!</strong> Ready to add more topics or generate news.
                 `;
                 summary.style.display = 'block';
             } else if (validTopics.length === 0) {
@@ -1678,13 +1721,9 @@
             
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
-            const generateBtn = document.getElementById('generateBtn');
-            
             // Show loading state
             loading.style.display = 'block';
             result.style.display = 'none';
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             
             // Start progress animation
             startProgressAnimation();
@@ -1713,8 +1752,6 @@
                 showError('Error: ' + error.message);
             } finally {
                 loading.style.display = 'none';
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="fas fa-play"></i> Generate News Broadcast';
                 stopProgressAnimation();
             }
         });
@@ -1874,9 +1911,20 @@
         
         // Function to generate news from added topics
         function generateNewsFromTopics() {
-            if (addedTopics.length === 0) {
-                alert('Please add at least one topic before generating news.');
-                return;
+            let topicsToUse = [];
+            
+            // Check if there are added topics
+            if (addedTopics.length > 0) {
+                topicsToUse = addedTopics;
+            } else {
+                // Check if there's a current input value
+                const currentInput = document.getElementById('keyword');
+                if (currentInput && currentInput.value.trim()) {
+                    topicsToUse = [currentInput.value.trim()];
+                } else {
+                    alert('Please add at least one topic before generating news.');
+                    return;
+                }
             }
             
             // Submit the topics to the broadcast endpoint
@@ -1885,21 +1933,103 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ topics: addedTopics })
+                body: JSON.stringify({ topics: topicsToUse })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
                     alert('Error: ' + data.error);
                 } else {
-                    // Redirect to a status page or show loading
-                    window.location.href = '/routes2/news/status/' + data.task_id;
+                    // Show loading state and poll for completion
+                    showLoadingState();
+                    pollForCompletion(data.task_id);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('Error generating news. Please try again.');
             });
+        }
+        
+        // Function to show loading state
+        function showLoadingState() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'block';
+                startProgressAnimation();
+            }
+        }
+        
+        // Function to poll for completion
+        function pollForCompletion(taskId) {
+            const pollInterval = setInterval(() => {
+                fetch(`/routes2/news/status/${taskId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'completed') {
+                            clearInterval(pollInterval);
+                            stopProgressAnimation();
+                            hideLoadingState();
+                            showResults(data);
+                        } else if (data.status === 'failed') {
+                            clearInterval(pollInterval);
+                            stopProgressAnimation();
+                            hideLoadingState();
+                            alert('News generation failed: ' + (data.error || 'Unknown error'));
+                        }
+                        // If still running, continue polling
+                    })
+                    .catch(error => {
+                        clearInterval(pollInterval);
+                        stopProgressAnimation();
+                        hideLoadingState();
+                        console.error('Error polling status:', error);
+                        alert('Error checking status. Please try again.');
+                    });
+            }, 2000); // Poll every 2 seconds
+        }
+        
+        // Function to hide loading state
+        function hideLoadingState() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        }
+        
+        // Function to show results
+        function showResults(result) {
+            const resultDiv = document.getElementById('result');
+            if (resultDiv) {
+                const audioUrl = result.audio_file || result.audio_url;
+                resultDiv.innerHTML = `
+                    <div class="result-content">
+                        <h3><i class="fas fa-check-circle"></i> News Generation Complete!</h3>
+                        <p>Your professional news broadcast has been generated successfully.</p>
+                        <div class="audio-player-container">
+                            ${audioUrl ? `
+                                <audio controls style="width: 100%; margin: 20px 0;">
+                                    <source src="${audioUrl}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                                <div class="audio-actions">
+                                    <a href="${audioUrl}" download class="btn btn-primary">
+                                        <i class="fas fa-download"></i> Download Audio
+                                    </a>
+                                    <a href="/routes2/analytics" class="btn btn-secondary">
+                                        <i class="fas fa-chart-bar"></i> View Dashboard
+                                    </a>
+                                </div>
+                            ` : '<p>Audio file is being processed...</p>'}
+                        </div>
+                        <div class="generation-info">
+                            <p><strong>Topics:</strong> ${result.topics ? result.topics.join(', ') : 'N/A'}</p>
+                            <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                        </div>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+            }
         }
         
         // Clear input field after successful validation

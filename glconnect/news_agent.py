@@ -165,12 +165,12 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     # Load credentials from file and pass to client
     from google.oauth2 import service_account
     
-    # Get TTS credentials path from glconfig.json
-    tts_credentials_path = config.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+    # Get TTS credentials path from environment variables
+    tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
     print(f"DEBUG: Loading TTS credentials from: {tts_credentials_path}")
     print(f"DEBUG: Credentials file exists: {os.path.exists(tts_credentials_path)}")
     print(f"DEBUG: Current working directory: {os.getcwd()}")
-    print(f"DEBUG: Environment: {config.get('FLASK_ENV', 'production')}")
+    print(f"DEBUG: Environment: {os.getenv('FLASK_ENV', 'production')}")
     
     # Check if credentials file exists, if not try default path
     if not os.path.exists(tts_credentials_path):

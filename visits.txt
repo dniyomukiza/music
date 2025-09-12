@@ -1117,3 +1117,237 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-09-12 19:37:08 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:37:14 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:37:26 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:37:31 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:37:36 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:37:42 UTC] POST /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:25 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:29 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:33 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:38 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:41 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:44 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:48 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:39:51 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:48:34 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:48:38 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:48:42 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:48:45 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:48:50 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:49:13 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:49:18 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:49:21 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:52:22 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:52:26 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:52:29 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:52:33 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:54:05 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:54:10 UTC] GET /routes2/news/status/20cf37c2-1cc9-423e-9d43-5fd93b53f48e
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:54:19 UTC] GET /routes2/news/status/20cf37c2-1cc9-423e-9d43-5fd93b53f48e
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:54:52 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:54:56 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:55:01 UTC] GET /routes2/news/status/2ff9147e-a1d3-46b6-b575-a9e2a3e7b4b4
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:55:16 UTC] GET /routes2/news/status/2ff9147e-a1d3-46b6-b575-a9e2a3e7b4b4
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:55:28 UTC] GET /routes2/news/status/2ff9147e-a1d3-46b6-b575-a9e2a3e7b4b4
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:58:05 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:58:10 UTC] GET /routes2/news/status/1b5272f5-f451-42f4-b2f6-eff949e66b42
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:58:29 UTC] GET /routes2/news/status/1b5272f5-f451-42f4-b2f6-eff949e66b42
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:58:48 UTC] GET /routes2/news/status/1b5272f5-f451-42f4-b2f6-eff949e66b42
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-12 19:58:52 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
