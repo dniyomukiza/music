@@ -617,7 +617,7 @@
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     
-                    const responseText = await response.text();
+                    let responseText = await response.text();
                     console.log('Picture game response length:', responseText.length);
                     
                     const data = JSON.parse(responseText);
@@ -709,6 +709,18 @@
                         const pictureImg = document.createElement('img');
                         pictureImg.className = 'picture-generated';
                         pictureImg.src = item.image.data_url;
+                        pictureImg.alt = item.image.description;
+                        pictureImg.style.width = '100%';
+                        pictureImg.style.height = '100%';
+                        pictureImg.style.objectFit = 'cover';
+                        pictureImg.style.borderRadius = '8px';
+                        
+                        pictureCard.appendChild(pictureImg);
+                    } else if (item.image.type === 'stored_image' && item.image.image_url) {
+                        // Use stored image from local files
+                        const pictureImg = document.createElement('img');
+                        pictureImg.className = 'picture-generated';
+                        pictureImg.src = item.image.image_url;
                         pictureImg.alt = item.image.description;
                         pictureImg.style.width = '100%';
                         pictureImg.style.height = '100%';
@@ -854,7 +866,7 @@
                 this.updateUI();
                 
                 // Check if game is complete
-                if (this.matches === this.gameData.length) {
+                if (this.gameData && this.matches === this.gameData.length) {
                     this.endGame();
                 }
             }
@@ -902,9 +914,10 @@
                 
                 // Show result message
                 let message = '';
-                if (this.matches === this.gameData.length) {
+                const totalPictures = this.gameData ? this.gameData.length : 0;
+                if (this.matches === totalPictures) {
                     message = 'Perfect! You matched all the pictures!';
-                } else if (this.matches >= this.gameData.length * 0.7) {
+                } else if (this.matches >= totalPictures * 0.7) {
                     message = 'Great job! You matched most of the pictures!';
                 } else {
                     message = 'Good try! Keep practicing to improve!';

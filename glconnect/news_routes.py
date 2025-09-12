@@ -497,7 +497,7 @@ class NewsTopicValidationAgent:
                 print(f"✅ NewsTopicValidationAgent: '{topic}' is VALID")
                 return True, ""
             elif result == "NO":
-                error_msg = f"'{topic}' is not a valid news topic. Please enter topics like politics, economy, sports, technology, health, world affairs, etc."
+                error_msg = f"This does not seem to be a valid topic"
                 print(f"❌ NewsTopicValidationAgent: '{topic}' is INVALID")
                 return False, error_msg
             else:

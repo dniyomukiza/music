@@ -599,15 +599,43 @@ def get_picture_word_game():
         import random
         from datetime import datetime, timezone
         
-        # First, try to get pre-generated picture game items
-        # Get a larger pool for more variety
-        available_items = PictureGameItem.query.filter(
+        # Get all available picture game items for maximum variety
+        all_available_items = PictureGameItem.query.filter(
             PictureGameItem.is_active == True
-        ).order_by(PictureGameItem.used_count.asc(), PictureGameItem.last_used.asc()).limit(20).all()
+        ).all()
         
-        if len(available_items) >= 3:
-            # Use pre-generated items
-            selected_items = random.sample(available_items, 3)
+        if len(all_available_items) >= 3:
+            # Smart selection strategy for variety:
+            # 1. Get items that haven't been used recently (last 5 games)
+            # 2. Mix with some less-used items
+            # 3. Always include some variety
+            
+            # Sort by usage: least used first, then by last used
+            sorted_items = sorted(all_available_items, 
+                                key=lambda x: (x.used_count, x.last_used or datetime.min.replace(tzinfo=timezone.utc)))
+            
+            # Create a weighted selection pool
+            # 60% from least used items, 40% from random selection
+            pool_size = min(15, len(sorted_items))  # Use up to 15 items for variety
+            
+            # Get least used items (60% of pool)
+            least_used_count = int(pool_size * 0.6)
+            least_used_items = sorted_items[:least_used_count]
+            
+            # Get random items from the rest (40% of pool)
+            remaining_items = sorted_items[least_used_count:]
+            random_count = pool_size - least_used_count
+            random_items = random.sample(remaining_items, min(random_count, len(remaining_items))) if remaining_items else []
+            
+            # Combine both pools
+            selection_pool = least_used_items + random_items
+            
+            # Randomly select 3 from the combined pool
+            selected_items = random.sample(selection_pool, 3)
+            
+            # Log selection for debugging
+            selected_words = [item.kinyarwanda_word for item in selected_items]
+            print(f"🎮 Picture game selection: {selected_words} (from {len(all_available_items)} available)")
             
             # Update usage tracking
             for item in selected_items:
@@ -646,7 +674,7 @@ def get_picture_word_game():
             return jsonify({
                 'success': False,
                 'message': 'Not enough pre-generated pictures available. Please run the daily generation script first.',
-                'available_count': len(available_items),
+                'available_count': len(all_available_items),
                 'needed_count': 3
             }), 400
         

@@ -79,7 +79,7 @@
 }
 
 .submit-btn {
-    background: linear-gradient(145deg, #8e44ad, #9b59b6);
+    background: linear-gradient(145deg, #ff8c00, #ffa500);
     color: white;
     border: none;
     padding: 14px 28px;
@@ -92,9 +92,9 @@
 }
 
 .submit-btn:hover {
-    background: linear-gradient(145deg, #7d3c98, #8e44ad);
+    background: linear-gradient(145deg, #e67e00, #ff8c00);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
 }
 
 .contribution-message {
@@ -126,10 +126,10 @@
 .game-section {
     margin-top: 40px;
     padding: 30px;
-    background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 16px;
     color: white;
-    box-shadow: 0 8px 32px rgba(142, 68, 173, 0.3);
+    box-shadow: 0 8px 32px rgba(44, 62, 80, 0.3);
 }
 
 .game-section h3 {
@@ -347,7 +347,7 @@
 }
 
 .play-again-btn {
-    background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     color: white;
     border: none;
     padding: 15px 30px;
@@ -360,7 +360,7 @@
 
 .play-again-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(142, 68, 173, 0.4);
+    box-shadow: 0 8px 25px rgba(255, 140, 0, 0.4);
 }
 
 /* Responsive design for mobile */
@@ -503,14 +503,14 @@
 /* Language Page Redesign */
 .language-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     padding: 0;
     margin: 0;
 }
 
 /* Hero Section */
 .hero-section {
-    background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     color: white;
     padding: 4rem 2rem;
     position: relative;
@@ -605,27 +605,21 @@
 }
 
 .floating-word:nth-child(1) {
-    top: 20%;
-    left: 10%;
+    top: 15%;
+    left: 15%;
     animation-delay: 0s;
 }
 
 .floating-word:nth-child(2) {
-    top: 60%;
-    right: 20%;
-    animation-delay: 1.5s;
+    top: 50%;
+    right: 15%;
+    animation-delay: 2s;
 }
 
 .floating-word:nth-child(3) {
-    top: 40%;
-    left: 50%;
-    animation-delay: 3s;
-}
-
-.floating-word:nth-child(4) {
-    top: 80%;
-    left: 30%;
-    animation-delay: 4.5s;
+    top: 75%;
+    left: 40%;
+    animation-delay: 4s;
 }
 
 @keyframes float {
@@ -662,7 +656,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #8e44ad, #9b59b6);
+    background: linear-gradient(90deg, #ff8c00, #ffa500);
 }
 
 .action-card:hover {
@@ -682,7 +676,7 @@
 }
 
 .search-card .card-icon {
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     color: white;
 }
 
@@ -725,8 +719,8 @@
 
 .search-form input:focus {
     outline: none;
-    border-color: #8e44ad;
-    box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1);
+    border-color: #ff8c00;
+    box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
 }
 
 .search-form button {
@@ -784,7 +778,7 @@
 }
 
 .section-title i {
-    color: #8e44ad;
+    color: #ff8c00;
     margin-right: 0.5rem;
 }
 
@@ -823,11 +817,11 @@
 }
 
 .word-matching-card::before {
-    background: linear-gradient(90deg, #8e44ad, #9b59b6);
+    background: linear-gradient(90deg, #ff8c00, #ffa500);
 }
 
 .picture-matching-card::before {
-    background: linear-gradient(90deg, #f093fb, #f5576c);
+    background: linear-gradient(90deg, #ff8c00, #ffa500);
 }
 
 .game-card:hover {
@@ -853,12 +847,12 @@
 }
 
 .word-matching-card .game-icon {
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     color: white;
 }
 
 .picture-matching-card .game-icon {
-    background: linear-gradient(135deg, #f093fb, #f5576c);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     color: white;
 }
 
@@ -889,7 +883,7 @@
 }
 
 .stat i {
-    color: #8e44ad;
+    color: #ff8c00;
 }
 
 .game-controls {
@@ -914,8 +908,8 @@
 }
 
 .game-reset-btn {
-    background: #e9ecef;
-    color: #666;
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    color: white;
 }
 
 .game-play-btn:hover, .game-reset-btn:hover {
@@ -937,15 +931,15 @@
 }
 
 .btn-secondary {
-    background: #e9ecef !important;
+    background: linear-gradient(135deg, #ff8c00, #ffa500) !important;
     border: none !important;
-    color: #666 !important;
+    color: white !important;
 }
 
 .btn-secondary:hover {
-    background: #dee2e6 !important;
+    background: linear-gradient(135deg, #e67e00, #ff8c00) !important;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
 }
 
 /* Action buttons for word actions */
@@ -1049,7 +1043,7 @@
     font-weight: 800;
     color: #333;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1062,7 +1056,7 @@
 }
 
 .pos-tag {
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 15px;
@@ -1080,8 +1074,8 @@
     height: 40px;
     border: none;
     border-radius: 10px;
-    background: #f8f9fa;
-    color: #8e44ad;
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    color: white;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -1090,10 +1084,10 @@
 }
 
 .action-btn:hover {
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #e67e00, #ff8c00);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(142, 68, 173, 0.3);
+    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
 }
 
 .word-content {
@@ -1118,7 +1112,7 @@
 }
 
 .meaning-section h3 i {
-    color: #8e44ad;
+    color: #ff8c00;
 }
 
 .phonetics-section h3 i {
@@ -1146,11 +1140,11 @@
     padding: 0.75rem;
     background: white;
     border-radius: 10px;
-    border-left: 4px solid #8e44ad;
+    border-left: 4px solid #ff8c00;
 }
 
 .meaning-number {
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     color: white;
     width: 24px;
     height: 24px;
@@ -1214,13 +1208,13 @@
 .contribution-link-card {
     max-width: 800px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     border-radius: 20px;
     padding: 3rem;
     display: flex;
     align-items: center;
     gap: 2rem;
-    box-shadow: 0 20px 40px rgba(142, 68, 173, 0.3);
+    box-shadow: 0 20px 40px rgba(44, 62, 80, 0.3);
     transition: transform 0.3s ease;
 }
 
@@ -1276,7 +1270,7 @@
 .contribution-link-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(142, 68, 173, 0.3);
+    box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
     color: white;
 }
 
@@ -1340,12 +1334,12 @@
 .picture-card:hover, .picture-word-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    border-color: #8e44ad;
+    border-color: #ff8c00;
 }
 
 .picture-card.selected, .picture-word-card.selected {
-    border-color: #8e44ad;
-    background: #f0f4ff;
+    border-color: #ff8c00;
+    background: #fff8f0;
     transform: scale(1.05);
 }
 
@@ -1398,7 +1392,7 @@
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    background: linear-gradient(135deg, #ff8c00, #ffa500);
     width: 0%;
     transition: width 0.3s ease;
 }
@@ -1826,18 +1820,18 @@ p {
 }
 
 .stats-card, .learning-resources-card {
-    background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 16px;
     padding: 2rem;
     color: white;
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 8px 25px rgba(142, 68, 173, 0.3);
+    box-shadow: 0 8px 25px rgba(44, 62, 80, 0.3);
 }
 
 .stats-card:hover, .learning-resources-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(142, 68, 173, 0.4);
+    box-shadow: 0 15px 35px rgba(44, 62, 80, 0.4);
 }
 
 .stats-icon, .resources-icon {

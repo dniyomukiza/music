@@ -626,6 +626,80 @@
             transform: none;
         }
 
+        /* Approved Topics Section */
+        .approved-topics-section {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+
+        .approved-topics-title {
+            color: #28a745;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .approved-topics-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .approved-topic-item {
+            background: white;
+            border: 2px solid #28a745;
+            border-radius: 25px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .approved-topic-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .approved-topic-text {
+            color: #28a745;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .remove-topic-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .remove-topic-btn:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+
+        .no-approved-topics {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+
         .loading-section {
             text-align: center;
             padding: 40px;
@@ -888,9 +962,20 @@
                         <div id="validationSummary" class="validation-summary"></div>
                     </div>
                     
-                    <button type="submit" class="generate-btn" id="generateBtn">
+                    <!-- Approved Topics Section -->
+                    <div class="approved-topics-section" id="approvedTopicsSection" style="display: none;">
+                        <h3 class="approved-topics-title">
+                            <i class="fas fa-check-circle"></i>
+                            Approved Topics
+                        </h3>
+                        <div id="approvedTopicsList" class="approved-topics-list">
+                            <!-- Approved topics will be added here -->
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="generate-btn" id="generateBtn" disabled>
                         <i class="fas fa-play"></i>
-                        Generate News Broadcast
+                        <span id="generateBtnText">Add at least one approved topic to generate news</span>
                     </button>
                 </form>
             </div>
@@ -919,6 +1004,7 @@
 
     <script>
         let topics = [];
+        let approvedTopics = [];
         let topicValidations = {};
         let progressInterval;
         let validationTimeout;
@@ -1104,7 +1190,7 @@
                 input.classList.remove('invalid');
                 input.classList.add('valid');
             } else {
-                const errorMsg = validationData.error || 'Not a valid news topic';
+                const errorMsg = validationData.error || 'This does not seem to be a valid topic';
                 feedback.innerHTML = `
                     <div class="validation-error">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -1159,29 +1245,66 @@
 
         function removeTopic(topicToRemove) {
             topics = topics.filter(topic => topic !== topicToRemove);
+            delete topicValidations[topicToRemove];
+            updateTopicsDisplay();
+        }
+
+        function removeApprovedTopic(topicToRemove) {
+            // Remove from both arrays
+            topics = topics.filter(topic => topic !== topicToRemove);
+            approvedTopics = approvedTopics.filter(topic => topic !== topicToRemove);
+            delete topicValidations[topicToRemove];
             updateTopicsDisplay();
         }
 
         function updateTopicsDisplay() {
             const display = document.getElementById('topicsDisplay');
+            const approvedSection = document.getElementById('approvedTopicsSection');
+            const approvedList = document.getElementById('approvedTopicsList');
+            const generateBtn = document.getElementById('generateBtn');
+            const generateBtnText = document.getElementById('generateBtnText');
             
-            if (topics.length === 0) {
-                display.innerHTML = '<div class="empty-state">No topics added yet. Start typing above!</div>';
+            // Separate valid and invalid topics
+            const validTopics = [];
+            const invalidTopics = [];
+            
+            topics.forEach(topic => {
+                const validation = topicValidations[topic];
+                if (validation && validation.is_relevant) {
+                    validTopics.push(topic);
+                } else {
+                    invalidTopics.push(topic);
+                }
+            });
+            
+            // Update approved topics
+            approvedTopics = validTopics;
+            
+            // Show/hide approved section
+            if (approvedTopics.length > 0) {
+                approvedSection.style.display = 'block';
+                approvedList.innerHTML = approvedTopics.map(topic => `
+                    <div class="approved-topic-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span class="approved-topic-text">${topic}</span>
+                        <button class="remove-topic-btn" onclick="removeApprovedTopic('${topic}')" title="Remove approved topic">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('');
             } else {
-                display.innerHTML = topics.map(topic => {
+                approvedSection.style.display = 'none';
+                approvedList.innerHTML = '<div class="no-approved-topics">No approved topics yet</div>';
+            }
+            
+            // Update main topics display (only show invalid topics)
+            if (invalidTopics.length === 0) {
+                display.innerHTML = '<div class="empty-state">All topics have been approved! Add more topics above.</div>';
+            } else {
+                display.innerHTML = invalidTopics.map(topic => {
                     const validation = topicValidations[topic];
-                    let statusClass = '';
-                    let statusIcon = '';
-                    
-                    if (validation) {
-                        if (validation.is_relevant) {
-                            statusClass = 'valid';
-                            statusIcon = '<i class="fas fa-check-circle"></i>';
-                        } else {
-                            statusClass = 'invalid';
-                            statusIcon = '<i class="fas fa-exclamation-triangle"></i>';
-                        }
-                    }
+                    let statusClass = 'invalid';
+                    let statusIcon = '<i class="fas fa-exclamation-triangle"></i>';
                     
                     return `
                         <div class="topic-tag ${statusClass}">
@@ -1193,6 +1316,15 @@
                         </div>
                     `;
                 }).join('');
+            }
+            
+            // Update generate button
+            if (approvedTopics.length > 0) {
+                generateBtn.disabled = false;
+                generateBtnText.textContent = `Generate News Broadcast (${approvedTopics.length} topic${approvedTopics.length > 1 ? 's' : ''})`;
+            } else {
+                generateBtn.disabled = true;
+                generateBtnText.textContent = 'Add at least one approved topic to generate news';
             }
         }
 
@@ -1232,11 +1364,13 @@
             const validTopics = results.filter(r => r.validation.is_relevant);
             const invalidTopics = results.filter(r => !r.validation.is_relevant);
             
-            if (invalidTopics.length === 0) {
+            if (results.length === 0) {
+                summary.style.display = 'none';
+            } else if (invalidTopics.length === 0) {
                 summary.className = 'validation-summary all-valid';
                 summary.innerHTML = `
                     <i class="fas fa-check-circle"></i>
-                    <strong>All topics look good!</strong> Ready to generate news broadcast.
+                    <strong>All topics approved!</strong> Ready to generate news broadcast.
                 `;
                 summary.style.display = 'block';
             } else if (validTopics.length === 0) {
@@ -1250,8 +1384,8 @@
                 summary.className = 'validation-summary has-warnings';
                 summary.innerHTML = `
                     <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Some topics may not be suitable:</strong> ${invalidTopics.map(t => `"${t.topic}"`).join(', ')}. 
-                    Only valid topics will be processed.
+                    <strong>Some topics were not approved:</strong> ${invalidTopics.map(t => `"${t.topic}"`).join(', ')}. 
+                    Only approved topics will be used for news generation.
                 `;
                 summary.style.display = 'block';
             }
@@ -1265,14 +1399,9 @@
                 return;
             }
             
-            // Filter to only valid topics
-            const validTopics = topics.filter(topic => {
-                const validation = topicValidations[topic];
-                return validation && validation.is_relevant;
-            });
-            
-            if (validTopics.length === 0) {
-                alert('No valid news topics found. Please add relevant topics like politics, economy, sports, technology, health, world, etc.');
+            // Use approved topics
+            if (approvedTopics.length === 0) {
+                alert('No approved topics found. Please add and validate topics first.');
                 return;
             }
             
@@ -1296,7 +1425,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ topics: validTopics })
+                    body: JSON.stringify({ topics: approvedTopics })
                 });
                 
                 const data = await response.json();

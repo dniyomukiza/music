@@ -17,24 +17,24 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from glconnect import create_app
 from glconnect.models import db, PictureGameItem, WordsData
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+from PIL import Image
+from io import BytesIO
 
 def generate_image_with_gemini(word, meaning):
     """Generate an image using Gemini API for a Kinyarwanda word"""
     try:
-        # Configure Gemini
+        # Configure Gemini client
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY not found in environment variables")
         
-        genai.configure(api_key=api_key)
-        
-        # Create the model
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        client = genai.Client(api_key=api_key)
         
         # Create a prompt for image generation
         prompt = f"""
-        Generate a simple, clear image that represents the Kinyarwanda word: "{word}"
+        Create a simple, clear image that represents the Kinyarwanda word: "{word}"
         English meaning: "{meaning}"
         
         The image should be:
@@ -43,29 +43,41 @@ def generate_image_with_gemini(word, meaning):
         - Easy to identify
         - Professional looking
         - Focused on the main object/concept
-        
-        Do not include any text in the image.
+        - No text in the image
+        - Clean background
         """
         
-        # Generate content (this will create an image)
-        response = model.generate_content(prompt)
+        print(f"Generating image for: {word} ({meaning})")
         
-        # For now, we'll use a placeholder approach since Gemini 2.0 Flash
-        # doesn't directly generate images. We'll create a text-based representation
-        # and store it as metadata for future image generation
+        # Generate content using the image generation model
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image-preview",
+            contents=[prompt],
+        )
         
-        return {
-            "success": True,
-            "image_data": None,  # Placeholder for actual image data
-            "prompt_used": prompt,
-            "generated_at": datetime.now(timezone.utc).isoformat()
-        }
+        # Extract image data from response
+        image_data = None
+        for part in response.candidates[0].content.parts:
+            if part.inline_data is not None:
+                image_data = part.inline_data.data
+                break
+        
+        if image_data:
+            return {
+                "success": True,
+                "image_data": image_data,  # Actual image bytes
+                "prompt_used": prompt,
+                "generated_at": datetime.now(timezone.utc).isoformat()
+            }
+        else:
+            raise Exception("No image data received from Gemini")
         
     except Exception as e:
         print(f"Error generating image for {word}: {str(e)}")
         return {
             "success": False,
-            "error": str(e)
+            "error": str(e),
+            "image_data": None
         }
 
 def get_random_kinyarwanda_words(limit=10):
@@ -133,33 +145,26 @@ def extract_english_meaning(meaning_data):
         print(f"Error extracting meaning: {str(e)}")
         return "No meaning available"
 
-def create_placeholder_image(word, meaning):
-    """Create a placeholder image file for the word"""
+def save_image(word, meaning, image_data):
+    """Save the generated image to the static/pictures directory"""
     try:
-        # Create a simple text-based image representation
-        # In a real implementation, you would generate actual images
-        image_content = f"""
-        Kinyarwanda Word: {word}
-        English Meaning: {meaning}
-        Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-        """
-        
         # Create filename
         safe_word = "".join(c for c in word if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        filename = f"{safe_word}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        filename = f"{safe_word}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
         filepath = os.path.join("glconnect", "static", "pictures", filename)
         
         # Ensure directory exists
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
-        # Write placeholder content
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(image_content)
+        # Save the actual image using PIL
+        image = Image.open(BytesIO(image_data))
+        image.save(filepath, 'PNG')
         
+        print(f"✅ Saved image: {filename}")
         return filename
         
     except Exception as e:
-        print(f"Error creating placeholder image for {word}: {str(e)}")
+        print(f"Error saving image for {word}: {str(e)}")
         return None
 
 def generate_daily_pictures():
@@ -197,9 +202,9 @@ def generate_daily_pictures():
                     # Generate image (placeholder for now)
                     image_result = generate_image_with_gemini(kinyarwanda_word, english_meaning)
                     
-                    if image_result["success"]:
-                        # Create placeholder image file
-                        image_filename = create_placeholder_image(kinyarwanda_word, english_meaning)
+                    if image_result["success"] and image_result.get("image_data"):
+                        # Save actual image file
+                        image_filename = save_image(kinyarwanda_word, english_meaning, image_result["image_data"])
                         
                         if image_filename:
                             # Save to database
@@ -253,8 +258,12 @@ def generate_daily_pictures():
                     
                     print(f"Processing word: {kinyarwanda_word} -> {english_meaning}")
                     
-                    # Create placeholder image file
-                    image_filename = create_placeholder_image(kinyarwanda_word, english_meaning)
+                    # Generate image using Gemini
+                    image_result = generate_image_with_gemini(kinyarwanda_word, english_meaning)
+                    
+                    if image_result["success"] and image_result.get("image_data"):
+                        # Save actual image file
+                        image_filename = save_image(kinyarwanda_word, english_meaning, image_result["image_data"])
                     
                     if image_filename:
                         # Save to database
