@@ -79,7 +79,7 @@
 }
 
 .submit-btn {
-    background: linear-gradient(145deg, #ff8c00, #ffa500);
+    background: linear-gradient(145deg, #2c3e50, #34495e);
     color: white;
     border: none;
     padding: 14px 28px;
@@ -92,9 +92,9 @@
 }
 
 .submit-btn:hover {
-    background: linear-gradient(145deg, #e67e00, #ff8c00);
+    background: linear-gradient(145deg, #1a252f, #2c3e50);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
 }
 
 .contribution-message {
@@ -347,7 +347,7 @@
 }
 
 .play-again-btn {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
     border: none;
     padding: 15px 30px;
@@ -360,7 +360,7 @@
 
 .play-again-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 140, 0, 0.4);
+    box-shadow: 0 8px 25px rgba(44, 62, 80, 0.4);
 }
 
 /* Responsive design for mobile */
@@ -483,7 +483,7 @@
 
 .search-form button {
     padding: 14px 28px;
-    background: linear-gradient(145deg, #ff8c00, #ffa500);
+    background: linear-gradient(145deg, #2c3e50, #34495e);
     border: none;
     color: white;
     font-size: 18px;
@@ -497,7 +497,7 @@
 
 .search-form button:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 8px 20px rgba(44, 62, 80, 0.3);
 }
 
 /* Language Page Redesign */
@@ -656,7 +656,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #ff8c00, #ffa500);
+    background: linear-gradient(90deg, #2c3e50, #34495e);
 }
 
 .action-card:hover {
@@ -676,7 +676,7 @@
 }
 
 .search-card .card-icon {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
@@ -719,13 +719,13 @@
 
 .search-form input:focus {
     outline: none;
-    border-color: #ff8c00;
-    box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
 }
 
 .search-form button {
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
     border: none;
     border-radius: 10px;
@@ -736,7 +736,7 @@
 
 .search-form button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
 }
 
 .card-button {
@@ -744,7 +744,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
     text-decoration: none;
     border-radius: 10px;
@@ -754,7 +754,7 @@
 
 .card-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
     color: white;
     text-decoration: none;
 }
@@ -778,7 +778,7 @@
 }
 
 .section-title i {
-    color: #ff8c00;
+    color: #2c3e50;
     margin-right: 0.5rem;
 }
 
@@ -817,11 +817,11 @@
 }
 
 .word-matching-card::before {
-    background: linear-gradient(90deg, #ff8c00, #ffa500);
+    background: linear-gradient(90deg, #2c3e50, #34495e);
 }
 
 .picture-matching-card::before {
-    background: linear-gradient(90deg, #ff8c00, #ffa500);
+    background: linear-gradient(90deg, #2c3e50, #34495e);
 }
 
 .game-card:hover {
@@ -847,12 +847,12 @@
 }
 
 .word-matching-card .game-icon {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
 .picture-matching-card .game-icon {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
@@ -883,7 +883,7 @@
 }
 
 .stat i {
-    color: #ff8c00;
+    color: #2c3e50;
 }
 
 .game-controls {
@@ -903,48 +903,48 @@
 }
 
 .game-play-btn {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
 .game-reset-btn {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
 .game-play-btn:hover, .game-reset-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
 }
 
 /* Bootstrap button overrides for orange theme */
 .btn-success {
-    background: linear-gradient(135deg, #ff8c00, #ffa500) !important;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
     border: none !important;
     color: white !important;
 }
 
 .btn-success:hover {
-    background: linear-gradient(135deg, #e67e00, #ff8c00) !important;
+    background: linear-gradient(135deg, #1a252f, #2c3e50) !important;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #ff8c00, #ffa500) !important;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
     border: none !important;
     color: white !important;
 }
 
 .btn-secondary:hover {
-    background: linear-gradient(135deg, #e67e00, #ff8c00) !important;
+    background: linear-gradient(135deg, #1a252f, #2c3e50) !important;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
 }
 
 /* Action buttons for word actions */
 .action-btn {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     border: none;
     color: white;
     padding: 0.5rem;
@@ -956,12 +956,12 @@
 
 .action-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
 }
 
 /* Play again button */
 .play-again-btn {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     border: none;
     color: white;
     padding: 0.75rem 1.5rem;
@@ -973,7 +973,7 @@
 
 .play-again-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
 }
 
 /* Word Search Results */
@@ -1043,7 +1043,7 @@
     font-weight: 800;
     color: #333;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1056,7 +1056,7 @@
 }
 
 .pos-tag {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 15px;
@@ -1074,7 +1074,7 @@
     height: 40px;
     border: none;
     border-radius: 10px;
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1084,10 +1084,10 @@
 }
 
 .action-btn:hover {
-    background: linear-gradient(135deg, #e67e00, #ff8c00);
+    background: linear-gradient(135deg, #1a252f, #2c3e50);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
 }
 
 .word-content {
@@ -1112,7 +1112,7 @@
 }
 
 .meaning-section h3 i {
-    color: #ff8c00;
+    color: #2c3e50;
 }
 
 .phonetics-section h3 i {
@@ -1140,11 +1140,11 @@
     padding: 0.75rem;
     background: white;
     border-radius: 10px;
-    border-left: 4px solid #ff8c00;
+    border-left: 4px solid #2c3e50;
 }
 
 .meaning-number {
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
     width: 24px;
     height: 24px;
@@ -1334,11 +1334,11 @@
 .picture-card:hover, .picture-word-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    border-color: #ff8c00;
+    border-color: #2c3e50;
 }
 
 .picture-card.selected, .picture-word-card.selected {
-    border-color: #ff8c00;
+    border-color: #2c3e50;
     background: #fff8f0;
     transform: scale(1.05);
 }
@@ -1392,7 +1392,7 @@
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(135deg, #ff8c00, #ffa500);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     width: 0%;
     transition: width 0.3s ease;
 }

@@ -7,76 +7,9 @@
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fas fa-users"></i> Community Dictionary</h2>
-            <p class="text-muted">Words contributed by the community</p>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ stats.total_words }}</h4>
-                            <p class="mb-0">Total Words</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-book fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ words|length }}</h4>
-                            <p class="mb-0">Approved Words</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-check-circle fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ stats.version }}</h4>
-                            <p class="mb-0">Version</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-code-branch fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <small>{{ stats.last_updated[:10] if stats.last_updated else 'Never' }}</small>
-                            <p class="mb-0">Last Updated</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-clock fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Search and Filter -->
     <div class="row mb-4">
@@ -116,7 +49,20 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-list"></i> Community Words</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-list"></i> Words</h5>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('routes1.admin_contributions') }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-list"></i> Pending
+                            </a>
+                            <a href="{{ url_for('routes1.words') }}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-book"></i> Main Dictionary
+                            </a>
+                            <button class="btn btn-info btn-sm" onclick="location.reload()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if words %}
@@ -178,29 +124,6 @@
         </div>
     </div>
 
-    <!-- Actions -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-tools"></i> Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="btn-group" role="group">
-                        <a href="{{ url_for('routes1.admin_contributions') }}" class="btn btn-primary">
-                            <i class="fas fa-list"></i> View Pending Contributions
-                        </a>
-                        <a href="{{ url_for('routes1.words') }}" class="btn btn-secondary">
-                            <i class="fas fa-book"></i> Main Dictionary
-                        </a>
-                        <button class="btn btn-info" onclick="location.reload()">
-                            <i class="fas fa-sync"></i> Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -231,9 +154,29 @@ document.getElementById('contributorFilter').addEventListener('change', filterWo
 </script>
 
 <style>
+/* Page Background */
+body {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.container {
+    background: transparent;
+}
+
+/* Page Title Styling */
+h2 {
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: 2rem;
+}
+
+/* Card Styling */
 .card {
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     border: 1px solid rgba(0, 0, 0, 0.125);
+    background-color: white;
 }
 
 .card-header {
@@ -248,10 +191,19 @@ document.getElementById('contributorFilter').addEventListener('change', filterWo
     color: #333;
 }
 
+.table {
+    background-color: white;
+}
+
 .table td {
     color: #333;
     background-color: white;
     padding: 0.75rem;
+}
+
+.table thead th {
+    background-color: white;
+    color: #333;
 }
 
 .table tbody tr:hover td {
@@ -276,42 +228,69 @@ document.getElementById('contributorFilter').addEventListener('change', filterWo
     font-size: 0.75em;
 }
 
+/* Button Styling - Override Bootstrap defaults with navy */
+.btn-primary {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1a252f, #2c3e50) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #1a252f, #2c3e50) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+}
+
 /* Button Group Styling */
 .btn-group {
     display: flex !important;
-    flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
-    width: 100%;
 }
 
 .btn-group .btn {
-    flex: 1;
-    min-width: 150px;
     margin: 0 !important;
-    border-radius: 10px !important;
+    border-radius: 6px !important;
+    white-space: nowrap;
 }
 
 /* Override Bootstrap's default btn-group behavior */
 .btn-group > .btn:not(:last-child):not(.dropdown-toggle) {
-    border-top-right-radius: 10px !important;
-    border-bottom-right-radius: 10px !important;
+    border-top-right-radius: 6px !important;
+    border-bottom-right-radius: 6px !important;
 }
 
 .btn-group > .btn:not(:first-child) {
-    border-top-left-radius: 10px !important;
-    border-bottom-left-radius: 10px !important;
+    border-top-left-radius: 6px !important;
+    border-bottom-left-radius: 6px !important;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .btn-group {
+    .card-header .d-flex {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 1rem;
+    }
+    
+    .btn-group {
+        width: 100%;
+        justify-content: center;
     }
     
     .btn-group .btn {
-        width: 100%;
+        flex: 1;
         min-width: auto;
     }
 }
