@@ -19,3 +19,5 @@ liquidsoap.tar
 icecast2.tar
 tts.json
 glconfig.json
+
+# Media files - both audio and pictures are now tracked for remote server

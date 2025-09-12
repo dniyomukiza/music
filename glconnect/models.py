@@ -158,3 +158,19 @@ class Song_upload(db.Model):
     apple_music_link = db.Column(db.String(255), nullable=True)
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
     artist = db.relationship('Artist', backref='songs')
+
+class PictureGameItem(db.Model):
+    __tablename__ = 'picture_game_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    kinyarwanda_word = db.Column(db.String(255), nullable=False)
+    english_meaning = db.Column(db.Text, nullable=False)
+    image_filename = db.Column(db.String(500), nullable=False)  # Path to image in static/pictures/
+    word_id = db.Column(db.Integer, db.ForeignKey('words_data.id'), nullable=True)  # Link to words_data table
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    used_count = db.Column(db.Integer, default=0)  # Track how many times this item has been used
+    is_active = db.Column(db.Boolean, default=True)  # For soft deletion
+    last_used = db.Column(db.DateTime, nullable=True)  # Track when it was last used in a game
+    
+    # Relationship to words_data table
+    word_data = db.relationship('WordsData', backref='picture_game_items')

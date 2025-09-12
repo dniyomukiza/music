@@ -631,13 +631,20 @@
                         this.draggedWordId = null;
                         this.correctPairs.clear();
                         
-                        this.renderGame();
-                        this.startTimer();
-                        this.updateUI();
-                        
-                        document.getElementById('pictureGameArea').style.display = 'block';
-                        document.getElementById('startPictureGameMain').disabled = true;
-                        document.getElementById('resetPictureGameMain').disabled = false;
+                        try {
+                            this.renderGame();
+                            this.startTimer();
+                            this.updateUI();
+                            
+                            document.getElementById('pictureGameArea').style.display = 'block';
+                            document.getElementById('startPictureGameMain').disabled = true;
+                            document.getElementById('resetPictureGameMain').disabled = false;
+                            
+                            console.log('Picture game started successfully');
+                        } catch (renderError) {
+                            console.error('Error rendering game:', renderError);
+                            alert('Error rendering game: ' + renderError.message);
+                        }
                         
                         // Clear response data to free memory
                         responseText = null;
@@ -663,25 +670,31 @@
             }
             
             renderGame() {
-                const picturesContainer = document.getElementById('picturesContainer');
-                const wordsContainer = document.getElementById('pictureWordsContainer');
-                
-                if (!picturesContainer || !wordsContainer) {
-                    console.error('Game containers not found');
-                    return;
-                }
-                
-                // Clear containers and free memory
-                picturesContainer.innerHTML = '';
-                wordsContainer.innerHTML = '';
-                
-                // Force garbage collection if available
-                if (window.gc) {
-                    window.gc();
-                }
-                
-                // Shuffle the game data
-                const shuffledData = [...this.gameData].sort(() => Math.random() - 0.5);
+                try {
+                    const picturesContainer = document.getElementById('picturesContainer');
+                    const wordsContainer = document.getElementById('pictureWordsContainer');
+                    
+                    if (!picturesContainer || !wordsContainer) {
+                        console.error('Game containers not found');
+                        throw new Error('Game containers not found');
+                    }
+                    
+                    if (!this.gameData || !Array.isArray(this.gameData)) {
+                        console.error('Invalid game data');
+                        throw new Error('Invalid game data');
+                    }
+                    
+                    // Clear containers and free memory
+                    picturesContainer.innerHTML = '';
+                    wordsContainer.innerHTML = '';
+                    
+                    // Force garbage collection if available
+                    if (window.gc) {
+                        window.gc();
+                    }
+                    
+                    // Shuffle the game data
+                    const shuffledData = [...this.gameData].sort(() => Math.random() - 0.5);
                 
                 // Create picture cards (drop zones)
                 shuffledData.forEach((item, index) => {
@@ -743,12 +756,13 @@
                     wordText.className = 'picture-word-text';
                     wordText.textContent = item.word;
                     
-                    const wordMeaning = document.createElement('div');
-                    wordMeaning.className = 'picture-word-meaning';
-                    wordMeaning.textContent = item.meaning;
+                    // Don't show English meaning on Kinyarwanda word cards to avoid revealing answers
+                    // const wordMeaning = document.createElement('div');
+                    // wordMeaning.className = 'picture-word-meaning';
+                    // wordMeaning.textContent = item.meaning;
                     
                     wordCard.appendChild(wordText);
-                    wordCard.appendChild(wordMeaning);
+                    // wordCard.appendChild(wordMeaning);
                     
                     // Add drag functionality
                     wordCard.addEventListener('dragstart', (e) => this.handleDragStart(e, item.id));
@@ -756,6 +770,10 @@
                     
                     wordsContainer.appendChild(wordCard);
                 });
+                } catch (error) {
+                    console.error('Error in renderGame:', error);
+                    throw error; // Re-throw to be caught by the calling function
+                }
             }
             
             // Drag and Drop Methods
