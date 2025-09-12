@@ -158,6 +158,114 @@
             margin-bottom: 20px;
         }
 
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .input-group .topic-input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .generate-btn-mobile {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .generate-btn-mobile:hover {
+            background: linear-gradient(135deg, #1a252f, #2c3e50);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+        }
+
+        .generate-btn-mobile:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn-mobile i {
+            font-size: 1rem;
+        }
+
+        .add-topic-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+        .add-topic-btn:hover {
+            background: linear-gradient(135deg, #218838, #1e7e34);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .add-topic-btn:active {
+            transform: translateY(0);
+        }
+
+        .add-topic-btn i {
+            font-size: 1rem;
+        }
+
+        .btn-text {
+            font-size: 0.9rem;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .generate-btn-mobile, .add-topic-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 15px 20px;
+                font-size: 1rem;
+            }
+
+            .btn-text {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .generate-btn-mobile, .add-topic-btn {
+                padding: 12px 16px;
+            }
+
+            .btn-text {
+                display: none;
+            }
+
+            .generate-btn-mobile i, .add-topic-btn i {
+                font-size: 1.2rem;
+            }
+        }
+
         .topic-input {
             width: 100%;
             padding: 15px 20px;
@@ -906,7 +1014,13 @@
                             <i class="fas fa-newspaper"></i> Enter News Topic
                         </label>
                         <div class="topic-input-container">
-                            {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
+                            <div class="input-group">
+                                {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter or tap Generate (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
+                                <button type="submit" class="generate-btn-mobile" id="generateBtnMobile">
+                                    <i class="fas fa-play"></i>
+                                    <span class="btn-text">Generate</span>
+                                </button>
+                            </div>
                             {% if form.keyword.errors %}
                                 <div class="validation-error">
                                     <i class="fas fa-exclamation-triangle"></i>
@@ -946,13 +1060,19 @@
                             <i class="fas fa-plus-circle"></i> Add News Topics
                         </label>
                         <div class="topic-input-container">
-                            <input 
-                                type="text" 
-                                id="topicInput" 
-                                class="topic-input" 
-                                placeholder="Type a topic and press Enter (e.g., 'college football', 'election results', 'AI developments')"
-                                autocomplete="off"
-                            >
+                            <div class="input-group">
+                                <input 
+                                    type="text" 
+                                    id="topicInput" 
+                                    class="topic-input" 
+                                    placeholder="Type a topic and press Enter or tap Add (e.g., 'college football', 'election results', 'AI developments')"
+                                    autocomplete="off"
+                                >
+                                <button type="button" class="add-topic-btn" id="addTopicBtn">
+                                    <i class="fas fa-plus"></i>
+                                    <span class="btn-text">Add</span>
+                                </button>
+                            </div>
                             <div id="validationFeedback" class="validation-feedback"></div>
                             <div id="topicSuggestions" class="topic-suggestions"></div>
                         </div>
@@ -1145,6 +1265,19 @@
                 console.log('Enter key pressed, submitting Flask form...');
                 document.getElementById('flaskForm').submit();
             }
+        });
+
+        // Handle mobile Generate button click
+        document.getElementById('generateBtnMobile').addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Mobile Generate button clicked, submitting Flask form...');
+            document.getElementById('flaskForm').submit();
+        });
+
+        // Handle Add Topic button click
+        document.getElementById('addTopicBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            addTopic();
         });
 
         // Also handle form submission for debugging

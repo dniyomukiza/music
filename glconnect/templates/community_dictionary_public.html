@@ -12,76 +12,7 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4 col-sm-6 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ stats.total_words }}</h4>
-                            <p class="mb-0">Community Words</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-book fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 col-sm-6 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ words|length }}</h4>
-                            <p class="mb-0">Approved Words</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-check-circle fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 col-sm-12 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h4>{{ stats.version }}</h4>
-                            <p class="mb-0">Version</p>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-code-branch fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Search -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <input type="text" id="searchInput" class="form-control" placeholder="Search words or meanings...">
-                        </div>
-                        <div class="col-md-4">
-                            <button class="btn btn-primary" onclick="filterWords()">
-                                <i class="fas fa-search"></i> Search
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Search Bar -->
     <div class="row mb-4">
@@ -280,9 +211,10 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 
 <style>
 .community-dictionary-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     min-height: 100vh;
     padding: 2rem 0;
+    overflow-x: hidden;
 }
 
 .community-dictionary-page .container {
@@ -291,6 +223,8 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     padding: 2rem;
     margin-top: 2rem;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .community-dictionary-page h2 {
@@ -303,7 +237,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 }
 
 .community-dictionary-page h2 i {
-    color: #667eea;
+    color: #2c3e50;
 }
 
 .card {
@@ -320,7 +254,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 
 .card-header {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    border-bottom: 2px solid #667eea;
+    border-bottom: 2px solid #2c3e50;
     border-radius: 15px 15px 0 0 !important;
     font-weight: 600;
 }
@@ -334,7 +268,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 }
 
 .card-header h5 i {
-    color: #667eea;
+    color: #2c3e50;
 }
 
 .table {
@@ -383,7 +317,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     background: #f8f9fa;
     padding: 0.75rem;
     border-radius: 8px;
-    border-left: 3px solid #667eea;
+    border-left: 3px solid #2c3e50;
 }
 
 .word-card .word-meta {
@@ -511,6 +445,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 200px;
+    word-wrap: break-word;
 }
 
 .table td:nth-child(2) {
@@ -523,14 +458,34 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     max-width: 400px;
 }
 
+/* Ensure table is responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile table adjustments */
+@media (max-width: 768px) {
+    .table td {
+        white-space: normal !important;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: initial !important;
+    }
+}
+
 .badge {
     font-size: 0.75em;
     padding: 0.5em 0.75em;
     border-radius: 10px;
 }
 
-.badge-secondary {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+.badge-secondary,
+.table td .badge-secondary,
+.badge.badge-secondary {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    color: white !important;
+    border: none !important;
 }
 
 .btn {
@@ -546,7 +501,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     border: none;
 }
 
@@ -568,8 +523,8 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 }
 
 .form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
 }
 
 .text-center.py-4 {
@@ -577,7 +532,7 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 }
 
 .text-center.py-4 i {
-    color: #667eea !important;
+    color: #2c3e50 !important;
 }
 
 .text-center.py-4 h5 {
@@ -590,29 +545,6 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     font-size: 1.1rem;
 }
 
-/* Statistics Cards */
-.card.bg-primary {
-    background: linear-gradient(135deg, #667eea, #764ba2) !important;
-}
-
-.card.bg-success {
-    background: linear-gradient(135deg, #4CAF50, #45a049) !important;
-}
-
-.card.bg-info {
-    background: linear-gradient(135deg, #17a2b8, #138496) !important;
-}
-
-.card-body h4 {
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-}
-
-.card-body p {
-    font-size: 1rem;
-    opacity: 0.9;
-}
 
 /* Button Group Styling */
 .btn-group {
@@ -643,9 +575,14 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .community-dictionary-page {
+        padding: 1rem 0;
+    }
+    
     .community-dictionary-page .container {
-        margin: 1rem;
+        margin: 0.5rem;
         padding: 1rem;
+        border-radius: 15px;
     }
     
     .btn-group {
@@ -656,6 +593,130 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     .btn-group .btn {
         width: 100%;
         min-width: auto;
+    }
+    
+    /* Fix table overflow on mobile */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+        min-width: 100%;
+        font-size: 0.85rem;
+    }
+    
+    .table td {
+        white-space: normal !important;
+        max-width: none !important;
+        padding: 0.5rem 0.25rem !important;
+        word-wrap: break-word;
+    }
+    
+    .table th {
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.8rem;
+    }
+    
+    /* Make badges smaller on mobile */
+    .badge {
+        font-size: 0.6rem !important;
+        padding: 0.2rem 0.4rem !important;
+    }
+    
+    /* Ensure form controls fit */
+    .form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Card padding adjustments */
+    .card-body {
+        padding: 1rem 0.75rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .community-dictionary-page {
+        padding: 0.5rem 0;
+    }
+    
+    .community-dictionary-page .container {
+        margin: 0.25rem;
+        padding: 0.75rem;
+        border-radius: 15px;
+    }
+    
+    .table {
+        font-size: 0.75rem;
+    }
+    
+    .table td {
+        padding: 0.4rem 0.2rem !important;
+    }
+    
+    .table th {
+        padding: 0.4rem 0.2rem !important;
+        font-size: 0.7rem;
+    }
+    
+    .badge {
+        font-size: 0.55rem !important;
+        padding: 0.15rem 0.3rem !important;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .card-header {
+        padding: 0.5rem;
+    }
+    
+    .card-header h5 {
+        font-size: 0.9rem;
+    }
+    
+    /* Ensure no horizontal overflow */
+    * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Make sure text doesn't overflow */
+    .table td, .table th {
+        word-break: break-word;
+        hyphens: auto;
+    }
+    
+    /* Adjust input group for very small screens */
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .input-group-prepend {
+        margin-bottom: 0.5rem;
+    }
+    
+    .input-group-text {
+        border-radius: 0.375rem 0.375rem 0 0 !important;
+    }
+    
+    .form-control {
+        border-radius: 0 0 0.375rem 0.375rem !important;
     }
 }
 </style>

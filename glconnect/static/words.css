@@ -151,9 +151,9 @@
 }
 
 .start-game-btn, .reset-game-btn, .play-again-btn {
-    background: rgba(142, 68, 173, 0.8);
+    background: rgba(44, 62, 80, 0.8);
     color: white;
-    border: 2px solid rgba(142, 68, 173, 0.9);
+    border: 2px solid rgba(44, 62, 80, 0.9);
     padding: 15px 30px;
     border-radius: 50px;
     font-size: 1.1rem;
@@ -164,10 +164,10 @@
 }
 
 .start-game-btn:hover, .reset-game-btn:hover, .play-again-btn:hover {
-    background: rgba(142, 68, 173, 1);
-    border-color: rgba(142, 68, 173, 1);
+    background: rgba(44, 62, 80, 1);
+    border-color: rgba(44, 62, 80, 1);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(142, 68, 173, 0.4);
+    box-shadow: 0 8px 25px rgba(44, 62, 80, 0.4);
 }
 
 .game-area {
@@ -275,9 +275,9 @@
 }
 
 .game-word:hover, .game-meaning:hover {
-    border-color: #8e44ad;
+    border-color: #2c3e50;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(142, 68, 173, 0.2);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.2);
 }
 
 .game-word.dragging, .game-meaning.dragging {
@@ -681,12 +681,12 @@
 }
 
 .contribute-card .card-icon {
-    background: linear-gradient(135deg, #ff9800, #f57c00);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
 .community-card .card-icon {
-    background: linear-gradient(135deg, #f093fb, #f5576c);
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
 }
 
