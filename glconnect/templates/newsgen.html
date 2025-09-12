@@ -1093,9 +1093,9 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="generate-btn" id="generateBtn" disabled>
+                    <button type="button" class="generate-btn" id="generateBtn" disabled>
                         <i class="fas fa-play"></i>
-                        <span id="generateBtnText">Add at least one approved topic to generate news</span>
+                        <span id="generateBtnText">Generate News Broadcast</span>
                     </button>
                 </form>
             </div>
@@ -1314,10 +1314,11 @@
             const input = document.getElementById('topicInput');
             
             if (validationData.valid) {
+                const message = validationData.message || 'Valid news topic - ready for generation';
                 feedback.innerHTML = `
                     <div class="validation-success">
                         <i class="fas fa-check-circle"></i>
-                        <span>✅ Valid news topic - ready for generation</span>
+                        <span>✅ ${message}</span>
                     </div>
                 `;
                 input.classList.remove('invalid');
@@ -1363,16 +1364,64 @@
             suggestions.style.display = 'none';
         }
 
-        function addTopic() {
+        async function addTopic() {
             const input = document.getElementById('topicInput');
             const topic = input.value.trim();
             
-            if (topic && !topics.includes(topic)) {
-                topics.push(topic);
-                input.value = '';
-                clearValidationFeedback();
-                updateTopicsDisplay();
-                validateAllTopics();
+            if (!topic) {
+                showValidationFeedback('', {
+                    valid: false,
+                    error: 'Please enter a topic'
+                });
+                return;
+            }
+            
+            if (topics.includes(topic)) {
+                showValidationFeedback(topic, {
+                    valid: false,
+                    error: 'This topic has already been added'
+                });
+                return;
+            }
+            
+            // Validate the topic first
+            try {
+                const response = await fetch('/routes2/news/api/validate-news-topic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ topic: topic })
+                });
+                
+                const validationData = await response.json();
+                
+                if (validationData.valid) {
+                    // Topic is valid - add it
+                    topics.push(topic);
+                    input.value = ''; // Clear input field
+                    clearValidationFeedback();
+                    updateTopicsDisplay();
+                    validateAllTopics();
+                    
+                    // Show success message
+                    showValidationFeedback(topic, {
+                        valid: true,
+                        message: 'Topic added successfully!'
+                    });
+                } else {
+                    // Topic is invalid - show error
+                    showValidationFeedback(topic, {
+                        valid: false,
+                        error: 'This topic does not seem to be a news topic'
+                    });
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                showValidationFeedback(topic, {
+                    valid: false,
+                    error: 'Validation service unavailable. Please try again.'
+                });
             }
         }
 
@@ -1457,7 +1506,7 @@
                 generateBtnText.textContent = `Generate News Broadcast (${approvedTopics.length} topic${approvedTopics.length > 1 ? 's' : ''})`;
             } else {
                 generateBtn.disabled = true;
-                generateBtnText.textContent = 'Add at least one approved topic to generate news';
+                generateBtnText.textContent = 'Add topics to generate news';
             }
         }
 

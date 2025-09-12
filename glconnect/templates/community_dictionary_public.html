@@ -86,7 +86,7 @@
                         </div>
 
                         <!-- Mobile Card View -->
-                        <div class="d-lg-none" id="mobileWordsList">
+                        <div class="d-lg-none mobile-words-container" id="mobileWordsList" style="display: block;">
                             {% for word in words %}
                             <div class="word-card mb-3" data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
                                 <div class="card">
@@ -207,6 +207,37 @@ function filterWords() {
 
 // Search as you type
 document.getElementById('searchInput').addEventListener('input', filterWords);
+
+// Ensure mobile view is properly initialized
+document.addEventListener('DOMContentLoaded', function() {
+    // Force mobile cards to be visible
+    const mobileWordsList = document.getElementById('mobileWordsList');
+    if (mobileWordsList) {
+        mobileWordsList.style.display = 'block';
+        mobileWordsList.style.visibility = 'visible';
+        
+        // Ensure all word cards are visible
+        const wordCards = mobileWordsList.querySelectorAll('.word-card');
+        wordCards.forEach(card => {
+            card.style.display = 'block';
+            card.style.visibility = 'visible';
+            card.style.opacity = '1';
+        });
+    }
+    
+    // Debug: Log mobile view status
+    console.log('Mobile words list element:', mobileWordsList);
+    console.log('Word cards found:', wordCards ? wordCards.length : 0);
+});
+
+// Additional mobile view fix on window resize
+window.addEventListener('resize', function() {
+    const mobileWordsList = document.getElementById('mobileWordsList');
+    if (mobileWordsList && window.innerWidth <= 991) {
+        mobileWordsList.style.display = 'block';
+        mobileWordsList.style.visibility = 'visible';
+    }
+});
 </script>
 
 <style>
@@ -295,6 +326,44 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
     transition: all 0.3s ease;
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Ensure mobile cards are always visible */
+@media (max-width: 991px) {
+    .d-lg-none {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Force mobile container to be visible */
+.mobile-words-container {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Additional mobile fixes */
+@media (max-width: 768px) {
+    .mobile-words-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .mobile-words-container .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 1rem;
+    }
 }
 
 .word-card .card:hover {
@@ -471,6 +540,30 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
         max-width: none !important;
         overflow: visible !important;
         text-overflow: initial !important;
+    }
+    
+    /* Ensure mobile cards are visible */
+    .d-lg-none {
+        display: block !important;
+    }
+    
+    /* Fix mobile card visibility */
+    .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Ensure mobile cards have proper spacing */
+    .word-card .card {
+        margin-bottom: 1rem;
+        display: block !important;
+    }
+    
+    /* Fix any potential z-index issues */
+    .word-card .card-body {
+        position: relative;
+        z-index: 1;
     }
 }
 
