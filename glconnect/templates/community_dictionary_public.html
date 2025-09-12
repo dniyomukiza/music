@@ -87,6 +87,9 @@
 
                         <!-- Mobile Card View -->
                         <div class="d-lg-none mobile-words-container" id="mobileWordsList" style="display: block;">
+                            <div class="alert alert-info d-block d-lg-none" style="margin-bottom: 1rem;">
+                                <i class="fas fa-mobile-alt"></i> Mobile View - {{ words|length if words else 0 }} words available
+                            </div>
                             {% for word in words %}
                             <div class="word-card mb-3" data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
                                 <div class="card">
@@ -213,29 +216,69 @@ document.addEventListener('DOMContentLoaded', function() {
     // Force mobile cards to be visible
     const mobileWordsList = document.getElementById('mobileWordsList');
     if (mobileWordsList) {
-        mobileWordsList.style.display = 'block';
-        mobileWordsList.style.visibility = 'visible';
+        mobileWordsList.style.display = 'block !important';
+        mobileWordsList.style.visibility = 'visible !important';
+        mobileWordsList.style.opacity = '1 !important';
+        mobileWordsList.classList.remove('d-lg-none');
+        mobileWordsList.classList.add('d-block');
         
         // Ensure all word cards are visible
         const wordCards = mobileWordsList.querySelectorAll('.word-card');
         wordCards.forEach(card => {
-            card.style.display = 'block';
-            card.style.visibility = 'visible';
-            card.style.opacity = '1';
+            card.style.display = 'block !important';
+            card.style.visibility = 'visible !important';
+            card.style.opacity = '1 !important';
+            card.classList.remove('d-none');
+            card.classList.add('d-block');
         });
+    }
+    
+    // Force desktop table to be hidden on mobile
+    const desktopTable = document.querySelector('.d-none.d-lg-block');
+    if (desktopTable && window.innerWidth <= 991) {
+        desktopTable.style.display = 'none !important';
     }
     
     // Debug: Log mobile view status
     console.log('Mobile words list element:', mobileWordsList);
     console.log('Word cards found:', wordCards ? wordCards.length : 0);
+    console.log('Window width:', window.innerWidth);
 });
 
 // Additional mobile view fix on window resize
 window.addEventListener('resize', function() {
     const mobileWordsList = document.getElementById('mobileWordsList');
-    if (mobileWordsList && window.innerWidth <= 991) {
-        mobileWordsList.style.display = 'block';
-        mobileWordsList.style.visibility = 'visible';
+    const desktopTable = document.querySelector('.d-none.d-lg-block');
+    
+    if (window.innerWidth <= 991) {
+        // Show mobile content
+        if (mobileWordsList) {
+            mobileWordsList.style.display = 'block !important';
+            mobileWordsList.style.visibility = 'visible !important';
+            mobileWordsList.style.opacity = '1 !important';
+            mobileWordsList.classList.remove('d-lg-none');
+            mobileWordsList.classList.add('d-block');
+            
+            const wordCards = mobileWordsList.querySelectorAll('.word-card');
+            wordCards.forEach(card => {
+                card.style.display = 'block !important';
+                card.style.visibility = 'visible !important';
+                card.style.opacity = '1 !important';
+            });
+        }
+        
+        // Hide desktop table
+        if (desktopTable) {
+            desktopTable.style.display = 'none !important';
+        }
+    } else {
+        // Show desktop content
+        if (desktopTable) {
+            desktopTable.style.display = 'block !important';
+        }
+        if (mobileWordsList) {
+            mobileWordsList.style.display = 'none !important';
+        }
     }
 });
 </script>
@@ -246,6 +289,8 @@ window.addEventListener('resize', function() {
     min-height: 100vh;
     padding: 2rem 0;
     overflow-x: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 .community-dictionary-page .container {
@@ -348,6 +393,10 @@ window.addEventListener('resize', function() {
 .mobile-words-container {
     display: block !important;
     visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    background: transparent !important;
 }
 
 /* Additional mobile fixes */
@@ -356,6 +405,8 @@ window.addEventListener('resize', function() {
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
     }
     
     .mobile-words-container .word-card {
@@ -363,6 +414,19 @@ window.addEventListener('resize', function() {
         visibility: visible !important;
         opacity: 1 !important;
         margin-bottom: 1rem;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    /* Override any Bootstrap hiding classes */
+    .d-lg-none {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .d-none.d-lg-block {
+        display: none !important;
     }
 }
 
