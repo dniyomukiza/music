@@ -14,7 +14,7 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-md-4 col-sm-6 mb-3">
             <div class="card bg-primary text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -30,7 +30,7 @@
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-4 col-sm-6 mb-3">
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -46,7 +46,7 @@
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-4 col-sm-12 mb-3">
             <div class="card bg-info text-white">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
@@ -83,56 +83,120 @@
         </div>
     </div>
 
+    <!-- Search Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search words or meanings...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Words List -->
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-list"></i> Community Words ({{ words|length if words else 0 }} words)</h5>
                 </div>
                 <div class="card-body">
                     {% if words and words|length > 0 %}
-                        <div class="table-responsive">
-                            <table class="table table-striped" id="wordsTable">
-                                <thead>
-                                    <tr>
-                                        <th>Word</th>
-                                        <th>Meaning</th>
-                                        <th>Part of Speech</th>
-                                        <th>Example</th>
-                                        <th>Contributor</th>
-                                        <th>Date Added</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for word in words %}
-                                    <tr data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
-                                        <td><strong>{{ word.word }}</strong></td>
-                                        <td>{{ word.meaning }}</td>
-                                        <td>
-                                            {% if word.part_of_speech %}
-                                                <span class="badge badge-secondary">{{ word.part_of_speech }}</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if word.example_sentence %}
-                                                <small class="text-muted">{{ word.example_sentence[:50] }}{% if word.example_sentence|length > 50 %}...{% endif %}</small>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ word.contributor_name if word.contributor_name else 'Anonymous' }}</td>
-                                        <td>
+                        <!-- Desktop Table View -->
+                        <div class="d-none d-lg-block">
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="wordsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Word</th>
+                                            <th>Meaning</th>
+                                            <th>Part of Speech</th>
+                                            <th>Example</th>
+                                            <th>Contributor</th>
+                                            <th>Date Added</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for word in words %}
+                                        <tr data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
+                                            <td><strong>{{ word.word }}</strong></td>
+                                            <td>{{ word.meaning }}</td>
+                                            <td>
+                                                {% if word.part_of_speech %}
+                                                    <span class="badge badge-secondary">{{ word.part_of_speech }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if word.example_sentence %}
+                                                    <small class="text-muted">{{ word.example_sentence[:50] }}{% if word.example_sentence|length > 50 %}...{% endif %}</small>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ word.contributor_name if word.contributor_name else 'Anonymous' }}</td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ word.approved_at[:10] if word.approved_at else '-' }}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Card View -->
+                        <div class="d-lg-none" id="mobileWordsList">
+                            {% for word in words %}
+                            <div class="word-card mb-3" data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-0">
+                                                <strong>{{ word.word }}</strong>
+                                                {% if word.part_of_speech %}
+                                                    <span class="badge badge-secondary ml-2">{{ word.part_of_speech }}</span>
+                                                {% endif %}
+                                            </h6>
+                                        </div>
+                                        
+                                        <p class="card-text mb-2">{{ word.meaning }}</p>
+                                        
+                                        {% if word.example_sentence %}
+                                        <div class="example-section mb-2">
                                             <small class="text-muted">
-                                                {{ word.approved_at[:10] if word.approved_at else '-' }}
+                                                <strong>Example:</strong> {{ word.example_sentence }}
                                             </small>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="word-meta">
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-user"></i> {{ word.contributor_name if word.contributor_name else 'Anonymous' }}
+                                                    </small>
+                                                </div>
+                                                <div class="col-6 text-right">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar"></i> {{ word.approved_at[:10] if word.approved_at else '-' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     {% else %}
                         <div class="text-center py-4">
@@ -178,9 +242,10 @@
 <script>
 function filterWords() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const rows = document.querySelectorAll('#wordsTable tbody tr');
     
-    rows.forEach(row => {
+    // Filter desktop table rows
+    const tableRows = document.querySelectorAll('#wordsTable tbody tr');
+    tableRows.forEach(row => {
         const word = row.dataset.word;
         const meaning = row.dataset.meaning;
         
@@ -190,6 +255,21 @@ function filterWords() {
             row.style.display = '';
         } else {
             row.style.display = 'none';
+        }
+    });
+    
+    // Filter mobile card elements
+    const wordCards = document.querySelectorAll('#mobileWordsList .word-card');
+    wordCards.forEach(card => {
+        const word = card.dataset.word;
+        const meaning = card.dataset.meaning;
+        
+        const matchesSearch = !searchTerm || word.includes(searchTerm) || meaning.includes(searchTerm);
+        
+        if (matchesSearch) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
         }
     });
 }
@@ -273,6 +353,132 @@ document.getElementById('searchInput').addEventListener('input', filterWords);
     padding: 1rem;
     vertical-align: middle;
     color: #333;
+}
+
+/* Mobile Card Styles */
+.word-card .card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.word-card .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.word-card .card-title {
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.word-card .card-text {
+    color: #555;
+    line-height: 1.5;
+}
+
+.word-card .example-section {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.word-card .word-meta {
+    border-top: 1px solid #e9ecef;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.word-card .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .community-dictionary-page .container {
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .community-dictionary-page h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .word-card .card-body {
+        padding: 1rem;
+    }
+    
+    .word-card .card-title {
+        font-size: 1rem;
+    }
+    
+    .word-card .card-text {
+        font-size: 0.9rem;
+    }
+    
+    .word-card .example-section {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .word-card .word-meta {
+        font-size: 0.8rem;
+    }
+    
+    .input-group-text {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-control {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .community-dictionary-page .container {
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .community-dictionary-page h2 {
+        font-size: 1.3rem;
+    }
+    
+    .word-card .card-body {
+        padding: 0.75rem;
+    }
+    
+    .word-card .card-title {
+        font-size: 0.95rem;
+    }
+    
+    .word-card .card-text {
+        font-size: 0.85rem;
+    }
+    
+    .word-card .example-section {
+        padding: 0.4rem;
+        font-size: 0.75rem;
+    }
+    
+    .word-card .word-meta {
+        font-size: 0.75rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
     background-color: white;
 }
 

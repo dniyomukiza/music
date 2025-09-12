@@ -10,10 +10,6 @@
         <div class="hero-section">
             <div class="hero-content">
                 <div class="hero-text">
-                    <h1 class="hero-title">
-                        <span class="title-main">Learn Kinyarwanda</span>
-                       
-                    </h1>
                     <p class="hero-description">
                         Discover, play, and contribute to the rich vocabulary of Kinyarwanda. 
                         Join thousands of learners in this interactive journey!
@@ -28,7 +24,7 @@
                             <span class="stat-label">Games</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">500+</span>
+                            <span class="stat-number">100+</span>
                             <span class="stat-label">Learners</span>
                         </div>
                     </div>
@@ -36,9 +32,8 @@
                 <div class="hero-visual">
                     <div class="floating-elements">
                         <div class="floating-word">Muraho</div>
-                        <div class="floating-word">Mwaramutse</div>
                         <div class="floating-word">Murakoze</div>
-                        <div class="floating-word">Amahoro</div>
+                        <div class="floating-word">Murabeho</div>
                     </div>
                 </div>
             </div>
@@ -50,7 +45,6 @@
                 <div class="card-icon">
                     <i class="fas fa-search"></i>
                 </div>
-                <h3>Word Search</h3>
                 <p>Look up any Kinyarwanda word instantly</p>
                 <form action="{{ url_for('routes1.findwords') }}" method="POST" class="search-form">
                     <input type="text" placeholder="Search a word..." name="word" required>
@@ -64,8 +58,7 @@
                 <div class="card-icon">
                     <i class="fas fa-plus-circle"></i>
                 </div>
-                <h3>Add New Words</h3>
-                <p>Submit new Kinyarwanda words with meanings and examples</p>
+                <p>Contribute to Kinyarwanda by adding words</p>
                 <a href="{{ url_for('routes1.contribute_word_page') }}" class="card-button">
                     <i class="fas fa-arrow-right"></i>
                     Add Words
@@ -76,8 +69,7 @@
                 <div class="card-icon">
                     <i class="fas fa-users"></i>
                 </div>
-                <h3>Browse Community Words</h3>
-                <p>Discover words added by other learners and contributors</p>
+                <p>Discover newwords added by the community of learners and contributors</p>
                 <a href="{{ url_for('routes1.community_dictionary_public') }}" class="card-button">
                     <i class="fas fa-arrow-right"></i>
                     Browse Words
