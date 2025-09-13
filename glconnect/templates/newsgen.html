@@ -1263,7 +1263,6 @@
     </div>
 
     <script>
-        let topics = [];
         let approvedTopics = [];
         let topicValidations = {};
         let progressInterval;
@@ -1516,7 +1515,7 @@
                 return;
             }
             
-            if (topics.includes(topic)) {
+            if (addedTopics.includes(topic)) {
                 showValidationFeedback(topic, {
                     valid: false,
                     error: 'This topic has already been added'
@@ -1538,11 +1537,9 @@
                 
                 if (validationData.valid) {
                     // Topic is valid - add it
-                    topics.push(topic);
+                    addTopicToList(topic);
                     input.value = ''; // Clear input field
                     clearValidationFeedback();
-                    updateTopicsDisplay();
-                    validateAllTopics();
                     
                     // Show success message
                     showValidationFeedback(topic, {
@@ -1566,17 +1563,15 @@
         }
 
         function removeTopic(topicToRemove) {
-            topics = topics.filter(topic => topic !== topicToRemove);
+            removeTopicFromList(topicToRemove);
             delete topicValidations[topicToRemove];
-            updateTopicsDisplay();
         }
 
         function removeApprovedTopic(topicToRemove) {
             // Remove from both arrays
-            topics = topics.filter(topic => topic !== topicToRemove);
+            removeTopicFromList(topicToRemove);
             approvedTopics = approvedTopics.filter(topic => topic !== topicToRemove);
             delete topicValidations[topicToRemove];
-            updateTopicsDisplay();
         }
 
         function updateTopicsDisplay() {
@@ -1589,7 +1584,7 @@
             const validTopics = [];
             const invalidTopics = [];
             
-            topics.forEach(topic => {
+            addedTopics.forEach(topic => {
                 const validation = topicValidations[topic];
                 if (validation && validation.is_relevant) {
                     validTopics.push(topic);
@@ -1643,7 +1638,7 @@
         }
 
         async function validateAllTopics() {
-            const validationPromises = topics.map(async (topic) => {
+            const validationPromises = addedTopics.map(async (topic) => {
                 try {
                     const response = await fetch('/routes2/news/api/validate-news-topic', {
                         method: 'POST',
@@ -1708,7 +1703,7 @@
         document.getElementById('newsForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            if (topics.length === 0) {
+            if (addedTopics.length === 0) {
                 alert('Please add at least one topic before generating news.');
                 return;
             }
