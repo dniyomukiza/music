@@ -16,7 +16,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             min-height: 100vh;
             color: #333;
         }
@@ -98,7 +98,7 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: linear-gradient(90deg, #2c3e50, #34495e);
         }
 
         .card h3 {
@@ -139,22 +139,22 @@
         .stat-value {
             font-size: 1.4em;
             font-weight: bold;
-            color: #667eea;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #2c3e50;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
         .category-link {
-            color: #667eea;
+            color: #2c3e50;
             text-decoration: none;
             font-weight: 500;
             transition: all 0.3s ease;
         }
 
         .category-link:hover {
-            color: #764ba2;
+            color: #34495e;
             text-decoration: underline;
         }
 
@@ -174,7 +174,7 @@
         }
 
         .recent-searches::-webkit-scrollbar-thumb {
-            background: #667eea;
+            background: #2c3e50;
             border-radius: 3px;
         }
 
@@ -216,7 +216,7 @@
         .metric-card {
             text-align: center;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #2c3e50, #34495e);
             color: white;
             border-radius: 15px;
             margin-bottom: 20px;
@@ -276,7 +276,7 @@
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #2c3e50, #34495e);
             color: white;
             border: none;
             border-radius: 50%;
@@ -297,12 +297,12 @@
             display: none;
             text-align: center;
             padding: 20px;
-            color: #667eea;
+            color: #2c3e50;
         }
 
         .spinner {
-            border: 3px solid rgba(102, 126, 234, 0.3);
-            border-top: 3px solid #667eea;
+            border: 3px solid rgba(44, 62, 80, 0.3);
+            border-top: 3px solid #2c3e50;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -325,7 +325,7 @@
         <div class="header">
             <h1>
                 <i class="fas fa-chart-line"></i>
-                Real-time Analytics Dashboard
+                Real-time Analytics
                 <span class="live-indicator">
                     <div class="pulse"></div>
                     LIVE
@@ -478,12 +478,12 @@
                 datasets: [{
                     label: 'Searches',
                     data: dailyData.map(day => day.count),
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: '#2c3e50',
+                    backgroundColor: 'rgba(44, 62, 80, 0.1)',
                     borderWidth: 3,
                     fill: true,
                     tension: 0.4,
-                    pointBackgroundColor: '#667eea',
+                    pointBackgroundColor: '#2c3e50',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointRadius: 6
@@ -522,12 +522,12 @@
                 datasets: [{
                     data: categoryData.map(item => item[1]),
                     backgroundColor: [
-                        '#667eea',
-                        '#764ba2',
-                        '#f093fb',
-                        '#f5576c',
-                        '#4facfe',
-                        '#00f2fe',
+                        '#2c3e50',
+                        '#34495e',
+                        '#4a6741',
+                        '#5d6d7e',
+                        '#6c7b95',
+                        '#7d8b9a',
                         '#43e97b',
                         '#38f9d7'
                     ],
