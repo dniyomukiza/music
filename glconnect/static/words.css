@@ -1116,7 +1116,7 @@
 }
 
 .phonetics-section h3 i {
-    color: #f093fb;
+    color: #2c3e50;
 }
 
 .root-section h3 i {
@@ -1179,7 +1179,7 @@
 
 .phonetic-key {
     font-weight: 600;
-    color: #f093fb;
+    color: #2c3e50;
     font-size: 0.9rem;
     text-transform: uppercase;
 }

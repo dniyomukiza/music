@@ -314,7 +314,11 @@ def approve_contribution(contribution_id):
         contribution = WordContribution.query.get_or_404(contribution_id)
         
         if contribution.status != 'pending':
-            return jsonify({'success': False, 'message': 'Contribution already processed'}), 400
+            status_msg = {
+                'approved': 'This contribution has already been approved',
+                'rejected': 'This contribution has already been rejected'
+            }.get(contribution.status, 'This contribution has already been processed')
+            return jsonify({'success': False, 'message': status_msg}), 400
         
         # Add to community dictionary (separate from main dictionary)
         from .community_dictionary_manager import community_dictionary_manager

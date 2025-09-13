@@ -819,55 +819,86 @@ def generate_broadcast(topics: list[str]) -> dict:
 
     # Execute text generation first to get reporter scripts
     print("DEBUG: Executing text generation phase...")
-    text_generation_output = asyncio.run(run_agent(text_generation_phase, ""))
-    print(f"DEBUG: Text generation output: {text_generation_output[:200]}...")
+    print(f"DEBUG: Running with {len(news_agents)} reporter agents")
+    for i, agent in enumerate(news_agents):
+        print(f"DEBUG: Agent {i}: {agent.name} - {agent.description}")
+    
+    try:
+        text_generation_output = asyncio.run(run_agent(text_generation_phase, ""))
+        print(f"DEBUG: Text generation output length: {len(text_generation_output)}")
+        print(f"DEBUG: Text generation output: {text_generation_output[:500]}...")
+    except Exception as e:
+        print(f"DEBUG: Parallel execution failed: {e}")
+        print("DEBUG: Falling back to individual agent execution...")
+        
+        # Fallback: run each agent individually
+        individual_outputs = []
+        for i, agent in enumerate(news_agents):
+            try:
+                print(f"DEBUG: Running individual agent {i}: {agent.name}")
+                individual_output = asyncio.run(run_agent(agent, ""))
+                individual_outputs.append(individual_output)
+                print(f"DEBUG: Agent {i} output: {individual_output[:100]}...")
+            except Exception as agent_error:
+                print(f"DEBUG: Agent {i} failed: {agent_error}")
+                individual_outputs.append("")
+        
+        # Combine individual outputs
+        text_generation_output = "\n".join(individual_outputs)
+        print(f"DEBUG: Combined individual outputs: {text_generation_output[:500]}...")
 
     # Extract reporter scripts from the output
     reporter_scripts = []
     
-    # Look for JSON patterns in the output
-    json_pattern = r'\{[^{}]*"[^"]*script[^"]*"[^{}]*\}'
-    json_matches = re.findall(json_pattern, text_generation_output)
-    
-    print(f"DEBUG: Found {len(json_matches)} JSON matches in text generation output")
+    print(f"DEBUG: Raw text generation output: {text_generation_output[:500]}...")
     
     for script_key in reporter_script_keys:
         script_found = False
+        script_text = ""
         
-        # First try to find in JSON matches
-        for json_match in json_matches:
-            if script_key in json_match:
-                # Extract the value after the script key - improved regex to handle escaped quotes
-                pattern = f'"{script_key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'
-                match = re.search(pattern, json_match)
-                if match:
-                    # Clean up the extracted text - remove any unwanted characters
-                    script_text = match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
-                    # Apply comprehensive text cleaning for speech
-                    script_text = clean_text_for_speech(script_text)
-                    reporter_scripts.append(script_text)
+        # Try multiple extraction methods
+        extraction_methods = [
+            # Method 1: Look for JSON with script key
+            f'"{script_key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"',
+            # Method 2: Look for script key with different quote styles
+            f'"{script_key}"\\s*:\\s*"([^"]*)"',
+            # Method 3: Look for script key with single quotes
+            f"'{script_key}'\\s*:\\s*'([^']*)'",
+            # Method 4: Look for script key without quotes
+            f'{script_key}\\s*:\\s*"([^"]*)"',
+        ]
+        
+        for i, pattern in enumerate(extraction_methods):
+            match = re.search(pattern, text_generation_output, re.DOTALL)
+            if match:
+                script_text = match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
+                # Only accept if we got substantial content (more than just a placeholder)
+                if len(script_text.strip()) > 20 and not script_text.strip().startswith("Here's the latest"):
                     script_found = True
-                    print(f"DEBUG: Found {script_key} in JSON: {script_text[:50]}...")
+                    print(f"DEBUG: Found {script_key} using method {i+1}: {script_text[:50]}...")
                     break
         
-        # If not found in JSON, try to find the script key in the raw output
-        if not script_found:
-            pattern = f'"{script_key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'
-            match = re.search(pattern, text_generation_output)
-            if match:
-                # Clean up the extracted text - remove any unwanted characters
-                script_text = match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
-                # Apply comprehensive text cleaning for speech
-                script_text = clean_text_for_speech(script_text)
-                reporter_scripts.append(script_text)
-                script_found = True
-                print(f"DEBUG: Found {script_key} in raw output: {script_text[:50]}...")
-        
-        if not script_found:
-            # Create a placeholder script
-            topic = script_key.replace('_script', '')
-            reporter_scripts.append(f"Here's the latest report on {topic}.")
-            print(f"DEBUG: Created placeholder for {script_key}")
+        if script_found:
+            # Apply comprehensive text cleaning for speech
+            script_text = clean_text_for_speech(script_text)
+            reporter_scripts.append(script_text)
+        else:
+            # If still not found, try to extract any substantial content after the script key
+            fallback_pattern = f'"{script_key}"\\s*:\\s*"([^"]*)"'
+            fallback_match = re.search(fallback_pattern, text_generation_output, re.DOTALL)
+            if fallback_match:
+                fallback_text = fallback_match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
+                if len(fallback_text.strip()) > 10:
+                    script_text = clean_text_for_speech(fallback_text)
+                    reporter_scripts.append(script_text)
+                    script_found = True
+                    print(f"DEBUG: Found {script_key} using fallback: {script_text[:50]}...")
+            
+            if not script_found:
+                # Create a more detailed placeholder that indicates the issue
+                topic = script_key.replace('_script', '')
+                reporter_scripts.append(f"Reporting on {topic}: Unable to retrieve current news details. Please check back later for updates on {topic}.")
+                print(f"DEBUG: Created detailed placeholder for {script_key} due to extraction failure")
 
     print(f"DEBUG: Extracted reporter scripts: {len(reporter_scripts)} scripts")
 

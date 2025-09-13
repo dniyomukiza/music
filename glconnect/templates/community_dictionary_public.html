@@ -159,9 +159,6 @@
                         <a href="{{ url_for('routes1.findwords') }}" class="btn btn-primary">
                             <i class="fas fa-book"></i> Main Dictionary
                         </a>
-                        <a href="{{ url_for('routes1.contribute_word_page') }}" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Contribute Word
-                        </a>
                         <button class="btn btn-info" onclick="location.reload()">
                             <i class="fas fa-sync"></i> Refresh
                         </button>
@@ -793,26 +790,57 @@ setInterval(forceMobileVisibility, 500);
     font-weight: 600;
     padding: 0.75rem 1.5rem;
     transition: all 0.3s ease;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
 }
 
 .btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #2c3e50, #34495e);
-    border: none;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #4CAF50, #45a049);
-    border: none;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
 }
 
 .btn-info {
-    background: linear-gradient(135deg, #17a2b8, #138496);
-    border: none;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
 }
 
 .form-control {
