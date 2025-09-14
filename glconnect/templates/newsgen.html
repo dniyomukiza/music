@@ -428,6 +428,10 @@
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         }
 
+        .topic-tag.pending {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+
         .topic-tag.warning {
             background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
         }
@@ -521,6 +525,34 @@
         .feature-card.clickable:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .feature-card.disabled-card {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+            position: relative;
+        }
+        
+        .feature-card.disabled-card::after {
+            content: "Currently Disabled";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .feature-card.disabled-card:hover::after {
+            opacity: 1;
         }
 
         .audio-files-section {
@@ -1103,11 +1135,11 @@
                             <i class="fas fa-arrow-right"></i>
                         </div>
                     </div>
-                    <div class="feature-card clickable" id="professionalAudioCard">
+                    <div class="feature-card disabled-card" id="professionalAudioCard" style="opacity: 0.6; cursor: not-allowed; pointer-events: none;">
                         <div class="feature-icon"><i class="fas fa-music"></i></div>
                         <h3>Professional Audio</h3>
                         <p>High-quality news audio with jingles, transitions, in a professional broadcast format</p>
-                        <div class="audio-files-section" id="audioFilesSection">
+                        <div class="audio-files-section" id="audioFilesSection" style="display: none;">
                             <div class="audio-files-header">
                                 <h4 class="audio-files-title">Available Audio Files</h4>
                                 <span class="audio-files-count" id="audioFilesCount">0 files</span>
@@ -1269,22 +1301,22 @@
         let validationTimeout;
         let audioFilesLoaded = false;
 
-        // Professional Audio click handler
-        document.getElementById('professionalAudioCard').addEventListener('click', function() {
-            const audioSection = document.getElementById('audioFilesSection');
-            const isVisible = audioSection.style.display !== 'none';
-            
-            if (isVisible) {
-                // Hide the section
-                audioSection.style.display = 'none';
-            } else {
-                // Show the section and load audio files
-                audioSection.style.display = 'block';
-                if (!audioFilesLoaded) {
-                    loadAudioFiles();
-                }
-            }
-        });
+        // Professional Audio click handler - DISABLED
+        // document.getElementById('professionalAudioCard').addEventListener('click', function() {
+        //     const audioSection = document.getElementById('audioFilesSection');
+        //     const isVisible = audioSection.style.display !== 'none';
+        //     
+        //     if (isVisible) {
+        //         // Hide the section
+        //         audioSection.style.display = 'none';
+        //     } else {
+        //         // Show the section and load audio files
+        //         audioSection.style.display = 'block';
+        //         if (!audioFilesLoaded) {
+        //             loadAudioFiles();
+        //         }
+        //     }
+        // });
 
         // Load audio files from API
         async function loadAudioFiles() {
@@ -1538,6 +1570,8 @@
                 if (validationData.valid) {
                     // Topic is valid - add it
                     addTopicToList(topic);
+                    // Also update the main topics display
+                    updateTopicsDisplay();
                     input.value = ''; // Clear input field
                     clearValidationFeedback();
                     
@@ -1578,18 +1612,23 @@
             const display = document.getElementById('topicsDisplay');
             const approvedSection = document.getElementById('approvedTopicsSection');
             const approvedList = document.getElementById('approvedTopicsList');
-            // Button references removed - using only input group Add button
             
             // Separate valid and invalid topics
             const validTopics = [];
             const invalidTopics = [];
+            const pendingTopics = [];
             
             addedTopics.forEach(topic => {
                 const validation = topicValidations[topic];
-                if (validation && validation.is_relevant) {
-                    validTopics.push(topic);
+                if (validation) {
+                    if (validation.is_relevant) {
+                        validTopics.push(topic);
+                    } else {
+                        invalidTopics.push(topic);
+                    }
                 } else {
-                    invalidTopics.push(topic);
+                    // Topics that haven't been validated yet
+                    pendingTopics.push(topic);
                 }
             });
             
@@ -1613,14 +1652,28 @@
                 approvedList.innerHTML = '<div class="no-approved-topics">No approved topics yet</div>';
             }
             
-            // Update main topics display (only show invalid topics)
-            if (invalidTopics.length === 0) {
+            // Update main topics display - show all added topics
+            const allTopicsToShow = [...pendingTopics, ...invalidTopics];
+            
+            if (allTopicsToShow.length === 0 && addedTopics.length === 0) {
+                display.innerHTML = '<div class="empty-state">No topics added yet. Add topics above to get started.</div>';
+            } else if (allTopicsToShow.length === 0 && addedTopics.length > 0) {
                 display.innerHTML = '<div class="empty-state">All topics have been approved! Add more topics above.</div>';
             } else {
-                display.innerHTML = invalidTopics.map(topic => {
+                display.innerHTML = allTopicsToShow.map(topic => {
                     const validation = topicValidations[topic];
-                    let statusClass = 'invalid';
-                    let statusIcon = '<i class="fas fa-exclamation-triangle"></i>';
+                    let statusClass = 'pending';
+                    let statusIcon = '<i class="fas fa-clock"></i>';
+                    
+                    if (validation) {
+                        if (validation.is_relevant) {
+                            statusClass = 'valid';
+                            statusIcon = '<i class="fas fa-check-circle"></i>';
+                        } else {
+                            statusClass = 'invalid';
+                            statusIcon = '<i class="fas fa-exclamation-triangle"></i>';
+                        }
+                    }
                     
                     return `
                         <div class="topic-tag ${statusClass}">
@@ -1633,8 +1686,6 @@
                     `;
                 }).join('');
             }
-            
-            // Button state management removed - using only input group Add button
         }
 
         async function validateAllTopics() {
@@ -1858,7 +1909,7 @@
         function addTopicToList(topic) {
             if (!addedTopics.includes(topic)) {
                 addedTopics.push(topic);
-                updateTopicsDisplay();
+                updateAddedTopicsDisplay();
                 showTopicsList();
             }
         }
@@ -1866,14 +1917,14 @@
         // Function to remove topic from the list
         function removeTopicFromList(topic) {
             addedTopics = addedTopics.filter(t => t !== topic);
-            updateTopicsDisplay();
+            updateAddedTopicsDisplay();
             if (addedTopics.length === 0) {
                 hideTopicsList();
             }
         }
         
         // Function to update the topics display
-        function updateTopicsDisplay() {
+        function updateAddedTopicsDisplay() {
             const container = document.getElementById('addedTopicsContainer');
             if (container) {
                 container.innerHTML = addedTopics.map(topic => `

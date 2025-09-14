@@ -22,3 +22,153 @@
     Device: Desktop
     User-Agent: python-requests/2.32.3
 --------------------------------------------------------------------------------
+[2025-09-14 05:53:53 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-14 05:56:34 UTC] GET /routes2/news
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-14 05:57:59 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:04 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:06 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:08 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:10 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:12 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:14 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:16 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:18 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:20 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:22 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:30 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:32 UTC] GET /routes2/news/status/999702b9-e248-42cc-9b55-66c719e8cec6
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:46 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:46 UTC] GET /routes2/news/status/999702b9-e248-42cc-9b55-66c719e8cec6
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:58:57 UTC] GET /routes2/news/status/2a01f42f-032d-4ed4-9575-450a3a6626f3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:59:27 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:59:34 UTC] GET /routes2/news/status/2054f411-7a8b-4ac5-87f3-175b653ef52e
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 06:03:27 UTC] GET /routes2/news/analytics
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 06:03:27 UTC] GET /routes2/news/api/analytics/summary
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 06:03:39 UTC] GET /routes2/news/analytics
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-14 06:04:17 UTC] GET /routes2/news/analytics/category/Technology
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-14 06:04:31 UTC] GET /routes2/news/analytics/category/Politics
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
