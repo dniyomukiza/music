@@ -1,0 +1,24 @@
+[2025-09-14 05:48:51 UTC] GET /routes1/api/picture-word-game
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-14 05:49:00 UTC] GET /routes1/api/picture-word-game
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:49:02 UTC] GET /routes1/api/picture-word-game
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 05:49:03 UTC] GET /routes1/api/picture-word-game
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------

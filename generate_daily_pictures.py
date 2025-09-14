@@ -23,7 +23,7 @@ from PIL import Image
 from io import BytesIO
 
 def generate_image_with_gemini(word, meaning):
-    """Generate an image using Gemini API for a Kinyarwanda word"""
+    """Generate an image with interleaved text using Gemini API for a Kinyarwanda word"""
     try:
         # Configure Gemini client
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -32,19 +32,42 @@ def generate_image_with_gemini(word, meaning):
         
         client = genai.Client(api_key=api_key)
         
-        # Create a prompt for image generation
+        # Create a focused prompt for image generation with English text overlay only
         prompt = f"""
-        Create a simple, clear image that represents the Kinyarwanda word: "{word}"
+        Create an educational image for a Kinyarwanda language learning matching game with these specifications:
+        
+        Kinyarwanda word: "{word}"
         English meaning: "{meaning}"
         
-        The image should be:
-        - Simple and clear
-        - Suitable for a language learning game
-        - Easy to identify
-        - Professional looking
-        - Focused on the main object/concept
-        - No text in the image
-        - Clean background
+        Image requirements:
+        1. VISUAL ELEMENTS:
+           - Clear, simple illustration representing the word/concept
+           - Professional, clean design suitable for learning
+           - Bright, engaging colors
+           - Uncluttered composition
+           - Focus on the main object/concept
+           
+        2. TEXT OVERLAY (integrated into the image):
+           - ONLY show the English translation: "{meaning}"
+           - Position the text at the bottom of the image
+           - Make it clearly readable with good contrast
+           - Use a clean, readable font
+           - Add a subtle background behind the text for readability
+           
+        3. DESIGN SPECIFICATIONS:
+           - Image size: 400x300 pixels (landscape orientation)
+           - English text should be prominent but not overwhelming
+           - Use white or light text with dark background, or dark text with light background
+           - Professional, educational appearance
+           - No decorative borders or frames
+           - Text should be positioned to not interfere with the main visual
+           
+        4. CONTENT GUIDELINES:
+           - Make the image immediately recognizable
+           - Suitable for all ages
+           - Culturally appropriate
+           - Focus on the main concept so users can easily match with Kinyarwanda words
+           - The English text should help users understand what the picture represents
         """
         
         print(f"Generating image for: {word} ({meaning})")
@@ -207,7 +230,7 @@ def generate_daily_pictures():
                         image_filename = save_image(kinyarwanda_word, english_meaning, image_result["image_data"])
                         
                         if image_filename:
-                            # Save to database
+                            # Save to database with enhanced metadata
                             picture_item = PictureGameItem(
                                 kinyarwanda_word=kinyarwanda_word,
                                 english_meaning=english_meaning,
@@ -215,7 +238,17 @@ def generate_daily_pictures():
                                 word_id=word_data.id,
                                 created_at=datetime.now(timezone.utc),
                                 used_count=0,
-                                is_active=True
+                                is_active=True,
+                                image_type='text_overlay',
+                                pronunciation_guide=None,  # Could be extracted from word_data if available
+                                context_hint=None,  # Could be extracted from word_data if available
+                                text_overlay_data=json.dumps({
+                                    'english_meaning': english_meaning,
+                                    'text_position': 'bottom_overlay',
+                                    'text_type': 'english_only',
+                                    'font_size': 'medium'
+                                }),
+                                generation_prompt=image_result.get('prompt_used', '')
                             )
                             
                             db.session.add(picture_item)
@@ -266,7 +299,7 @@ def generate_daily_pictures():
                         image_filename = save_image(kinyarwanda_word, english_meaning, image_result["image_data"])
                     
                     if image_filename:
-                        # Save to database
+                        # Save to database with enhanced metadata
                         picture_item = PictureGameItem(
                             kinyarwanda_word=kinyarwanda_word,
                             english_meaning=english_meaning,
@@ -274,7 +307,17 @@ def generate_daily_pictures():
                             word_id=word_data.id,
                             created_at=datetime.now(timezone.utc),
                             used_count=0,
-                            is_active=True
+                            is_active=True,
+                            image_type='text_overlay',
+                            pronunciation_guide=None,  # Could be extracted from word_data if available
+                            context_hint=None,  # Could be extracted from word_data if available
+                            text_overlay_data=json.dumps({
+                                'english_meaning': english_meaning,
+                                'text_position': 'bottom_overlay',
+                                'text_type': 'english_only',
+                                'font_size': 'medium'
+                            }),
+                            generation_prompt=image_result.get('prompt_used', '')
                         )
                         
                         db.session.add(picture_item)

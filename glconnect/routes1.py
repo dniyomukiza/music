@@ -648,15 +648,32 @@ def get_picture_word_game():
             
             db.session.commit()
             
-            # Convert to game data format
+            # Convert to game data format with enhanced text-overlay support
             game_data = []
             for item in selected_items:
-                # Create image data from stored filename
+                # Parse text overlay data if available
+                text_overlay_data = {}
+                if item.text_overlay_data:
+                    try:
+                        text_overlay_data = json.loads(item.text_overlay_data)
+                    except:
+                        text_overlay_data = {}
+                
+                # Create enhanced image data from stored filename
                 image_data = {
                     'type': 'stored_image',
                     'image_url': f"/static/pictures/{item.image_filename}",
                     'description': item.english_meaning,
-                    'is_noun': True
+                    'is_noun': True,
+                    'image_type': item.image_type or 'text_overlay',
+                    'text_overlay': {
+                        'english_meaning': text_overlay_data.get('english_meaning', item.english_meaning),
+                        'text_position': text_overlay_data.get('text_position', 'bottom_overlay'),
+                        'text_type': text_overlay_data.get('text_type', 'english_only'),
+                        'font_size': text_overlay_data.get('font_size', 'medium')
+                    },
+                    'pronunciation_guide': item.pronunciation_guide,
+                    'context_hint': item.context_hint
                 }
                 
                 game_data.append({

@@ -717,7 +717,7 @@
                         
                         pictureCard.appendChild(pictureImg);
                     } else if (item.image.type === 'stored_image' && item.image.image_url) {
-                        // Use stored image from local files
+                        // Use stored image from local files with enhanced text-overlay support
                         const pictureImg = document.createElement('img');
                         pictureImg.className = 'picture-generated';
                         pictureImg.src = item.image.image_url;
@@ -727,7 +727,42 @@
                         pictureImg.style.objectFit = 'cover';
                         pictureImg.style.borderRadius = '8px';
                         
-                        pictureCard.appendChild(pictureImg);
+                        // Add English text overlay if available
+                        if (item.image.image_type === 'text_overlay' && item.image.text_overlay) {
+                            const textOverlay = document.createElement('div');
+                            textOverlay.className = 'english-text-overlay';
+                            textOverlay.style.cssText = `
+                                position: absolute;
+                                bottom: 0;
+                                left: 0;
+                                right: 0;
+                                background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.4));
+                                padding: 8px 12px;
+                                border-radius: 0 0 8px 8px;
+                                color: white;
+                                text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+                                text-align: center;
+                            `;
+                            
+                            // Only English meaning (clean and simple)
+                            const englishText = document.createElement('div');
+                            englishText.className = 'english-hint-text';
+                            englishText.textContent = item.image.text_overlay.english_meaning;
+                            englishText.style.cssText = `
+                                font-size: ${item.image.text_overlay.font_size === 'medium' ? '0.9em' : '0.8em'};
+                                font-weight: 600;
+                                line-height: 1.2;
+                            `;
+                            
+                            textOverlay.appendChild(englishText);
+                            
+                            pictureCard.style.position = 'relative';
+                            pictureCard.appendChild(pictureImg);
+                            pictureCard.appendChild(textOverlay);
+                        } else {
+                            // Regular stored image without text overlay
+                            pictureCard.appendChild(pictureImg);
+                        }
                     } else if (item.image.type === 'simple_placeholder' || item.image.type === 'enhanced_placeholder') {
                         // Enhanced placeholder for nouns (with icon)
                         const picturePlaceholder = document.createElement('div');

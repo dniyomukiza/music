@@ -172,5 +172,12 @@ class PictureGameItem(db.Model):
     is_active = db.Column(db.Boolean, default=True)  # For soft deletion
     last_used = db.Column(db.DateTime, nullable=True)  # Track when it was last used in a game
     
+    # Enhanced fields for text-to-image with interleaved text
+    image_type = db.Column(db.String(50), default='text_overlay')  # 'text_overlay', 'simple', 'enhanced'
+    pronunciation_guide = db.Column(db.String(255), nullable=True)  # Optional pronunciation hint
+    context_hint = db.Column(db.Text, nullable=True)  # Optional context or usage hint
+    text_overlay_data = db.Column(db.Text, nullable=True)  # JSON data about text positioning and styling
+    generation_prompt = db.Column(db.Text, nullable=True)  # Store the prompt used for generation
+    
     # Relationship to words_data table
     word_data = db.relationship('WordsData', backref='picture_game_items')
