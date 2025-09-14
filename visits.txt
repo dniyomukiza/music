@@ -46,3 +46,21 @@
     Device: Desktop
     User-Agent: python-requests/2.32.3
 --------------------------------------------------------------------------------
+[2025-09-14 06:47:53 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 06:47:53 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-09-14 06:47:54 UTC] POST /routes2/news/api/validate-news-topic
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------

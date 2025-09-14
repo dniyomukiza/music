@@ -1574,8 +1574,8 @@
                     }
                     // Store validation result
                     topicValidations[topic] = validationData;
-                    // Update the main topics display
-                    updateTopicsDisplay();
+                    // Update the correct topics display (simple form)
+                    updateAddedTopicsDisplay();
                     input.value = ''; // Clear input field
                     clearValidationFeedback();
                     
@@ -1591,8 +1591,8 @@
                     }
                     // Store validation result
                     topicValidations[topic] = validationData;
-                    // Update the main topics display
-                    updateTopicsDisplay();
+                    // Update the correct topics display (simple form)
+                    updateAddedTopicsDisplay();
                     input.value = ''; // Clear input field
                     
                     // Show error message
@@ -1611,8 +1611,8 @@
                 if (!addedTopics.includes(topic)) {
                     addedTopics.push(topic);
                 }
-                // Update the main topics display
-                updateTopicsDisplay();
+                // Update the correct topics display (simple form)
+                updateAddedTopicsDisplay();
                 input.value = ''; // Clear input field
             }
         }
@@ -1624,8 +1624,8 @@
             approvedTopics = approvedTopics.filter(t => t !== topicToRemove);
             // Remove validation data
             delete topicValidations[topicToRemove];
-            // Update display
-            updateTopicsDisplay();
+            // Update the correct display (simple form)
+            updateAddedTopicsDisplay();
         }
 
         function removeApprovedTopic(topicToRemove) {
@@ -1635,8 +1635,8 @@
             approvedTopics = approvedTopics.filter(topic => topic !== topicToRemove);
             // Remove validation data
             delete topicValidations[topicToRemove];
-            // Update display
-            updateTopicsDisplay();
+            // Update the correct display (simple form)
+            updateAddedTopicsDisplay();
         }
 
         function updateTopicsDisplay() {
@@ -1957,16 +1957,30 @@
         // Function to update the topics display
         function updateAddedTopicsDisplay() {
             const container = document.getElementById('addedTopicsContainer');
+            const topicsList = document.getElementById('addedTopicsList');
+            
             if (container) {
-                container.innerHTML = addedTopics.map(topic => `
-                    <div class="topic-item">
-                        <i class="fas fa-check-circle"></i>
-                        <span class="topic-text">${topic}</span>
-                        <button class="remove-topic-btn" onclick="removeTopicFromList('${topic}')" title="Remove topic">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                `).join('');
+                if (addedTopics.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No topics added yet. Add topics above to get started.</div>';
+                    if (topicsList) {
+                        topicsList.style.display = 'none';
+                    }
+                } else {
+                    container.innerHTML = addedTopics.map(topic => `
+                        <div class="topic-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span class="topic-text">${topic}</span>
+                            <button class="remove-topic-btn" onclick="removeTopic('${topic}')" title="Remove topic">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                    
+                    // Show the topics list
+                    if (topicsList) {
+                        topicsList.style.display = 'block';
+                    }
+                }
             }
         }
         
