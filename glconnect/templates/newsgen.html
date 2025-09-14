@@ -1568,9 +1568,13 @@
                 const validationData = await response.json();
                 
                 if (validationData.valid) {
-                    // Topic is valid - add it
-                    addTopicToList(topic);
-                    // Also update the main topics display
+                    // Topic is valid - add it to the main system
+                    if (!addedTopics.includes(topic)) {
+                        addedTopics.push(topic);
+                    }
+                    // Store validation result
+                    topicValidations[topic] = validationData;
+                    // Update the main topics display
                     updateTopicsDisplay();
                     input.value = ''; // Clear input field
                     clearValidationFeedback();
@@ -1581,7 +1585,17 @@
                         message: 'Topic added successfully!'
                     });
                 } else {
-                    // Topic is invalid - show error
+                    // Topic is invalid - still add it to display but mark as invalid
+                    if (!addedTopics.includes(topic)) {
+                        addedTopics.push(topic);
+                    }
+                    // Store validation result
+                    topicValidations[topic] = validationData;
+                    // Update the main topics display
+                    updateTopicsDisplay();
+                    input.value = ''; // Clear input field
+                    
+                    // Show error message
                     showValidationFeedback(topic, {
                         valid: false,
                         error: 'This topic does not seem to be a news topic'
@@ -1593,19 +1607,36 @@
                     valid: false,
                     error: 'Validation service unavailable. Please try again.'
                 });
+                // Still add the topic but mark as pending validation
+                if (!addedTopics.includes(topic)) {
+                    addedTopics.push(topic);
+                }
+                // Update the main topics display
+                updateTopicsDisplay();
+                input.value = ''; // Clear input field
             }
         }
 
         function removeTopic(topicToRemove) {
-            removeTopicFromList(topicToRemove);
+            // Remove from addedTopics array
+            addedTopics = addedTopics.filter(t => t !== topicToRemove);
+            // Remove from approved topics if it was there
+            approvedTopics = approvedTopics.filter(t => t !== topicToRemove);
+            // Remove validation data
             delete topicValidations[topicToRemove];
+            // Update display
+            updateTopicsDisplay();
         }
 
         function removeApprovedTopic(topicToRemove) {
-            // Remove from both arrays
-            removeTopicFromList(topicToRemove);
+            // Remove from addedTopics array
+            addedTopics = addedTopics.filter(t => t !== topicToRemove);
+            // Remove from approved topics
             approvedTopics = approvedTopics.filter(topic => topic !== topicToRemove);
+            // Remove validation data
             delete topicValidations[topicToRemove];
+            // Update display
+            updateTopicsDisplay();
         }
 
         function updateTopicsDisplay() {
@@ -2008,30 +2039,62 @@
         
         // Function to poll for completion
         function pollForCompletion(taskId) {
+            let pollCount = 0;
+            const maxPolls = 90; // 3 minutes max (90 * 2 seconds)
+            
             const pollInterval = setInterval(() => {
-                fetch(`/routes2/news/status/${taskId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'completed') {
-                            clearInterval(pollInterval);
-                            stopProgressAnimation();
-                            hideLoadingState();
-                            showResults(data);
-                        } else if (data.status === 'failed') {
-                            clearInterval(pollInterval);
-                            stopProgressAnimation();
-                            hideLoadingState();
-                            alert('News generation failed: ' + (data.error || 'Unknown error'));
-                        }
-                        // If still running, continue polling
-                    })
-                    .catch(error => {
+                pollCount++;
+                
+                // Check if we've exceeded max polling attempts
+                if (pollCount > maxPolls) {
+                    clearInterval(pollInterval);
+                    stopProgressAnimation();
+                    hideLoadingState();
+                    alert('News generation is taking longer than expected. Please try again or check back later.');
+                    return;
+                }
+                
+                fetch(`/routes2/news/status/${taskId}`, {
+                    method: 'GET',
+                    timeout: 10000 // 10 second timeout for each request
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'completed') {
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
-                        console.error('Error polling status:', error);
-                        alert('Error checking status. Please try again.');
-                    });
+                        showResults(data);
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        stopProgressAnimation();
+                        hideLoadingState();
+                        alert('News generation failed: ' + (data.error || 'Unknown error'));
+                    } else if (data.error === 'Task not found') {
+                        clearInterval(pollInterval);
+                        stopProgressAnimation();
+                        hideLoadingState();
+                        alert('Task not found. The news generation may have completed or been cancelled. Please try generating news again.');
+                    }
+                    // If still running, continue polling
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                    
+                    // Only show error and stop polling if it's not a network timeout
+                    if (error.name !== 'TypeError' || !error.message.includes('Failed to fetch')) {
+                        clearInterval(pollInterval);
+                        stopProgressAnimation();
+                        hideLoadingState();
+                        alert('Error checking status: ' + error.message + '. Please try again.');
+                    }
+                    // For network timeouts, continue polling
+                });
             }, 2000); // Poll every 2 seconds
         }
         
