@@ -1946,18 +1946,12 @@
         }
         
         // Function to remove topic from the list
-        function removeTopicFromList(topic) {
-            addedTopics = addedTopics.filter(t => t !== topic);
-            updateAddedTopicsDisplay();
-            if (addedTopics.length === 0) {
-                hideTopicsList();
-            }
-        }
         
         // Function to update the topics display
         function updateAddedTopicsDisplay() {
             const container = document.getElementById('addedTopicsContainer');
             const topicsList = document.getElementById('addedTopicsList');
+            
             
             if (container) {
                 if (addedTopics.length === 0) {
@@ -1966,15 +1960,22 @@
                         topicsList.style.display = 'none';
                     }
                 } else {
-                    container.innerHTML = addedTopics.map(topic => `
-                        <div class="topic-item">
+                    // Clear the container first
+                    container.innerHTML = '';
+                    
+                    // Add each topic as a separate element
+                    addedTopics.forEach(topic => {
+                        const topicElement = document.createElement('div');
+                        topicElement.className = 'topic-item';
+                        topicElement.innerHTML = `
                             <i class="fas fa-check-circle"></i>
                             <span class="topic-text">${topic}</span>
                             <button class="remove-topic-btn" onclick="removeTopic('${topic}')" title="Remove topic">
                                 <i class="fas fa-times"></i>
                             </button>
-                        </div>
-                    `).join('');
+                        `;
+                        container.appendChild(topicElement);
+                    });
                     
                     // Show the topics list
                     if (topicsList) {
@@ -2003,6 +2004,7 @@
         // Function to generate news from added topics
         function generateNewsFromTopics() {
             let topicsToUse = [];
+            
             
             // Check if there are added topics
             if (addedTopics.length > 0) {
