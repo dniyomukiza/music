@@ -1331,7 +1331,22 @@ def _generate_broadcast_attempt(topics: list[str]) -> dict:
     # Force garbage collection to free memory
     gc.collect()
     
-    return final_output
+    # The final_output is a string, but we need to return a dict
+    # Extract the audio file path from the filesystem
+    import glob
+    audio_files = glob.glob("glconnect/static/audio/final_news_broadcast_*.mp3")
+    if audio_files:
+        # Get the most recent audio file
+        latest_audio = max(audio_files, key=os.path.getctime)
+        return {
+            "audio_file": latest_audio,
+            "summary": final_output if isinstance(final_output, str) else str(final_output)
+        }
+    else:
+        return {
+            "audio_file": None,
+            "summary": final_output if isinstance(final_output, str) else str(final_output)
+        }
 
 
 

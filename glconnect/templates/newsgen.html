@@ -697,6 +697,16 @@
             transform: translateY(-1px);
         }
 
+        .audio-transcribe-btn {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .audio-transcribe-btn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
         .audio-loading {
             text-align: center;
             padding: 20px;
@@ -1172,9 +1182,6 @@
                                 <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
                                     <i class="fas fa-play"></i> Generate News
                                 </button>
-                                <button type="button" class="btn btn-info" onclick="testWithSpecificTopics()" style="background: linear-gradient(135deg, #17a2b8, #138496); border: none; padding: 10px 20px; border-radius: 8px; color: white; margin-left: 10px;">
-                                    <i class="fas fa-test-tube"></i> Test Topics
-                                </button>
                             </div>
                             <div id="flaskValidationFeedback" class="validation-feedback"></div>
                             {% if form.keyword.errors %}
@@ -1372,6 +1379,9 @@
                                     <a href="${file.url}" class="audio-action-btn audio-download-btn" download>
                                         <i class="fas fa-download"></i> Download
                                     </a>
+                                    <button class="audio-action-btn audio-transcribe-btn" onclick="transcribeAudio('${file.url}', '${file.filename}')">
+                                        <i class="fas fa-file-text"></i> Transcribe
+                                    </button>
                                 </div>
                             </div>
                         `;
@@ -1405,6 +1415,165 @@
                 console.error('Error playing audio:', error);
                 alert('Error playing audio file. Please try downloading it instead.');
             });
+        }
+
+        // Transcribe audio function
+        async function transcribeAudio(audioUrl, filename) {
+            try {
+                // Show loading state
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing...';
+                button.disabled = true;
+
+                // Call the transcription endpoint
+                const response = await fetch('/routes2/news/transcribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        audio_url: audioUrl,
+                        filename: filename
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Show transcription result
+                showTranscriptionResult(data.transcript, filename);
+
+            } catch (error) {
+                console.error('Transcription error:', error);
+                alert('Error transcribing audio: ' + error.message);
+            } finally {
+                // Reset button state
+                const button = event.target;
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Show transcription result
+        function showTranscriptionResult(transcript, filename) {
+            // Create a modal or overlay to show the transcription
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 1000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                box-sizing: border-box;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    background: white;
+                    border-radius: 15px;
+                    padding: 30px;
+                    max-width: 800px;
+                    width: 100%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                ">
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 style="margin: 0; color: #2c3e50;">
+                            <i class="fas fa-file-text"></i> Audio Transcription
+                        </h3>
+                        <button onclick="this.closest('.modal').remove()" style="
+                            background: #dc3545;
+                            color: white;
+                            border: none;
+                            border-radius: 50%;
+                            width: 30px;
+                            height: 30px;
+                            cursor: pointer;
+                            font-size: 16px;
+                        ">×</button>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <strong>File:</strong> ${filename}
+                    </div>
+                    <div style="
+                        background: #f8f9fa;
+                        border: 1px solid #e9ecef;
+                        border-radius: 8px;
+                        padding: 20px;
+                        margin-bottom: 20px;
+                        white-space: pre-wrap;
+                        line-height: 1.6;
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    ">${transcript}</div>
+                    <div style="text-align: center;">
+                        <button onclick="downloadTranscript('${transcript}', '${filename}')" style="
+                            background: linear-gradient(135deg, #28a745, #20c997);
+                            color: white;
+                            border: none;
+                            padding: 12px 25px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 600;
+                            margin-right: 10px;
+                        ">
+                            <i class="fas fa-download"></i> Download Transcript
+                        </button>
+                        <button onclick="this.closest('.modal').remove()" style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 12px 25px;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-weight: 600;
+                        ">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        // Download transcript function
+        function downloadTranscript(transcript, filename) {
+            const transcriptFilename = filename.replace(/\.[^/.]+$/, '') + '_transcript.txt';
+            const blob = new Blob([transcript], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = transcriptFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
 
         // Real-time validation as user types
@@ -2081,44 +2250,6 @@
         // Global variable to store added topics
         let addedTopics = [];
         
-        // Test function with specific topics
-        function testWithSpecificTopics() {
-            console.log('Testing with specific topics...');
-            
-            // Clear existing topics
-            addedTopics = [];
-            updateAddedTopicsDisplay();
-            
-            // Add the test topics
-            const testTopics = [
-                'Stablecoins in shaping global macroeconomics',
-                'Nepal voted for their next Prime Minister via Discord',
-                'MLS updates'
-            ];
-            
-            console.log('Adding test topics:', testTopics);
-            
-            // Add each topic to the array
-            testTopics.forEach(topic => {
-                if (!addedTopics.includes(topic)) {
-                    addedTopics.push(topic);
-                    console.log('Added topic:', topic);
-                }
-            });
-            
-            // Update display
-            updateAddedTopicsDisplay();
-            
-            // Show feedback
-            showFlaskValidationFeedback('', {
-                valid: true,
-                message: `Added ${testTopics.length} test topics. Click "Generate News" to test!`
-            });
-            
-            console.log('Final addedTopics:', addedTopics);
-        }
-        
-        
         // Function to add topic to the list
         function addTopicToList(topic) {
             if (!addedTopics.includes(topic)) {
@@ -2338,6 +2469,9 @@
                                     <a href="${audioUrl}" download class="btn btn-primary">
                                         <i class="fas fa-download"></i> Download Audio
                                     </a>
+                                    <button class="btn btn-info" onclick="transcribeAudio('${audioUrl}', 'news_broadcast.mp3')">
+                                        <i class="fas fa-file-text"></i> Transcribe Audio
+                                    </button>
                                     <a href="{{ url_for('news_bp.analytics') }}" class="btn btn-secondary">
                                         <i class="fas fa-chart-bar"></i> View Dashboard
                                     </a>

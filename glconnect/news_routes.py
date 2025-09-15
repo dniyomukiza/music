@@ -927,8 +927,82 @@ def run_generate_broadcast(task_id, topics):
         print(f"DEBUG: Output type: {type(output)}")
         print(f"DEBUG: Output content: {str(output)[:500]}...")
         
-        # The agent returns a string, not a dictionary
-        if isinstance(output, str):
+        # Handle both string and dictionary outputs
+        if isinstance(output, dict):
+            print(f"Output from generate_broadcast (dict): {output}")
+            audio_file_path = output.get('audio_file')
+            summary = output.get('summary', '')
+            
+            if not audio_file_path:
+                # Fallback: look for audio files in filesystem
+                audio_file_path = extract_audio_path_from_output("")
+                if not audio_file_path:
+                    raise AudioFilePathNotFound("Audio file path not found in output")
+            
+            # Debug path information
+            print(f"DEBUG: Current working directory: {os.getcwd()}")
+            print(f"DEBUG: Audio file path to check: {audio_file_path}")
+            print(f"DEBUG: Audio file path exists: {os.path.exists(audio_file_path)}")
+            print(f"DEBUG: Audio file path is absolute: {os.path.isabs(audio_file_path)}")
+            
+            # Try to resolve the path if it's relative
+            if not os.path.isabs(audio_file_path):
+                abs_audio_file_path = os.path.abspath(audio_file_path)
+                print(f"DEBUG: Resolved absolute path: {abs_audio_file_path}")
+                print(f"DEBUG: Resolved path exists: {os.path.exists(abs_audio_file_path)}")
+                if os.path.exists(abs_audio_file_path):
+                    audio_file_path = abs_audio_file_path
+                    print(f"DEBUG: Using resolved absolute path: {audio_file_path}")
+            
+            # Verify the audio file exists and has content before marking as completed
+            # Add retry mechanism in case file is still being written
+            max_retries = 10
+            retry_delay = 1  # seconds
+            
+            for attempt in range(max_retries):
+                if os.path.exists(audio_file_path):
+                    file_size = os.path.getsize(audio_file_path)
+                    if file_size > 0:
+                        print(f"DEBUG: Audio file verified - {audio_file_path} ({file_size} bytes)")
+                        break
+                    else:
+                        print(f"DEBUG: Audio file exists but is empty (0 bytes), attempt {attempt + 1}/{max_retries}")
+                else:
+                    print(f"DEBUG: Audio file does not exist yet, attempt {attempt + 1}/{max_retries}")
+                
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+            else:
+                # If we get here, all retries failed
+                if not os.path.exists(audio_file_path):
+                    raise AudioFilePathNotFound(f"Audio file does not exist after {max_retries} attempts: {audio_file_path}")
+                else:
+                    file_size = os.path.getsize(audio_file_path)
+                    raise AudioFilePathNotFound(f"Audio file is empty (0 bytes) after {max_retries} attempts: {audio_file_path}")
+            
+            # Convert the file path to a URL that can be served by Flask
+            filename = os.path.basename(audio_file_path)
+            audio_url = f"/routes2/news/audio/{filename}"
+            
+            # Store the result with the extracted audio path
+            with _tasks_lock:
+                tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['result'] = {
+                    'audio_file_path': audio_file_path,
+                    'output_text': summary
+                }
+                tasks[task_id]['summary'] = summary
+            
+            # Clean up old audio files after successful generation (but keep the current one)
+            cleanup_old_audio_files()
+            
+            # Clean up temporary audio files (jingle.wav and final_news_broadcast*.mp3 are NEVER deleted)
+            cleanup_temp_audio_files()
+            
+            print("ADK agent system completed successfully!")
+            return
+        elif isinstance(output, str):
             print(f"Output from generate_broadcast: {output}")
             # Extract the audio file path from the string output
             audio_file_path = extract_audio_path_from_output(output)
@@ -1545,3 +1619,70 @@ def get_audio_files():
     except Exception as e:
         print(f"Error getting audio files: {e}")
         return jsonify({'error': 'Failed to get audio files'}), 500
+
+@news_bp.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    """Transcribe audio file using Google's Gemini API."""
+    try:
+        data = request.get_json()
+        audio_url = data.get('audio_url', '').strip()
+        filename = data.get('filename', 'audio.mp3')
+        
+        if not audio_url:
+            return jsonify({'error': 'Audio URL is required'}), 400
+        
+        # Convert URL to file path
+        if audio_url.startswith('/routes2/news/audio/'):
+            filename = audio_url.replace('/routes2/news/audio/', '')
+            audio_file_path = os.path.join('glconnect', 'static', 'audio', filename)
+        else:
+            return jsonify({'error': 'Invalid audio URL format'}), 400
+        
+        # Check if file exists
+        if not os.path.exists(audio_file_path):
+            return jsonify({'error': 'Audio file not found'}), 404
+        
+        # Check file size (limit to 10MB for transcription)
+        file_size = os.path.getsize(audio_file_path)
+        if file_size > 10 * 1024 * 1024:  # 10MB limit
+            return jsonify({'error': 'Audio file too large for transcription (max 10MB)'}), 400
+        
+        # Use Google Gemini for transcription
+        from google import genai
+        import os
+        
+        # Get API key from environment
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            return jsonify({'error': 'Google API key not configured'}), 500
+        
+        # Initialize Gemini client
+        client = genai.Client(api_key=api_key)
+        
+        # Upload the audio file
+        print(f"Uploading audio file for transcription: {audio_file_path}")
+        myfile = client.files.upload(file=audio_file_path)
+        
+        # Generate transcription using Gemini
+        print("Generating transcription...")
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=["Transcribe this audio file. Provide a clean, accurate transcription of all spoken content.", myfile]
+        )
+        
+        transcript = response.text.strip()
+        
+        if not transcript:
+            return jsonify({'error': 'No transcription generated'}), 500
+        
+        print(f"Transcription completed successfully for {filename}")
+        
+        return jsonify({
+            'transcript': transcript,
+            'filename': filename,
+            'file_size': file_size
+        })
+        
+    except Exception as e:
+        print(f"Transcription error: {e}")
+        return jsonify({'error': f'Transcription failed: {str(e)}'}), 500
