@@ -1444,18 +1444,69 @@
                     throw new Error(data.error);
                 }
 
-                // Show transcription result
-                showTranscriptionResult(data.transcript, filename);
+                // If we get a task_id, poll for completion
+                if (data.task_id) {
+                    console.log('Transcription started, polling for completion...');
+                    await pollTranscriptionStatus(data.task_id, filename, button, originalText);
+                } else if (data.transcript) {
+                    // Direct result (fallback)
+                    showTranscriptionResult(data.transcript, filename);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
 
             } catch (error) {
                 console.error('Transcription error:', error);
                 alert('Error transcribing audio: ' + error.message);
-            } finally {
                 // Reset button state
                 const button = event.target;
                 button.innerHTML = originalText;
                 button.disabled = false;
             }
+        }
+
+        // Poll transcription status
+        async function pollTranscriptionStatus(taskId, filename, button, originalText) {
+            const maxPolls = 30; // 1 minute max (30 * 2 seconds)
+            let pollCount = 0;
+            
+            const pollInterval = setInterval(async () => {
+                pollCount++;
+                
+                if (pollCount > maxPolls) {
+                    clearInterval(pollInterval);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    alert('Transcription is taking longer than expected. Please try again.');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/routes2/news/transcribe/status/${taskId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        showTranscriptionResult(data.transcript, filename);
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        alert('Transcription failed: ' + (data.error || 'Unknown error'));
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    } else {
+                        // Still processing, update button text
+                        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing... (${pollCount}/${maxPolls})`;
+                    }
+                } catch (error) {
+                    console.error('Error polling transcription status:', error);
+                    clearInterval(pollInterval);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    alert('Error checking transcription status: ' + error.message);
+                }
+            }, 2000); // Poll every 2 seconds
         }
 
         // Show transcription result
@@ -2373,6 +2424,14 @@
         
         // Function to poll for completion
         function pollForCompletion(taskId) {
+            // Validate task ID
+            if (!taskId || taskId.length < 10) {
+                console.error('Invalid task ID:', taskId);
+                hideLoadingState();
+                alert('Invalid task ID. Please try generating news again.');
+                return;
+            }
+            
             let pollCount = 0;
             const maxPolls = 30; // 1 minute max (30 * 2 seconds) - reduced for testing
             
@@ -2396,7 +2455,13 @@
                 .then(response => {
                     console.log(`Status response for ${taskId}:`, response.status, response.statusText);
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        if (response.status === 404) {
+                            throw new Error('Task not found - the news generation may have completed or been cancelled. Please try generating news again.');
+                        } else if (response.status === 502) {
+                            throw new Error('Server temporarily unavailable. Please try again in a moment.');
+                        } else {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
                     }
                     return response.json();
                 })
@@ -2430,8 +2495,18 @@
                 .catch(error => {
                     console.error('Error polling status:', error);
                     
-                    // Only show error and stop polling if it's not a network timeout
-                    if (error.name !== 'TypeError' || !error.message.includes('Failed to fetch')) {
+                    // Handle specific error cases
+                    if (error.message.includes('Task not found')) {
+                        clearInterval(pollInterval);
+                        stopProgressAnimation();
+                        hideLoadingState();
+                        alert(error.message);
+                    } else if (error.message.includes('Server temporarily unavailable')) {
+                        clearInterval(pollInterval);
+                        stopProgressAnimation();
+                        hideLoadingState();
+                        alert(error.message);
+                    } else if (error.name !== 'TypeError' || !error.message.includes('Failed to fetch')) {
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();

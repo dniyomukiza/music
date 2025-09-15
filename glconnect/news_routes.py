@@ -16,6 +16,26 @@ news_bp = Blueprint('news_bp', __name__)
 tasks = {}
 _tasks_lock = threading.Lock()
 
+def cleanup_old_tasks():
+    """Clean up old completed/failed tasks to prevent memory buildup."""
+    try:
+        current_time = datetime.now()
+        with _tasks_lock:
+            # Remove tasks older than 1 hour
+            tasks_to_remove = []
+            for task_id, task_data in tasks.items():
+                if 'created_at' in task_data:
+                    task_age = current_time - task_data['created_at']
+                    if task_age.total_seconds() > 3600:  # 1 hour
+                        tasks_to_remove.append(task_id)
+            
+            for task_id in tasks_to_remove:
+                del tasks[task_id]
+                print(f"Cleaned up old task: {task_id}")
+                
+    except Exception as e:
+        print(f"Error cleaning up tasks: {e}")
+
 # Analytics data storage
 analytics_data = {
     'search_history': [],  # List of all searches with timestamps
@@ -1622,7 +1642,7 @@ def get_audio_files():
 
 @news_bp.route('/transcribe', methods=['POST'])
 def transcribe_audio():
-    """Transcribe audio file using Google's Gemini API."""
+    """Transcribe audio file using Google's Gemini API with async processing."""
     try:
         data = request.get_json()
         audio_url = data.get('audio_url', '').strip()
@@ -1642,10 +1662,54 @@ def transcribe_audio():
         if not os.path.exists(audio_file_path):
             return jsonify({'error': 'Audio file not found'}), 404
         
-        # Check file size (limit to 10MB for transcription)
+        # Check file size (limit to 2MB for transcription to prevent timeouts and memory issues)
         file_size = os.path.getsize(audio_file_path)
-        if file_size > 10 * 1024 * 1024:  # 10MB limit
-            return jsonify({'error': 'Audio file too large for transcription (max 10MB)'}), 400
+        if file_size > 2 * 1024 * 1024:  # 2MB limit (reduced for stability)
+            return jsonify({'error': 'Audio file too large for transcription (max 2MB)'}), 400
+        
+        # Check if file is too short (less than 1 second)
+        if file_size < 1000:  # Less than 1KB
+            return jsonify({'error': 'Audio file too short for transcription'}), 400
+        
+        # Clean up old tasks first
+        cleanup_old_tasks()
+        
+        # Start transcription in a separate thread to prevent worker timeout
+        task_id = str(uuid.uuid4())
+        with _tasks_lock:
+            tasks[task_id] = {
+                'status': 'running', 
+                'type': 'transcription',
+                'created_at': datetime.now()
+            }
+        
+        # Start transcription thread
+        thread = threading.Thread(target=run_transcription, args=(task_id, audio_file_path, filename))
+        thread.daemon = True  # Make it a daemon thread so it doesn't prevent app shutdown
+        thread.start()
+        
+        return jsonify({
+            'task_id': task_id,
+            'status': 'processing',
+            'message': 'Transcription started. This may take a few moments...'
+        })
+        
+    except Exception as e:
+        print(f"Transcription error: {e}")
+        return jsonify({'error': f'Transcription failed: {str(e)}'}), 500
+
+def run_transcription(task_id, audio_file_path, filename):
+    """Run transcription in a separate thread to prevent worker timeout."""
+    import gc
+    import time
+    
+    try:
+        print(f"Starting transcription for {filename}")
+        
+        # Check file size again before processing
+        file_size = os.path.getsize(audio_file_path)
+        if file_size > 2 * 1024 * 1024:  # 2MB limit
+            raise Exception("File too large for transcription (max 2MB)")
         
         # Use Google Gemini for transcription
         from google import genai
@@ -1654,35 +1718,84 @@ def transcribe_audio():
         # Get API key from environment
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            return jsonify({'error': 'Google API key not configured'}), 500
+            raise Exception("Google API key not configured")
         
         # Initialize Gemini client
         client = genai.Client(api_key=api_key)
         
-        # Upload the audio file
+        # Upload the audio file with timeout handling
         print(f"Uploading audio file for transcription: {audio_file_path}")
-        myfile = client.files.upload(file=audio_file_path)
+        try:
+            myfile = client.files.upload(file=audio_file_path)
+        except Exception as e:
+            raise Exception(f"Failed to upload audio file: {str(e)}")
         
-        # Generate transcription using Gemini
+        # Generate transcription using Gemini with timeout
         print("Generating transcription...")
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=["Transcribe this audio file. Provide a clean, accurate transcription of all spoken content.", myfile]
-        )
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=["Transcribe this audio file. Provide a clean, accurate transcription of all spoken content.", myfile]
+            )
+        except Exception as e:
+            raise Exception(f"Failed to generate transcription: {str(e)}")
         
         transcript = response.text.strip()
         
         if not transcript:
-            return jsonify({'error': 'No transcription generated'}), 500
+            raise Exception("No transcription generated")
         
         print(f"Transcription completed successfully for {filename}")
         
-        return jsonify({
-            'transcript': transcript,
-            'filename': filename,
-            'file_size': file_size
-        })
+        # Store the result
+        with _tasks_lock:
+            tasks[task_id]['status'] = 'completed'
+            tasks[task_id]['result'] = {
+                'transcript': transcript,
+                'filename': filename,
+                'file_size': file_size
+            }
+        
+        # Clean up memory
+        del myfile
+        del response
+        del transcript
+        gc.collect()
         
     except Exception as e:
         print(f"Transcription error: {e}")
-        return jsonify({'error': f'Transcription failed: {str(e)}'}), 500
+        with _tasks_lock:
+            tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['error'] = str(e)
+        
+        # Clean up memory on error
+        gc.collect()
+    
+    finally:
+        # Force garbage collection
+        gc.collect()
+        print(f"Transcription thread completed for {filename}")
+
+@news_bp.route('/transcribe/status/<task_id>')
+def transcription_status(task_id):
+    """Check the status of a transcription task."""
+    with _tasks_lock:
+        task = tasks.get(task_id)
+    
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    
+    if task['status'] == 'completed':
+        return jsonify({
+            'status': 'completed',
+            'transcript': task['result']['transcript'],
+            'filename': task['result']['filename'],
+            'file_size': task['result']['file_size']
+        })
+    elif task['status'] == 'failed':
+        return jsonify({
+            'status': 'failed',
+            'error': task.get('error', 'Unknown error')
+        })
+    else:
+        return jsonify({'status': 'processing'})
