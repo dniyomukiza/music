@@ -1173,6 +1173,7 @@
                                     <i class="fas fa-play"></i> Generate News
                                 </button>
                             </div>
+                            <div id="flaskValidationFeedback" class="validation-feedback"></div>
                             {% if form.keyword.errors %}
                                 <div class="validation-error">
                                     <i class="fas fa-exclamation-triangle"></i>
@@ -1451,12 +1452,24 @@
             addTopic();
         });
 
+        // Handle Flask form Add Topic button click to prevent form submission
+        document.getElementById('generateBtnMobile').addEventListener('click', function(e) {
+            e.preventDefault();
+            addTopicFromFlaskForm();
+        });
+
+        // Handle Enter key in Flask form input
+        document.getElementById('keyword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTopicFromFlaskForm();
+            }
+        });
+
         // Also handle form submission for debugging
         document.getElementById('flaskForm').addEventListener('submit', function(e) {
-            console.log('Flask form submitted');
-            console.log('Form method:', this.method);
-            console.log('Form action:', this.action);
-            console.log('Keyword value:', document.getElementById('keyword').value);
+            e.preventDefault(); // Prevent form submission
+            addTopicFromFlaskForm();
         });
 
         async function validateTopicRealTime(topic) {
@@ -1533,6 +1546,132 @@
             feedback.classList.remove('valid', 'invalid', 'warning');
             feedback.style.display = 'none';
             suggestions.style.display = 'none';
+        }
+
+        function showFlaskValidationFeedback(topic, validationData) {
+            const feedback = document.getElementById('flaskValidationFeedback');
+            const input = document.getElementById('keyword');
+            
+            if (validationData.valid) {
+                feedback.innerHTML = `
+                    <div class="validation-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span>${validationData.message || 'Topic added successfully!'}</span>
+                    </div>
+                `;
+                feedback.className = 'validation-feedback valid';
+                input.classList.add('valid');
+                input.classList.remove('invalid');
+            } else {
+                feedback.innerHTML = `
+                    <div class="validation-error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>${validationData.error || 'Invalid topic'}</span>
+                    </div>
+                `;
+                feedback.className = 'validation-feedback invalid';
+                input.classList.add('invalid');
+                input.classList.remove('valid');
+            }
+            
+            feedback.style.display = 'block';
+            
+            // Auto-hide feedback after 5 seconds
+            setTimeout(() => {
+                feedback.innerHTML = '';
+                input.classList.remove('valid', 'invalid');
+            }, 5000);
+        }
+
+        function clearFlaskValidationFeedback() {
+            const input = document.getElementById('keyword');
+            const feedback = document.getElementById('flaskValidationFeedback');
+            
+            input.classList.remove('valid', 'invalid');
+            feedback.classList.remove('valid', 'invalid', 'warning');
+            feedback.style.display = 'none';
+        }
+
+        async function addTopicFromFlaskForm() {
+            const input = document.getElementById('keyword');
+            const topic = input.value.trim();
+            
+            if (!topic) {
+                showFlaskValidationFeedback('', {
+                    valid: false,
+                    error: 'Please enter a topic'
+                });
+                return;
+            }
+            
+            if (addedTopics.includes(topic)) {
+                showFlaskValidationFeedback(topic, {
+                    valid: false,
+                    error: 'This topic has already been added'
+                });
+                return;
+            }
+            
+            // Validate the topic first
+            try {
+                const response = await fetch('/routes2/news/api/validate-news-topic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ topic: topic })
+                });
+                
+                const validationData = await response.json();
+                
+                if (validationData.valid) {
+                    // Topic is valid - add it to the main system
+                    if (!addedTopics.includes(topic)) {
+                        addedTopics.push(topic);
+                    }
+                    // Store validation result
+                    topicValidations[topic] = validationData;
+                    // Update the correct topics display (simple form)
+                    updateAddedTopicsDisplay();
+                    input.value = ''; // Clear input field
+                    clearFlaskValidationFeedback();
+                    
+                    // Show success message
+                    showFlaskValidationFeedback(topic, {
+                        valid: true,
+                        message: 'Topic added successfully!'
+                    });
+                } else {
+                    // Topic is invalid - still add it to display but mark as invalid
+                    if (!addedTopics.includes(topic)) {
+                        addedTopics.push(topic);
+                    }
+                    // Store validation result
+                    topicValidations[topic] = validationData;
+                    // Update the correct topics display (simple form)
+                    updateAddedTopicsDisplay();
+                    input.value = ''; // Clear input field
+                    
+                    // Show error message
+                    showFlaskValidationFeedback(topic, {
+                        valid: false,
+                        error: 'This topic does not seem to be a news topic'
+                    });
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                showFlaskValidationFeedback(topic, {
+                    valid: false,
+                    error: 'Validation service unavailable. Please try again.'
+                });
+                // Still add the topic but mark as pending validation
+                if (!addedTopics.includes(topic)) {
+                    addedTopics.push(topic);
+                }
+                // Update the correct topics display (simple form)
+                updateAddedTopicsDisplay();
+                input.value = ''; // Clear input field
+            }
         }
 
         async function addTopic() {
