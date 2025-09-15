@@ -1430,21 +1430,9 @@
             }
         });
 
-        // Handle Enter key for Flask form
-        document.getElementById('keyword').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                console.log('Enter key pressed, submitting Flask form...');
-                document.getElementById('flaskForm').submit();
-            }
-        });
+        // Handle Enter key for Flask form - REMOVED (duplicate with DOMContentLoaded version)
 
-        // Handle mobile Add button click
-        document.getElementById('generateBtnMobile').addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Mobile Add button clicked, submitting Flask form...');
-            document.getElementById('flaskForm').submit();
-        });
+        // Handle mobile Add button click - REMOVED (duplicate with DOMContentLoaded version)
 
         // Handle Add Topic button click
         document.getElementById('addTopicBtn').addEventListener('click', function(e) {
@@ -2089,6 +2077,7 @@
         
         // Global variable to store added topics
         let addedTopics = [];
+        
         
         // Function to add topic to the list
         function addTopicToList(topic) {

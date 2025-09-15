@@ -1,9 +1,0 @@
-[0;1;31m×[0m nginx.service - A high performance web server and a reverse proxy server
-     Loaded: loaded (]8;;file://glc-server/usr/lib/systemd/system/nginx.service/usr/lib/systemd/system/nginx.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
-     Active: [0;1;31mfailed[0m (Result: exit-code) since Wed 2025-04-30 15:27:45 UTC; 39s ago
-   Duration: 18min 15.860s
- Invocation: aa0990e14e2e4a9090359408bc5a7281
-       Docs: ]8;;man:nginx(8)man:nginx(8)]8;;
-    Process: 106857 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; [0;1;31m(code=exited, status=1/FAILURE)[0m
-   Mem peak: 1.8M
-        CPU: 11ms
