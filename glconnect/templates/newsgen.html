@@ -1172,6 +1172,9 @@
                                 <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
                                     <i class="fas fa-play"></i> Generate News
                                 </button>
+                                <button type="button" class="btn btn-info" onclick="testWithSpecificTopics()" style="background: linear-gradient(135deg, #17a2b8, #138496); border: none; padding: 10px 20px; border-radius: 8px; color: white; margin-left: 10px;">
+                                    <i class="fas fa-test-tube"></i> Test Topics
+                                </button>
                             </div>
                             <div id="flaskValidationFeedback" class="validation-feedback"></div>
                             {% if form.keyword.errors %}
@@ -2078,6 +2081,43 @@
         // Global variable to store added topics
         let addedTopics = [];
         
+        // Test function with specific topics
+        function testWithSpecificTopics() {
+            console.log('Testing with specific topics...');
+            
+            // Clear existing topics
+            addedTopics = [];
+            updateAddedTopicsDisplay();
+            
+            // Add the test topics
+            const testTopics = [
+                'Stablecoins in shaping global macroeconomics',
+                'Nepal voted for their next Prime Minister via Discord',
+                'MLS updates'
+            ];
+            
+            console.log('Adding test topics:', testTopics);
+            
+            // Add each topic to the array
+            testTopics.forEach(topic => {
+                if (!addedTopics.includes(topic)) {
+                    addedTopics.push(topic);
+                    console.log('Added topic:', topic);
+                }
+            });
+            
+            // Update display
+            updateAddedTopicsDisplay();
+            
+            // Show feedback
+            showFlaskValidationFeedback('', {
+                valid: true,
+                message: `Added ${testTopics.length} test topics. Click "Generate News" to test!`
+            });
+            
+            console.log('Final addedTopics:', addedTopics);
+        }
+        
         
         // Function to add topic to the list
         function addTopicToList(topic) {
@@ -2170,13 +2210,18 @@
                 },
                 body: JSON.stringify({ topics: topicsToUse })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Broadcast response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Broadcast response data:', data);
                 if (data.error) {
                     alert('Error: ' + data.error);
                 } else {
                     // Show loading state and poll for completion
                     showLoadingState();
+                    console.log('Starting polling for task_id:', data.task_id);
                     pollForCompletion(data.task_id);
                 }
             })
@@ -2198,7 +2243,7 @@
         // Function to poll for completion
         function pollForCompletion(taskId) {
             let pollCount = 0;
-            const maxPolls = 90; // 3 minutes max (90 * 2 seconds)
+            const maxPolls = 30; // 1 minute max (30 * 2 seconds) - reduced for testing
             
             const pollInterval = setInterval(() => {
                 pollCount++;
@@ -2212,32 +2257,42 @@
                     return;
                 }
                 
+                console.log(`Polling status for task_id: ${taskId}`);
                 fetch(`/routes2/news/status/${taskId}`, {
                     method: 'GET',
                     timeout: 10000 // 10 second timeout for each request
                 })
                 .then(response => {
+                    console.log(`Status response for ${taskId}:`, response.status, response.statusText);
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Status response data:', data);
                     if (data.status === 'completed') {
+                        console.log('Task completed successfully!');
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
                         showResults(data);
                     } else if (data.status === 'failed') {
+                        console.log('Task failed:', data.error);
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
                         alert('News generation failed: ' + (data.error || 'Unknown error'));
                     } else if (data.error === 'Task not found') {
+                        console.log('Task not found - may have completed or been cancelled');
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
                         alert('Task not found. The news generation may have completed or been cancelled. Please try generating news again.');
+                    } else if (data.status === 'running') {
+                        console.log('Task still running, continuing to poll...');
+                    } else {
+                        console.log('Unknown status response:', data);
                     }
                     // If still running, continue polling
                 })

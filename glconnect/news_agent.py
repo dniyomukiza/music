@@ -360,6 +360,167 @@ def clean_text_for_speech(text: str) -> str:
     
     return text
 
+def validate_news_content(content: str, topic: str) -> tuple[bool, str]:
+    """
+    Validate news content to ensure it's professional and suitable for broadcast.
+    Returns (is_valid, cleaned_content)
+    """
+    if not content or len(content.strip()) < 20:
+        return False, ""
+    
+    # Check for unprofessional phrases that should never appear in live news
+    unprofessional_phrases = [
+        "unable to retrieve",
+        "check back later", 
+        "no information available",
+        "unable to report",
+        "please check back",
+        "we are unable",
+        "cannot retrieve",
+        "failed to get",
+        "error occurred",
+        "technical difficulties",
+        "system error",
+        "unable to access",
+        "retrieval failed",
+        "data unavailable"
+    ]
+    
+    content_lower = content.lower()
+    for phrase in unprofessional_phrases:
+        if phrase in content_lower:
+            print(f"WARNING: Unprofessional phrase detected in {topic}: '{phrase}'")
+            return False, ""
+    
+    # Check for minimum professional content length
+    if len(content.strip()) < 50:
+        print(f"WARNING: Content too short for {topic}: {len(content)} characters")
+        return False, ""
+    
+    # Clean and return valid content
+    cleaned_content = clean_text_for_speech(content)
+    return True, cleaned_content
+
+def analyze_topic_context(topic: str) -> dict:
+    """
+    Analyze any topic to understand its context, category, and significance.
+    Returns a dictionary with analysis results.
+    """
+    try:
+        import google.generativeai as genai
+        from glconnect import config
+        
+        # Configure Gemini
+        genai.configure(api_key=config.get("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        prompt = f"""
+        Analyze this news topic and provide context for professional news reporting: "{topic}"
+        
+        Return a JSON object with:
+        - category: "politics", "sports", "finance", "technology", "health", "world", "entertainment", "other"
+        - significance: Why this topic is important or relevant
+        - context: Background information that would help a news reporter
+        - recent_trends: Any recent developments or ongoing issues
+        - impact: Who or what is affected by this topic
+        
+        Example format:
+        {{
+            "category": "politics",
+            "significance": "This topic affects government policy and public welfare",
+            "context": "Background information about the topic",
+            "recent_trends": "Recent developments or ongoing issues",
+            "impact": "Who or what is affected"
+        }}
+        
+        Topic: "{topic}"
+        """
+        
+        response = model.generate_content(prompt)
+        content = response.text.strip()
+        
+        # Clean up the response
+        if content.startswith('```json'):
+            content = content[7:]
+        if content.endswith('```'):
+            content = content[:-3]
+        content = content.strip()
+        
+        import json
+        analysis = json.loads(content)
+        return analysis
+        
+    except Exception as e:
+        print(f"DEBUG: Topic analysis failed for {topic}: {e}")
+        return {
+            "category": "other",
+            "significance": "This topic is being monitored by our news team",
+            "context": "Ongoing developments are being tracked",
+            "recent_trends": "Recent updates are being followed",
+            "impact": "Various stakeholders are affected"
+        }
+
+def generate_intelligent_fallback_content(topic: str) -> str:
+    """
+    Generate intelligent, contextually appropriate fallback content for any topic.
+    Uses AI to analyze the topic and generate professional news content.
+    """
+    try:
+        # First analyze the topic to understand its context
+        analysis = analyze_topic_context(topic)
+        
+        import google.generativeai as genai
+        from glconnect import config
+        
+        # Configure Gemini
+        genai.configure(api_key=config.get("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        prompt = f"""
+        You are a professional news reporter. Generate a brief, informative news segment about "{topic}" that would be suitable for live broadcast.
+        
+        Topic Analysis:
+        - Category: {analysis.get('category', 'general')}
+        - Significance: {analysis.get('significance', 'This topic is being monitored')}
+        - Context: {analysis.get('context', 'Ongoing developments')}
+        - Recent Trends: {analysis.get('recent_trends', 'Recent updates')}
+        - Impact: {analysis.get('impact', 'Various stakeholders')}
+        
+        Requirements:
+        - Sound like a professional news report, not an error message
+        - Use the analysis above to provide relevant context
+        - Keep it concise but informative (2-3 sentences)
+        - End with "I'm [Reporter Name], for GLC News"
+        - Never mention "unable to retrieve", "check back later", or any error phrases
+        - Focus on the topic's significance, impact, or current relevance
+        
+        Generate professional news content:
+        """
+        
+        response = model.generate_content(prompt)
+        content = response.text.strip()
+        
+        # Validate the generated content
+        is_valid, cleaned_content = validate_news_content(content, topic)
+        
+        if is_valid:
+            print(f"DEBUG: Generated intelligent fallback for {topic} (category: {analysis.get('category', 'unknown')})")
+            return cleaned_content
+        else:
+            # If AI-generated content fails validation, use a generic professional template
+            return generate_generic_fallback(topic)
+            
+    except Exception as e:
+        print(f"DEBUG: AI fallback generation failed for {topic}: {e}")
+        return generate_generic_fallback(topic)
+
+def generate_generic_fallback(topic: str) -> str:
+    """
+    Generate a generic professional fallback when AI generation fails.
+    This is the last resort to ensure we never have unprofessional content.
+    """
+    return f"Regarding {topic}, our news team continues to monitor developments and will provide updates as new information becomes available. This story remains under close observation by our editorial team. I'm reporting for GLC News."
+
 def combine_audio_files(file_paths: list[str], output_filename: str = "final_news_broadcast.mp3") -> dict:
     """
     Combines multiple MP3 audio files into a single MP3 file in the given order,
@@ -529,7 +690,9 @@ def create_news_reporter_agent(topic: str, voice: str, agent_name: str, output_k
             - Your task is to prepare a professional news report on '{topic}'.
             - You MUST use the 'google_search' tool to find news details about {topic}.
             - Tool call format: `google_search(query='The latest {topic} news')`
-            - After getting the search results, synthesize the information into a professional news report.
+            - If the search fails or returns no results, create a professional news report based on your knowledge of {topic}.
+            - Focus on recent developments, trends, or ongoing issues related to {topic}.
+            - After getting the search results (or using your knowledge), synthesize the information into a professional news report.
             - You must end your news report with the following signature: 'I am {agent_name.replace("_", " ")}, for GLC News'.
             - Your final output must be ONLY the news report content, exactly as a reporter would deliver it.
             - You must output your news report in JSON format with the key '{output_key}'.
@@ -538,6 +701,11 @@ def create_news_reporter_agent(topic: str, voice: str, agent_name: str, output_k
             - No titles nor subtitles are needed in your script.
             - Never ever include special character in your script such as asterisks or other symbols.
             - Do not ask any questions or engage in conversation. Proceed directly with the report after the search.
+            - If you cannot find specific recent news, provide context and analysis about why {topic} is important or relevant.
+            - CRITICAL: Never include phrases like "unable to retrieve", "check back later", "no information available", or any error messages in your report.
+            - Your report must always sound professional and informative, even if based on general knowledge.
+            - ADAPTIVE: Analyze the topic context and provide relevant information based on what you know about {topic}.
+            - If the topic is unfamiliar, focus on its potential significance or ask clarifying questions about its context.
         """,
         output_key=output_key,
         tools=[google_search]
@@ -555,7 +723,9 @@ def create_category_reporter_agent(category: str, topics: list[str], voice: str,
             - Your task is to prepare a comprehensive professional news report covering all the following {category} topics: {topics_str}.
             - You MUST use the 'google_search' tool to find news details about each topic.
             - For each topic, make a separate search: `google_search(query='The latest [topic] news')`
-            - After getting the search results for all topics, synthesize the information into a single comprehensive news report.
+            - If any search fails or returns no results, use your knowledge to provide context and analysis about that topic.
+            - Focus on recent developments, trends, or ongoing issues related to each topic.
+            - After getting the search results (or using your knowledge), synthesize the information into a single comprehensive news report.
             - Structure your report to cover all topics in a logical flow, transitioning smoothly between topics.
             - You must end your news report with the following signature: 'I am {agent_name.replace("_", " ")}, for GLC News'.
             - Your final output must be ONLY the news report content, exactly as a reporter would deliver it.
@@ -566,6 +736,11 @@ def create_category_reporter_agent(category: str, topics: list[str], voice: str,
             - Never ever include special character in your script such as asterisks or other symbols.
             - Do not ask any questions or engage in conversation. Proceed directly with the report after the searches.
             - Make sure to cover ALL topics: {topics_str} in your final report.
+            - If you cannot find specific recent news for any topic, provide context and analysis about why that topic is important or relevant.
+            - CRITICAL: Never include phrases like "unable to retrieve", "check back later", "no information available", or any error messages in your report.
+            - Your report must always sound professional and informative, even if based on general knowledge.
+            - ADAPTIVE: Analyze each topic's context and provide relevant information based on what you know about each topic.
+            - If any topic is unfamiliar, focus on its potential significance or provide general context about why it might be newsworthy.
         """,
         output_key=output_key,
         tools=[google_search]
@@ -731,7 +906,7 @@ async def run_agent(agent, input_text):
                 final_response = event.content.parts[0].text
     return final_response
 
-def generate_broadcast(topics: list[str]) -> dict:
+def generate_broadcast(topics: list[str], max_retries: int = 2) -> dict:
     import gc
     if not topics:
         print("No topics entered. Exiting.")
@@ -739,7 +914,33 @@ def generate_broadcast(topics: list[str]) -> dict:
     
     # Force garbage collection at start
     gc.collect()
+    
+    # Try to generate broadcast with retries
+    for attempt in range(max_retries + 1):
+        try:
+            print(f"DEBUG: News generation attempt {attempt + 1}/{max_retries + 1}")
+            result = _generate_broadcast_attempt(topics)
+            if result and result.get('audio_file'):
+                print(f"DEBUG: News generation successful on attempt {attempt + 1}")
+                return result
+            else:
+                print(f"DEBUG: News generation failed on attempt {attempt + 1}, retrying...")
+                if attempt < max_retries:
+                    continue
+        except Exception as e:
+            print(f"DEBUG: News generation error on attempt {attempt + 1}: {e}")
+            if attempt < max_retries:
+                continue
+            else:
+                raise e
+    
+    # If all attempts failed, return a minimal result
+    print("DEBUG: All news generation attempts failed, returning minimal result")
+    return {"audio_file": None, "summary": "News generation failed after multiple attempts"}
 
+def _generate_broadcast_attempt(topics: list[str]) -> dict:
+    import gc
+    
     # Categorization Agent
     categorization_agent = Agent(
         model="gemini-2.0-flash",
@@ -879,9 +1080,18 @@ def generate_broadcast(topics: list[str]) -> dict:
                     break
         
         if script_found:
-            # Apply comprehensive text cleaning for speech
-            script_text = clean_text_for_speech(script_text)
-            reporter_scripts.append(script_text)
+            # Validate the extracted content before using it
+            topic = script_key.replace('_script', '')
+            is_valid, cleaned_script = validate_news_content(script_text, topic)
+            
+            if is_valid:
+                reporter_scripts.append(cleaned_script)
+                print(f"DEBUG: Valid content extracted for {script_key}")
+            else:
+                # Content failed validation, generate intelligent fallback
+                fallback_content = generate_intelligent_fallback_content(topic)
+                reporter_scripts.append(fallback_content)
+                print(f"DEBUG: Content validation failed for {script_key}, using intelligent fallback")
         else:
             # If still not found, try to extract any substantial content after the script key
             fallback_pattern = f'"{script_key}"\\s*:\\s*"([^"]*)"'
@@ -889,16 +1099,21 @@ def generate_broadcast(topics: list[str]) -> dict:
             if fallback_match:
                 fallback_text = fallback_match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
                 if len(fallback_text.strip()) > 10:
-                    script_text = clean_text_for_speech(fallback_text)
-                    reporter_scripts.append(script_text)
-                    script_found = True
-                    print(f"DEBUG: Found {script_key} using fallback: {script_text[:50]}...")
+                    # Validate the fallback content
+                    topic = script_key.replace('_script', '')
+                    is_valid, cleaned_fallback = validate_news_content(fallback_text, topic)
+                    
+                    if is_valid:
+                        reporter_scripts.append(cleaned_fallback)
+                        script_found = True
+                        print(f"DEBUG: Found {script_key} using fallback: {cleaned_fallback[:50]}...")
             
             if not script_found:
-                # Create a more detailed placeholder that indicates the issue
+                # Generate intelligent fallback content
                 topic = script_key.replace('_script', '')
-                reporter_scripts.append(f"Reporting on {topic}: Unable to retrieve current news details. Please check back later for updates on {topic}.")
-                print(f"DEBUG: Created detailed placeholder for {script_key} due to extraction failure")
+                fallback_content = generate_intelligent_fallback_content(topic)
+                reporter_scripts.append(fallback_content)
+                print(f"DEBUG: Generated intelligent fallback for {script_key} due to extraction failure")
 
     print(f"DEBUG: Extracted reporter scripts: {len(reporter_scripts)} scripts")
 
