@@ -1154,7 +1154,7 @@
                 </div>
 
                 <!-- Flask Form for server-side validation -->
-                <form method="POST" id="flaskForm" action="/routes2/news">
+                <form method="POST" id="flaskForm">
                     {{ form.hidden_tag() }}
                     <div class="input-section">
                         <label for="keyword" class="input-label">
@@ -1452,24 +1452,39 @@
             addTopic();
         });
 
-        // Handle Flask form Add Topic button click to prevent form submission
-        document.getElementById('generateBtnMobile').addEventListener('click', function(e) {
-            e.preventDefault();
-            addTopicFromFlaskForm();
-        });
-
-        // Handle Enter key in Flask form input
-        document.getElementById('keyword').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addTopicFromFlaskForm();
+        // Wait for DOM to be loaded before attaching event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle Flask form Add Topic button click to prevent form submission
+            const addBtn = document.getElementById('generateBtnMobile');
+            if (addBtn) {
+                addBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addTopicFromFlaskForm();
+                });
             }
-        });
 
-        // Also handle form submission for debugging
-        document.getElementById('flaskForm').addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent form submission
-            addTopicFromFlaskForm();
+            // Handle Enter key in Flask form input
+            const keywordInput = document.getElementById('keyword');
+            if (keywordInput) {
+                keywordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        addTopicFromFlaskForm();
+                    }
+                });
+            }
+
+            // Also handle form submission for debugging
+            const flaskForm = document.getElementById('flaskForm');
+            if (flaskForm) {
+                flaskForm.addEventListener('submit', function(e) {
+                    e.preventDefault(); // Prevent form submission
+                    e.stopPropagation();
+                    addTopicFromFlaskForm();
+                });
+            }
         });
 
         async function validateTopicRealTime(topic) {
@@ -2090,7 +2105,6 @@
         function updateAddedTopicsDisplay() {
             const container = document.getElementById('addedTopicsContainer');
             const topicsList = document.getElementById('addedTopicsList');
-            
             
             if (container) {
                 if (addedTopics.length === 0) {
