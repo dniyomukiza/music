@@ -49,6 +49,9 @@ def cleanup_old_tasks():
             for task_id in tasks_to_remove:
                 del tasks[task_id]
                 print(f"Cleaned up old task: {task_id}")
+            
+            if tasks_to_remove:
+                print(f"DEBUG: Cleanup removed {len(tasks_to_remove)} tasks. Remaining: {len(tasks)}")
                 
     except Exception as e:
         print(f"Error cleaning up tasks: {e}")
@@ -952,15 +955,21 @@ def cleanup_temp_audio_files():
 
 def run_generate_broadcast(task_id, topics):
     """Wrapper function to run generate_broadcast and store the result."""
-    import signal
     import time
+    import threading
     
-    def timeout_handler(signum, frame):
-        raise TimeoutError("News generation timed out after 10 minutes")
+    # Set up timeout using threading (works in any thread)
+    timeout_seconds = 600  # 10 minutes
+    timeout_occurred = threading.Event()
     
-    # Set up timeout (10 minutes)
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(600)  # 10 minutes timeout
+    def timeout_handler():
+        time.sleep(timeout_seconds)
+        timeout_occurred.set()
+    
+    # Start timeout thread
+    timeout_thread = threading.Thread(target=timeout_handler)
+    timeout_thread.daemon = True
+    timeout_thread.start()
     
     try:
         # Use the ADK agent system for sophisticated news generation
@@ -969,7 +978,17 @@ def run_generate_broadcast(task_id, topics):
         
         # Run the ADK agent system directly (no threading needed)
         print(f"Starting ADK agent news generation for topics: {topics}")
+        
+        # Check for timeout before starting
+        if timeout_occurred.is_set():
+            raise TimeoutError("News generation timed out before starting")
+        
         output = generate_broadcast(topics)
+        
+        # Check for timeout after generation
+        if timeout_occurred.is_set():
+            raise TimeoutError("News generation timed out during processing")
+        
         print("ADK agent system completed successfully")
         print(f"DEBUG: Output type: {type(output)}")
         print(f"DEBUG: Output content: {str(output)[:500]}...")
@@ -1175,8 +1194,8 @@ def run_generate_broadcast(task_id, topics):
             tasks[task_id]['failed_at'] = datetime.now()
             tasks[task_id]['error'] = f"e : {e}"
     finally:
-        # Cancel the timeout
-        signal.alarm(0)
+        # Cancel the timeout thread
+        timeout_occurred.set()
 
 @news_bp.route('/')
 def index():
@@ -1249,6 +1268,7 @@ def broadcast():
             'status': 'running',
             'created_at': datetime.now()
         }
+        print(f"DEBUG: Created news task {task_id}. Total tasks: {len(tasks)}")
 
     thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
     thread.start()
@@ -1262,6 +1282,7 @@ def task_status(task_id):
     if not task:
         print(f"DEBUG: Task {task_id} not found in tasks dictionary. Total tasks: {len(tasks)}")
         print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
+        print(f"DEBUG: Current time: {datetime.now()}")
         return jsonify({'error': 'Task not found'}), 404
     
     if task['status'] == 'completed':
