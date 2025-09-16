@@ -26,7 +26,7 @@ def cleanup_old_tasks():
             for task_id, task_data in tasks.items():
                 if 'created_at' in task_data:
                     task_age = current_time - task_data['created_at']
-                    if task_age.total_seconds() > 3600:  # 1 hour
+                    if task_age.total_seconds() > 7200:  # 2 hours (more conservative)
                         tasks_to_remove.append(task_id)
                 elif task_data.get('status') in ['completed', 'failed']:
                     # For tasks without created_at but are completed/failed, 
@@ -51,11 +51,14 @@ def cleanup_old_tasks():
                             print(f"DEBUG: Marking legacy task for cleanup: {task_id}")
             
             for task_id in tasks_to_remove:
+                task_info = tasks[task_id]
                 del tasks[task_id]
-                print(f"Cleaned up old task: {task_id}")
+                print(f"Cleaned up old task: {task_id} (status: {task_info.get('status')}, age: {task_info.get('created_at', 'no timestamp')})")
             
             if tasks_to_remove:
                 print(f"DEBUG: Cleanup removed {len(tasks_to_remove)} tasks. Remaining: {len(tasks)}")
+            else:
+                print(f"DEBUG: No tasks cleaned up. Current tasks: {len(tasks)}")
                 
     except Exception as e:
         print(f"Error cleaning up tasks: {e}")
@@ -1275,6 +1278,7 @@ def broadcast():
             'created_at': datetime.now()
         }
         print(f"DEBUG: Created news task {task_id}. Total tasks: {len(tasks)}")
+        print(f"DEBUG: Task {task_id} created at: {datetime.now()}")
 
     thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
     thread.start()
