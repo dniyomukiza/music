@@ -28,6 +28,23 @@ def cleanup_old_tasks():
                     task_age = current_time - task_data['created_at']
                     if task_age.total_seconds() > 3600:  # 1 hour
                         tasks_to_remove.append(task_id)
+                elif task_data.get('status') in ['completed', 'failed']:
+                    # For tasks without created_at but are completed/failed, 
+                    # remove them if they're older than 30 minutes (safer cleanup)
+                    # This handles legacy tasks
+                    cleanup_timestamp = None
+                    if 'completed_at' in task_data:
+                        cleanup_timestamp = task_data['completed_at']
+                    elif 'failed_at' in task_data:
+                        cleanup_timestamp = task_data['failed_at']
+                    
+                    if cleanup_timestamp:
+                        task_age = current_time - cleanup_timestamp
+                        if task_age.total_seconds() > 1800:  # 30 minutes
+                            tasks_to_remove.append(task_id)
+                    else:
+                        # If no timestamp at all, remove completed/failed tasks immediately
+                        tasks_to_remove.append(task_id)
             
             for task_id in tasks_to_remove:
                 del tasks[task_id]
@@ -935,6 +952,16 @@ def cleanup_temp_audio_files():
 
 def run_generate_broadcast(task_id, topics):
     """Wrapper function to run generate_broadcast and store the result."""
+    import signal
+    import time
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("News generation timed out after 10 minutes")
+    
+    # Set up timeout (10 minutes)
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(600)  # 10 minutes timeout
+    
     try:
         # Use the ADK agent system for sophisticated news generation
         print("Using ADK agent system with Google Cloud TTS...")
@@ -1008,6 +1035,7 @@ def run_generate_broadcast(task_id, topics):
             # Store the result with the extracted audio path
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['completed_at'] = datetime.now()
                 tasks[task_id]['result'] = {
                     'audio_file_path': audio_file_path,
                     'output_text': summary
@@ -1112,6 +1140,7 @@ def run_generate_broadcast(task_id, topics):
             # Store the result with the extracted audio path
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['completed_at'] = datetime.now()
                 tasks[task_id]['audio_file'] = audio_url
                 tasks[task_id]['summary'] = ""
             
@@ -1131,6 +1160,7 @@ def run_generate_broadcast(task_id, topics):
             
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['completed_at'] = datetime.now()
                 tasks[task_id]['result'] = output
             
             # Clean up old audio files after successful generation
@@ -1142,7 +1172,11 @@ def run_generate_broadcast(task_id, topics):
         print(f"Error in ADK agent news generation: {e}")
         with _tasks_lock:
             tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['failed_at'] = datetime.now()
             tasks[task_id]['error'] = f"e : {e}"
+    finally:
+        # Cancel the timeout
+        signal.alarm(0)
 
 @news_bp.route('/')
 def index():
@@ -1206,9 +1240,15 @@ def broadcast():
     # Track analytics for the search
     track_search_analytics(relevant_topics)
 
+    # Clean up old tasks before creating new ones
+    cleanup_old_tasks()
+
     task_id = str(uuid.uuid4())
     with _tasks_lock:
-        tasks[task_id] = {'status': 'running'}
+        tasks[task_id] = {
+            'status': 'running',
+            'created_at': datetime.now()
+        }
 
     thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
     thread.start()
@@ -1220,6 +1260,8 @@ def task_status(task_id):
     with _tasks_lock:
         task = tasks.get(task_id)
     if not task:
+        print(f"DEBUG: Task {task_id} not found in tasks dictionary. Total tasks: {len(tasks)}")
+        print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
         return jsonify({'error': 'Task not found'}), 404
     
     if task['status'] == 'completed':
@@ -1750,6 +1792,7 @@ def run_transcription(task_id, audio_file_path, filename):
         # Store the result
         with _tasks_lock:
             tasks[task_id]['status'] = 'completed'
+            tasks[task_id]['completed_at'] = datetime.now()
             tasks[task_id]['result'] = {
                 'transcript': transcript,
                 'filename': filename,
@@ -1766,6 +1809,7 @@ def run_transcription(task_id, audio_file_path, filename):
         print(f"Transcription error: {e}")
         with _tasks_lock:
             tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['failed_at'] = datetime.now()
             tasks[task_id]['error'] = str(e)
         
         # Clean up memory on error
@@ -1783,6 +1827,8 @@ def transcription_status(task_id):
         task = tasks.get(task_id)
     
     if not task:
+        print(f"DEBUG: Transcription task {task_id} not found in tasks dictionary. Total tasks: {len(tasks)}")
+        print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
         return jsonify({'error': 'Task not found'}), 404
     
     if task['status'] == 'completed':
