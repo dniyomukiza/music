@@ -1467,7 +1467,7 @@
 
         // Poll transcription status
         async function pollTranscriptionStatus(taskId, filename, button, originalText) {
-            const maxPolls = 30; // 1 minute max (30 * 2 seconds)
+            const maxPolls = 150; // 5 minutes max (150 * 2 seconds) - increased for multiple topics
             let pollCount = 0;
             
             const pollInterval = setInterval(async () => {
@@ -2433,7 +2433,7 @@
             }
             
             let pollCount = 0;
-            const maxPolls = 30; // 1 minute max (30 * 2 seconds) - reduced for testing
+            const maxPolls = 150; // 5 minutes max (150 * 2 seconds) - increased for multiple topics
             
             const pollInterval = setInterval(() => {
                 pollCount++;
@@ -2443,7 +2443,7 @@
                     clearInterval(pollInterval);
                     stopProgressAnimation();
                     hideLoadingState();
-                    alert('News generation is taking longer than expected. Please try again or check back later.');
+                    alert('News generation is taking longer than expected (5+ minutes). Please try again or check back later.');
                     return;
                 }
                 
@@ -2487,6 +2487,18 @@
                         alert('Task not found. The news generation may have completed or been cancelled. Please try generating news again.');
                     } else if (data.status === 'running') {
                         console.log('Task still running, continuing to poll...');
+                        // Update progress indicator
+                        const progressText = document.getElementById('progressText');
+                        if (progressText) {
+                            const elapsed = pollCount * 2; // seconds
+                            const minutes = Math.floor(elapsed / 60);
+                            const seconds = elapsed % 60;
+                            if (minutes > 0) {
+                                progressText.textContent = `Generating news... (${minutes}m ${seconds}s elapsed)`;
+                            } else {
+                                progressText.textContent = `Generating news... (${elapsed}s elapsed)`;
+                            }
+                        }
                     } else {
                         console.log('Unknown status response:', data);
                     }

@@ -958,6 +958,8 @@ def run_generate_broadcast(task_id, topics):
     import time
     import threading
     
+    print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
+    
     # Set up timeout using threading (works in any thread)
     timeout_seconds = 600  # 10 minutes
     timeout_occurred = threading.Event()
@@ -1273,7 +1275,26 @@ def broadcast():
     thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
     thread.start()
 
+    print(f"DEBUG: Started news generation thread for task {task_id}")
+    print(f"DEBUG: Thread started, returning task_id to client")
+    
     return jsonify({'task_id': task_id})
+
+@news_bp.route('/debug/tasks')
+def debug_tasks():
+    """Debug endpoint to check current tasks."""
+    with _tasks_lock:
+        task_info = {}
+        for task_id, task_data in tasks.items():
+            task_info[task_id] = {
+                'status': task_data.get('status', 'unknown'),
+                'created_at': str(task_data.get('created_at', 'unknown')),
+                'age_seconds': (datetime.now() - task_data.get('created_at', datetime.now())).total_seconds() if 'created_at' in task_data else 'unknown'
+            }
+        return jsonify({
+            'total_tasks': len(tasks),
+            'tasks': task_info
+        })
 
 @news_bp.route('/status/<task_id>')
 def task_status(task_id):
