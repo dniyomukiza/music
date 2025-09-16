@@ -30,8 +30,8 @@ def cleanup_old_tasks():
                         tasks_to_remove.append(task_id)
                 elif task_data.get('status') in ['completed', 'failed']:
                     # For tasks without created_at but are completed/failed, 
-                    # remove them if they're older than 30 minutes (safer cleanup)
-                    # This handles legacy tasks
+                    # remove them if they're older than 2 hours (safer cleanup)
+                    # This handles legacy tasks and gives UI more time to poll
                     cleanup_timestamp = None
                     if 'completed_at' in task_data:
                         cleanup_timestamp = task_data['completed_at']
@@ -40,11 +40,15 @@ def cleanup_old_tasks():
                     
                     if cleanup_timestamp:
                         task_age = current_time - cleanup_timestamp
-                        if task_age.total_seconds() > 1800:  # 30 minutes
+                        if task_age.total_seconds() > 7200:  # 2 hours instead of 30 minutes
                             tasks_to_remove.append(task_id)
+                            print(f"DEBUG: Marking completed task for cleanup: {task_id} (age: {task_age.total_seconds():.1f}s)")
                     else:
-                        # If no timestamp at all, remove completed/failed tasks immediately
-                        tasks_to_remove.append(task_id)
+                        # If no timestamp at all, remove completed/failed tasks after 1 hour
+                        if 'created_at' not in task_data:
+                            # Only remove if it's been at least 1 hour since we can't determine exact completion time
+                            tasks_to_remove.append(task_id)
+                            print(f"DEBUG: Marking legacy task for cleanup: {task_id}")
             
             for task_id in tasks_to_remove:
                 del tasks[task_id]
@@ -1304,7 +1308,11 @@ def task_status(task_id):
         print(f"DEBUG: Task {task_id} not found in tasks dictionary. Total tasks: {len(tasks)}")
         print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
         print(f"DEBUG: Current time: {datetime.now()}")
-        return jsonify({'error': 'Task not found'}), 404
+        print(f"DEBUG: This task may have been cleaned up due to age. Check cleanup logs above.")
+        return jsonify({
+            'error': 'Task not found - the news generation may have completed or been cancelled. Please try generating news again.',
+            'details': 'Task was not found in the system. This usually means it was cleaned up due to age or the task ID is invalid.'
+        }), 404
     
     if task['status'] == 'completed':
         # Handle the new task structure with direct audio_file and summary
@@ -1341,11 +1349,10 @@ def task_status(task_id):
         # Fallback for old structure
         elif 'result' in task:
             result = task['result']
-        
-        # Handle the new result structure
-        if isinstance(result, dict) and 'audio_file_path' in result:
-            audio_file_path = result['audio_file_path']
-            output_text = result.get('output_text', '')
+            # Handle the new result structure
+            if isinstance(result, dict) and 'audio_file_path' in result:
+                audio_file_path = result['audio_file_path']
+                output_text = result.get('output_text', '')
             
             # Extract summary from the output text if available
             summary = ""
