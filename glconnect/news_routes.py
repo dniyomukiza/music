@@ -20,14 +20,27 @@ def cleanup_old_tasks():
     """Clean up old completed/failed tasks to prevent memory buildup."""
     try:
         current_time = datetime.now()
+        print(f"DEBUG: Cleanup started at {current_time}")
+        
+        # Check memory usage before cleanup
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory usage - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        
         with _tasks_lock:
-            # Remove tasks older than 1 hour
+            print(f"DEBUG: Current tasks before cleanup: {len(tasks)}")
+            # Remove tasks older than 2 hours
             tasks_to_remove = []
             for task_id, task_data in tasks.items():
                 if 'created_at' in task_data:
                     task_age = current_time - task_data['created_at']
-                    if task_age.total_seconds() > 7200:  # 2 hours (more conservative)
+                    print(f"DEBUG: Task {task_id} age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')}")
+                    # Only clean up tasks older than 2 hours AND not currently running
+                    if task_age.total_seconds() > 7200 and task_data.get('status') not in ['running']:
                         tasks_to_remove.append(task_id)
+                        print(f"DEBUG: Marking task {task_id} for cleanup (age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')})")
+                    else:
+                        print(f"DEBUG: Keeping task {task_id} (age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')})")
                 elif task_data.get('status') in ['completed', 'failed']:
                     # For tasks without created_at but are completed/failed, 
                     # remove them if they're older than 2 hours (safer cleanup)
@@ -59,6 +72,14 @@ def cleanup_old_tasks():
                 print(f"DEBUG: Cleanup removed {len(tasks_to_remove)} tasks. Remaining: {len(tasks)}")
             else:
                 print(f"DEBUG: No tasks cleaned up. Current tasks: {len(tasks)}")
+            
+            # Check memory usage after cleanup
+            memory_info = psutil.virtual_memory()
+            print(f"DEBUG: Memory after cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            
+            # If memory usage is high, warn about potential issues
+            if memory_info.percent > 80:
+                print(f"WARNING: High memory usage detected ({memory_info.percent}%) - this may cause worker crashes!")
                 
     except Exception as e:
         print(f"Error cleaning up tasks: {e}")
@@ -967,6 +988,11 @@ def run_generate_broadcast(task_id, topics):
     
     print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
     
+    # Check memory usage at start of news generation
+    import psutil
+    memory_info = psutil.virtual_memory()
+    print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+    
     # Set up timeout using threading (works in any thread)
     timeout_seconds = 600  # 10 minutes
     timeout_occurred = threading.Event()
@@ -1338,6 +1364,7 @@ def broadcast():
     track_search_analytics(relevant_topics)
 
     # Clean up old tasks before creating new ones
+    print(f"DEBUG: Calling cleanup before creating new task")
     cleanup_old_tasks()
 
     task_id = str(uuid.uuid4())
@@ -1348,6 +1375,12 @@ def broadcast():
         }
         print(f"DEBUG: Created news task {task_id}. Total tasks: {len(tasks)}")
         print(f"DEBUG: Task {task_id} created at: {datetime.now()}")
+        print(f"DEBUG: All task IDs: {list(tasks.keys())}")
+        
+        # Check memory usage after task creation
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory after task creation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
 
     thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
     thread.start()
@@ -1383,8 +1416,22 @@ def debug_tasks():
 @news_bp.route('/debug/health')
 def debug_health():
     """Health check endpoint to verify server status and code version."""
+    import psutil
+    import os
+    
+    # Get system information
+    memory_info = psutil.virtual_memory()
+    cpu_percent = psutil.cpu_percent(interval=1)
+    
+    # Get process information
+    process = psutil.Process(os.getpid())
+    process_memory = process.memory_info()
+    
+    # Check if server is healthy
+    is_healthy = memory_info.percent < 90 and cpu_percent < 90
+    
     return jsonify({
-        'status': 'healthy',
+        'status': 'healthy' if is_healthy else 'unhealthy',
         'code_version': '73bce23-comprehensive-fixes',
         'features': {
             'result_debugging': True,
@@ -1393,26 +1440,114 @@ def debug_health():
             'memory_optimization': True,
             'garbage_collection': True
         },
+        'system_info': {
+            'memory_usage_percent': memory_info.percent,
+            'memory_available_mb': round(memory_info.available / 1024 / 1024, 1),
+            'memory_used_mb': round(memory_info.used / 1024 / 1024, 1),
+            'cpu_percent': cpu_percent,
+            'process_memory_mb': round(process_memory.rss / 1024 / 1024, 1)
+        },
         'memory_info': {
             'docker_memory_limit': '4GB',
             'docker_memory_reservation': '2GB'
         },
+        'warnings': [
+            f"High memory usage: {memory_info.percent}%" if memory_info.percent > 80 else None,
+            f"High CPU usage: {cpu_percent}%" if cpu_percent > 80 else None
+        ],
+        'timestamp': datetime.now().isoformat()
+    })
+
+@news_bp.route('/debug/server-status')
+def debug_server_status():
+    """Detailed server status for debugging task issues."""
+    import psutil
+    import os
+    
+    memory_info = psutil.virtual_memory()
+    cpu_percent = psutil.cpu_percent(interval=1)
+    process = psutil.Process(os.getpid())
+    
+    with _tasks_lock:
+        task_count = len(tasks)
+        running_tasks = sum(1 for task in tasks.values() if task.get('status') == 'running')
+        completed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'completed')
+        failed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'failed')
+    
+    return jsonify({
+        'server_status': {
+            'memory_percent': memory_info.percent,
+            'memory_available_mb': round(memory_info.available / 1024 / 1024, 1),
+            'cpu_percent': cpu_percent,
+            'process_memory_mb': round(process.memory_info().rss / 1024 / 1024, 1)
+        },
+        'task_status': {
+            'total_tasks': task_count,
+            'running_tasks': running_tasks,
+            'completed_tasks': completed_tasks,
+            'failed_tasks': failed_tasks
+        },
+        'health_indicators': {
+            'memory_healthy': memory_info.percent < 80,
+            'cpu_healthy': cpu_percent < 80,
+            'tasks_healthy': task_count < 100
+        },
+        'potential_issues': [
+            'High memory usage may cause 502 errors' if memory_info.percent > 80 else None,
+            'High CPU usage may cause timeouts' if cpu_percent > 80 else None,
+            'Many tasks may cause memory issues' if task_count > 50 else None,
+            'No tasks may indicate server restart' if task_count == 0 else None
+        ],
         'timestamp': datetime.now().isoformat()
     })
 
 @news_bp.route('/status/<task_id>')
 def task_status(task_id):
+    print(f"DEBUG: Checking status for task {task_id}")
+    
+    # Check server health before processing
+    import psutil
+    memory_info = psutil.virtual_memory()
+    print(f"DEBUG: Server health check - Memory: {memory_info.percent}%, Available: {memory_info.available / 1024 / 1024:.1f}MB")
+    
+    # Check if server is under memory pressure
+    if memory_info.percent > 90:
+        print(f"CRITICAL: Server under extreme memory pressure ({memory_info.percent}%) - may cause 502 errors!")
+        return jsonify({
+            'error': 'Server temporarily unavailable due to high memory usage. Please try again in a moment.',
+            'details': f'Server memory usage: {memory_info.percent}%'
+        }), 503
+    
     with _tasks_lock:
         task = tasks.get(task_id)
+        print(f"DEBUG: Total tasks in system: {len(tasks)}")
+        print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
+        
+        # Log task details if found
+        if task:
+            print(f"DEBUG: Task {task_id} found - Status: {task.get('status')}, Created: {task.get('created_at')}")
+        else:
+            print(f"DEBUG: Task {task_id} NOT FOUND in system")
+    
     if not task:
         print(f"DEBUG: Task {task_id} not found in tasks dictionary. Total tasks: {len(tasks)}")
         print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
         print(f"DEBUG: Current time: {datetime.now()}")
         print(f"DEBUG: This task may have been cleaned up due to age. Check cleanup logs above.")
-        return jsonify({
-            'error': 'Task not found - the news generation may have completed or been cancelled. Please try generating news again.',
-            'details': 'Task was not found in the system. This usually means it was cleaned up due to age or the task ID is invalid.'
-        }), 404
+        
+        # Check if this is a recent task that shouldn't have been cleaned up
+        if len(tasks) == 0:
+            print(f"CRITICAL: No tasks in system - possible server restart or memory crash!")
+            return jsonify({
+                'error': 'Task not found - the news generation may have completed or been cancelled. Please try generating news again.',
+                'details': 'No tasks found in system. This may indicate a server restart or memory issue.',
+                'server_restart': True
+            }), 404
+        else:
+            return jsonify({
+                'error': 'Task not found - the news generation may have completed or been cancelled. Please try generating news again.',
+                'details': 'Task was not found in the system. This usually means it was cleaned up due to age or the task ID is invalid.'
+            }), 404
     
     if task['status'] == 'completed':
         # Handle the new task structure with direct audio_file and summary
@@ -2032,3 +2167,272 @@ def download_transcript(task_id):
     )
     
     return response
+
+@news_bp.route('/languages')
+def get_supported_languages():
+    """Get list of supported languages and voices for TTS."""
+    try:
+        from google.cloud import texttospeech
+        
+        client = texttospeech.TextToSpeechClient()
+        voices = client.list_voices()
+        
+        languages = {}
+        for voice in voices.voices:
+            for language_code in voice.language_codes:
+                if language_code not in languages:
+                    languages[language_code] = {
+                        'code': language_code,
+                        'name': get_language_name(language_code),
+                        'voices': []
+                    }
+                
+                languages[language_code]['voices'].append({
+                    'name': voice.name,
+                    'gender': voice.ssml_gender.name,
+                    'sample_rate': voice.natural_sample_rate_hertz
+                })
+        
+        # Sort languages by code
+        sorted_languages = sorted(languages.values(), key=lambda x: x['code'])
+        
+        return jsonify({
+            'languages': sorted_languages,
+            'total_languages': len(sorted_languages)
+        })
+        
+    except Exception as e:
+        print(f"Error getting supported languages: {e}")
+        return jsonify({'error': 'Failed to get supported languages'}), 500
+
+def get_language_name(language_code):
+    """Convert language code to readable name."""
+    language_names = {
+        'en-US': 'English (US)',
+        'en-GB': 'English (UK)',
+        'es-ES': 'Spanish (Spain)',
+        'es-MX': 'Spanish (Mexico)',
+        'fr-FR': 'French (France)',
+        'de-DE': 'German (Germany)',
+        'it-IT': 'Italian (Italy)',
+        'pt-BR': 'Portuguese (Brazil)',
+        'pt-PT': 'Portuguese (Portugal)',
+        'ja-JP': 'Japanese (Japan)',
+        'ko-KR': 'Korean (South Korea)',
+        'zh-CN': 'Chinese (Simplified)',
+        'zh-TW': 'Chinese (Traditional)',
+        'ru-RU': 'Russian (Russia)',
+        'ar-SA': 'Arabic (Saudi Arabia)',
+        'hi-IN': 'Hindi (India)',
+        'nl-NL': 'Dutch (Netherlands)',
+        'sv-SE': 'Swedish (Sweden)',
+        'no-NO': 'Norwegian (Norway)',
+        'da-DK': 'Danish (Denmark)',
+        'fi-FI': 'Finnish (Finland)',
+        'pl-PL': 'Polish (Poland)',
+        'tr-TR': 'Turkish (Turkey)',
+        'cs-CZ': 'Czech (Czech Republic)',
+        'hu-HU': 'Hungarian (Hungary)',
+        'ro-RO': 'Romanian (Romania)',
+        'bg-BG': 'Bulgarian (Bulgaria)',
+        'hr-HR': 'Croatian (Croatia)',
+        'sk-SK': 'Slovak (Slovakia)',
+        'sl-SI': 'Slovenian (Slovenia)',
+        'et-EE': 'Estonian (Estonia)',
+        'lv-LV': 'Latvian (Latvia)',
+        'lt-LT': 'Lithuanian (Lithuania)',
+        'uk-UA': 'Ukrainian (Ukraine)',
+        'el-GR': 'Greek (Greece)',
+        'he-IL': 'Hebrew (Israel)',
+        'th-TH': 'Thai (Thailand)',
+        'vi-VN': 'Vietnamese (Vietnam)',
+        'id-ID': 'Indonesian (Indonesia)',
+        'ms-MY': 'Malay (Malaysia)',
+        'tl-PH': 'Filipino (Philippines)',
+        'ca-ES': 'Catalan (Spain)',
+        'eu-ES': 'Basque (Spain)',
+        'gl-ES': 'Galician (Spain)',
+        'cy-GB': 'Welsh (UK)',
+        'ga-IE': 'Irish (Ireland)',
+        'mt-MT': 'Maltese (Malta)',
+        'is-IS': 'Icelandic (Iceland)',
+        'sq-AL': 'Albanian (Albania)',
+        'mk-MK': 'Macedonian (Macedonia)',
+        'sr-RS': 'Serbian (Serbia)',
+        'bs-BA': 'Bosnian (Bosnia)',
+        'me-ME': 'Montenegrin (Montenegro)',
+        'af-ZA': 'Afrikaans (South Africa)',
+        'sw-KE': 'Swahili (Kenya)',
+        'am-ET': 'Amharic (Ethiopia)',
+        'ha-NG': 'Hausa (Nigeria)',
+        'ig-NG': 'Igbo (Nigeria)',
+        'yo-NG': 'Yoruba (Nigeria)',
+        'zu-ZA': 'Zulu (South Africa)',
+        'xh-ZA': 'Xhosa (South Africa)',
+        'st-ZA': 'Sesotho (South Africa)',
+        'tn-ZA': 'Tswana (South Africa)',
+        'ss-ZA': 'Swati (South Africa)',
+        've-ZA': 'Venda (South Africa)',
+        'ts-ZA': 'Tsonga (South Africa)',
+        'nr-ZA': 'Ndebele (South Africa)',
+        'nso-ZA': 'Northern Sotho (South Africa)',
+        'zu-ZA': 'Zulu (South Africa)',
+        'xh-ZA': 'Xhosa (South Africa)',
+        'st-ZA': 'Sesotho (South Africa)',
+        'tn-ZA': 'Tswana (South Africa)',
+        'ss-ZA': 'Swati (South Africa)',
+        've-ZA': 'Venda (South Africa)',
+        'ts-ZA': 'Tsonga (South Africa)',
+        'nr-ZA': 'Ndebele (South Africa)',
+        'nso-ZA': 'Northern Sotho (South Africa)'
+    }
+    return language_names.get(language_code, language_code)
+
+@news_bp.route('/regenerate-audio', methods=['POST'])
+def regenerate_audio_in_language():
+    """Regenerate news audio in a different language."""
+    try:
+        data = request.get_json()
+        task_id = data.get('task_id')
+        language_code = data.get('language_code', 'en-US')
+        voice_name = data.get('voice_name')
+        
+        if not task_id:
+            return jsonify({'error': 'Task ID is required'}), 400
+        
+        # Get the original task to extract the transcript
+        with _tasks_lock:
+            original_task = tasks.get(task_id)
+        
+        if not original_task:
+            return jsonify({'error': 'Original task not found'}), 404
+        
+        if original_task['status'] != 'completed':
+            return jsonify({'error': 'Original task not completed yet'}), 400
+        
+        # Get the transcript
+        transcript = None
+        if 'result' in original_task and 'transcript' in original_task['result']:
+            transcript = original_task['result']['transcript']
+        elif 'summary' in original_task:
+            transcript = original_task['summary']
+        else:
+            return jsonify({'error': 'No transcript or summary available for regeneration'}), 400
+        
+        # Create a new task for the regenerated audio
+        new_task_id = str(uuid.uuid4())
+        with _tasks_lock:
+            tasks[new_task_id] = {
+                'status': 'running',
+                'created_at': datetime.now(),
+                'original_task_id': task_id,
+                'language_code': language_code,
+                'voice_name': voice_name
+            }
+        
+        # Start regeneration in a separate thread
+        thread = threading.Thread(target=regenerate_audio_worker, args=(new_task_id, transcript, language_code, voice_name))
+        thread.start()
+        
+        return jsonify({
+            'task_id': new_task_id,
+            'message': f'Regenerating audio in {get_language_name(language_code)}...'
+        })
+        
+    except Exception as e:
+        print(f"Error starting audio regeneration: {e}")
+        return jsonify({'error': f'Failed to start audio regeneration: {str(e)}'}), 500
+
+def regenerate_audio_worker(task_id, transcript, language_code, voice_name):
+    """Worker function to regenerate audio in different language."""
+    try:
+        from google.cloud import texttospeech
+        import os
+        
+        print(f"DEBUG: Starting audio regeneration for task {task_id}")
+        print(f"DEBUG: Language: {language_code}, Voice: {voice_name}")
+        
+        # Initialize TTS client
+        client = texttospeech.TextToSpeechClient()
+        
+        # Set up voice selection
+        if voice_name:
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                name=voice_name
+            )
+        else:
+            # Get available voices for the language
+            voices = client.list_voices()
+            available_voices = []
+            for v in voices.voices:
+                if language_code in v.language_codes:
+                    available_voices.append(v.name)
+            
+            if not available_voices:
+                raise Exception(f"No voices available for language {language_code}")
+            
+            # Use the first available voice
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                name=available_voices[0]
+            )
+        
+        # Set up audio config
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=1.0,
+            pitch=0.0
+        )
+        
+        # Create synthesis input
+        synthesis_input = texttospeech.SynthesisInput(text=transcript)
+        
+        # Perform the synthesis
+        response = client.synthesize_speech(
+            input=synthesis_input,
+            voice=voice,
+            audio_config=audio_config
+        )
+        
+        # Save the audio file
+        filename = f"news_broadcast_{language_code}_{task_id[:8]}.mp3"
+        audio_path = os.path.join('glconnect', 'static', 'audio', filename)
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+        
+        with open(audio_path, 'wb') as out:
+            out.write(response.audio_content)
+        
+        print(f"DEBUG: Regenerated audio saved to: {audio_path}")
+        
+        # Update task status
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['completed_at'] = datetime.now()
+                tasks[task_id]['result'] = {
+                    'audio_file_path': audio_path,
+                    'audio_url': f'/routes2/news/audio/{filename}',
+                    'language_code': language_code,
+                    'voice_name': voice.name,
+                    'transcript': transcript
+                }
+                print(f"DEBUG: Task {task_id} marked as completed")
+        
+        # Force garbage collection
+        import gc
+        gc.collect()
+        print(f"DEBUG: Garbage collection completed for task {task_id}")
+        
+    except Exception as e:
+        print(f"ERROR in audio regeneration: {e}")
+        import traceback
+        print(f"ERROR traceback: {traceback.format_exc()}")
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['status'] = 'failed'
+                tasks[task_id]['failed_at'] = datetime.now()
+                tasks[task_id]['error'] = f"Audio regeneration failed: {str(e)}"
+                print(f"DEBUG: Task {task_id} marked as failed due to: {e}")
