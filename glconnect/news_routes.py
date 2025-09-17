@@ -1075,6 +1075,8 @@ def run_generate_broadcast(task_id, topics):
             # Convert the file path to a URL that can be served by Flask
             filename = os.path.basename(audio_file_path)
             audio_url = f"/routes2/news/audio/{filename}"
+            print(f"DEBUG: Generated audio URL: {audio_url}")
+            print(f"DEBUG: Audio filename: {filename}")
             
             # Store the result with the extracted audio path
             print(f"DEBUG: Storing result for task {task_id}")
@@ -1090,6 +1092,8 @@ def run_generate_broadcast(task_id, topics):
                     'output_text': summary
                 }
                 tasks[task_id]['summary'] = summary
+                # Also store the audio URL for the UI
+                tasks[task_id]['audio_file'] = audio_url
                 print(f"DEBUG: Result stored for task {task_id}")
                 print(f"DEBUG: Stored result keys: {list(tasks[task_id]['result'].keys())}")
                 print(f"DEBUG: Audio file path in result: {tasks[task_id]['result'].get('audio_file_path')}")
