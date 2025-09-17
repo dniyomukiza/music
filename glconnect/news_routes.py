@@ -1003,6 +1003,7 @@ def run_generate_broadcast(task_id, topics):
         print(f"DEBUG: Output content: {str(output)[:500]}...")
         print(f"DEBUG: Output is None: {output is None}")
         print(f"DEBUG: Output is dict: {isinstance(output, dict)}")
+        print(f"DEBUG: Output keys: {list(output.keys()) if isinstance(output, dict) else 'Not a dict'}")
         
         # Handle both string and dictionary outputs
         if output is None:
@@ -1018,10 +1019,16 @@ def run_generate_broadcast(task_id, topics):
             summary = output.get('summary', '')
             
             if not audio_file_path:
+                print("DEBUG: No audio_file_path in output, trying fallback")
                 # Fallback: look for audio files in filesystem
                 audio_file_path = extract_audio_path_from_output("")
                 if not audio_file_path:
+                    print("DEBUG: Fallback failed - no audio file found")
                     raise AudioFilePathNotFound("Audio file path not found in output")
+                else:
+                    print(f"DEBUG: Fallback successful - found audio file: {audio_file_path}")
+            else:
+                print(f"DEBUG: Audio file path from output: {audio_file_path}")
             
             # Debug path information
             print(f"DEBUG: Current working directory: {os.getcwd()}")
@@ -1084,6 +1091,9 @@ def run_generate_broadcast(task_id, topics):
                 }
                 tasks[task_id]['summary'] = summary
                 print(f"DEBUG: Result stored for task {task_id}")
+                print(f"DEBUG: Stored result keys: {list(tasks[task_id]['result'].keys())}")
+                print(f"DEBUG: Audio file path in result: {tasks[task_id]['result'].get('audio_file_path')}")
+                print(f"DEBUG: Summary length: {len(tasks[task_id]['summary'])}")
             
             # Clean up old audio files after successful generation (but keep the current one)
             cleanup_old_audio_files()
@@ -1217,11 +1227,15 @@ def run_generate_broadcast(task_id, topics):
             return
             
     except Exception as e:
-        print(f"Error in ADK agent news generation: {e}")
+        print(f"ERROR in ADK agent news generation: {e}")
+        print(f"ERROR type: {type(e).__name__}")
+        import traceback
+        print(f"ERROR traceback: {traceback.format_exc()}")
         with _tasks_lock:
             tasks[task_id]['status'] = 'failed'
             tasks[task_id]['failed_at'] = datetime.now()
-            tasks[task_id]['error'] = f"e : {e}"
+            tasks[task_id]['error'] = f"News generation failed: {str(e)}"
+            print(f"DEBUG: Task {task_id} marked as failed due to: {e}")
     finally:
         # Cancel the timeout thread
         timeout_occurred.set()
@@ -1317,15 +1331,39 @@ def debug_tasks():
             task_info[task_id] = {
                 'status': task_data.get('status', 'unknown'),
                 'created_at': str(task_data.get('created_at', 'unknown')),
-                'age_seconds': (datetime.now() - task_data.get('created_at', datetime.now())).total_seconds() if 'created_at' in task_data else 'unknown'
+                'age_seconds': (datetime.now() - task_data.get('created_at', datetime.now())).total_seconds() if 'created_at' in task_data else 'unknown',
+                'has_result': 'result' in task_data,
+                'has_audio_file': 'audio_file_path' in task_data.get('result', {}) if 'result' in task_data else False
             }
         return jsonify({
             'total_tasks': len(tasks),
             'tasks': task_info,
-            'code_version': '862b442-debugging-added',
+            'code_version': '73bce23-comprehensive-fixes',
             'has_result_debugging': True,
-            'has_cleanup_debugging': True
+            'has_cleanup_debugging': True,
+            'has_enhanced_error_handling': True,
+            'memory_optimized': True
         })
+
+@news_bp.route('/debug/health')
+def debug_health():
+    """Health check endpoint to verify server status and code version."""
+    return jsonify({
+        'status': 'healthy',
+        'code_version': '73bce23-comprehensive-fixes',
+        'features': {
+            'result_debugging': True,
+            'cleanup_debugging': True,
+            'enhanced_error_handling': True,
+            'memory_optimization': True,
+            'garbage_collection': True
+        },
+        'memory_info': {
+            'docker_memory_limit': '4GB',
+            'docker_memory_reservation': '2GB'
+        },
+        'timestamp': datetime.now().isoformat()
+    })
 
 @news_bp.route('/status/<task_id>')
 def task_status(task_id):
