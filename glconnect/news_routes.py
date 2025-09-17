@@ -1001,9 +1001,18 @@ def run_generate_broadcast(task_id, topics):
         print("ADK agent system completed successfully")
         print(f"DEBUG: Output type: {type(output)}")
         print(f"DEBUG: Output content: {str(output)[:500]}...")
+        print(f"DEBUG: Output is None: {output is None}")
+        print(f"DEBUG: Output is dict: {isinstance(output, dict)}")
         
         # Handle both string and dictionary outputs
-        if isinstance(output, dict):
+        if output is None:
+            print("DEBUG: generate_broadcast returned None - no topics provided")
+            with _tasks_lock:
+                tasks[task_id]['status'] = 'failed'
+                tasks[task_id]['failed_at'] = datetime.now()
+                tasks[task_id]['error'] = "No topics provided for news generation"
+            return
+        elif isinstance(output, dict):
             print(f"Output from generate_broadcast (dict): {output}")
             audio_file_path = output.get('audio_file')
             summary = output.get('summary', '')
@@ -1061,6 +1070,11 @@ def run_generate_broadcast(task_id, topics):
             audio_url = f"/routes2/news/audio/{filename}"
             
             # Store the result with the extracted audio path
+            print(f"DEBUG: Storing result for task {task_id}")
+            print(f"DEBUG: Audio file path: {audio_file_path}")
+            print(f"DEBUG: Summary length: {len(summary) if summary else 'None'}")
+            print(f"DEBUG: Audio file exists: {os.path.exists(audio_file_path) if audio_file_path else 'No path'}")
+            
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
                 tasks[task_id]['completed_at'] = datetime.now()
@@ -1069,6 +1083,7 @@ def run_generate_broadcast(task_id, topics):
                     'output_text': summary
                 }
                 tasks[task_id]['summary'] = summary
+                print(f"DEBUG: Result stored for task {task_id}")
             
             # Clean up old audio files after successful generation (but keep the current one)
             cleanup_old_audio_files()
