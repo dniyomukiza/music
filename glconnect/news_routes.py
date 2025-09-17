@@ -1073,6 +1073,11 @@ def run_generate_broadcast(task_id, topics):
             # Clean up old audio files after successful generation (but keep the current one)
             cleanup_old_audio_files()
             
+            # Force garbage collection to free memory after task completion
+            import gc
+            gc.collect()
+            print(f"DEBUG: Garbage collection completed for task {task_id}")
+            
             # Clean up temporary audio files (jingle.wav and final_news_broadcast*.mp3 are NEVER deleted)
             cleanup_temp_audio_files()
             
