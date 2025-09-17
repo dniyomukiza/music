@@ -1074,9 +1074,12 @@ def run_generate_broadcast(task_id, topics):
             
             # Convert the file path to a URL that can be served by Flask
             filename = os.path.basename(audio_file_path)
+            # Ensure filename doesn't contain path separators
+            filename = filename.replace('\\', '/').split('/')[-1]
             audio_url = f"/routes2/news/audio/{filename}"
             print(f"DEBUG: Generated audio URL: {audio_url}")
             print(f"DEBUG: Audio filename: {filename}")
+            print(f"DEBUG: Original audio_file_path: {audio_file_path}")
             
             # Store the result with the extracted audio path
             print(f"DEBUG: Storing result for task {task_id}")
@@ -1258,14 +1261,23 @@ def serve_audio(filename):
     
     # Try multiple possible audio directory locations
     possible_dirs = [
+        '/usr/src/appdir/glconnect/static/audio',  # Docker container path (most likely)
         os.path.join(os.getcwd(), 'glconnect', 'static', 'audio'),
         os.path.abspath('glconnect/static/audio'),
-        '/usr/src/appdir/glconnect/static/audio',  # Docker container path
-        './glconnect/static/audio'
+        './glconnect/static/audio',
+        'glconnect/static/audio',  # Relative path from current directory
+        '/app/glconnect/static/audio',  # Alternative Docker path
+        '/appdir/glconnect/static/audio'  # Another alternative
     ]
     
     print(f"DEBUG: Looking for audio file: {filename}")
     print(f"DEBUG: Current working directory: {os.getcwd()}")
+    
+    # First, try the exact Docker path that was mentioned in the error
+    docker_path = f"/usr/src/appdir/glconnect/static/audio/{filename}"
+    if os.path.exists(docker_path):
+        print(f"DEBUG: Found audio file at exact Docker path: {docker_path}")
+        return send_from_directory("/usr/src/appdir/glconnect/static/audio", filename)
     
     for audio_dir in possible_dirs:
         print(f"DEBUG: Checking directory: {audio_dir}")
@@ -1279,6 +1291,25 @@ def serve_audio(filename):
                 print(f"DEBUG: File not found in {audio_dir}")
         else:
             print(f"DEBUG: Directory does not exist: {audio_dir}")
+    
+    # If not found in standard locations, try to find the file anywhere
+    print(f"DEBUG: File not found in standard locations, searching for: {filename}")
+    import glob
+    search_patterns = [
+        f"**/glconnect/static/audio/{filename}",
+        f"**/static/audio/{filename}",
+        f"**/{filename}",
+        f"/usr/src/appdir/**/{filename}",  # Specific Docker path pattern
+        f"/usr/src/appdir/glconnect/static/audio/{filename}"  # Exact Docker path
+    ]
+    
+    for pattern in search_patterns:
+        matches = glob.glob(pattern, recursive=True)
+        if matches:
+            match = matches[0]
+            audio_dir = os.path.dirname(match)
+            print(f"DEBUG: Found audio file via search at: {match}")
+            return send_from_directory(audio_dir, filename)
     
     print(f"ERROR: Audio file {filename} not found in any expected location")
     return "Audio file not found", 404
