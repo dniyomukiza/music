@@ -1383,12 +1383,17 @@ def broadcast():
             memory_info = psutil.virtual_memory()
             print(f"DEBUG: Pre-processing memory check - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
             
-            if memory_info.percent > 85:
-                print(f"WARNING: High memory usage ({memory_info.percent}%) before processing")
+            # Only block if memory usage is at 100% to allow maximum operation
+            if memory_info.percent >= 100:
+                print(f"CRITICAL: Memory usage at maximum ({memory_info.percent}%) - blocking to prevent crash")
                 return jsonify({
-                    'error': 'Server is under high memory pressure. Please try again in a moment.',
+                    'error': 'Server memory is at maximum capacity. Please try again in a moment.',
                     'details': f'Memory usage: {memory_info.percent}%'
                 }), 503
+            elif memory_info.percent > 90:
+                print(f"WARNING: Very high memory usage ({memory_info.percent}%) - proceeding with caution")
+            elif memory_info.percent > 80:
+                print(f"INFO: High memory usage ({memory_info.percent}%) - monitoring")
         except ImportError:
             print("DEBUG: psutil not available - skipping memory check")
         except Exception as e:
@@ -1542,6 +1547,33 @@ def force_cleanup():
             'error': str(e)
         }), 500
 
+@news_bp.route('/debug/memory-status')
+def debug_memory_status():
+    """Check current memory status without triggering errors"""
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        process = psutil.Process()
+        process_memory = process.memory_info()
+        
+        return jsonify({
+            'memory_percent': memory_info.percent,
+            'memory_used_mb': memory_info.used / 1024 / 1024,
+            'memory_available_mb': memory_info.available / 1024 / 1024,
+            'memory_total_mb': memory_info.total / 1024 / 1024,
+            'process_memory_mb': process_memory.rss / 1024 / 1024,
+            'thresholds': {
+                'info': 80,
+                'warning': 90,
+                'critical': 100
+            },
+            'status': 'critical' if memory_info.percent >= 100 else 'warning' if memory_info.percent > 90 else 'info' if memory_info.percent > 80 else 'normal'
+        })
+    except ImportError:
+        return jsonify({'error': 'psutil not available'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Memory check failed: {str(e)}'}), 500
+
 @news_bp.route('/debug/health')
 def debug_health():
     """Health check endpoint to verify server status and code version."""
@@ -1582,7 +1614,7 @@ def debug_health():
                 'docker_memory_reservation': '2GB'
             },
             'warnings': [
-                f"High memory usage: {memory_info.percent}%" if memory_info.percent > 80 else None,
+                f"Very high memory usage: {memory_info.percent}%" if memory_info.percent > 90 else f"High memory usage: {memory_info.percent}%" if memory_info.percent > 80 else None,
                 f"High CPU usage: {cpu_percent}%" if cpu_percent > 80 else None
             ],
             'timestamp': datetime.now().isoformat()
@@ -1657,7 +1689,7 @@ def debug_server_status():
                 'tasks_healthy': task_count < 100
             },
             'potential_issues': [
-                'High memory usage may cause 502 errors' if memory_info.percent > 80 else None,
+                'Maximum memory usage may cause 502 errors' if memory_info.percent >= 100 else 'Very high memory usage may cause issues' if memory_info.percent > 90 else 'High memory usage' if memory_info.percent > 80 else None,
                 'High CPU usage may cause timeouts' if cpu_percent > 80 else None,
                 'Many tasks may cause memory issues' if task_count > 50 else None,
                 'No tasks may indicate server restart' if task_count == 0 else None
@@ -1714,12 +1746,16 @@ def task_status(task_id):
         print(f"DEBUG: Server health check - Memory: {memory_info.percent}%, Available: {memory_info.available / 1024 / 1024:.1f}MB")
         
         # Check if server is under memory pressure
-        if memory_info.percent > 90:
-            print(f"CRITICAL: Server under extreme memory pressure ({memory_info.percent}%) - may cause 502 errors!")
+        if memory_info.percent >= 100:
+            print(f"CRITICAL: Server memory at maximum ({memory_info.percent}%) - may cause 502 errors!")
             return jsonify({
-                'error': 'Server temporarily unavailable due to high memory usage. Please try again in a moment.',
+                'error': 'Server temporarily unavailable due to maximum memory usage. Please try again in a moment.',
                 'details': f'Server memory usage: {memory_info.percent}%'
             }), 503
+        elif memory_info.percent > 90:
+            print(f"WARNING: Very high memory usage ({memory_info.percent}%) - monitoring closely")
+        elif memory_info.percent > 80:
+            print(f"INFO: High memory usage ({memory_info.percent}%) - monitoring")
     except ImportError:
         print("DEBUG: psutil not available - skipping memory check")
     except Exception as e:
