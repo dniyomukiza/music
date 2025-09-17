@@ -1853,10 +1853,10 @@ def transcribe_audio():
         if not os.path.exists(audio_file_path):
             return jsonify({'error': 'Audio file not found'}), 404
         
-        # Check file size (limit to 2MB for transcription to prevent timeouts and memory issues)
+        # Check file size (limit to 10MB for transcription to accommodate news broadcasts)
         file_size = os.path.getsize(audio_file_path)
-        if file_size > 2 * 1024 * 1024:  # 2MB limit (reduced for stability)
-            return jsonify({'error': 'Audio file too large for transcription (max 2MB)'}), 400
+        if file_size > 10 * 1024 * 1024:  # 10MB limit (increased for news broadcasts)
+            return jsonify({'error': 'Audio file too large for transcription (max 10MB)'}), 400
         
         # Check if file is too short (less than 1 second)
         if file_size < 1000:  # Less than 1KB
@@ -1899,8 +1899,8 @@ def run_transcription(task_id, audio_file_path, filename):
         
         # Check file size again before processing
         file_size = os.path.getsize(audio_file_path)
-        if file_size > 2 * 1024 * 1024:  # 2MB limit
-            raise Exception("File too large for transcription (max 2MB)")
+        if file_size > 10 * 1024 * 1024:  # 10MB limit (increased for news broadcasts)
+            raise Exception("File too large for transcription (max 10MB)")
         
         # Use Google Gemini for transcription
         from google import genai
@@ -1985,7 +1985,8 @@ def transcription_status(task_id):
             'status': 'completed',
             'transcript': task['result']['transcript'],
             'filename': task['result']['filename'],
-            'file_size': task['result']['file_size']
+            'file_size': task['result']['file_size'],
+            'download_url': f'/routes2/news/transcript/download/{task_id}'
         })
     elif task['status'] == 'failed':
         return jsonify({
@@ -1994,3 +1995,40 @@ def transcription_status(task_id):
         })
     else:
         return jsonify({'status': 'processing'})
+
+@news_bp.route('/transcript/download/<task_id>')
+def download_transcript(task_id):
+    """Download the transcript as a text file."""
+    with _tasks_lock:
+        task = tasks.get(task_id)
+    
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    
+    if task['status'] != 'completed':
+        return jsonify({'error': 'Transcription not completed yet'}), 400
+    
+    if 'result' not in task or 'transcript' not in task['result']:
+        return jsonify({'error': 'No transcript available'}), 400
+    
+    transcript = task['result']['transcript']
+    filename = task['result'].get('filename', 'transcript.txt')
+    
+    # Create a response with the transcript as a downloadable file
+    from flask import Response
+    
+    # Generate a clean filename
+    clean_filename = filename.replace('.mp3', '_transcript.txt').replace('.wav', '_transcript.txt')
+    if not clean_filename.endswith('.txt'):
+        clean_filename += '_transcript.txt'
+    
+    response = Response(
+        transcript,
+        mimetype='text/plain',
+        headers={
+            'Content-Disposition': f'attachment; filename="{clean_filename}"',
+            'Content-Type': 'text/plain; charset=utf-8'
+        }
+    )
+    
+    return response
