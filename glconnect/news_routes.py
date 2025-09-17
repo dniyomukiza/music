@@ -1321,7 +1321,10 @@ def debug_tasks():
             }
         return jsonify({
             'total_tasks': len(tasks),
-            'tasks': task_info
+            'tasks': task_info,
+            'code_version': '862b442-debugging-added',
+            'has_result_debugging': True,
+            'has_cleanup_debugging': True
         })
 
 @news_bp.route('/status/<task_id>')
