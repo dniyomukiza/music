@@ -41,9 +41,9 @@ def cleanup_old_tasks():
                     task_age = current_time - task_data['created_at']
                     print(f"DEBUG: Task {task_id} age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')}")
                     # Clean up tasks older than 2 hours AND not currently running
-                    # OR clean up stuck running tasks older than 5 minutes
+                    # OR clean up stuck running tasks older than 10 minutes (news generation can take 5+ minutes)
                     is_old_task = task_age.total_seconds() > 7200 and task_data.get('status') not in ['running']
-                    is_stuck_running = task_data.get('status') == 'running' and task_age.total_seconds() > 300  # 5 minutes
+                    is_stuck_running = task_data.get('status') == 'running' and task_age.total_seconds() > 600  # 10 minutes
                     
                     if is_old_task or is_stuck_running:
                         tasks_to_remove.append(task_id)
@@ -1516,7 +1516,7 @@ def force_cleanup():
                     created_at = task.get('created_at')
                     if created_at:
                         age_seconds = (current_time - created_at).total_seconds()
-                        if age_seconds > 300:  # 5 minutes
+                        if age_seconds > 600:  # 10 minutes
                             stuck_tasks.append((task_id, age_seconds))
             
             print(f"DEBUG: Found {len(stuck_tasks)} stuck tasks")
@@ -1566,6 +1566,10 @@ def debug_memory_status():
                 'info': 80,
                 'warning': 90,
                 'critical': 100
+            },
+            'task_timeouts': {
+                'running_task_cleanup': '10 minutes',
+                'completed_task_cleanup': '2 hours'
             },
             'status': 'critical' if memory_info.percent >= 100 else 'warning' if memory_info.percent > 90 else 'info' if memory_info.percent > 80 else 'normal'
         })
