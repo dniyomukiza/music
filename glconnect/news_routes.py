@@ -23,9 +23,14 @@ def cleanup_old_tasks():
         print(f"DEBUG: Cleanup started at {current_time}")
         
         # Check memory usage before cleanup
-        import psutil
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory usage - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        try:
+            import psutil
+            memory_info = psutil.virtual_memory()
+            print(f"DEBUG: Memory usage - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        except ImportError:
+            print("DEBUG: psutil not available - skipping memory check")
+        except Exception as e:
+            print(f"DEBUG: Memory check failed: {e}")
         
         with _tasks_lock:
             print(f"DEBUG: Current tasks before cleanup: {len(tasks)}")
@@ -35,8 +40,12 @@ def cleanup_old_tasks():
                 if 'created_at' in task_data:
                     task_age = current_time - task_data['created_at']
                     print(f"DEBUG: Task {task_id} age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')}")
-                    # Only clean up tasks older than 2 hours AND not currently running
-                    if task_age.total_seconds() > 7200 and task_data.get('status') not in ['running']:
+                    # Clean up tasks older than 2 hours AND not currently running
+                    # OR clean up stuck running tasks older than 5 minutes
+                    is_old_task = task_age.total_seconds() > 7200 and task_data.get('status') not in ['running']
+                    is_stuck_running = task_data.get('status') == 'running' and task_age.total_seconds() > 300  # 5 minutes
+                    
+                    if is_old_task or is_stuck_running:
                         tasks_to_remove.append(task_id)
                         print(f"DEBUG: Marking task {task_id} for cleanup (age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')})")
                     else:
@@ -74,12 +83,18 @@ def cleanup_old_tasks():
                 print(f"DEBUG: No tasks cleaned up. Current tasks: {len(tasks)}")
             
             # Check memory usage after cleanup
-            memory_info = psutil.virtual_memory()
-            print(f"DEBUG: Memory after cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-            
-            # If memory usage is high, warn about potential issues
-            if memory_info.percent > 80:
-                print(f"WARNING: High memory usage detected ({memory_info.percent}%) - this may cause worker crashes!")
+            try:
+                import psutil
+                memory_info = psutil.virtual_memory()
+                print(f"DEBUG: Memory after cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+                
+                # If memory usage is high, warn about potential issues
+                if memory_info.percent > 80:
+                    print(f"WARNING: High memory usage detected ({memory_info.percent}%) - this may cause worker crashes!")
+            except ImportError:
+                print("DEBUG: psutil not available - skipping memory check")
+            except Exception as e:
+                print(f"DEBUG: Memory check failed: {e}")
                 
     except Exception as e:
         print(f"Error cleaning up tasks: {e}")
@@ -989,9 +1004,14 @@ def run_generate_broadcast(task_id, topics):
     print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
     
     # Check memory usage at start of news generation
-    import psutil
-    memory_info = psutil.virtual_memory()
-    print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+    except ImportError:
+        print("DEBUG: psutil not available - skipping memory check")
+    except Exception as e:
+        print(f"DEBUG: Memory check failed: {e}")
     
     # Set up timeout using threading (works in any thread)
     timeout_seconds = 600  # 10 minutes
@@ -1342,53 +1362,114 @@ def serve_audio(filename):
 
 @news_bp.route('/broadcast', methods=['POST'])
 def broadcast():
-    data = request.get_json()
-    # Handle both string and list inputs
-    if isinstance(data['topics'], str):
-        topics = [topic.strip() for topic in data['topics'].split(',')]
-    else:
-        topics = [topic.strip() for topic in data['topics']]
-    # Filter to only relevant topics
-    relevant_topics = []
-    for topic in topics:
-        is_relevant, confidence, reason = is_relevant_topic(topic)
-        if is_relevant:
-            relevant_topics.append(topic)
-        else:
-            print(f"DEBUG: Topic '{topic}' rejected: {reason} (confidence: {confidence})")
-
-    if not relevant_topics:
-        return jsonify({'error': 'No relevant news topics detected. Please enter news-related topics like politics, economy, sports, technology, health, world, etc.'}), 400
-
-    # Track analytics for the search
-    track_search_analytics(relevant_topics)
-
-    # Clean up old tasks before creating new ones
-    print(f"DEBUG: Calling cleanup before creating new task")
-    cleanup_old_tasks()
-
-    task_id = str(uuid.uuid4())
-    with _tasks_lock:
-        tasks[task_id] = {
-            'status': 'running',
-            'created_at': datetime.now()
-        }
-        print(f"DEBUG: Created news task {task_id}. Total tasks: {len(tasks)}")
-        print(f"DEBUG: Task {task_id} created at: {datetime.now()}")
-        print(f"DEBUG: All task IDs: {list(tasks.keys())}")
+    try:
+        print("DEBUG: News generation request received")
+        data = request.get_json()
         
-        # Check memory usage after task creation
-        import psutil
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory after task creation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        if not data or 'topics' not in data:
+            return jsonify({'error': 'No topics provided in request'}), 400
+        
+        # Handle both string and list inputs
+        if isinstance(data['topics'], str):
+            topics = [topic.strip() for topic in data['topics'].split(',')]
+        else:
+            topics = [topic.strip() for topic in data['topics']]
+        
+        print(f"DEBUG: Topics received: {topics}")
+        
+        # Check server health before processing
+        try:
+            import psutil
+            memory_info = psutil.virtual_memory()
+            print(f"DEBUG: Pre-processing memory check - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            
+            if memory_info.percent > 85:
+                print(f"WARNING: High memory usage ({memory_info.percent}%) before processing")
+                return jsonify({
+                    'error': 'Server is under high memory pressure. Please try again in a moment.',
+                    'details': f'Memory usage: {memory_info.percent}%'
+                }), 503
+        except ImportError:
+            print("DEBUG: psutil not available - skipping memory check")
+        except Exception as e:
+            print(f"DEBUG: Memory check failed: {e}")
+        
+        # Filter to only relevant topics
+        relevant_topics = []
+        for topic in topics:
+            try:
+                is_relevant, confidence, reason = is_relevant_topic(topic)
+                if is_relevant:
+                    relevant_topics.append(topic)
+                else:
+                    print(f"DEBUG: Topic '{topic}' rejected: {reason} (confidence: {confidence})")
+            except Exception as e:
+                print(f"ERROR: Failed to check topic relevance for '{topic}': {str(e)}")
+                # Include topic anyway if relevance check fails
+                relevant_topics.append(topic)
 
-    thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
-    thread.start()
+        if not relevant_topics:
+            return jsonify({'error': 'No relevant news topics detected. Please enter news-related topics like politics, economy, sports, technology, health, world, etc.'}), 400
 
-    print(f"DEBUG: Started news generation thread for task {task_id}")
-    print(f"DEBUG: Thread started, returning task_id to client")
-    
-    return jsonify({'task_id': task_id})
+        # Track analytics for the search
+        try:
+            track_search_analytics(relevant_topics)
+        except Exception as e:
+            print(f"WARNING: Failed to track analytics: {str(e)}")
+
+        # Clean up old tasks before creating new ones
+        print(f"DEBUG: Calling cleanup before creating new task")
+        try:
+            cleanup_old_tasks()
+        except Exception as e:
+            print(f"WARNING: Cleanup failed: {str(e)}")
+
+        task_id = str(uuid.uuid4())
+        with _tasks_lock:
+            tasks[task_id] = {
+                'status': 'running',
+                'created_at': datetime.now()
+            }
+            print(f"DEBUG: Created news task {task_id}. Total tasks: {len(tasks)}")
+            print(f"DEBUG: Task {task_id} created at: {datetime.now()}")
+            print(f"DEBUG: All task IDs: {list(tasks.keys())}")
+            
+            # Check memory usage after task creation
+            try:
+                import psutil
+                memory_info = psutil.virtual_memory()
+                print(f"DEBUG: Memory after task creation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            except ImportError:
+                print("DEBUG: psutil not available - skipping memory check")
+            except Exception as e:
+                print(f"DEBUG: Memory check failed: {e}")
+
+        thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
+        thread.start()
+
+        print(f"DEBUG: Started news generation thread for task {task_id}")
+        print(f"DEBUG: Thread started, returning task_id to client")
+        
+        return jsonify({'task_id': task_id})
+        
+    except Exception as e:
+        print(f"CRITICAL ERROR in broadcast endpoint: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        # Log system state during error
+        try:
+            import psutil
+            memory_info = psutil.virtual_memory()
+            print(f"ERROR: System state - Memory: {memory_info.percent}%, Available: {memory_info.available / 1024 / 1024:.1f}MB")
+        except:
+            print("ERROR: Could not get system state")
+        
+        return jsonify({
+            'error': 'Internal server error during news generation',
+            'details': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @news_bp.route('/debug/tasks')
 def debug_tasks():
@@ -1413,110 +1494,236 @@ def debug_tasks():
             'memory_optimized': True
         })
 
+@news_bp.route('/debug/force-cleanup')
+def force_cleanup():
+    """Force cleanup of stuck tasks to resolve server overload."""
+    try:
+        with _tasks_lock:
+            initial_count = len(tasks)
+            print(f"DEBUG: Force cleanup - initial task count: {initial_count}")
+            
+            # Get stuck tasks (running for more than 5 minutes)
+            stuck_tasks = []
+            current_time = datetime.now()
+            
+            for task_id, task in tasks.items():
+                if task.get('status') == 'running':
+                    created_at = task.get('created_at')
+                    if created_at:
+                        age_seconds = (current_time - created_at).total_seconds()
+                        if age_seconds > 300:  # 5 minutes
+                            stuck_tasks.append((task_id, age_seconds))
+            
+            print(f"DEBUG: Found {len(stuck_tasks)} stuck tasks")
+            
+            # Remove stuck tasks
+            for task_id, age_seconds in stuck_tasks:
+                print(f"DEBUG: Removing stuck task {task_id} (age: {age_seconds:.1f}s)")
+                del tasks[task_id]
+            
+            final_count = len(tasks)
+            print(f"DEBUG: Force cleanup completed - final task count: {final_count}")
+            
+            return jsonify({
+                'success': True,
+                'initial_tasks': initial_count,
+                'final_tasks': final_count,
+                'stuck_tasks_removed': len(stuck_tasks),
+                'stuck_task_ids': [task_id for task_id, _ in stuck_tasks],
+                'message': f'Removed {len(stuck_tasks)} stuck tasks'
+            })
+            
+    except Exception as e:
+        print(f"ERROR in force cleanup: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @news_bp.route('/debug/health')
 def debug_health():
     """Health check endpoint to verify server status and code version."""
-    import psutil
-    import os
-    
-    # Get system information
-    memory_info = psutil.virtual_memory()
-    cpu_percent = psutil.cpu_percent(interval=1)
-    
-    # Get process information
-    process = psutil.Process(os.getpid())
-    process_memory = process.memory_info()
-    
-    # Check if server is healthy
-    is_healthy = memory_info.percent < 90 and cpu_percent < 90
-    
-    return jsonify({
-        'status': 'healthy' if is_healthy else 'unhealthy',
-        'code_version': '73bce23-comprehensive-fixes',
-        'features': {
-            'result_debugging': True,
-            'cleanup_debugging': True,
-            'enhanced_error_handling': True,
-            'memory_optimization': True,
-            'garbage_collection': True
-        },
-        'system_info': {
-            'memory_usage_percent': memory_info.percent,
-            'memory_available_mb': round(memory_info.available / 1024 / 1024, 1),
-            'memory_used_mb': round(memory_info.used / 1024 / 1024, 1),
-            'cpu_percent': cpu_percent,
-            'process_memory_mb': round(process_memory.rss / 1024 / 1024, 1)
-        },
-        'memory_info': {
-            'docker_memory_limit': '4GB',
-            'docker_memory_reservation': '2GB'
-        },
-        'warnings': [
-            f"High memory usage: {memory_info.percent}%" if memory_info.percent > 80 else None,
-            f"High CPU usage: {cpu_percent}%" if cpu_percent > 80 else None
-        ],
-        'timestamp': datetime.now().isoformat()
-    })
+    try:
+        import psutil
+        import os
+        
+        # Get system information
+        memory_info = psutil.virtual_memory()
+        cpu_percent = psutil.cpu_percent(interval=1)
+        
+        # Get process information
+        process = psutil.Process(os.getpid())
+        process_memory = process.memory_info()
+        
+        # Check if server is healthy
+        is_healthy = memory_info.percent < 90 and cpu_percent < 90
+        
+        return jsonify({
+            'status': 'healthy' if is_healthy else 'unhealthy',
+            'code_version': '73bce23-comprehensive-fixes',
+            'features': {
+                'result_debugging': True,
+                'cleanup_debugging': True,
+                'enhanced_error_handling': True,
+                'memory_optimization': True,
+                'garbage_collection': True
+            },
+            'system_info': {
+                'memory_usage_percent': memory_info.percent,
+                'memory_available_mb': round(memory_info.available / 1024 / 1024, 1),
+                'memory_used_mb': round(memory_info.used / 1024 / 1024, 1),
+                'cpu_percent': cpu_percent,
+                'process_memory_mb': round(process_memory.rss / 1024 / 1024, 1)
+            },
+            'memory_info': {
+                'docker_memory_limit': '4GB',
+                'docker_memory_reservation': '2GB'
+            },
+            'warnings': [
+                f"High memory usage: {memory_info.percent}%" if memory_info.percent > 80 else None,
+                f"High CPU usage: {cpu_percent}%" if cpu_percent > 80 else None
+            ],
+            'timestamp': datetime.now().isoformat()
+        })
+    except ImportError:
+        # Fallback when psutil is not available
+        return jsonify({
+            'status': 'unknown',
+            'code_version': '73bce23-comprehensive-fixes',
+            'features': {
+                'result_debugging': True,
+                'cleanup_debugging': True,
+                'enhanced_error_handling': True,
+                'memory_optimization': True,
+                'garbage_collection': True
+            },
+            'system_info': {
+                'memory_usage_percent': 'unknown',
+                'memory_available_mb': 'unknown',
+                'memory_used_mb': 'unknown',
+                'cpu_percent': 'unknown',
+                'process_memory_mb': 'unknown'
+            },
+            'memory_info': {
+                'docker_memory_limit': '4GB',
+                'docker_memory_reservation': '2GB'
+            },
+            'warnings': ['psutil not available - system monitoring limited'],
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'code_version': '73bce23-comprehensive-fixes',
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @news_bp.route('/debug/server-status')
 def debug_server_status():
     """Detailed server status for debugging task issues."""
-    import psutil
-    import os
-    
-    memory_info = psutil.virtual_memory()
-    cpu_percent = psutil.cpu_percent(interval=1)
-    process = psutil.Process(os.getpid())
-    
-    with _tasks_lock:
-        task_count = len(tasks)
-        running_tasks = sum(1 for task in tasks.values() if task.get('status') == 'running')
-        completed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'completed')
-        failed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'failed')
-    
-    return jsonify({
-        'server_status': {
-            'memory_percent': memory_info.percent,
-            'memory_available_mb': round(memory_info.available / 1024 / 1024, 1),
-            'cpu_percent': cpu_percent,
-            'process_memory_mb': round(process.memory_info().rss / 1024 / 1024, 1)
-        },
-        'task_status': {
-            'total_tasks': task_count,
-            'running_tasks': running_tasks,
-            'completed_tasks': completed_tasks,
-            'failed_tasks': failed_tasks
-        },
-        'health_indicators': {
-            'memory_healthy': memory_info.percent < 80,
-            'cpu_healthy': cpu_percent < 80,
-            'tasks_healthy': task_count < 100
-        },
-        'potential_issues': [
-            'High memory usage may cause 502 errors' if memory_info.percent > 80 else None,
-            'High CPU usage may cause timeouts' if cpu_percent > 80 else None,
-            'Many tasks may cause memory issues' if task_count > 50 else None,
-            'No tasks may indicate server restart' if task_count == 0 else None
-        ],
-        'timestamp': datetime.now().isoformat()
-    })
+    try:
+        import psutil
+        import os
+        
+        memory_info = psutil.virtual_memory()
+        cpu_percent = psutil.cpu_percent(interval=1)
+        process = psutil.Process(os.getpid())
+        
+        with _tasks_lock:
+            task_count = len(tasks)
+            running_tasks = sum(1 for task in tasks.values() if task.get('status') == 'running')
+            completed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'completed')
+            failed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'failed')
+        
+        return jsonify({
+            'server_status': {
+                'memory_percent': memory_info.percent,
+                'memory_available_mb': round(memory_info.available / 1024 / 1024, 1),
+                'cpu_percent': cpu_percent,
+                'process_memory_mb': round(process.memory_info().rss / 1024 / 1024, 1)
+            },
+            'task_status': {
+                'total_tasks': task_count,
+                'running_tasks': running_tasks,
+                'completed_tasks': completed_tasks,
+                'failed_tasks': failed_tasks
+            },
+            'health_indicators': {
+                'memory_healthy': memory_info.percent < 80,
+                'cpu_healthy': cpu_percent < 80,
+                'tasks_healthy': task_count < 100
+            },
+            'potential_issues': [
+                'High memory usage may cause 502 errors' if memory_info.percent > 80 else None,
+                'High CPU usage may cause timeouts' if cpu_percent > 80 else None,
+                'Many tasks may cause memory issues' if task_count > 50 else None,
+                'No tasks may indicate server restart' if task_count == 0 else None
+            ],
+            'timestamp': datetime.now().isoformat()
+        })
+    except ImportError:
+        # Fallback when psutil is not available
+        with _tasks_lock:
+            task_count = len(tasks)
+            running_tasks = sum(1 for task in tasks.values() if task.get('status') == 'running')
+            completed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'completed')
+            failed_tasks = sum(1 for task in tasks.values() if task.get('status') == 'failed')
+        
+        return jsonify({
+            'server_status': {
+                'memory_percent': 'unknown',
+                'memory_available_mb': 'unknown',
+                'cpu_percent': 'unknown',
+                'process_memory_mb': 'unknown'
+            },
+            'task_status': {
+                'total_tasks': task_count,
+                'running_tasks': running_tasks,
+                'completed_tasks': completed_tasks,
+                'failed_tasks': failed_tasks
+            },
+            'health_indicators': {
+                'memory_healthy': 'unknown',
+                'cpu_healthy': 'unknown',
+                'tasks_healthy': task_count < 100
+            },
+            'potential_issues': [
+                'psutil not available - system monitoring limited',
+                'Many tasks may cause memory issues' if task_count > 50 else None,
+                'No tasks may indicate server restart' if task_count == 0 else None
+            ],
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @news_bp.route('/status/<task_id>')
 def task_status(task_id):
     print(f"DEBUG: Checking status for task {task_id}")
     
     # Check server health before processing
-    import psutil
-    memory_info = psutil.virtual_memory()
-    print(f"DEBUG: Server health check - Memory: {memory_info.percent}%, Available: {memory_info.available / 1024 / 1024:.1f}MB")
-    
-    # Check if server is under memory pressure
-    if memory_info.percent > 90:
-        print(f"CRITICAL: Server under extreme memory pressure ({memory_info.percent}%) - may cause 502 errors!")
-        return jsonify({
-            'error': 'Server temporarily unavailable due to high memory usage. Please try again in a moment.',
-            'details': f'Server memory usage: {memory_info.percent}%'
-        }), 503
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Server health check - Memory: {memory_info.percent}%, Available: {memory_info.available / 1024 / 1024:.1f}MB")
+        
+        # Check if server is under memory pressure
+        if memory_info.percent > 90:
+            print(f"CRITICAL: Server under extreme memory pressure ({memory_info.percent}%) - may cause 502 errors!")
+            return jsonify({
+                'error': 'Server temporarily unavailable due to high memory usage. Please try again in a moment.',
+                'details': f'Server memory usage: {memory_info.percent}%'
+            }), 503
+    except ImportError:
+        print("DEBUG: psutil not available - skipping memory check")
+    except Exception as e:
+        print(f"DEBUG: Memory check failed: {e}")
     
     with _tasks_lock:
         task = tasks.get(task_id)
