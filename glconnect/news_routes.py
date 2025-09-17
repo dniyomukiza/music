@@ -34,16 +34,20 @@ def cleanup_old_tasks():
         
         with _tasks_lock:
             print(f"DEBUG: Current tasks before cleanup: {len(tasks)}")
-            # Remove tasks older than 2 hours
+            # Only clean up if we have more than 10 tasks to prevent aggressive cleanup
+            if len(tasks) <= 10:
+                print(f"DEBUG: Skipping cleanup - only {len(tasks)} tasks in system")
+                return
+            
             tasks_to_remove = []
             for task_id, task_data in tasks.items():
                 if 'created_at' in task_data:
                     task_age = current_time - task_data['created_at']
                     print(f"DEBUG: Task {task_id} age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')}")
-                    # Clean up tasks older than 2 hours AND not currently running
-                    # OR clean up stuck running tasks older than 10 minutes (news generation can take 5+ minutes)
-                    is_old_task = task_age.total_seconds() > 7200 and task_data.get('status') not in ['running']
-                    is_stuck_running = task_data.get('status') == 'running' and task_age.total_seconds() > 600  # 10 minutes
+                    # Clean up tasks older than 4 hours AND not currently running (increased from 2 hours)
+                    # OR clean up stuck running tasks older than 15 minutes (increased from 10 minutes)
+                    is_old_task = task_age.total_seconds() > 14400 and task_data.get('status') not in ['running']
+                    is_stuck_running = task_data.get('status') == 'running' and task_age.total_seconds() > 900  # 15 minutes
                     
                     if is_old_task or is_stuck_running:
                         tasks_to_remove.append(task_id)
@@ -52,8 +56,7 @@ def cleanup_old_tasks():
                         print(f"DEBUG: Keeping task {task_id} (age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')})")
                 elif task_data.get('status') in ['completed', 'failed']:
                     # For tasks without created_at but are completed/failed, 
-                    # remove them if they're older than 2 hours (safer cleanup)
-                    # This handles legacy tasks and gives UI more time to poll
+                    # remove them if they're older than 4 hours (increased from 2 hours)
                     cleanup_timestamp = None
                     if 'completed_at' in task_data:
                         cleanup_timestamp = task_data['completed_at']
@@ -62,25 +65,29 @@ def cleanup_old_tasks():
                     
                     if cleanup_timestamp:
                         task_age = current_time - cleanup_timestamp
-                        if task_age.total_seconds() > 7200:  # 2 hours instead of 30 minutes
+                        if task_age.total_seconds() > 14400:  # 4 hours instead of 2 hours
                             tasks_to_remove.append(task_id)
                             print(f"DEBUG: Marking completed task for cleanup: {task_id} (age: {task_age.total_seconds():.1f}s)")
                     else:
-                        # If no timestamp at all, remove completed/failed tasks after 1 hour
+                        # If no timestamp at all, remove completed/failed tasks after 2 hours (increased from 1 hour)
                         if 'created_at' not in task_data:
-                            # Only remove if it's been at least 1 hour since we can't determine exact completion time
+                            # Only remove if it's been at least 2 hours since we can't determine exact completion time
                             tasks_to_remove.append(task_id)
                             print(f"DEBUG: Marking legacy task for cleanup: {task_id}")
             
-            for task_id in tasks_to_remove:
-                task_info = tasks[task_id]
-                del tasks[task_id]
-                print(f"Cleaned up old task: {task_id} (status: {task_info.get('status')}, age: {task_info.get('created_at', 'no timestamp')})")
-            
-            if tasks_to_remove:
-                print(f"DEBUG: Cleanup removed {len(tasks_to_remove)} tasks. Remaining: {len(tasks)}")
+            # Only remove tasks if we have more than 5 tasks remaining after cleanup
+            if len(tasks) - len(tasks_to_remove) > 5:
+                for task_id in tasks_to_remove:
+                    task_info = tasks[task_id]
+                    del tasks[task_id]
+                    print(f"Cleaned up old task: {task_id} (status: {task_info.get('status')}, age: {task_info.get('created_at', 'no timestamp')})")
+                
+                if tasks_to_remove:
+                    print(f"DEBUG: Cleanup removed {len(tasks_to_remove)} tasks. Remaining: {len(tasks)}")
+                else:
+                    print(f"DEBUG: No tasks cleaned up. Current tasks: {len(tasks)}")
             else:
-                print(f"DEBUG: No tasks cleaned up. Current tasks: {len(tasks)}")
+                print(f"DEBUG: Skipping cleanup to maintain minimum task count. Would remove {len(tasks_to_remove)} tasks, leaving {len(tasks) - len(tasks_to_remove)}")
             
             # Check memory usage after cleanup
             try:
@@ -1422,12 +1429,8 @@ def broadcast():
         except Exception as e:
             print(f"WARNING: Failed to track analytics: {str(e)}")
 
-        # Clean up old tasks before creating new ones
-        print(f"DEBUG: Calling cleanup before creating new task")
-        try:
-            cleanup_old_tasks()
-        except Exception as e:
-            print(f"WARNING: Cleanup failed: {str(e)}")
+        # Note: Cleanup is now handled automatically and less aggressively
+        # No need to clean up before creating new tasks
 
         task_id = str(uuid.uuid4())
         with _tasks_lock:
@@ -1788,12 +1791,23 @@ def task_status(task_id):
             return jsonify({
                 'error': 'Task not found - the news generation may have completed or been cancelled. Please try generating news again.',
                 'details': 'No tasks found in system. This may indicate a server restart or memory issue.',
-                'server_restart': True
+                'server_restart': True,
+                'suggestion': 'Please try generating news again. If the problem persists, the server may need to be restarted.'
             }), 404
         else:
+            # Check if there are any running tasks to provide better context
+            running_tasks = [tid for tid, tdata in tasks.items() if tdata.get('status') == 'running']
+            completed_tasks = [tid for tid, tdata in tasks.items() if tdata.get('status') == 'completed']
+            
             return jsonify({
                 'error': 'Task not found - the news generation may have completed or been cancelled. Please try generating news again.',
-                'details': 'Task was not found in the system. This usually means it was cleaned up due to age or the task ID is invalid.'
+                'details': f'Task was not found in the system. Current system status: {len(tasks)} total tasks ({len(running_tasks)} running, {len(completed_tasks)} completed). This usually means the task was cleaned up due to age or the task ID is invalid.',
+                'system_status': {
+                    'total_tasks': len(tasks),
+                    'running_tasks': len(running_tasks),
+                    'completed_tasks': len(completed_tasks)
+                },
+                'suggestion': 'Please try generating news again. The task may have been cleaned up due to system maintenance.'
             }), 404
     
     if task['status'] == 'completed':
@@ -2244,8 +2258,7 @@ def transcribe_audio():
         if file_size < 1000:  # Less than 1KB
             return jsonify({'error': 'Audio file too short for transcription'}), 400
         
-        # Clean up old tasks first
-        cleanup_old_tasks()
+        # Note: Cleanup is now handled automatically and less aggressively
         
         # Start transcription in a separate thread to prevent worker timeout
         task_id = str(uuid.uuid4())
