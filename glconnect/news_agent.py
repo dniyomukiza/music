@@ -1060,16 +1060,38 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         # Use asyncio.gather for true parallel execution
         async def run_all_agents_parallel():
             tasks = []
-            for agent in news_agents:
+            for i, agent in enumerate(news_agents):
                 task = asyncio.create_task(run_agent(agent, ""))
                 tasks.append(task)
+                
+                # Update progress for each agent started
+                try:
+                    from glconnect.news_routes import update_task_in_db
+                    progress = 20 + (i * 10)  # 20% to 50% for starting agents
+                    update_task_in_db(task_id, 
+                                     progress=progress,
+                                     current_step=f'Starting AI reporter {i+1}/{len(news_agents)}...',
+                                     last_heartbeat=datetime.now())
+                except:
+                    pass
             
             # Run all agents in parallel with timeout
             try:
                 results = await asyncio.wait_for(
                     asyncio.gather(*tasks, return_exceptions=True),
-                    timeout=300  # 5 minute timeout for text generation
+                    timeout=600  # 10 minute timeout for text generation
                 )
+                
+                # Update progress after completion
+                try:
+                    from glconnect.news_routes import update_task_in_db
+                    update_task_in_db(task_id, 
+                                     progress=60,
+                                     current_step='Text generation completed, processing results...',
+                                     last_heartbeat=datetime.now())
+                except:
+                    pass
+                
                 return results
             except asyncio.TimeoutError:
                 print("DEBUG: Text generation timed out, using partial results")

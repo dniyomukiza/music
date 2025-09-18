@@ -1333,10 +1333,15 @@ def run_generate_broadcast(task_id, topics):
             raise TimeoutError("News generation timed out during processing")
         
         # Update progress after generation
+        update_task_in_db(task_id, 
+                         progress=70,
+                         current_step='Text generation completed, processing audio...',
+                         last_heartbeat=datetime.now())
+        
         with _tasks_lock:
             if task_id in tasks:
-                tasks[task_id]['progress'] = 80
-                tasks[task_id]['current_step'] = 'Processing audio files...'
+                tasks[task_id]['progress'] = 70
+                tasks[task_id]['current_step'] = 'Text generation completed, processing audio...'
                 tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
         print("ADK agent system completed successfully")
