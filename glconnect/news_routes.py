@@ -1656,8 +1656,8 @@ def memory_status():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@news_bp.route('/task-status')
-def task_status():
+@news_bp.route('/debug/tasks')
+def debug_tasks():
     """Endpoint to check current task status for debugging"""
     try:
         with _tasks_lock:
