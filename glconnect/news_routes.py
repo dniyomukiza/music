@@ -868,41 +868,108 @@ def categorize_topic_keywords(topic: str) -> str:
 def track_search_analytics(topics: list[str]):
     """
     Tracks search analytics for the given topics with improved categorization.
+    Now uses database for persistent storage.
     """
+    from glconnect.models import db, SearchHistory, CategoryCount, TopicCount, DailySearchCount, CategoryTopic, CategorizationConfidence
+    from glconnect import create_app
+    
     current_time = datetime.now()
     current_date = current_time.strftime('%Y-%m-%d')
     
-    with _analytics_lock:
-        for topic in topics:
-            # Add to search history
-            analytics_data['search_history'].append({
-                'topic': topic,
-                'timestamp': current_time.isoformat(),
-                'date': current_date
-            })
+    # Create app context for database operations
+    app = create_app()
+    with app.app_context():
+        try:
+            for topic in topics:
+                # Categorize the topic with confidence tracking
+                category, confidence = categorize_topic_with_confidence(topic)
+                
+                # Add to search history
+                search_entry = SearchHistory(
+                    topic=topic,
+                    timestamp=current_time,
+                    date=current_date,
+                    category=category,
+                    confidence=confidence
+                )
+                db.session.add(search_entry)
+                
+                # Update category count
+                category_count = CategoryCount.query.filter_by(category=category).first()
+                if category_count:
+                    category_count.count += 1
+                    category_count.last_updated = current_time
+                else:
+                    category_count = CategoryCount(category=category, count=1)
+                    db.session.add(category_count)
+                
+                # Update topic count
+                topic_count = TopicCount.query.filter_by(topic=topic).first()
+                if topic_count:
+                    topic_count.count += 1
+                    topic_count.last_updated = current_time
+                else:
+                    topic_count = TopicCount(topic=topic, count=1)
+                    db.session.add(topic_count)
+                
+                # Update daily search count
+                daily_count = DailySearchCount.query.filter_by(date=current_date).first()
+                if daily_count:
+                    daily_count.count += 1
+                    daily_count.last_updated = current_time
+                else:
+                    daily_count = DailySearchCount(date=current_date, count=1)
+                    db.session.add(daily_count)
+                
+                # Add to category topics (check if combination already exists)
+                existing_category_topic = CategoryTopic.query.filter_by(
+                    category=category, topic=topic
+                ).first()
+                if not existing_category_topic:
+                    category_topic = CategoryTopic(category=category, topic=topic)
+                    db.session.add(category_topic)
+                
+                # Track categorization confidence
+                confidence_entry = CategorizationConfidence(
+                    topic=topic,
+                    category=category,
+                    confidence=confidence,
+                    timestamp=current_time
+                )
+                db.session.add(confidence_entry)
             
-            # Categorize the topic with confidence tracking
-            category, confidence = categorize_topic_with_confidence(topic)
+            # Commit all changes
+            db.session.commit()
             
-            # Update counts
-            analytics_data['category_counts'][category] += 1
-            analytics_data['topic_counts'][topic] += 1
-            analytics_data['daily_searches'][current_date] += 1
-            
-            # Add to category topics with confidence
-            if topic not in analytics_data['category_topics'][category]:
-                analytics_data['category_topics'][category].append(topic)
-            
-            # Track categorization confidence for monitoring
-            if 'categorization_confidence' not in analytics_data:
-                analytics_data['categorization_confidence'] = []
-            
-            analytics_data['categorization_confidence'].append({
-                'topic': topic,
-                'category': category,
-                'confidence': confidence,
-                'timestamp': current_time.isoformat()
-            })
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error tracking analytics: {e}")
+            # Fallback to in-memory storage if database fails
+            with _analytics_lock:
+                for topic in topics:
+                    analytics_data['search_history'].append({
+                        'topic': topic,
+                        'timestamp': current_time.isoformat(),
+                        'date': current_date
+                    })
+                    
+                    category, confidence = categorize_topic_with_confidence(topic)
+                    analytics_data['category_counts'][category] += 1
+                    analytics_data['topic_counts'][topic] += 1
+                    analytics_data['daily_searches'][current_date] += 1
+                    
+                    if topic not in analytics_data['category_topics'][category]:
+                        analytics_data['category_topics'][category].append(topic)
+                    
+                    if 'categorization_confidence' not in analytics_data:
+                        analytics_data['categorization_confidence'] = []
+                    
+                    analytics_data['categorization_confidence'].append({
+                        'topic': topic,
+                        'category': category,
+                        'confidence': confidence,
+                        'timestamp': current_time.isoformat()
+                    })
 
 def categorize_topic_with_confidence(topic: str) -> tuple[str, float]:
     """
@@ -1895,34 +1962,74 @@ def task_status(task_id):
 @news_bp.route('/analytics')
 def analytics():
     """Main analytics page showing dominant topics by category with LLM categorization."""
-    with _analytics_lock:
-        # Get category counts sorted by frequency
-        category_data = dict(analytics_data['category_counts'])
-        sorted_categories = sorted(category_data.items(), key=lambda x: x[1], reverse=True)
-        
-        # Get total searches
-        total_searches = sum(analytics_data['category_counts'].values())
-        
-        # Get recent searches (last 10)
-        recent_searches = analytics_data['search_history'][-10:]
-        
-        # Get daily search trends (last 7 days)
-        daily_trends = []
-        for i in range(7):
-            date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
-            count = analytics_data['daily_searches'].get(date, 0)
-            daily_trends.append({'date': date, 'count': count})
-        daily_trends.reverse()
-        
-        # Get categorization confidence statistics
-        confidence_stats = get_categorization_stats()
-        
-        return render_template('analytics.html', 
-                             categories=sorted_categories,
-                             total_searches=total_searches,
-                             recent_searches=recent_searches,
-                             daily_trends=daily_trends,
-                             confidence_stats=confidence_stats)
+    from glconnect.models import db, SearchHistory, CategoryCount, TopicCount, DailySearchCount, CategoryTopic, CategorizationConfidence
+    from glconnect import create_app
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            # Get category counts sorted by frequency
+            category_counts = CategoryCount.query.all()
+            sorted_categories = [(cat.category, cat.count) for cat in category_counts]
+            sorted_categories.sort(key=lambda x: x[1], reverse=True)
+            
+            # Get total searches
+            total_searches = sum(cat.count for cat in category_counts)
+            
+            # Get recent searches (last 10)
+            recent_searches = SearchHistory.query.order_by(SearchHistory.timestamp.desc()).limit(10).all()
+            recent_searches_data = [
+                {
+                    'topic': search.topic,
+                    'timestamp': search.timestamp.isoformat(),
+                    'date': search.date
+                }
+                for search in recent_searches
+            ]
+            
+            # Get daily search trends (last 7 days)
+            daily_trends = []
+            for i in range(7):
+                date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+                daily_count = DailySearchCount.query.filter_by(date=date).first()
+                count = daily_count.count if daily_count else 0
+                daily_trends.append({'date': date, 'count': count})
+            daily_trends.reverse()
+            
+            # Get categorization confidence statistics
+            confidence_stats = get_categorization_stats()
+            
+            return render_template('analytics.html', 
+                                 categories=sorted_categories,
+                                 total_searches=total_searches,
+                                 recent_searches=recent_searches_data,
+                                 daily_trends=daily_trends,
+                                 confidence_stats=confidence_stats)
+                                 
+        except Exception as e:
+            print(f"Error loading analytics from database: {e}")
+            # Fallback to in-memory data if database fails
+            with _analytics_lock:
+                category_data = dict(analytics_data['category_counts'])
+                sorted_categories = sorted(category_data.items(), key=lambda x: x[1], reverse=True)
+                total_searches = sum(analytics_data['category_counts'].values())
+                recent_searches = analytics_data['search_history'][-10:]
+                
+                daily_trends = []
+                for i in range(7):
+                    date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+                    count = analytics_data['daily_searches'].get(date, 0)
+                    daily_trends.append({'date': date, 'count': count})
+                daily_trends.reverse()
+                
+                confidence_stats = get_categorization_stats()
+                
+                return render_template('analytics.html', 
+                                     categories=sorted_categories,
+                                     total_searches=total_searches,
+                                     recent_searches=recent_searches,
+                                     daily_trends=daily_trends,
+                                     confidence_stats=confidence_stats)
 
 @news_bp.route('/analytics/category/<category>')
 def category_details(category):
@@ -1959,43 +2066,80 @@ def category_details(category):
 
 def get_categorization_stats():
     """Get overall categorization statistics including confidence scores."""
-    if 'categorization_confidence' not in analytics_data:
-        return {
-            'total_categorizations': 0,
-            'ai_categorizations': 0,
-            'keyword_categorizations': 0,
-            'average_confidence': 0.0,
-            'high_confidence_count': 0,
-            'low_confidence_count': 0
-        }
+    from glconnect.models import db, CategorizationConfidence
+    from glconnect import create_app
     
-    confidences = analytics_data['categorization_confidence']
-    total = len(confidences)
-    
-    if total == 0:
-        return {
-            'total_categorizations': 0,
-            'ai_categorizations': 0,
-            'keyword_categorizations': 0,
-            'average_confidence': 0.0,
-            'high_confidence_count': 0,
-            'low_confidence_count': 0
-        }
-    
-    ai_count = sum(1 for c in confidences if c['confidence'] >= 0.8)
-    keyword_count = total - ai_count
-    avg_confidence = sum(c['confidence'] for c in confidences) / total
-    high_confidence = sum(1 for c in confidences if c['confidence'] >= 0.8)
-    low_confidence = sum(1 for c in confidences if c['confidence'] < 0.7)
-    
-    return {
-        'total_categorizations': total,
-        'ai_categorizations': ai_count,
-        'keyword_categorizations': keyword_count,
-        'average_confidence': round(avg_confidence, 2),
-        'high_confidence_count': high_confidence,
-        'low_confidence_count': low_confidence
-    }
+    app = create_app()
+    with app.app_context():
+        try:
+            confidences = CategorizationConfidence.query.all()
+            total = len(confidences)
+            
+            if total == 0:
+                return {
+                    'total_categorizations': 0,
+                    'ai_categorizations': 0,
+                    'keyword_categorizations': 0,
+                    'average_confidence': 0.0,
+                    'high_confidence_count': 0,
+                    'low_confidence_count': 0
+                }
+            
+            ai_count = sum(1 for c in confidences if c.confidence >= 0.8)
+            keyword_count = total - ai_count
+            avg_confidence = sum(c.confidence for c in confidences) / total
+            high_confidence = sum(1 for c in confidences if c.confidence >= 0.8)
+            low_confidence = sum(1 for c in confidences if c.confidence < 0.7)
+            
+            return {
+                'total_categorizations': total,
+                'ai_categorizations': ai_count,
+                'keyword_categorizations': keyword_count,
+                'average_confidence': round(avg_confidence, 2),
+                'high_confidence_count': high_confidence,
+                'low_confidence_count': low_confidence
+            }
+            
+        except Exception as e:
+            print(f"Error getting categorization stats from database: {e}")
+            # Fallback to in-memory data
+            if 'categorization_confidence' not in analytics_data:
+                return {
+                    'total_categorizations': 0,
+                    'ai_categorizations': 0,
+                    'keyword_categorizations': 0,
+                    'average_confidence': 0.0,
+                    'high_confidence_count': 0,
+                    'low_confidence_count': 0
+                }
+            
+            confidences = analytics_data['categorization_confidence']
+            total = len(confidences)
+            
+            if total == 0:
+                return {
+                    'total_categorizations': 0,
+                    'ai_categorizations': 0,
+                    'keyword_categorizations': 0,
+                    'average_confidence': 0.0,
+                    'high_confidence_count': 0,
+                    'low_confidence_count': 0
+                }
+            
+            ai_count = sum(1 for c in confidences if c['confidence'] >= 0.8)
+            keyword_count = total - ai_count
+            avg_confidence = sum(c['confidence'] for c in confidences) / total
+            high_confidence = sum(1 for c in confidences if c['confidence'] >= 0.8)
+            low_confidence = sum(1 for c in confidences if c['confidence'] < 0.7)
+            
+            return {
+                'total_categorizations': total,
+                'ai_categorizations': ai_count,
+                'keyword_categorizations': keyword_count,
+                'average_confidence': round(avg_confidence, 2),
+                'high_confidence_count': high_confidence,
+                'low_confidence_count': low_confidence
+            }
 
 def get_category_confidence_stats(category):
     """Get confidence statistics for a specific category."""
@@ -2035,15 +2179,40 @@ def get_category_confidence_stats(category):
 @news_bp.route('/api/analytics/summary')
 def analytics_summary():
     """API endpoint for analytics summary data with LLM categorization stats."""
-    with _analytics_lock:
-        confidence_stats = get_categorization_stats()
-        return jsonify({
-            'total_searches': sum(analytics_data['category_counts'].values()),
-            'category_counts': dict(analytics_data['category_counts']),
-            'top_topics': dict(Counter(analytics_data['topic_counts']).most_common(10)),
-            'daily_searches': dict(analytics_data['daily_searches']),
-            'categorization_stats': confidence_stats
-        })
+    from glconnect.models import db, SearchHistory, CategoryCount, TopicCount, DailySearchCount, CategoryTopic, CategorizationConfidence
+    from glconnect import create_app
+    from collections import Counter
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            confidence_stats = get_categorization_stats()
+            
+            # Get data from database
+            category_counts = {cat.category: cat.count for cat in CategoryCount.query.all()}
+            topic_counts = {topic.topic: topic.count for topic in TopicCount.query.all()}
+            daily_counts = {daily.date: daily.count for daily in DailySearchCount.query.all()}
+            
+            return jsonify({
+                'total_searches': sum(category_counts.values()),
+                'category_counts': category_counts,
+                'top_topics': dict(Counter(topic_counts).most_common(10)),
+                'daily_searches': daily_counts,
+                'categorization_stats': confidence_stats
+            })
+            
+        except Exception as e:
+            print(f"Error getting analytics summary from database: {e}")
+            # Fallback to in-memory data
+            with _analytics_lock:
+                confidence_stats = get_categorization_stats()
+                return jsonify({
+                    'total_searches': sum(analytics_data['category_counts'].values()),
+                    'category_counts': dict(analytics_data['category_counts']),
+                    'top_topics': dict(Counter(analytics_data['topic_counts']).most_common(10)),
+                    'daily_searches': dict(analytics_data['daily_searches']),
+                    'categorization_stats': confidence_stats
+                })
 
 @news_bp.route('/api/validate-topic', methods=['POST'])
 def validate_topic_api():
@@ -2299,7 +2468,6 @@ def run_transcription(task_id, audio_file_path, filename):
         
         # Use Google Gemini for transcription
         from google import genai
-        import os
         
         # Get API key from environment
         api_key = os.getenv("GOOGLE_API_KEY")

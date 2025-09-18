@@ -181,3 +181,53 @@ class PictureGameItem(db.Model):
     
     # Relationship to words_data table
     word_data = db.relationship('WordsData', backref='picture_game_items')
+
+# Analytics Models for persistent data storage
+class SearchHistory(db.Model):
+    __tablename__ = 'search_history'
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    date = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD format
+    category = db.Column(db.String(100), nullable=True)
+    confidence = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class CategoryCount(db.Model):
+    __tablename__ = 'category_counts'
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(100), nullable=False, unique=True)
+    count = db.Column(db.Integer, nullable=False, default=0)
+    last_updated = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class TopicCount(db.Model):
+    __tablename__ = 'topic_counts'
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(255), nullable=False, unique=True)
+    count = db.Column(db.Integer, nullable=False, default=0)
+    last_updated = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class DailySearchCount(db.Model):
+    __tablename__ = 'daily_search_counts'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.String(10), nullable=False, unique=True)  # YYYY-MM-DD format
+    count = db.Column(db.Integer, nullable=False, default=0)
+    last_updated = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class CategoryTopic(db.Model):
+    __tablename__ = 'category_topics'
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(100), nullable=False)
+    topic = db.Column(db.String(255), nullable=False)
+    added_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    
+    # Ensure unique combination of category and topic
+    __table_args__ = (db.UniqueConstraint('category', 'topic', name='unique_category_topic'),)
+
+class CategorizationConfidence(db.Model):
+    __tablename__ = 'categorization_confidence'
+    id = db.Column(db.Integer, primary_key=True)
+    topic = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    confidence = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
