@@ -906,7 +906,7 @@ async def run_agent(agent, input_text):
                 final_response = event.content.parts[0].text
     return final_response
 
-def generate_broadcast(topics: list[str], max_retries: int = 2) -> dict:
+def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = None) -> dict:
     import gc
     if not topics:
         print("No topics entered. Exiting.")
@@ -919,7 +919,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2) -> dict:
     for attempt in range(max_retries + 1):
         try:
             print(f"DEBUG: News generation attempt {attempt + 1}/{max_retries + 1}")
-            result = _generate_broadcast_attempt(topics)
+            result = _generate_broadcast_attempt(topics, task_id)
             if result and result.get('audio_file'):
                 print(f"DEBUG: News generation successful on attempt {attempt + 1}")
                 return result
@@ -938,8 +938,18 @@ def generate_broadcast(topics: list[str], max_retries: int = 2) -> dict:
     print("DEBUG: All news generation attempts failed, returning minimal result")
     return {"audio_file": None, "summary": "News generation failed after multiple attempts"}
 
-def _generate_broadcast_attempt(topics: list[str]) -> dict:
+def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     import gc
+    
+    # Update heartbeat if task_id is provided
+    if task_id:
+        try:
+            from glconnect.news_routes import tasks, _tasks_lock
+            with _tasks_lock:
+                if task_id in tasks:
+                    tasks[task_id]['last_heartbeat'] = datetime.now()
+        except:
+            pass  # Ignore errors in heartbeat update
     
     # Categorization Agent
     categorization_agent = Agent(
@@ -1005,6 +1015,17 @@ def _generate_broadcast_attempt(topics: list[str]) -> dict:
 
     # Create anchor agent with category information
     anchor_agent = create_anchor_agent(list(topics_by_category.keys()), reporter_script_keys)
+    
+    # Update heartbeat before audio processing
+    if task_id:
+        try:
+            from glconnect.news_routes import tasks, _tasks_lock
+            with _tasks_lock:
+                if task_id in tasks:
+                    tasks[task_id]['last_heartbeat'] = datetime.now()
+                    tasks[task_id]['current_step'] = 'Creating audio components...'
+        except:
+            pass
 
     # Note: TTS agents for anchor parts will be created after we have the anchor script
 
@@ -1023,6 +1044,17 @@ def _generate_broadcast_attempt(topics: list[str]) -> dict:
     print(f"DEBUG: Running with {len(news_agents)} reporter agents")
     for i, agent in enumerate(news_agents):
         print(f"DEBUG: Agent {i}: {agent.name} - {agent.description}")
+    
+    # Update heartbeat before text generation
+    if task_id:
+        try:
+            from glconnect.news_routes import tasks, _tasks_lock
+            with _tasks_lock:
+                if task_id in tasks:
+                    tasks[task_id]['last_heartbeat'] = datetime.now()
+                    tasks[task_id]['current_step'] = f'Generating content with {len(news_agents)} AI reporters...'
+        except:
+            pass
     
     try:
         # Use asyncio.gather for true parallel execution
@@ -1063,6 +1095,17 @@ def _generate_broadcast_attempt(topics: list[str]) -> dict:
         text_generation_output = "\n".join(valid_outputs)
         print(f"DEBUG: Parallel execution completed. Output length: {len(text_generation_output)}")
         print(f"DEBUG: Combined outputs: {text_generation_output[:500]}...")
+        
+        # Update heartbeat after text generation
+        if task_id:
+            try:
+                from glconnect.news_routes import tasks, _tasks_lock
+                with _tasks_lock:
+                    if task_id in tasks:
+                        tasks[task_id]['last_heartbeat'] = datetime.now()
+                        tasks[task_id]['current_step'] = 'Processing generated content...'
+            except:
+                pass
         
     except Exception as e:
         print(f"DEBUG: Parallel execution failed: {e}")

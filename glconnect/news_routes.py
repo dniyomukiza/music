@@ -45,9 +45,19 @@ def cleanup_old_tasks():
                     task_age = current_time - task_data['created_at']
                     print(f"DEBUG: Task {task_id} age: {task_age.total_seconds():.1f}s, status: {task_data.get('status')}")
                     # Clean up tasks older than 4 hours AND not currently running (increased from 2 hours)
-                    # OR clean up stuck running tasks older than 15 minutes (increased from 10 minutes)
+                    # OR clean up stuck running tasks (no heartbeat for 30 minutes)
                     is_old_task = task_age.total_seconds() > 14400 and task_data.get('status') not in ['running']
-                    is_stuck_running = task_data.get('status') == 'running' and task_age.total_seconds() > 900  # 15 minutes
+                    
+                    # For running tasks, check heartbeat instead of creation time
+                    is_stuck_running = False
+                    if task_data.get('status') == 'running':
+                        last_heartbeat = task_data.get('last_heartbeat')
+                        if last_heartbeat:
+                            heartbeat_age = (current_time - last_heartbeat).total_seconds()
+                            is_stuck_running = heartbeat_age > 1800  # 30 minutes without heartbeat
+                        else:
+                            # Fallback to creation time if no heartbeat
+                            is_stuck_running = task_age.total_seconds() > 1800
                     
                     if is_old_task or is_stuck_running:
                         tasks_to_remove.append(task_id)
@@ -1130,8 +1140,9 @@ def run_generate_broadcast(task_id, topics):
             if task_id in tasks:
                 tasks[task_id]['progress'] = 20
                 tasks[task_id]['current_step'] = f'Generating news content for {len(topics)} topics...'
+                tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
-        output = generate_broadcast(topics)
+        output = generate_broadcast(topics, task_id=task_id)
         
         # Check for timeout after generation
         if timeout_occurred.is_set():
@@ -1142,6 +1153,7 @@ def run_generate_broadcast(task_id, topics):
             if task_id in tasks:
                 tasks[task_id]['progress'] = 80
                 tasks[task_id]['current_step'] = 'Processing audio files...'
+                tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
         print("ADK agent system completed successfully")
         print(f"DEBUG: Output type: {type(output)}")
@@ -1611,7 +1623,7 @@ def force_cleanup():
                     created_at = task.get('created_at')
                     if created_at:
                         age_seconds = (current_time - created_at).total_seconds()
-                        if age_seconds > 600:  # 10 minutes
+                        if age_seconds > 1800:  # 30 minutes (increased for multi-topic processing)
                             stuck_tasks.append((task_id, age_seconds))
             
             print(f"DEBUG: Found {len(stuck_tasks)} stuck tasks")
