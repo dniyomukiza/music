@@ -1265,7 +1265,7 @@
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">
                         <i class="fas fa-list"></i> Added Topics 
                         <span id="topicCount" style="font-size: 0.8em; color: #6c757d; font-weight: normal;">
-                            (0/5 maximum)
+                            (0/3 maximum)
                         </span>
                     </h4>
                     <div id="addedTopicsContainer" class="added-topics-container">
@@ -1879,10 +1879,10 @@
             }
             
             // Check topic limit
-            if (addedTopics.length >= 5) {
+            if (addedTopics.length >= 3) {
                 showFlaskValidationFeedback(topic, {
                     valid: false,
-                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
+                    error: 'Maximum 3 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -1970,10 +1970,10 @@
             }
             
             // Check topic limit
-            if (addedTopics.length >= 5) {
+            if (addedTopics.length >= 3) {
                 showValidationFeedback(topic, {
                     valid: false,
-                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
+                    error: 'Maximum 3 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -2378,8 +2378,8 @@
             
             // Update topic count display
             if (topicCount) {
-                topicCount.textContent = `(${addedTopics.length}/5 maximum)`;
-                if (addedTopics.length >= 5) {
+                topicCount.textContent = `(${addedTopics.length}/3 maximum)`;
+                if (addedTopics.length >= 3) {
                     topicCount.style.color = '#dc3545'; // Red when at limit
                 } else {
                     topicCount.style.color = '#6c757d'; // Gray when under limit
@@ -2453,9 +2453,9 @@
                 }
             }
             
-            // Limit to maximum 5 topics for optimal performance
-            if (topicsToUse.length > 5) {
-                alert('Maximum 5 topics allowed for optimal performance. Please remove some topics and try again.');
+            // Limit to maximum 3 topics for memory safety
+            if (topicsToUse.length > 3) {
+                alert('Maximum 3 topics allowed due to server memory constraints. Please remove some topics and try again.');
                 return;
             }
             

@@ -1756,11 +1756,11 @@ def broadcast():
         
         print(f"DEBUG: Topics received: {topics}")
         
-        # Enforce maximum topic limit
-        if len(topics) > 5:
+        # Enforce maximum topic limit (reduced for memory safety)
+        if len(topics) > 3:
             return jsonify({
-                'error': 'Maximum 5 topics allowed for optimal performance. Please reduce the number of topics and try again.',
-                'details': f'Received {len(topics)} topics, maximum allowed is 5'
+                'error': 'Maximum 3 topics allowed due to server memory constraints. Please reduce the number of topics and try again.',
+                'details': f'Received {len(topics)} topics, maximum allowed is 3'
             }), 400
         
         # Check server health before processing
