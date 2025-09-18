@@ -1885,28 +1885,6 @@ def broadcast():
             'timestamp': datetime.now().isoformat()
         }), 500
 
-@news_bp.route('/debug/tasks')
-def debug_tasks():
-    """Debug endpoint to check current tasks."""
-    with _tasks_lock:
-        task_info = {}
-        for task_id, task_data in tasks.items():
-            task_info[task_id] = {
-                'status': task_data.get('status', 'unknown'),
-                'created_at': str(task_data.get('created_at', 'unknown')),
-                'age_seconds': (datetime.now() - task_data.get('created_at', datetime.now())).total_seconds() if 'created_at' in task_data else 'unknown',
-                'has_result': 'result' in task_data,
-                'has_audio_file': 'audio_file_path' in task_data.get('result', {}) if 'result' in task_data else False
-            }
-        return jsonify({
-            'total_tasks': len(tasks),
-            'tasks': task_info,
-            'code_version': '73bce23-comprehensive-fixes',
-            'has_result_debugging': True,
-            'has_cleanup_debugging': True,
-            'has_enhanced_error_handling': True,
-            'memory_optimized': True
-        })
 
 @news_bp.route('/debug/force-cleanup')
 def force_cleanup():
@@ -1956,36 +1934,6 @@ def force_cleanup():
             'error': str(e)
         }), 500
 
-@news_bp.route('/debug/memory-status')
-def debug_memory_status():
-    """Check current memory status without triggering errors"""
-    try:
-        import psutil
-        memory_info = psutil.virtual_memory()
-        process = psutil.Process()
-        process_memory = process.memory_info()
-        
-        return jsonify({
-            'memory_percent': memory_info.percent,
-            'memory_used_mb': memory_info.used / 1024 / 1024,
-            'memory_available_mb': memory_info.available / 1024 / 1024,
-            'memory_total_mb': memory_info.total / 1024 / 1024,
-            'process_memory_mb': process_memory.rss / 1024 / 1024,
-            'thresholds': {
-                'info': 80,
-                'warning': 90,
-                'critical': 100
-            },
-            'task_timeouts': {
-                'running_task_cleanup': '10 minutes',
-                'completed_task_cleanup': '2 hours'
-            },
-            'status': 'critical' if memory_info.percent >= 100 else 'warning' if memory_info.percent > 90 else 'info' if memory_info.percent > 80 else 'normal'
-        })
-    except ImportError:
-        return jsonify({'error': 'psutil not available'}), 500
-    except Exception as e:
-        return jsonify({'error': f'Memory check failed: {str(e)}'}), 500
 
 @news_bp.route('/debug/health')
 def debug_health():
