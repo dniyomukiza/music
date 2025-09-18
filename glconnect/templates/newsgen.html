@@ -881,6 +881,35 @@
             font-size: 0.9rem;
             color: #999;
         }
+        
+        .progress-container {
+            margin: 20px 0;
+            width: 100%;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
 
         .result-section {
             display: none;
@@ -1293,8 +1322,11 @@
             <div class="spinner"></div>
             <div class="loading-text">Generating your professional news broadcast...</div>
             <div class="loading-details">This may take 1-2 minutes. Please wait.</div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Initializing...</div>
             </div>
         </div>
 
@@ -2491,6 +2523,12 @@
                         hideLoadingState();
                         alert('Task not found. The news generation may have completed or been cancelled. Please try generating news again.');
                     } else if (data.status === 'running') {
+                        console.log(`Task ${taskId} is still running... (attempt ${pollCount}/${maxPolls})`);
+                        
+                        // Update progress if available
+                        if (data.progress !== undefined) {
+                            updateProgress(data.progress, data.current_step);
+                        }
                         console.log('Task still running, continuing to poll...');
                         // Update progress indicator
                         const progressText = document.getElementById('progressText');
@@ -2539,6 +2577,19 @@
             const loading = document.getElementById('loading');
             if (loading) {
                 loading.style.display = 'none';
+            }
+        }
+        
+        function updateProgress(progress, currentStep) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            if (progressFill) {
+                progressFill.style.width = progress + '%';
+            }
+            
+            if (progressText && currentStep) {
+                progressText.textContent = currentStep;
             }
         }
         

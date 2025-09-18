@@ -10,7 +10,7 @@ backlog = 2048
 workers = 1  # Further reduced to single worker for memory-constrained environments
 worker_class = "sync"
 worker_connections = 500  # Reduced connections per worker
-timeout = 120  # Increased timeout for memory-intensive operations
+timeout = 600  # Increased timeout for news generation (10 minutes)
 keepalive = 2
 
 # Memory management

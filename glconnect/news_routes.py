@@ -1077,6 +1077,13 @@ def run_generate_broadcast(task_id, topics):
     
     print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
     
+    # Update task status with progress
+    with _tasks_lock:
+        if task_id in tasks:
+            tasks[task_id]['status'] = 'running'
+            tasks[task_id]['progress'] = 0
+            tasks[task_id]['current_step'] = 'Initializing news generation...'
+    
     # Check memory usage at start of news generation
     try:
         import psutil
@@ -1101,6 +1108,12 @@ def run_generate_broadcast(task_id, topics):
     timeout_thread.start()
     
     try:
+        # Update progress
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['progress'] = 10
+                tasks[task_id]['current_step'] = 'Categorizing topics...'
+        
         # Use the ADK agent system for sophisticated news generation
         print("Using ADK agent system with Google Cloud TTS...")
         print("Following pattern: jingle → intro → transition → report → thank you → outro → jingle")
@@ -1112,11 +1125,23 @@ def run_generate_broadcast(task_id, topics):
         if timeout_occurred.is_set():
             raise TimeoutError("News generation timed out before starting")
         
+        # Update progress before generation
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['progress'] = 20
+                tasks[task_id]['current_step'] = f'Generating news content for {len(topics)} topics...'
+        
         output = generate_broadcast(topics)
         
         # Check for timeout after generation
         if timeout_occurred.is_set():
             raise TimeoutError("News generation timed out during processing")
+        
+        # Update progress after generation
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['progress'] = 80
+                tasks[task_id]['current_step'] = 'Processing audio files...'
         
         print("ADK agent system completed successfully")
         print(f"DEBUG: Output type: {type(output)}")
@@ -1957,7 +1982,11 @@ def task_status(task_id):
     elif task['status'] == 'failed':
         return jsonify({'status': 'failed', 'error': task.get('error', 'Unknown error')})
     else:
-        return jsonify({'status': 'running'})
+        return jsonify({
+            'status': 'running',
+            'progress': task.get('progress', 0),
+            'current_step': task.get('current_step', 'Processing...')
+        })
 
 @news_bp.route('/analytics')
 def analytics():

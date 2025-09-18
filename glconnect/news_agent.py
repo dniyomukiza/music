@@ -1018,28 +1018,67 @@ def _generate_broadcast_attempt(topics: list[str]) -> dict:
         sub_agents=news_agents
     )
 
-    # Execute text generation first to get reporter scripts
+    # Execute text generation with optimized parallel processing
     print("DEBUG: Executing text generation phase...")
     print(f"DEBUG: Running with {len(news_agents)} reporter agents")
     for i, agent in enumerate(news_agents):
         print(f"DEBUG: Agent {i}: {agent.name} - {agent.description}")
     
     try:
-        text_generation_output = asyncio.run(run_agent(text_generation_phase, ""))
-        print(f"DEBUG: Text generation output length: {len(text_generation_output)}")
-        print(f"DEBUG: Text generation output: {text_generation_output[:500]}...")
+        # Use asyncio.gather for true parallel execution
+        async def run_all_agents_parallel():
+            tasks = []
+            for agent in news_agents:
+                task = asyncio.create_task(run_agent(agent, ""))
+                tasks.append(task)
+            
+            # Run all agents in parallel with timeout
+            try:
+                results = await asyncio.wait_for(
+                    asyncio.gather(*tasks, return_exceptions=True),
+                    timeout=300  # 5 minute timeout for text generation
+                )
+                return results
+            except asyncio.TimeoutError:
+                print("DEBUG: Text generation timed out, using partial results")
+                # Cancel remaining tasks
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                return [str(e) for e in results if not isinstance(e, Exception)]
+        
+        # Run the parallel execution
+        individual_outputs = asyncio.run(run_all_agents_parallel())
+        
+        # Filter out exceptions and combine results
+        valid_outputs = []
+        for i, output in enumerate(individual_outputs):
+            if isinstance(output, Exception):
+                print(f"DEBUG: Agent {i} failed with exception: {output}")
+                valid_outputs.append("")
+            else:
+                valid_outputs.append(str(output))
+                print(f"DEBUG: Agent {i} completed successfully")
+        
+        text_generation_output = "\n".join(valid_outputs)
+        print(f"DEBUG: Parallel execution completed. Output length: {len(text_generation_output)}")
+        print(f"DEBUG: Combined outputs: {text_generation_output[:500]}...")
+        
     except Exception as e:
         print(f"DEBUG: Parallel execution failed: {e}")
         print("DEBUG: Falling back to individual agent execution...")
         
-        # Fallback: run each agent individually
+        # Fallback: run each agent individually with shorter timeout
         individual_outputs = []
         for i, agent in enumerate(news_agents):
             try:
                 print(f"DEBUG: Running individual agent {i}: {agent.name}")
-                individual_output = asyncio.run(run_agent(agent, ""))
+                individual_output = asyncio.run(asyncio.wait_for(run_agent(agent, ""), timeout=120))
                 individual_outputs.append(individual_output)
                 print(f"DEBUG: Agent {i} output: {individual_output[:100]}...")
+            except asyncio.TimeoutError:
+                print(f"DEBUG: Agent {i} timed out after 2 minutes")
+                individual_outputs.append("")
             except Exception as agent_error:
                 print(f"DEBUG: Agent {i} failed: {agent_error}")
                 individual_outputs.append("")
