@@ -12,9 +12,177 @@ from .news_agent import generate_broadcast
 # Create blueprint for news routes
 news_bp = Blueprint('news_bp', __name__)
 
-# Task storage
+# Task storage (keeping for backward compatibility, but using database as primary)
 tasks = {}
 _tasks_lock = threading.Lock()
+
+# Database task management functions
+def create_task_in_db(task_id, topics):
+    """Create a new task in the database."""
+    from glconnect.models import db, NewsTask
+    from glconnect import create_app
+    import json
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            task = NewsTask(
+                task_id=task_id,
+                status='running',
+                topics=json.dumps(topics),
+                progress=0,
+                current_step='Initializing news generation...',
+                last_heartbeat=datetime.now()
+            )
+            db.session.add(task)
+            db.session.commit()
+            print(f"DEBUG: Created task {task_id} in database")
+            return True
+        except Exception as e:
+            print(f"ERROR: Failed to create task in database: {e}")
+            db.session.rollback()
+            return False
+
+def update_task_in_db(task_id, **kwargs):
+    """Update a task in the database."""
+    from glconnect.models import db, NewsTask
+    from glconnect import create_app
+    import json
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            task = NewsTask.query.filter_by(task_id=task_id).first()
+            if not task:
+                print(f"DEBUG: Task {task_id} not found in database")
+                return False
+            
+            # Update fields
+            for key, value in kwargs.items():
+                if key in ['result', 'memory_usage', 'topics_processed'] and isinstance(value, (dict, list)):
+                    setattr(task, key, json.dumps(value))
+                elif key == 'last_heartbeat' and isinstance(value, str):
+                    # Handle string datetime
+                    from dateutil import parser
+                    setattr(task, key, parser.parse(value))
+                else:
+                    setattr(task, key, value)
+            
+            db.session.commit()
+            print(f"DEBUG: Updated task {task_id} in database")
+            return True
+        except Exception as e:
+            print(f"ERROR: Failed to update task in database: {e}")
+            db.session.rollback()
+            return False
+
+def get_task_from_db(task_id):
+    """Get a task from the database."""
+    from glconnect.models import db, NewsTask
+    from glconnect import create_app
+    import json
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            task = NewsTask.query.filter_by(task_id=task_id).first()
+            if not task:
+                return None
+            
+            # Convert to dictionary format
+            task_dict = {
+                'status': task.status,
+                'created_at': task.created_at,
+                'completed_at': task.completed_at,
+                'failed_at': task.failed_at,
+                'last_heartbeat': task.last_heartbeat,
+                'progress': task.progress,
+                'current_step': task.current_step,
+                'error': task.error,
+                'generation_time': task.generation_time
+            }
+            
+            # Parse JSON fields
+            if task.topics:
+                task_dict['topics'] = json.loads(task.topics)
+            if task.result:
+                task_dict['result'] = json.loads(task.result)
+            if task.memory_usage:
+                task_dict['memory_usage'] = json.loads(task.memory_usage)
+            if task.topics_processed:
+                task_dict['topics_processed'] = json.loads(task.topics_processed)
+            
+            return task_dict
+        except Exception as e:
+            print(f"ERROR: Failed to get task from database: {e}")
+            return None
+
+def delete_task_from_db(task_id):
+    """Delete a task from the database."""
+    from glconnect.models import db, NewsTask
+    from glconnect import create_app
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            task = NewsTask.query.filter_by(task_id=task_id).first()
+            if task:
+                db.session.delete(task)
+                db.session.commit()
+                print(f"DEBUG: Deleted task {task_id} from database")
+                return True
+            return False
+        except Exception as e:
+            print(f"ERROR: Failed to delete task from database: {e}")
+            db.session.rollback()
+            return False
+
+def normalize_task_format(task):
+    """Normalize task format from database to match memory format."""
+    if not task:
+        return None
+    
+    # If it's already in memory format, return as is
+    if 'audio_file' in task or 'result' in task:
+        return task
+    
+    # Convert database format to memory format
+    normalized = {
+        'status': task.get('status', 'running'),
+        'created_at': task.get('created_at'),
+        'completed_at': task.get('completed_at'),
+        'failed_at': task.get('failed_at'),
+        'last_heartbeat': task.get('last_heartbeat'),
+        'progress': task.get('progress', 0),
+        'current_step': task.get('current_step'),
+        'error': task.get('error'),
+        'generation_time': task.get('generation_time')
+    }
+    
+    # Handle result field
+    if 'result' in task and task['result']:
+        if isinstance(task['result'], dict):
+            normalized['result'] = task['result']
+            # Extract audio_file if available
+            if 'audio_file_path' in task['result']:
+                audio_path = task['result']['audio_file_path']
+                if audio_path.startswith('glconnect/static/audio/'):
+                    filename = os.path.basename(audio_path)
+                    normalized['audio_file'] = f"/routes2/news/audio/{filename}"
+                else:
+                    normalized['audio_file'] = audio_path
+            if 'output_text' in task['result']:
+                normalized['summary'] = task['result']['output_text']
+    
+    # Handle other fields
+    if 'topics' in task:
+        normalized['topics'] = task['topics']
+    if 'memory_usage' in task:
+        normalized['memory_usage'] = task['memory_usage']
+    if 'topics_processed' in task:
+        normalized['topics_processed'] = task['topics_processed']
+    
+    return normalized
 
 def cleanup_old_tasks():
     """Clean up old completed/failed tasks to prevent memory buildup."""
@@ -1088,6 +1256,12 @@ def run_generate_broadcast(task_id, topics):
     print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
     
     # Update task status with progress
+    update_task_in_db(task_id, 
+                     status='running',
+                     progress=0,
+                     current_step='Initializing news generation...',
+                     last_heartbeat=datetime.now())
+    
     with _tasks_lock:
         if task_id in tasks:
             tasks[task_id]['status'] = 'running'
@@ -1119,6 +1293,11 @@ def run_generate_broadcast(task_id, topics):
     
     try:
         # Update progress
+        update_task_in_db(task_id, 
+                         progress=10,
+                         current_step='Categorizing topics...',
+                         last_heartbeat=datetime.now())
+        
         with _tasks_lock:
             if task_id in tasks:
                 tasks[task_id]['progress'] = 10
@@ -1136,6 +1315,11 @@ def run_generate_broadcast(task_id, topics):
             raise TimeoutError("News generation timed out before starting")
         
         # Update progress before generation
+        update_task_in_db(task_id, 
+                         progress=20,
+                         current_step=f'Generating news content for {len(topics)} topics...',
+                         last_heartbeat=datetime.now())
+        
         with _tasks_lock:
             if task_id in tasks:
                 tasks[task_id]['progress'] = 20
@@ -1243,6 +1427,15 @@ def run_generate_broadcast(task_id, topics):
             print(f"DEBUG: Audio file path: {audio_file_path}")
             print(f"DEBUG: Summary length: {len(summary) if summary else 'None'}")
             print(f"DEBUG: Audio file exists: {os.path.exists(audio_file_path) if audio_file_path else 'No path'}")
+            
+            # Update database
+            update_task_in_db(task_id, 
+                             status='completed',
+                             completed_at=datetime.now(),
+                             result={
+                                 'audio_file_path': audio_file_path,
+                                 'output_text': summary
+                             })
             
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
@@ -1395,6 +1588,12 @@ def run_generate_broadcast(task_id, topics):
         print(f"ERROR type: {type(e).__name__}")
         import traceback
         print(f"ERROR traceback: {traceback.format_exc()}")
+        # Update database
+        update_task_in_db(task_id, 
+                         status='failed',
+                         failed_at=datetime.now(),
+                         error=f"News generation failed: {str(e)}")
+        
         with _tasks_lock:
             tasks[task_id]['status'] = 'failed'
             tasks[task_id]['failed_at'] = datetime.now()
@@ -1537,6 +1736,12 @@ def broadcast():
         # No need to clean up before creating new tasks
 
         task_id = str(uuid.uuid4())
+        
+        # Create task in database
+        if not create_task_in_db(task_id, relevant_topics):
+            print(f"ERROR: Failed to create task {task_id} in database, falling back to memory")
+        
+        # Also create in memory for backward compatibility
         with _tasks_lock:
             tasks[task_id] = {
                 'status': 'running',
@@ -1872,16 +2077,23 @@ def task_status(task_id):
     except Exception as e:
         print(f"DEBUG: Memory check failed: {e}")
     
-    with _tasks_lock:
-        task = tasks.get(task_id)
-        print(f"DEBUG: Total tasks in system: {len(tasks)}")
-        print(f"DEBUG: Available task IDs: {list(tasks.keys())}")
-        
-        # Log task details if found
-        if task:
-            print(f"DEBUG: Task {task_id} found - Status: {task.get('status')}, Created: {task.get('created_at')}")
-        else:
-            print(f"DEBUG: Task {task_id} NOT FOUND in system")
+    # First try to get task from database
+    db_task = get_task_from_db(task_id)
+    task = normalize_task_format(db_task)
+    
+    # If not found in database, check memory (for backward compatibility)
+    if not task:
+        with _tasks_lock:
+            memory_task = tasks.get(task_id)
+            print(f"DEBUG: Total tasks in memory: {len(tasks)}")
+            print(f"DEBUG: Available task IDs in memory: {list(tasks.keys())}")
+            
+            # Log task details if found
+            if memory_task:
+                print(f"DEBUG: Task {task_id} found in memory - Status: {memory_task.get('status')}, Created: {memory_task.get('created_at')}")
+                task = memory_task
+            else:
+                print(f"DEBUG: Task {task_id} NOT FOUND in memory")
     
     if not task:
         print(f"DEBUG: Task {task_id} not found in tasks dictionary. Total tasks: {len(tasks)}")

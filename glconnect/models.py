@@ -231,3 +231,22 @@ class CategorizationConfidence(db.Model):
     category = db.Column(db.String(100), nullable=False)
     confidence = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+# Task persistence model for news generation
+class NewsTask(db.Model):
+    __tablename__ = 'news_tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.String(36), nullable=False, unique=True)  # UUID
+    status = db.Column(db.String(20), nullable=False, default='running')  # running, completed, failed
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime, nullable=True)
+    failed_at = db.Column(db.DateTime, nullable=True)
+    last_heartbeat = db.Column(db.DateTime, nullable=True)
+    progress = db.Column(db.Integer, nullable=True, default=0)  # 0-100
+    current_step = db.Column(db.String(255), nullable=True)
+    topics = db.Column(db.Text, nullable=True)  # JSON string of topics
+    result = db.Column(db.Text, nullable=True)  # JSON string of result
+    error = db.Column(db.Text, nullable=True)  # Error message if failed
+    generation_time = db.Column(db.Float, nullable=True)  # Time taken in seconds
+    memory_usage = db.Column(db.Text, nullable=True)  # JSON string of memory info
+    topics_processed = db.Column(db.Text, nullable=True)  # JSON string of processed topics
