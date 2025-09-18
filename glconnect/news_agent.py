@@ -146,6 +146,9 @@ def get_timezone_info() -> dict:
         return {"timezone_info": "Welcome to GLC News"}
 
 
+# Simple TTS cache to avoid regenerating identical content
+_tts_cache = {}
+
 # --- Define the Text-to-Speech Tool (as a callable function) ---
 def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_rate: float = 1.0, pitch: float = 0.0) -> dict:
     """
@@ -161,6 +164,17 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     """
     # Clean the text before processing
     clean_text = clean_text_for_speech(text)
+    
+    # Check cache first
+    cache_key = f"{clean_text}_{voice_name}_{speaking_rate}_{pitch}"
+    if cache_key in _tts_cache:
+        cached_file = _tts_cache[cache_key]
+        if os.path.exists(cached_file):
+            print(f"DEBUG: Using cached TTS for {output_filename}")
+            return {"audio_filepath": cached_file}
+        else:
+            # Remove stale cache entry
+            del _tts_cache[cache_key]
     
     # Load credentials from file and pass to client
     from google.oauth2 import service_account
@@ -318,6 +332,10 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             print(f"DEBUG: Response audio_content type: {type(response.audio_content)}")
             print(f"DEBUG: Response audio_content length: {len(response.audio_content) if response.audio_content else 'None'}")
             raise Exception(f"Audio file created but is empty (0 bytes) for {output_filename}")
+        
+        # Cache the result for future use
+        _tts_cache[cache_key] = full_path
+        print(f"DEBUG: Cached TTS result for key: {cache_key[:50]}...")
             
         return {"audio_filepath": full_path}
     except Exception as e:
@@ -908,9 +926,25 @@ async def run_agent(agent, input_text):
 
 def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = None) -> dict:
     import gc
+    import psutil
+    import os
+    
     if not topics:
         print("No topics entered. Exiting.")
         return
+    
+    # Check memory before starting
+    try:
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory at start of generate_broadcast - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        
+        # If memory usage is too high, force garbage collection
+        if memory_info.percent > 80:
+            print("DEBUG: High memory usage detected, forcing aggressive garbage collection")
+            gc.collect()
+            gc.collect()  # Call twice for better cleanup
+    except Exception as e:
+        print(f"DEBUG: Memory check failed: {e}")
     
     # Force garbage collection at start
     gc.collect()
@@ -1416,9 +1450,36 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         sub_agents=[intro_tts_agent, outro_tts_agent, thank_you_tts_agent] + reporters_tts_agents_with_content + transition_tts_agents
     )
 
-    # Execute TTS phase
+    # Execute TTS phase with progress updates
     print("DEBUG: Executing TTS phase...")
+    
+    # Update progress before TTS
+    if task_id:
+        try:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(task_id, 
+                             progress=70,
+                             current_step=f'Converting {len(tts_phase.sub_agents)} text segments to speech...',
+                             last_heartbeat=datetime.now())
+        except:
+            pass
+    
     tts_output = asyncio.run(run_agent(tts_phase, ""))
+    
+    # Force garbage collection after TTS to free memory
+    gc.collect()
+    gc.collect()
+    
+    # Update progress after TTS
+    if task_id:
+        try:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(task_id, 
+                             progress=85,
+                             current_step='TTS conversion completed, assembling final audio...',
+                             last_heartbeat=datetime.now())
+        except:
+            pass
 
     # Execute final output phase
     final_output_phase = ParallelAgent(
@@ -1432,8 +1493,26 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     print("DEBUG: Executing final output phase...")
     final_output = asyncio.run(run_agent(final_output_phase, ""))
     
-    # Force garbage collection to free memory
+    # Force aggressive garbage collection to free memory
     gc.collect()
+    gc.collect()
+    gc.collect()
+    
+    # Clear only old TTS cache entries to free memory (keep recent ones)
+    global _tts_cache
+    if len(_tts_cache) > 50:  # Only clear if cache is large
+        # Keep only the most recent 20 entries
+        recent_entries = dict(list(_tts_cache.items())[-20:])
+        _tts_cache.clear()
+        _tts_cache.update(recent_entries)
+        print(f"DEBUG: Cleared old TTS cache entries, kept {len(_tts_cache)} recent ones")
+    
+    # Check memory after cleanup
+    try:
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory after news generation cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+    except:
+        pass
     
     # The final_output is a string, but we need to return a dict
     # Extract the audio file path from the filesystem

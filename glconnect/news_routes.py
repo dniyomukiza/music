@@ -297,6 +297,32 @@ _analytics_lock = threading.Lock()
 class AudioFilePathNotFound(Exception):
     pass
 
+def cleanup_old_completed_tasks():
+    """Clean up old completed tasks to free memory, preserving running tasks."""
+    try:
+        from datetime import datetime, timedelta
+        
+        current_time = datetime.now()
+        cutoff_time = current_time - timedelta(hours=1)  # Keep tasks newer than 1 hour
+        
+        with _tasks_lock:
+            # Get list of tasks to remove (completed and old)
+            tasks_to_remove = []
+            for task_id, task_data in tasks.items():
+                if (task_data.get('status') in ['completed', 'failed'] and 
+                    task_data.get('created_at', current_time) < cutoff_time):
+                    tasks_to_remove.append(task_id)
+            
+            # Remove old completed tasks
+            for task_id in tasks_to_remove:
+                del tasks[task_id]
+                print(f"DEBUG: Removed old completed task: {task_id}")
+            
+            print(f"DEBUG: Task cleanup completed: {len(tasks_to_remove)} old tasks removed, {len(tasks)} tasks remaining")
+            
+    except Exception as e:
+        print(f"Error during task cleanup: {e}")
+
 def cleanup_old_audio_files():
     """Clean up old audio files, keeping only jingle.wav and the most recent final_news_broadcast*.mp3"""
     print("DEBUG: Audio cleanup disabled for debugging - keeping all files")
@@ -1614,6 +1640,44 @@ def index():
     form = KeywordForm()
     return render_template('newsgen.html', form=form)
 
+@news_bp.route('/memory-status')
+def memory_status():
+    """Endpoint to check current memory usage"""
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        return jsonify({
+            'memory_percent': memory_info.percent,
+            'memory_used_mb': memory_info.used / 1024 / 1024,
+            'memory_available_mb': memory_info.available / 1024 / 1024,
+            'memory_total_mb': memory_info.total / 1024 / 1024,
+            'status': 'critical' if memory_info.percent > 90 else 'warning' if memory_info.percent > 80 else 'ok'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@news_bp.route('/task-status')
+def task_status():
+    """Endpoint to check current task status for debugging"""
+    try:
+        with _tasks_lock:
+            task_info = {}
+            for task_id, task_data in tasks.items():
+                task_info[task_id] = {
+                    'status': task_data.get('status', 'unknown'),
+                    'created_at': task_data.get('created_at', 'unknown'),
+                    'progress': task_data.get('progress', 0),
+                    'current_step': task_data.get('current_step', 'unknown')
+                }
+            
+            return jsonify({
+                'total_tasks': len(tasks),
+                'tasks': task_info,
+                'memory_cleanup_safe': True
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @news_bp.route('/audio/<filename>')
 def serve_audio(filename):
     """Serve audio files from the glconnect/static/audio directory."""
@@ -1692,21 +1756,49 @@ def broadcast():
         
         print(f"DEBUG: Topics received: {topics}")
         
+        # Enforce maximum topic limit
+        if len(topics) > 5:
+            return jsonify({
+                'error': 'Maximum 5 topics allowed for optimal performance. Please reduce the number of topics and try again.',
+                'details': f'Received {len(topics)} topics, maximum allowed is 5'
+            }), 400
+        
         # Check server health before processing
         try:
             import psutil
             memory_info = psutil.virtual_memory()
             print(f"DEBUG: Pre-processing memory check - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
             
-            # Only block if memory usage is at 100% to allow maximum operation
-            if memory_info.percent >= 100:
-                print(f"CRITICAL: Memory usage at maximum ({memory_info.percent}%) - blocking to prevent crash")
+            # Block if memory usage is too high to prevent 502 errors
+            if memory_info.percent >= 95:
+                print(f"CRITICAL: Memory usage too high ({memory_info.percent}%) - blocking to prevent 502 errors")
                 return jsonify({
-                    'error': 'Server memory is at maximum capacity. Please try again in a moment.',
-                    'details': f'Memory usage: {memory_info.percent}%'
+                    'error': 'Server memory is critically high. Please wait a moment for memory to free up, then try again.',
+                    'details': f'Memory usage: {memory_info.percent}% (Available: {memory_info.available / 1024 / 1024:.1f}MB)'
                 }), 503
             elif memory_info.percent > 90:
-                print(f"WARNING: Very high memory usage ({memory_info.percent}%) - proceeding with caution")
+                print(f"WARNING: Very high memory usage ({memory_info.percent}%) - forcing safe cleanup before proceeding")
+                # Force garbage collection (safe - doesn't affect tasks)
+                import gc
+                gc.collect()
+                gc.collect()
+                
+                # Clean up old completed tasks only (preserve running tasks)
+                try:
+                    print(f"DEBUG: Before cleanup - {len(tasks)} tasks in memory")
+                    cleanup_old_completed_tasks()
+                    print(f"DEBUG: After cleanup - {len(tasks)} tasks in memory")
+                except Exception as e:
+                    print(f"DEBUG: Task cleanup failed: {e}")
+                
+                # Check memory again after cleanup
+                memory_info = psutil.virtual_memory()
+                print(f"DEBUG: Memory after cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+                if memory_info.percent >= 95:
+                    return jsonify({
+                        'error': 'Server memory is critically high even after cleanup. Please try again in a moment.',
+                        'details': f'Memory usage: {memory_info.percent}% (Available: {memory_info.available / 1024 / 1024:.1f}MB)'
+                    }), 503
             elif memory_info.percent > 80:
                 print(f"INFO: High memory usage ({memory_info.percent}%) - monitoring")
         except ImportError:

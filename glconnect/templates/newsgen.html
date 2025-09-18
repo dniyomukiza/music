@@ -1263,7 +1263,10 @@
                 <!-- Added Topics List -->
                 <div id="addedTopicsList" class="added-topics-section" style="margin-top: 20px; display: none;">
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">
-                        <i class="fas fa-list"></i> Added Topics
+                        <i class="fas fa-list"></i> Added Topics 
+                        <span id="topicCount" style="font-size: 0.8em; color: #6c757d; font-weight: normal;">
+                            (0/5 maximum)
+                        </span>
                     </h4>
                     <div id="addedTopicsContainer" class="added-topics-container">
                         <!-- Topics will be added here -->
@@ -1321,7 +1324,7 @@
         <div class="loading-section" id="loading">
             <div class="spinner"></div>
             <div class="loading-text">Generating your professional news broadcast...</div>
-            <div class="loading-details">This may take 1-2 minutes. Please wait.</div>
+            <div class="loading-details">This may take 5-10 minutes for multiple topics. Please wait.</div>
             <div class="progress-container">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -1504,7 +1507,7 @@
 
         // Poll transcription status
         async function pollTranscriptionStatus(taskId, filename, button, originalText) {
-            const maxPolls = 150; // 5 minutes max (150 * 2 seconds) - increased for multiple topics
+            const maxPolls = 300; // 10 minutes max (300 * 2 seconds) - increased for multiple topics
             let pollCount = 0;
             
             const pollInterval = setInterval(async () => {
@@ -1875,6 +1878,15 @@
                 return;
             }
             
+            // Check topic limit
+            if (addedTopics.length >= 5) {
+                showFlaskValidationFeedback(topic, {
+                    valid: false,
+                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
+                });
+                return;
+            }
+            
             // Validate the topic first
             try {
                 const response = await fetch('/routes2/news/api/validate-news-topic', {
@@ -1953,6 +1965,15 @@
                 showValidationFeedback(topic, {
                     valid: false,
                     error: 'This topic has already been added'
+                });
+                return;
+            }
+            
+            // Check topic limit
+            if (addedTopics.length >= 5) {
+                showValidationFeedback(topic, {
+                    valid: false,
+                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -2353,6 +2374,17 @@
         function updateAddedTopicsDisplay() {
             const container = document.getElementById('addedTopicsContainer');
             const topicsList = document.getElementById('addedTopicsList');
+            const topicCount = document.getElementById('topicCount');
+            
+            // Update topic count display
+            if (topicCount) {
+                topicCount.textContent = `(${addedTopics.length}/5 maximum)`;
+                if (addedTopics.length >= 5) {
+                    topicCount.style.color = '#dc3545'; // Red when at limit
+                } else {
+                    topicCount.style.color = '#6c757d'; // Gray when under limit
+                }
+            }
             
             if (container) {
                 if (addedTopics.length === 0) {
@@ -2421,6 +2453,12 @@
                 }
             }
             
+            // Limit to maximum 5 topics for optimal performance
+            if (topicsToUse.length > 5) {
+                alert('Maximum 5 topics allowed for optimal performance. Please remove some topics and try again.');
+                return;
+            }
+            
             // Submit the topics to the broadcast endpoint
             fetch('/routes2/news/broadcast', {
                 method: 'POST',
@@ -2470,7 +2508,7 @@
             }
             
             let pollCount = 0;
-            const maxPolls = 150; // 5 minutes max (150 * 2 seconds) - increased for multiple topics
+            const maxPolls = 300; // 10 minutes max (300 * 2 seconds) - increased for multiple topics
             
             const pollInterval = setInterval(() => {
                 pollCount++;
@@ -2480,7 +2518,7 @@
                     clearInterval(pollInterval);
                     stopProgressAnimation();
                     hideLoadingState();
-                    alert('News generation is taking longer than expected (5+ minutes). Please try again or check back later.');
+                    alert('News generation is taking longer than expected (10+ minutes). Please try again or check back later.');
                     return;
                 }
                 
@@ -2530,16 +2568,31 @@
                             updateProgress(data.progress, data.current_step);
                         }
                         console.log('Task still running, continuing to poll...');
-                        // Update progress indicator
+                        // Update progress indicator with more detailed status
                         const progressText = document.getElementById('progressText');
                         if (progressText) {
                             const elapsed = pollCount * 2; // seconds
                             const minutes = Math.floor(elapsed / 60);
                             const seconds = elapsed % 60;
-                            if (minutes > 0) {
-                                progressText.textContent = `Generating news... (${minutes}m ${seconds}s elapsed)`;
+                            
+                            // Show different messages based on elapsed time
+                            let statusMessage = '';
+                            if (elapsed < 60) {
+                                statusMessage = 'Initializing news generation...';
+                            } else if (elapsed < 180) {
+                                statusMessage = 'Generating news content with AI reporters...';
+                            } else if (elapsed < 300) {
+                                statusMessage = 'Converting text to speech (this takes time)...';
+                            } else if (elapsed < 480) {
+                                statusMessage = 'Assembling audio files...';
                             } else {
-                                progressText.textContent = `Generating news... (${elapsed}s elapsed)`;
+                                statusMessage = 'Finalizing broadcast...';
+                            }
+                            
+                            if (minutes > 0) {
+                                progressText.textContent = `${statusMessage} (${minutes}m ${seconds}s elapsed)`;
+                            } else {
+                                progressText.textContent = `${statusMessage} (${elapsed}s elapsed)`;
                             }
                         }
                     } else {
@@ -2556,11 +2609,11 @@
                         stopProgressAnimation();
                         hideLoadingState();
                         alert(error.message);
-                    } else if (error.message.includes('Server temporarily unavailable')) {
+                    } else if (error.message.includes('Server temporarily unavailable') || error.message.includes('502')) {
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
-                        alert(error.message);
+                        alert('Server is temporarily overloaded. The news generation is still running in the background. Please wait a few minutes and refresh the page to check status.');
                     } else if (error.name !== 'TypeError' || !error.message.includes('Failed to fetch')) {
                         clearInterval(pollInterval);
                         stopProgressAnimation();
