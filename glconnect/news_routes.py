@@ -1278,8 +1278,27 @@ def run_generate_broadcast(task_id, topics):
     """Wrapper function to run generate_broadcast and store the result."""
     import time
     import threading
+    import signal
+    import sys
     
     print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
+    
+    # Set up graceful shutdown handling
+    def signal_handler(signum, frame):
+        print(f"DEBUG: Received signal {signum}, gracefully shutting down task {task_id}")
+        try:
+            update_task_in_db(task_id, 
+                             status='failed',
+                             progress=0,
+                             current_step='Task cancelled due to system shutdown',
+                             last_heartbeat=datetime.now())
+        except:
+            pass
+        sys.exit(0)
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     
     # Update task status with progress
     update_task_in_db(task_id, 
@@ -1352,7 +1371,14 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['current_step'] = f'Generating news content for {len(topics)} topics...'
                 tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
-        output = generate_broadcast(topics, task_id=task_id)
+        try:
+            output = generate_broadcast(topics, task_id=task_id)
+        except RuntimeError as e:
+            if "cannot schedule new futures after interpreter shutdown" in str(e):
+                print(f"DEBUG: Interpreter shutdown detected during news generation: {e}")
+                raise Exception("News generation failed: Interpreter is shutting down")
+            else:
+                raise e
         
         # Check for timeout after generation
         if timeout_occurred.is_set():
@@ -1757,10 +1783,10 @@ def broadcast():
         print(f"DEBUG: Topics received: {topics}")
         
         # Enforce maximum topic limit (reduced for memory safety)
-        if len(topics) > 3:
+        if len(topics) > 5:
             return jsonify({
-                'error': 'Maximum 3 topics allowed due to server memory constraints. Please reduce the number of topics and try again.',
-                'details': f'Received {len(topics)} topics, maximum allowed is 3'
+                'error': 'Maximum 5 topics allowed due to server memory constraints. Please reduce the number of topics and try again.',
+                'details': f'Received {len(topics)} topics, maximum allowed is 5'
             }), 400
         
         # Check server health before processing

@@ -1879,10 +1879,10 @@
             }
             
             // Check topic limit
-            if (addedTopics.length >= 3) {
+            if (addedTopics.length >= 5) {
                 showFlaskValidationFeedback(topic, {
                     valid: false,
-                    error: 'Maximum 3 topics allowed. Please remove a topic first.'
+                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -1970,10 +1970,10 @@
             }
             
             // Check topic limit
-            if (addedTopics.length >= 3) {
+            if (addedTopics.length >= 5) {
                 showValidationFeedback(topic, {
                     valid: false,
-                    error: 'Maximum 3 topics allowed. Please remove a topic first.'
+                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -2378,8 +2378,8 @@
             
             // Update topic count display
             if (topicCount) {
-                topicCount.textContent = `(${addedTopics.length}/3 maximum)`;
-                if (addedTopics.length >= 3) {
+                topicCount.textContent = `(${addedTopics.length}/5 maximum)`;
+                if (addedTopics.length >= 5) {
                     topicCount.style.color = '#dc3545'; // Red when at limit
                 } else {
                     topicCount.style.color = '#6c757d'; // Gray when under limit
@@ -2453,9 +2453,9 @@
                 }
             }
             
-            // Limit to maximum 3 topics for memory safety
-            if (topicsToUse.length > 3) {
-                alert('Maximum 3 topics allowed due to server memory constraints. Please remove some topics and try again.');
+            // Limit to maximum 5 topics for memory safety
+            if (topicsToUse.length > 5) {
+                alert('Maximum 5 topics allowed due to server memory constraints. Please remove some topics and try again.');
                 return;
             }
             

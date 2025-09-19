@@ -972,6 +972,60 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     print("DEBUG: All news generation attempts failed, returning minimal result")
     return {"audio_file": None, "summary": "News generation failed after multiple attempts"}
 
+def _run_async_safely(coro):
+    """Safely run async coroutine in a thread, handling interpreter shutdown gracefully."""
+    import asyncio
+    import threading
+    import sys
+    
+    try:
+        # Check if the interpreter is shutting down
+        if sys.is_finalizing():
+            print("DEBUG: Interpreter is finalizing, cannot run async operation")
+            return None
+        
+        # Check if there's a closed event loop set as the current loop
+        try:
+            current_loop = asyncio.get_event_loop()
+            if current_loop.is_closed():
+                print("DEBUG: Current event loop is closed, cannot run async operation")
+                return None
+        except RuntimeError:
+            # No event loop set, that's fine
+            pass
+        
+        # Check if we're in a thread that already has an event loop
+        try:
+            loop = asyncio.get_running_loop()
+            # If we're in a thread with a running loop, we need to create a new one
+            if loop.is_running():
+                # Create a new event loop for this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(coro)
+                finally:
+                    new_loop.close()
+        except RuntimeError:
+            # No running loop, we can create one
+            pass
+        
+        # Try to run with asyncio.run, but handle shutdown gracefully
+        try:
+            return asyncio.run(coro)
+        except RuntimeError as e:
+            if "cannot schedule new futures after interpreter shutdown" in str(e):
+                print("DEBUG: Interpreter is shutting down, cannot run async operation")
+                return None
+            elif "Event loop is closed" in str(e):
+                print("DEBUG: Event loop is closed, cannot run async operation")
+                return None
+            else:
+                raise e
+    except Exception as e:
+        print(f"DEBUG: Error in _run_async_safely: {e}")
+        return None
+
 def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     import gc
     
@@ -1005,19 +1059,29 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         output_key="categorized_topics"
     )
 
-    categorized_topics_json = asyncio.run(run_agent(categorization_agent, str(topics)))
+    categorized_topics_json = _run_async_safely(run_agent(categorization_agent, str(topics)))
     print(f"DEBUG: Raw categorization output: {categorized_topics_json}")
     
-    # Clean up the JSON response
-    categorized_topics_json = categorized_topics_json.strip()
-    if categorized_topics_json.startswith('```json'):
-        categorized_topics_json = categorized_topics_json[7:]  # Remove ```json
-    if categorized_topics_json.endswith('```'):
-        categorized_topics_json = categorized_topics_json[:-3]  # Remove ```
-    categorized_topics_json = categorized_topics_json.strip()
-    print(f"DEBUG: Cleaned categorization JSON: {categorized_topics_json}")
-    
-    categorized_topics = json.loads(categorized_topics_json)
+    # Handle case where async operation failed due to interpreter shutdown
+    if categorized_topics_json is None:
+        print("DEBUG: Categorization failed due to interpreter shutdown, using fallback")
+        # Create a simple fallback categorization
+        categorized_topics = {topic: 'other' for topic in topics}
+    else:
+        # Clean up the JSON response
+        categorized_topics_json = categorized_topics_json.strip()
+        if categorized_topics_json.startswith('```json'):
+            categorized_topics_json = categorized_topics_json[7:]  # Remove ```json
+        if categorized_topics_json.endswith('```'):
+            categorized_topics_json = categorized_topics_json[:-3]  # Remove ```
+        categorized_topics_json = categorized_topics_json.strip()
+        print(f"DEBUG: Cleaned categorization JSON: {categorized_topics_json}")
+        
+        try:
+            categorized_topics = json.loads(categorized_topics_json)
+        except json.JSONDecodeError as e:
+            print(f"DEBUG: JSON decode error: {e}, using fallback categorization")
+            categorized_topics = {topic: 'other' for topic in topics}
     print(f"DEBUG: Parsed categories: {categorized_topics}")
 
     # Group topics by category
@@ -1136,7 +1200,12 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
                 return [str(e) for e in results if not isinstance(e, Exception)]
         
         # Run the parallel execution
-        individual_outputs = asyncio.run(run_all_agents_parallel())
+        individual_outputs = _run_async_safely(run_all_agents_parallel())
+        
+        # Handle case where async operation failed due to interpreter shutdown
+        if individual_outputs is None:
+            print("DEBUG: Parallel agent execution failed due to interpreter shutdown, using fallback")
+            individual_outputs = []
         
         # Filter out exceptions and combine results
         valid_outputs = []
@@ -1172,7 +1241,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         for i, agent in enumerate(news_agents):
             try:
                 print(f"DEBUG: Running individual agent {i}: {agent.name}")
-                individual_output = asyncio.run(asyncio.wait_for(run_agent(agent, ""), timeout=120))
+                individual_output = _run_async_safely(asyncio.wait_for(run_agent(agent, ""), timeout=120))
                 individual_outputs.append(individual_output)
                 print(f"DEBUG: Agent {i} output: {individual_output[:100]}...")
             except asyncio.TimeoutError:
@@ -1355,21 +1424,30 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     
     # Force the anchor agent to call the timezone tool first
     anchor_input = "Please call the get_timezone_info tool first to get the current time, then create your script."
-    anchor_output = asyncio.run(run_agent(anchor_agent, anchor_input))
-    print(f"DEBUG: Anchor output: {anchor_output[:200]}...")
+    anchor_output = _run_async_safely(run_agent(anchor_agent, anchor_input))
+    print(f"DEBUG: Anchor output: {anchor_output[:200] if anchor_output else 'None'}...")
     
-    # Parse anchor script to get intro, transitions, and outro
-    try:
-        anchor_script = json.loads(anchor_output.strip("```json\n").strip("```"))
-        intro_text = anchor_script.get("intro", "Welcome to GLC News")
-        transitions = anchor_script.get("transitions", [])
-        outro_text = anchor_script.get("outro", "Thanks for listening to GLC News")
-        print(f"DEBUG: Found intro, {len(transitions)} transitions, and outro in anchor script")
-    except Exception as e:
-        print(f"DEBUG: Error parsing anchor script: {e}")
-        intro_text = "Welcome to GLC News"
-        transitions = [f"Transition {i+1}" for i in range(len(topics))]
-        outro_text = "Thanks for listening to GLC News"
+    # Handle case where async operation failed due to interpreter shutdown
+    if anchor_output is None:
+        print("DEBUG: Anchor agent failed due to interpreter shutdown, using fallback")
+        anchor_script = {
+            "intro": "Welcome to GLC News. Here are today's top stories.",
+            "transitions": ["Now let's hear from our reporters.", "Moving on to our next story."],
+            "outro": "That's all for today's news. Thank you for listening to GLC News."
+        }
+    else:
+        # Parse anchor script to get intro, transitions, and outro
+        try:
+            anchor_script = json.loads(anchor_output.strip("```json\n").strip("```"))
+            intro_text = anchor_script.get("intro", "Welcome to GLC News")
+            transitions = anchor_script.get("transitions", [])
+            outro_text = anchor_script.get("outro", "Thanks for listening to GLC News")
+            print(f"DEBUG: Found intro, {len(transitions)} transitions, and outro in anchor script")
+        except Exception as e:
+            print(f"DEBUG: Error parsing anchor script: {e}")
+            intro_text = "Welcome to GLC News"
+            transitions = [f"Transition {i+1}" for i in range(len(topics))]
+            outro_text = "Thanks for listening to GLC News"
     
     # Create intro and outro TTS agents with actual script content
     intro_tts_agent = Agent(
@@ -1464,7 +1542,12 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         except:
             pass
     
-    tts_output = asyncio.run(run_agent(tts_phase, ""))
+    tts_output = _run_async_safely(run_agent(tts_phase, ""))
+    
+    # Handle case where TTS failed due to interpreter shutdown
+    if tts_output is None:
+        print("DEBUG: TTS phase failed due to interpreter shutdown")
+        return {"audio_file": None, "summary": "News generation failed: TTS conversion failed due to interpreter shutdown"}
     
     # Force garbage collection after TTS to free memory
     gc.collect()
@@ -1491,7 +1574,12 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         ]
     )
     print("DEBUG: Executing final output phase...")
-    final_output = asyncio.run(run_agent(final_output_phase, ""))
+    final_output = _run_async_safely(run_agent(final_output_phase, ""))
+    
+    # Handle case where final output failed due to interpreter shutdown
+    if final_output is None:
+        print("DEBUG: Final output phase failed due to interpreter shutdown")
+        return {"audio_file": None, "summary": "News generation failed: Final assembly failed due to interpreter shutdown"}
     
     # Force aggressive garbage collection to free memory
     gc.collect()
