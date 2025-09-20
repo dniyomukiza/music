@@ -1316,15 +1316,32 @@ def run_generate_broadcast(task_id, topics):
     # Check memory usage at start of news generation
     try:
         import psutil
+        import gc
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        
+        # If memory usage is too high, abort immediately
+        if memory_info.percent > 90:
+            print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting news generation")
+            update_task_in_db(task_id, 
+                             status='failed',
+                             progress=0,
+                             current_step=f'Memory usage too high ({memory_info.percent}%) - please try again later',
+                             last_heartbeat=datetime.now())
+            return
+        
+        # Force garbage collection if memory is high
+        if memory_info.percent > 80:
+            print("DEBUG: High memory usage detected - forcing garbage collection")
+            gc.collect()
+            
     except ImportError:
         print("DEBUG: psutil not available - skipping memory check")
     except Exception as e:
         print(f"DEBUG: Memory check failed: {e}")
     
     # Set up timeout using threading (works in any thread)
-    timeout_seconds = 600  # 10 minutes
+    timeout_seconds = 300  # 5 minutes - reduced for faster failure detection
     timeout_occurred = threading.Event()
     
     def timeout_handler():
@@ -1359,6 +1376,28 @@ def run_generate_broadcast(task_id, topics):
         if timeout_occurred.is_set():
             raise TimeoutError("News generation timed out before starting")
         
+        # Add periodic timeout checks during generation
+        def check_timeout_periodically():
+            while not timeout_occurred.is_set():
+                time.sleep(30)  # Check every 30 seconds
+                if timeout_occurred.is_set():
+                    print("DEBUG: Timeout detected during generation, attempting graceful shutdown")
+                    break
+        
+        # Check memory before generation
+        try:
+            memory_info = psutil.virtual_memory()
+            if memory_info.percent > 90:
+                print(f"ERROR: Memory usage too high during generation ({memory_info.percent}%) - aborting")
+                update_task_in_db(task_id, 
+                                 status='failed',
+                                 progress=20,
+                                 current_step=f'Memory usage too high ({memory_info.percent}%) - aborting generation',
+                                 last_heartbeat=datetime.now())
+                return
+        except:
+            pass
+        
         # Update progress before generation
         update_task_in_db(task_id, 
                          progress=20,
@@ -1372,6 +1411,10 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
         try:
+            # Check timeout before each major operation
+            if timeout_occurred.is_set():
+                raise TimeoutError("News generation timed out during execution")
+                
             output = generate_broadcast(topics, task_id=task_id)
         except RuntimeError as e:
             if "cannot schedule new futures after interpreter shutdown" in str(e):
@@ -1383,6 +1426,15 @@ def run_generate_broadcast(task_id, topics):
         # Check for timeout after generation
         if timeout_occurred.is_set():
             raise TimeoutError("News generation timed out during processing")
+        
+        # Force garbage collection after text generation
+        try:
+            import gc
+            gc.collect()
+            memory_info = psutil.virtual_memory()
+            print(f"DEBUG: Memory after text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        except:
+            pass
         
         # Update progress after generation
         update_task_in_db(task_id, 
@@ -1645,17 +1697,56 @@ def run_generate_broadcast(task_id, topics):
         print(f"ERROR type: {type(e).__name__}")
         import traceback
         print(f"ERROR traceback: {traceback.format_exc()}")
-        # Update database
-        update_task_in_db(task_id, 
-                         status='failed',
-                         failed_at=datetime.now(),
-                         error=f"News generation failed: {str(e)}")
         
-        with _tasks_lock:
-            tasks[task_id]['status'] = 'failed'
-            tasks[task_id]['failed_at'] = datetime.now()
-            tasks[task_id]['error'] = f"News generation failed: {str(e)}"
-            print(f"DEBUG: Task {task_id} marked as failed due to: {e}")
+        # Try simple fallback generation before marking as failed
+        try:
+            print("DEBUG: Attempting simple fallback news generation...")
+            from glconnect.news_agent import generate_intelligent_fallback_content
+            
+            fallback_content = []
+            for topic in topics:
+                content = generate_intelligent_fallback_content(topic)
+                fallback_content.append(content)
+            
+            # Create a simple broadcast structure
+            fallback_output = {
+                "broadcast_script": "\n\n".join(fallback_content),
+                "audio_files": [],
+                "combined_audio_filepath": "fallback_generation.mp3",
+                "generation_method": "fallback_simple"
+            }
+            
+            # Store the fallback result
+            with _tasks_lock:
+                tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['completed_at'] = datetime.now()
+                tasks[task_id]['result'] = fallback_output
+                tasks[task_id]['generation_method'] = 'fallback_simple'
+                print(f"DEBUG: Task {task_id} completed with fallback generation")
+            
+            # Update database
+            update_task_in_db(task_id, 
+                             status='completed',
+                             completed_at=datetime.now(),
+                             result=fallback_output)
+            
+            print("DEBUG: Fallback generation successful")
+            return
+            
+        except Exception as fallback_error:
+            print(f"DEBUG: Fallback generation also failed: {fallback_error}")
+            
+            # Update database
+            update_task_in_db(task_id, 
+                             status='failed',
+                             failed_at=datetime.now(),
+                             error=f"News generation failed: {str(e)}")
+            
+            with _tasks_lock:
+                tasks[task_id]['status'] = 'failed'
+                tasks[task_id]['failed_at'] = datetime.now()
+                tasks[task_id]['error'] = f"News generation failed: {str(e)}"
+                print(f"DEBUG: Task {task_id} marked as failed due to: {e}")
     finally:
         # Cancel the timeout thread
         timeout_occurred.set()

@@ -708,7 +708,8 @@ def create_news_reporter_agent(topic: str, voice: str, agent_name: str, output_k
             - Your task is to prepare a professional news report on '{topic}'.
             - You MUST use the 'google_search' tool to find news details about {topic}.
             - Tool call format: `google_search(query='The latest {topic} news')`
-            - If the search fails or returns no results, create a professional news report based on your knowledge of {topic}.
+            - If the search fails, times out, or returns no results, IMMEDIATELY create a professional news report based on your knowledge of {topic}.
+            - Do NOT retry the search if it fails - proceed directly to content generation.
             - Focus on recent developments, trends, or ongoing issues related to {topic}.
             - After getting the search results (or using your knowledge), synthesize the information into a professional news report.
             - You must end your news report with the following signature: 'I am {agent_name.replace("_", " ")}, for GLC News'.
@@ -1028,6 +1029,21 @@ def _run_async_safely(coro):
 
 def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     import gc
+    import psutil
+    
+    # Check memory at start and abort if too high
+    try:
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory at start of broadcast generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        
+        if memory_info.percent > 90:
+            print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting broadcast generation")
+            return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
+    except:
+        pass
+    
+    # Force garbage collection at start
+    gc.collect()
     
     # Update heartbeat if task_id is provided
     if task_id:
@@ -1177,7 +1193,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             try:
                 results = await asyncio.wait_for(
                     asyncio.gather(*tasks, return_exceptions=True),
-                    timeout=600  # 10 minute timeout for text generation
+                    timeout=180  # 3 minute timeout for text generation - further reduced for faster failure detection
                 )
                 
                 # Update progress after completion
@@ -1197,10 +1213,23 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
                 for task in tasks:
                     if not task.done():
                         task.cancel()
-                return [str(e) for e in results if not isinstance(e, Exception)]
+                # Return partial results or fallback content
+                partial_results = []
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        print(f"DEBUG: Agent {i} failed with exception: {result}")
+                        # Generate fallback content for failed agents
+                        fallback_content = generate_intelligent_fallback_content(topics[i] if i < len(topics) else f"Topic {i+1}")
+                        partial_results.append(fallback_content)
+                    else:
+                        partial_results.append(str(result))
+                return partial_results
         
         # Run the parallel execution
         individual_outputs = _run_async_safely(run_all_agents_parallel())
+        
+        # Force garbage collection after async operations
+        gc.collect()
         
         # Handle case where async operation failed due to interpreter shutdown
         if individual_outputs is None:
