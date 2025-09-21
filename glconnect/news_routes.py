@@ -1325,29 +1325,76 @@ def run_generate_broadcast(task_id, topics):
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        # If memory usage is too high, try cleanup first, then abort
+        # If memory usage is too high, try emergency cleanup first, then abort
         if memory_info.percent > 90:
-            print(f"WARNING: Memory usage too high ({memory_info.percent}%) - attempting cleanup...")
+            print(f"WARNING: Memory usage too high ({memory_info.percent}%) - attempting emergency cleanup...")
             
-            # Force aggressive cleanup
-            gc.collect()
-            gc.collect()
-            gc.collect()
-            
-            # Try memory trimming on Linux
+            # Emergency cleanup sequence
             try:
-                import ctypes
-                libc = ctypes.CDLL("libc.so.6")
-                libc.malloc_trim(0)
-            except:
-                pass
+                # Clear any cached data
+                import sys
+                if hasattr(sys, '_clear_type_cache'):
+                    sys._clear_type_cache()
+                
+                # Force aggressive garbage collection multiple times
+                for i in range(5):
+                    gc.collect()
+                    gc.collect()
+                
+                # Clear module caches
+                import importlib
+                for module_name in list(sys.modules.keys()):
+                    if module_name.startswith('glconnect.') and 'cache' in module_name.lower():
+                        try:
+                            del sys.modules[module_name]
+                        except:
+                            pass
+                
+                # Try memory trimming on Linux
+                try:
+                    import ctypes
+                    libc = ctypes.CDLL("libc.so.6")
+                    libc.malloc_trim(0)
+                except:
+                    pass
+                
+                # Clear any large objects in memory
+                try:
+                    from glconnect.news_routes import tasks
+                    with _tasks_lock:
+                        # Remove old completed tasks to free memory
+                        current_time = datetime.now()
+                        tasks_to_remove = []
+                        for tid, task_data in tasks.items():
+                            if (task_data.get('status') in ['completed', 'failed'] and 
+                                task_data.get('created_at') and 
+                                (current_time - task_data['created_at']).total_seconds() > 3600):  # 1 hour old
+                                tasks_to_remove.append(tid)
+                        
+                        for tid in tasks_to_remove:
+                            del tasks[tid]
+                            print(f"DEBUG: Removed old task {tid} to free memory")
+                except:
+                    pass
+                
+            except Exception as e:
+                print(f"DEBUG: Error during emergency cleanup: {e}")
             
             # Check memory again after cleanup
             memory_info_after = psutil.virtual_memory()
-            print(f"DEBUG: Memory after cleanup - Used: {memory_info_after.used / 1024 / 1024:.1f}MB, Percent: {memory_info_after.percent}%")
+            print(f"DEBUG: Memory after emergency cleanup - Used: {memory_info_after.used / 1024 / 1024:.1f}MB, Percent: {memory_info_after.percent}%")
             
             if memory_info_after.percent > 90:
-                print(f"ERROR: Memory usage still too high after cleanup ({memory_info_after.percent}%) - aborting news generation")
+                print(f"ERROR: Memory usage still too high after emergency cleanup ({memory_info_after.percent}%) - aborting news generation")
+                
+                # Log memory state for debugging
+                try:
+                    process = psutil.Process(os.getpid())
+                    process_memory = process.memory_info()
+                    print(f"DEBUG: Process memory - RSS: {process_memory.rss / 1024 / 1024:.1f}MB, VMS: {process_memory.vms / 1024 / 1024:.1f}MB")
+                except:
+                    pass
+                
                 update_task_in_db(task_id, 
                                  status='failed',
                                  progress=0,
@@ -1355,7 +1402,7 @@ def run_generate_broadcast(task_id, topics):
                                  last_heartbeat=datetime.now())
                 return
             else:
-                print(f"INFO: Memory usage reduced to {memory_info_after.percent}% after cleanup - proceeding")
+                print(f"INFO: Memory usage reduced to {memory_info_after.percent}% after emergency cleanup - proceeding")
         
         # Force garbage collection if memory is high
         if memory_info.percent > 80:
@@ -1422,6 +1469,12 @@ def run_generate_broadcast(task_id, topics):
                                  current_step=f'Memory usage too high ({memory_info.percent}%) - aborting generation',
                                  last_heartbeat=datetime.now())
                 return
+            elif memory_info.percent > 85:
+                print(f"WARNING: High memory usage during generation ({memory_info.percent}%) - forcing cleanup")
+                # Force cleanup during generation
+                gc.collect()
+                gc.collect()
+                gc.collect()
         except:
             pass
         
@@ -1460,6 +1513,13 @@ def run_generate_broadcast(task_id, topics):
             gc.collect()
             memory_info = psutil.virtual_memory()
             print(f"DEBUG: Memory after text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            
+            # Log memory usage to file for analysis
+            try:
+                with open('memory_usage.log', 'a') as f:
+                    f.write(f"{datetime.now().isoformat()},text_generation,{memory_info.percent:.1f},{memory_info.used / 1024 / 1024:.1f}\n")
+            except:
+                pass
         except:
             pass
         
@@ -2049,8 +2109,16 @@ def broadcast():
 
 @news_bp.route('/debug/force-cleanup')
 def force_cleanup():
-    """Force cleanup of stuck tasks to resolve server overload."""
+    """Force cleanup of stuck tasks and memory to resolve server overload."""
     try:
+        import gc
+        import psutil
+        import sys
+        
+        # Get memory before cleanup
+        memory_before = psutil.virtual_memory()
+        print(f"DEBUG: Memory before cleanup - Used: {memory_before.used / 1024 / 1024:.1f}MB, Percent: {memory_before.percent}%")
+        
         with _tasks_lock:
             initial_count = len(tasks)
             print(f"DEBUG: Force cleanup - initial task count: {initial_count}")
@@ -2076,16 +2144,59 @@ def force_cleanup():
             
             final_count = len(tasks)
             print(f"DEBUG: Force cleanup completed - final task count: {final_count}")
-            
-            return jsonify({
-                'success': True,
-                'initial_tasks': initial_count,
-                'final_tasks': final_count,
-                'stuck_tasks_removed': len(stuck_tasks),
-                'stuck_task_ids': [task_id for task_id, _ in stuck_tasks],
-                'message': f'Removed {len(stuck_tasks)} stuck tasks'
-            })
-            
+        
+        # Emergency memory cleanup
+        collected_total = 0
+        for i in range(3):  # Multiple passes
+            collected = gc.collect()
+            collected_total += collected
+            print(f"DEBUG: Garbage collection pass {i+1} collected {collected} objects")
+        
+        # Clear any cached data
+        if hasattr(sys, '_clear_type_cache'):
+            sys._clear_type_cache()
+        
+        # Clear module caches
+        import importlib
+        for module_name in list(sys.modules.keys()):
+            if module_name.startswith('glconnect.') and 'cache' in module_name.lower():
+                try:
+                    del sys.modules[module_name]
+                except:
+                    pass
+        
+        # Try memory trimming on Linux
+        try:
+            import ctypes
+            libc = ctypes.CDLL("libc.so.6")
+            libc.malloc_trim(0)
+            print("DEBUG: Memory trimmed successfully")
+        except:
+            print("DEBUG: Memory trim not available")
+        
+        # Get memory after cleanup
+        memory_after = psutil.virtual_memory()
+        print(f"DEBUG: Memory after cleanup - Used: {memory_after.used / 1024 / 1024:.1f}MB, Percent: {memory_after.percent}%")
+        
+        return jsonify({
+            'success': True,
+            'initial_tasks': initial_count,
+            'final_tasks': final_count,
+            'stuck_tasks_removed': len(stuck_tasks),
+            'stuck_task_ids': [task_id for task_id, _ in stuck_tasks],
+            'memory_before': {
+                'used_mb': round(memory_before.used / 1024 / 1024, 1),
+                'percent': round(memory_before.percent, 1)
+            },
+            'memory_after': {
+                'used_mb': round(memory_after.used / 1024 / 1024, 1),
+                'percent': round(memory_after.percent, 1)
+            },
+            'memory_freed_mb': round((memory_before.used - memory_after.used) / 1024 / 1024, 1),
+            'objects_collected': collected_total,
+            'message': f'Removed {len(stuck_tasks)} stuck tasks and freed {round((memory_before.used - memory_after.used) / 1024 / 1024, 1)}MB memory'
+        })
+        
     except Exception as e:
         print(f"ERROR in force cleanup: {e}")
         import traceback
