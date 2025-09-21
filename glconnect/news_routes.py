@@ -1296,9 +1296,14 @@ def run_generate_broadcast(task_id, topics):
             pass
         sys.exit(0)
     
-    # Register signal handlers for graceful shutdown
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+    # Register signal handlers for graceful shutdown (only in main thread)
+    try:
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+    except ValueError:
+        # Signal handlers can only be set in the main thread
+        # This is expected when running in a background thread
+        print("DEBUG: Signal handlers not set (running in background thread)")
     
     # Update task status with progress
     update_task_in_db(task_id, 
