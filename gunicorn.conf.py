@@ -9,15 +9,15 @@ backlog = 2048
 # Worker processes
 workers = 1  # Single worker for memory-constrained environments
 worker_class = "sync"
-worker_connections = 100  # Further reduced for news generation
+worker_connections = 50  # Reduced for news generation
 timeout = 1800  # Increased timeout for news generation (30 minutes)
 keepalive = 2
 
 # Memory management
-max_requests = 50  # Restart workers more frequently to prevent memory leaks
-max_requests_jitter = 10  # Add randomness to prevent all workers restarting at once
+max_requests = 25  # Restart workers more frequently to prevent memory leaks
+max_requests_jitter = 5  # Add randomness to prevent all workers restarting at once
 preload_app = False  # Disable preload to reduce initial memory usage
-worker_memory_limit = 200  # Increased memory limit for news generation
+worker_memory_limit = 400  # Increased memory limit for news generation
 
 # Logging
 accesslog = "-"

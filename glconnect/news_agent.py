@@ -1030,6 +1030,7 @@ def _run_async_safely(coro):
 def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     import gc
     import psutil
+    import os
     
     # Check memory at start and abort if too high
     try:
@@ -1042,8 +1043,20 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     except:
         pass
     
-    # Force garbage collection at start
+    # Force aggressive garbage collection at start
     gc.collect()
+    gc.collect()  # Call twice for better cleanup
+    
+    # Set more aggressive garbage collection thresholds
+    gc.set_threshold(50, 5, 5)  # More frequent collection
+    
+    # Force memory cleanup
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+        libc.malloc_trim(0)  # Trim memory on Linux
+    except:
+        pass  # Ignore if not available
     
     # Update heartbeat if task_id is provided
     if task_id:
@@ -1159,6 +1172,17 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     for i, agent in enumerate(news_agents):
         print(f"DEBUG: Agent {i}: {agent.name} - {agent.description}")
     
+    # Check memory before text generation
+    try:
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory before text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        if memory_info.percent > 85:
+            print(f"WARNING: High memory usage before text generation ({memory_info.percent}%)")
+            gc.collect()
+            gc.collect()
+    except:
+        pass
+    
     # Update heartbeat before text generation
     if task_id:
         try:
@@ -1241,6 +1265,27 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         
         # Force garbage collection after async operations
         gc.collect()
+        gc.collect()  # Call twice for better cleanup
+        
+        # Check memory after text generation
+        try:
+            memory_info = psutil.virtual_memory()
+            print(f"DEBUG: Memory after text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            if memory_info.percent > 85:
+                print(f"WARNING: High memory usage after text generation ({memory_info.percent}%) - forcing aggressive cleanup")
+                gc.collect()
+                gc.collect()
+                gc.collect()
+                
+                # Try to trim memory on Linux
+                try:
+                    import ctypes
+                    libc = ctypes.CDLL("libc.so.6")
+                    libc.malloc_trim(0)
+                except:
+                    pass
+        except:
+            pass
         
         # Handle case where async operation failed due to interpreter shutdown
         if individual_outputs is None:

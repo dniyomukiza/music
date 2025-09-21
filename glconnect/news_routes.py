@@ -1325,15 +1325,37 @@ def run_generate_broadcast(task_id, topics):
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        # If memory usage is too high, abort immediately
+        # If memory usage is too high, try cleanup first, then abort
         if memory_info.percent > 90:
-            print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting news generation")
-            update_task_in_db(task_id, 
-                             status='failed',
-                             progress=0,
-                             current_step=f'Memory usage too high ({memory_info.percent}%) - please try again later',
-                             last_heartbeat=datetime.now())
-            return
+            print(f"WARNING: Memory usage too high ({memory_info.percent}%) - attempting cleanup...")
+            
+            # Force aggressive cleanup
+            gc.collect()
+            gc.collect()
+            gc.collect()
+            
+            # Try memory trimming on Linux
+            try:
+                import ctypes
+                libc = ctypes.CDLL("libc.so.6")
+                libc.malloc_trim(0)
+            except:
+                pass
+            
+            # Check memory again after cleanup
+            memory_info_after = psutil.virtual_memory()
+            print(f"DEBUG: Memory after cleanup - Used: {memory_info_after.used / 1024 / 1024:.1f}MB, Percent: {memory_info_after.percent}%")
+            
+            if memory_info_after.percent > 90:
+                print(f"ERROR: Memory usage still too high after cleanup ({memory_info_after.percent}%) - aborting news generation")
+                update_task_in_db(task_id, 
+                                 status='failed',
+                                 progress=0,
+                                 current_step=f'Memory usage too high ({memory_info_after.percent}%) - please try again later',
+                                 last_heartbeat=datetime.now())
+                return
+            else:
+                print(f"INFO: Memory usage reduced to {memory_info_after.percent}% after cleanup - proceeding")
         
         # Force garbage collection if memory is high
         if memory_info.percent > 80:
@@ -2152,6 +2174,113 @@ def debug_health():
             'code_version': '73bce23-comprehensive-fixes',
             'timestamp': datetime.now().isoformat()
         }), 500
+
+@news_bp.route('/debug/memory-dashboard')
+def memory_dashboard():
+    """Memory usage dashboard with detailed information and recommendations."""
+    try:
+        import psutil
+        import os
+        import gc
+        
+        # Get system information
+        memory_info = psutil.virtual_memory()
+        cpu_percent = psutil.cpu_percent(interval=1)
+        
+        # Get process information
+        process = psutil.Process(os.getpid())
+        process_memory = process.memory_info()
+        
+        # Get container memory limit if available
+        container_limit = None
+        try:
+            with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as f:
+                container_limit = int(f.read().strip()) / 1024 / 1024 / 1024  # Convert to GB
+        except:
+            pass
+        
+        # Calculate memory efficiency
+        memory_efficiency = (memory_info.available / memory_info.total) * 100
+        
+        # Get garbage collection stats
+        gc_stats = gc.get_stats()
+        
+        # Determine status
+        if memory_info.percent > 95:
+            status = 'critical'
+            status_color = '#ff4444'
+        elif memory_info.percent > 85:
+            status = 'warning'
+            status_color = '#ffaa00'
+        elif memory_info.percent > 70:
+            status = 'caution'
+            status_color = '#ffdd00'
+        else:
+            status = 'healthy'
+            status_color = '#44ff44'
+        
+        # Generate recommendations
+        recommendations = []
+        if memory_info.percent > 90:
+            recommendations.append("🚨 CRITICAL: Memory usage is extremely high - consider restarting the application")
+        elif memory_info.percent > 80:
+            recommendations.append("⚠️ WARNING: High memory usage detected - monitor closely")
+            recommendations.append("💡 Consider running garbage collection")
+        elif memory_info.percent > 70:
+            recommendations.append("⚡ Memory usage is elevated - consider optimization")
+        
+        if process_memory.rss > 200 * 1024 * 1024:  # 200MB
+            recommendations.append("🔧 Process memory is high - check for memory leaks")
+        
+        if not recommendations:
+            recommendations.append("✅ Memory usage is within normal parameters")
+        
+        return jsonify({
+            'status': status,
+            'status_color': status_color,
+            'timestamp': datetime.now().isoformat(),
+            'system_memory': {
+                'total_gb': round(memory_info.total / 1024 / 1024 / 1024, 2),
+                'used_gb': round(memory_info.used / 1024 / 1024 / 1024, 2),
+                'available_gb': round(memory_info.available / 1024 / 1024 / 1024, 2),
+                'used_percent': round(memory_info.percent, 1),
+                'efficiency_percent': round(memory_efficiency, 1)
+            },
+            'process_memory': {
+                'rss_mb': round(process_memory.rss / 1024 / 1024, 1),
+                'vms_mb': round(process_memory.vms / 1024 / 1024, 1),
+                'percent': round(process.memory_percent(), 1)
+            },
+            'container_info': {
+                'limit_gb': round(container_limit, 2) if container_limit else None,
+                'usage_percent': round((memory_info.used / (container_limit * 1024 * 1024 * 1024)) * 100, 1) if container_limit else None
+            },
+            'cpu_info': {
+                'usage_percent': round(cpu_percent, 1)
+            },
+            'garbage_collection': {
+                'collections': gc_stats[0]['collections'] if gc_stats else 0,
+                'collected': gc_stats[0]['collected'] if gc_stats else 0,
+                'uncollectable': gc_stats[0]['uncollectable'] if gc_stats else 0
+            },
+            'recommendations': recommendations,
+            'actions': {
+                'force_gc': '/debug/force-cleanup',
+                'restart_app': '/debug/restart-application',
+                'memory_monitor': '/debug/memory-monitor'
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@news_bp.route('/debug/memory-dashboard-page')
+def memory_dashboard_page():
+    """Serve the memory dashboard HTML page."""
+    try:
+        from flask import render_template
+        return render_template('memory_dashboard.html')
+    except Exception as e:
+        return f"Error loading memory dashboard: {e}", 500
 
 @news_bp.route('/debug/server-status')
 def debug_server_status():
