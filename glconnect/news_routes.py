@@ -32,7 +32,8 @@ def create_task_in_db(task_id, topics):
                 topics=json.dumps(topics),
                 progress=0,
                 current_step='Initializing news generation...',
-                last_heartbeat=datetime.now()
+                last_heartbeat=datetime.now(),
+                error=None  # Initialize error field
             )
             db.session.add(task)
             db.session.commit()
@@ -40,6 +41,8 @@ def create_task_in_db(task_id, topics):
             return True
         except Exception as e:
             print(f"ERROR: Failed to create task in database: {e}")
+            import traceback
+            print(f"ERROR: Traceback: {traceback.format_exc()}")
             db.session.rollback()
             return False
 
@@ -2077,7 +2080,8 @@ def broadcast():
         with _tasks_lock:
             tasks[task_id] = {
                 'status': 'running',
-                'created_at': datetime.now()
+                'created_at': datetime.now(),
+                'error': None  # Initialize error field
             }
             print(f"DEBUG: Created news task {task_id}. Total tasks: {len(tasks)}")
             print(f"DEBUG: Task {task_id} created at: {datetime.now()}")
@@ -2642,7 +2646,15 @@ def task_status(task_id):
             })
             
     elif task['status'] == 'failed':
-        return jsonify({'status': 'failed', 'error': task.get('error', 'Unknown error')})
+        error_message = task.get('error')
+        if not error_message or error_message == 'Unknown error':
+            # Try to get more specific error information
+            if 'failed_at' in task:
+                error_message = f"News generation failed at {task['failed_at']}. Please try again."
+            else:
+                error_message = "News generation failed due to an unknown error. Please try again."
+        print(f"DEBUG: Task {task_id} failed with error: {error_message}")
+        return jsonify({'status': 'failed', 'error': error_message})
     else:
         return jsonify({
             'status': 'running',
