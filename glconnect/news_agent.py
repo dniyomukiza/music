@@ -951,6 +951,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     gc.collect()
     
     # Try to generate broadcast with retries
+    last_error = None
     for attempt in range(max_retries + 1):
         try:
             print(f"DEBUG: News generation attempt {attempt + 1}/{max_retries + 1}")
@@ -963,15 +964,43 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
                 if attempt < max_retries:
                     continue
         except Exception as e:
-            print(f"DEBUG: News generation error on attempt {attempt + 1}: {e}")
+            error_type = type(e).__name__
+            error_message = str(e)
+            last_error = f"{error_type}: {error_message}"
+            print(f"DEBUG: News generation error on attempt {attempt + 1}: {last_error}")
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
             if attempt < max_retries:
                 continue
             else:
                 raise e
     
-    # If all attempts failed, return a minimal result
+    # If all attempts failed, return a minimal result with error details
     print("DEBUG: All news generation attempts failed, returning minimal result")
-    return {"audio_file": None, "summary": "News generation failed after multiple attempts"}
+    error_summary = f"News generation failed after {max_retries + 1} attempts"
+    if last_error:
+        error_summary += f". Last error: {last_error}"
+    return {"audio_file": None, "summary": error_summary, "error": last_error}
+
+def generate_intelligent_fallback_content(topic: str) -> str:
+    """Generate simple fallback content when main generation fails."""
+    try:
+        # Simple fallback content generation
+        return f"""
+Breaking News Report: {topic}
+
+This is a developing story about {topic}. Our news team is working to gather more information and will provide updates as they become available.
+
+Key points to consider:
+- This topic is currently under investigation
+- More details will be provided as they emerge
+- We will continue to monitor this situation closely
+
+This concludes our report on {topic}. Stay tuned for more updates.
+        """.strip()
+    except Exception as e:
+        print(f"DEBUG: Error in fallback content generation: {e}")
+        return f"News report on {topic} - Content generation temporarily unavailable. Please try again later."
 
 def _run_async_safely(coro):
     """Safely run async coroutine in a thread, handling interpreter shutdown gracefully."""

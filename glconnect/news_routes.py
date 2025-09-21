@@ -1300,10 +1300,13 @@ def run_generate_broadcast(task_id, topics):
     try:
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
-    except ValueError:
+        print("DEBUG: Signal handlers registered successfully")
+    except ValueError as e:
         # Signal handlers can only be set in the main thread
         # This is expected when running in a background thread
-        print("DEBUG: Signal handlers not set (running in background thread)")
+        print(f"DEBUG: Signal handlers not set (running in background thread): {e}")
+    except Exception as e:
+        print(f"DEBUG: Error setting signal handlers: {e}")
     
     # Update task status with progress
     update_task_in_db(task_id, 
@@ -1797,10 +1800,16 @@ def run_generate_broadcast(task_id, topics):
         return
         
     except Exception as e:
-        print(f"ERROR in ADK agent news generation: {e}")
-        print(f"ERROR type: {type(e).__name__}")
+        error_type = type(e).__name__
+        error_message = str(e)
+        print(f"ERROR in ADK agent news generation: {error_message}")
+        print(f"ERROR type: {error_type}")
         import traceback
-        print(f"ERROR traceback: {traceback.format_exc()}")
+        traceback_str = traceback.format_exc()
+        print(f"ERROR traceback: {traceback_str}")
+        
+        # Create detailed error message
+        detailed_error = f"{error_type}: {error_message}"
         
         # Try simple fallback generation before marking as failed
         try:
@@ -1839,18 +1848,23 @@ def run_generate_broadcast(task_id, topics):
             
         except Exception as fallback_error:
             print(f"DEBUG: Fallback generation also failed: {fallback_error}")
+            fallback_error_type = type(fallback_error).__name__
+            fallback_error_message = str(fallback_error)
+            
+            # Create comprehensive error message
+            comprehensive_error = f"Primary error: {detailed_error}. Fallback error: {fallback_error_type}: {fallback_error_message}"
             
             # Update database
             update_task_in_db(task_id, 
                              status='failed',
                              failed_at=datetime.now(),
-                             error=f"News generation failed: {str(e)}")
+                             error=comprehensive_error)
             
             with _tasks_lock:
                 tasks[task_id]['status'] = 'failed'
                 tasks[task_id]['failed_at'] = datetime.now()
-                tasks[task_id]['error'] = f"News generation failed: {str(e)}"
-                print(f"DEBUG: Task {task_id} marked as failed due to: {e}")
+                tasks[task_id]['error'] = comprehensive_error
+                print(f"DEBUG: Task {task_id} marked as failed due to: {comprehensive_error}")
     finally:
         # Cancel the timeout thread
         timeout_occurred.set()
