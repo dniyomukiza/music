@@ -1193,7 +1193,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             try:
                 results = await asyncio.wait_for(
                     asyncio.gather(*tasks, return_exceptions=True),
-                    timeout=180  # 3 minute timeout for text generation - further reduced for faster failure detection
+                    timeout=300  # 5 minute timeout for text generation - increased for complex news generation
                 )
                 
                 # Update progress after completion
@@ -1208,7 +1208,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
                 
                 return results
             except asyncio.TimeoutError:
-                print("DEBUG: Text generation timed out, using partial results")
+                print("DEBUG: Text generation timed out after 5 minutes, using partial results")
                 # Cancel remaining tasks
                 for task in tasks:
                     if not task.done():
@@ -1223,6 +1223,17 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
                         partial_results.append(fallback_content)
                     else:
                         partial_results.append(str(result))
+                
+                # Update progress to indicate timeout recovery
+                try:
+                    from glconnect.news_routes import update_task_in_db
+                    update_task_in_db(task_id, 
+                                     progress=55,
+                                     current_step='Text generation timed out, using partial results...',
+                                     last_heartbeat=datetime.now())
+                except:
+                    pass
+                
                 return partial_results
         
         # Run the parallel execution
@@ -1270,11 +1281,11 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         for i, agent in enumerate(news_agents):
             try:
                 print(f"DEBUG: Running individual agent {i}: {agent.name}")
-                individual_output = _run_async_safely(asyncio.wait_for(run_agent(agent, ""), timeout=120))
+                individual_output = _run_async_safely(asyncio.wait_for(run_agent(agent, ""), timeout=180))
                 individual_outputs.append(individual_output)
                 print(f"DEBUG: Agent {i} output: {individual_output[:100]}...")
             except asyncio.TimeoutError:
-                print(f"DEBUG: Agent {i} timed out after 2 minutes")
+                print(f"DEBUG: Agent {i} timed out after 3 minutes")
                 individual_outputs.append("")
             except Exception as agent_error:
                 print(f"DEBUG: Agent {i} failed: {agent_error}")

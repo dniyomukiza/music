@@ -1324,7 +1324,7 @@
         <div class="loading-section" id="loading">
             <div class="spinner"></div>
             <div class="loading-text">Generating your professional news broadcast...</div>
-            <div class="loading-details">This may take 5-10 minutes for multiple topics. Please wait.</div>
+            <div class="loading-details">This may take 5-15 minutes for multiple topics. Please wait.</div>
             <div class="progress-container">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -1507,7 +1507,7 @@
 
         // Poll transcription status
         async function pollTranscriptionStatus(taskId, filename, button, originalText) {
-            const maxPolls = 150; // 5 minutes max (150 * 2 seconds) - reduced for faster failure detection
+            const maxPolls = 300; // 10 minutes max (300 * 2 seconds) - increased for complex news generation
             let pollCount = 0;
             
             const pollInterval = setInterval(async () => {
@@ -2508,7 +2508,7 @@
             }
             
             let pollCount = 0;
-            const maxPolls = 150; // 5 minutes max (150 * 2 seconds) - reduced for faster failure detection
+            const maxPolls = 300; // 10 minutes max (300 * 2 seconds) - increased for complex news generation
             
             const pollInterval = setInterval(() => {
                 pollCount++;
@@ -2518,7 +2518,7 @@
                     clearInterval(pollInterval);
                     stopProgressAnimation();
                     hideLoadingState();
-                    alert('News generation is taking longer than expected (5+ minutes). Please try again or check back later.');
+                    alert('News generation is taking longer than expected (10+ minutes). Please try again or check back later.');
                     return;
                 }
                 
@@ -2585,8 +2585,10 @@
                                 statusMessage = 'Hang tight as we get your news broadcast ready(this takes time)...';
                             } else if (elapsed < 480) {
                                 statusMessage = 'Assembling audio files...';
-                            } else {
+                            } else if (elapsed < 600) {
                                 statusMessage = 'Finalizing broadcast...';
+                            } else {
+                                statusMessage = 'Almost done, finalizing broadcast...';
                             }
                             
                             if (minutes > 0) {

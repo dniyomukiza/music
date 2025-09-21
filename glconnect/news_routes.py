@@ -1341,7 +1341,7 @@ def run_generate_broadcast(task_id, topics):
         print(f"DEBUG: Memory check failed: {e}")
     
     # Set up timeout using threading (works in any thread)
-    timeout_seconds = 300  # 5 minutes - reduced for faster failure detection
+    timeout_seconds = 600  # 10 minutes - increased for complex news generation
     timeout_occurred = threading.Event()
     
     def timeout_handler():
@@ -1692,6 +1692,23 @@ def run_generate_broadcast(task_id, topics):
             print("ADK agent system completed successfully!")
             return
             
+    except TimeoutError as e:
+        print(f"TIMEOUT in news generation: {e}")
+        print(f"Timeout occurred after {timeout_seconds} seconds")
+        
+        # Update task status for timeout
+        update_task_in_db(task_id, 
+                         status='failed',
+                         failed_at=datetime.now(),
+                         error=f"News generation timed out after {timeout_seconds} seconds. Please try again with fewer topics or simpler content.")
+        
+        with _tasks_lock:
+            tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['failed_at'] = datetime.now()
+            tasks[task_id]['error'] = f"News generation timed out after {timeout_seconds} seconds. Please try again with fewer topics or simpler content."
+            print(f"DEBUG: Task {task_id} marked as failed due to timeout")
+        return
+        
     except Exception as e:
         print(f"ERROR in ADK agent news generation: {e}")
         print(f"ERROR type: {type(e).__name__}")
