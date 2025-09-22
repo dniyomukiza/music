@@ -1016,3 +1016,442 @@ E0000 00:00:1758513033.211909  256986 init.cc:229] grpc_wait_for_shutdown_with_t
  * Restarting with watchdog (fsevents)
  * Debugger is active!
  * Debugger PIN: 103-643-401
+127.0.0.1 - - [21/Sep/2025 21:29:18] "GET /routes2/news/debug/tasks HTTP/1.1" 200 -
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+127.0.0.1 - - [21/Sep/2025 21:29:32] "POST /routes2/news/broadcast HTTP/1.1" 200 -
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+127.0.0.1 - - [21/Sep/2025 21:29:38] "GET /routes2/news/status/1da9bd90-3cf8-4a67-9063-597134a624f2 HTTP/1.1" 200 -
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+DEBUG: News generation request received
+DEBUG: Topics received: ['Technology news', 'Sports updates']
+DEBUG: Pre-processing memory check - Used: 7494.8MB, Available: 6878.0MB, Percent: 58.0%
+DEBUG: Enhanced validation for: 'Technology news'
+✅ NewsTopicValidationAgent: 'Technology news' is VALID
+DEBUG: Gemini validation result: True (confidence: 0.95)
+DEBUG: Enhanced validation for: 'Sports updates'
+✅ NewsTopicValidationAgent: 'Sports updates' is VALID
+DEBUG: Gemini validation result: True (confidence: 0.95)
+DEBUG: Created task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: Created news task 1da9bd90-3cf8-4a67-9063-597134a624f2. Total tasks: 1
+DEBUG: Task 1da9bd90-3cf8-4a67-9063-597134a624f2 created at: 2025-09-21 21:29:32.443816
+DEBUG: All task IDs: ['1da9bd90-3cf8-4a67-9063-597134a624f2']
+DEBUG: Memory after task creation - Used: 7465.0MB, Available: 6906.8MB, Percent: 57.8%
+DEBUG: run_generate_broadcast started for task 1da9bd90-3cf8-4a67-9063-597134a624f2 with topics: ['Technology news', 'Sports updates']
+DEBUG: Thread ID: 6213332992, Main thread: 8689426624
+DEBUG: About to start signal handler setup...
+DEBUG: Running in background thread - signal handlers not set
+DEBUG: Started news generation thread for task 1da9bd90-3cf8-4a67-9063-597134a624f2
+DEBUG: Thread started, returning task_id to client
+DEBUG: Thread is alive: True
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: Memory at start of news generation - Used: 7470.7MB, Available: 6902.6MB, Percent: 57.9%
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+Using ADK agent system with Google Cloud TTS...
+Following pattern: jingle → intro → transition → report → thank you → outro → jingle
+Starting ADK agent news generation for topics: ['Technology news', 'Sports updates']
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: About to call generate_broadcast with topics: ['Technology news', 'Sports updates'], task_id: 1da9bd90-3cf8-4a67-9063-597134a624f2
+DEBUG: Memory at start of generate_broadcast - Used: 7471.9MB, Available: 6900.2MB, Percent: 57.9%
+DEBUG: News generation attempt 1/3
+DEBUG: Memory at start of broadcast generation - Used: 7471.9MB, Percent: 57.9%
+DEBUG: create_session callable: True
+DEBUG: create_session type: <class 'method'>
+DEBUG: Using async create_session
+DEBUG: Session type: <class 'google.adk.sessions.session.Session'>
+DEBUG: Session user_id: user123
+DEBUG: Checking status for task 1da9bd90-3cf8-4a67-9063-597134a624f2
+DEBUG: Server health check - Memory: 58.0%, Available: 6875.6MB
+DEBUG: Raw categorization output: ```json
+{
+    "Technology news": "tech",
+    "Sports updates": "sports"
+}
+```
+DEBUG: Cleaned categorization JSON: {
+    "Technology news": "tech",
+    "Sports updates": "sports"
+}
+DEBUG: Parsed categories: {'Technology news': 'tech', 'Sports updates': 'sports'}
+DEBUG: Topics grouped by category: {'tech': ['Technology news'], 'sports': ['Sports updates']}
+DEBUG: Executing text generation phase...
+DEBUG: Running with 2 reporter agents
+DEBUG: Agent 0: tech_reporter - An agent that generates a news script about tech topics: Technology news.
+DEBUG: Agent 1: sports_reporter - An agent that generates a news script about sports topics: Sports updates.
+DEBUG: Memory before text generation - Used: 7490.8MB, Percent: 58.0%
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: create_session callable: True
+DEBUG: create_session type: <class 'method'>
+DEBUG: Using async create_session
+DEBUG: Session type: <class 'google.adk.sessions.session.Session'>
+DEBUG: Session user_id: user123
+DEBUG: create_session callable: True
+DEBUG: create_session type: <class 'method'>
+DEBUG: Using async create_session
+DEBUG: Session type: <class 'google.adk.sessions.session.Session'>
+DEBUG: Session user_id: user123
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: Memory after text generation - Used: 7492.7MB, Percent: 58.0%
+DEBUG: Agent 0 completed successfully
+DEBUG: Agent 1 completed successfully
+DEBUG: Parallel execution completed. Output length: 2335
+DEBUG: Combined outputs: ```json
+{
+  "tech_script": "Here's the latest technology news: The Associated Press provides up-to-date tech news articles [1]. TechNewsWorld offers news, reviews, and analysis of computing, enterprise IT, cybersecurity, mobile technology, cloud computing, tech industry trends, and digital marketing [2].\n\nSeveral key trends and events are shaping the tech landscape. A rise in Chief Trust Officers reflects waning trust in tech companies, with these officers tasked to restore transparency and ac...
+DEBUG: Raw text generation output: ```json
+{
+  "tech_script": "Here's the latest technology news: The Associated Press provides up-to-date tech news articles [1]. TechNewsWorld offers news, reviews, and analysis of computing, enterprise IT, cybersecurity, mobile technology, cloud computing, tech industry trends, and digital marketing [2].\n\nSeveral key trends and events are shaping the tech landscape. A rise in Chief Trust Officers reflects waning trust in tech companies, with these officers tasked to restore transparency and ac...
+DEBUG: Found tech_script using fallback: Here's the latest technology news: The Associated ...
+DEBUG: Found sports_script using method 1: In the world of sports, several key updates are ma...
+DEBUG: Valid content extracted for sports_script
+DEBUG: Extracted reporter scripts: 2 scripts
+DEBUG: Executing anchor agent...
+DEBUG: Anchor agent tools: ['get_timezone_info']
+DEBUG: create_session callable: True
+DEBUG: create_session type: <class 'method'>
+DEBUG: Using async create_session
+DEBUG: Session type: <class 'google.adk.sessions.session.Session'>
+DEBUG: Session user_id: user123
+==================================================
+DEBUG: TIMEZONE TOOL CALLED!
+==================================================
+DEBUG: Getting timezone info at UTC time: 04:29:45
+DEBUG: Pacific time: 21:29 -> 09:29 PM
+DEBUG: Eastern time: 00:29 -> 12:29 AM
+DEBUG: Central time: 23:29 -> 11:29 PM
+DEBUG: Final timezone info: It's 9:29 PM Pacific time, 12:29 AM Eastern time, and 11:29 PM Central time
+==================================================
+DEBUG: TIMEZONE TOOL COMPLETED!
+==================================================
+DEBUG: Anchor output: ```json
+{
+    "intro": "It's 9:29 PM Pacific time, 12:29 AM Eastern time, and 11:29 PM Central time, I am your anchor today and welcome to GLC News, in this edition we are covering technology news and...
+DEBUG: Found intro, 2 transitions, and outro in anchor script
+DEBUG: Executing TTS phase...
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: create_session callable: True
+DEBUG: create_session type: <class 'method'>
+DEBUG: Using async create_session
+DEBUG: Session type: <class 'google.adk.sessions.session.Session'>
+DEBUG: Session user_id: user123
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for thank_you_audio.mp3 with text: 'Thank you for that report....'
+DEBUG: Using voice: en-US-Studio-O, rate: 1, pitch: 0
+DEBUG: Text length: 26 characters
+DEBUG: TTS response received, audio content length: 11328
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/thank_you_audio.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 11328
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/thank_you_audio.mp3 (11328 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: Thank you for that report._en-US-Studio-O_1_0...
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for transition_audio_1.mp3 with text: 'Next our sports reporter will bring us the sports updates....'
+DEBUG: Using voice: en-US-Studio-O, rate: 1, pitch: 0
+DEBUG: Text length: 58 characters
+DEBUG: TTS response received, audio content length: 24384
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/transition_audio_1.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 24384
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/transition_audio_1.mp3 (24384 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: Next our sports reporter will bring us the sports ...
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for transition_audio_0.mp3 with text: 'First we have our tech reporter with the latest technology news....'
+DEBUG: Using voice: en-US-Studio-O, rate: 1, pitch: 0
+DEBUG: Text length: 64 characters
+DEBUG: TTS response received, audio content length: 28608
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/transition_audio_0.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 28608
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/transition_audio_0.mp3 (28608 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: First we have our tech reporter with the latest te...
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for intro_audio.mp3 with text: 'It's 9:29 PM Pacific time 12:29 AM Eastern time and 11:29 PM Central time I am your anchor today and...'
+DEBUG: Using voice: en-US-Studio-O, rate: 1, pitch: 0
+DEBUG: Text length: 188 characters
+DEBUG: TTS response received, audio content length: 112512
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/intro_audio.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 112512
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/intro_audio.mp3 (112512 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: It's 9:29 PM Pacific time 12:29 AM Eastern time an...
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for outro_audio.mp3 with text: 'That concludes today's GLC News bulletin. We covered the latest in technology and sports. Thanks for...'
+DEBUG: Using voice: en-US-Studio-O, rate: 1, pitch: 0
+DEBUG: Text length: 123 charactersDefault value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Warning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+
+DEBUG: TTS response received, audio content length: 59712
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/outro_audio.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 59712
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/outro_audio.mp3 (59712 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: That concludes today's GLC News bulletin. We cover...
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for sports_audio.mp3 with text: 'In the world of sports several key updates are making headlines. In cricket England has clinched a s...'
+DEBUG: Using voice: en-US-Neural2-D, rate: 1, pitch: 0
+DEBUG: Text length: 787 characters
+DEBUG: TTS response received, audio content length: 387648
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/sports_audio.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 387648
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/sports_audio.mp3 (387648 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: In the world of sports several key updates are mak...
+DEBUG: Loading TTS credentials from: tts.json
+DEBUG: Credentials file exists: True
+DEBUG: Current working directory: /Users/nididier/Documents/music-1
+DEBUG: Environment: production
+DEBUG: Credentials file size: 2365 bytes
+DEBUG: Credentials file starts with: {
+  "type": "service_account",
+  "project_id": "tts-proj-470005",
+  "private_key_id": "19e5b45b0dc5a...
+DEBUG: TTS client created successfully
+DEBUG: TTS API test successful - response length: 6912
+DEBUG: Test file written successfully - size: 6912 bytes
+DEBUG: Test file cleaned up
+DEBUG: Attempting TTS for tech_audio.mp3 with text: 'Here's the latest technology news: The Associated Press provides up-to-date tech news articles . Tec...'
+DEBUG: Using voice: en-GB-Standard-B, rate: 1, pitch: 0
+DEBUG: Text length: 1370 characters
+DEBUG: TTS response received, audio content length: 643200
+DEBUG: Response type: <class 'google.cloud.texttospeech_v1.types.cloud_tts.SynthesizeSpeechResponse'>
+DEBUG: Response attributes: ['__bool__', '__class__', '__contains__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattr__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__setstate__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'audio_content']
+DEBUG: Audio content type: <class 'bytes'>
+DEBUG: Audio content first 20 bytes: b'\xff\xf3\x84\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+DEBUG: Audio content is bytes: True
+DEBUG: Creating output directory: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Directory created/exists: /Users/nididier/Documents/music-1/glconnect/static/audio
+DEBUG: Full output path: /Users/nididier/Documents/music-1/glconnect/static/audio/tech_audio.mp3
+DEBUG: Path exists before write: True
+DEBUG: Bytes written to file: 643200
+DEBUG: Audio content written to file: /Users/nididier/Documents/music-1/glconnect/static/audio/tech_audio.mp3 (643200 bytes)
+DEBUG: File permissions: 0o100644
+DEBUG: Cached TTS result for key: Here's the latest technology news: The Associated ...
+DEBUG: Updated task 1da9bd90-3cf8-4a67-9063-597134a624f2 in database
+DEBUG: Executing final output phase...
+DEBUG: create_session callable: True
+DEBUG: create_session type: <class 'method'>
+DEBUG: Using async create_session
+DEBUG: Session type: <class 'google.adk.sessions.session.Session'>
+DEBUG: Session user_id: user123
+DEBUG: FFmpeg is available - version: 7.1.1
+DEBUG: Loading audio segment: glconnect/static/audio/jingle.wav
+DEBUG: Segment file size: 6291544 bytes
+DEBUG: Loaded segment - duration: 32.768229166666664s, channels: 2
+DEBUG: Added to combined audio - total duration: 65.53645833333333s
+DEBUG: Loading audio segment: glconnect/static/audio/intro_audio.mp3
+DEBUG: Segment file size: 112512 bytes
+DEBUG: Loaded segment - duration: 14.064s, channels: 1
+DEBUG: Added to combined audio - total duration: 79.6004375s
+DEBUG: Loading audio segment: glconnect/static/audio/transition_audio_0.mp3
+DEBUG: Segment file size: 28608 bytes
+DEBUG: Loaded segment - duration: 3.576s, channels: 1
+DEBUG: Added to combined audio - total duration: 83.17641666666667s
+DEBUG: Loading audio segment: glconnect/static/audio/tech_audio.mp3
+DEBUG: Segment file size: 643200 bytes
+DEBUG: Loaded segment - duration: 80.4s, channels: 1
+DEBUG: Added to combined audio - total duration: 163.57639583333332s
+DEBUG: Loading audio segment: glconnect/static/audio/thank_you_audio.mp3
+DEBUG: Segment file size: 11328 bytes
+DEBUG: Loaded segment - duration: 1.416s, channels: 1
+DEBUG: Added to combined audio - total duration: 164.992375s
+DEBUG: Loading audio segment: glconnect/static/audio/transition_audio_1.mp3
+DEBUG: Segment file size: 24384 bytes
+DEBUG: Loaded segment - duration: 3.048s, channels: 1
+DEBUG: Added to combined audio - total duration: 168.04035416666667s
+DEBUG: Loading audio segment: glconnect/static/audio/sports_audio.mp3
+DEBUG: Segment file size: 387648 bytes
+DEBUG: Loaded segment - duration: 48.456s, channels: 1
+DEBUG: Added to combined audio - total duration: 216.49633333333333s
+DEBUG: Loading audio segment: glconnect/static/audio/thank_you_audio.mp3
+DEBUG: Segment file size: 11328 bytes
+DEBUG: Loaded segment - duration: 1.416s, channels: 1
+DEBUG: Added to combined audio - total duration: 217.9123125s
+DEBUG: Loading audio segment: glconnect/static/audio/outro_audio.mp3
+DEBUG: Segment file size: 59712 bytesWarning: there are non-text parts in the response: ['function_call'], returning concatenated text result from text parts. Check the full candidates.content.parts accessor to get the full model response.
+Default value is not supported in function declaration schema for Google AI.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+127.0.0.1 - - [21/Sep/2025 21:30:16] "GET /routes2/news/status/1da9bd90-3cf8-4a67-9063-597134a624f2 HTTP/1.1" 200 -
+127.0.0.1 - - [21/Sep/2025 21:30:55] "GET /routes2/news/status/1da9bd90-3cf8-4a67-9063-597134a624f2 HTTP/1.1" 200 -
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

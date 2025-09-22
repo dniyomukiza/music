@@ -136,3 +136,51 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-09-22 04:29:18 UTC] GET /routes2/news/debug/tasks
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:29:26 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:29:37 UTC] GET /routes2/news/status/1da9bd90-3cf8-4a67-9063-597134a624f2
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:30:14 UTC] GET /routes2/news/status/1da9bd90-3cf8-4a67-9063-597134a624f2
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:30:54 UTC] GET /routes2/news/status/1da9bd90-3cf8-4a67-9063-597134a624f2
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:31:44 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:31:53 UTC] GET /routes2/news/status/275bdc36-da9f-4079-84b4-477672cda0f8
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:33:01 UTC] GET /routes2/news/status/275bdc36-da9f-4079-84b4-477672cda0f8
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
