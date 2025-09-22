@@ -1,0 +1,57 @@
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+ * Serving Flask app 'glconnect'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://10.0.0.62:5001
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 247-916-160
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+127.0.0.1 - - [20/Sep/2025 20:54:51] "[31m[1mPOST /routes2/news/broadcast HTTP/1.1[0m" 400 -
+Exception in thread Thread-6 (run_generate_broadcast):
+Traceback (most recent call last):
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/threading.py", line 1075, in _bootstrap_inner
+127.0.0.1 - - [20/Sep/2025 20:55:04] "POST /routes2/news/broadcast HTTP/1.1" 200 -
+    self.run()
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "/Users/nididier/Documents/music-1/glconnect/news_routes.py", line 1300, in run_generate_broadcast
+    signal.signal(signal.SIGTERM, signal_handler)
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/signal.py", line 58, in signal
+    handler = _signal.signal(_enum_to_int(signalnum), _enum_to_int(handler))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: signal only works in main thread of the main interpreter
+ * Detected change in '/Users/nididier/Documents/music-1/glconnect/news_routes.py', reloading
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+DEBUG: News generation request received
+DEBUG: Topics received: ['Test topic']
+DEBUG: Pre-processing memory check - Used: 8138.7MB, Available: 6551.2MB, Percent: 60.0%
+DEBUG: Enhanced validation for: 'Test topic'
+❌ NewsTopicValidationAgent: 'Test topic' is INVALID
+DEBUG: Gemini validation result: False (confidence: 0.95)
+DEBUG: Topic 'Test topic' rejected: Gemini AI validation - Not a valid news topic (confidence: 0.95)
+DEBUG: News generation request received
+DEBUG: Topics received: ['Stablecoins in shaping global macroeconomics']
+DEBUG: Pre-processing memory check - Used: 8159.9MB, Available: 6530.1MB, Percent: 60.1%
+DEBUG: Enhanced validation for: 'Stablecoins in shaping global macroeconomics'
+✅ NewsTopicValidationAgent: 'Stablecoins in shaping global macroeconomics' is VALID
+DEBUG: Gemini validation result: True (confidence: 0.95)
+DEBUG: Created task 00d70c28-820e-456e-96bb-383f43a53efd in database
+DEBUG: Created news task 00d70c28-820e-456e-96bb-383f43a53efd. Total tasks: 1
+DEBUG: Task 00d70c28-820e-456e-96bb-383f43a53efd created at: 2025-09-20 20:55:04.267155
+DEBUG: All task IDs: ['00d70c28-820e-456e-96bb-383f43a53efd']
+DEBUG: Memory after task creation - Used: 8109.9MB, Available: 6579.0MB, Percent: 59.8%
+DEBUG: run_generate_broadcast started for task 00d70c28-820e-456e-96bb-383f43a53efd with topics: ['Stablecoins in shaping global macroeconomics']
+DEBUG: Started news generation thread for task 00d70c28-820e-456e-96bb-383f43a53efd
+DEBUG: Thread started, returning task_id to client

@@ -68,3 +68,4 @@ echo ""
 
 # Keep script running and show logs
 docker-compose logs -f
+
