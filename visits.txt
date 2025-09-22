@@ -1,0 +1,138 @@
+[2025-09-22 03:38:15 UTC] GET /routes2/news/debug/server-status
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:38:19 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:38:27 UTC] GET /routes2/news/status/a15ed70d-3c5d-459e-893d-8463082140c5
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:38:41 UTC] GET /routes2/news/debug/tasks
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:38:43 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:38:50 UTC] GET /routes2/news/status/6ce48772-e810-46bd-8ef6-b24def59c204
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:39:18 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:39:29 UTC] GET /routes2/news/status/b85b9529-cded-4b5d-99c8-ddb6582a7aa7
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:39:48 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:40:15 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:40:31 UTC] GET /routes2/news/debug/server-status
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:40:37 UTC] GET /routes2/news/status/f62780cf-139e-4a00-8a5c-5f01be24b5f4
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:40:58 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:45:07 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:45:38 UTC] GET /routes2/news/status/0b3cd0e0-320b-4f2c-bb0c-b19b49fc167f
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:45:46 UTC] GET /routes2/news/status/0b3cd0e0-320b-4f2c-bb0c-b19b49fc167f
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:46:21 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:47:00 UTC] GET /routes2/news/status/44bcffbe-2b1d-42cd-9100-9bc7efb25035
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:47:49 UTC] GET /routes2/news/status/44bcffbe-2b1d-42cd-9100-9bc7efb25035
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:48:15 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:48:30 UTC] GET /routes2/news/status/0187db4c-11b9-4448-9174-c2f853253ad2
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:49:08 UTC] GET /routes2/news/status/0187db4c-11b9-4448-9174-c2f853253ad2
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 03:50:18 UTC] GET /routes2/news/status/0187db4c-11b9-4448-9174-c2f853253ad2
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------

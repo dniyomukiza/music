@@ -1284,7 +1284,12 @@ def run_generate_broadcast(task_id, topics):
     import signal
     import sys
     
+    # Import tasks and _tasks_lock at the function level
+    from glconnect.news_routes import tasks, _tasks_lock
+    
     print(f"DEBUG: run_generate_broadcast started for task {task_id} with topics: {topics}")
+    print(f"DEBUG: Thread ID: {threading.current_thread().ident}, Main thread: {threading.main_thread().ident}")
+    print(f"DEBUG: About to start signal handler setup...")
     
     # Set up graceful shutdown handling
     def signal_handler(signum, frame):
@@ -1301,10 +1306,15 @@ def run_generate_broadcast(task_id, topics):
     
     # Register signal handlers for graceful shutdown (only in main thread)
     try:
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
-        print("DEBUG: Signal handlers registered successfully")
-    except ValueError as e:
+        # Check if we're in the main thread before setting signal handlers
+        import threading
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGTERM, signal_handler)
+            signal.signal(signal.SIGINT, signal_handler)
+            print("DEBUG: Signal handlers registered successfully")
+        else:
+            print("DEBUG: Running in background thread - signal handlers not set")
+    except (ValueError, AttributeError) as e:
         # Signal handlers can only be set in the main thread
         # This is expected when running in a background thread
         print(f"DEBUG: Signal handlers not set (running in background thread): {e}")
@@ -1500,8 +1510,10 @@ def run_generate_broadcast(task_id, topics):
             # Check timeout before each major operation
             if timeout_occurred.is_set():
                 raise TimeoutError("News generation timed out during execution")
-                
+            
+            print(f"DEBUG: About to call generate_broadcast with topics: {topics}, task_id: {task_id}")
             output = generate_broadcast(topics, task_id=task_id)
+            print(f"DEBUG: generate_broadcast completed, output type: {type(output)}")
         except RuntimeError as e:
             if "cannot schedule new futures after interpreter shutdown" in str(e):
                 print(f"DEBUG: Interpreter shutdown detected during news generation: {e}")
@@ -2098,10 +2110,12 @@ def broadcast():
                 print(f"DEBUG: Memory check failed: {e}")
 
         thread = threading.Thread(target=run_generate_broadcast, args=(task_id, relevant_topics))
+        thread.daemon = True  # Make it a daemon thread
         thread.start()
 
         print(f"DEBUG: Started news generation thread for task {task_id}")
         print(f"DEBUG: Thread started, returning task_id to client")
+        print(f"DEBUG: Thread is alive: {thread.is_alive()}")
         
         return jsonify({'task_id': task_id})
         
@@ -2603,6 +2617,10 @@ def task_status(task_id):
         # Fallback for old structure
         elif 'result' in task:
             result = task['result']
+            # Initialize variables
+            audio_file_path = None
+            output_text = ""
+            
             # Handle the new result structure
             if isinstance(result, dict) and 'audio_file_path' in result:
                 audio_file_path = result['audio_file_path']
@@ -2619,8 +2637,10 @@ def task_status(task_id):
                         break
             
             # Verify the audio file exists before returning it
-            if not os.path.exists(audio_file_path):
+            if audio_file_path and not os.path.exists(audio_file_path):
                 return jsonify({'status': 'failed', 'error': f'Audio file not found: {audio_file_path}'})
+            elif not audio_file_path:
+                return jsonify({'status': 'failed', 'error': 'No audio file path found in result'})
             
             return jsonify({
                 'status': 'completed',
