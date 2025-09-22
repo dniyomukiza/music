@@ -47,7 +47,7 @@ def create_task_in_db(task_id, topics):
             return False
 
 def update_task_in_db(task_id, **kwargs):
-    """Update a task in the database."""
+    """Update a task in the database and sync with in-memory tasks."""
     from glconnect.models import db, NewsTask
     from glconnect import create_app
     import json
@@ -73,6 +73,17 @@ def update_task_in_db(task_id, **kwargs):
             
             db.session.commit()
             print(f"DEBUG: Updated task {task_id} in database")
+            
+            # Sync with in-memory tasks dictionary
+            try:
+                with _tasks_lock:
+                    if task_id in tasks:
+                        for key, value in kwargs.items():
+                            tasks[task_id][key] = value
+                        print(f"DEBUG: Synced task {task_id} with in-memory tasks")
+            except Exception as e:
+                print(f"DEBUG: Failed to sync with in-memory tasks: {e}")
+            
             return True
         except Exception as e:
             print(f"ERROR: Failed to update task in database: {e}")
@@ -2669,7 +2680,7 @@ def task_status(task_id):
         error_message = task.get('error')
         if not error_message or error_message == 'Unknown error':
             # Try to get more specific error information
-            if 'failed_at' in task:
+            if 'failed_at' in task and task['failed_at']:
                 error_message = f"News generation failed at {task['failed_at']}. Please try again."
             else:
                 error_message = "News generation failed due to an unknown error. Please try again."

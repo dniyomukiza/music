@@ -184,3 +184,27 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-09-22 04:57:55 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:58:07 UTC] GET /routes2/news/status/a5b12b25-84ab-4ead-840b-440c08530c67
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:59:18 UTC] GET /routes2/news/status/a5b12b25-84ab-4ead-840b-440c08530c67
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-09-22 04:59:34 UTC] POST /routes2/news/broadcast
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
