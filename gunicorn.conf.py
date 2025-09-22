@@ -9,15 +9,15 @@ backlog = 2048
 # Worker processes
 workers = 1  # Single worker for memory-constrained environments
 worker_class = "sync"
-worker_connections = 50  # Reduced for news generation
-timeout = 1800  # Increased timeout for news generation (30 minutes)
+worker_connections = 30  # Further reduced for better memory management
+timeout = 1200  # Reduced timeout to 20 minutes
 keepalive = 2
 
 # Memory management
-max_requests = 25  # Restart workers more frequently to prevent memory leaks
-max_requests_jitter = 5  # Add randomness to prevent all workers restarting at once
+max_requests = 15  # More frequent restarts to prevent memory leaks
+max_requests_jitter = 3  # Add randomness to prevent all workers restarting at once
 preload_app = False  # Disable preload to reduce initial memory usage
-worker_memory_limit = 400  # Increased memory limit for news generation
+worker_memory_limit = 300  # Reduced memory limit per worker
 
 # Logging
 accesslog = "-"
@@ -63,3 +63,13 @@ def max_requests_jitter_handler(worker):
     """Called when max_requests is reached."""
     import gc
     gc.collect()  # Force garbage collection before restart
+
+def worker_exit(server, worker):
+    """Called when a worker exits."""
+    import gc
+    gc.collect()  # Force garbage collection on worker exit
+
+def on_exit(server):
+    """Called when the master process exits."""
+    import gc
+    gc.collect()  # Final cleanup
