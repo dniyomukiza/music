@@ -15,9 +15,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G  # Increased for news generation
         reservations:
-          memory: 512M
+          memory: 1G  # Increased minimum memory reservation
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]

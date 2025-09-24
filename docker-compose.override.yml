@@ -6,9 +6,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G  # Increased for news generation
+          memory: 2G  # Increased for news generation (was 1G)
         reservations:
-          memory: 512M  # Increased minimum memory reservation
+          memory: 1G  # Increased minimum memory reservation (was 512M)
     
     # Environment variables for memory optimization
     environment:
@@ -35,4 +35,4 @@ services:
     restart: unless-stopped
     
     # Shared memory for temporary files
-    shm_size: 128m  # Increased for news generation
+    shm_size: 256m  # Increased for news generation (was 128m)

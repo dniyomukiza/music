@@ -1488,7 +1488,7 @@ def run_generate_broadcast(task_id, topics):
         # Check memory before generation
         try:
             memory_info = psutil.virtual_memory()
-            if memory_info.percent > 90:
+            if memory_info.percent > 75:  # Lowered threshold for better safety
                 print(f"ERROR: Memory usage too high during generation ({memory_info.percent}%) - aborting")
                 update_task_in_db(task_id, 
                                  status='failed',
@@ -1496,7 +1496,7 @@ def run_generate_broadcast(task_id, topics):
                                  current_step=f'Memory usage too high ({memory_info.percent}%) - aborting generation',
                                  last_heartbeat=datetime.now())
                 return
-            elif memory_info.percent > 85:
+            elif memory_info.percent > 70:  # Lowered warning threshold
                 print(f"WARNING: High memory usage during generation ({memory_info.percent}%) - forcing cleanup")
                 # Force cleanup during generation
                 gc.collect()
