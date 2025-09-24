@@ -14,10 +14,10 @@ timeout = 1200  # Reduced timeout to 20 minutes
 keepalive = 2
 
 # Memory management
-max_requests = 5  # Very frequent restarts to prevent memory leaks
-max_requests_jitter = 2  # Add randomness to prevent all workers restarting at once
+max_requests = 2  # Extremely frequent restarts to prevent memory leaks
+max_requests_jitter = 1  # Add randomness to prevent all workers restarting at once
 preload_app = False  # Disable preload to reduce initial memory usage
-worker_memory_limit = 200  # Very aggressive memory limit per worker
+worker_memory_limit = 150  # Extremely aggressive memory limit per worker
 
 # Logging
 accesslog = "-"
