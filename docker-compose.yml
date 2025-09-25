@@ -59,9 +59,7 @@ services:
         - app_network
 
   icecast2:
-    build:
-      context: .
-      dockerfile: Dockerfile.icecast
+    image: deepcomp/icecast2
     container_name: icecast_server
     ports:
       - "8000:8000"
