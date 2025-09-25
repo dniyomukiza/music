@@ -930,6 +930,20 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     import psutil
     import os
     
+    # Import and use the news memory manager
+    try:
+        from news_memory_manager import news_memory_manager
+        print("DEBUG: Using enhanced memory management")
+        
+        # Pre-generation cleanup and safety check
+        if not news_memory_manager.pre_generation_cleanup():
+            return {"error": "Memory usage too high - please try again later"}
+        
+        # Start monitoring
+        news_memory_manager.start_monitoring()
+    except ImportError:
+        print("DEBUG: News memory manager not available, using basic memory management")
+    
     if not topics:
         print("No topics entered. Exiting.")
         return
@@ -940,7 +954,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         print(f"DEBUG: Memory at start of generate_broadcast - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
         # If memory usage is too high, force garbage collection
-        if memory_info.percent > 80:
+        if memory_info.percent > 70:
             print("DEBUG: High memory usage detected, forcing aggressive garbage collection")
             gc.collect()
             gc.collect()  # Call twice for better cleanup
@@ -958,6 +972,15 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
             result = _generate_broadcast_attempt(topics, task_id)
             if result and result.get('audio_file'):
                 print(f"DEBUG: News generation successful on attempt {attempt + 1}")
+                
+                # Post-generation cleanup
+                try:
+                    from news_memory_manager import news_memory_manager
+                    news_memory_manager.stop_monitoring()
+                    news_memory_manager.post_generation_cleanup()
+                except ImportError:
+                    pass
+                
                 return result
             else:
                 print(f"DEBUG: News generation failed on attempt {attempt + 1}, retrying...")
@@ -977,6 +1000,15 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     
     # If all attempts failed, return a minimal result with error details
     print("DEBUG: All news generation attempts failed, returning minimal result")
+    
+    # Cleanup on failure
+    try:
+        from news_memory_manager import news_memory_manager
+        news_memory_manager.stop_monitoring()
+        news_memory_manager.post_generation_cleanup()
+    except ImportError:
+        pass
+    
     error_summary = f"News generation failed after {max_retries + 1} attempts"
     if last_error:
         error_summary += f". Last error: {last_error}"
@@ -1066,7 +1098,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of broadcast generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        if memory_info.percent > 90:
+        if memory_info.percent > 75:
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting broadcast generation")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except:
