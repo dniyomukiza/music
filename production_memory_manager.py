@@ -293,3 +293,4 @@ if __name__ == "__main__":
     print(f"\n✅ Safety Check: {message}")
     
     print(f"\n🎯 Production memory manager ready! (Containerized: {manager.is_containerized})")
+

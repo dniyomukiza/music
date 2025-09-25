@@ -934,40 +934,18 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         print("No topics entered. Exiting.")
         return
     
-    # Import and use the production memory manager
+    # Check memory before starting
     try:
-        import sys
-        sys.path.append('/usr/src/appdir')
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory at start of generate_broadcast - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        # Try production memory manager first (for Linux production)
-        try:
-            from production_memory_manager import production_memory_manager as memory_manager
-            print("DEBUG: Using production memory manager")
-        except ImportError:
-            # Fallback to regular memory manager
-            from news_memory_manager import news_memory_manager as memory_manager
-            print("DEBUG: Using standard memory manager")
-        
-        # Pre-generation cleanup and safety check
-        if not memory_manager.pre_generation_cleanup():
-            return {"error": "Memory usage too high - please try again later"}
-        
-        # Start monitoring
-        memory_manager.start_monitoring()
-        
-    except ImportError:
-        print("DEBUG: Enhanced memory manager not available, using fallback")
-        # Fallback to original memory check
-        try:
-            memory_info = psutil.virtual_memory()
-            print(f"DEBUG: Memory at start of generate_broadcast - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-            
-            if memory_info.percent > 70:  # Lowered threshold
-                print("DEBUG: High memory usage detected, forcing aggressive garbage collection")
-                gc.collect()
-                gc.collect()
-        except Exception as e:
-            print(f"DEBUG: Memory check failed: {e}")
+        # If memory usage is too high, force garbage collection
+        if memory_info.percent > 80:
+            print("DEBUG: High memory usage detected, forcing aggressive garbage collection")
+            gc.collect()
+            gc.collect()  # Call twice for better cleanup
+    except Exception as e:
+        print(f"DEBUG: Memory check failed: {e}")
     
     # Force garbage collection at start
     gc.collect()
@@ -980,14 +958,6 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
             result = _generate_broadcast_attempt(topics, task_id)
             if result and result.get('audio_file'):
                 print(f"DEBUG: News generation successful on attempt {attempt + 1}")
-                
-                # Final cleanup on success
-                try:
-                    memory_manager.stop_monitoring()
-                    memory_manager.post_generation_cleanup()
-                except:
-                    pass
-                
                 return result
             else:
                 print(f"DEBUG: News generation failed on attempt {attempt + 1}, retrying...")
@@ -1010,14 +980,6 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     error_summary = f"News generation failed after {max_retries + 1} attempts"
     if last_error:
         error_summary += f". Last error: {last_error}"
-    
-    # Final cleanup
-    try:
-        memory_manager.stop_monitoring()
-        memory_manager.post_generation_cleanup()
-    except:
-        pass
-    
     return {"audio_file": None, "summary": error_summary, "error": last_error}
 
 def generate_intelligent_fallback_content(topic: str) -> str:
@@ -1104,7 +1066,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of broadcast generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        if memory_info.percent > 75:  # Lowered threshold for better safety
+        if memory_info.percent > 90:
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting broadcast generation")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except:
