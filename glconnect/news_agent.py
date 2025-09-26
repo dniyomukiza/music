@@ -1001,7 +1001,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         print(f"DEBUG: Memory at start of generate_broadcast - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
         # If memory usage is too high, force garbage collection
-        if memory_info.percent > 65:
+        if memory_info.percent > 55:
             print("DEBUG: High memory usage detected, forcing aggressive garbage collection")
             gc.collect()
             gc.collect()  # Call twice for better cleanup
@@ -1145,7 +1145,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of broadcast generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        if memory_info.percent > 70:
+        if memory_info.percent > 60:
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting broadcast generation")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except:
