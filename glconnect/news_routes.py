@@ -1581,6 +1581,17 @@ def run_generate_broadcast(task_id, topics):
             return
         elif isinstance(output, dict):
             print(f"Output from generate_broadcast (dict): {output}")
+            
+            # Check for error first
+            if 'error' in output:
+                error_message = output['error']
+                print(f"DEBUG: generate_broadcast returned error: {error_message}")
+                with _tasks_lock:
+                    tasks[task_id]['status'] = 'failed'
+                    tasks[task_id]['failed_at'] = datetime.now()
+                    tasks[task_id]['error'] = error_message
+                return
+            
             audio_file_path = output.get('audio_file')
             summary = output.get('summary', '')
             
