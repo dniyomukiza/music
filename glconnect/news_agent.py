@@ -539,17 +539,64 @@ def generate_generic_fallback(topic: str) -> str:
     """
     return f"Regarding {topic}, our news team continues to monitor developments and will provide updates as new information becomes available. This story remains under close observation by our editorial team. I'm reporting for GLC News."
 
+def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "final_news_broadcast.mp3") -> dict:
+    """
+    Memory-efficient audio combination using FFmpeg instead of loading all files into RAM.
+    This approach processes files on disk, using minimal memory.
+    """
+    import subprocess
+    import tempfile
+    
+    try:
+        # Create a temporary file list for FFmpeg concat
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            for file_path in file_paths:
+                if isinstance(file_path, dict) and 'audio_filepath' in file_path:
+                    file_path = file_path['audio_filepath']
+                
+                if os.path.exists(file_path) and not file_path.startswith("Error:"):
+                    # FFmpeg concat format: file 'path/to/file.mp3'
+                    f.write(f"file '{file_path}'\n")
+            
+            concat_file = f.name
+        
+        # Use FFmpeg to combine files efficiently
+        output_path = os.path.join(os.getcwd(), output_filename)
+        
+        cmd = [
+            'ffmpeg', '-y',  # -y to overwrite output file
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', concat_file,
+            '-c', 'copy',  # Copy without re-encoding for speed
+            output_path
+        ]
+        
+        print(f"DEBUG: FFmpeg command: {' '.join(cmd)}")
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        
+        # Clean up temporary file
+        os.unlink(concat_file)
+        
+        if result.returncode == 0:
+            print(f"DEBUG: FFmpeg audio combination successful: {output_path}")
+            return {"combined_audio_filepath": output_path}
+        else:
+            print(f"ERROR: FFmpeg failed - {result.stderr}")
+            return {"combined_audio_filepath": f"Error: FFmpeg failed - {result.stderr}"}
+            
+    except Exception as e:
+        print(f"ERROR: FFmpeg audio combination failed: {e}")
+        return {"combined_audio_filepath": f"Error: {e}"}
+
 def combine_audio_files(file_paths: list[str], output_filename: str = "final_news_broadcast.mp3") -> dict:
     """
-    Combines multiple MP3 audio files into a single MP3 file in the given order,
-    preceding and ending it with a 'jingle.wav' sound.
-    Args:
-        file_paths: A list of paths to the audio files in the desired order.
-        output_filename: The name of the output combined audio file.
-    Returns:
-        A dictionary with 'combined_audio_filepath': The full path to the combined audio file.
+    Memory-efficient audio combination using FFmpeg instead of loading all files into RAM.
+    This approach processes files on disk, using minimal memory.
     """
-    # Debug: Check FFmpeg availability
+    print("DEBUG: Using memory-efficient FFmpeg audio combination")
+    return combine_audio_files_ffmpeg(file_paths, output_filename)
     try:
         import subprocess
         result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=10)
