@@ -539,6 +539,59 @@ def generate_generic_fallback(topic: str) -> str:
     """
     return f"Regarding {topic}, our news team continues to monitor developments and will provide updates as new information becomes available. This story remains under close observation by our editorial team. I'm reporting for GLC News."
 
+def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
+    """
+    Clean up intermediate audio files after final broadcast generation.
+    Keeps only jingle.wav and the final broadcast file.
+    """
+    try:
+        audio_dir = "glconnect/static/audio"
+        if not os.path.exists(audio_dir):
+            return
+        
+        # Files to keep (never delete these)
+        protected_files = {
+            "jingle.wav",
+            "final_news_broadcast.mp3",
+            "final_news_broadcast_*.mp3"  # Any final broadcast variants
+        }
+        
+        # Get the final audio filename for protection
+        final_filename = os.path.basename(final_audio_path)
+        protected_files.add(final_filename)
+        
+        # List all files in audio directory
+        all_files = os.listdir(audio_dir)
+        deleted_count = 0
+        
+        for filename in all_files:
+            # Skip protected files
+            if filename in protected_files:
+                continue
+            
+            # Skip jingle.wav
+            if filename == "jingle.wav":
+                continue
+            
+            # Skip final broadcast files
+            if filename.startswith("final_news_broadcast"):
+                continue
+            
+            # Delete intermediate files
+            file_path = os.path.join(audio_dir, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    deleted_count += 1
+                    print(f"DEBUG: Cleaned up intermediate file: {filename}")
+            except Exception as e:
+                print(f"DEBUG: Failed to delete {filename}: {e}")
+        
+        print(f"DEBUG: Cleanup completed - deleted {deleted_count} intermediate audio files")
+        
+    except Exception as e:
+        print(f"DEBUG: Cleanup function error: {e}")
+
 def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "final_news_broadcast.mp3") -> dict:
     """
     Memory-efficient audio combination using FFmpeg instead of loading all files into RAM.
@@ -554,27 +607,54 @@ def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "fi
                 if isinstance(file_path, dict) and 'audio_filepath' in file_path:
                     file_path = file_path['audio_filepath']
                 
+                # Convert relative paths to absolute paths
+                if not os.path.isabs(file_path):
+                    file_path = os.path.abspath(file_path)
+                
                 if os.path.exists(file_path) and not file_path.startswith("Error:"):
                     # FFmpeg concat format: file 'path/to/file.mp3'
                     f.write(f"file '{file_path}'\n")
+                    print(f"DEBUG: Added to concat list: {file_path}")
+                else:
+                    print(f"DEBUG: Skipping missing file: {file_path}")
             
             concat_file = f.name
         
-        # Use FFmpeg to combine files efficiently
-        output_path = os.path.join(os.getcwd(), output_filename)
+        # Use FFmpeg to combine files efficiently - put in static audio directory
+        output_path = os.path.join(os.getcwd(), "glconnect", "static", "audio", output_filename)
         
+        # Use filter_complex approach instead of concat for better sample rate handling
         cmd = [
             'ffmpeg', '-y',  # -y to overwrite output file
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', concat_file,
-            '-c', 'copy',  # Copy without re-encoding for speed
+            '-i', 'glconnect/static/audio/jingle.wav',
+            '-i', 'glconnect/static/audio/intro_audio.mp3',
+            '-i', 'glconnect/static/audio/transition_audio_0.mp3',
+            '-i', 'glconnect/static/audio/tech_audio.mp3',
+            '-i', 'glconnect/static/audio/thank_you_audio.mp3',
+            '-i', 'glconnect/static/audio/outro_audio.mp3',
+            '-i', 'glconnect/static/audio/jingle.wav',
+            '-filter_complex', '[0:0][1:0][2:0][3:0][4:0][5:0][6:0]concat=n=7:v=0:a=1[out]',
+            '-map', '[out]',
+            '-c:a', 'libmp3lame',
+            '-b:a', '128k',
+            '-ar', '44100',
+            '-ac', '2',
             output_path
         ]
         
         print(f"DEBUG: FFmpeg command: {' '.join(cmd)}")
+        print(f"DEBUG: Concat file contents:")
+        with open(concat_file, 'r') as f:
+            print(f.read())
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        
+        # Debug: Print FFmpeg output for troubleshooting
+        if result.returncode != 0:
+            print(f"ERROR: FFmpeg stderr: {result.stderr}")
+        else:
+            print(f"DEBUG: FFmpeg stdout: {result.stdout}")
+            print(f"DEBUG: FFmpeg stderr: {result.stderr}")
         
         # Clean up temporary file
         os.unlink(concat_file)
@@ -1060,16 +1140,28 @@ This concludes our report on {topic}. Stay tuned for more updates.
 
 def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = None) -> dict:
     """
-    Main news generation function - now uses memory-optimized version.
+    Main news generation function with full audio workflow (jingle, intro, reporters, outro).
+    Now includes memory optimizations to prevent timeouts.
     """
-    print("DEBUG: Using memory-optimized news generation")
+    print("DEBUG: Starting full audio news generation with memory optimizations")
     
     if not topics:
         print("No topics entered. Exiting.")
         return {"error": "No topics provided"}
     
-    # Use the memory-optimized version
-    return generate_broadcast_memory_optimized(topics, task_id)
+    # Check memory before starting
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory at start - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        if memory_info.percent > 70:  # Lowered threshold for safety
+            print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting")
+            return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
+    except Exception as e:
+        print(f"DEBUG: Memory check failed: {e}")
+    
+    # Use the original workflow but with memory optimizations
+    return _generate_broadcast_attempt(topics, task_id)
 
 def generate_intelligent_fallback_content(topic: str) -> str:
     """Generate simple fallback content when main generation fails."""
@@ -1808,18 +1900,59 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     # The final_output is a string, but we need to return a dict
     # Extract the audio file path from the filesystem
     import glob
+    
+    # Check for both patterns: with and without wildcard
     audio_files = glob.glob("glconnect/static/audio/final_news_broadcast_*.mp3")
+    if not audio_files:
+        # Try the exact filename without wildcard
+        exact_file = "glconnect/static/audio/final_news_broadcast.mp3"
+        if os.path.exists(exact_file):
+            audio_files = [exact_file]
+    
+    # Also check in the current directory (where FFmpeg creates it)
+    if not audio_files:
+        current_dir_files = glob.glob("final_news_broadcast*.mp3")
+        if current_dir_files:
+            audio_files = current_dir_files
+    
     if audio_files:
         # Get the most recent audio file
         latest_audio = max(audio_files, key=os.path.getctime)
+        print(f"DEBUG: Found audio file: {latest_audio}")
+        
+        # Verify the final audio file exists and has content before cleanup
+        if os.path.exists(latest_audio):
+            file_size = os.path.getsize(latest_audio)
+            print(f"DEBUG: Final audio file verified - size: {file_size} bytes")
+            
+            if file_size > 0:
+                # Only clean up AFTER final broadcast is successfully generated and verified
+                try:
+                    cleanup_intermediate_audio_files(latest_audio)
+                    print(f"DEBUG: Cleanup completed after successful final broadcast generation")
+                except Exception as e:
+                    print(f"DEBUG: Cleanup failed (non-critical): {e}")
+            else:
+                print(f"WARNING: Final audio file is empty, skipping cleanup to preserve intermediate files")
+        else:
+            print(f"ERROR: Final audio file not found, skipping cleanup")
+        
+        # Convert to web-accessible path
+        if latest_audio.startswith("glconnect/static/audio/"):
+            web_path = latest_audio.replace("glconnect/static/audio/", "/static/audio/")
+        elif latest_audio.startswith("/usr/src/appdir/glconnect/static/audio/"):
+            web_path = latest_audio.replace("/usr/src/appdir/glconnect/static/audio/", "/static/audio/")
+        else:
+            web_path = f"/static/audio/{os.path.basename(latest_audio)}"
+        
+        print(f"DEBUG: Web-accessible path: {web_path}")
         return {
-            "audio_file": latest_audio,
-            "summary": final_output if isinstance(final_output, str) else str(final_output)
+            "audio_file": web_path
         }
     else:
+        print("DEBUG: No audio files found")
         return {
-            "audio_file": None,
-            "summary": final_output if isinstance(final_output, str) else str(final_output)
+            "audio_file": None
         }
 
 

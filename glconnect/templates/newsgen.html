@@ -1461,10 +1461,12 @@
         async function transcribeAudio(audioUrl, filename) {
             try {
                 // Show loading state
-                const button = event.target;
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing...';
-                button.disabled = true;
+                const button = event ? event.target : document.querySelector('button[onclick*="transcribeAudio"]');
+                const originalText = button ? button.innerHTML : 'Transcribe Audio';
+                if (button) {
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing...';
+                    button.disabled = true;
+                }
 
                 // Call the transcription endpoint
                 const response = await fetch('/routes2/news/transcribe', {
@@ -2284,7 +2286,7 @@
                     const data = await response.json();
                     
                     if (data.status === 'completed') {
-                        showSuccess(data);
+                        showResults(data);
                         return;
                     } else if (data.status === 'failed') {
                         throw new Error(data.error || 'Generation failed');
@@ -2653,10 +2655,35 @@
             const resultDiv = document.getElementById('result');
             if (resultDiv) {
                 const audioUrl = result.audio_file || result.audio_url;
+                const hasContent = result.content && result.content.length > 0;
+                
                 resultDiv.innerHTML = `
                     <div class="result-content">
                         <h3><i class="fas fa-check-circle"></i> News Generation Complete!</h3>
                         <p>Your professional news broadcast has been generated successfully.</p>
+                        
+                        ${hasContent ? `
+                            <div class="news-content-container" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
+                                <h4><i class="fas fa-newspaper"></i> Generated News Content</h4>
+                                <div class="news-articles">
+                                    ${result.content.map((article, index) => `
+                                        <div class="news-article" style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                            <h5 style="color: #007bff; margin-bottom: 10px;">Article ${index + 1}</h5>
+                                            <div style="white-space: pre-line; line-height: 1.6;">${article}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="content-actions" style="margin-top: 15px;">
+                                    <button class="btn btn-primary" onclick="copyNewsContent()">
+                                        <i class="fas fa-copy"></i> Copy All Content
+                                    </button>
+                                    <button class="btn btn-success" onclick="downloadNewsContent()">
+                                        <i class="fas fa-download"></i> Download as Text
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
                         <div class="audio-player-container">
                             ${audioUrl ? `
                                 <audio controls style="width: 100%; margin: 20px 0;">
@@ -2667,22 +2694,62 @@
                                     <a href="${audioUrl}" download class="btn btn-primary">
                                         <i class="fas fa-download"></i> Download Audio
                                     </a>
-                                    <button class="btn btn-info" onclick="transcribeAudio('${audioUrl}', 'news_broadcast.mp3')">
+                                    <button class="btn btn-info" onclick="transcribeAudio('${window.location.origin}${audioUrl}', 'news_broadcast.mp3')">
                                         <i class="fas fa-file-text"></i> Transcribe Audio
                                     </button>
                                     <a href="{{ url_for('news_bp.analytics') }}" class="btn btn-secondary">
                                         <i class="fas fa-chart-bar"></i> View Dashboard
                                     </a>
                                 </div>
+                            ` : hasContent ? `
+                                <div class="no-audio-message" style="padding: 20px; text-align: center; background: #e9ecef; border-radius: 5px; margin: 20px 0;">
+                                    <i class="fas fa-info-circle" style="color: #6c757d; font-size: 24px; margin-bottom: 10px;"></i>
+                                    <p style="margin: 0; color: #6c757d;">Text content generated successfully. Audio processing is not available in memory-optimized mode.</p>
+                                </div>
                             ` : '<p>Audio file is being processed...</p>'}
                         </div>
+                        
                         <div class="generation-info">
+                            <p><strong>Summary:</strong> ${result.summary || 'N/A'}</p>
                             <p><strong>Topics:</strong> ${result.topics ? result.topics.join(', ') : 'N/A'}</p>
                             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
                         </div>
                     </div>
                 `;
                 resultDiv.style.display = 'block';
+            }
+        }
+        
+        // Function to copy news content to clipboard
+        function copyNewsContent() {
+            const resultDiv = document.getElementById('result');
+            const contentDiv = resultDiv.querySelector('.news-content-container');
+            if (contentDiv) {
+                const textContent = contentDiv.innerText;
+                navigator.clipboard.writeText(textContent).then(() => {
+                    alert('News content copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy content: ', err);
+                    alert('Failed to copy content. Please try selecting and copying manually.');
+                });
+            }
+        }
+        
+        // Function to download news content as text file
+        function downloadNewsContent() {
+            const resultDiv = document.getElementById('result');
+            const contentDiv = resultDiv.querySelector('.news-content-container');
+            if (contentDiv) {
+                const textContent = contentDiv.innerText;
+                const blob = new Blob([textContent], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `news_broadcast_${new Date().toISOString().slice(0, 10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
             }
         }
         
