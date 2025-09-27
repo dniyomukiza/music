@@ -2709,6 +2709,10 @@ def task_status(task_id):
         # Fallback for old structure
         elif 'result' in task:
             result = task['result']
+            print(f"DEBUG: Task {task_id} completed with result: {result}")
+            print(f"DEBUG: Result type: {type(result)}")
+            print(f"DEBUG: Result keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
+            
             # Initialize variables
             audio_file_path = None
             summary = ""
@@ -2719,10 +2723,14 @@ def task_status(task_id):
                 if 'audio_file' in result:
                     audio_file_path = result['audio_file']
                     summary = result.get('summary', '')
+                    print(f"DEBUG: Found audio_file in result: {audio_file_path}")
                 # Check for old structure
                 elif 'audio_file_path' in result:
                     audio_file_path = result['audio_file_path']
                     summary = result.get('summary', '')
+                    print(f"DEBUG: Found audio_file_path in result: {audio_file_path}")
+                else:
+                    print(f"DEBUG: No audio_file or audio_file_path found in result")
                 
                 # Extract summary from content if available
                 if not summary and 'content' in result:
@@ -2760,6 +2768,9 @@ def task_status(task_id):
             
     elif task['status'] == 'failed':
         error_message = task.get('error')
+        print(f"DEBUG: Task {task_id} failed - raw error: '{error_message}'")
+        print(f"DEBUG: Task {task_id} full task data: {task}")
+        
         if not error_message or error_message == 'Unknown error':
             # Try to get more specific error information
             if 'failed_at' in task and task['failed_at']:
@@ -3226,6 +3237,9 @@ def transcribe_audio():
         # Convert URL to file path
         if audio_url.startswith('/routes2/news/audio/'):
             filename = audio_url.replace('/routes2/news/audio/', '')
+            audio_file_path = os.path.join('glconnect', 'static', 'audio', filename)
+        elif audio_url.startswith('/static/audio/'):
+            filename = audio_url.replace('/static/audio/', '')
             audio_file_path = os.path.join('glconnect', 'static', 'audio', filename)
         else:
             return jsonify({'error': 'Invalid audio URL format'}), 400

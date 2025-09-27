@@ -10,12 +10,12 @@ backlog = 2048
 workers = 1  # Single worker for memory-constrained environments
 worker_class = "sync"
 worker_connections = 30  # Further reduced for better memory management
-timeout = 1200  # Reduced timeout to 20 minutes
+timeout = 1800  # 30 minutes timeout for long news generation tasks
 keepalive = 2
 
 # Memory management
-max_requests = 2  # Extremely frequent restarts to prevent memory leaks
-max_requests_jitter = 1  # Add randomness to prevent all workers restarting at once
+max_requests = 0  # Disable automatic restarts to prevent interpreter shutdown during long tasks
+max_requests_jitter = 0  # No jitter needed when max_requests is 0
 preload_app = False  # Disable preload to reduce initial memory usage
 worker_memory_limit = 150  # Extremely aggressive memory limit per worker
 

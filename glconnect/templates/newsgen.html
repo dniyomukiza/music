@@ -2499,8 +2499,8 @@
             }
         }
         
-        // Function to poll for completion
-        function pollForCompletion(taskId) {
+        // Function to poll for completion (legacy version)
+        function pollForCompletionLegacy(taskId) {
             // Validate task ID
             if (!taskId || taskId.length < 10) {
                 console.error('Invalid task ID:', taskId);
