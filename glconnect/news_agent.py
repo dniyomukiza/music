@@ -1068,7 +1068,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        if memory_info.percent > 60:
+        if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except Exception as e:
@@ -1088,7 +1088,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
             # Check memory before each topic
             try:
                 memory_info = psutil.virtual_memory()
-                if memory_info.percent > 60:
+                if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
                     print(f"ERROR: Memory usage too high during processing ({memory_info.percent}%)")
                     return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
             except:
@@ -1154,7 +1154,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         import psutil
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-        if memory_info.percent > 70:  # Lowered threshold for safety
+        if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except Exception as e:

@@ -1353,7 +1353,7 @@ def run_generate_broadcast(task_id, topics):
         print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
         # If memory usage is too high, try emergency cleanup first, then abort
-        if memory_info.percent > 90:
+        if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
             print(f"WARNING: Memory usage too high ({memory_info.percent}%) - attempting emergency cleanup...")
             
             # Emergency cleanup sequence
@@ -1411,7 +1411,7 @@ def run_generate_broadcast(task_id, topics):
             memory_info_after = psutil.virtual_memory()
             print(f"DEBUG: Memory after emergency cleanup - Used: {memory_info_after.used / 1024 / 1024:.1f}MB, Percent: {memory_info_after.percent}%")
             
-            if memory_info_after.percent > 90:
+            if memory_info_after.percent > 98:  # Only abort if memory is critically high after cleanup
                 print(f"ERROR: Memory usage still too high after emergency cleanup ({memory_info_after.percent}%) - aborting news generation")
                 
                 # Log memory state for debugging
@@ -1488,7 +1488,7 @@ def run_generate_broadcast(task_id, topics):
         # Check memory before generation
         try:
             memory_info = psutil.virtual_memory()
-            if memory_info.percent > 75:  # Lowered threshold for better safety
+            if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
                 print(f"ERROR: Memory usage too high during generation ({memory_info.percent}%) - aborting")
                 update_task_in_db(task_id, 
                                  status='failed',
