@@ -428,9 +428,18 @@ def analyze_topic_context(topic: str) -> dict:
         import google.generativeai as genai
         from glconnect import config
         
-        # Configure Gemini
-        genai.configure(api_key=config.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Configure Gemini with memory-efficient settings
+        generation_config = genai.types.GenerationConfig(
+            max_output_tokens=1024,  # Limit output length
+            temperature=0.7,  # Balanced creativity
+            top_p=0.8,  # Focus on most likely tokens
+            top_k=40  # Limit token selection
+        )
+        
+        model = genai.GenerativeModel(
+            'gemini-2.0-flash',
+            generation_config=generation_config
+        )
         
         prompt = f"""
         Analyze this news topic and provide context for professional news reporting: "{topic}"
@@ -490,9 +499,18 @@ def generate_intelligent_fallback_content(topic: str) -> str:
         import google.generativeai as genai
         from glconnect import config
         
-        # Configure Gemini
-        genai.configure(api_key=config.get("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Configure Gemini with memory-efficient settings
+        generation_config = genai.types.GenerationConfig(
+            max_output_tokens=1024,  # Limit output length
+            temperature=0.7,  # Balanced creativity
+            top_p=0.8,  # Focus on most likely tokens
+            top_k=40  # Limit token selection
+        )
+        
+        model = genai.GenerativeModel(
+            'gemini-2.0-flash',
+            generation_config=generation_config
+        )
         
         prompt = f"""
         You are a professional news reporter. Generate a brief, informative news segment about "{topic}" that would be suitable for live broadcast.
@@ -1247,7 +1265,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start of broadcast generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
-        if memory_info.percent > 60:
+        if memory_info.percent > 90:
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting broadcast generation")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except:
@@ -1300,6 +1318,20 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
 
     categorized_topics_json = _run_async_safely(run_agent(categorization_agent, str(topics)))
     print(f"DEBUG: Raw categorization output: {categorized_topics_json}")
+    
+    # Force garbage collection after categorization
+    gc.collect()
+    
+    # Check memory after categorization
+    try:
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory after categorization - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        if memory_info.percent > 85:
+            print(f"WARNING: High memory usage after categorization ({memory_info.percent}%) - forcing cleanup")
+            gc.collect()
+            gc.collect()
+    except:
+        pass
     
     # Handle case where async operation failed due to interpreter shutdown
     if categorized_topics_json is None:
@@ -1472,6 +1504,20 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         
         # Run the parallel execution
         individual_outputs = _run_async_safely(run_all_agents_parallel())
+        
+        # Force garbage collection after text generation
+        gc.collect()
+        
+        # Check memory after text generation
+        try:
+            memory_info = psutil.virtual_memory()
+            print(f"DEBUG: Memory after text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            if memory_info.percent > 85:
+                print(f"WARNING: High memory usage after text generation ({memory_info.percent}%) - forcing cleanup")
+                gc.collect()
+                gc.collect()
+        except:
+            pass
         
         # Force garbage collection after async operations
         gc.collect()

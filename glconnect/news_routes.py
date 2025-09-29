@@ -955,9 +955,18 @@ def categorize_topic_ai(topic: str) -> str:
     import google.generativeai as genai
     from glconnect import config
     
-    # Configure Gemini
-    genai.configure(api_key=config.get("GOOGLE_API_KEY"))
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    # Configure Gemini with memory-efficient settings
+    generation_config = genai.types.GenerationConfig(
+        max_output_tokens=1024,  # Limit output length
+        temperature=0.7,  # Balanced creativity
+        top_p=0.8,  # Focus on most likely tokens
+        top_k=40  # Limit token selection
+    )
+    
+    model = genai.GenerativeModel(
+        'gemini-2.0-flash',
+        generation_config=generation_config
+    )
     
     prompt = f"""
     Categorize this news topic into exactly one of these categories:

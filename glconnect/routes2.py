@@ -27,7 +27,19 @@ client = None
 def generate_news_with_gemini(topic: str) -> str:
     """Generate news content using Gemini API for a single topic."""
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Configure model with memory-efficient settings
+        generation_config = genai.types.GenerationConfig(
+            max_output_tokens=1024,  # Limit output length
+            temperature=0.7,  # Balanced creativity
+            top_p=0.8,  # Focus on most likely tokens
+            top_k=40  # Limit token selection
+        )
+        
+        model = genai.GenerativeModel(
+            'gemini-2.0-flash',
+            generation_config=generation_config
+        )
+        
         prompt = f"""
         You are an experienced news reporter assistant that summarizes the latest news regarding certain topics.
         
