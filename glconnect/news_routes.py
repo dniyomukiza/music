@@ -1362,7 +1362,7 @@ def run_generate_broadcast(task_id, topics):
         print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         
         # If memory usage is too high, try emergency cleanup first, then abort
-        if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
+        if memory_info.percent > 85:  # Conservative threshold for production stability
             print(f"WARNING: Memory usage too high ({memory_info.percent}%) - attempting emergency cleanup...")
             
             # Emergency cleanup sequence
@@ -1500,7 +1500,7 @@ def run_generate_broadcast(task_id, topics):
         # Check memory before generation
         try:
             memory_info = psutil.virtual_memory()
-            if memory_info.percent > 95:  # More reasonable threshold - only abort at critical levels
+            if memory_info.percent > 85:  # Conservative threshold for production stability
                 print(f"ERROR: Memory usage too high during generation ({memory_info.percent}%) - aborting")
                 error_message = f'Memory usage too high ({memory_info.percent}%) - please try again later'
                 update_task_in_db(task_id, 
@@ -2076,7 +2076,7 @@ def broadcast():
                     'error': 'Server memory is critically high. Please wait a moment for memory to free up, then try again.',
                     'details': f'Memory usage: {memory_info.percent}% (Available: {memory_info.available / 1024 / 1024:.1f}MB)'
                 }), 503
-            elif memory_info.percent > 90:
+            elif memory_info.percent > 80:
                 print(f"WARNING: Very high memory usage ({memory_info.percent}%) - forcing safe cleanup before proceeding")
                 # Force garbage collection (safe - doesn't affect tasks)
                 import gc
@@ -2460,7 +2460,7 @@ def memory_dashboard():
         gc_stats = gc.get_stats()
         
         # Determine status
-        if memory_info.percent > 95:
+        if memory_info.percent > 85:
             status = 'critical'
             status_color = '#ff4444'
         elif memory_info.percent > 85:
@@ -2475,7 +2475,7 @@ def memory_dashboard():
         
         # Generate recommendations
         recommendations = []
-        if memory_info.percent > 90:
+        if memory_info.percent > 80:
             recommendations.append("🚨 CRITICAL: Memory usage is extremely high - consider restarting the application")
         elif memory_info.percent > 80:
             recommendations.append("⚠️ WARNING: High memory usage detected - monitor closely")
@@ -2635,7 +2635,7 @@ def task_status(task_id):
                 'error': 'Server temporarily unavailable due to maximum memory usage. Please try again in a moment.',
                 'details': f'Server memory usage: {memory_info.percent}%'
             }), 503
-        elif memory_info.percent > 90:
+        elif memory_info.percent > 80:
             print(f"WARNING: Very high memory usage ({memory_info.percent}%) - monitoring closely")
         elif memory_info.percent > 80:
             print(f"INFO: High memory usage ({memory_info.percent}%) - monitoring")
