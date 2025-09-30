@@ -2194,6 +2194,8 @@ def broadcast():
                                  status='failed',
                                  progress=0,
                                  current_step=f'News generation failed: {error_msg}',
+                                 error=error_msg,
+                                 failed_at=datetime.now(),
                                  last_heartbeat=datetime.now())
                 
                 with _tasks_lock:
@@ -2214,6 +2216,8 @@ def broadcast():
                              status='failed',
                              progress=0,
                              current_step=f'News generation failed: {str(e)}',
+                             error=str(e),
+                             failed_at=datetime.now(),
                              last_heartbeat=datetime.now())
             
             with _tasks_lock:
