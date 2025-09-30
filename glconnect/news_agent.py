@@ -162,6 +162,11 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     Returns:
         A dictionary with 'audio_filepath': The full path to the generated audio file.
     """
+    import gc
+    
+    # Force garbage collection before TTS processing
+    gc.collect()
+    
     # Clean the text before processing
     clean_text = clean_text_for_speech(text)
     
@@ -1201,59 +1206,86 @@ This concludes our report on {topic}. Stay tuned for more updates.
         print(f"DEBUG: Error in fallback content generation: {e}")
         return f"News report on {topic} - Content generation temporarily unavailable. Please try again later."
 
-def _run_async_safely(coro):
-    """Safely run async coroutine in a thread, handling interpreter shutdown gracefully."""
+def _run_async_safely(coro, max_retries=3, retry_delay=2):
+    """Safely run async coroutine in a thread, handling interpreter shutdown gracefully with retry logic."""
     import asyncio
     import threading
     import sys
+    import time
     
-    try:
-        # Check if the interpreter is shutting down
-        if sys.is_finalizing():
-            print("DEBUG: Interpreter is finalizing, cannot run async operation")
+    for attempt in range(max_retries):
+        try:
+            # Check if the interpreter is shutting down
+            if sys.is_finalizing():
+                print(f"DEBUG: Interpreter is finalizing, cannot run async operation (attempt {attempt + 1})")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                return None
+            
+            # Check if there's a closed event loop set as the current loop
+            try:
+                current_loop = asyncio.get_event_loop()
+                if current_loop.is_closed():
+                    print(f"DEBUG: Current event loop is closed, cannot run async operation (attempt {attempt + 1})")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    return None
+            except RuntimeError:
+                # No event loop set, that's fine
+                pass
+            
+            # Check if we're in a thread that already has an event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # If we're in a thread with a running loop, we need to create a new one
+                if loop.is_running():
+                    # Create a new event loop for this thread
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        result = new_loop.run_until_complete(coro)
+                        print(f"DEBUG: Async operation completed successfully on attempt {attempt + 1}")
+                        return result
+                    finally:
+                        new_loop.close()
+            except RuntimeError:
+                # No running loop, we can create one
+                pass
+            
+            # Try to run with asyncio.run, but handle shutdown gracefully
+            try:
+                result = asyncio.run(coro)
+                print(f"DEBUG: Async operation completed successfully on attempt {attempt + 1}")
+                return result
+            except RuntimeError as e:
+                if "cannot schedule new futures after interpreter shutdown" in str(e):
+                    print(f"DEBUG: Interpreter is shutting down, cannot run async operation (attempt {attempt + 1})")
+                    if attempt < max_retries - 1:
+                        print(f"DEBUG: Retrying in {retry_delay} seconds...")
+                        time.sleep(retry_delay)
+                        continue
+                    return None
+                elif "Event loop is closed" in str(e):
+                    print(f"DEBUG: Event loop is closed, cannot run async operation (attempt {attempt + 1})")
+                    if attempt < max_retries - 1:
+                        print(f"DEBUG: Retrying in {retry_delay} seconds...")
+                        time.sleep(retry_delay)
+                        continue
+                    return None
+                else:
+                    raise e
+        except Exception as e:
+            print(f"DEBUG: Error in _run_async_safely (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print(f"DEBUG: Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                continue
             return None
-        
-        # Check if there's a closed event loop set as the current loop
-        try:
-            current_loop = asyncio.get_event_loop()
-            if current_loop.is_closed():
-                print("DEBUG: Current event loop is closed, cannot run async operation")
-                return None
-        except RuntimeError:
-            # No event loop set, that's fine
-            pass
-        
-        # Check if we're in a thread that already has an event loop
-        try:
-            loop = asyncio.get_running_loop()
-            # If we're in a thread with a running loop, we need to create a new one
-            if loop.is_running():
-                # Create a new event loop for this thread
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    return new_loop.run_until_complete(coro)
-                finally:
-                    new_loop.close()
-        except RuntimeError:
-            # No running loop, we can create one
-            pass
-        
-        # Try to run with asyncio.run, but handle shutdown gracefully
-        try:
-            return asyncio.run(coro)
-        except RuntimeError as e:
-            if "cannot schedule new futures after interpreter shutdown" in str(e):
-                print("DEBUG: Interpreter is shutting down, cannot run async operation")
-                return None
-            elif "Event loop is closed" in str(e):
-                print("DEBUG: Event loop is closed, cannot run async operation")
-                return None
-            else:
-                raise e
-    except Exception as e:
-        print(f"DEBUG: Error in _run_async_safely: {e}")
-        return None
+    
+    print(f"DEBUG: All {max_retries} attempts failed in _run_async_safely")
+    return None
 
 def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     import gc
@@ -1883,12 +1915,29 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         except:
             pass
     
-    tts_output = _run_async_safely(run_agent(tts_phase, ""))
+    # TTS processing with retry logic and memory optimization
+    print("DEBUG: Starting TTS processing with retry logic...")
+    tts_output = _run_async_safely(run_agent(tts_phase, ""), max_retries=3, retry_delay=3)
     
     # Handle case where TTS failed due to interpreter shutdown
     if tts_output is None:
-        print("DEBUG: TTS phase failed due to interpreter shutdown")
-        return {"audio_file": None, "summary": "News generation failed: TTS conversion failed due to interpreter shutdown"}
+        print("DEBUG: TTS phase failed after retries - attempting fallback")
+        # Try a simpler TTS approach as fallback
+        try:
+            print("DEBUG: Attempting fallback TTS processing...")
+            # Force garbage collection before fallback
+            gc.collect()
+            gc.collect()
+            
+            # Try again with a fresh async context
+            tts_output = _run_async_safely(run_agent(tts_phase, ""), max_retries=2, retry_delay=5)
+            
+            if tts_output is None:
+                print("DEBUG: Fallback TTS also failed")
+                return {"audio_file": None, "summary": "News generation failed: TTS conversion failed after multiple attempts. Please try again."}
+        except Exception as e:
+            print(f"DEBUG: Fallback TTS failed with error: {e}")
+            return {"audio_file": None, "summary": "News generation failed: TTS conversion failed due to system error. Please try again."}
     
     # Force garbage collection after TTS to free memory
     gc.collect()

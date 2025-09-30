@@ -15,9 +15,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 3G  # Increased for news generation and audio processing
+          memory: 4G  # Increased for news generation and TTS processing
         reservations:
-          memory: 1.5G  # Increased minimum memory reservation
+          memory: 2G  # Increased minimum memory reservation
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
