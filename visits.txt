@@ -310,3 +310,57 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-10-05 05:31:59 UTC] GET /routes2/news/task/ffdbb5ae-957b-4711-844c-354f6e63809c
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:32:03 UTC] GET /routes2/news/task-status/ffdbb5ae-957b-4711-844c-354f6e63809c
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:32:06 UTC] GET /routes2/news/status/ffdbb5ae-957b-4711-844c-354f6e63809c
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:32:13 UTC] GET /routes2/news/memory-status
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:45:33 UTC] GET /routes2/news/memory-status
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:45:36 UTC] POST /routes2/news/broadcast
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:46:41 UTC] GET /routes2/news/debug/tasks
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:46:44 UTC] GET /routes2/news/status/d53f1aea-6925-47ef-88ab-daf90a0c950f
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-05 05:46:53 UTC] GET /routes2/news/memory-status
+    IP: 172.19.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------

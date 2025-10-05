@@ -2111,16 +2111,16 @@ def broadcast():
                 except Exception as e:
                     print(f"DEBUG: Task cleanup failed: {e}")
                 
-                # Check memory again after cleanup
-                memory_info = psutil.virtual_memory()
-                print(f"DEBUG: Memory after cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-                if memory_info.percent >= 95:
+                # Check memory again after cleanup using container-aware monitoring
+                memory_percent = get_memory_usage()
+                print(f"DEBUG: Memory after cleanup - Percent: {memory_percent:.1f}%")
+                if memory_percent >= 85:  # More aggressive threshold for 4GB containers
                     return jsonify({
                         'error': 'Server memory is critically high even after cleanup. Please try again in a moment.',
-                        'details': f'Memory usage: {memory_info.percent}% (Available: {memory_info.available / 1024 / 1024:.1f}MB)'
+                        'details': f'Memory usage: {memory_percent:.1f}%'
                     }), 503
-            elif memory_info.percent > 80:
-                print(f"INFO: High memory usage ({memory_info.percent}%) - monitoring")
+            elif memory_percent > 70:  # More aggressive threshold for 4GB containers
+                print(f"INFO: High memory usage ({memory_percent:.1f}%) - monitoring")
         except ImportError:
             print("DEBUG: psutil not available - skipping memory check")
         except Exception as e:
@@ -2169,11 +2169,10 @@ def broadcast():
             print(f"DEBUG: Task {task_id} created at: {datetime.now()}")
             print(f"DEBUG: All task IDs: {list(tasks.keys())}")
             
-            # Check memory usage after task creation
+            # Check memory usage after task creation using container-aware monitoring
             try:
-                import psutil
-                memory_info = psutil.virtual_memory()
-                print(f"DEBUG: Memory after task creation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+                memory_percent = get_memory_usage()
+                print(f"DEBUG: Memory after task creation - Percent: {memory_percent:.1f}%")
             except ImportError:
                 print("DEBUG: psutil not available - skipping memory check")
             except Exception as e:

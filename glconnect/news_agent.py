@@ -1161,12 +1161,12 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
         for i, topic in enumerate(topics):
             print(f"DEBUG: Processing topic {i+1}/{len(topics)}: {topic}")
             
-            # Check memory before each topic
+            # Check memory before each topic using container-aware monitoring
             try:
-                memory_info = psutil.virtual_memory()
-                if memory_info.percent > 85:  # Conservative threshold for production stability
-                    print(f"ERROR: Memory usage too high during processing ({memory_info.percent}%)")
-                    return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
+                memory_percent = get_memory_usage()
+                if memory_percent > 80:  # Conservative threshold for 4GB containers
+                    print(f"ERROR: Memory usage too high during processing ({memory_percent:.1f}%)")
+                    return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
             except:
                 pass
             
@@ -1345,14 +1345,14 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     import psutil
     import os
     
-    # Check memory at start and abort if too high
+    # Check memory at start and abort if too high using container-aware monitoring
     try:
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory at start of broadcast generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        memory_percent = get_memory_usage()
+        print(f"DEBUG: Memory at start of broadcast generation - Percent: {memory_percent:.1f}%")
         
-        if memory_info.percent > 80:
-            print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting broadcast generation")
-            return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
+        if memory_percent > 70:  # Conservative threshold for 4GB containers
+            print(f"ERROR: Memory usage too high ({memory_percent:.1f}%) - aborting broadcast generation")
+            return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
     except:
         pass
     
