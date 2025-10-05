@@ -1942,19 +1942,39 @@ def index():
 
 @news_bp.route('/memory-status')
 def memory_status():
-    """Endpoint to check current memory usage"""
+    """Endpoint to check current memory usage with container-aware monitoring"""
     try:
-        import psutil
-        memory_info = psutil.virtual_memory()
+        from glconnect.news_agent import get_memory_usage
+        memory_percent = get_memory_usage()
+        
+        # Determine status
+        if memory_percent >= 85:
+            status = 'critical'
+            message = 'Memory critically high - news generation blocked'
+        elif memory_percent >= 70:
+            status = 'warning'
+            message = 'Memory high - news generation may be limited'
+        elif memory_percent >= 50:
+            status = 'caution'
+            message = 'Memory moderate - monitoring'
+        else:
+            status = 'healthy'
+            message = 'Memory healthy - news generation available'
+        
         return jsonify({
-            'memory_percent': memory_info.percent,
-            'memory_used_mb': memory_info.used / 1024 / 1024,
-            'memory_available_mb': memory_info.available / 1024 / 1024,
-            'memory_total_mb': memory_info.total / 1024 / 1024,
-            'status': 'critical' if memory_info.percent > 90 else 'warning' if memory_info.percent > 80 else 'ok'
+            'status': status,
+            'memory_percent': f"{memory_percent:.1f}%",
+            'message': message,
+            'can_generate_news': memory_percent < 70,
+            'timestamp': datetime.now().isoformat()
         })
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @news_bp.route('/debug/tasks')
 def debug_tasks():
@@ -2260,6 +2280,7 @@ def emergency_memory_cleanup():
         import ctypes
         
         # Get memory before cleanup
+        from glconnect.news_agent import get_memory_usage
         memory_before = get_memory_usage()
         print(f"DEBUG: Emergency cleanup - memory before: {memory_before:.1f}%")
         
@@ -2309,43 +2330,6 @@ def emergency_memory_cleanup():
             'memory_freed': f"{memory_freed:.1f}%",
             'objects_collected': collected_total,
             'tasks_cleaned': initial_count - final_count,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-
-@news_bp.route('/debug/memory-status')
-def memory_status():
-    """Get current memory status for monitoring."""
-    try:
-        from glconnect.news_agent import get_memory_usage
-        memory_percent = get_memory_usage()
-        
-        # Determine status
-        if memory_percent >= 85:
-            status = 'critical'
-            message = 'Memory critically high - news generation blocked'
-        elif memory_percent >= 70:
-            status = 'warning'
-            message = 'Memory high - news generation may be limited'
-        elif memory_percent >= 50:
-            status = 'caution'
-            message = 'Memory moderate - monitoring'
-        else:
-            status = 'healthy'
-            message = 'Memory healthy - news generation available'
-        
-        return jsonify({
-            'status': status,
-            'memory_percent': f"{memory_percent:.1f}%",
-            'message': message,
-            'can_generate_news': memory_percent < 70,
             'timestamp': datetime.now().isoformat()
         })
         
