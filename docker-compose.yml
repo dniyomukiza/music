@@ -65,12 +65,8 @@ services:
       - app_network
     command: /usr/bin/icecast -c /etc/icecast.xml -b
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+    mem_limit: 256M
+    mem_reservation: 128M
     healthcheck:
       test: ["CMD", "pgrep", "icecast"]
       interval: 30s
@@ -106,12 +102,8 @@ services:
     environment:
      - TZ=America/New_York
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+    mem_limit: 512M
+    mem_reservation: 256M
     healthcheck:
       test: ["CMD", "pgrep", "liquidsoap"]
       interval: 30s
@@ -128,12 +120,8 @@ services:
       - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+    mem_limit: 256M
+    mem_reservation: 128M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]

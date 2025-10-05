@@ -3,12 +3,8 @@ version: '3.8'
 services:
   app:
     # Memory optimizations for container environments
-    deploy:
-      resources:
-        limits:
-          memory: 2G  # Increased for news generation (was 1G)
-        reservations:
-          memory: 1G  # Increased minimum memory reservation (was 512M)
+    mem_limit: 4G  # Increased for news generation and TTS processing
+    mem_reservation: 2G  # Increased minimum memory reservation
     
     # Environment variables for memory optimization
     environment:
