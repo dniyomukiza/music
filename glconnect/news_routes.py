@@ -2063,21 +2063,21 @@ def broadcast():
                 'details': f'Received {len(topics)} topics, maximum allowed is 5'
             }), 400
         
-        # Check server health before processing
+        # Check server health before processing using container-aware memory
         try:
-            import psutil
-            memory_info = psutil.virtual_memory()
-            print(f"DEBUG: Pre-processing memory check - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            from glconnect.news_agent import get_memory_usage
+            memory_percent = get_memory_usage()
+            print(f"DEBUG: Pre-processing memory check - Percent: {memory_percent:.1f}%")
             
             # Block if memory usage is too high to prevent 502 errors
-            if memory_info.percent >= 95:
-                print(f"CRITICAL: Memory usage too high ({memory_info.percent}%) - blocking to prevent 502 errors")
+            if memory_percent >= 95:
+                print(f"CRITICAL: Memory usage too high ({memory_percent:.1f}%) - blocking to prevent 502 errors")
                 return jsonify({
                     'error': 'Server memory is critically high. Please wait a moment for memory to free up, then try again.',
-                    'details': f'Memory usage: {memory_info.percent}% (Available: {memory_info.available / 1024 / 1024:.1f}MB)'
+                    'details': f'Memory usage: {memory_percent:.1f}%'
                 }), 503
-            elif memory_info.percent > 80:
-                print(f"WARNING: Very high memory usage ({memory_info.percent}%) - forcing safe cleanup before proceeding")
+            elif memory_percent > 80:
+                print(f"WARNING: Very high memory usage ({memory_percent:.1f}%) - forcing safe cleanup before proceeding")
                 # Force garbage collection (safe - doesn't affect tasks)
                 import gc
                 gc.collect()

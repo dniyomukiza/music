@@ -17,6 +17,48 @@ from summa import summarizer
 
 load_dotenv()
 
+def get_memory_usage():
+    """Get current memory usage percentage - container-aware."""
+    try:
+        import psutil
+        import os
+        
+        # Try to get container memory limit first
+        container_limit = None
+        try:
+            # Docker container memory limit
+            with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as f:
+                container_limit = int(f.read().strip())
+        except:
+            try:
+                # Alternative path for newer Docker versions
+                with open('/sys/fs/cgroup/memory.max', 'r') as f:
+                    content = f.read().strip()
+                    if content != 'max':
+                        container_limit = int(content)
+            except:
+                pass
+        
+        # Get current memory usage
+        memory_info = psutil.virtual_memory()
+        
+        if container_limit and container_limit < memory_info.total:
+            # Use container memory limit
+            container_used = memory_info.used
+            container_percent = (container_used / container_limit) * 100
+            print(f"DEBUG: Container memory - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB, Percent: {container_percent:.1f}%")
+            return container_percent
+        else:
+            # Fallback to system memory
+            print(f"DEBUG: System memory - Used: {memory_info.used / 1024 / 1024:.1f}MB, Total: {memory_info.total / 1024 / 1024:.1f}MB, Percent: {memory_info.percent:.1f}%")
+            return memory_info.percent
+            
+    except ImportError:
+        return 0
+    except Exception as e:
+        print(f"DEBUG: Memory check failed: {e}")
+        return 0
+
 # Load Google API key from environment variables
 google_api_key = os.getenv("GOOGLE_API_KEY")
 if not google_api_key:
@@ -1088,12 +1130,12 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
     
     # Check memory before starting
     try:
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory at start - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        memory_percent = get_memory_usage()
+        print(f"DEBUG: Memory at start - Percent: {memory_percent:.1f}%")
         
-        if memory_info.percent > 85:  # Conservative threshold for production stability
-            print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting")
-            return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
+        if memory_percent > 85:  # Conservative threshold for production stability
+            print(f"ERROR: Memory usage too high ({memory_percent:.1f}%) - aborting")
+            return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
     except Exception as e:
         print(f"DEBUG: Memory check failed: {e}")
     
@@ -1478,10 +1520,10 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             
             # Check memory before each agent
             try:
-                memory_info = psutil.virtual_memory()
-                print(f"DEBUG: Memory before agent {i+1} - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-                if memory_info.percent > 80:
-                    print(f"WARNING: High memory usage before agent {i+1} ({memory_info.percent}%) - forcing cleanup")
+                memory_percent = get_memory_usage()
+                print(f"DEBUG: Memory before agent {i+1} - Percent: {memory_percent:.1f}%")
+                if memory_percent > 80:
+                    print(f"WARNING: High memory usage before agent {i+1} ({memory_percent:.1f}%) - forcing cleanup")
                     gc.collect()
                     gc.collect()
                     gc.collect()
@@ -1520,8 +1562,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             try:
                 gc.collect()
                 gc.collect()
-                memory_info = psutil.virtual_memory()
-                print(f"DEBUG: Memory after agent {i+1} - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+                memory_percent = get_memory_usage()
+                print(f"DEBUG: Memory after agent {i+1} - Percent: {memory_percent:.1f}%")
             except:
                 pass
             
