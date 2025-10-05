@@ -1469,73 +1469,67 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             pass
     
     try:
-        # Use asyncio.gather for true parallel execution
-        async def run_all_agents_parallel():
-            tasks = []
-            for i, agent in enumerate(news_agents):
-                task = asyncio.create_task(run_agent(agent, ""))
-                tasks.append(task)
-                
-                # Update progress for each agent started
-                try:
-                    from glconnect.news_routes import update_task_in_db
-                    progress = 20 + (i * 10)  # 20% to 50% for starting agents
-                    update_task_in_db(task_id, 
-                                     progress=progress,
-                                     current_step=f'Starting AI reporter {i+1}/{len(news_agents)}...',
-                                     last_heartbeat=datetime.now())
-                except:
-                    pass
-            
-            # Run all agents in parallel with timeout
-            try:
-                results = await asyncio.wait_for(
-                    asyncio.gather(*tasks, return_exceptions=True),
-                    timeout=300  # 5 minute timeout for text generation - increased for complex news generation
-                )
-                
-                # Update progress after completion
-                try:
-                    from glconnect.news_routes import update_task_in_db
-                    update_task_in_db(task_id, 
-                                     progress=60,
-                                     current_step='Text generation completed, processing results...',
-                                     last_heartbeat=datetime.now())
-                except:
-                    pass
-                
-                return results
-            except asyncio.TimeoutError:
-                print("DEBUG: Text generation timed out after 5 minutes, using partial results")
-                # Cancel remaining tasks
-                for task in tasks:
-                    if not task.done():
-                        task.cancel()
-                # Return partial results or fallback content
-                partial_results = []
-                for i, result in enumerate(results):
-                    if isinstance(result, Exception):
-                        print(f"DEBUG: Agent {i} failed with exception: {result}")
-                        # Generate fallback content for failed agents
-                        fallback_content = generate_intelligent_fallback_content(topics[i] if i < len(topics) else f"Topic {i+1}")
-                        partial_results.append(fallback_content)
-                    else:
-                        partial_results.append(str(result))
-                
-                # Update progress to indicate timeout recovery
-                try:
-                    from glconnect.news_routes import update_task_in_db
-                    update_task_in_db(task_id, 
-                                     progress=55,
-                                     current_step='Text generation timed out, using partial results...',
-                                     last_heartbeat=datetime.now())
-                except:
-                    pass
-                
-                return partial_results
+        # SEQUENTIAL PROCESSING: Process topics one by one to prevent memory spikes
+        print("DEBUG: Using sequential processing to prevent memory issues...")
+        individual_outputs = []
         
-        # Run the parallel execution
-        individual_outputs = _run_async_safely(run_all_agents_parallel())
+        for i, agent in enumerate(news_agents):
+            print(f"DEBUG: Processing agent {i+1}/{len(news_agents)}: {agent.name}")
+            
+            # Check memory before each agent
+            try:
+                memory_info = psutil.virtual_memory()
+                print(f"DEBUG: Memory before agent {i+1} - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+                if memory_info.percent > 80:
+                    print(f"WARNING: High memory usage before agent {i+1} ({memory_info.percent}%) - forcing cleanup")
+                    gc.collect()
+                    gc.collect()
+                    gc.collect()
+            except:
+                pass
+            
+            # Update progress
+            try:
+                from glconnect.news_routes import update_task_in_db
+                progress = 20 + (i * 15)  # 20% to 80% for sequential agents
+                update_task_in_db(task_id, 
+                                 progress=progress,
+                                 current_step=f'Processing topic {i+1}/{len(news_agents)} with AI reporter...',
+                                 last_heartbeat=datetime.now())
+            except:
+                pass
+            
+            # Process this agent
+            try:
+                result = _run_async_safely(run_agent(agent, ""), max_retries=2, retry_delay=3)
+                if result is not None:
+                    individual_outputs.append(result)
+                    print(f"DEBUG: Agent {i+1} completed successfully")
+                else:
+                    print(f"DEBUG: Agent {i+1} failed - using fallback")
+                    # Create fallback content for this agent
+                    fallback_result = {"script": f"News report on topic {i+1} - Content generation temporarily unavailable."}
+                    individual_outputs.append(fallback_result)
+            except Exception as e:
+                print(f"DEBUG: Agent {i+1} failed with error: {e}")
+                # Create fallback content
+                fallback_result = {"script": f"News report on topic {i+1} - Content generation temporarily unavailable."}
+                individual_outputs.append(fallback_result)
+            
+            # Force memory cleanup after each agent
+            try:
+                gc.collect()
+                gc.collect()
+                memory_info = psutil.virtual_memory()
+                print(f"DEBUG: Memory after agent {i+1} - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+            except:
+                pass
+            
+            # Small delay to allow memory cleanup
+            import time
+            time.sleep(1)
+        
+        print(f"DEBUG: Sequential processing completed - {len(individual_outputs)} agents processed")
         
         # Force garbage collection after text generation
         gc.collect()
