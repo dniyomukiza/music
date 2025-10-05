@@ -1354,16 +1354,16 @@ def run_generate_broadcast(task_id, topics):
             tasks[task_id]['progress'] = 0
             tasks[task_id]['current_step'] = 'Initializing news generation...'
     
-    # Check memory usage at start of news generation
+    # Check memory usage at start of news generation using container-aware monitoring
     try:
-        import psutil
+        from glconnect.news_agent import get_memory_usage
         import gc
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory at start of news generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+        memory_percent = get_memory_usage()
+        print(f"DEBUG: Memory at start of news generation - Percent: {memory_percent:.1f}%")
         
         # If memory usage is too high, try emergency cleanup first, then abort
-        if memory_info.percent > 85:  # Conservative threshold for production stability
-            print(f"WARNING: Memory usage too high ({memory_info.percent}%) - attempting emergency cleanup...")
+        if memory_percent > 70:  # Conservative threshold for 4GB containers
+            print(f"WARNING: Memory usage too high ({memory_percent:.1f}%) - attempting emergency cleanup...")
             
             # Emergency cleanup sequence
             try:
@@ -1416,12 +1416,12 @@ def run_generate_broadcast(task_id, topics):
             except Exception as e:
                 print(f"DEBUG: Error during emergency cleanup: {e}")
             
-            # Check memory again after cleanup
-            memory_info_after = psutil.virtual_memory()
-            print(f"DEBUG: Memory after emergency cleanup - Used: {memory_info_after.used / 1024 / 1024:.1f}MB, Percent: {memory_info_after.percent}%")
+            # Check memory again after cleanup using container-aware monitoring
+            memory_percent_after = get_memory_usage()
+            print(f"DEBUG: Memory after emergency cleanup - Percent: {memory_percent_after:.1f}%")
             
-            if memory_info_after.percent > 98:  # Only abort if memory is critically high after cleanup
-                print(f"ERROR: Memory usage still too high after emergency cleanup ({memory_info_after.percent}%) - aborting news generation")
+            if memory_percent_after > 80:  # Only abort if memory is critically high after cleanup
+                print(f"ERROR: Memory usage still too high after emergency cleanup ({memory_percent_after:.1f}%) - aborting news generation")
                 
                 # Log memory state for debugging
                 try:
@@ -1497,12 +1497,12 @@ def run_generate_broadcast(task_id, topics):
                     print("DEBUG: Timeout detected during generation, attempting graceful shutdown")
                     break
         
-        # Check memory before generation
+        # Check memory before generation using container-aware monitoring
         try:
-            memory_info = psutil.virtual_memory()
-            if memory_info.percent > 85:  # Conservative threshold for production stability
-                print(f"ERROR: Memory usage too high during generation ({memory_info.percent}%) - aborting")
-                error_message = f'Memory usage too high ({memory_info.percent}%) - please try again later'
+            memory_percent = get_memory_usage()
+            if memory_percent > 70:  # Conservative threshold for 4GB containers
+                print(f"ERROR: Memory usage too high during generation ({memory_percent:.1f}%) - aborting")
+                error_message = f'Memory usage too high ({memory_percent:.1f}%) - please try again later'
                 update_task_in_db(task_id, 
                                  status='failed',
                                  progress=20,
