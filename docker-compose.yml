@@ -12,12 +12,8 @@ services:
       - app_network
     command: >
      sh -c "gunicorn --config gunicorn.conf.py --capture-output --enable-stdio-inheritance run:app"
-    deploy:
-      resources:
-        limits:
-          memory: 4G  # Increased for news generation and TTS processing
-        reservations:
-          memory: 2G  # Increased minimum memory reservation
+    mem_limit: 4g  # Increased for news generation and TTS processing
+    mem_reservation: 2g  # Increased minimum memory reservation
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
