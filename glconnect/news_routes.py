@@ -2250,6 +2250,113 @@ def broadcast():
         }), 500
 
 
+@news_bp.route('/debug/emergency-memory-cleanup')
+def emergency_memory_cleanup():
+    """Emergency memory cleanup endpoint for production."""
+    try:
+        import gc
+        import psutil
+        import os
+        import ctypes
+        
+        # Get memory before cleanup
+        memory_before = get_memory_usage()
+        print(f"DEBUG: Emergency cleanup - memory before: {memory_before:.1f}%")
+        
+        # Aggressive garbage collection
+        collected_total = 0
+        for i in range(5):  # Multiple passes
+            collected = gc.collect()
+            collected_total += collected
+            print(f"DEBUG: Garbage collection pass {i+1} collected {collected} objects")
+        
+        # Linux memory trimming
+        try:
+            libc = ctypes.CDLL("libc.so.6")
+            libc.malloc_trim(0)
+            print("DEBUG: Linux malloc_trim() completed")
+        except:
+            print("DEBUG: Linux malloc_trim() not available")
+        
+        # Clear old tasks
+        with _tasks_lock:
+            initial_count = len(tasks)
+            tasks_to_remove = []
+            current_time = datetime.now()
+            
+            for task_id, task in tasks.items():
+                if task.get('status') in ['completed', 'failed']:
+                    created_at = task.get('created_at')
+                    if created_at:
+                        age_seconds = (current_time - created_at).total_seconds()
+                        if age_seconds > 300:  # 5 minutes old
+                            tasks_to_remove.append(task_id)
+            
+            for task_id in tasks_to_remove:
+                del tasks[task_id]
+            
+            final_count = len(tasks)
+            print(f"DEBUG: Cleaned up {initial_count - final_count} old tasks")
+        
+        # Get memory after cleanup
+        memory_after = get_memory_usage()
+        memory_freed = memory_before - memory_after
+        
+        return jsonify({
+            'status': 'success',
+            'memory_before': f"{memory_before:.1f}%",
+            'memory_after': f"{memory_after:.1f}%",
+            'memory_freed': f"{memory_freed:.1f}%",
+            'objects_collected': collected_total,
+            'tasks_cleaned': initial_count - final_count,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
+@news_bp.route('/debug/memory-status')
+def memory_status():
+    """Get current memory status for monitoring."""
+    try:
+        from glconnect.news_agent import get_memory_usage
+        memory_percent = get_memory_usage()
+        
+        # Determine status
+        if memory_percent >= 85:
+            status = 'critical'
+            message = 'Memory critically high - news generation blocked'
+        elif memory_percent >= 70:
+            status = 'warning'
+            message = 'Memory high - news generation may be limited'
+        elif memory_percent >= 50:
+            status = 'caution'
+            message = 'Memory moderate - monitoring'
+        else:
+            status = 'healthy'
+            message = 'Memory healthy - news generation available'
+        
+        return jsonify({
+            'status': status,
+            'memory_percent': f"{memory_percent:.1f}%",
+            'message': message,
+            'can_generate_news': memory_percent < 70,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
 @news_bp.route('/debug/force-cleanup')
 def force_cleanup():
     """Force cleanup of stuck tasks and memory to resolve server overload."""
