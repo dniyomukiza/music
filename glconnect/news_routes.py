@@ -2070,13 +2070,13 @@ def broadcast():
             print(f"DEBUG: Pre-processing memory check - Percent: {memory_percent:.1f}%")
             
             # Block if memory usage is too high to prevent 502 errors
-            if memory_percent >= 95:
+            if memory_percent >= 85:  # More aggressive threshold for 2GB containers
                 print(f"CRITICAL: Memory usage too high ({memory_percent:.1f}%) - blocking to prevent 502 errors")
                 return jsonify({
                     'error': 'Server memory is critically high. Please wait a moment for memory to free up, then try again.',
                     'details': f'Memory usage: {memory_percent:.1f}%'
                 }), 503
-            elif memory_percent > 80:
+            elif memory_percent > 70:  # More aggressive threshold for 2GB containers
                 print(f"WARNING: Very high memory usage ({memory_percent:.1f}%) - forcing safe cleanup before proceeding")
                 # Force garbage collection (safe - doesn't affect tasks)
                 import gc

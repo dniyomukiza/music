@@ -1144,7 +1144,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
         memory_percent = get_memory_usage()
         print(f"DEBUG: Memory at start - Percent: {memory_percent:.1f}%")
         
-        if memory_percent > 85:  # Conservative threshold for production stability
+        if memory_percent > 70:  # More aggressive threshold for 2GB containers
             print(f"ERROR: Memory usage too high ({memory_percent:.1f}%) - aborting")
             return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
     except Exception as e:
@@ -1533,7 +1533,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             try:
                 memory_percent = get_memory_usage()
                 print(f"DEBUG: Memory before agent {i+1} - Percent: {memory_percent:.1f}%")
-                if memory_percent > 80:
+                if memory_percent > 65:  # More aggressive threshold for 2GB containers
                     print(f"WARNING: High memory usage before agent {i+1} ({memory_percent:.1f}%) - forcing cleanup")
                     gc.collect()
                     gc.collect()
@@ -1569,18 +1569,34 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
                 fallback_result = {"script": f"News report on topic {i+1} - Content generation temporarily unavailable."}
                 individual_outputs.append(fallback_result)
             
-            # Force memory cleanup after each agent
+            # Force aggressive memory cleanup after each agent
             try:
                 gc.collect()
                 gc.collect()
+                gc.collect()  # Triple garbage collection
+                
+                # Try to trim memory on Linux
+                try:
+                    import ctypes
+                    libc = ctypes.CDLL("libc.so.6")
+                    libc.malloc_trim(0)
+                except:
+                    pass
+                
                 memory_percent = get_memory_usage()
                 print(f"DEBUG: Memory after agent {i+1} - Percent: {memory_percent:.1f}%")
+                
+                # Emergency abort if memory is still too high
+                if memory_percent > 80:
+                    print(f"EMERGENCY: Memory too high after agent {i+1} ({memory_percent:.1f}%) - aborting remaining agents")
+                    break
+                    
             except:
                 pass
             
-            # Small delay to allow memory cleanup
+            # Longer delay to allow memory cleanup
             import time
-            time.sleep(1)
+            time.sleep(2)  # Increased delay
         
         print(f"DEBUG: Sequential processing completed - {len(individual_outputs)} agents processed")
         
