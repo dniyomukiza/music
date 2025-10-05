@@ -18,33 +18,44 @@ from summa import summarizer
 load_dotenv()
 
 def get_memory_usage():
-    """Get current memory usage percentage - container-aware."""
+    """Get current memory usage percentage - container-aware with cgroup v1/v2 support."""
     try:
         import psutil
         import os
         
         # Try to get container memory limit first
         container_limit = None
+        container_used = None
+        
+        # Cgroup v2 (Linux containers)
         try:
-            # Docker container memory limit
-            with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as f:
-                container_limit = int(f.read().strip())
+            with open('/sys/fs/cgroup/memory.max', 'r') as f:
+                content = f.read().strip()
+                if content != 'max':
+                    container_limit = int(content)
+            
+            with open('/sys/fs/cgroup/memory.current', 'r') as f:
+                container_used = int(f.read().strip())
+                
+            print(f"DEBUG: Cgroup v2 - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB")
         except:
+            # Cgroup v1 (Docker Desktop on macOS)
             try:
-                # Alternative path for newer Docker versions
-                with open('/sys/fs/cgroup/memory.max', 'r') as f:
-                    content = f.read().strip()
-                    if content != 'max':
-                        container_limit = int(content)
+                with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as f:
+                    container_limit = int(f.read().strip())
+                
+                with open('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'r') as f:
+                    container_used = int(f.read().strip())
+                    
+                print(f"DEBUG: Cgroup v1 - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB")
             except:
                 pass
         
-        # Get current memory usage
+        # Get current memory usage from psutil
         memory_info = psutil.virtual_memory()
         
-        if container_limit and container_limit < memory_info.total:
+        if container_limit and container_used is not None and container_limit < memory_info.total:
             # Use container memory limit
-            container_used = memory_info.used
             container_percent = (container_used / container_limit) * 100
             print(f"DEBUG: Container memory - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB, Percent: {container_percent:.1f}%")
             return container_percent
