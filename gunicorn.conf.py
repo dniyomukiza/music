@@ -17,7 +17,7 @@ keepalive = 2
 max_requests = 0  # Disable automatic restarts to prevent interpreter shutdown during long tasks
 max_requests_jitter = 0  # No jitter needed when max_requests is 0
 preload_app = False  # Disable preload to reduce initial memory usage
-worker_memory_limit = 150  # Extremely aggressive memory limit per worker
+worker_memory_limit = 2048  # Increased to 2GB for news generation
 
 # Logging
 accesslog = "-"

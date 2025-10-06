@@ -1509,7 +1509,7 @@
 
         // Poll transcription status
         async function pollTranscriptionStatus(taskId, filename, button, originalText) {
-            const maxPolls = 300; // 10 minutes max (300 * 2 seconds) - increased for complex news generation
+            const maxPolls = 600; // 20 minutes max (600 * 2 seconds) - increased for 4GB container news generation
             let pollCount = 0;
             
             const pollInterval = setInterval(async () => {
@@ -2510,7 +2510,7 @@
             }
             
             let pollCount = 0;
-            const maxPolls = 300; // 10 minutes max (300 * 2 seconds) - increased for complex news generation
+            const maxPolls = 600; // 20 minutes max (600 * 2 seconds) - increased for 4GB container news generation
             
             const pollInterval = setInterval(() => {
                 pollCount++;
@@ -2520,14 +2520,14 @@
                     clearInterval(pollInterval);
                     stopProgressAnimation();
                     hideLoadingState();
-                    alert('News generation is taking longer than expected (10+ minutes). Please try again or check back later.');
+                    alert('News generation is taking longer than expected (20+ minutes). Please try again or check back later.');
                     return;
                 }
                 
                 console.log(`Polling status for task_id: ${taskId}`);
                 fetch(`/routes2/news/status/${taskId}`, {
                     method: 'GET',
-                    timeout: 10000 // 10 second timeout for each request
+                    timeout: 30000 // 30 second timeout for each polling request
                 })
                 .then(response => {
                     console.log(`Status response for ${taskId}:`, response.status, response.statusText);
