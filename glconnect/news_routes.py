@@ -1362,7 +1362,7 @@ def run_generate_broadcast(task_id, topics):
         print(f"DEBUG: Memory at start of news generation - Percent: {memory_percent:.1f}%")
         
         # If memory usage is too high, try emergency cleanup first, then abort
-        if memory_percent > 70:  # Conservative threshold for 4GB containers
+        if memory_percent > 85:  # More appropriate threshold for 4GB containers
             print(f"WARNING: Memory usage too high ({memory_percent:.1f}%) - attempting emergency cleanup...")
             
             # Emergency cleanup sequence
@@ -1500,7 +1500,7 @@ def run_generate_broadcast(task_id, topics):
         # Check memory before generation using container-aware monitoring
         try:
             memory_percent = get_memory_usage()
-            if memory_percent > 70:  # Conservative threshold for 4GB containers
+            if memory_percent > 85:  # More appropriate threshold for 4GB containers
                 print(f"ERROR: Memory usage too high during generation ({memory_percent:.1f}%) - aborting")
                 error_message = f'Memory usage too high ({memory_percent:.1f}%) - please try again later'
                 update_task_in_db(task_id, 
@@ -1511,7 +1511,7 @@ def run_generate_broadcast(task_id, topics):
                                  failed_at=datetime.now(),
                                  last_heartbeat=datetime.now())
                 return
-            elif memory_info.percent > 70:  # Lowered warning threshold
+            elif memory_info.percent > 80:  # More appropriate warning threshold for 4GB containers
                 print(f"WARNING: High memory usage during generation ({memory_info.percent}%) - forcing cleanup")
                 # Force cleanup during generation
                 gc.collect()

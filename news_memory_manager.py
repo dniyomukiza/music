@@ -14,7 +14,7 @@ import ctypes
 import sys
 
 class NewsMemoryManager:
-    def __init__(self, max_memory_percent=70, cleanup_threshold=60):
+    def __init__(self, max_memory_percent=85, cleanup_threshold=75):
         self.max_memory_percent = max_memory_percent
         self.cleanup_threshold = cleanup_threshold
         self.monitoring = False

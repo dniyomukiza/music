@@ -54,13 +54,14 @@ def get_memory_usage():
         # Get current memory usage from psutil
         memory_info = psutil.virtual_memory()
         
-        if container_limit and container_used is not None and container_limit < memory_info.total:
+        # Always prefer container memory if available, regardless of system total
+        if container_limit and container_used is not None:
             # Use container memory limit
             container_percent = (container_used / container_limit) * 100
             print(f"DEBUG: Container memory - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB, Percent: {container_percent:.1f}%")
             return container_percent
         else:
-            # Fallback to system memory
+            # Fallback to system memory only if no container limits found
             print(f"DEBUG: System memory - Used: {memory_info.used / 1024 / 1024:.1f}MB, Total: {memory_info.total / 1024 / 1024:.1f}MB, Percent: {memory_info.percent:.1f}%")
             return memory_info.percent
             
@@ -1144,7 +1145,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
         memory_percent = get_memory_usage()
         print(f"DEBUG: Memory at start - Percent: {memory_percent:.1f}%")
         
-        if memory_percent > 70:  # More aggressive threshold for 2GB containers
+        if memory_percent > 85:  # More appropriate threshold for 4GB containers
             print(f"ERROR: Memory usage too high ({memory_percent:.1f}%) - aborting")
             return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
     except Exception as e:
@@ -1164,7 +1165,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
             # Check memory before each topic using container-aware monitoring
             try:
                 memory_percent = get_memory_usage()
-                if memory_percent > 80:  # Conservative threshold for 4GB containers
+                if memory_percent > 90:  # More appropriate threshold for 4GB containers
                     print(f"ERROR: Memory usage too high during processing ({memory_percent:.1f}%)")
                     return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
             except:
@@ -1230,7 +1231,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         import psutil
         memory_info = psutil.virtual_memory()
         print(f"DEBUG: Memory at start - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-        if memory_info.percent > 85:  # Conservative threshold for production stability
+        if memory_info.percent > 90:  # More appropriate threshold for 4GB containers
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting")
             return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
     except Exception as e:

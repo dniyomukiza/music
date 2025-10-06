@@ -14,7 +14,7 @@ import json
 from datetime import datetime
 
 class MemoryMonitor:
-    def __init__(self, memory_threshold=85, check_interval=10, restart_threshold=95):
+    def __init__(self, memory_threshold=80, check_interval=10, restart_threshold=90):
         self.memory_threshold = memory_threshold
         self.restart_threshold = restart_threshold
         self.check_interval = check_interval
@@ -243,8 +243,8 @@ def main():
         duration = None
     
     monitor = MemoryMonitor(
-        memory_threshold=85,  # Warning at 85%
-        restart_threshold=95,  # Restart at 95%
+        memory_threshold=80,  # Warning at 80% for 4GB containers
+        restart_threshold=90,  # Restart at 90% for 4GB containers
         check_interval=10     # Check every 10 seconds
     )
     
