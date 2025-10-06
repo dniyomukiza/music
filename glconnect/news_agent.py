@@ -27,17 +27,42 @@ def get_memory_usage():
         container_limit = None
         container_used = None
         
-        # Cgroup v2 (Linux containers)
+        # Cgroup v2 (Linux containers) - try multiple possible locations
         try:
-            with open('/sys/fs/cgroup/memory.max', 'r') as f:
-                content = f.read().strip()
-                if content != 'max':
-                    container_limit = int(content)
+            # Try different possible cgroup v2 paths
+            cgroup_paths = [
+                '/sys/fs/cgroup/memory.max',
+                '/sys/fs/cgroup/memory/memory.max',
+                '/sys/fs/cgroup/system.slice/docker-myapp.scope/memory.max'
+            ]
             
-            with open('/sys/fs/cgroup/memory.current', 'r') as f:
-                container_used = int(f.read().strip())
-                
-            print(f"DEBUG: Cgroup v2 - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB")
+            for path in cgroup_paths:
+                try:
+                    with open(path, 'r') as f:
+                        content = f.read().strip()
+                        if content != 'max' and content.isdigit():
+                            container_limit = int(content)
+                            break
+                except:
+                    continue
+            
+            # Try different possible cgroup v2 usage paths
+            usage_paths = [
+                '/sys/fs/cgroup/memory.current',
+                '/sys/fs/cgroup/memory/memory.current',
+                '/sys/fs/cgroup/system.slice/docker-myapp.scope/memory.current'
+            ]
+            
+            for path in usage_paths:
+                try:
+                    with open(path, 'r') as f:
+                        container_used = int(f.read().strip())
+                        break
+                except:
+                    continue
+                    
+            if container_limit and container_used is not None:
+                print(f"DEBUG: Cgroup v2 - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB")
         except:
             # Cgroup v1 (Docker Desktop on macOS)
             try:
@@ -61,9 +86,19 @@ def get_memory_usage():
             print(f"DEBUG: Container memory - Used: {container_used / 1024 / 1024:.1f}MB, Limit: {container_limit / 1024 / 1024:.1f}MB, Percent: {container_percent:.1f}%")
             return container_percent
         else:
-            # Fallback to system memory only if no container limits found
-            print(f"DEBUG: System memory - Used: {memory_info.used / 1024 / 1024:.1f}MB, Total: {memory_info.total / 1024 / 1024:.1f}MB, Percent: {memory_info.percent:.1f}%")
-            return memory_info.percent
+            # Fallback: Try to detect if we're in a container with 4GB limit
+            # If system memory is very low (< 2GB) but we expect 4GB, assume container
+            if memory_info.total < 2 * 1024 * 1024 * 1024:  # Less than 2GB
+                print(f"DEBUG: System memory low ({memory_info.total / 1024 / 1024:.1f}MB) - assuming 4GB container")
+                # Assume 4GB container limit and calculate percentage based on system usage
+                assumed_container_limit = 4 * 1024 * 1024 * 1024  # 4GB
+                container_percent = (memory_info.used / assumed_container_limit) * 100
+                print(f"DEBUG: Assumed container memory - Used: {memory_info.used / 1024 / 1024:.1f}MB, Assumed Limit: 4096.0MB, Percent: {container_percent:.1f}%")
+                return container_percent
+            else:
+                # Fallback to system memory only if no container limits found
+                print(f"DEBUG: System memory - Used: {memory_info.used / 1024 / 1024:.1f}MB, Total: {memory_info.total / 1024 / 1024:.1f}MB, Percent: {memory_info.percent:.1f}%")
+                return memory_info.percent
             
     except ImportError:
         return 0
