@@ -1212,11 +1212,6 @@
                                     <span class="btn-text">Add Topic</span>
                                 </button>
                             </div>
-                            <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
-                                    <i class="fas fa-play"></i> Generate News
-                                </button>
-                            </div>
                             <div id="flaskValidationFeedback" class="validation-feedback"></div>
                             {% if form.keyword.errors %}
                                 <div class="validation-error">
@@ -1224,6 +1219,7 @@
                                     <span>{{ form.keyword.errors[0] }}</span>
                                 </div>
                             {% endif %}
+                            <!-- Generate News button removed from Flask form to prevent duplicate triggers -->
                             {% if validation_error %}
                                 <div class="validation-error">
                                     <i class="fas fa-exclamation-triangle"></i>
@@ -2436,10 +2432,18 @@
             }
         }
         
+        // Flag to prevent multiple simultaneous requests
+        let isGeneratingNews = false;
+
         // Function to generate news from added topics
         function generateNewsFromTopics() {
-            let topicsToUse = [];
+            // Prevent multiple simultaneous requests
+            if (isGeneratingNews) {
+                console.log('News generation already in progress, ignoring duplicate request');
+                return;
+            }
             
+            let topicsToUse = [];
             
             // Check if there are added topics
             if (addedTopics.length > 0) {
@@ -2461,6 +2465,10 @@
                 return;
             }
             
+            // Set flag to prevent duplicate requests
+            isGeneratingNews = true;
+            console.log('Starting news generation, setting isGeneratingNews = true');
+            
             // Submit the topics to the broadcast endpoint
             fetch('/routes2/news/broadcast', {
                 method: 'POST',
@@ -2477,6 +2485,7 @@
                 console.log('Broadcast response data:', data);
                 if (data.error) {
                     alert('Error: ' + data.error);
+                    isGeneratingNews = false; // Reset flag on error
                 } else {
                     // Show loading state and poll for completion
                     showLoadingState();
@@ -2485,6 +2494,9 @@
                 }
             })
             .catch(error => {
+                console.error('Error in news generation:', error);
+                alert('Error: ' + error.message);
+                isGeneratingNews = false; // Reset flag on error
                 console.error('Error:', error);
                 alert('Error generating news. Please try again.');
             });
@@ -2555,12 +2567,14 @@
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
+                        isGeneratingNews = false; // Reset flag on failure
                         alert('News generation failed: ' + (data.error || 'Unknown error'));
                     } else if (data.error === 'Task not found') {
                         console.log('Task not found - may have completed or been cancelled');
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
+                        isGeneratingNews = false; // Reset flag on task not found
                         alert('Task not found. The news generation may have completed or been cancelled. Please try generating news again.');
                     } else if (data.status === 'running') {
                         console.log(`Task ${taskId} is still running... (attempt ${pollCount}/${maxPolls})`);
@@ -2612,16 +2626,19 @@
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
+                        isGeneratingNews = false; // Reset flag on error
                         alert(error.message);
                     } else if (error.message.includes('Server temporarily unavailable') || error.message.includes('502')) {
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
+                        isGeneratingNews = false; // Reset flag on error
                         alert('Server is temporarily overloaded. The news generation is still running in the background. Please wait a few minutes and refresh the page to check status.');
                     } else if (error.name !== 'TypeError' || !error.message.includes('Failed to fetch')) {
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         hideLoadingState();
+                        isGeneratingNews = false; // Reset flag on error
                         alert('Error checking status: ' + error.message + '. Please try again.');
                     }
                     // For network timeouts, continue polling
@@ -2652,6 +2669,10 @@
         
         // Function to show results
         function showResults(result) {
+            // Reset the generation flag when results are shown
+            isGeneratingNews = false;
+            console.log('News generation completed, setting isGeneratingNews = false');
+            
             const resultDiv = document.getElementById('result');
             if (resultDiv) {
                 const audioUrl = result.audio_file || result.audio_url;
