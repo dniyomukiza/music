@@ -735,24 +735,42 @@ def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "fi
         # Use FFmpeg to combine files efficiently - put in static audio directory
         output_path = os.path.join(os.getcwd(), "glconnect", "static", "audio", output_filename)
         
-        # Use filter_complex approach instead of concat for better sample rate handling
-        cmd = [
-            'ffmpeg', '-y',  # -y to overwrite output file
-            '-i', 'glconnect/static/audio/jingle.wav',
-            '-i', 'glconnect/static/audio/intro_audio.mp3',
-            '-i', 'glconnect/static/audio/transition_audio_0.mp3',
-            '-i', 'glconnect/static/audio/tech_audio.mp3',
-            '-i', 'glconnect/static/audio/thank_you_audio.mp3',
-            '-i', 'glconnect/static/audio/outro_audio.mp3',
-            '-i', 'glconnect/static/audio/jingle.wav',
-            '-filter_complex', '[0:0][1:0][2:0][3:0][4:0][5:0][6:0]concat=n=7:v=0:a=1[out]',
+        # Build dynamic FFmpeg command based on actual file paths
+        cmd = ['ffmpeg', '-y']  # -y to overwrite output file
+        
+        # Add all input files to the command
+        input_files = []
+        for file_path in file_paths:
+            if isinstance(file_path, dict) and 'audio_filepath' in file_path:
+                file_path = file_path['audio_filepath']
+            
+            # Convert relative paths to absolute paths
+            if not os.path.isabs(file_path):
+                file_path = os.path.abspath(file_path)
+            
+            if os.path.exists(file_path) and not file_path.startswith("Error:"):
+                cmd.extend(['-i', file_path])
+                input_files.append(file_path)
+                print(f"DEBUG: Added input file to FFmpeg: {file_path}")
+        
+        # Build filter_complex string dynamically
+        num_inputs = len(input_files)
+        if num_inputs == 0:
+            return {"combined_audio_filepath": "Error: No valid input files found"}
+        
+        # Create filter_complex string: [0:0][1:0][2:0]...concat=n=N:v=0:a=1[out]
+        filter_inputs = ''.join([f'[{i}:0]' for i in range(num_inputs)])
+        filter_complex = f'{filter_inputs}concat=n={num_inputs}:v=0:a=1[out]'
+        
+        cmd.extend([
+            '-filter_complex', filter_complex,
             '-map', '[out]',
             '-c:a', 'libmp3lame',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
             output_path
-        ]
+        ])
         
         print(f"DEBUG: FFmpeg command: {' '.join(cmd)}")
         print(f"DEBUG: Concat file contents:")
@@ -912,17 +930,8 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
             print(f"ERROR: Combined audio file was not created!")
             raise Exception(f"Combined audio file was not created: {full_path}")
 
-        # Scoped cleanup: remove only the specific input mp3s used for this combination
-        try:
-            final_abs_path = os.path.abspath(full_path)
-            for candidate_path in input_mp3_paths:
-                if candidate_path != final_abs_path and os.path.exists(candidate_path):
-                    try:
-                        os.remove(candidate_path)
-                    except Exception as cleanup_err:
-                        print(f"Warning: failed to remove {candidate_path}: {cleanup_err}")
-        except Exception as e:
-            print(f"Warning: cleanup step failed: {e}")
+        # DO NOT clean up intermediate files here - they will be cleaned up after final broadcast verification
+        print(f"DEBUG: Skipping intermediate file cleanup - will be done after final broadcast verification")
 
         return {"combined_audio_filepath": full_path}
     except Exception as e:

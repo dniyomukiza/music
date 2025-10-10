@@ -1724,8 +1724,8 @@ def run_generate_broadcast(task_id, topics):
             gc.collect()
             print(f"DEBUG: Garbage collection completed for task {task_id}")
             
-            # Clean up temporary audio files (jingle.wav and final_news_broadcast*.mp3 are NEVER deleted)
-            cleanup_temp_audio_files()
+            # Skip cleanup here - it's already handled in the news generation process
+            print("DEBUG: Skipping cleanup_temp_audio_files() - already handled in news generation")
             
             print("ADK agent system completed successfully!")
             return
