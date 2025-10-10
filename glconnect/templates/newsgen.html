@@ -1212,6 +1212,11 @@
                                     <span class="btn-text">Add Topic</span>
                                 </button>
                             </div>
+                            <div style="margin-top: 15px; text-align: center;">
+                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
+                                    <i class="fas fa-play"></i> Generate News
+                                </button>
+                            </div>
                             <div id="flaskValidationFeedback" class="validation-feedback"></div>
                             {% if form.keyword.errors %}
                                 <div class="validation-error">
