@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Book - Book Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/book_platform.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-book"></i> Book Platform
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
+                    <i class="fas fa-arrow-left"></i> Back to Book
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 edit-book">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-edit"></i> Edit Book Details
+                        </h4>
+                        <small class="text-muted">Update information for "{{ book.title }}"</small>
+                    </div>
+                    <div class="card-body">
+                        <form id="editBookForm">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Book Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" required
+                                       value="{{ book.title }}" placeholder="Enter book title">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Book Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="4"
+                                          placeholder="Describe your book">{{ book.description or '' }}</textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="genre" class="form-label">Genre</label>
+                                        <select class="form-select" id="genre" name="genre">
+                                            <option value="">Select a genre</option>
+                                            <option value="fiction" {% if book.genre == 'fiction' %}selected{% endif %}>Fiction</option>
+                                            <option value="non-fiction" {% if book.genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                                            <option value="mystery" {% if book.genre == 'mystery' %}selected{% endif %}>Mystery</option>
+                                            <option value="romance" {% if book.genre == 'romance' %}selected{% endif %}>Romance</option>
+                                            <option value="sci-fi" {% if book.genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
+                                            <option value="fantasy" {% if book.genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
+                                            <option value="thriller" {% if book.genre == 'thriller' %}selected{% endif %}>Thriller</option>
+                                            <option value="biography" {% if book.genre == 'biography' %}selected{% endif %}>Biography</option>
+                                            <option value="self-help" {% if book.genre == 'self-help' %}selected{% endif %}>Self-Help</option>
+                                            <option value="business" {% if book.genre == 'business' %}selected{% endif %}>Business</option>
+                                            <option value="history" {% if book.genre == 'history' %}selected{% endif %}>History</option>
+                                            <option value="other" {% if book.genre == 'other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="target_audience" class="form-label">Target Audience</label>
+                                        <select class="form-select" id="target_audience" name="target_audience">
+                                            <option value="">Select target audience</option>
+                                            <option value="children" {% if book.target_audience == 'children' %}selected{% endif %}>Children</option>
+                                            <option value="young-adult" {% if book.target_audience == 'young-adult' %}selected{% endif %}>Young Adult</option>
+                                            <option value="adult" {% if book.target_audience == 'adult' %}selected{% endif %}>Adult</option>
+                                            <option value="general" {% if book.target_audience == 'general' %}selected{% endif %}>General</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="word_count_target" class="form-label">Target Word Count</label>
+                                        <input type="number" class="form-control" id="word_count_target" name="word_count_target" 
+                                               value="{{ book.word_count_target or '' }}" min="0" placeholder="Optional target word count">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="price" class="form-label">Price (USD)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="price" name="price" 
+                                                   value="{{ book.price or '' }}" min="0" step="0.01" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="tags" class="form-label">Tags</label>
+                                <input type="text" class="form-control" id="tags" name="tags" 
+                                       value="{{ book.tags or '' }}" placeholder="Enter tags separated by commas">
+                                <div class="form-text">Separate multiple tags with commas</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cover_image" class="form-label">Cover Image URL</label>
+                                <input type="url" class="form-control" id="cover_image" name="cover_image" 
+                                       value="{{ book.cover_image or '' }}" placeholder="https://example.com/cover.jpg">
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_published" name="is_published"
+                                           {% if book.is_published %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_published">
+                                        Publish this book
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allow_collaboration" name="allow_collaboration"
+                                           {% if book.allow_collaboration %}checked{% endif %}>
+                                    <label class="form-check-label" for="allow_collaboration">
+                                        Allow collaboration
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                                   class="btn btn-secondary me-md-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Book
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="confirmDeleteBook()">
+                                    <i class="fas fa-trash"></i> Delete Book
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Book Statistics -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar"></i> Book Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Chapters</h6>
+                                    <h4 class="text-primary">{{ book.chapters|length }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Word Count</h6>
+                                    <h4 class="text-success">{{ book.word_count or 0 }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Status</h6>
+                                    <h4 class="text-info">{{ book.status.value.title() if book.status else 'Draft' }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Created</h6>
+                                    <h4 class="text-warning">{{ book.created_at.strftime('%m/%d/%Y') if book.created_at else 'N/A' }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chapter Management -->
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> Chapter Management
+                        </h5>
+                        <div>
+                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Add Chapter
+                            </a>
+                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-list"></i> View All
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if book.chapters %}
+                            <div class="row">
+                                {% for chapter in book.chapters %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card chapter-card h-100">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Chapter {{ chapter.chapter_number }}</h6>
+                                            {% if chapter.is_published %}
+                                                <span class="badge bg-success">Published</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Draft</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ chapter.title }}</h6>
+                                            
+                                            {% if chapter.content %}
+                                                <p class="card-text small">{{ chapter.content[:100]|striptags }}{% if chapter.content|length > 100 %}...{% endif %}</p>
+                                            {% else %}
+                                                <p class="card-text small text-muted">No content yet</p>
+                                            {% endif %}
+                                            
+                                            <div class="chapter-meta mb-2">
+                                                {% if chapter.word_count %}
+                                                    <span class="badge bg-info">{{ chapter.word_count }} words</span>
+                                                {% endif %}
+                                                {% if chapter.word_count_target %}
+                                                    <span class="badge bg-secondary">Target: {{ chapter.word_count_target }}</span>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="chapter-stats">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar"></i> {{ chapter.created_at.strftime('%m/%d/%Y') }}
+                                                    {% if chapter.updated_at and chapter.updated_at != chapter.created_at %}
+                                                        <br><i class="fas fa-edit"></i> Updated: {{ chapter.updated_at.strftime('%m/%d/%Y') }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                               <div class="card-footer">
+                                   <div class="btn-group w-100" role="group">
+                                       <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                                          class="btn btn-outline-primary btn-sm">
+                                           <i class="fas fa-eye"></i> View
+                                       </a>
+                                       {% if chapter.is_published %}
+                                           <button class="btn btn-outline-warning btn-sm" disabled title="Published chapters are locked for editing">
+                                               <i class="fas fa-lock"></i> Locked
+                                           </button>
+                                       {% else %}
+                                           <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                                              class="btn btn-outline-secondary btn-sm">
+                                               <i class="fas fa-edit"></i> Edit
+                                           </a>
+                                       {% endif %}
+                                       <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteChapter({{ chapter.id }}, '{{ chapter.title }}')">
+                                           <i class="fas fa-trash"></i> Delete
+                                       </button>
+                                   </div>
+                               </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <!-- Empty State -->
+                            <div class="text-center py-4">
+                                <div class="empty-state">
+                                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                    <h5>No Chapters Yet</h5>
+                                    <p class="text-muted mb-3">Start writing your book by adding your first chapter.</p>
+                                    <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Add First Chapter
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}"></script>
+    <script>
+        // Form submission
+        document.getElementById('editBookForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('{{ url_for("book_platform.edit_book", book_id=book.id) }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success message
+                    showNotification('Book updated successfully!', 'success');
+                    
+                    // Redirect to book view
+                    setTimeout(() => {
+                        window.location.href = result.redirect || '{{ url_for("book_platform.view_book", book_id=book.id) }}';
+                    }, 1500);
+                } else {
+                    showNotification(result.error || 'Failed to update book', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating book:', error);
+                showNotification('An error occurred while updating the book', 'error');
+            }
+        });
+
+        // Notification function
+        function showNotification(message, type = 'info') {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Auto-save functionality
+        let autoSaveTimeout;
+        const form = document.getElementById('editBookForm');
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => {
+                    // Auto-save logic could be implemented here
+                    console.log('Auto-save triggered');
+                }, 3000);
+            });
+        });
+
+        // Delete book confirmation
+        function confirmDeleteBook() {
+            if (confirm('Are you sure you want to delete this book? This action cannot be undone and will delete all chapters and content.')) {
+                deleteBook();
+            }
+        }
+
+        async function deleteBook() {
+            try {
+                const response = await fetch('{{ url_for("book_platform.delete_book", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '{{ url_for("book_platform.books") }}';
+                    }, 1500);
+                } else {
+                    showNotification(result.error || 'Failed to delete book', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting book:', error);
+                showNotification('An error occurred while deleting the book', 'error');
+            }
+        }
+
+        // Delete chapter confirmation
+        function confirmDeleteChapter(chapterId, chapterTitle) {
+            if (confirm(`Are you sure you want to delete "${chapterTitle}"? This action cannot be undone.`)) {
+                deleteChapter(chapterId);
+            }
+        }
+
+        async function deleteChapter(chapterId) {
+            try {
+                const response = await fetch(`{{ url_for("book_platform.delete_chapter", book_id=book.id, chapter_id=0) }}`.replace('0', chapterId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotification(result.error || 'Failed to delete chapter', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting chapter:', error);
+                showNotification('An error occurred while deleting the chapter', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

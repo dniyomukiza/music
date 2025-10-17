@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Marketplace - Book Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-book"></i> Book Platform
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Sidebar Filters -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-filter"></i> Filters</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="filterForm">
+                            <div class="mb-3">
+                                <label for="genre" class="form-label">Genre</label>
+                                <select class="form-select" id="genre" name="genre">
+                                    <option value="">All Genres</option>
+                                    <option value="fiction">Fiction</option>
+                                    <option value="non-fiction">Non-Fiction</option>
+                                    <option value="mystery">Mystery</option>
+                                    <option value="romance">Romance</option>
+                                    <option value="sci-fi">Science Fiction</option>
+                                    <option value="fantasy">Fantasy</option>
+                                    <option value="thriller">Thriller</option>
+                                    <option value="biography">Biography</option>
+                                    <option value="self-help">Self-Help</option>
+                                    <option value="business">Business</option>
+                                    <option value="history">History</option>
+                                    <option value="poetry">Poetry</option>
+                                    <option value="children">Children's</option>
+                                    <option value="young-adult">Young Adult</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="priceRange" class="form-label">Price Range</label>
+                                <select class="form-select" id="priceRange" name="price_range">
+                                    <option value="">Any Price</option>
+                                    <option value="0-5">$0 - $5</option>
+                                    <option value="5-10">$5 - $10</option>
+                                    <option value="10-20">$10 - $20</option>
+                                    <option value="20+">$20+</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="sortBy" class="form-label">Sort By</label>
+                                <select class="form-select" id="sortBy" name="sort_by">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="price_low">Price: Low to High</option>
+                                    <option value="price_high">Price: High to Low</option>
+                                    <option value="title">Title A-Z</option>
+                                    <option value="popular">Most Popular</option>
+                                </select>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Apply Filters
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-bar"></i> Marketplace Stats</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ books|length }}</span>
+                            <span class="stat-label">Books Available</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ books|selectattr('price')|list|length }}</span>
+                            <span class="stat-label">Paid Books</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ books|rejectattr('price')|list|length }}</span>
+                            <span class="stat-label">Free Books</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-store"></i> Book Marketplace</h2>
+                    <div class="d-flex gap-2">
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search books...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="searchBooks()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Books Grid -->
+                <div class="row" id="booksGrid">
+                    {% if books %}
+                        {% for book in books %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="marketplace-card">
+                                    {% if book.cover_image %}
+                                        <img src="{{ book.cover_image }}" class="book-cover" alt="{{ book.title }}">
+                                    {% else %}
+                                        <div class="book-cover-placeholder">
+                                            <i class="fas fa-book"></i>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="book-info">
+                                        <h5 class="book-title">{{ book.title }}</h5>
+                                        <p class="book-author">by {{ book.author.pen_name or book.author.user.username }}</p>
+                                        
+                                        {% if book.description %}
+                                            <p class="book-description">{{ book.description[:100] }}{% if book.description|length > 100 %}...{% endif %}</p>
+                                        {% endif %}
+                                        
+                                        <div class="book-meta">
+                                            <span class="badge badge-info">{{ book.genre or 'No genre' }}</span>
+                                            {% if book.word_count %}
+                                                <span class="badge badge-secondary">{{ book.word_count }} words</span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="book-rating">
+                                            <div class="stars">
+                                                <i class="fas fa-star star"></i>
+                                                <i class="fas fa-star star"></i>
+                                                <i class="fas fa-star star"></i>
+                                                <i class="fas fa-star star"></i>
+                                                <i class="far fa-star star"></i>
+                                            </div>
+                                            <span class="rating-text">(4.2)</span>
+                                        </div>
+                                        
+                                        <div class="book-price-section">
+                                            {% if book.price and book.price > 0 %}
+                                                <div class="book-price">${{ "%.2f"|format(book.price) }}</div>
+                                            {% else %}
+                                                <div class="book-price text-success">Free</div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="book-actions">
+                                            <button class="btn btn-primary btn-sm" onclick="viewBook({{ book.id }})">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </button>
+                                            {% if book.price and book.price > 0 %}
+                                                <button class="btn btn-success btn-sm" onclick="purchaseBook({{ book.id }})">
+                                                    <i class="fas fa-shopping-cart"></i> Buy Now
+                                                </button>
+                                            {% else %}
+                                                <button class="btn btn-outline-primary btn-sm" onclick="downloadBook({{ book.id }})">
+                                                    <i class="fas fa-download"></i> Download
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-12">
+                            <div class="text-center py-5">
+                                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                                <h4 class="text-muted">No books available</h4>
+                                <p class="text-muted">Check back later for new releases!</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Pagination -->
+                {% if books|length > 12 %}
+                    <nav aria-label="Books pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                            <li class="page-item active">
+                                <span class="page-link">1</span>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">2</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">3</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Book Details Modal -->
+    <div class="modal fade" id="bookDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bookDetailsTitle">Book Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="bookDetailsBody">
+                    <!-- Book details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="purchaseButton">Purchase</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search functionality
+        function searchBooks() {
+            const searchTerm = document.getElementById('searchInput').value;
+            const genre = document.getElementById('genre').value;
+            const priceRange = document.getElementById('priceRange').value;
+            const sortBy = document.getElementById('sortBy').value;
+            
+            // Apply filters (in a real implementation, this would make an API call)
+            filterBooks(searchTerm, genre, priceRange, sortBy);
+        }
+
+        function filterBooks(searchTerm, genre, priceRange, sortBy) {
+            const books = document.querySelectorAll('.marketplace-card');
+            
+            books.forEach(bookCard => {
+                const title = bookCard.querySelector('.book-title').textContent.toLowerCase();
+                const author = bookCard.querySelector('.book-author').textContent.toLowerCase();
+                const bookGenre = bookCard.querySelector('.badge-info').textContent.toLowerCase();
+                const price = bookCard.querySelector('.book-price').textContent;
+                
+                let show = true;
+                
+                // Search term filter
+                if (searchTerm && !title.includes(searchTerm.toLowerCase()) && !author.includes(searchTerm.toLowerCase())) {
+                    show = false;
+                }
+                
+                // Genre filter
+                if (genre && !bookGenre.includes(genre.toLowerCase())) {
+                    show = false;
+                }
+                
+                // Price range filter
+                if (priceRange) {
+                    const bookPrice = parseFloat(price.replace('$', '').replace('Free', '0'));
+                    switch(priceRange) {
+                        case '0-5':
+                            if (bookPrice > 5) show = false;
+                            break;
+                        case '5-10':
+                            if (bookPrice < 5 || bookPrice > 10) show = false;
+                            break;
+                        case '10-20':
+                            if (bookPrice < 10 || bookPrice > 20) show = false;
+                            break;
+                        case '20+':
+                            if (bookPrice < 20) show = false;
+                            break;
+                    }
+                }
+                
+                bookCard.parentElement.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        function viewBook(bookId) {
+            // In a real implementation, this would fetch book details from the server
+            const modal = new bootstrap.Modal(document.getElementById('bookDetailsModal'));
+            document.getElementById('bookDetailsTitle').textContent = 'Book Details';
+            document.getElementById('bookDetailsBody').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading book details...</p>
+                </div>
+            `;
+            modal.show();
+            
+            // Simulate loading book details
+            setTimeout(() => {
+                document.getElementById('bookDetailsBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="book-cover-placeholder text-center">
+                                <i class="fas fa-book fa-3x"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h4>Sample Book Title</h4>
+                            <p class="text-muted">by Sample Author</p>
+                            <p>This is a sample book description that would be loaded from the database.</p>
+                            <div class="book-meta">
+                                <span class="badge badge-info">Fiction</span>
+                                <span class="badge badge-secondary">50,000 words</span>
+                            </div>
+                            <div class="book-price-section mt-3">
+                                <div class="book-price">$9.99</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        function purchaseBook(bookId) {
+            if (confirm('Are you sure you want to purchase this book?')) {
+                fetch(`/mybook/books/${bookId}/purchase`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Book purchased successfully!');
+                        // In a real implementation, you might redirect to a download page
+                    } else {
+                        alert('Purchase failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Purchase error:', error);
+                    alert('Purchase failed. Please try again.');
+                });
+            }
+        }
+
+        function downloadBook(bookId) {
+            // For free books, directly download
+            window.open(`/mybook/books/${bookId}/download`, '_blank');
+        }
+
+        // Filter form submission
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            searchBooks();
+        });
+
+        // Search input enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchBooks();
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Platform Dashboard - {{ current_user.username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-book"></i> Book Platform
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">
+                            <i class="fas fa-book-open"></i> My Books
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
+                            <i class="fas fa-store"></i> Marketplace
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-line"></i> Quick Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ authored_books|length }}</span>
+                            <span class="stat-label">Books Written</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ collaborations|length }}</span>
+                            <span class="stat-label">Collaborations</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ notifications|length }}</span>
+                            <span class="stat-label">New Notifications</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5><i class="fas fa-bell"></i> Recent Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if notifications %}
+                            {% for notification in notifications %}
+                                <div class="notification-item">
+                                    <div class="notification-title">{{ notification.title }}</div>
+                                    <div class="notification-message">{{ notification.message }}</div>
+                                    <div class="notification-time">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No new notifications</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-home"></i> Dashboard</h2>
+                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Book
+                    </a>
+                </div>
+
+                <!-- My Books Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-book-open"></i> My Books</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if authored_books %}
+                            <div class="row">
+                                {% for book in authored_books %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="book-card">
+                                            {% if book.cover_image %}
+                                                <img src="{{ book.cover_image }}" class="book-cover" alt="{{ book.title }}">
+                                            {% else %}
+                                                <div class="book-cover-placeholder">
+                                                    <i class="fas fa-book"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div class="book-info">
+                                                <h6 class="book-title">{{ book.title }}</h6>
+                                                <p class="book-genre">{{ book.genre or 'No genre' }}</p>
+                                                <div class="book-status">
+                                                    <span class="badge badge-{{ 'success' if book.status.value == 'published' else 'warning' }}">
+                                                        {{ book.status.value.title() }}
+                                                    </span>
+                                                </div>
+                                                <div class="book-actions">
+                                                    <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </a>
+                                                    {% if book.status.value == 'draft' %}
+                                                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-edit"></i> Edit
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No books yet</h5>
+                                <p class="text-muted">Start writing your first book!</p>
+                                <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Create Your First Book
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Collaborations Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users"></i> My Collaborations</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if collaborations %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Book</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for collab in collaborations %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ collab.book_project.title }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">by {{ collab.book_project.author.pen_name or collab.book_project.author.user.username }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-info">{{ collab.role.value.title() }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-success">Active</span>
+                                                </td>
+                                                <td>
+                                                    <a href="{{ url_for('book_platform.view_book', book_id=collab.book_project.id) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No collaborations yet</h5>
+                                <p class="text-muted">You haven't been invited to collaborate on any books.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='book_platform.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+"""
+Book Platform Integration Module
+This module integrates the book platform with the main Flask application.
+It handles database initialization, blueprint registration, and WebSocket setup.
+"""
+
+from flask import Flask
+from flask_socketio import SocketIO
+from flask_login import LoginManager
+from flask_migrate import Migrate
+
+# Import existing models and database
+from glconnect.models import db, User
+
+# Import book platform components
+from glconnect.book_platform_models import *
+from glconnect.book_platform_routes import book_bp
+from glconnect.book_platform_websocket import socketio
+from glconnect.gemini_integration import gemini_bp
+
+def init_book_platform(app):
+    """
+    Initialize the book platform with the Flask application.
+    This function should be called from your main app initialization.
+    """
+    
+    # Register the book platform blueprints
+    app.register_blueprint(book_bp)
+    app.register_blueprint(gemini_bp)
+    
+    # Initialize SocketIO with the app
+    socketio.init_app(app, cors_allowed_origins="*")
+    
+    # Import WebSocket handlers to register them
+    import glconnect.book_platform_websocket
+    
+    # Create database tables for book platform
+    with app.app_context():
+        try:
+            # Create all book platform tables
+            db.create_all()
+            print("Book platform database tables created successfully")
+        except Exception as e:
+            print(f"Error creating book platform tables: {e}")
+    
+    return app, socketio
+
+def create_book_platform_tables():
+    """
+    Create only the book platform tables.
+    This can be used to add the book platform to an existing database.
+    """
+    from glconnect.book_platform_models import (
+        BookPlatformUser, BookProject, BookChapter, BookCollaboration,
+        CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
+        BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification
+    )
+    
+    # Create tables
+    BookPlatformUser.__table__.create(db.engine, checkfirst=True)
+    BookProject.__table__.create(db.engine, checkfirst=True)
+    BookChapter.__table__.create(db.engine, checkfirst=True)
+    BookCollaboration.__table__.create(db.engine, checkfirst=True)
+    CollaborationInvitation.__table__.create(db.engine, checkfirst=True)
+    BookComment.__table__.create(db.engine, checkfirst=True)
+    BookVersion.__table__.create(db.engine, checkfirst=True)
+    ChapterVersion.__table__.create(db.engine, checkfirst=True)
+    BookPurchase.__table__.create(db.engine, checkfirst=True)
+    BookSale.__table__.create(db.engine, checkfirst=True)
+    RealtimeSession.__table__.create(db.engine, checkfirst=True)
+    BookAnalytics.__table__.create(db.engine, checkfirst=True)
+    BookNotification.__table__.create(db.engine, checkfirst=True)
+    
+    print("Book platform tables created successfully")
+
+def drop_book_platform_tables():
+    """
+    Drop all book platform tables.
+    This can be used to completely remove the book platform from the database.
+    """
+    from glconnect.book_platform_models import (
+        BookPlatformUser, BookProject, BookChapter, BookCollaboration,
+        CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
+        BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification
+    )
+    
+    # Drop tables in reverse order to handle foreign key constraints
+    BookNotification.__table__.drop(db.engine, checkfirst=True)
+    BookAnalytics.__table__.drop(db.engine, checkfirst=True)
+    RealtimeSession.__table__.drop(db.engine, checkfirst=True)
+    BookSale.__table__.drop(db.engine, checkfirst=True)
+    BookPurchase.__table__.drop(db.engine, checkfirst=True)
+    ChapterVersion.__table__.drop(db.engine, checkfirst=True)
+    BookVersion.__table__.drop(db.engine, checkfirst=True)
+    BookComment.__table__.drop(db.engine, checkfirst=True)
+    CollaborationInvitation.__table__.drop(db.engine, checkfirst=True)
+    BookCollaboration.__table__.drop(db.engine, checkfirst=True)
+    BookChapter.__table__.drop(db.engine, checkfirst=True)
+    BookProject.__table__.drop(db.engine, checkfirst=True)
+    BookPlatformUser.__table__.drop(db.engine, checkfirst=True)
+    
+    print("Book platform tables dropped successfully")
+
+def get_book_platform_stats():
+    """
+    Get statistics about the book platform usage.
+    """
+    from glconnect.book_platform_models import (
+        BookPlatformUser, BookProject, BookChapter, BookCollaboration,
+        BookComment, BookPurchase, BookSale
+    )
+    
+    stats = {
+        'total_users': BookPlatformUser.query.count(),
+        'total_books': BookProject.query.count(),
+        'total_chapters': BookChapter.query.count(),
+        'total_collaborations': BookCollaboration.query.count(),
+        'total_comments': BookComment.query.count(),
+        'total_purchases': BookPurchase.query.count(),
+        'total_sales': BookSale.query.count(),
+        'published_books': BookProject.query.filter_by(status=BookStatus.PUBLISHED).count(),
+        'draft_books': BookProject.query.filter_by(status=BookStatus.DRAFT).count(),
+    }
+    
+    return stats
+
+def cleanup_book_platform_data():
+    """
+    Clean up old or unused data from the book platform.
+    This can be run periodically to maintain database performance.
+    """
+    from glconnect.book_platform_models import (
+        RealtimeSession, BookNotification, BookComment
+    )
+    from datetime import datetime, timezone, timedelta
+    
+    # Clean up old realtime sessions (older than 1 day)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=1)
+    old_sessions = RealtimeSession.query.filter(
+        RealtimeSession.last_activity < cutoff_date
+    ).all()
+    
+    for session in old_sessions:
+        db.session.delete(session)
+    
+    # Clean up old notifications (older than 30 days)
+    notification_cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    old_notifications = BookNotification.query.filter(
+        BookNotification.created_at < notification_cutoff,
+        BookNotification.is_read == True
+    ).all()
+    
+    for notification in old_notifications:
+        db.session.delete(notification)
+    
+    # Clean up resolved comments (older than 90 days)
+    comment_cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+    old_resolved_comments = BookComment.query.filter(
+        BookComment.resolved_at < comment_cutoff,
+        BookComment.is_resolved == True
+    ).all()
+    
+    for comment in old_resolved_comments:
+        db.session.delete(comment)
+    
+    db.session.commit()
+    print(f"Cleaned up {len(old_sessions)} sessions, {len(old_notifications)} notifications, {len(old_resolved_comments)} comments")
+
+# Example usage in your main app file:
+"""
+from flask import Flask
+from glconnect.models import db
+from glconnect.book_platform_integration import init_book_platform
+
+def create_app():
+    app = Flask(__name__)
+    
+    # Your existing app configuration
+    app.config['SECRET_KEY'] = 'your-secret-key'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'your-database-uri'
+    
+    # Initialize existing components
+    db.init_app(app)
+    
+    # Initialize book platform
+    app, socketio = init_book_platform(app)
+    
+    return app, socketio
+
+if __name__ == '__main__':
+    app, socketio = create_app()
+    socketio.run(app, debug=True)
+"""

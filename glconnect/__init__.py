@@ -19,6 +19,7 @@ load_dotenv()
 config = {
     "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
     "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
+    "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
     "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
     "DB_URL": os.getenv("DB_URL"),
     "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
@@ -29,7 +30,9 @@ print("DEBUG: Using environment variables for configuration")
 # Debug: Check if Google credentials are loaded
 # Get Google API key from glconfig.json
 google_api_key = config.get("GOOGLE_API_KEY")
+gemini_api_key = config.get("GEMINI_API_KEY")
 print(f"GOOGLE_API_KEY from glconfig.json: {google_api_key}")
+print(f"GEMINI_API_KEY from .env: {gemini_api_key[:20]}..." if gemini_api_key else "GEMINI_API_KEY: Not found")
 print(f"GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)")
 
 # Initialize extensions
@@ -49,6 +52,7 @@ def create_app():
         SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_SAMESITE='None', # This is correct for cross-site cookies with credentials
         JWT_SECRET_KEY="abarayon",
+        GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
     )
 
     # Secret key for sessions
@@ -148,6 +152,7 @@ def create_app():
         from .writer import writer
         from .book import book
         from .news_routes import news_bp
+        from .book_platform_integration import init_book_platform
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
@@ -160,6 +165,9 @@ def create_app():
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
         app.register_blueprint(news_bp, url_prefix='/routes2/news')
+        
+        # Initialize book platform
+        app, socketio = init_book_platform(app)
 
         # Ensure tables exist
         inspector = inspect(db.engine)
@@ -168,4 +176,4 @@ def create_app():
         if missing_tables:
             db.create_all()
 
-    return app
+    return app, socketio
