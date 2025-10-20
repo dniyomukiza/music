@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask_login import login_required, current_user
 from datetime import datetime, timezone
 import psutil
 import os
@@ -14,6 +15,12 @@ def index():
 @bp.route('/home')
 def home():
     return render_template('home.html')
+
+@bp.route('/marketplace')
+@login_required
+def marketplace():
+    """Universal marketplace access - redirects to book platform marketplace"""
+    return redirect(url_for('book_platform.marketplace'))
 
 @bp.route('/about')
 def about():

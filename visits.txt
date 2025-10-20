@@ -8536,3 +8536,33 @@
     Device: Desktop
     User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
 --------------------------------------------------------------------------------
+[2025-10-20 04:08:04 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-20 04:08:10 UTC] GET /mybook/
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-20 04:08:20 UTC] GET /writer/
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-20 04:08:25 UTC] GET /writer/dashboard
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-10-20 04:08:33 UTC] GET /marketplace
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------

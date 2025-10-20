@@ -188,7 +188,7 @@ class BookComment(db.Model):
     
     # Relationships
     replies = db.relationship('BookComment', backref=db.backref('parent_comment', remote_side=[id]), lazy=True)
-    resolved_by = db.relationship('BookPlatformUser', foreign_keys=[commenter_id], backref='resolved_comments')
+    resolved_by = db.relationship('BookPlatformUser', foreign_keys=[commenter_id], backref='resolved_comments', overlaps="commenter,comments")
 
 # Book Version Model (for version control)
 class BookVersion(db.Model):

@@ -83,9 +83,23 @@ def writer_dashboard():
 
     # Fetch books uploaded by this writer
     books = Book.query.filter_by(writer_id=writer.writer_id).all()
+    
+    # Check if user has book platform profile
+    from glconnect.book_platform_models import BookPlatformUser
+    book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get book platform books if user has profile
+    book_platform_books = []
+    if book_platform_user:
+        from glconnect.book_platform_models import BookProject
+        book_platform_books = BookProject.query.filter_by(author_id=book_platform_user.id).all()
 
     # Render the writer's dashboard and pass the writer and books to the template
-    return render_template('writer_dashboard.html', writer=writer, books=books)
+    return render_template('writer_dashboard.html', 
+                         writer=writer, 
+                         books=books,
+                         book_platform_user=book_platform_user,
+                         book_platform_books=book_platform_books)
 
 
 
@@ -206,20 +220,15 @@ def delete_book(book_id):
     flash("Book deleted successfully.", "success")
     return redirect(url_for('writer.writer_dashboard'))
 
-@writer.route('/search-writer', methods=['GET'])
-def search_writer():
-    query = request.args.get('q', '').strip().lower()
-    if not query:
-        return jsonify([])
+@writer.route('/book-platform')
+@login_required
+def access_book_platform():
+    """Redirect to book platform dashboard - writers can access directly"""
+    # Writers can now access book platform directly without separate profile
+    return redirect(url_for('book_platform.dashboard'))
 
-    # Search for writer name (case-insensitive, partial match)
-    writer = Writer.query.filter(Writer.writer_name.ilike(f"%{query}%")).first()
-    if writer:
-        return jsonify({'redirect': url_for('writer.view_writer', writer_id=writer.writer_id)})
-
-    # If not found, search for a book title
-    book = Book.query.filter(Book.title.ilike(f"%{query}%")).first()
-    if book:
-        return jsonify({'redirect': url_for('writer.view_writer', writer_id=book.writer_id)})
-
-    return jsonify([])  # No match found
+@writer.route('/marketplace')
+@login_required
+def access_marketplace():
+    """Access marketplace from writer platform"""
+    return redirect(url_for('book_platform.marketplace'))

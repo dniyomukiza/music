@@ -18,7 +18,7 @@ import json
 from functools import wraps
 
 # Import models
-from glconnect.models import db, User
+from glconnect.models import db, User, Writer
 from glconnect.book_platform_models import (
     BookPlatformUser, BookProject, BookChapter, BookCollaboration, 
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
@@ -30,8 +30,49 @@ from glconnect.book_platform_models import (
 book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
 # Helper decorators
+def get_user_profile():
+    """Get user profile - Writer profile is primary for book platform"""
+    if not current_user.is_authenticated:
+        return None, None
+    
+    # Check for Writer profile first (primary users for book platform)
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
+    if writer:
+        return writer, 'writer'
+    
+    # Check for BookPlatformUser profile (legacy support)
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if book_user:
+        return book_user, 'book_platform'
+    
+    return None, None
+
+def writer_or_book_platform_required(f):
+    """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for book platform access"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('routes1.login'))
+        
+        user_profile, profile_type = get_user_profile()
+        if not user_profile:
+            # If no profile exists, redirect to writer profile creation
+            flash('You need a Writer profile to access the book platform', 'warning')
+            return redirect(url_for('writer.writer_profile'))
+        
+        # Add profile info to kwargs for use in the function
+        kwargs['user_profile'] = user_profile
+        kwargs['profile_type'] = profile_type
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def integrated_auth_required(f):
+    """Decorator that accepts both Writer and BookPlatformUser profiles (legacy name)"""
+    return writer_or_book_platform_required(f)
+
 def book_platform_required(f):
-    """Decorator to ensure user has book platform profile"""
+    """Decorator to ensure user has book platform profile (legacy - for backward compatibility)"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -73,33 +114,56 @@ def collaboration_required(f):
 
 # Main dashboard route
 @book_bp.route('/')
-@login_required
-def dashboard():
-    """Main book platform dashboard"""
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+@writer_or_book_platform_required
+def dashboard(user_profile, profile_type):
+    """Main book platform dashboard - Writer profiles are primary users"""
     
-    if not book_user:
-        return redirect(url_for('book_platform.setup_profile'))
-    
-    # Get user's books
-    authored_books = BookProject.query.filter_by(author_id=book_user.id).all()
-    
-    # Get collaborations
-    collaborations = BookCollaboration.query.filter_by(
-        collaborator_id=book_user.id, 
-        is_active=True
-    ).all()
-    
-    # Get recent notifications
-    notifications = BookNotification.query.filter_by(
-        user_id=book_user.id,
-        is_read=False
-    ).order_by(BookNotification.created_at.desc()).limit(5).all()
+    if profile_type == 'writer':
+        # For writers, create a temporary BookPlatformUser-like object
+        class WriterAsBookUser:
+            def __init__(self, writer):
+                self.id = writer.writer_id
+                self.user_id = writer.user_id
+                self.pen_name = writer.writer_name
+                self.bio = writer.bio
+                self.profile_picture = writer.profile_picture
+        
+        book_user = WriterAsBookUser(user_profile)
+        
+        # Get books authored by this writer (from BookProject table)
+        authored_books = BookProject.query.filter_by(author_id=book_user.id).all()
+        
+        # Get collaborations (if any)
+        collaborations = BookCollaboration.query.filter_by(
+            collaborator_id=book_user.id, 
+            is_active=True
+        ).all()
+        
+        # Get recent notifications (if any)
+        notifications = BookNotification.query.filter_by(
+            user_id=book_user.id,
+            is_read=False
+        ).order_by(BookNotification.created_at.desc()).limit(5).all()
+        
+    else:
+        # For BookPlatformUsers (legacy), use existing logic
+        book_user = user_profile
+        authored_books = BookProject.query.filter_by(author_id=book_user.id).all()
+        collaborations = BookCollaboration.query.filter_by(
+            collaborator_id=book_user.id, 
+            is_active=True
+        ).all()
+        notifications = BookNotification.query.filter_by(
+            user_id=book_user.id,
+            is_read=False
+        ).order_by(BookNotification.created_at.desc()).limit(5).all()
     
     return render_template('book_platform/dashboard.html', 
                          authored_books=authored_books,
                          collaborations=collaborations,
-                         notifications=notifications)
+                         notifications=notifications,
+                         user_profile=book_user,
+                         profile_type=profile_type)
 
 # Profile setup
 @book_bp.route('/setup-profile', methods=['GET', 'POST'])
@@ -156,19 +220,18 @@ def books():
     return render_template('book_platform/books.html', books=books)
 
 @book_bp.route('/books/create', methods=['GET', 'POST'])
-@book_platform_required
-def create_book():
-    """Create a new book project"""
+@writer_or_book_platform_required
+def create_book(user_profile, profile_type):
+    """Create a new book project - Writer profiles are primary users"""
     if request.method == 'POST':
         data = request.get_json()
-        book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         
         book = BookProject(
             title=data['title'],
             description=data.get('description'),
             genre=data.get('genre'),
             target_audience=data.get('target_audience'),
-            author_id=book_user.id
+            author_id=user_profile.id  # Use the profile ID (writer_id or book_user.id)
         )
         
         db.session.add(book)
@@ -655,8 +718,9 @@ def resolve_comment(comment_id):
 
 # Marketplace routes
 @book_bp.route('/marketplace')
+@login_required
 def marketplace():
-    """Browse published books in marketplace"""
+    """Browse published books in marketplace - accessible to all logged-in users"""
     books = BookProject.query.filter_by(status=BookStatus.PUBLISHED).all()
     return render_template('book_platform/marketplace.html', books=books)
 
@@ -683,19 +747,30 @@ def publish_book(book_id):
     return jsonify({'success': True})
 
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
-@book_platform_required
+@login_required
 def purchase_book(book_id):
-    """Purchase a book"""
+    """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
     book = BookProject.query.get_or_404(book_id)
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     
-    # Can't buy your own book
-    if book.author_id == book_user.id:
+    # Get user profile (Writer or BookPlatformUser) - if no profile, create a temporary one for purchase
+    user_profile, profile_type = get_user_profile()
+    if not user_profile:
+        # For users without profiles, create a temporary profile for purchase tracking
+        class TempUserProfile:
+            def __init__(self, user_id):
+                self.id = user_id  # Use user_id as the ID for purchase tracking
+                self.user_id = user_id
+        
+        user_profile = TempUserProfile(current_user.user_id)
+        profile_type = 'temp'
+    
+    # Can't buy your own book (only applies to users with Writer/BookPlatformUser profiles)
+    if profile_type in ['writer', 'book_platform'] and book.author_id == user_profile.id:
         return jsonify({'error': 'You cannot purchase your own book'}), 400
     
     # Check if already purchased
     existing_purchase = BookPurchase.query.filter_by(
-        buyer_id=book_user.id,
+        buyer_id=user_profile.id,
         book_project_id=book_id,
         status=TransactionStatus.COMPLETED
     ).first()
@@ -705,7 +780,7 @@ def purchase_book(book_id):
     
     # Create purchase record
     purchase = BookPurchase(
-        buyer_id=book_user.id,
+        buyer_id=user_profile.id,
         book_project_id=book_id,
         amount=book.price,
         currency=book.currency,

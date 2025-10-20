@@ -9,13 +9,32 @@
         <img src="{{ url_for('static', filename=writer.profile_picture or 'writer_uploads/default_writer.jpg') }}" alt="Profile Picture" width="150">
         <p><strong>Bio:</strong> {{ writer.bio }}</p>
 
-        <a href="{{ url_for('writer.writer_profile') }}" class="btn btn-primary">Edit Profile</a>
-        <form method="POST" action="{{ url_for('writer.delete_profile') }}" style="display:inline;">
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your profile? This action cannot be undone.')">Delete Profile</button>
-        </form>
-        <a href="{{ url_for('book.upload_work') }}" class="btn btn-success">Upload Your Work</a>
+        <!-- Writer Platform Actions -->
+        <div class="platform-actions">
+            <h3>Writer Platform</h3>
+            <a href="{{ url_for('writer.writer_profile') }}" class="btn btn-primary">Edit Profile</a>
+            <form method="POST" action="{{ url_for('writer.delete_profile') }}" style="display:inline;">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your profile? This action cannot be undone.')">Delete Profile</button>
+            </form>
+            <a href="{{ url_for('book.upload_work') }}" class="btn btn-success">Upload Your Work</a>
+        </div>
 
-        <h2>Your Uploaded Books</h2>
+        <!-- Book Platform Integration -->
+        <div class="platform-actions">
+            <h3>Book Platform</h3>
+            <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-info">📚 Book Platform Dashboard</a>
+            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-warning">🛒 Marketplace</a>
+            <p class="platform-status">✅ Book Platform: Writer profiles only | Marketplace: All logged-in users</p>
+        </div>
+
+        <!-- Universal Marketplace Access -->
+        <div class="platform-actions">
+            <h3>Marketplace</h3>
+            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-warning">🛒 Browse All Books</a>
+            <p class="platform-status">Available to all logged-in users</p>
+        </div>
+
+        <h2>Your Uploaded Books (Writer Platform)</h2>
         {% if books %}
             <ul>
                 {% for book in books %}
@@ -34,6 +53,22 @@
             </ul>
         {% else %}
             <p>You haven't uploaded any books yet</p>
+        {% endif %}
+
+        <!-- Book Platform Books -->
+        {% if book_platform_books %}
+        <h2>Your Books (Book Platform)</h2>
+        <ul>
+            {% for book in book_platform_books %}
+                <li>
+                    <h3>{{ book.title }}</h3>
+                    <p><strong>Status:</strong> {{ book.status.value }}</p>
+                    <p><strong>Genre:</strong> {{ book.genre }}</p>
+                    <p><strong>Word Count:</strong> {{ book.word_count }}</p>
+                    <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-primary">View Book</a>
+                </li>
+            {% endfor %}
+        </ul>
         {% endif %}
     </div>
     <style>
@@ -128,6 +163,47 @@
 
 .btn-success:hover {
     background-color: #27ae60;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.platform-actions {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.platform-actions h3 {
+    margin-top: 0;
+    color: #495057;
+    font-size: 1.2rem;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 10px;
+}
+
+.platform-status {
+    font-style: italic;
+    color: #6c757d;
+    margin-top: 10px;
+    font-size: 0.9rem;
 }
 
     </style>
