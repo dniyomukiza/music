@@ -8,7 +8,7 @@ This module contains all routes for the book platform including:
 - User management
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, current_app, send_from_directory
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
@@ -29,6 +29,21 @@ from glconnect.book_platform_models import (
 # Create blueprint
 book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
+# Image upload configuration
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+
+def get_image_upload_folder():
+    """Get the image upload folder for book chapters"""
+    upload_folder = os.path.join(current_app.root_path, 'static', 'book_images')
+    os.makedirs(upload_folder, exist_ok=True)
+    return upload_folder
+
+def allowed_image_file(filename):
+    """Check if the uploaded file is an allowed image type"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
 # Helper decorators
 def get_user_profile():
     """Get user profile - Writer profile is primary for book platform"""
@@ -46,6 +61,17 @@ def get_user_profile():
         return book_user, 'book_platform'
     
     return None, None
+
+def get_profile_id(user_profile, profile_type):
+    """Get the correct ID based on profile type"""
+    if profile_type == 'book_platform':
+        return user_profile.id
+    elif profile_type == 'writer':
+        return user_profile.writer_id
+    elif profile_type == 'temp':
+        return user_profile.user_id
+    else:
+        return None
 
 def writer_or_book_platform_required(f):
     """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for book platform access"""
@@ -226,12 +252,15 @@ def create_book(user_profile, profile_type):
     if request.method == 'POST':
         data = request.get_json()
         
+        # Get the correct ID based on profile type
+        author_id = get_profile_id(user_profile, profile_type)
+        
         book = BookProject(
             title=data['title'],
             description=data.get('description'),
             genre=data.get('genre'),
             target_audience=data.get('target_audience'),
-            author_id=user_profile.id  # Use the profile ID (writer_id or book_user.id)
+            author_id=author_id
         )
         
         db.session.add(book)
@@ -765,12 +794,12 @@ def purchase_book(book_id):
         profile_type = 'temp'
     
     # Can't buy your own book (only applies to users with Writer/BookPlatformUser profiles)
-    if profile_type in ['writer', 'book_platform'] and book.author_id == user_profile.id:
+    if profile_type in ['writer', 'book_platform'] and book.author_id == get_profile_id(user_profile, profile_type):
         return jsonify({'error': 'You cannot purchase your own book'}), 400
     
     # Check if already purchased
     existing_purchase = BookPurchase.query.filter_by(
-        buyer_id=user_profile.id,
+        buyer_id=get_profile_id(user_profile, profile_type),
         book_project_id=book_id,
         status=TransactionStatus.COMPLETED
     ).first()
@@ -780,7 +809,7 @@ def purchase_book(book_id):
     
     # Create purchase record
     purchase = BookPurchase(
-        buyer_id=user_profile.id,
+        buyer_id=get_profile_id(user_profile, profile_type),
         book_project_id=book_id,
         amount=book.price,
         currency=book.currency,
@@ -896,3 +925,97 @@ def not_found(error):
 @book_bp.errorhandler(403)
 def forbidden(error):
     return render_template('book_platform/403.html'), 403
+
+# Image upload routes for CKEditor
+@book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/upload-image', methods=['POST'])
+@writer_or_book_platform_required
+def upload_chapter_image(book_id, chapter_id, user_profile, profile_type):
+    """Upload image for a book chapter"""
+    book = BookProject.query.get_or_404(book_id)
+    chapter = BookChapter.query.get_or_404(chapter_id)
+    
+    # Verify chapter belongs to book
+    if chapter.book_project_id != book_id:
+        return jsonify({'error': 'Chapter not found'}), 404
+    
+    # Check access permissions
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        # Check if user is a collaborator
+        collaboration = BookCollaboration.query.filter_by(
+            book_project_id=book_id,
+            collaborator_id=author_id,
+            is_active=True
+        ).first()
+        if not collaboration:
+            return jsonify({'error': 'Access denied'}), 403
+    
+    if 'upload' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['upload']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_image_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Only image files are allowed.'}), 400
+    
+    # Check file size
+    file.seek(0, 2)  # Seek to end
+    file_size = file.tell()
+    file.seek(0)  # Reset to beginning
+    
+    if file_size > MAX_IMAGE_SIZE:
+        return jsonify({'error': 'File too large. Maximum size is 10MB.'}), 400
+    
+    # Generate unique filename
+    filename = secure_filename(file.filename)
+    name, ext = os.path.splitext(filename)
+    unique_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+    
+    # Save file
+    upload_folder = get_image_upload_folder()
+    file_path = os.path.join(upload_folder, unique_filename)
+    file.save(file_path)
+    
+    # Generate URL for the uploaded file
+    image_url = f"/static/book_images/{unique_filename}"
+    
+    return jsonify({
+        'success': True,
+        'url': image_url,
+        'filename': unique_filename
+    })
+
+@book_bp.route('/books/<int:book_id>/images')
+@writer_or_book_platform_required
+def get_chapter_images(book_id, user_profile, profile_type):
+    """Get all images uploaded for a book"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check access permissions
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        # Check if user is a collaborator
+        collaboration = BookCollaboration.query.filter_by(
+            book_project_id=book_id,
+            collaborator_id=author_id,
+            is_active=True
+        ).first()
+        if not collaboration:
+            return jsonify({'error': 'Access denied'}), 403
+    
+    # Get all images in the book's image folder
+    upload_folder = get_image_upload_folder()
+    images = []
+    
+    if os.path.exists(upload_folder):
+        for filename in os.listdir(upload_folder):
+            if allowed_image_file(filename):
+                images.append({
+                    'url': f"/static/book_images/{filename}",
+                    'filename': filename,
+                    'name': os.path.splitext(filename)[0]
+                })
+    
+    return jsonify({'images': images})

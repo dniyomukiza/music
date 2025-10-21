@@ -96,21 +96,81 @@
     <script>
         let editor;
 
-        // Initialize CKEditor
+        // Initialize CKEditor with full features
         ClassicEditor
             .create(document.querySelector('#editor'), {
                 toolbar: {
                     items: [
                         'heading', '|',
-                        'bold', 'italic', 'underline', '|',
-                        'bulletedList', 'numberedList', '|',
+                        'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', '|',
+                        'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                        'bulletedList', 'numberedList', 'todoList', '|',
                         'outdent', 'indent', '|',
                         'alignment', '|',
                         'blockQuote', 'insertTable', '|',
-                        'undo', 'redo'
+                        'link', 'imageUpload', 'mediaEmbed', '|',
+                        'horizontalLine', 'pageBreak', '|',
+                        'code', 'codeBlock', '|',
+                        'findAndReplace', '|',
+                        'undo', 'redo', '|',
+                        'sourceEditing'
                     ]
                 },
                 language: 'en',
+                fontSize: {
+                    options: [9, 11, 13, 'default', 17, 19, 21, 24, 28, 32, 36, 48, 60, 72]
+                },
+                fontFamily: {
+                    options: [
+                        'default',
+                        'Arial, Helvetica, sans-serif',
+                        'Courier New, Courier, monospace',
+                        'Georgia, serif',
+                        'Lucida Sans Unicode, Lucida Grande, sans-serif',
+                        'Tahoma, Geneva, sans-serif',
+                        'Times New Roman, Times, serif',
+                        'Trebuchet MS, Helvetica, sans-serif',
+                        'Verdana, Geneva, sans-serif'
+                    ]
+                },
+                fontColor: {
+                    colors: [
+                        { color: 'hsl(0, 0%, 0%)', label: 'Black' },
+                        { color: 'hsl(0, 0%, 30%)', label: 'Dim grey' },
+                        { color: 'hsl(0, 0%, 60%)', label: 'Grey' },
+                        { color: 'hsl(0, 0%, 90%)', label: 'Light grey' },
+                        { color: 'hsl(0, 0%, 100%)', label: 'White', hasBorder: true },
+                        { color: 'hsl(0, 75%, 60%)', label: 'Red' },
+                        { color: 'hsl(30, 75%, 60%)', label: 'Orange' },
+                        { color: 'hsl(60, 75%, 60%)', label: 'Yellow' },
+                        { color: 'hsl(90, 75%, 60%)', label: 'Light green' },
+                        { color: 'hsl(120, 75%, 60%)', label: 'Green' },
+                        { color: 'hsl(150, 75%, 60%)', label: 'Aquamarine' },
+                        { color: 'hsl(180, 75%, 60%)', label: 'Turquoise' },
+                        { color: 'hsl(210, 75%, 60%)', label: 'Light blue' },
+                        { color: 'hsl(240, 75%, 60%)', label: 'Blue' },
+                        { color: 'hsl(270, 75%, 60%)', label: 'Purple' }
+                    ]
+                },
+                fontBackgroundColor: {
+                    colors: [
+                        { color: 'hsl(0, 0%, 0%)', label: 'Black' },
+                        { color: 'hsl(0, 0%, 30%)', label: 'Dim grey' },
+                        { color: 'hsl(0, 0%, 60%)', label: 'Grey' },
+                        { color: 'hsl(0, 0%, 90%)', label: 'Light grey' },
+                        { color: 'hsl(0, 0%, 100%)', label: 'White', hasBorder: true },
+                        { color: 'hsl(0, 75%, 60%)', label: 'Red' },
+                        { color: 'hsl(30, 75%, 60%)', label: 'Orange' },
+                        { color: 'hsl(60, 75%, 60%)', label: 'Yellow' },
+                        { color: 'hsl(90, 75%, 60%)', label: 'Light green' },
+                        { color: 'hsl(120, 75%, 60%)', label: 'Green' },
+                        { color: 'hsl(150, 75%, 60%)', label: 'Aquamarine' },
+                        { color: 'hsl(180, 75%, 60%)', label: 'Turquoise' },
+                        { color: 'hsl(210, 75%, 60%)', label: 'Light blue' },
+                        { color: 'hsl(240, 75%, 60%)', label: 'Blue' },
+                        { color: 'hsl(270, 75%, 60%)', label: 'Purple' }
+                    ]
+                },
                 indentBlock: {
                     offset: 40,
                     unit: 'px'
@@ -129,16 +189,111 @@
                     contentToolbar: [
                         'tableColumn',
                         'tableRow',
-                        'mergeTableCells'
+                        'mergeTableCells',
+                        'tableProperties',
+                        'tableCellProperties'
                     ]
+                },
+                image: {
+                    toolbar: [
+                        'imageTextAlternative',
+                        'imageStyle:inline',
+                        'imageStyle:block',
+                        'imageStyle:side',
+                        '|',
+                        'toggleImageCaption',
+                        'imageResize'
+                    ],
+                    resizeOptions: [
+                        {
+                            name: 'imageResize:original',
+                            label: 'Original',
+                            value: null
+                        },
+                        {
+                            name: 'imageResize:25',
+                            label: '25%',
+                            value: '25'
+                        },
+                        {
+                            name: 'imageResize:50',
+                            label: '50%',
+                            value: '50'
+                        },
+                        {
+                            name: 'imageResize:75',
+                            label: '75%',
+                            value: '75'
+                        }
+                    ]
+                },
+                link: {
+                    decorators: {
+                        openInNewTab: {
+                            mode: 'manual',
+                            label: 'Open in a new tab',
+                            attributes: {
+                                target: '_blank',
+                                rel: 'noopener noreferrer'
+                            }
+                        }
+                    }
+                },
+                mediaEmbed: {
+                    previewsInData: true
                 }
             })
             .then(newEditor => {
                 editor = newEditor;
+                
+                // Configure image upload adapter
+                editor.plugins.get('FileRepository').createUploadAdapter = function(loader) {
+                    return new UploadAdapter(loader);
+                };
             })
             .catch(error => {
                 console.error('Error initializing CKEditor:', error);
             });
+
+        // Custom upload adapter for CKEditor
+        class UploadAdapter {
+            constructor(loader) {
+                this.loader = loader;
+            }
+
+            upload() {
+                return this.loader.file
+                    .then(file => new Promise((resolve, reject) => {
+                        const data = new FormData();
+                        data.append('upload', file);
+                        
+                        // Get book and chapter IDs from URL
+                        const urlParts = window.location.pathname.split('/');
+                        const bookId = urlParts[urlParts.indexOf('books') + 1];
+                        const chapterId = urlParts[urlParts.indexOf('chapters') + 1];
+                        
+                        fetch(`/mybook/books/${bookId}/chapters/${chapterId}/upload-image`, {
+                            method: 'POST',
+                            body: data
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                resolve({ default: result.url });
+                            } else {
+                                reject(result.error || 'Upload failed');
+                            }
+                        })
+                        .catch(error => {
+                            reject('Upload failed: ' + error.message);
+                        });
+                    }));
+            }
+
+            abort() {
+                // Implement abort if needed
+            }
+        }
 
         // Form submission
         document.getElementById('createChapterForm').addEventListener('submit', async function(e) {
