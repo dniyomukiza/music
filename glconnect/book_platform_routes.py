@@ -238,11 +238,30 @@ def setup_profile():
 
 # Book management routes
 @book_bp.route('/books')
-@book_platform_required
-def books():
+@writer_or_book_platform_required
+def books(user_profile, profile_type):
     """List all user's books"""
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    books = BookProject.query.filter_by(author_id=book_user.id).all()
+    # Get the correct ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
+    
+    # If user has Writer profile, ensure they have a BookPlatformUser profile
+    if profile_type == 'writer':
+        book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        if not book_platform_user:
+            # Create BookPlatformUser for Writer
+            book_platform_user = BookPlatformUser(
+                user_id=current_user.user_id,
+                pen_name=user_profile.writer_name,
+                bio=user_profile.bio,
+                profile_picture=user_profile.profile_picture
+            )
+            db.session.add(book_platform_user)
+            db.session.commit()
+            author_id = book_platform_user.id
+        else:
+            author_id = book_platform_user.id
+    
+    books = BookProject.query.filter_by(author_id=author_id).all()
     return render_template('book_platform/books.html', books=books)
 
 @book_bp.route('/books/create', methods=['GET', 'POST'])
@@ -254,6 +273,23 @@ def create_book(user_profile, profile_type):
         
         # Get the correct ID based on profile type
         author_id = get_profile_id(user_profile, profile_type)
+        
+        # If user has Writer profile, ensure they have a BookPlatformUser profile
+        if profile_type == 'writer':
+            book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+            if not book_platform_user:
+                # Create BookPlatformUser for Writer
+                book_platform_user = BookPlatformUser(
+                    user_id=current_user.user_id,
+                    pen_name=user_profile.writer_name,
+                    bio=user_profile.bio,
+                    profile_picture=user_profile.profile_picture
+                )
+                db.session.add(book_platform_user)
+                db.session.flush()  # Get the ID without committing
+                author_id = book_platform_user.id
+            else:
+                author_id = book_platform_user.id
         
         book = BookProject(
             title=data['title'],
