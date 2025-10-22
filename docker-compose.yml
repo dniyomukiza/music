@@ -37,6 +37,7 @@ services:
       - SENDER_PASSWORD=uivaqvvdohjovkhi
       - RECAPTCHAPUB=6LfdZjgrAAAAADyijAp1kSulPN7ZFAWk01fJzaPz
       - RECAPTCHAPRIV=6LfdZjgrAAAAAI2jKpHvpDeXAKK0IuhMMXjul-RK
+      - GEMINI_API_KEY=AIzaSyAN9PhRQkawgarggs44LB0TlX3DH5HxeyI
 
   nginx:
       build:
