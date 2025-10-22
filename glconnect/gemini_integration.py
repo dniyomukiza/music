@@ -167,42 +167,59 @@ class GeminiWritingAssistant:
     
     def generate_ideas(self, genre: str, theme: str = "", character: str = "") -> Dict:
         """Generate creative ideas for stories"""
-        prompt = f"""Generate 5 creative story ideas for a {genre} book"""
+        prompt = f"""Write 5 story ideas for a {genre} book"""
         if theme:
-            prompt += f" with the theme: {theme}"
+            prompt += f" about {theme}"
         if character:
-            prompt += f" featuring a character like: {character}"
-        
-        prompt += """. Each idea should include:
-        - A compelling hook
-        - Main conflict
-        - Character motivation
-        - Potential plot points
-        
-        Format each idea as a numbered list with clear sections."""
-        
+            prompt += f" with a character like {character}"
+
+        prompt += """. Each idea should have a title, main character, and basic plot."""
+
         try:
             response = self.model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=800,
-                    temperature=0.8,
+                    max_output_tokens=2000,  # Increased from 800
+                    temperature=0.7,
                     top_p=0.8,
                     top_k=40
                 )
             )
-            
-            return {
-                "success": True,
-                "content": response.text,
-                "usage": {
-                    "prompt_tokens": len(prompt.split()),
-                    "completion_tokens": len(response.text.split()),
-                    "total_tokens": len(prompt.split()) + len(response.text.split())
+
+            # Check if response has content
+            try:
+                content = response.text
+                return {
+                    "success": True,
+                    "content": content,
+                    "usage": {
+                        "prompt_tokens": len(prompt.split()),
+                        "completion_tokens": len(content.split()),
+                        "total_tokens": len(prompt.split()) + len(content.split())
+                    }
                 }
-            }
-            
+            except Exception as text_error:
+                print(f"DEBUG: Error accessing response.text in generate_ideas: {text_error}")
+                print(f"DEBUG: Response candidates: {response.candidates}")
+                if response.candidates and len(response.candidates) > 0:
+                    candidate = response.candidates[0]
+                    print(f"DEBUG: Candidate finish reason: {candidate.finish_reason}")
+                    print(f"DEBUG: Candidate safety ratings: {candidate.safety_ratings}")
+
+                    # Handle MAX_TOKENS case
+                    if candidate.finish_reason == 2:  # MAX_TOKENS
+                        return {
+                            "success": False,
+                            "error": "Response was truncated due to token limit. Please try with a shorter prompt or increase max_tokens."
+                        }
+
+                return {
+                    "success": False,
+                    "error": f"Error accessing response text: {str(text_error)}"
+                }
+
         except Exception as e:
+            print(f"DEBUG: Exception in generate_ideas: {e}")
             return {"success": False, "error": str(e)}
     
     def analyze_text(self, text: str) -> Dict:
@@ -337,79 +354,6 @@ Corrected text:"""
             
         except Exception as e:
             print(f"DEBUG: Exception in proofread: {e}")
-            return {"success": False, "error": str(e)}
-    
-    def generate_dialogue(self, character1: str, character2: str, context: str, mood: str = "neutral") -> Dict:
-        """Generate realistic dialogue between characters"""
-        prompt = f"""Write a natural dialogue between {character1} and {character2}.
-        Context: {context}
-        Mood: {mood}
-        
-        Make the dialogue:
-        - Natural and realistic
-        - Character-appropriate
-        - Engaging and purposeful
-        - Properly formatted"""
-        
-        try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=600,
-                    temperature=0.6,
-                    top_p=0.8,
-                    top_k=40
-                )
-            )
-            
-            return {
-                "success": True,
-                "content": response.text,
-                "usage": {
-                    "prompt_tokens": len(prompt.split()),
-                    "completion_tokens": len(response.text.split()),
-                    "total_tokens": len(prompt.split()) + len(response.text.split())
-                }
-            }
-            
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    
-    def expand_scene(self, scene_description: str, target_length: int = 500) -> Dict:
-        """Expand a brief scene description into detailed prose"""
-        prompt = f"""Expand this scene description into detailed, engaging prose of approximately {target_length} words:
-        
-        Scene: {scene_description}
-        
-        Include:
-        - Vivid descriptions
-        - Character emotions and thoughts
-        - Sensory details
-        - Smooth transitions
-        - Engaging narrative flow"""
-        
-        try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=target_length + 100,
-                    temperature=0.7,
-                    top_p=0.8,
-                    top_k=40
-                )
-            )
-            
-            return {
-                "success": True,
-                "content": response.text,
-                "usage": {
-                    "prompt_tokens": len(prompt.split()),
-                    "completion_tokens": len(response.text.split()),
-                    "total_tokens": len(prompt.split()) + len(response.text.split())
-                }
-            }
-            
-        except Exception as e:
             return {"success": False, "error": str(e)}
     
     def suggest_improvements(self, text: str) -> Dict:
@@ -597,17 +541,18 @@ def generate_ideas():
     """Generate creative story ideas using Gemini"""
     try:
         data = request.get_json()
-        genre = data.get('genre', 'fiction')
         theme = data.get('theme', '')
-        character = data.get('character', '')
-        
+
+        if not theme:
+            return jsonify({'success': False, 'error': 'Theme is required'}), 400
+
         assistant = get_gemini_assistant()
         if not assistant:
             return jsonify({'success': False, 'error': 'Gemini AI service not configured'}), 500
-        
-        result = assistant.generate_ideas(genre, theme, character)
+
+        result = assistant.generate_ideas('fiction', theme, '')
         return jsonify(result)
-        
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -627,52 +572,6 @@ def proofread():
             return jsonify({'success': False, 'error': 'Gemini AI service not configured'}), 500
         
         result = assistant.proofread(text)
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@gemini_bp.route('/generate-dialogue', methods=['POST'])
-@login_required
-def generate_dialogue():
-    """Generate dialogue between characters using Gemini"""
-    try:
-        data = request.get_json()
-        character1 = data.get('character1')
-        character2 = data.get('character2')
-        context = data.get('context', '')
-        mood = data.get('mood', 'neutral')
-        
-        if not character1 or not character2:
-            return jsonify({'success': False, 'error': 'Both characters are required'}), 400
-        
-        assistant = get_gemini_assistant()
-        if not assistant:
-            return jsonify({'success': False, 'error': 'Gemini AI service not configured'}), 500
-        
-        result = assistant.generate_dialogue(character1, character2, context, mood)
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@gemini_bp.route('/expand-scene', methods=['POST'])
-@login_required
-def expand_scene():
-    """Expand a scene description using Gemini"""
-    try:
-        data = request.get_json()
-        scene_description = data.get('scene_description')
-        target_length = data.get('target_length', 500)
-        
-        if not scene_description:
-            return jsonify({'success': False, 'error': 'Scene description is required'}), 400
-        
-        assistant = get_gemini_assistant()
-        if not assistant:
-            return jsonify({'success': False, 'error': 'Gemini AI service not configured'}), 500
-        
-        result = assistant.expand_scene(scene_description, target_length)
         return jsonify(result)
         
     except Exception as e:

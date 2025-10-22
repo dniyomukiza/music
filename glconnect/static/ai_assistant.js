@@ -15,8 +15,6 @@ class AIWritingAssistant {
             analyzeText: true,
             proofread: true,
             generateIdeas: true,
-            generateDialogue: true,
-            expandScene: true,
             suggestImprovements: true
         };
     }
@@ -320,12 +318,6 @@ class AIWritingAssistant {
             case 'generate-ideas':
                 await this.generateIdeas();
                 break;
-            case 'generate-dialogue':
-                await this.generateDialogue();
-                break;
-            case 'expand-scene':
-                await this.expandScene();
-                break;
             case 'suggest-improvements':
                 await this.suggestImprovements();
                 break;
@@ -339,15 +331,13 @@ class AIWritingAssistant {
         const prompt = await this.getUserInput('Enter a prompt for content generation:', 'text');
         if (!prompt) return;
 
-        const context = await this.getUserInput('Enter context (optional):', 'text');
-        
         this.showAIModal('Generating Content...', 'loading');
         
         try {
             const response = await fetch('/mybook/ai/generate-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, context })
+                body: JSON.stringify({ prompt })
             });
             
             const result = await response.json();
@@ -462,82 +452,20 @@ class AIWritingAssistant {
      * Generate story ideas
      */
     async generateIdeas() {
-        const genre = await this.getUserInput('Enter genre:', 'text', 'fiction');
-        const theme = await this.getUserInput('Enter theme (optional):', 'text');
-        const character = await this.getUserInput('Enter character (optional):', 'text');
-        
+        const theme = await this.getUserInput('Enter theme for story ideas:', 'text');
+        if (!theme) return;
+
         this.showAIModal('Generating Ideas...', 'loading');
         
         try {
             const response = await fetch('/mybook/ai/generate-ideas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ genre, theme, character })
+                body: JSON.stringify({ theme })
             });
             
             const result = await response.json();
             this.showAIResult(result, 'Story Ideas');
-        } catch (error) {
-            this.showAIResult({ success: false, error: error.message }, 'Error');
-        }
-    }
-
-    /**
-     * Generate dialogue
-     */
-    async generateDialogue() {
-        const character1 = await this.getUserInput('Character 1:', 'text');
-        const character2 = await this.getUserInput('Character 2:', 'text');
-        const context = await this.getUserInput('Context:', 'text');
-        const mood = await this.getUserInput('Mood:', 'select', ['neutral', 'tense', 'happy', 'sad', 'angry']);
-        
-        if (!character1 || !character2) {
-            this.showNotification('Both characters are required', 'warning');
-            return;
-        }
-        
-        this.showAIModal('Generating Dialogue...', 'loading');
-        
-        try {
-            const response = await fetch('/mybook/ai/generate-dialogue', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ character1, character2, context, mood })
-            });
-            
-            const result = await response.json();
-            this.showAIResult(result, 'Generated Dialogue');
-        } catch (error) {
-            this.showAIResult({ success: false, error: error.message }, 'Error');
-        }
-    }
-
-    /**
-     * Expand scene
-     */
-    async expandScene() {
-        const sceneDescription = await this.getUserInput('Enter scene description:', 'textarea');
-        const targetLength = await this.getUserInput('Target length (words):', 'number', '500');
-        
-        if (!sceneDescription) {
-            this.showNotification('Scene description is required', 'warning');
-            return;
-        }
-        
-        this.showAIModal('Expanding Scene...', 'loading');
-        
-        try {
-            const response = await fetch('/mybook/ai/expand-scene', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    scene_description: sceneDescription, 
-                    target_length: parseInt(targetLength) 
-                })
-            });
-            
-            const result = await response.json();
-            this.showAIResult(result, 'Expanded Scene');
         } catch (error) {
             this.showAIResult({ success: false, error: error.message }, 'Error');
         }

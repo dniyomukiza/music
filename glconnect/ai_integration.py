@@ -139,35 +139,6 @@ class AIWritingAssistant:
         Text: {text}"""
         
         return self.generate_content(prompt, max_tokens=800)
-    
-    def generate_dialogue(self, character1: str, character2: str, context: str, mood: str = "neutral") -> Dict:
-        """Generate realistic dialogue between characters"""
-        prompt = f"""Write a natural dialogue between {character1} and {character2}.
-        Context: {context}
-        Mood: {mood}
-        
-        Make the dialogue:
-        - Natural and realistic
-        - Character-appropriate
-        - Engaging and purposeful
-        - Properly formatted"""
-        
-        return self.generate_content(prompt, max_tokens=600)
-    
-    def expand_scene(self, scene_description: str, target_length: int = 500) -> Dict:
-        """Expand a brief scene description into detailed prose"""
-        prompt = f"""Expand this scene description into detailed, engaging prose of approximately {target_length} words:
-        
-        Scene: {scene_description}
-        
-        Include:
-        - Vivid descriptions
-        - Character emotions and thoughts
-        - Sensory details
-        - Smooth transitions
-        - Engaging narrative flow"""
-        
-        return self.generate_content(prompt, max_tokens=target_length + 100)
 
 class AIEditor:
     """AI-powered editing assistant"""
@@ -307,17 +278,18 @@ def generate_ideas():
     """Generate creative story ideas"""
     try:
         data = request.get_json()
-        genre = data.get('genre', 'fiction')
         theme = data.get('theme', '')
-        character = data.get('character', '')
-        
+
+        if not theme:
+            return jsonify({'success': False, 'error': 'Theme is required'}), 400
+
         assistant = get_ai_assistant()
         if not assistant:
             return jsonify({'success': False, 'error': 'AI service not configured'}), 500
-        
-        result = assistant.generate_ideas(genre, theme, character)
+
+        result = assistant.generate_ideas('fiction', theme, '')
         return jsonify(result)
-        
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -337,52 +309,6 @@ def proofread():
             return jsonify({'success': False, 'error': 'AI service not configured'}), 500
         
         result = editor.proofread(text)
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@ai_bp.route('/generate-dialogue', methods=['POST'])
-@login_required
-def generate_dialogue():
-    """Generate dialogue between characters"""
-    try:
-        data = request.get_json()
-        character1 = data.get('character1')
-        character2 = data.get('character2')
-        context = data.get('context', '')
-        mood = data.get('mood', 'neutral')
-        
-        if not character1 or not character2:
-            return jsonify({'success': False, 'error': 'Both characters are required'}), 400
-        
-        assistant = get_ai_assistant()
-        if not assistant:
-            return jsonify({'success': False, 'error': 'AI service not configured'}), 500
-        
-        result = assistant.generate_dialogue(character1, character2, context, mood)
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@ai_bp.route('/expand-scene', methods=['POST'])
-@login_required
-def expand_scene():
-    """Expand a scene description"""
-    try:
-        data = request.get_json()
-        scene_description = data.get('scene_description')
-        target_length = data.get('target_length', 500)
-        
-        if not scene_description:
-            return jsonify({'success': False, 'error': 'Scene description is required'}), 400
-        
-        assistant = get_ai_assistant()
-        if not assistant:
-            return jsonify({'success': False, 'error': 'AI service not configured'}), 500
-        
-        result = assistant.expand_scene(scene_description, target_length)
         return jsonify(result)
         
     except Exception as e:

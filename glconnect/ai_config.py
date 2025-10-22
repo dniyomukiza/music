@@ -29,7 +29,7 @@ class AIConfig:
             'temperature': 0.5,
             'improvement_types': [
                 'general', 'grammar', 'style', 'clarity', 
-                'dialogue', 'description', 'flow'
+                'description', 'flow'
             ]
         },
         'text_analysis': {
@@ -59,22 +59,6 @@ class AIConfig:
                 'sci-fi', 'fantasy', 'thriller', 'biography',
                 'self-help', 'business', 'history'
             ]
-        },
-        'dialogue_generation': {
-            'enabled': True,
-            'max_tokens': 600,
-            'temperature': 0.6,
-            'moods': [
-                'neutral', 'tense', 'happy', 'sad', 'angry',
-                'excited', 'confused', 'sarcastic', 'romantic'
-            ]
-        },
-        'scene_expansion': {
-            'enabled': True,
-            'max_tokens': 1000,
-            'temperature': 0.7,
-            'min_length': 200,
-            'max_length': 2000
         }
     }
     

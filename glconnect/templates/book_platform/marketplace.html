@@ -172,13 +172,34 @@
                                             <button class="btn btn-primary btn-sm" onclick="viewBook({{ book.id }})">
                                                 <i class="fas fa-eye"></i> View Details
                                             </button>
+                                            <!-- Digital Book Purchase -->
                                             {% if book.price and book.price > 0 %}
-                                                <button class="btn btn-success btn-sm" onclick="purchaseBook({{ book.id }})">
-                                                    <i class="fas fa-shopping-cart"></i> Buy Now
+                                                <button class="btn btn-success btn-sm" onclick="buyWithStripeLink({{ book.id }}, false)">
+                                                    <i class="fas fa-book"></i> Buy Digital Book
                                                 </button>
                                             {% else %}
                                                 <button class="btn btn-outline-primary btn-sm" onclick="downloadBook({{ book.id }})">
-                                                    <i class="fas fa-download"></i> Download
+                                                    <i class="fas fa-download"></i> Free Download
+                                                </button>
+                                            {% endif %}
+                                            
+                                            <!-- Digital Audiobook Purchase -->
+                                            {% if book.has_audiobook %}
+                                                {% if book.audiobook_price and book.audiobook_price > 0 %}
+                                                    <button class="btn btn-warning btn-sm mt-1" onclick="buyWithStripeLink({{ book.id }}, true)">
+                                                        <i class="fas fa-headphones"></i> Buy Audiobook
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-outline-warning btn-sm mt-1" onclick="downloadAudiobook({{ book.id }})">
+                                                        <i class="fas fa-headphones"></i> Free Audiobook
+                                                    </button>
+                                                {% endif %}
+                                            {% endif %}
+                                            
+                                            <!-- Bundle Option -->
+                                            {% if book.price and book.price > 0 and book.has_audiobook and book.audiobook_price and book.audiobook_price > 0 %}
+                                                <button class="btn btn-info btn-sm mt-1" onclick="buyBundle({{ book.id }})">
+                                                    <i class="fas fa-gift"></i> Buy Both (Save 20%)
                                                 </button>
                                             {% endif %}
                                         </div>
@@ -367,6 +388,160 @@
             // For free books, directly download
             window.open(`/mybook/books/${bookId}/download`, '_blank');
         }
+
+        function downloadAudiobook(bookId) {
+            // For free audiobooks, directly access
+            window.open(`/mybook/audiobook/${bookId}/player`, '_blank');
+        }
+
+        // Bundle purchase function
+        function buyBundle(bookId) {
+            const confirmMessage = `You're about to purchase both the digital book and audiobook at a 20% discount. You'll be redirected to Stripe for secure payment processing.`;
+            
+            if (confirm(confirmMessage)) {
+                // Store bundle purchase info
+                const purchaseData = {
+                    bookId: bookId,
+                    audiobookPurchase: false, // This will be handled as a bundle
+                    bundlePurchase: true,
+                    timestamp: Date.now(),
+                    userId: '{{ current_user.user_id if current_user.is_authenticated else "anonymous" }}'
+                };
+                
+                localStorage.setItem('pendingPurchase', JSON.stringify(purchaseData));
+                
+                // Redirect to Stripe Payment Link (you might want a different link for bundles)
+                window.open('https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000', '_blank');
+                
+                // Show success message
+                showBundleNotification(bookId);
+            }
+        }
+
+        function showBundleNotification(bookId) {
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
+            
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-gift fa-2x me-3 text-info"></i>
+                    <div>
+                        <h6 class="mb-1">Bundle Purchase Processing</h6>
+                        <p class="mb-0">Complete your book + audiobook bundle purchase on Stripe. You'll get access to both formats immediately after payment.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 10 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 10000);
+        }
+
+        // Stripe Payment Link Integration
+        function buyWithStripeLink(bookId, audiobookPurchase = false) {
+            // Show confirmation dialog
+            const purchaseType = audiobookPurchase ? 'audiobook' : 'book';
+            const confirmMessage = `You're about to purchase this ${purchaseType}. You'll be redirected to Stripe for secure payment processing.`;
+            
+            if (confirm(confirmMessage)) {
+                // Store purchase info in localStorage for post-payment processing
+                const purchaseData = {
+                    bookId: bookId,
+                    audiobookPurchase: audiobookPurchase,
+                    timestamp: Date.now(),
+                    userId: '{{ current_user.user_id if current_user.is_authenticated else "anonymous" }}'
+                };
+                
+                localStorage.setItem('pendingPurchase', JSON.stringify(purchaseData));
+                
+                // Redirect to Stripe Payment Link
+                window.open('https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000', '_blank');
+                
+                // Show success message
+                showPurchaseNotification(bookId, audiobookPurchase);
+            }
+        }
+
+        function showPurchaseNotification(bookId, audiobookPurchase) {
+            const purchaseType = audiobookPurchase ? 'audiobook' : 'book';
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
+            
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${audiobookPurchase ? 'headphones' : 'book'} fa-2x me-3 text-success"></i>
+                    <div>
+                        <h6 class="mb-1">${purchaseType.charAt(0).toUpperCase() + purchaseType.slice(1)} Purchase Processing</h6>
+                        <p class="mb-0">Complete your ${purchaseType} purchase on Stripe. You'll get access immediately after payment.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 10 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 10000);
+        }
+
+        // Check for completed purchases when page loads
+        function checkForCompletedPurchases() {
+            const pendingPurchase = localStorage.getItem('pendingPurchase');
+            if (pendingPurchase) {
+                const purchaseData = JSON.parse(pendingPurchase);
+                const timeElapsed = Date.now() - purchaseData.timestamp;
+                
+                // If more than 5 minutes have passed, assume purchase was completed
+                if (timeElapsed > 300000) { // 5 minutes
+                    localStorage.removeItem('pendingPurchase');
+                    showPurchaseReminder(purchaseData.bookId, purchaseData.audiobookPurchase);
+                }
+            }
+        }
+
+        function showPurchaseReminder(bookId, audiobookPurchase) {
+            const purchaseType = audiobookPurchase ? 'audiobook' : 'book';
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
+            
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x me-3 text-warning"></i>
+                    <div>
+                        <h6 class="mb-1">Purchase Verification</h6>
+                        <p class="mb-0">If you completed your ${purchaseType} purchase, please refresh the page to access your content.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 15 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 15000);
+        }
+
+        // Check for completed purchases when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            checkForCompletedPurchases();
+        });
 
         // Filter form submission
         document.getElementById('filterForm').addEventListener('submit', function(e) {
