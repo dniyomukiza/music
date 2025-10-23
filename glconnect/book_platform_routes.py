@@ -138,6 +138,24 @@ def collaboration_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Ink Studio access route - handles redirects based on user type
+@book_bp.route('/ink-studio')
+def ink_studio_access():
+    """Ink Studio access point - redirects writers to dashboard, others to login"""
+    if not current_user.is_authenticated:
+        flash('Please log in to access Ink Studio', 'info')
+        return redirect(url_for('routes1.login'))
+    
+    # Check if user has writer profile
+    writer = current_user.writer_profiles.first()
+    if writer:
+        # Writer - redirect to Ink Studio dashboard
+        return redirect(url_for('book_platform.dashboard'))
+    else:
+        # Non-writer - redirect to writer profile creation
+        flash('You need a writer profile to access Ink Studio. Please create a writer profile first.', 'info')
+        return redirect(url_for('writer.writer_profile'))
+
 # Main dashboard route
 @book_bp.route('/')
 @writer_or_book_platform_required
