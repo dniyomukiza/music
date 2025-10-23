@@ -1,6 +1,6 @@
 """
-Book Platform Integration Module
-This module integrates the book platform with the main Flask application.
+Ink Studio Integration Module
+This module integrates Ink Studio with the main Flask application.
 It handles database initialization, blueprint registration, and WebSocket setup.
 """
 
@@ -12,7 +12,7 @@ from flask_migrate import Migrate
 # Import existing models and database
 from glconnect.models import db, User
 
-# Import book platform components
+# Import Ink Studio components
 from glconnect.book_platform_models import *
 from glconnect.book_platform_routes import book_bp
 from glconnect.book_platform_websocket import socketio
@@ -20,11 +20,11 @@ from glconnect.gemini_integration import gemini_bp
 
 def init_book_platform(app):
     """
-    Initialize the book platform with the Flask application.
+    Initialize Ink Studio with the Flask application.
     This function should be called from your main app initialization.
     """
     
-    # Register the book platform blueprints
+    # Register the Ink Studio blueprints
     app.register_blueprint(book_bp)
     app.register_blueprint(gemini_bp)
     
@@ -34,21 +34,21 @@ def init_book_platform(app):
     # Import WebSocket handlers to register them
     import glconnect.book_platform_websocket
     
-    # Create database tables for book platform
+    # Create database tables for Ink Studio
     with app.app_context():
         try:
-            # Create all book platform tables
+            # Create all Ink Studio tables
             db.create_all()
-            print("Book platform database tables created successfully")
+            print("Ink Studio database tables created successfully")
         except Exception as e:
-            print(f"Error creating book platform tables: {e}")
+            print(f"Error creating Ink Studio tables: {e}")
     
     return app, socketio
 
 def create_book_platform_tables():
     """
-    Create only the book platform tables.
-    This can be used to add the book platform to an existing database.
+    Create only the Ink Studio tables.
+    This can be used to add Ink Studio to an existing database.
     """
     from glconnect.book_platform_models import (
         BookPlatformUser, BookProject, BookChapter, BookCollaboration,
@@ -71,12 +71,12 @@ def create_book_platform_tables():
     BookAnalytics.__table__.create(db.engine, checkfirst=True)
     BookNotification.__table__.create(db.engine, checkfirst=True)
     
-    print("Book platform tables created successfully")
+    print("Ink Studio tables created successfully")
 
 def drop_book_platform_tables():
     """
-    Drop all book platform tables.
-    This can be used to completely remove the book platform from the database.
+    Drop all Ink Studio tables.
+    This can be used to completely remove Ink Studio from the database.
     """
     from glconnect.book_platform_models import (
         BookPlatformUser, BookProject, BookChapter, BookCollaboration,
@@ -99,11 +99,11 @@ def drop_book_platform_tables():
     BookProject.__table__.drop(db.engine, checkfirst=True)
     BookPlatformUser.__table__.drop(db.engine, checkfirst=True)
     
-    print("Book platform tables dropped successfully")
+    print("Ink Studio tables dropped successfully")
 
 def get_book_platform_stats():
     """
-    Get statistics about the book platform usage.
+    Get statistics about Ink Studio usage.
     """
     from glconnect.book_platform_models import (
         BookPlatformUser, BookProject, BookChapter, BookCollaboration,
@@ -126,7 +126,7 @@ def get_book_platform_stats():
 
 def cleanup_book_platform_data():
     """
-    Clean up old or unused data from the book platform.
+    Clean up old or unused data from Ink Studio.
     This can be run periodically to maintain database performance.
     """
     from glconnect.book_platform_models import (
@@ -182,7 +182,7 @@ def create_app():
     # Initialize existing components
     db.init_app(app)
     
-    # Initialize book platform
+    # Initialize Ink Studio
     app, socketio = init_book_platform(app)
     
     return app, socketio

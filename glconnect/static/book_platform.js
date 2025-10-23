@@ -1,5 +1,5 @@
 /**
- * Book Platform JavaScript
+ * Ink Studio JavaScript
  * Handles rich text editing, real-time collaboration, and other interactive features
  */
 
@@ -548,7 +548,7 @@ class BookPlatform {
     }
 }
 
-// Initialize the book platform when DOM is loaded
+// Initialize Ink Studio when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.bookPlatform = new BookPlatform();
 });

@@ -1,6 +1,6 @@
 """
-Book Platform Routes - Flask routes for the book platform functionality
-This module contains all routes for the book platform including:
+Ink Studio Routes - Flask routes for the Ink Studio functionality
+This module contains all routes for Ink Studio including:
 - Book creation and management
 - Collaboration features
 - Real-time editing
@@ -46,11 +46,11 @@ def allowed_image_file(filename):
 
 # Helper decorators
 def get_user_profile():
-    """Get user profile - Writer profile is primary for book platform"""
+    """Get user profile - Writer profile is primary for Ink Studio"""
     if not current_user.is_authenticated:
         return None, None
     
-    # Check for Writer profile first (primary users for book platform)
+    # Check for Writer profile first (primary users for Ink Studio)
     writer = Writer.query.filter_by(user_id=current_user.user_id).first()
     if writer:
         return writer, 'writer'
@@ -74,7 +74,7 @@ def get_profile_id(user_profile, profile_type):
         return None
 
 def writer_or_book_platform_required(f):
-    """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for book platform access"""
+    """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for Ink Studio access"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -83,7 +83,7 @@ def writer_or_book_platform_required(f):
         user_profile, profile_type = get_user_profile()
         if not user_profile:
             # If no profile exists, redirect to writer profile creation
-            flash('You need a Writer profile to access the book platform', 'warning')
+            flash('You need a Writer profile to access Ink Studio', 'warning')
             return redirect(url_for('writer.writer_profile'))
         
         # Add profile info to kwargs for use in the function
@@ -98,13 +98,13 @@ def integrated_auth_required(f):
     return writer_or_book_platform_required(f)
 
 def book_platform_required(f):
-    """Decorator to ensure user has book platform profile (legacy - for backward compatibility)"""
+    """Decorator to ensure user has Ink Studio profile (legacy - for backward compatibility)"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('routes1.login'))
         
-        # Check if user has book platform profile
+        # Check if user has Ink Studio profile
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         if not book_user:
             return redirect(url_for('book_platform.setup_profile'))
@@ -122,7 +122,7 @@ def collaboration_required(f):
         
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         if not book_user:
-            return jsonify({'error': 'Book platform profile required'}), 403
+            return jsonify({'error': 'Ink Studio profile required'}), 403
         
         # Check if user is author or collaborator
         book = BookProject.query.get_or_404(book_id)
@@ -142,7 +142,7 @@ def collaboration_required(f):
 @book_bp.route('/')
 @writer_or_book_platform_required
 def dashboard(user_profile, profile_type):
-    """Main book platform dashboard - Writer profiles are primary users"""
+    """Main Ink Studio dashboard - Writer profiles are primary users"""
     
     if profile_type == 'writer':
         # For writers, create a temporary BookPlatformUser-like object
@@ -195,12 +195,12 @@ def dashboard(user_profile, profile_type):
 @book_bp.route('/setup-profile', methods=['GET', 'POST'])
 @login_required
 def setup_profile():
-    """Setup book platform profile"""
+    """Setup Ink Studio profile"""
     if request.method == 'POST':
         try:
             data = request.get_json()
             
-            # Check if user already has a book platform profile
+            # Check if user already has an Ink Studio profile
             existing_profile = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
             
             if existing_profile:
@@ -213,7 +213,7 @@ def setup_profile():
                 existing_profile.genres = data.get('genres', [])
                 existing_profile.updated_at = datetime.now(timezone.utc)
             else:
-                # Create new book platform user profile
+                # Create new Ink Studio user profile
                 book_user = BookPlatformUser(
                     user_id=current_user.user_id,
                     pen_name=data.get('pen_name'),
@@ -470,7 +470,7 @@ def edit_chapter(book_id, chapter_id):
     # Check if user has permission to edit this chapter
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user:
-        flash('Book platform profile required', 'error')
+        flash('Ink Studio profile required', 'error')
         return redirect(url_for('book_platform.setup_profile'))
     
     # Check if user is the author of the book
@@ -547,7 +547,7 @@ def unpublish_chapter(book_id, chapter_id):
     # Check if user has permission
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user:
-        return jsonify({'error': 'Book platform profile required'}), 403
+            return jsonify({'error': 'Ink Studio profile required'}), 403
 
     # Check if user is the author of the book
     if book.author_id != book_user.id:
@@ -576,7 +576,7 @@ def delete_book(book_id):
     # Check if user has permission
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user:
-        return jsonify({'error': 'Book platform profile required'}), 403
+            return jsonify({'error': 'Ink Studio profile required'}), 403
 
     # Check if user is the author of the book
     if book.author_id != book_user.id:
@@ -605,7 +605,7 @@ def delete_chapter(book_id, chapter_id):
     # Check if user has permission
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user:
-        return jsonify({'error': 'Book platform profile required'}), 403
+            return jsonify({'error': 'Ink Studio profile required'}), 403
 
     # Check if user is the author of the book
     if book.author_id != book_user.id:
@@ -706,7 +706,7 @@ def accept_invitation(invitation_uuid):
             flash('Please log in to accept the invitation', 'error')
             return redirect(url_for('login'))
         
-        # Check if user has book platform profile
+        # Check if user has Ink Studio profile
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         if not book_user:
             return redirect(url_for('book_platform.setup_profile'))
@@ -1055,3 +1055,270 @@ def get_chapter_images(book_id, user_profile, profile_type):
                 })
     
     return jsonify({'images': images})
+
+# Digital Book Upload Routes
+@book_bp.route('/upload-digital-book', methods=['GET', 'POST'])
+@book_platform_required
+def upload_digital_book():
+    """Upload and process digital book files"""
+    from glconnect.forms import DigitalBookUploadForm
+    from glconnect.digital_book_processor import digital_book_processor
+    from glconnect.audio_book_generator import audio_book_generator
+    from glconnect.book_platform_models import AudioGenerationTask
+    import threading
+    
+    form = DigitalBookUploadForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Get user profile
+            user_profile, profile_type = get_user_profile()
+            author_id = get_profile_id(user_profile, profile_type)
+            
+            # Handle file uploads
+            digital_file = form.digital_book_file.data
+            cover_image = form.cover_image.data
+            
+            # Create upload directories
+            digital_books_dir = os.path.join(current_app.root_path, 'static', 'digital_books')
+            covers_dir = os.path.join(current_app.root_path, 'static', 'book_covers')
+            os.makedirs(digital_books_dir, exist_ok=True)
+            os.makedirs(covers_dir, exist_ok=True)
+            
+            # Save digital book file
+            digital_filename = secure_filename(digital_file.filename)
+            name, ext = os.path.splitext(digital_filename)
+            unique_digital_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+            digital_file_path = os.path.join(digital_books_dir, unique_digital_filename)
+            digital_file.save(digital_file_path)
+            
+            # Get file info
+            file_stat = os.stat(digital_file_path)
+            file_type = ext.lower().lstrip('.')
+            
+            # Save cover image if provided
+            cover_path = None
+            if cover_image:
+                cover_filename = secure_filename(cover_image.filename)
+                cover_name, cover_ext = os.path.splitext(cover_filename)
+                unique_cover_filename = f"{cover_name}_{uuid.uuid4().hex[:8]}{cover_ext}"
+                cover_path = os.path.join(covers_dir, unique_cover_filename)
+                cover_image.save(cover_path)
+                cover_path = f"book_covers/{unique_cover_filename}"
+            
+            # Extract text from digital book
+            extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
+            
+            if not extraction_result['success']:
+                flash(f"Failed to extract text from file: {extraction_result['error']}", "error")
+                return render_template('book_platform/upload_digital_book.html', form=form)
+            
+            # Create book project
+            book = BookProject(
+                title=form.title.data,
+                description=form.description.data,
+                genre=form.genre.data,
+                author_id=author_id,
+                word_count=extraction_result['word_count'],
+                price=form.digital_price.data,
+                cover_image=cover_path,
+                digital_file_path=f"digital_books/{unique_digital_filename}",
+                digital_file_type=file_type,
+                digital_file_size=file_stat.st_size,
+                digital_file_uploaded_at=datetime.now(timezone.utc),
+                status=BookStatus.DRAFT
+            )
+            
+            db.session.add(book)
+            db.session.commit()
+            
+            # Generate audiobook if requested
+            if form.generate_audiobook.data and form.audiobook_price.data:
+                # Create audio generation task
+                audio_task = AudioGenerationTask(
+                    book_project_id=book.id,
+                    status='pending'
+                )
+                db.session.add(audio_task)
+                db.session.commit()
+                
+                # Start audio generation in background
+                def generate_audio_background():
+                    try:
+                        # Update task status
+                        audio_task.status = 'processing'
+                        audio_task.progress = 10
+                        db.session.commit()
+                        
+                        # Generate audiobook
+                        audio_result = audio_book_generator.generate_audiobook(
+                            extraction_result['text'],
+                            book.id,
+                            form.audiobook_voice.data
+                        )
+                        
+                        if audio_result['success']:
+                            # Update book with audiobook info
+                            book.has_audiobook = True
+                            book.audiobook_file_path = audio_result['audio_file_path']
+                            book.audiobook_price = form.audiobook_price.data
+                            book.audiobook_duration = audio_result['duration']
+                            book.audiobook_generated_at = datetime.now(timezone.utc)
+                            book.audiobook_voice = form.audiobook_voice.data
+                            
+                            # Update task
+                            audio_task.status = 'completed'
+                            audio_task.progress = 100
+                            audio_task.completed_at = datetime.now(timezone.utc)
+                            
+                            db.session.commit()
+                            
+                            flash("Audiobook generated successfully!", "success")
+                        else:
+                            # Update task with error
+                            audio_task.status = 'failed'
+                            audio_task.error_message = audio_result['error']
+                            db.session.commit()
+                            
+                            flash(f"Audiobook generation failed: {audio_result['error']}", "error")
+                            
+                    except Exception as e:
+                        audio_task.status = 'failed'
+                        audio_task.error_message = str(e)
+                        db.session.commit()
+                        flash(f"Audiobook generation failed: {str(e)}", "error")
+                
+                # Start background thread
+                thread = threading.Thread(target=generate_audio_background)
+                thread.daemon = True
+                thread.start()
+                
+                flash("Digital book uploaded successfully! Audiobook generation started in the background.", "success")
+            else:
+                flash("Digital book uploaded successfully!", "success")
+            
+            return redirect(url_for('book_platform.book_detail', book_id=book.id))
+            
+        except Exception as e:
+            flash(f"Error uploading book: {str(e)}", "error")
+            logger.error(f"Error in upload_digital_book: {str(e)}")
+    
+    return render_template('book_platform/upload_digital_book.html', form=form)
+
+@book_bp.route('/books/<int:book_id>/audio-generation-status')
+@book_platform_required
+def audio_generation_status(book_id):
+    """Check audio generation status for a book"""
+    from glconnect.book_platform_models import AudioGenerationTask
+    
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check access permissions
+    user_profile, profile_type = get_user_profile()
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Get latest audio generation task
+    task = AudioGenerationTask.query.filter_by(
+        book_project_id=book_id
+    ).order_by(AudioGenerationTask.created_at.desc()).first()
+    
+    if not task:
+        return jsonify({'status': 'not_started'})
+    
+    return jsonify({
+        'status': task.status,
+        'progress': task.progress,
+        'error_message': task.error_message,
+        'created_at': task.created_at.isoformat() if task.created_at else None,
+        'completed_at': task.completed_at.isoformat() if task.completed_at else None
+    })
+
+@book_bp.route('/books/<int:book_id>/download-digital')
+@login_required
+def download_digital_book(book_id):
+    """Download digital book file"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check if user has purchased this book
+    user_profile, profile_type = get_user_profile()
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        
+        # Check if user is the author
+        if book.author_id == author_id:
+            # Author can always download
+            pass
+        else:
+            # Check if user has purchased the book
+            purchase = BookPurchase.query.filter_by(
+                buyer_id=author_id,
+                book_project_id=book_id,
+                status=TransactionStatus.COMPLETED
+            ).first()
+            
+            if not purchase:
+                flash("You must purchase this book to download it.", "error")
+                return redirect(url_for('book_platform.marketplace'))
+    
+    if not book.digital_file_path:
+        flash("Digital file not available for this book.", "error")
+        return redirect(url_for('book_platform.marketplace'))
+    
+    # Serve the file
+    file_path = os.path.join(current_app.root_path, 'static', book.digital_file_path)
+    
+    if not os.path.exists(file_path):
+        flash("Digital file not found.", "error")
+        return redirect(url_for('book_platform.marketplace'))
+    
+    return send_from_directory(
+        os.path.dirname(file_path),
+        os.path.basename(file_path),
+        as_attachment=True,
+        download_name=f"{book.title}.{book.digital_file_type}"
+    )
+
+@book_bp.route('/books/<int:book_id>/download-audio')
+@login_required
+def download_audio_book(book_id):
+    """Download audio book file"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    if not book.has_audiobook or not book.audiobook_file_path:
+        flash("Audiobook not available for this book.", "error")
+        return redirect(url_for('book_platform.marketplace'))
+    
+    # Check if user has purchased this book (same logic as digital download)
+    user_profile, profile_type = get_user_profile()
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        
+        # Check if user is the author
+        if book.author_id == author_id:
+            # Author can always download
+            pass
+        else:
+            # Check if user has purchased the book
+            purchase = BookPurchase.query.filter_by(
+                buyer_id=author_id,
+                book_project_id=book_id,
+                status=TransactionStatus.COMPLETED
+            ).first()
+            
+            if not purchase:
+                flash("You must purchase this book to download it.", "error")
+                return redirect(url_for('book_platform.marketplace'))
+    
+    # Serve the audio file
+    if not os.path.exists(book.audiobook_file_path):
+        flash("Audiobook file not found.", "error")
+        return redirect(url_for('book_platform.marketplace'))
+    
+    return send_from_directory(
+        os.path.dirname(book.audiobook_file_path),
+        os.path.basename(book.audiobook_file_path),
+        as_attachment=True,
+        download_name=f"{book.title}_audiobook.mp3"
+    )

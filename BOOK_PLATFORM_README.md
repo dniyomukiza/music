@@ -1,8 +1,8 @@
-# Book Platform - Complete Documentation
+# Ink Studio - Complete Documentation
 
 ## Overview
 
-The Book Platform is a comprehensive web application that allows users to create, collaborate on, publish, and sell books. It's designed as a separate module that can be easily integrated into your existing Flask application without affecting your current features.
+Ink Studio is a comprehensive web application that allows users to create, collaborate on, publish, and sell books. It's designed as a separate module that can be easily integrated into your existing Flask application without affecting your current features.
 
 ## Features
 
@@ -339,6 +339,7 @@ To contribute to the book platform:
 - Marketplace functionality
 - Security features
 - Analytics and monitoring
+
 
 
 

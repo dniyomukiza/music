@@ -1,0 +1,206 @@
+{% extends "book_platform/base.html" %}
+
+{% block title %}Upload Digital Book - Ink Studio{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-upload me-2"></i>Upload Digital Book
+                    </h3>
+                    <p class="text-muted mb-0">Upload your existing digital book and optionally generate an audiobook version</p>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="digitalBookForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>Book Information
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="title" class="form-label">Book Title *</label>
+                                    {{ form.title(class="form-control", placeholder="Enter the book title") }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.title.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="genre" class="form-label">Genre</label>
+                                    {{ form.genre(class="form-control", placeholder="e.g., Fiction, Non-fiction, Romance") }}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    {{ form.description(class="form-control", rows="3", placeholder="Brief description of your book") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-file-upload me-2"></i>File Upload
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="digital_book_file" class="form-label">Digital Book File *</label>
+                                    {{ form.digital_book_file(class="form-control") }}
+                                    <div class="form-text">Supported formats: PDF, EPUB, DOCX, DOC, TXT (Max 50MB)</div>
+                                    {% if form.digital_book_file.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.digital_book_file.errors %}
+                                                <div>{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="cover_image" class="form-label">Cover Image</label>
+                                    {{ form.cover_image(class="form-control") }}
+                                    <div class="form-text">Optional cover image (JPG, PNG, GIF)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pricing -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-dollar-sign me-2"></i>Pricing
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="digital_price" class="form-label">Digital Book Price (USD)</label>
+                                    {{ form.digital_price(class="form-control", placeholder="0.00", step="0.01", min="0") }}
+                                    <div class="form-text">Leave empty for free book</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Audiobook Generation -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-headphones me-2"></i>Audiobook Generation
+                                </h5>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check mb-3">
+                                    {{ form.generate_audiobook(class="form-check-input", id="generateAudiobook") }}
+                                    <label class="form-check-label" for="generateAudiobook">
+                                        Generate audiobook version
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="audiobookPriceField" style="display: none;">
+                                <div class="form-group mb-3">
+                                    <label for="audiobook_price" class="form-label">Audiobook Price (USD)</label>
+                                    {{ form.audiobook_price(class="form-control", placeholder="0.00", step="0.01", min="0") }}
+                                    <div class="form-text">Leave empty for free audiobook</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="audiobookVoiceField" style="display: none;">
+                                <div class="form-group mb-3">
+                                    <label for="audiobook_voice" class="form-label">Audiobook Voice</label>
+                                    {{ form.audiobook_voice(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Information Box -->
+                        <div class="alert alert-info mb-4">
+                            <h6><i class="fas fa-info-circle me-2"></i>Important Information</h6>
+                            <ul class="mb-0">
+                                <li>Your digital book file will be processed to extract text content</li>
+                                <li>Audiobook generation may take several minutes depending on book length</li>
+                                <li>You can monitor the audiobook generation progress from your book dashboard</li>
+                                <li>Both digital and audio versions will be available for purchase in the marketplace</li>
+                            </ul>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-upload me-2"></i>Upload Digital Book
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const audiobookCheckbox = document.getElementById('generateAudiobook');
+    const audiobookPriceField = document.getElementById('audiobookPriceField');
+    const audiobookVoiceField = document.getElementById('audiobookVoiceField');
+    
+    // Toggle audiobook fields visibility
+    audiobookCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            audiobookPriceField.style.display = 'block';
+            audiobookVoiceField.style.display = 'block';
+        } else {
+            audiobookPriceField.style.display = 'none';
+            audiobookVoiceField.style.display = 'none';
+        }
+    });
+    
+    // Form validation
+    const form = document.getElementById('digitalBookForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        const digitalFile = document.querySelector('input[name="digital_book_file"]');
+        
+        if (!digitalFile.files.length) {
+            e.preventDefault();
+            alert('Please select a digital book file to upload.');
+            return;
+        }
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+        submitBtn.disabled = true;
+    });
+    
+    // File size validation
+    const fileInput = document.querySelector('input[name="digital_book_file"]');
+    fileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const maxSize = 50 * 1024 * 1024; // 50MB
+            if (file.size > maxSize) {
+                alert('File size must be less than 50MB.');
+                this.value = '';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

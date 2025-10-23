@@ -1,5 +1,5 @@
 """
-AI Configuration for Book Platform
+AI Configuration for Ink Studio
 Configuration settings for AI integration
 """
 

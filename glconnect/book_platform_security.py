@@ -1,6 +1,6 @@
 """
-Security features for the book platform
-This module implements security best practices for the book platform including:
+Security features for Ink Studio
+This module implements security best practices for Ink Studio including:
 - Input validation and sanitization
 - Rate limiting
 - CSRF protection
@@ -397,6 +397,7 @@ def secure_collaboration_operation(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
 
 
 

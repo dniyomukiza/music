@@ -1,6 +1,6 @@
 """
-Book Platform Models - Separate database tables for the book platform
-This module contains all database models for the book platform functionality.
+Ink Studio Models - Separate database tables for Ink Studio functionality
+This module contains all database models for Ink Studio functionality.
 These tables are separate from the main application to allow easy removal.
 """
 
@@ -15,7 +15,7 @@ import uuid
 # Use the same db instance from the main models
 from glconnect.models import db
 
-# Enums for the book platform
+# Enums for Ink Studio
 class BookStatus(PyEnum):
     DRAFT = "draft"
     IN_REVIEW = "in_review"
@@ -45,7 +45,7 @@ class TransactionStatus(PyEnum):
     FAILED = "failed"
     REFUNDED = "refunded"
 
-# Book Platform User Model (extends existing User with book-specific fields)
+# Ink Studio User Model (extends existing User with book-specific fields)
 class BookPlatformUser(db.Model):
     __tablename__ = 'book_platform_users'
     
@@ -89,6 +89,20 @@ class BookProject(db.Model):
     published_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Digital Book File Support
+    digital_file_path = db.Column(db.String(500), nullable=True)  # Path to uploaded digital book file
+    digital_file_type = db.Column(db.String(50), nullable=True)  # PDF, EPUB, DOCX, etc.
+    digital_file_size = db.Column(db.Integer, nullable=True)  # File size in bytes
+    digital_file_uploaded_at = db.Column(db.DateTime, nullable=True)
+    
+    # Audio Book Support
+    has_audiobook = db.Column(db.Boolean, default=False)
+    audiobook_file_path = db.Column(db.String(500), nullable=True)  # Path to generated audio file
+    audiobook_price = db.Column(db.Float, nullable=True)  # Separate price for audio version
+    audiobook_duration = db.Column(db.Integer, nullable=True)  # Duration in seconds
+    audiobook_generated_at = db.Column(db.DateTime, nullable=True)
+    audiobook_voice = db.Column(db.String(100), nullable=True)  # TTS voice used
     
     # Foreign Keys
     author_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=False)
@@ -269,6 +283,21 @@ class BookSale(db.Model):
     seller_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=False)
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
     purchase_id = db.Column(db.Integer, db.ForeignKey('book_purchases.id'), nullable=False)
+
+# Audio Generation Task Model
+class AudioGenerationTask(db.Model):
+    __tablename__ = 'audio_generation_tasks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
+    status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
+    progress = db.Column(db.Integer, default=0)  # 0-100
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    book_project = db.relationship('BookProject', backref='audio_generation_tasks')
 
 # Real-time Session Model (for WebSocket connections)
 class RealtimeSession(db.Model):

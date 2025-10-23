@@ -121,6 +121,13 @@
         <li><a href="https://glc.cool/home">Home</a></li>
         <!--<li><a href="https://glc.cool/blog/contact">Contact</a></li>-->
         <li><a href="https://glc.cool/word/">API</a></li>
+        {% if current_user.is_authenticated %}
+          <li><a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a></li>
+          {% set writer = current_user.writer_profiles.first() %}
+          {% if writer %}
+            <li><a href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a></li>
+          {% endif %}
+        {% endif %}
       </ul>
     </nav>
     <div class="menu-toggle" onclick="toggleMenu()">☰</div>
@@ -130,6 +137,13 @@
         <li><a href="/writer/profile">📚 For authors</a></li>
         <li><a href="/writer/profile">🧠 For researchers</a></li>
         <li><a href="/blog/blogs">✍️ For bloggers</a></li>
+        {% if current_user.is_authenticated %}
+          <li><a href="{{ url_for('book_platform.marketplace') }}">🛒 Marketplace</a></li>
+          {% set writer = current_user.writer_profiles.first() %}
+          {% if writer %}
+            <li><a href="{{ url_for('book_platform.dashboard') }}">🖋️ Ink Studio</a></li>
+          {% endif %}
+        {% endif %}
         <li><a href="/prof/uprofile">Others</a></li>
       </ul>
     </div>

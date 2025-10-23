@@ -84,11 +84,11 @@ def writer_dashboard():
     # Fetch books uploaded by this writer
     books = Book.query.filter_by(writer_id=writer.writer_id).all()
     
-    # Check if user has book platform profile
+    # Check if user has Ink Studio profile
     from glconnect.book_platform_models import BookPlatformUser
     book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     
-    # Get book platform books if user has profile
+    # Get Ink Studio books if user has profile
     book_platform_books = []
     if book_platform_user:
         from glconnect.book_platform_models import BookProject
@@ -223,8 +223,8 @@ def delete_book(book_id):
 @writer.route('/book-platform')
 @login_required
 def access_book_platform():
-    """Redirect to book platform dashboard - writers can access directly"""
-    # Writers can now access book platform directly without separate profile
+    """Redirect to Ink Studio dashboard - writers can access directly"""
+    # Writers can now access Ink Studio directly without separate profile
     return redirect(url_for('book_platform.dashboard'))
 
 @writer.route('/marketplace')

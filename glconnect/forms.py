@@ -3,7 +3,7 @@ from flask import flash
 from .models import User
 from flask_wtf.file import FileAllowed
 from flask_ckeditor import CKEditorField
-from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,TextAreaField,FileField,IntegerField
+from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,TextAreaField,FileField,IntegerField,FloatField
 from wtforms.validators import DataRequired, Email, EqualTo, Length,ValidationError,Optional
 class RegistrationForm(FlaskForm):
     fname = StringField('First Name', validators=[DataRequired()], render_kw={"placeholder": "First Name"})
@@ -79,3 +79,29 @@ class UploadBookForm(FlaskForm):
     cover_image = FileField('Cover Image', validators=[Optional()])
     submit = SubmitField('Upload Book')
     recap=RecaptchaField()
+
+class DigitalBookUploadForm(FlaskForm):
+    title = StringField('Book Title', validators=[DataRequired(), Length(min=3, max=200)])
+    description = TextAreaField('Description', validators=[Optional()])
+    genre = StringField('Genre', validators=[Optional(), Length(max=100)])
+    digital_book_file = FileField('Digital Book File', validators=[
+        DataRequired(),
+        FileAllowed(['pdf', 'epub', 'docx', 'doc', 'txt'], 'Only PDF, EPUB, DOCX, DOC, and TXT files are allowed!')
+    ])
+    cover_image = FileField('Cover Image', validators=[Optional()])
+    
+    # Pricing
+    digital_price = FloatField('Digital Book Price (USD)', validators=[Optional()])
+    generate_audiobook = BooleanField('Generate Audiobook Version')
+    audiobook_price = FloatField('Audiobook Price (USD)', validators=[Optional()])
+    audiobook_voice = SelectField('Audiobook Voice', choices=[
+        ('en-US-Standard-A', 'English (US) - Female'),
+        ('en-US-Standard-B', 'English (US) - Male'),
+        ('en-US-Standard-C', 'English (US) - Female 2'),
+        ('en-US-Standard-D', 'English (US) - Male 2'),
+        ('en-GB-Standard-A', 'English (UK) - Female'),
+        ('en-GB-Standard-B', 'English (UK) - Male'),
+    ], default='en-US-Standard-A')
+    
+    submit = SubmitField('Upload Digital Book')
+    recap = RecaptchaField()
