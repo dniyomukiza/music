@@ -146,7 +146,8 @@ def login():
             elif user.role=="artist":
                 return redirect(url_for('music.artist_profile'))
             elif user.role=="author":
-                return redirect(url_for('writer.writer_profile'))
+                # Writers go directly to Ink Studio dashboard
+                return redirect(url_for('book_platform.dashboard'))
             elif user.role=="dreamer":
                 return redirect(url_for('dream.dream_input'))
             else:
