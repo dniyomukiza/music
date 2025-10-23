@@ -62,7 +62,7 @@
                                 <div class="form-group mb-3">
                                     <label for="digital_book_file" class="form-label">Digital Book File *</label>
                                     {{ form.digital_book_file(class="form-control") }}
-                                    <div class="form-text">Supported formats: PDF, EPUB, DOCX, DOC, TXT (Max 50MB)</div>
+                                    <div class="form-text">Supported formats: PDF, EPUB, DOCX, TXT (Max 50MB)</div>
                                     {% if form.digital_book_file.errors %}
                                         <div class="text-danger small">
                                             {% for error in form.digital_book_file.errors %}

@@ -86,7 +86,7 @@ class DigitalBookUploadForm(FlaskForm):
     genre = StringField('Genre', validators=[Optional(), Length(max=100)])
     digital_book_file = FileField('Digital Book File', validators=[
         DataRequired(),
-        FileAllowed(['pdf', 'epub', 'docx', 'doc', 'txt'], 'Only PDF, EPUB, DOCX, DOC, and TXT files are allowed!')
+        FileAllowed(['pdf', 'epub', 'docx', 'txt'], 'Only PDF, EPUB, DOCX, and TXT files are allowed!')
     ])
     cover_image = FileField('Cover Image', validators=[Optional()])
     

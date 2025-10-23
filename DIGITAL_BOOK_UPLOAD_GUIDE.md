@@ -2,12 +2,12 @@
 
 ## Overview
 
-This feature allows writers to upload existing digital books (PDF, EPUB, DOCX, DOC, TXT) and automatically generate audiobook versions using Google Cloud Text-to-Speech. Both digital and audio versions can be sold separately or as bundles in the marketplace through Ink Studio.
+This feature allows writers to upload existing digital books (PDF, EPUB, DOCX, TXT) and automatically generate audiobook versions using Google Cloud Text-to-Speech. Both digital and audio versions can be sold separately or as bundles in the marketplace through Ink Studio.
 
 ## Features Added
 
 ### ✅ Digital Book Upload
-- Support for multiple file formats: PDF, EPUB, DOCX, DOC, TXT
+- Support for multiple file formats: PDF, EPUB, DOCX, TXT
 - Automatic text extraction from uploaded documents
 - File validation and security checks
 - Cover image upload support
@@ -39,7 +39,6 @@ pip install -r requirements.txt
 
 New dependencies added:
 - `PyPDF2==3.0.1` - PDF text extraction
-- `textract==1.6.5` - DOC file processing
 - `python-docx==1.1.0` - DOCX processing (already existed)
 - `ebooklib==0.18` - EPUB processing (already existed)
 
@@ -170,8 +169,8 @@ Response:
 | PDF | PyPDF2 | Extracts text and metadata |
 | EPUB | ebooklib | Handles HTML content extraction |
 | DOCX | python-docx | Native Word document support |
-| DOC | textract | Legacy Word document support |
 | TXT | Built-in | Plain text files |
+| DOC | Not supported | Temporarily unavailable due to dependency conflicts |
 
 ### Text Extraction Process
 

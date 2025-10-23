@@ -30,7 +30,7 @@ except ImportError:
 
 try:
     import textract
-    TEXTTRACT_AVAILABLE = True
+    TEXTTRACT_AVAILABLE = False  # Disabled due to dependency conflicts
 except ImportError:
     TEXTTRACT_AVAILABLE = False
 
@@ -199,19 +199,13 @@ class DigitalBookProcessor:
         }
     
     def _extract_from_doc(self, file_path: str) -> Dict[str, Any]:
-        """Extract text from DOC file using textract"""
-        if not TEXTTRACT_AVAILABLE:
-            raise ImportError("textract is required for DOC processing")
-        
-        try:
-            text = textract.process(file_path).decode('utf-8')
-            return {
-                'text': text,
-                'metadata': {}
-            }
-        except Exception as e:
-            logger.error(f"Error reading DOC {file_path}: {str(e)}")
-            raise
+        """Extract text from DOC file - currently not supported due to dependency conflicts"""
+        return {
+            'success': False,
+            'error': 'DOC file processing is temporarily unavailable due to dependency conflicts. Please convert your DOC file to DOCX format.',
+            'text': '',
+            'metadata': {}
+        }
     
     def _extract_from_txt(self, file_path: str) -> Dict[str, Any]:
         """Extract text from TXT file"""
