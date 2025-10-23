@@ -1,5 +1,5 @@
 """
-WebSocket implementation for real-time collaboration in the book platform
+WebSocket implementation for real-time collaboration in Ink Studio
 This module handles WebSocket connections for real-time editing, comments, and collaboration features.
 """
 
@@ -30,7 +30,7 @@ def handle_connect():
         return False
     
     print(f"User {current_user.username} connected")
-    emit('connected', {'message': 'Connected to book platform'})
+    emit('connected', {'message': 'Connected to Ink Studio'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -61,7 +61,7 @@ def handle_join_book(data):
     # Verify user has access to the book
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user:
-        emit('error', {'message': 'Book platform profile required'})
+        emit('error', {'message': 'Ink Studio profile required'})
         return False
     
     # Check if user is author or collaborator

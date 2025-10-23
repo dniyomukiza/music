@@ -19,7 +19,7 @@ def home():
 @bp.route('/marketplace')
 @login_required
 def marketplace():
-    """Universal marketplace access - redirects to book platform marketplace"""
+    """Universal marketplace access - redirects to Ink Studio marketplace"""
     return redirect(url_for('book_platform.marketplace'))
 
 @bp.route('/about')

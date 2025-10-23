@@ -19,12 +19,12 @@
             <a href="{{ url_for('book.upload_work') }}" class="btn btn-success">Upload Your Work</a>
         </div>
 
-        <!-- Book Platform Integration -->
+        <!-- Ink Studio Integration -->
         <div class="platform-actions">
-            <h3>Book Platform</h3>
-            <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-info">📚 Book Platform Dashboard</a>
+            <h3>Ink Studio</h3>
+            <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-info">🖋️ Ink Studio Dashboard</a>
             <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-warning">🛒 Marketplace</a>
-            <p class="platform-status">✅ Book Platform: Writer profiles only | Marketplace: All logged-in users</p>
+            <p class="platform-status">✅ Ink Studio: Writer profiles only | Marketplace: All logged-in users</p>
         </div>
 
         <!-- Universal Marketplace Access -->
@@ -55,9 +55,9 @@
             <p>You haven't uploaded any books yet</p>
         {% endif %}
 
-        <!-- Book Platform Books -->
+        <!-- Ink Studio Books -->
         {% if book_platform_books %}
-        <h2>Your Books (Book Platform)</h2>
+        <h2>Your Books (Ink Studio)</h2>
         <ul>
             {% for book in book_platform_books %}
                 <li>
