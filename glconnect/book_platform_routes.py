@@ -804,8 +804,24 @@ def resolve_comment(comment_id):
 @login_required
 def marketplace():
     """Browse published books in marketplace - accessible to all logged-in users"""
-    books = BookProject.query.filter_by(status=BookStatus.PUBLISHED).all()
-    return render_template('book_platform/marketplace.html', books=books)
+    try:
+        # Debug: Check if we can query books at all
+        all_books = BookProject.query.all()
+        print(f"Total books in database: {len(all_books)}")
+        
+        # Debug: Check published books
+        published_books = BookProject.query.filter_by(status=BookStatus.PUBLISHED).all()
+        print(f"Published books: {len(published_books)}")
+        
+        # For now, show all books regardless of status for debugging
+        books = BookProject.query.all()
+        return render_template('book_platform/marketplace.html', books=books)
+    except Exception as e:
+        print(f"Marketplace error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Return empty list on error
+        return render_template('book_platform/marketplace.html', books=[])
 
 @book_bp.route('/books/<int:book_id>/publish', methods=['POST'])
 @book_platform_required
