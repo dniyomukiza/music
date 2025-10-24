@@ -147,7 +147,7 @@ def ink_studio_access():
         return redirect(url_for('routes1.login'))
     
     # Check if user has writer profile
-    writer = current_user.writer_profiles.first()
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
     if writer:
         # Writer - redirect to Ink Studio dashboard
         return redirect(url_for('book_platform.dashboard'))
@@ -815,13 +815,17 @@ def marketplace():
         
         # For now, show all books regardless of status for debugging
         books = BookProject.query.all()
-        return render_template('book_platform/marketplace.html', books=books)
+        
+        # Check if user has writer profile for conditional UI elements
+        has_writer_profile = Writer.query.filter_by(user_id=current_user.user_id).first() is not None
+        
+        return render_template('book_platform/marketplace.html', books=books, has_writer_profile=has_writer_profile)
     except Exception as e:
         print(f"Marketplace error: {str(e)}")
         import traceback
         traceback.print_exc()
         # Return empty list on error
-        return render_template('book_platform/marketplace.html', books=[])
+        return render_template('book_platform/marketplace.html', books=[], has_writer_profile=False)
 
 @book_bp.route('/books/<int:book_id>/publish', methods=['POST'])
 @book_platform_required
