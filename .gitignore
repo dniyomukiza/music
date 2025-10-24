@@ -2,6 +2,7 @@
 myenv
 __pycache__
 .DS_Store
+/glconnect/static/ytauto
 /glconnect/static/afro
 /glconnect/static/gosp3
 /glconnect/static/gospel2
@@ -12,6 +13,7 @@ __pycache__
 migrations
 .vscode/
 afro.m3u
+/glconnect/ytauto.m3u
 gosp3.m3u
 gospel.m3u
 satmix.m3u
