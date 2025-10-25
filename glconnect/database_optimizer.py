@@ -96,7 +96,7 @@ class DatabaseOptimizer:
     @query_performance_monitor
     def get_marketplace_books(limit=50, genre=None, search_term=None):
         """Get marketplace books with optimized queries"""
-        from .book_platform_models import BookProject, BookStatus
+        from .book_platform_models import BookProject, BookStatus, BookPlatformUser
         
         query = BookProject.query.options(
             joinedload(BookProject.author).joinedload(BookPlatformUser.user)
@@ -167,7 +167,7 @@ class QueryCache:
     
     @classmethod
     def set(cls, key, value):
-        """Set cached data with timestamp"""
+        """Cache data with timestamp"""
         cls._cache[key] = value
         cls._cache_timestamps[key] = time.time()
     
@@ -176,14 +176,6 @@ class QueryCache:
         """Clear all cached data"""
         cls._cache.clear()
         cls._cache_timestamps.clear()
-    
-    @classmethod
-    def invalidate_pattern(cls, pattern):
-        """Invalidate cache entries matching pattern"""
-        keys_to_remove = [key for key in cls._cache.keys() if pattern in key]
-        for key in keys_to_remove:
-            del cls._cache[key]
-            del cls._cache_timestamps[key]
 
 def cache_result(cache_key_func):
     """Decorator to cache function results"""

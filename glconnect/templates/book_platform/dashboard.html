@@ -65,10 +65,10 @@
                 <div class="col-lg-8">
                     <p class="lead mb-4">Your professional writing platform for creating, collaborating, and publishing digital books</p>
                     <div class="d-flex gap-3">
-                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-light btn-lg">
+                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-plus-circle me-2"></i>Start Writing
                         </a>
-                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-light btn-lg">
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
                             <i class="fas fa-store me-2"></i>Browse Marketplace
                         </a>
                     </div>
@@ -139,27 +139,6 @@
                     </div>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white border-0 pb-0">
-                        <h5 class="card-title text-primary mb-0">
-                            <i class="fas fa-bolt me-2"></i>Quick Actions
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary">
-                                <i class="fas fa-plus-circle me-2"></i>New Book
-                            </a>
-                            <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-book-open me-2"></i>My Books
-                            </a>
-                            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-store me-2"></i>Marketplace
-                            </a>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Recent Notifications -->
                 <div class="card shadow-sm border-0">
@@ -171,7 +150,7 @@
                     <div class="card-body">
                         {% if notifications %}
                             {% for notification in notifications %}
-                                <div class="notification-item p-3 border-start border-primary border-3 mb-3 bg-light rounded">
+                                <div class="notification-item p-3 border-start border-primary border-3 mb-3 bg-white rounded">
                                     <div class="notification-title fw-bold text-dark">{{ notification.title }}</div>
                                     <div class="notification-message text-muted small">{{ notification.message }}</div>
                                     <div class="notification-time text-muted small">
@@ -196,7 +175,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <h3 class="text-primary mb-2">
-                                <i class="fas fa-user-circle me-2"></i>Welcome back, {{ current_user.username }}!
+                                <i class="fas fa-user-circle me-2"></i>{{ current_user.username }}
                             </h3>
                             <p class="text-muted mb-0">Ready to continue your writing journey? Let's create something amazing together.</p>
                         </div>
@@ -292,14 +271,6 @@
                                 </div>
                                 <h4 class="text-muted mb-3">No books yet</h4>
                                 <p class="text-muted mb-4">Start your writing journey by creating your first book or uploading an existing one.</p>
-                                <div class="d-flex justify-content-center gap-3">
-                                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
-                                        <i class="fas fa-plus-circle me-2"></i>Create New Book
-                                    </a>
-                                    <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-outline-primary btn-lg">
-                                        <i class="fas fa-upload me-2"></i>Upload Digital Book
-                                    </a>
-                                </div>
                             </div>
                         {% endif %}
                     </div>

@@ -55,8 +55,8 @@ def allowed_image_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
-# Import performance optimizations (temporarily disabled for testing)
-# from .database_optimizer import DatabaseOptimizer, QueryCache, cache_result
+# Import performance optimizations
+from .database_optimizer import DatabaseOptimizer, QueryCache, cache_result
 # from .performance_optimizer import MemoryManager, memory_monitor
 
 # Add memory monitoring to key functions (temporarily disabled)
@@ -190,20 +190,10 @@ def dashboard(user_profile, profile_type):
         
         book_user = WriterAsBookUser(user_profile)
         
-        # Get books authored by this writer (from BookProject table)
-        authored_books = BookProject.query.filter_by(author_id=book_user.id).all()
-        
-        # Get collaborations (if any)
-        collaborations = BookCollaboration.query.filter_by(
-            collaborator_id=book_user.id, 
-            is_active=True
-        ).all()
-        
-        # Get recent notifications (if any)
-        notifications = BookNotification.query.filter_by(
-            user_id=book_user.id,
-            is_read=False
-        ).order_by(BookNotification.created_at.desc()).limit(5).all()
+        # Use optimized database queries
+        authored_books, collaborations, notifications = DatabaseOptimizer.get_dashboard_data(
+            user_profile.user_id, 'writer'
+        )[1:]  # Skip the first return value (book_user)
         
     else:
         # For BookPlatformUsers (legacy), use existing logic
@@ -818,27 +808,34 @@ def resolve_comment(comment_id):
 # Marketplace routes
 @book_bp.route('/marketplace')
 @login_required
-# @memory_monitor
 def marketplace():
     """Browse published books in marketplace - accessible to all logged-in users"""
     try:
-        # Use optimized database queries (temporarily disabled)
-        # books = DatabaseOptimizer.get_marketplace_books(limit=100)
-        books = BookProject.query.filter_by(status=BookStatus.PUBLISHED).all()
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 20  # Limit to 20 books per page
+        
+        # Use optimized database queries with pagination
+        books = DatabaseOptimizer.get_marketplace_books(limit=per_page)
         
         # Check if user has writer profile for conditional UI elements
         has_writer_profile = Writer.query.filter_by(user_id=current_user.user_id).first() is not None
         
-        # Log memory usage (temporarily disabled)
-        # MemoryManager.log_memory_usage("marketplace")
-        
-        return render_template('book_platform/marketplace.html', books=books, has_writer_profile=has_writer_profile)
+        return render_template('book_platform/marketplace.html', 
+                             books=books, 
+                             has_writer_profile=has_writer_profile,
+                             page=page,
+                             per_page=per_page)
     except Exception as e:
         print(f"Marketplace error: {str(e)}")
         import traceback
         traceback.print_exc()
         # Return empty list on error
-        return render_template('book_platform/marketplace.html', books=[], has_writer_profile=False)
+        return render_template('book_platform/marketplace.html', 
+                             books=[], 
+                             has_writer_profile=False,
+                             page=1,
+                             per_page=20)
 
 @book_bp.route('/books/<int:book_id>/publish', methods=['POST'])
 @book_platform_required
@@ -892,7 +889,6 @@ def unpublish_book(book_id):
 
 @book_bp.route('/admin/books')
 @login_required
-# @memory_monitor
 def admin_books():
     """Admin panel to manage all books"""
     # Check if user is admin
@@ -900,12 +896,8 @@ def admin_books():
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('book_platform.marketplace'))
     
-    # Use optimized database queries (temporarily disabled)
-    # books = DatabaseOptimizer.get_admin_books_data()
-    books = BookProject.query.join(BookPlatformUser, BookProject.author_id == BookPlatformUser.id).all()
-    
-    # Log memory usage (temporarily disabled)
-    # MemoryManager.log_memory_usage("admin_books")
+    # Use optimized database queries
+    books = DatabaseOptimizer.get_admin_books_data()
     
     return render_template('book_platform/admin_books.html', books=books)
 

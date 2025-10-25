@@ -7,7 +7,7 @@
     --success-color: #27ae60;
     --warning-color: #f39c12;
     --danger-color: #e74c3c;
-    --info-color: #3498db;
+    --info-color: #7f8c8d;
     --light-color: #ecf0f1;
     --dark-color: #2c3e50;
     --border-radius: 12px;
@@ -169,7 +169,7 @@ body {
 .book-cover-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -277,7 +277,7 @@ body {
 .book-cover-placeholder-large {
     width: 200px;
     height: 280px;
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: var(--border-radius);
     display: flex;
     align-items: center;
@@ -391,7 +391,7 @@ body {
 .book-cover-placeholder-small {
     width: 40px;
     height: 56px;
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -729,7 +729,7 @@ body {
 }
 
 .editor-toolbar button:hover {
-    background-color: #e9ecef;
+    background-color: #f8f9fa;
 }
 
 .editor-toolbar button.active {
@@ -896,6 +896,198 @@ body {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
     color: white;
+}
+
+/* Additional Bootstrap Overrides */
+.bg-info {
+    background-color: var(--info-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.btn-info {
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-info {
+    color: var(--info-color);
+    border-color: var(--info-color);
+}
+
+.btn-outline-info:hover {
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+    color: white;
+}
+
+/* Secondary Button Overrides */
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-secondary {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+/* Border Overrides */
+.border-primary {
+    border-color: var(--primary-color) !important;
+}
+
+.border-start.border-primary {
+    border-left-color: var(--primary-color) !important;
+}
+
+.border-end.border-primary {
+    border-right-color: var(--primary-color) !important;
+}
+
+.border-top.border-primary {
+    border-top-color: var(--primary-color) !important;
+}
+
+.border-bottom.border-primary {
+    border-bottom-color: var(--primary-color) !important;
+}
+
+/* Light Background Overrides */
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+/* Badge Overrides */
+.badge.bg-info {
+    background-color: var(--info-color) !important;
+}
+
+/* Additional Button State Overrides */
+.btn-outline-secondary:focus,
+.btn-outline-secondary.focus {
+    box-shadow: 0 0 0 0.2rem rgba(127, 140, 141, 0.25);
+}
+
+.btn-outline-secondary:not(:disabled):not(.disabled):active,
+.btn-outline-secondary:not(:disabled):not(.disabled).active {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+/* Ensure all info elements use muted gray */
+.text-info,
+i.text-info {
+    color: var(--info-color) !important;
+}
+
+/* COMPREHENSIVE BLUE COLOR ELIMINATION */
+/* Override ALL possible Bootstrap blue classes */
+.btn-link {
+    color: var(--primary-color) !important;
+}
+
+.btn-link:hover {
+    color: var(--primary-dark) !important;
+}
+
+/* Override any remaining blue colors */
+a {
+    color: var(--primary-color) !important;
+}
+
+a:hover {
+    color: var(--primary-dark) !important;
+}
+
+/* Override focus states */
+.btn:focus,
+.btn:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25) !important;
+}
+
+/* Override any blue links */
+.nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.nav-link:hover {
+    color: white !important;
+}
+
+/* Override dropdown links */
+.dropdown-item {
+    color: var(--dark-color) !important;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa !important;
+    color: var(--primary-color) !important;
+}
+
+/* Override any remaining blue elements */
+* {
+    --bs-blue: var(--primary-color) !important;
+    --bs-info: var(--info-color) !important;
+}
+
+/* Override Bootstrap's default blue */
+:root {
+    --bs-blue: var(--primary-color) !important;
+    --bs-info: var(--info-color) !important;
+}
+
+/* COMPREHENSIVE LIGHT/BLUE COLOR ELIMINATION */
+.btn-light {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.btn-light:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.btn-outline-light {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.bg-light {
+    background-color: white !important;
+}
+
+.text-light {
+    color: white !important;
 }
 
 .book-price {
