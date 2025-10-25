@@ -168,6 +168,10 @@ def create_app():
         
         # Initialize book platform
         app, socketio = init_book_platform(app)
+        
+        # Apply performance optimizations (temporarily disabled for testing)
+        # from .performance_optimizer import optimize_app_performance
+        # optimize_app_performance(app)
 
         # Ensure tables exist
         inspector = inspect(db.engine)

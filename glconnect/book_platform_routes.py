@@ -44,7 +44,12 @@ def allowed_image_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
-# Helper decorators
+# Import performance optimizations (temporarily disabled for testing)
+# from .database_optimizer import DatabaseOptimizer, QueryCache, cache_result
+# from .performance_optimizer import MemoryManager, memory_monitor
+
+# Add memory monitoring to key functions (temporarily disabled)
+# @memory_monitor
 def get_user_profile():
     """Get user profile - Writer profile is primary for Ink Studio"""
     if not current_user.is_authenticated:
@@ -802,22 +807,19 @@ def resolve_comment(comment_id):
 # Marketplace routes
 @book_bp.route('/marketplace')
 @login_required
+# @memory_monitor
 def marketplace():
     """Browse published books in marketplace - accessible to all logged-in users"""
     try:
-        # Debug: Check if we can query books at all
-        all_books = BookProject.query.all()
-        print(f"Total books in database: {len(all_books)}")
-        
-        # Debug: Check published books
-        published_books = BookProject.query.filter_by(status=BookStatus.PUBLISHED).all()
-        print(f"Published books: {len(published_books)}")
-        
-        # For now, show all books regardless of status for debugging
-        books = BookProject.query.all()
+        # Use optimized database queries (temporarily disabled)
+        # books = DatabaseOptimizer.get_marketplace_books(limit=100)
+        books = BookProject.query.filter_by(status=BookStatus.PUBLISHED).all()
         
         # Check if user has writer profile for conditional UI elements
         has_writer_profile = Writer.query.filter_by(user_id=current_user.user_id).first() is not None
+        
+        # Log memory usage (temporarily disabled)
+        # MemoryManager.log_memory_usage("marketplace")
         
         return render_template('book_platform/marketplace.html', books=books, has_writer_profile=has_writer_profile)
     except Exception as e:
@@ -848,6 +850,53 @@ def publish_book(book_id):
     db.session.commit()
     
     return jsonify({'success': True})
+
+@book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
+@book_platform_required
+def unpublish_book(book_id):
+    """Unpublish a book from marketplace (change status to DRAFT)"""
+    book = BookProject.query.get_or_404(book_id)
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Check if user has permission (author or admin)
+    if book.author_id != book_user.id:
+        # Check if user is admin using existing admin system
+        if current_user.role != 'admin':
+            return jsonify({'error': 'Only the author or admin can unpublish the book'}), 403
+    
+    # Only unpublish if currently published
+    if book.status != BookStatus.PUBLISHED:
+        return jsonify({'error': 'Book is not currently published'}), 400
+    
+    # Change status to DRAFT (removes from marketplace but keeps the book)
+    book.status = BookStatus.DRAFT
+    book.updated_at = datetime.now(timezone.utc)
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Book unpublished successfully. It has been removed from the marketplace but can be republished anytime.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@book_bp.route('/admin/books')
+@login_required
+# @memory_monitor
+def admin_books():
+    """Admin panel to manage all books"""
+    # Check if user is admin
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    
+    # Use optimized database queries (temporarily disabled)
+    # books = DatabaseOptimizer.get_admin_books_data()
+    books = BookProject.query.join(BookPlatformUser, BookProject.author_id == BookPlatformUser.id).all()
+    
+    # Log memory usage (temporarily disabled)
+    # MemoryManager.log_memory_usage("admin_books")
+    
+    return render_template('book_platform/admin_books.html', books=books)
 
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required

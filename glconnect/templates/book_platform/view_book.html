@@ -22,32 +22,137 @@
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
+    <!-- Hero Section -->
+    <div class="hero-section bg-gradient-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-outline-light btn-sm me-3">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        {% if book.status.value == 'published' %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-globe me-1"></i>Published
+                            </span>
+                        {% elif book.status.value == 'draft' %}
+                            <span class="badge bg-warning fs-6">
+                                <i class="fas fa-edit me-1"></i>Draft
+                            </span>
+                        {% endif %}
+                    </div>
+                    <h1 class="display-4 fw-bold mb-3">{{ book.title }}</h1>
+                    {% if book.description %}
+                        <p class="lead mb-4">{{ book.description }}</p>
+                    {% endif %}
+                    <div class="d-flex gap-3 flex-wrap">
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-tag me-2"></i>{{ book.genre or 'No genre' }}
+                        </span>
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-list me-2"></i>{{ chapters|length }} Chapters
+                        </span>
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-keyboard me-2"></i>{{ book.word_count or 0 }} Words
+                        </span>
+                        {% if book.price and book.price > 0 %}
+                            <span class="badge bg-light text-dark fs-6">
+                                <i class="fas fa-dollar-sign me-2"></i>${{ "%.2f"|format(book.price) }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-light text-dark fs-6">
+                                <i class="fas fa-gift me-2"></i>Free
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="book-cover-hero">
+                        {% if book.cover_image %}
+                            <img src="{{ book.cover_image }}" class="book-cover-large" alt="{{ book.title }}">
+                        {% else %}
+                            <div class="book-cover-placeholder-large">
+                                <i class="fas fa-book fa-4x text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-book"></i> {{ book.title }}</h5>
+            <div class="col-lg-3">
+                <!-- Book Info Card -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Book Details
+                        </h5>
                     </div>
                     <div class="card-body">
-                        <div class="book-info">
-                            <div class="book-status mb-3">
-                                <span class="badge badge-{{ 'success' if book.status.value == 'published' else 'warning' }}">
-                                    {{ book.status.value.title() }}
-                                </span>
-                            </div>
-                            
-                            <div class="book-stats">
-                                <div class="stat-item">
-                                    <span class="stat-number">{{ chapters|length }}</span>
-                                    <span class="stat-label">Chapters</span>
+                        <div class="book-stats-grid">
+                            <div class="stat-card text-center">
+                                <div class="stat-icon bg-primary text-white rounded-circle mx-auto mb-2">
+                                    <i class="fas fa-list"></i>
                                 </div>
-                                <div class="stat-item">
-                                    <span class="stat-number">{{ book.word_count or 0 }}</span>
-                                    <span class="stat-label">Words</span>
-                                </div>
+                                <div class="stat-number h5 mb-0">{{ chapters|length }}</div>
+                                <div class="stat-label text-muted small">Chapters</div>
                             </div>
+                            <div class="stat-card text-center">
+                                <div class="stat-icon bg-success text-white rounded-circle mx-auto mb-2">
+                                    <i class="fas fa-keyboard"></i>
+                                </div>
+                                <div class="stat-number h5 mb-0">{{ book.word_count or 0 }}</div>
+                                <div class="stat-label text-muted small">Words</div>
+                            </div>
+                            <div class="stat-card text-center">
+                                <div class="stat-icon bg-warning text-white rounded-circle mx-auto mb-2">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                <div class="stat-number h5 mb-0">{{ book.created_at.strftime('%b %d') if book.created_at else 'N/A' }}</div>
+                                <div class="stat-label text-muted small">Created</div>
+                            </div>
+                            <div class="stat-card text-center">
+                                <div class="stat-icon bg-info text-white rounded-circle mx-auto mb-2">
+                                    <i class="fas fa-eye"></i>
+                                </div>
+                                <div class="stat-number h5 mb-0">{{ collaborations|length }}</div>
+                                <div class="stat-label text-muted small">Collaborators</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-2"></i>Edit Book
+                            </a>
+                            <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-users me-2"></i>Collaborate
+                            </a>
+                            {% if book.status.value == 'draft' %}
+                                <button class="btn btn-success" onclick="publishBook()">
+                                    <i class="fas fa-globe me-2"></i>Publish
+                                </button>
+                            {% elif book.status.value == 'published' %}
+                                <button class="btn btn-warning" onclick="unpublishBook()">
+                                    <i class="fas fa-eye-slash me-2"></i>Unpublish
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
                             
                             {% if book.description %}
                                 <div class="book-description mt-3">
@@ -101,6 +206,10 @@
                         {% if book.status.value == 'draft' %}
                             <button class="btn btn-success" onclick="publishBook()">
                                 <i class="fas fa-globe"></i> Publish
+                            </button>
+                        {% elif book.status.value == 'published' %}
+                            <button class="btn btn-warning" onclick="unpublishBook()">
+                                <i class="fas fa-eye-slash"></i> Unpublish
                             </button>
                         {% endif %}
                     </div>
@@ -232,6 +341,30 @@
                 .catch(error => {
                     console.error('Error:', error);
                     alert('Error publishing book');
+                });
+            }
+        }
+
+        function unpublishBook() {
+            if (confirm('Are you sure you want to unpublish this book? This will remove it from the marketplace but you can republish it anytime after fixing any issues.')) {
+                fetch(`/mybook/books/{{ book.id }}/unpublish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Book unpublished successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error unpublishing book: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error unpublishing book');
                 });
             }
         }

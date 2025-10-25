@@ -24,18 +24,63 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <!-- Hero Section -->
+    <div class="hero-section bg-gradient-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold mb-3">
+                        <i class="fas fa-store me-3"></i>Book Marketplace
+                    </h1>
+                    <p class="lead mb-4">Discover amazing books from talented authors around the world</p>
+                    <div class="d-flex gap-3">
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-book me-2"></i>{{ books|length }} Books Available
+                        </span>
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-users me-2"></i>Multiple Authors
+                        </span>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="hero-stats">
+                        <div class="stat-circle">
+                            <i class="fas fa-book-open fa-2x"></i>
+                            <div class="stat-number">{{ books|length }}</div>
+                            <div class="stat-label">Books</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
         <div class="row">
             <!-- Sidebar Filters -->
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-filter"></i> Filters</h5>
+            <div class="col-lg-3">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-filter me-2"></i>Filters & Search
+                        </h5>
                     </div>
                     <div class="card-body">
                         <form id="filterForm">
-                            <div class="mb-3">
-                                <label for="genre" class="form-label">Genre</label>
+                            <!-- Search -->
+                            <div class="mb-4">
+                                <label for="search" class="form-label fw-bold">Search Books</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-primary text-white">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="search" name="search" placeholder="Search by title, author...">
+                                </div>
+                            </div>
+
+                            <!-- Genre Filter -->
+                            <div class="mb-4">
+                                <label for="genre" class="form-label fw-bold">Genre</label>
                                 <select class="form-select" id="genre" name="genre">
                                     <option value="">All Genres</option>
                                     <option value="fiction">Fiction</option>
@@ -109,101 +154,130 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9">
+            <div class="col-lg-9">
+                <!-- Results Header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="fas fa-store"></i> Book Marketplace</h2>
+                    <div>
+                        <h3 class="text-primary mb-1">
+                            <i class="fas fa-book-open me-2"></i>Available Books
+                        </h3>
+                        <p class="text-muted mb-0">Showing {{ books|length }} books in the marketplace</p>
+                    </div>
                     <div class="d-flex gap-2">
                         <div class="input-group" style="width: 300px;">
                             <input type="text" class="form-control" id="searchInput" placeholder="Search books...">
-                            <button class="btn btn-outline-secondary" type="button" onclick="searchBooks()">
+                            <button class="btn btn-outline-primary" type="button" onclick="searchBooks()">
                                 <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-secondary" onclick="toggleView('grid')" id="gridViewBtn">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="toggleView('list')" id="listViewBtn">
+                                <i class="fas fa-list"></i>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Books Grid -->
-                <div class="row" id="booksGrid">
+                <div class="row g-4" id="booksGrid">
                     {% if books %}
                         {% for book in books %}
-                            <div class="col-md-6 col-lg-4 mb-4">
-                                <div class="marketplace-card">
-                                    {% if book.cover_image %}
-                                        <img src="{{ book.cover_image }}" class="book-cover" alt="{{ book.title }}">
-                                    {% else %}
-                                        <div class="book-cover-placeholder">
-                                            <i class="fas fa-book"></i>
-                                        </div>
-                                    {% endif %}
-                                    
-                                    <div class="book-info">
-                                        <h5 class="book-title">{{ book.title }}</h5>
-                                        <p class="book-author">by {{ book.author.pen_name or book.author.user.username }}</p>
-                                        
-                                        {% if book.description %}
-                                            <p class="book-description">{{ book.description[:100] }}{% if book.description|length > 100 %}...{% endif %}</p>
-                                        {% endif %}
-                                        
-                                        <div class="book-meta">
-                                            <span class="badge badge-info">{{ book.genre or 'No genre' }}</span>
-                                            {% if book.word_count %}
-                                                <span class="badge badge-secondary">{{ book.word_count }} words</span>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <div class="book-rating">
-                                            <div class="stars">
-                                                <i class="fas fa-star star"></i>
-                                                <i class="fas fa-star star"></i>
-                                                <i class="fas fa-star star"></i>
-                                                <i class="fas fa-star star"></i>
-                                                <i class="far fa-star star"></i>
-                                            </div>
-                                            <span class="rating-text">(4.2)</span>
-                                        </div>
-                                        
-                                        <div class="book-price-section">
-                                            {% if book.price and book.price > 0 %}
-                                                <div class="book-price">${{ "%.2f"|format(book.price) }}</div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="book-card h-100">
+                                    <div class="card border-0 shadow-sm h-100">
+                                        <div class="book-cover-container">
+                                            {% if book.cover_image %}
+                                                <img src="{{ book.cover_image }}" class="book-cover-img" alt="{{ book.title }}">
                                             {% else %}
-                                                <div class="book-price text-success">Free</div>
+                                                <div class="book-cover-placeholder">
+                                                    <i class="fas fa-book fa-3x text-muted"></i>
+                                                </div>
                                             {% endif %}
-                                        </div>
-                                        
-                                        <div class="book-actions">
-                                            <button class="btn btn-primary btn-sm" onclick="viewBook({{ book.id }})">
-                                                <i class="fas fa-eye"></i> View Details
-                                            </button>
-                                            <!-- Digital Book Purchase -->
-                                            {% if book.price and book.price > 0 %}
-                                                <button class="btn btn-success btn-sm" onclick="buyWithStripeLink({{ book.id }}, false)">
-                                                    <i class="fas fa-book"></i> Buy Digital Book
-                                                </button>
-                                            {% else %}
-                                                <button class="btn btn-outline-primary btn-sm" onclick="downloadBook({{ book.id }})">
-                                                    <i class="fas fa-download"></i> Free Download
-                                                </button>
-                                            {% endif %}
-                                            
-                                            <!-- Digital Audiobook Purchase -->
-                                            {% if book.has_audiobook %}
-                                                {% if book.audiobook_price and book.audiobook_price > 0 %}
-                                                    <button class="btn btn-warning btn-sm mt-1" onclick="buyWithStripeLink({{ book.id }}, true)">
-                                                        <i class="fas fa-headphones"></i> Buy Audiobook
-                                                    </button>
+                                            <div class="book-status-overlay">
+                                                {% if book.price and book.price > 0 %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-dollar-sign me-1"></i>${{ "%.2f"|format(book.price) }}
+                                                    </span>
                                                 {% else %}
-                                                    <button class="btn btn-outline-warning btn-sm mt-1" onclick="downloadAudiobook({{ book.id }})">
-                                                        <i class="fas fa-headphones"></i> Free Audiobook
-                                                    </button>
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-gift me-1"></i>Free
+                                                    </span>
                                                 {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="card-body d-flex flex-column">
+                                            <h5 class="card-title text-dark mb-2">{{ book.title }}</h5>
+                                            <p class="card-text text-muted small mb-2">
+                                                <i class="fas fa-user me-1"></i>by {{ book.author.pen_name or book.author.user.username }}
+                                            </p>
+                                            
+                                            {% if book.description %}
+                                                <p class="card-text small text-muted mb-3">
+                                                    {{ book.description[:120] }}{% if book.description|length > 120 %}...{% endif %}
+                                                </p>
                                             {% endif %}
                                             
-                                            <!-- Bundle Option -->
-                                            {% if book.price and book.price > 0 and book.has_audiobook and book.audiobook_price and book.audiobook_price > 0 %}
-                                                <button class="btn btn-info btn-sm mt-1" onclick="buyBundle({{ book.id }})">
-                                                    <i class="fas fa-gift"></i> Buy Both (Save 20%)
-                                                </button>
-                                            {% endif %}
+                                            <div class="book-meta mb-3">
+                                                <span class="badge bg-primary me-1">{{ book.genre or 'No genre' }}</span>
+                                                {% if book.word_count %}
+                                                    <span class="badge bg-secondary">{{ book.word_count }} words</span>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="book-rating mb-3">
+                                                <div class="stars text-warning">
+                                                    <i class="fas fa-star"></i>
+                                                    <i class="fas fa-star"></i>
+                                                    <i class="fas fa-star"></i>
+                                                    <i class="fas fa-star"></i>
+                                                    <i class="far fa-star"></i>
+                                                </div>
+                                                <span class="rating-text text-muted small ms-2">(4.2)</span>
+                                            </div>
+                                            
+                                            <div class="mt-auto">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar me-1"></i>{{ book.created_at.strftime('%b %d, %Y') if book.created_at else 'Recently' }}
+                                                    </small>
+                                                    {% if book.has_audiobook %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-headphones me-1"></i>Audiobook Available
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <div class="d-grid gap-2">
+                                                    <button class="btn btn-primary btn-sm" onclick="viewBook({{ book.id }})">
+                                                        <i class="fas fa-eye me-1"></i>View Details
+                                                    </button>
+                                                    
+                                                    {% if book.price and book.price > 0 %}
+                                                        <button class="btn btn-success btn-sm" onclick="buyWithStripeLink({{ book.id }}, false)">
+                                                            <i class="fas fa-shopping-cart me-1"></i>Buy for ${{ "%.2f"|format(book.price) }}
+                                                        </button>
+                                                    {% else %}
+                                                        <button class="btn btn-outline-primary btn-sm" onclick="downloadBook({{ book.id }})">
+                                                            <i class="fas fa-download me-1"></i>Free Download
+                                                        </button>
+                                                    {% endif %}
+                                                    
+                                                    {% if book.has_audiobook %}
+                                                        {% if book.audiobook_price and book.audiobook_price > 0 %}
+                                                            <button class="btn btn-warning btn-sm" onclick="buyWithStripeLink({{ book.id }}, true)">
+                                                                <i class="fas fa-headphones me-1"></i>Buy Audiobook
+                                                            </button>
+                                                        {% else %}
+                                                            <button class="btn btn-outline-warning btn-sm" onclick="downloadAudiobook({{ book.id }})">
+                                                                <i class="fas fa-headphones me-1"></i>Free Audiobook
+                                                            </button>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

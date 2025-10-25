@@ -1,93 +1,195 @@
 #!/usr/bin/env python3
 """
-Memory monitoring script for the music application.
-This script helps monitor memory usage and provides recommendations.
+Memory Monitoring Script for Ink Studio
+Monitors memory usage and provides optimization recommendations
 """
 
 import psutil
-import os
 import time
+import os
 import sys
+import logging
+from datetime import datetime
 
-def get_memory_info():
-    """Get current memory usage information."""
-    process = psutil.Process(os.getpid())
-    memory_info = process.memory_info()
-    
-    # Get system memory info
-    system_memory = psutil.virtual_memory()
-    
-    return {
-        'process_memory_mb': memory_info.rss / 1024 / 1024,
-        'process_memory_percent': process.memory_percent(),
-        'system_memory_total_gb': system_memory.total / 1024 / 1024 / 1024,
-        'system_memory_available_gb': system_memory.available / 1024 / 1024 / 1024,
-        'system_memory_used_percent': system_memory.percent
-    }
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('memory_monitor.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
-def check_container_limits():
-    """Check if running in a container and get memory limits."""
-    try:
-        # Check for cgroup memory limit
-        with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as f:
-            limit_bytes = int(f.read().strip())
-            return limit_bytes / 1024 / 1024 / 1024  # Convert to GB
-    except:
-        return None
+class MemoryMonitor:
+    """Monitor memory usage and provide optimization recommendations"""
+    
+    def __init__(self, threshold_percent=80):
+        self.threshold_percent = threshold_percent
+        self.start_time = time.time()
+        self.peak_memory = 0
+        self.memory_samples = []
+    
+    def get_system_memory(self):
+        """Get system memory information"""
+        memory = psutil.virtual_memory()
+        return {
+            'total': memory.total,
+            'available': memory.available,
+            'used': memory.used,
+            'percent': memory.percent,
+            'free': memory.free
+        }
+    
+    def get_process_memory(self, process_name='python'):
+        """Get memory usage for specific processes"""
+        processes = []
+        for proc in psutil.process_iter(['pid', 'name', 'memory_info', 'memory_percent']):
+            try:
+                if process_name in proc.info['name'].lower():
+                    processes.append({
+                        'pid': proc.info['pid'],
+                        'name': proc.info['name'],
+                        'memory_mb': proc.info['memory_info'].rss / 1024 / 1024,
+                        'memory_percent': proc.info['memory_percent']
+                    })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return processes
+    
+    def check_memory_health(self):
+        """Check overall memory health"""
+        system_memory = self.get_system_memory()
+        python_processes = self.get_process_memory('python')
+        
+        # Update peak memory
+        if system_memory['percent'] > self.peak_memory:
+            self.peak_memory = system_memory['percent']
+        
+        # Store sample
+        self.memory_samples.append({
+            'timestamp': datetime.now(),
+            'system_percent': system_memory['percent'],
+            'python_processes': python_processes
+        })
+        
+        # Keep only last 100 samples
+        if len(self.memory_samples) > 100:
+            self.memory_samples = self.memory_samples[-100:]
+        
+        # Check thresholds
+        warnings = []
+        if system_memory['percent'] > self.threshold_percent:
+            warnings.append(f"High system memory usage: {system_memory['percent']:.1f}%")
+        
+        total_python_memory = sum(p['memory_mb'] for p in python_processes)
+        if total_python_memory > 500:  # More than 500MB
+            warnings.append(f"High Python process memory: {total_python_memory:.1f}MB")
+        
+        return {
+            'system_memory': system_memory,
+            'python_processes': python_processes,
+            'warnings': warnings,
+            'peak_memory': self.peak_memory
+        }
+    
+    def get_optimization_recommendations(self):
+        """Get optimization recommendations based on memory usage"""
+        recommendations = []
+        
+        if self.peak_memory > 90:
+            recommendations.append("CRITICAL: Memory usage exceeded 90%. Consider:")
+            recommendations.append("  - Restarting the application")
+            recommendations.append("  - Implementing database connection pooling")
+            recommendations.append("  - Adding memory caching with Redis")
+            recommendations.append("  - Optimizing database queries")
+        
+        elif self.peak_memory > 80:
+            recommendations.append("WARNING: High memory usage detected. Consider:")
+            recommendations.append("  - Implementing query result caching")
+            recommendations.append("  - Optimizing image loading (lazy loading)")
+            recommendations.append("  - Adding database indexes")
+            recommendations.append("  - Implementing pagination for large datasets")
+        
+        elif self.peak_memory > 70:
+            recommendations.append("INFO: Moderate memory usage. Monitor for:")
+            recommendations.append("  - Memory leaks in long-running processes")
+            recommendations.append("  - Inefficient database queries")
+            recommendations.append("  - Large file uploads")
+        
+        return recommendations
+    
+    def generate_report(self):
+        """Generate a comprehensive memory report"""
+        health = self.check_memory_health()
+        recommendations = self.get_optimization_recommendations()
+        
+        report = f"""
+=== Ink Studio Memory Report ===
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Uptime: {time.time() - self.start_time:.1f} seconds
 
-def monitor_memory(duration_seconds=60, interval=5):
-    """Monitor memory usage for a specified duration."""
-    print("🔍 Memory Monitor Starting...")
-    print("=" * 50)
-    
-    container_limit = check_container_limits()
-    if container_limit:
-        print(f"📦 Container Memory Limit: {container_limit:.2f} GB")
-    else:
-        print("🖥️  Running on host system")
-    
-    print(f"⏱️  Monitoring for {duration_seconds} seconds (checking every {interval}s)")
-    print("=" * 50)
-    
-    start_time = time.time()
-    max_memory = 0
-    
-    while time.time() - start_time < duration_seconds:
-        mem_info = get_memory_info()
-        max_memory = max(max_memory, mem_info['process_memory_mb'])
-        
-        print(f"📊 Process Memory: {mem_info['process_memory_mb']:.1f} MB "
-              f"({mem_info['process_memory_percent']:.1f}%) | "
-              f"System: {mem_info['system_memory_used_percent']:.1f}% used")
-        
-        # Warning if memory usage is high
-        if mem_info['process_memory_mb'] > 200:
-            print("⚠️  WARNING: High memory usage detected!")
-        
-        if container_limit and mem_info['process_memory_mb'] > container_limit * 1024 * 0.8:
-            print("🚨 CRITICAL: Approaching container memory limit!")
-        
-        time.sleep(interval)
-    
-    print("=" * 50)
-    print(f"📈 Peak Memory Usage: {max_memory:.1f} MB")
-    
-    # Recommendations
-    print("\n💡 Recommendations:")
-    if max_memory > 200:
-        print("   - Consider reducing worker count in gunicorn.conf.py")
-        print("   - Enable more aggressive garbage collection")
-        print("   - Check for memory leaks in image generation")
-    
-    if container_limit and max_memory > container_limit * 1024 * 0.7:
-        print("   - Increase container memory limit")
-        print("   - Optimize memory-intensive operations")
-        print("   - Consider using external services for heavy processing")
+System Memory:
+  Total: {health['system_memory']['total'] / 1024 / 1024 / 1024:.1f} GB
+  Used: {health['system_memory']['used'] / 1024 / 1024 / 1024:.1f} GB
+  Available: {health['system_memory']['available'] / 1024 / 1024 / 1024:.1f} GB
+  Usage: {health['system_memory']['percent']:.1f}%
+  Peak Usage: {self.peak_memory:.1f}%
 
-if __name__ == "__main__":
+Python Processes:
+"""
+        
+        for proc in health['python_processes']:
+            report += f"  PID {proc['pid']}: {proc['memory_mb']:.1f} MB ({proc['memory_percent']:.1f}%)\n"
+        
+        if health['warnings']:
+            report += "\nWarnings:\n"
+            for warning in health['warnings']:
+                report += f"  - {warning}\n"
+        
+        if recommendations:
+            report += "\nRecommendations:\n"
+            for rec in recommendations:
+                report += f"  {rec}\n"
+        
+        return report
+    
+    def monitor_continuously(self, interval=30):
+        """Monitor memory continuously"""
+        logger.info("Starting continuous memory monitoring...")
+        
+        try:
+            while True:
+                health = self.check_memory_health()
+                
+                if health['warnings']:
+                    logger.warning(f"Memory warnings: {', '.join(health['warnings'])}")
+                
+                logger.info(f"Memory: {health['system_memory']['percent']:.1f}% "
+                           f"(Peak: {self.peak_memory:.1f}%)")
+                
+                time.sleep(interval)
+                
+        except KeyboardInterrupt:
+            logger.info("Memory monitoring stopped by user")
+            print(self.generate_report())
+
+def main():
+    """Main function"""
     if len(sys.argv) > 1:
-        duration = int(sys.argv[1])
+        if sys.argv[1] == 'report':
+            monitor = MemoryMonitor()
+            print(monitor.generate_report())
+        elif sys.argv[1] == 'monitor':
+            monitor = MemoryMonitor()
+            monitor.monitor_continuously()
+        else:
+            print("Usage: python memory_monitor.py [report|monitor]")
     else:
-        duration = 60
-    
-    monitor_memory(duration)
+        # Default: generate report
+        monitor = MemoryMonitor()
+        print(monitor.generate_report())
+
+if __name__ == '__main__':
+    main()
