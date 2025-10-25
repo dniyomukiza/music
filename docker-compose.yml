@@ -11,7 +11,7 @@ services:
     networks:
       - app_network
     command: >
-     sh -c "gunicorn --config gunicorn.conf.py --capture-output --enable-stdio-inheritance run:app"
+     sh -c "python run.py"
     mem_limit: 4g  # Increased for news generation and TTS processing
     mem_reservation: 2g  # Increased minimum memory reservation
     restart: unless-stopped

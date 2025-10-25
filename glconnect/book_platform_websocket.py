@@ -17,7 +17,7 @@ from glconnect.book_platform_models import (
 )
 
 # Initialize SocketIO (this should be done in your main app file)
-socketio = SocketIO(cors_allowed_origins="*")
+socketio = SocketIO(cors_allowed_origins=["https://glc.cool", "http://localhost:5000"], supports_credentials=True)
 
 # Store active sessions
 active_sessions = {}

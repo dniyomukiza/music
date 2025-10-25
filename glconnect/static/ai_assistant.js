@@ -114,12 +114,6 @@ class AIWritingAssistant {
                     <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-ideas">
                         <i class="fas fa-lightbulb"></i> Story Ideas
                     </button>
-                    <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-dialogue">
-                        <i class="fas fa-comments"></i> Dialogue
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary" data-ai-action="expand-scene">
-                        <i class="fas fa-expand"></i> Expand Scene
-                    </button>
                 </div>
                 
                 <div class="ai-section">
@@ -165,7 +159,7 @@ class AIWritingAssistant {
                 transform: translateY(-50%);
                 width: 280px;
                 background: white;
-                border: 1px solid #ddd;
+                border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.1);
                 z-index: 1000;
@@ -175,7 +169,7 @@ class AIWritingAssistant {
             
             .ai-toolbar-header {
                 padding: 12px;
-                border-bottom: 1px solid #eee;
+                border-bottom: 1px solid #e2e8f0;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -183,7 +177,7 @@ class AIWritingAssistant {
             
             .ai-toolbar-header h6 {
                 margin: 0;
-                color: #333;
+                color: #2c3e50;
             }
             
             .ai-status {
@@ -212,7 +206,7 @@ class AIWritingAssistant {
                 padding: 8px;
                 background: #f8f9fa;
                 border-radius: 4px;
-                border-left: 3px solid #007bff;
+                border-left: 3px solid #2c3e50;
             }
             
             .ai-section {
@@ -221,7 +215,7 @@ class AIWritingAssistant {
             
             .ai-section h6 {
                 margin-bottom: 8px;
-                color: #666;
+                color: #7f8c8d;
                 font-size: 12px;
                 text-transform: uppercase;
             }
@@ -275,17 +269,17 @@ class AIWritingAssistant {
                 padding: 16px;
                 background: #f8f9fa;
                 border-radius: 4px;
-                border-left: 4px solid #007bff;
+                border-left: 4px solid #2c3e50;
             }
             
             .ai-error {
-                border-left-color: #dc3545;
+                border-left-color: #e74c3c;
                 background: #f8d7da;
                 color: #721c24;
             }
             
             .ai-success {
-                border-left-color: #28a745;
+                border-left-color: #27ae60;
                 background: #d4edda;
                 color: #155724;
             }
@@ -834,7 +828,7 @@ class AIWritingAssistant {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #28a745;
+            background: #27ae60;
             color: white;
             padding: 12px 16px;
             border-radius: 4px;

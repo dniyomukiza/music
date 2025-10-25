@@ -239,7 +239,11 @@ class BookPlatform {
         }
         
         try {
-            this.websocket = io();
+            this.websocket = io({
+                transports: ['websocket', 'polling'],
+                upgrade: true,
+                rememberUpgrade: true
+            });
             
             this.websocket.on('connect', () => {
                 this.isConnected = true;

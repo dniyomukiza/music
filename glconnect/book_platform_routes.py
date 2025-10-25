@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 import os
 import uuid
 import json
+import logging
 from functools import wraps
 
 # Import models
@@ -23,11 +24,21 @@ from glconnect.book_platform_models import (
     BookPlatformUser, BookProject, BookChapter, BookCollaboration, 
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
     BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
-    BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus
+    BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
+    AudioGenerationTask
 )
+
+# Import additional modules
+from glconnect.forms import DigitalBookUploadForm
+from glconnect.digital_book_processor import digital_book_processor
+from glconnect.audio_book_generator import audio_book_generator
+import threading
 
 # Create blueprint
 book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 # Image upload configuration
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
@@ -1148,11 +1159,6 @@ def get_chapter_images(book_id, user_profile, profile_type):
 @book_platform_required
 def upload_digital_book():
     """Upload and process digital book files"""
-    from glconnect.forms import DigitalBookUploadForm
-    from glconnect.digital_book_processor import digital_book_processor
-    from glconnect.audio_book_generator import audio_book_generator
-    from glconnect.book_platform_models import AudioGenerationTask
-    import threading
     
     form = DigitalBookUploadForm()
     
