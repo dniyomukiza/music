@@ -32,7 +32,7 @@ services:
       - GOOGLE_API_KEY=AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
       - OPENAI_AI_KEY=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
       - GOOGLE_APPLICATION_CREDENTIALS=tts.json
-      - DB_URL=postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr
+      - DATABASE_URL=postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr
       - SENDER_MAIL=info@ndotonic.com
       - SENDER_PASSWORD=uivaqvvdohjovkhi
       - RECAPTCHAPUB=6LfdZjgrAAAAADyijAp1kSulPN7ZFAWk01fJzaPz
