@@ -591,10 +591,32 @@ def unpublish_chapter(book_id, chapter_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+def cleanup_orphaned_sessions():
+    """Clean up any orphaned realtime sessions that reference non-existent books"""
+    try:
+        # Find sessions that reference books that no longer exist
+        orphaned_sessions = db.session.query(RealtimeSession).outerjoin(
+            BookProject, RealtimeSession.book_project_id == BookProject.id
+        ).filter(BookProject.id.is_(None)).all()
+        
+        for session in orphaned_sessions:
+            db.session.delete(session)
+        
+        if orphaned_sessions:
+            db.session.commit()
+            logger.info(f"Cleaned up {len(orphaned_sessions)} orphaned realtime sessions")
+            
+    except Exception as e:
+        logger.error(f"Error cleaning up orphaned sessions: {str(e)}")
+        db.session.rollback()
+
 @book_bp.route('/books/<int:book_id>/delete', methods=['POST'])
 @book_platform_required
 def delete_book(book_id):
     """Delete a book and all its chapters"""
+    # Clean up any orphaned sessions first
+    cleanup_orphaned_sessions()
+    
     book = BookProject.query.get_or_404(book_id)
 
     # Check if user has permission
@@ -607,17 +629,190 @@ def delete_book(book_id):
         return jsonify({'error': 'You can only delete your own books'}), 403
 
     try:
-        # Delete all chapters first (cascade should handle this, but being explicit)
+        # Clean up related data in proper order to avoid foreign key constraints
+        
+        # 1. Clean up realtime sessions first (they reference book_project_id)
+        RealtimeSession.query.filter_by(book_project_id=book_id).delete()
+        
+        # 2. Clean up comments (they reference book_project_id)
+        BookComment.query.filter_by(book_project_id=book_id).delete()
+        
+        # 3. Clean up collaborations (they reference book_project_id)
+        BookCollaboration.query.filter_by(book_project_id=book_id).delete()
+        
+        # 4. Clean up invitations (they reference book_project_id)
+        CollaborationInvitation.query.filter_by(book_project_id=book_id).delete()
+        
+        # 5. Clean up analytics (they reference book_project_id)
+        BookAnalytics.query.filter_by(book_project_id=book_id).delete()
+        
+        # 6. Clean up notifications (they reference book_project_id)
+        BookNotification.query.filter_by(book_project_id=book_id).delete()
+        
+        # 7. Delete all chapters (cascade should handle this, but being explicit)
         BookChapter.query.filter_by(book_project_id=book_id).delete()
         
-        # Delete the book
+        # 8. Finally delete the book
         db.session.delete(book)
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Book deleted successfully'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Error deleting book {book_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@book_bp.route('/books/<int:book_id>/generate-audiobook', methods=['POST'])
+@book_platform_required
+def generate_audiobook_for_book(book_id):
+    """Generate audiobook from existing book content"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check if user has permission
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user:
+        return jsonify({'error': 'Ink Studio profile required'}), 403
+    
+    # Check if user is the author of the book
+    if book.author_id != book_user.id:
+        return jsonify({'error': 'You can only generate audiobooks for your own books'}), 403
+    
+    # Check if book already has audiobook
+    if book.has_audiobook:
+        return jsonify({'error': 'This book already has an audiobook version'}), 400
+    
+    # Get request data
+    data = request.get_json()
+    audiobook_price = data.get('audiobook_price', 0.0)
+    voice_name = data.get('voice_name', 'en-US-Standard-A')
+    
+    try:
+        # Extract text from all published chapters
+        chapters = BookChapter.query.filter_by(
+            book_project_id=book_id,
+            is_published=True
+        ).order_by(BookChapter.chapter_number).all()
+        
+        if not chapters:
+            return jsonify({'error': 'No published chapters found. Publish at least one chapter before generating audiobook.'}), 400
+        
+        # Combine all chapter content
+        full_text = ""
+        for chapter in chapters:
+            if chapter.content:
+                # Clean HTML content and extract text
+                import re
+                clean_content = re.sub(r'<[^>]+>', '', chapter.content)
+                clean_content = re.sub(r'\s+', ' ', clean_content).strip()
+                full_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n{clean_content}\n\n"
+        
+        if not full_text.strip():
+            return jsonify({'error': 'No text content found in published chapters'}), 400
+        
+        # Create audio generation task
+        audio_task = AudioGenerationTask(
+            book_project_id=book.id,
+            status='pending'
+        )
+        db.session.add(audio_task)
+        db.session.commit()
+        
+        # Start audio generation in background
+        def generate_audio_background():
+            try:
+                # Update task status
+                audio_task.status = 'processing'
+                audio_task.progress = 10
+                db.session.commit()
+                
+                # Generate audiobook
+                audio_result = audio_book_generator.generate_audiobook(
+                    full_text,
+                    book.id,
+                    voice_name
+                )
+                
+                if audio_result['success']:
+                    # Update book with audiobook info
+                    book.has_audiobook = True
+                    book.audiobook_file_path = audio_result['audio_file_path']
+                    book.audiobook_price = audiobook_price
+                    book.audiobook_duration = audio_result['duration']
+                    book.audiobook_generated_at = datetime.now(timezone.utc)
+                    book.audiobook_voice = voice_name
+                    
+                    # Update task
+                    audio_task.status = 'completed'
+                    audio_task.progress = 100
+                    audio_task.completed_at = datetime.now(timezone.utc)
+                    
+                    db.session.commit()
+                    logger.info(f"Audiobook generated successfully for book {book.id}")
+                    
+                else:
+                    # Update task with error
+                    audio_task.status = 'failed'
+                    audio_task.error_message = audio_result['error']
+                    db.session.commit()
+                    logger.error(f"Failed to generate audiobook for book {book.id}: {audio_result['error']}")
+                    
+            except Exception as e:
+                logger.error(f"Error in background audiobook generation: {str(e)}")
+                audio_task.status = 'failed'
+                audio_task.error_message = str(e)
+                db.session.commit()
+        
+        # Start background thread
+        thread = threading.Thread(target=generate_audio_background)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Audiobook generation started. You will be notified when it\'s complete.',
+            'task_id': audio_task.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@book_bp.route('/books/<int:book_id>/audiobook-status', methods=['GET'])
+@book_platform_required
+def get_audiobook_status(book_id):
+    """Get audiobook generation status"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check if user has permission
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user:
+        return jsonify({'error': 'Ink Studio profile required'}), 403
+    
+    # Check if user is the author of the book
+    if book.author_id != book_user.id:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Get latest audio generation task
+    audio_task = AudioGenerationTask.query.filter_by(
+        book_project_id=book_id
+    ).order_by(AudioGenerationTask.created_at.desc()).first()
+    
+    if not audio_task:
+        return jsonify({
+            'has_audiobook': book.has_audiobook,
+            'status': 'none',
+            'progress': 0
+        })
+    
+    return jsonify({
+        'has_audiobook': book.has_audiobook,
+        'status': audio_task.status,
+        'progress': audio_task.progress or 0,
+        'error_message': audio_task.error_message,
+        'created_at': audio_task.created_at.isoformat() if audio_task.created_at else None,
+        'completed_at': audio_task.completed_at.isoformat() if audio_task.completed_at else None
+    })
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/delete', methods=['POST'])
 @book_platform_required

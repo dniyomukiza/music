@@ -227,16 +227,6 @@ body {
     left: 100%;
 }
 
-.btn-primary {
-    background: var(--gradient-primary);
-    border: none;
-}
-
-.btn-primary:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-}
-
 /* Badges */
 .badge {
     border-radius: 20px;
@@ -320,6 +310,11 @@ body {
 .navbar-brand {
     font-weight: 700;
     font-size: 1.5rem;
+    color: white !important;
+}
+
+.navbar-brand:hover {
+    color: white !important;
 }
 
 /* Loading States */
@@ -873,29 +868,111 @@ body {
 }
 
 .text-primary {
-    color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.text-primary i {
+    color: white !important;
+}
+
+/* Ensure marketplace headings are white */
+.display-4,
+h1, h2, h3, h4, h5, h6 {
+    color: white !important;
+}
+
+.display-4 i,
+h1 i, h2 i, h3 i, h4 i, h5 i, h6 i {
+    color: white !important;
+}
+
+/* Ensure all chapter management buttons are white */
+.btn-outline-secondary {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-outline-warning {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-warning:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-outline-danger {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+/* Ensure all outline buttons are white on book view page */
+.btn-outline-primary {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+/* Ensure all other button variants are white */
+.btn-success {
+    color: white !important;
+}
+
+.btn-warning {
+    color: white !important;
+}
+
+.btn-outline-success {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-success:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-outline-info {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-info:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
 }
 
 .btn-primary {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
-    color: white;
+    color: white !important;
 }
 
 .btn-primary:hover {
     background-color: var(--primary-dark);
     border-color: var(--primary-dark);
-}
-
-.btn-outline-primary {
-    color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.btn-outline-primary:hover {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
+    color: white !important;
 }
 
 /* Additional Bootstrap Overrides */
@@ -1056,6 +1133,26 @@ a:hover {
 :root {
     --bs-blue: var(--primary-color) !important;
     --bs-info: var(--info-color) !important;
+}
+
+/* Ensure navbar text is white */
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-link {
+    color: white !important;
+}
+
+.navbar-dark .navbar-brand:hover,
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: white !important;
+}
+
+/* Ensure sidebar Ink Studio text is white */
+.sidebar-header h4 {
+    color: white !important;
+}
+
+.sidebar-header h4 i {
+    color: white !important;
 }
 
 /* COMPREHENSIVE LIGHT/BLUE COLOR ELIMINATION */

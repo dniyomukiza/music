@@ -23,7 +23,7 @@ def create_task_in_db(task_id, topics):
     from glconnect import create_app
     import json
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             task = NewsTask(
@@ -52,7 +52,7 @@ def update_task_in_db(task_id, **kwargs):
     from glconnect import create_app
     import json
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             task = NewsTask.query.filter_by(task_id=task_id).first()
@@ -96,7 +96,7 @@ def get_task_from_db(task_id):
     from glconnect import create_app
     import json
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             task = NewsTask.query.filter_by(task_id=task_id).first()
@@ -136,7 +136,7 @@ def delete_task_from_db(task_id):
     from glconnect.models import db, NewsTask
     from glconnect import create_app
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             task = NewsTask.query.filter_by(task_id=task_id).first()
@@ -1104,7 +1104,7 @@ def track_search_analytics(topics: list[str]):
     current_date = current_time.strftime('%Y-%m-%d')
     
     # Create app context for database operations
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             for topic in topics:
@@ -2901,7 +2901,7 @@ def analytics():
     from glconnect.models import db, SearchHistory, CategoryCount, TopicCount, DailySearchCount, CategoryTopic, CategorizationConfidence
     from glconnect import create_app
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             # Get category counts sorted by frequency
@@ -3005,7 +3005,7 @@ def get_categorization_stats():
     from glconnect.models import db, CategorizationConfidence
     from glconnect import create_app
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             confidences = CategorizationConfidence.query.all()
@@ -3119,7 +3119,7 @@ def analytics_summary():
     from glconnect import create_app
     from collections import Counter
     
-    app = create_app()
+    app, socketio = create_app()
     with app.app_context():
         try:
             confidence_stats = get_categorization_stats()
