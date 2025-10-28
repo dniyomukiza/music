@@ -79,11 +79,25 @@ def get_user_profile():
     return None, None
 
 def get_profile_id(user_profile, profile_type):
-    """Get the correct ID based on profile type"""
+    """Get the correct ID based on profile type - returns BookPlatformUser.id for consistency"""
     if profile_type == 'book_platform':
         return user_profile.id
     elif profile_type == 'writer':
-        return user_profile.writer_id
+        # For writers, always use BookPlatformUser.id since books are stored with that as author_id
+        bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        if bp_user:
+            return bp_user.id
+        else:
+            # Create BookPlatformUser if it doesn't exist
+            bp_user = BookPlatformUser(
+                user_id=current_user.user_id,
+                pen_name=user_profile.writer_name,
+                bio=user_profile.bio or "",
+                profile_picture=user_profile.profile_picture or "static/uploads/default_writer.jpg"
+            )
+            db.session.add(bp_user)
+            db.session.commit()
+            return bp_user.id
     elif profile_type == 'temp':
         return user_profile.user_id
     else:
@@ -265,27 +279,12 @@ def setup_profile():
 @writer_or_book_platform_required
 def books(user_profile, profile_type):
     """List all user's books"""
-    # Get the correct ID based on profile type
+    # Get the correct author_id (BookPlatformUser.id for consistency)
     author_id = get_profile_id(user_profile, profile_type)
     
-    # If user has Writer profile, ensure they have a BookPlatformUser profile
-    if profile_type == 'writer':
-        book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-        if not book_platform_user:
-            # Create BookPlatformUser for Writer
-            book_platform_user = BookPlatformUser(
-                user_id=current_user.user_id,
-                pen_name=user_profile.writer_name,
-                bio=user_profile.bio,
-                profile_picture=user_profile.profile_picture
-            )
-            db.session.add(book_platform_user)
-            db.session.commit()
-            author_id = book_platform_user.id
-        else:
-            author_id = book_platform_user.id
-    
+    # Query books
     books = BookProject.query.filter_by(author_id=author_id).all()
+    
     return render_template('book_platform/books.html', books=books)
 
 @book_bp.route('/books/create', methods=['GET', 'POST'])
@@ -295,25 +294,8 @@ def create_book(user_profile, profile_type):
     if request.method == 'POST':
         data = request.get_json()
         
-        # Get the correct ID based on profile type
+        # Get the correct author_id (BookPlatformUser.id)
         author_id = get_profile_id(user_profile, profile_type)
-        
-        # If user has Writer profile, ensure they have a BookPlatformUser profile
-        if profile_type == 'writer':
-            book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-            if not book_platform_user:
-                # Create BookPlatformUser for Writer
-                book_platform_user = BookPlatformUser(
-                    user_id=current_user.user_id,
-                    pen_name=user_profile.writer_name,
-                    bio=user_profile.bio,
-                    profile_picture=user_profile.profile_picture
-                )
-                db.session.add(book_platform_user)
-                db.session.flush()  # Get the ID without committing
-                author_id = book_platform_user.id
-            else:
-                author_id = book_platform_user.id
         
         book = BookProject(
             title=data['title'],
@@ -331,22 +313,31 @@ def create_book(user_profile, profile_type):
     return render_template('book_platform/create_book.html')
 
 @book_bp.route('/books/<int:book_id>')
-@book_platform_required
-def view_book(book_id):
+@writer_or_book_platform_required
+def view_book(book_id, user_profile, profile_type):
     """View book details and chapters"""
     book = BookProject.query.get_or_404(book_id)
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get the correct author_id
+    author_id = get_profile_id(user_profile, profile_type)
     
     # Check access
-    collaboration = BookCollaboration.query.filter_by(
-        book_project_id=book_id, 
-        collaborator_id=book_user.id,
-        is_active=True
-    ).first()
+    from glconnect.book_platform_models import BookCollaboration, BookPlatformUser
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    collaboration = None
+    if bp_user:
+        collaboration = BookCollaboration.query.filter_by(
+            book_project_id=book_id, 
+            collaborator_id=bp_user.id,
+            is_active=True
+        ).first()
     
-    if book.author_id != book_user.id and not collaboration:
+    is_author = book.author_id == author_id
+    is_collaborator = collaboration is not None
+    
+    if not is_author and not is_collaborator:
         flash('Access denied', 'error')
-        return redirect(url_for('book_platform.dashboard'))
+        return redirect(url_for('book_platform.books'))
     
     chapters = BookChapter.query.filter_by(book_project_id=book_id).order_by(BookChapter.chapter_number).all()
     collaborations = BookCollaboration.query.filter_by(book_project_id=book_id, is_active=True).all()
