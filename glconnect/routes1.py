@@ -60,6 +60,23 @@ def register():
             try:
                 db.session.add(new_user)
                 db.session.commit()
+                
+                # Auto-create Writer profile for authors
+                if new_user_role == 'author':
+                    from glconnect.models import Writer
+                    from datetime import datetime, timezone
+                    
+                    # Create a Writer profile with default values
+                    writer_profile = Writer(
+                        user_id=new_user.user_id,
+                        writer_name=f"{new_user.first_name} {new_user.last_name}",
+                        bio="",
+                        profile_picture="static/uploads/default_writer.jpg"
+                    )
+                    db.session.add(writer_profile)
+                    db.session.commit()
+                    
+                    print(f"✅ Auto-created Writer profile for {new_user.username}")
 
                 # Generate email confirmation token
                 s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
