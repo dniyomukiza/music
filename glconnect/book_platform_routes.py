@@ -357,14 +357,16 @@ def view_book(book_id):
                          collaborations=collaborations)
 
 @book_bp.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
-@book_platform_required
-def edit_book(book_id):
+@writer_or_book_platform_required
+def edit_book(book_id, user_profile, profile_type):
     """Edit book details"""
     book = BookProject.query.get_or_404(book_id)
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
     
     # Only author can edit book details
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         flash('Only the author can edit book details', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
@@ -485,20 +487,17 @@ def view_chapter(book_id, chapter_id):
                          comments=comments)
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/edit', methods=['GET', 'POST'])
-@book_platform_required
-def edit_chapter(book_id, chapter_id):
+@writer_or_book_platform_required
+def edit_chapter(book_id, chapter_id, user_profile, profile_type):
     """Edit chapter - GET shows form, POST saves changes"""
     book = BookProject.query.get_or_404(book_id)
     chapter = BookChapter.query.get_or_404(chapter_id)
     
-    # Check if user has permission to edit this chapter
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    if not book_user:
-        flash('Ink Studio profile required', 'error')
-        return redirect(url_for('book_platform.setup_profile'))
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
     
     # Check if user is the author of the book
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         flash('You can only edit chapters in your own books', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
@@ -537,6 +536,36 @@ def edit_chapter(book_id, chapter_id):
             chapter.is_published = data.get('is_published') == 'on' or data.get('is_published') == True
             chapter.word_count = len(data.get('content', '').split()) if data.get('content') else chapter.word_count
             chapter.updated_at = datetime.now(timezone.utc)
+            
+            # Create version snapshot for change tracking
+            try:
+                from .book_platform_models import ChapterVersion, BookPlatformUser
+                # Get the current user's BookPlatformUser or Writer profile ID
+                book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+                if book_user:
+                    # Get next version number
+                    existing_versions = ChapterVersion.query.filter_by(chapter_id=chapter_id).count()
+                    version_number = f"{existing_versions + 1}.0"
+                    
+                    # Create version
+                    version = ChapterVersion(
+                        chapter_id=chapter_id,
+                        book_version_id=1,  # Placeholder - can be linked to BookVersion if needed
+                        version_number=version_number,
+                        title=chapter.title,
+                        content=chapter.content,
+                        word_count=chapter.word_count,
+                        is_current=True,
+                        created_by_id=book_user.id
+                    )
+                    db.session.add(version)
+                    
+                    # Set all other versions to not current
+                    ChapterVersion.query.filter_by(chapter_id=chapter_id).update({'is_current': False})
+                    version.is_current = True
+            except Exception as e:
+                print(f"Version tracking error: {e}")
+                # Don't fail the edit if version tracking fails
             
             db.session.commit()
             
@@ -611,21 +640,19 @@ def cleanup_orphaned_sessions():
         db.session.rollback()
 
 @book_bp.route('/books/<int:book_id>/delete', methods=['POST'])
-@book_platform_required
-def delete_book(book_id):
+@writer_or_book_platform_required
+def delete_book(book_id, user_profile, profile_type):
     """Delete a book and all its chapters"""
     # Clean up any orphaned sessions first
     cleanup_orphaned_sessions()
     
     book = BookProject.query.get_or_404(book_id)
 
-    # Check if user has permission
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    if not book_user:
-            return jsonify({'error': 'Ink Studio profile required'}), 403
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
 
     # Check if user is the author of the book
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         return jsonify({'error': 'You can only delete your own books'}), 403
 
     try:
@@ -815,19 +842,17 @@ def get_audiobook_status(book_id):
     })
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/delete', methods=['POST'])
-@book_platform_required
-def delete_chapter(book_id, chapter_id):
+@writer_or_book_platform_required
+def delete_chapter(book_id, chapter_id, user_profile, profile_type):
     """Delete a chapter"""
     book = BookProject.query.get_or_404(book_id)
     chapter = BookChapter.query.get_or_404(chapter_id)
 
-    # Check if user has permission
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    if not book_user:
-            return jsonify({'error': 'Ink Studio profile required'}), 403
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
 
     # Check if user is the author of the book
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         return jsonify({'error': 'You can only delete chapters in your own books'}), 403
 
     if chapter.book_project_id != book_id:
@@ -843,16 +868,186 @@ def delete_chapter(book_id, chapter_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# Suggestion routes for collaborative editing with approval workflow
+@book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/suggest', methods=['POST'])
+@writer_or_book_platform_required
+def suggest_chapter_edit(book_id, chapter_id, user_profile, profile_type):
+    """Collaborator submits suggested edits for approval"""
+    from .book_platform_models import ChapterSuggestion, BookPlatformUser
+    
+    book = BookProject.query.get_or_404(book_id)
+    chapter = BookChapter.query.get_or_404(chapter_id)
+    
+    # Get the current user
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user:
+        return jsonify({'error': 'Ink Studio profile required'}), 403
+    
+    # Get the correct author ID
+    author_id = get_profile_id(user_profile, profile_type)
+    
+    # Check if user is the author - authors can edit directly, no suggestions needed
+    if book.author_id == author_id:
+        return jsonify({'error': 'Authors can edit directly. Use the edit endpoint instead.'}), 400
+    
+    # Check if user has collaboration permission
+    collaboration = BookCollaboration.query.filter_by(
+        book_project_id=book_id,
+        collaborator_id=book_user.id,
+        is_active=True
+    ).first()
+    
+    if not collaboration or collaboration.role.value in ['viewer']:
+        return jsonify({'error': 'You do not have permission to suggest edits'}), 403
+    
+    data = request.get_json()
+    
+    # Create suggestion
+    suggestion = ChapterSuggestion(
+        chapter_id=chapter_id,
+        suggested_by_id=book_user.id,
+        suggested_title=data.get('title', chapter.title),
+        suggested_content=data.get('content', chapter.content),
+        suggested_summary=data.get('summary', chapter.summary),
+        original_content=chapter.content,
+        status='pending'
+    )
+    
+    db.session.add(suggestion)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Your suggested edits have been submitted for review',
+        'suggestion_id': suggestion.id
+    })
+
+@book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/suggestions')
+@writer_or_book_platform_required
+def view_suggestions(book_id, chapter_id, user_profile, profile_type):
+    """View all suggestions for a chapter"""
+    from .book_platform_models import ChapterSuggestion
+    
+    book = BookProject.query.get_or_404(book_id)
+    chapter = BookChapter.query.get_or_404(chapter_id)
+    
+    # Only author can view suggestions
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        flash('Only the author can view suggestions', 'error')
+        return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
+    
+    suggestions = ChapterSuggestion.query.filter_by(chapter_id=chapter_id).order_by(
+        ChapterSuggestion.created_at.desc()
+    ).all()
+    
+    return render_template('book_platform/suggestions.html',
+                         book=book,
+                         chapter=chapter,
+                         suggestions=suggestions)
+
+@book_bp.route('/suggestions/<int:suggestion_id>/approve', methods=['POST'])
+@writer_or_book_platform_required
+def approve_suggestion(suggestion_id, user_profile, profile_type):
+    """Approve and merge a suggestion into the chapter"""
+    from .book_platform_models import ChapterSuggestion, BookPlatformUser
+    
+    suggestion = ChapterSuggestion.query.get_or_404(suggestion_id)
+    book = BookProject.query.get_or_404(suggestion.chapter.book_project_id)
+    
+    # Only author can approve
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        return jsonify({'error': 'Only the author can approve suggestions'}), 403
+    
+    if suggestion.status != 'pending':
+        return jsonify({'error': 'This suggestion has already been processed'}), 400
+    
+    # Update chapter with suggested changes
+    chapter = suggestion.chapter
+    
+    # Save current version before applying suggestion
+    chapter.content = suggestion.suggested_content
+    chapter.title = suggestion.suggested_title
+    chapter.summary = suggestion.suggested_summary or chapter.summary
+    chapter.updated_at = datetime.now(timezone.utc)
+    chapter.word_count = len(suggestion.suggested_content.split()) if suggestion.suggested_content else chapter.word_count
+    
+    # Update suggestion status
+    suggestion.status = 'approved'
+    suggestion.reviewed_by_id = author_id
+    suggestion.reviewed_at = datetime.now(timezone.utc)
+    suggestion.review_message = request.json.get('message', '')
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Suggestion approved and merged into chapter'
+    })
+
+@book_bp.route('/suggestions/<int:suggestion_id>/reject', methods=['POST'])
+@writer_or_book_platform_required
+def reject_suggestion(suggestion_id, user_profile, profile_type):
+    """Reject a suggestion"""
+    from .book_platform_models import ChapterSuggestion
+    
+    suggestion = ChapterSuggestion.query.get_or_404(suggestion_id)
+    book = BookProject.query.get_or_404(suggestion.chapter.book_project_id)
+    
+    # Only author can reject
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        return jsonify({'error': 'Only the author can reject suggestions'}), 403
+    
+    if suggestion.status != 'pending':
+        return jsonify({'error': 'This suggestion has already been processed'}), 400
+    
+    # Update suggestion status
+    suggestion.status = 'rejected'
+    suggestion.reviewed_by_id = author_id
+    suggestion.reviewed_at = datetime.now(timezone.utc)
+    suggestion.review_message = request.json.get('message', 'Rejected by author')
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Suggestion rejected'
+    })
+
+@book_bp.route('/suggestions/<int:suggestion_id>')
+@writer_or_book_platform_required
+def view_suggestion(suggestion_id, user_profile, profile_type):
+    """View a specific suggestion (with diff view)"""
+    from .book_platform_models import ChapterSuggestion
+    
+    suggestion = ChapterSuggestion.query.get_or_404(suggestion_id)
+    book = BookProject.query.get_or_404(suggestion.chapter.book_project_id)
+    
+    # Only author can view suggestions
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        flash('Only the author can view suggestions', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book.id))
+    
+    return render_template('book_platform/view_suggestion.html',
+                         suggestion=suggestion,
+                         book=book,
+                         chapter=suggestion.chapter)
+
 # Collaboration routes
 @book_bp.route('/books/<int:book_id>/collaborate')
-@book_platform_required
-def collaborate(book_id):
+@writer_or_book_platform_required
+def collaborate(book_id, user_profile, profile_type):
     """Collaboration management page"""
     book = BookProject.query.get_or_404(book_id)
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
     
     # Only author can manage collaborations
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         flash('Only the author can manage collaborations', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
@@ -867,14 +1062,16 @@ def collaborate(book_id):
                          invitations=invitations)
 
 @book_bp.route('/books/<int:book_id>/invite', methods=['POST'])
-@book_platform_required
-def invite_collaborator(book_id):
+@writer_or_book_platform_required
+def invite_collaborator(book_id, user_profile, profile_type):
     """Invite a collaborator"""
     book = BookProject.query.get_or_404(book_id)
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
     
     # Only author can invite collaborators
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         return jsonify({'error': 'Only the author can invite collaborators'}), 403
     
     data = request.get_json()
@@ -1055,14 +1252,16 @@ def publish_book(book_id):
     return jsonify({'success': True})
 
 @book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
-@book_platform_required
-def unpublish_book(book_id):
+@writer_or_book_platform_required
+def unpublish_book(book_id, user_profile, profile_type):
     """Unpublish a book from marketplace (change status to DRAFT)"""
     book = BookProject.query.get_or_404(book_id)
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
     
     # Check if user has permission (author or admin)
-    if book.author_id != book_user.id:
+    if book.author_id != author_id:
         # Check if user is admin using existing admin system
         if current_user.role != 'admin':
             return jsonify({'error': 'Only the author or admin can unpublish the book'}), 403

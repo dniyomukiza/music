@@ -2290,6 +2290,8 @@
                         showResults(data);
                         return;
                     } else if (data.status === 'failed') {
+                        isGeneratingNews = false; // Reset flag on failure
+                        resetGenerateButtons(); // Re-enable buttons on failure
                         throw new Error(data.error || 'Generation failed');
                     }
                     
@@ -2298,10 +2300,14 @@
                     attempts++;
                     
                 } catch (error) {
+                    isGeneratingNews = false; // Reset flag on error
+                    resetGenerateButtons(); // Re-enable buttons on error
                     throw error;
                 }
             }
             
+            isGeneratingNews = false; // Reset flag on timeout
+            resetGenerateButtons(); // Re-enable buttons on timeout
             throw new Error('Generation timed out. Please try again.');
         }
         
@@ -2474,6 +2480,24 @@
             isGeneratingNews = true;
             console.log('Starting news generation, setting isGeneratingNews = true');
             
+            // IMMEDIATE VISUAL FEEDBACK - Show loading and disable buttons instantly
+            const generateButtons = document.querySelectorAll('button[onclick*="generateNewsFromTopics"]');
+            generateButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+            });
+            
+            // Show loading state immediately
+            showLoadingState();
+            
+            // Scroll to loading section to make it visible
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            
             // Submit the topics to the broadcast endpoint
             fetch('/routes2/news/broadcast', {
                 method: 'POST',
@@ -2491,9 +2515,8 @@
                 if (data.error) {
                     alert('Error: ' + data.error);
                     isGeneratingNews = false; // Reset flag on error
+                    resetGenerateButtons(); // Re-enable buttons on error
                 } else {
-                    // Show loading state and poll for completion
-                    showLoadingState();
                     console.log('Starting polling for task_id:', data.task_id);
                     pollForCompletion(data.task_id);
                 }
@@ -2502,8 +2525,20 @@
                 console.error('Error in news generation:', error);
                 alert('Error: ' + error.message);
                 isGeneratingNews = false; // Reset flag on error
+                resetGenerateButtons(); // Re-enable buttons on error
                 console.error('Error:', error);
                 alert('Error generating news. Please try again.');
+            });
+        }
+        
+        // Function to reset generate button states
+        function resetGenerateButtons() {
+            const generateButtons = document.querySelectorAll('button[onclick*="generateNewsFromTopics"]');
+            generateButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Generate News';
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
             });
         }
         
@@ -2678,6 +2713,9 @@
             isGeneratingNews = false;
             console.log('News generation completed, setting isGeneratingNews = false');
             
+            // Reset generate button states
+            resetGenerateButtons();
+            
             const resultDiv = document.getElementById('result');
             if (resultDiv) {
                 const audioUrl = result.audio_file || result.audio_url;
@@ -2797,7 +2835,12 @@
                 const topicMatch = messageText.match(/Topic '([^']+)' added successfully/);
                 if (topicMatch) {
                     const topic = topicMatch[1];
+                    console.log('Adding validated topic to lists:', topic);
                     addTopicToList(topic);
+                    // Also add to approvedTopics since it's been validated by the server
+                    if (!approvedTopics.includes(topic)) {
+                        approvedTopics.push(topic);
+                    }
                     clearInputField();
                 }
             }

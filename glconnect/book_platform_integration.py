@@ -53,7 +53,7 @@ def create_book_platform_tables():
     from glconnect.book_platform_models import (
         BookPlatformUser, BookProject, BookChapter, BookCollaboration,
         CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
-        BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification
+        ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification
     )
     
     # Create tables
@@ -65,6 +65,7 @@ def create_book_platform_tables():
     BookComment.__table__.create(db.engine, checkfirst=True)
     BookVersion.__table__.create(db.engine, checkfirst=True)
     ChapterVersion.__table__.create(db.engine, checkfirst=True)
+    ChapterSuggestion.__table__.create(db.engine, checkfirst=True)
     BookPurchase.__table__.create(db.engine, checkfirst=True)
     BookSale.__table__.create(db.engine, checkfirst=True)
     RealtimeSession.__table__.create(db.engine, checkfirst=True)

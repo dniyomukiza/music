@@ -101,6 +101,7 @@ def create_app():
     @app.before_request
     def log_request():
         try:
+            # File logging (existing)
             with open("visits.txt", "a") as f:
                 # Get current time in a more readable format
                 now = datetime.now(timezone.utc)
@@ -136,6 +137,39 @@ def create_app():
                 f.write(f"    Device: {device}\n")
                 f.write(f"    User-Agent: {user_agent}\n")
                 f.write("-" * 80 + "\n")
+            
+            # Database analytics logging (new)
+            try:
+                from .models import PageAnalytics, db
+                from flask_login import current_user
+                
+                # Skip static files and admin endpoints (including analytics)
+                if not request.path.startswith('/static') and not request.path.startswith('/_analytics') and request.path != '/analytics':
+                    # Only log non-static pages to avoid database bloat
+                    analytics = PageAnalytics(
+                        path=request.path,
+                        method=request.method,
+                        ip_address=request.remote_addr,
+                        browser=browser,
+                        device=device,
+                        user_agent=user_agent[:500] if len(user_agent) > 500 else user_agent,  # Limit length
+                        user_id=current_user.user_id if current_user.is_authenticated else None,
+                        is_authenticated=current_user.is_authenticated,
+                        referer=request.referrer[:500] if request.referrer and len(request.referrer) > 500 else request.referrer
+                    )
+                    db.session.add(analytics)
+                    
+                    # Commit all analytics (database handles performance)
+                    db.session.commit()
+            except Exception as db_ex:
+                # Don't fail the request if analytics fails
+                print(f"Analytics logging error: {db_ex}")
+                # Rollback on error
+                try:
+                    db.session.rollback()
+                except:
+                    pass
+                
         except Exception as ex:
             print("Exception occurred while logging: ", ex)
 
@@ -153,6 +187,7 @@ def create_app():
         from .book import book
         from .news_routes import news_bp
         from .book_platform_integration import init_book_platform
+        from .analytics import analytics_bp
 
         app.register_blueprint(music, url_prefix="/music")
         app.register_blueprint(writer, url_prefix="/writer")
@@ -165,6 +200,7 @@ def create_app():
         app.register_blueprint(art, url_prefix='/art')
         app.register_blueprint(book, url_prefix='/book')
         app.register_blueprint(news_bp, url_prefix='/routes2/news')
+        app.register_blueprint(analytics_bp)
         
         # Initialize book platform
         app, socketio = init_book_platform(app)

@@ -224,6 +224,35 @@ class BookVersion(db.Model):
     created_by = db.relationship('BookPlatformUser', backref='created_versions')
     chapter_versions = db.relationship('ChapterVersion', backref='book_version', lazy=True, cascade='all, delete-orphan')
 
+# Chapter Suggestion Model (for collaborative edits that need approval)
+class ChapterSuggestion(db.Model):
+    __tablename__ = 'chapter_suggestions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    chapter_id = db.Column(db.Integer, db.ForeignKey('book_chapters.id'), nullable=False)
+    suggested_by_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=False)
+    
+    # Suggested changes
+    suggested_title = db.Column(db.String(200), nullable=True)
+    suggested_content = db.Column(db.Text, nullable=True)
+    suggested_summary = db.Column(db.Text, nullable=True)
+    
+    # Original values (for comparison/diff)
+    original_content = db.Column(db.Text, nullable=True)
+    
+    # Status tracking
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_message = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    chapter = db.relationship('BookChapter', backref='suggestions')
+    suggested_by = db.relationship('BookPlatformUser', foreign_keys=[suggested_by_id], backref='chapter_suggestions')
+    reviewed_by = db.relationship('BookPlatformUser', foreign_keys=[reviewed_by_id], backref='reviewed_suggestions')
+
 # Chapter Version Model
 class ChapterVersion(db.Model):
     __tablename__ = 'chapter_versions'

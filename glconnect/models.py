@@ -250,3 +250,32 @@ class NewsTask(db.Model):
     generation_time = db.Column(db.Float, nullable=True)  # Time taken in seconds
     memory_usage = db.Column(db.Text, nullable=True)  # JSON string of memory info
     topics_processed = db.Column(db.Text, nullable=True)  # JSON string of processed topics
+
+class PageAnalytics(db.Model):
+    __tablename__ = 'page_analytics'
+    id = db.Column(db.Integer, primary_key=True)
+    path = db.Column(db.String(500), nullable=False)  # The URL path accessed
+    method = db.Column(db.String(10), nullable=False)  # GET, POST, etc.
+    ip_address = db.Column(db.String(50), nullable=True)
+    browser = db.Column(db.String(50), nullable=True)
+    device = db.Column(db.String(50), nullable=True)
+    user_agent = db.Column(db.String(500), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
+    is_authenticated = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    referer = db.Column(db.String(500), nullable=True)
+    
+    # Relationship
+    user = db.relationship('User', backref='page_views')
+
+class PageAnalyticsStats(db.Model):
+    __tablename__ = 'page_analytics_stats'
+    id = db.Column(db.Integer, primary_key=True)
+    path = db.Column(db.String(500), nullable=False)
+    total_views = db.Column(db.Integer, default=0)
+    unique_visitors = db.Column(db.Integer, default=0)
+    last_accessed = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    __table_args__ = (db.UniqueConstraint('path', name='unique_path'),)

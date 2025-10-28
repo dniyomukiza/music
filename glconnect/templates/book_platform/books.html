@@ -101,6 +101,14 @@
                                             <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" class="btn btn-outline-info btn-sm">
                                                 <i class="fas fa-list"></i> Chapters
                                             </a>
+                                            {% if book.status.value == 'published' %}
+                                            <button class="btn btn-outline-warning btn-sm" onclick="confirmUnpublishBook({{ book.id }}, '{{ book.title }}')" title="Remove from marketplace">
+                                                <i class="fas fa-eye-slash"></i> Unpublish
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteBook({{ book.id }}, '{{ book.title }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -175,6 +183,58 @@
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         });
+
+        // Function to confirm and unpublish a book (removes from marketplace but keeps it as draft)
+        function confirmUnpublishBook(bookId, bookTitle) {
+            if (confirm(`Are you sure you want to unpublish "${bookTitle}"? This will remove it from the marketplace but you can republish it anytime after fixing any issues.`)) {
+                fetch(`/mybook/books/${bookId}/unpublish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Book unpublished successfully! It has been removed from the marketplace.');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to unpublish book'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while unpublishing the book');
+                });
+            }
+        }
+
+        // Function to confirm and delete a book
+        function confirmDeleteBook(bookId, bookTitle) {
+            if (confirm(`Are you sure you want to delete "${bookTitle}"? This action cannot be undone and will delete all chapters and content.`)) {
+                fetch(`/mybook/books/${bookId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Book deleted successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to delete book'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the book');
+                });
+            }
+        }
     </script>
 </body>
 </html>
