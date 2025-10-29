@@ -188,15 +188,17 @@ def ink_studio_access():
         flash('Please log in to access Ink Studio', 'info')
         return redirect(url_for('routes1.login'))
     
-    # Check if user has writer profile
+    # Check if user has writer profile or BookPlatformUser profile
     writer = Writer.query.filter_by(user_id=current_user.user_id).first()
-    if writer:
-        # Writer - redirect to Ink Studio dashboard
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    if writer or book_user:
+        # User has profile - redirect to Ink Studio dashboard
         return redirect(url_for('book_platform.dashboard'))
     else:
-        # Non-writer - redirect to writer profile creation
-        flash('You need a writer profile to access Ink Studio. Please create a writer profile first.', 'info')
-        return redirect(url_for('writer.writer_profile'))
+        # No profile - redirect to Ink Studio profile setup
+        flash('Please set up your author profile to access Ink Studio.', 'info')
+        return redirect(url_for('book_platform.setup_profile'))
 
 # Main dashboard route
 @book_bp.route('/')

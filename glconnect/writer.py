@@ -23,7 +23,12 @@ def writer_profile():
         writer_name = form.writer_name.data
         bio = form.bio.data
         profile_pic = form.profile_picture.data
-        relative_path = writer.profile_picture  # Default to the current picture if no new upload
+        
+        # Default to current picture if updating, or empty if creating new
+        if writer:
+            relative_path = writer.profile_picture  # Keep current picture if no new upload
+        else:
+            relative_path = "static/uploads/default_writer.jpg"  # Default for new profiles
 
         # Check if a new profile picture is uploaded
         if profile_pic:
@@ -57,7 +62,7 @@ def writer_profile():
 
             try:
                 db.session.commit()
-                flash("Profile saved successfully!", "success")
+                flash("Profile created successfully!", "success")
                 return redirect(url_for('writer.writer_dashboard'))
             except Exception as e:
                 db.session.rollback()

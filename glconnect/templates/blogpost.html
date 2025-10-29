@@ -2,16 +2,26 @@
 {%block content%}
 {% include 'messages.html' %}
 
-    {{ ckeditor.load() }}
-    {{ ckeditor.config(name='content', upload_url=url_for('blog.upload')) }}
-
     <form method="POST" action="" enctype="multipart/form-data">
         <legend>{{ legend }}</legend>
         {{ form.hidden_tag()}}
 
-        {{ form.title }}
-        {{ form.content | safe }}
-        {{ form.submit }}
+        <div style="margin-bottom: 15px;">
+            <label for="{{ form.title.id }}">Title</label>
+            {{ form.title(class="form-control") }}
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="{{ form.content.id }}">Content</label>
+            {{ form.content() }}
+        </div>
+
+        <div>
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
     </form>
+
+    {{ ckeditor.load() }}
+    {{ ckeditor.config(name='content', upload_url=url_for('blog.upload')) }}
 
 {%endblock content%}

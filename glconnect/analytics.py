@@ -1,37 +1,21 @@
 """
 Analytics module for tracking and viewing app usage statistics.
-This module provides admin-only endpoints to view detailed analytics about page views and user behavior.
+This module provides publicly accessible endpoints to view detailed analytics about page views and user behavior.
 """
 
 from flask import Blueprint, jsonify, render_template, request
-from flask_login import login_required, current_user
 from sqlalchemy import func, distinct
 from datetime import datetime, timezone, timedelta
 from .models import PageAnalytics, PageAnalyticsStats, db
 
 analytics_bp = Blueprint('analytics', __name__)
 
-def admin_required(f):
-    """Decorator to check if user is admin"""
-    from functools import wraps
-    
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
-            return jsonify({'success': False, 'message': 'Access denied. Admin privileges required.'}), 403
-        return f(*args, **kwargs)
-    return decorated_function
-
 @analytics_bp.route('/analytics')
-@login_required
-@admin_required
 def analytics_dashboard():
-    """Main analytics dashboard page (admin only)"""
+    """Main analytics dashboard page (public access)"""
     return render_template('analytics_dashboard.html')
 
 @analytics_bp.route('/_analytics/api/stats')
-@login_required
-@admin_required
 def get_stats():
     """Get overall statistics"""
     try:
@@ -94,8 +78,6 @@ def get_stats():
         }), 500
 
 @analytics_bp.route('/_analytics/api/pages')
-@login_required
-@admin_required
 def get_page_stats():
     """Get statistics by page/path"""
     try:
@@ -137,8 +119,6 @@ def get_page_stats():
         }), 500
 
 @analytics_bp.route('/_analytics/api/recent-activity')
-@login_required
-@admin_required
 def get_recent_activity():
     """Get recent page view activity"""
     try:
@@ -175,8 +155,6 @@ def get_recent_activity():
         }), 500
 
 @analytics_bp.route('/_analytics/api/time-series')
-@login_required
-@admin_required
 def get_time_series():
     """Get page views over time"""
     try:
@@ -225,8 +203,6 @@ def get_time_series():
         }), 500
 
 @analytics_bp.route('/_analytics/api/top-paths')
-@login_required
-@admin_required
 def get_top_paths():
     """Get top visited paths"""
     try:

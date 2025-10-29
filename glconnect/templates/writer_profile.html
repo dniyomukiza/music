@@ -7,24 +7,68 @@
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }} 
             
+            <!-- Display form validation errors -->
+            {% if form.errors %}
+                <div class="alert alert-danger" role="alert" style="margin-bottom:20px;">
+                    <strong>Please fix the following errors:</strong>
+                    <ul style="margin-top:10px; margin-bottom:0;">
+                        {% for field, errors in form.errors.items() %}
+                            {% for error in errors %}
+                                <li>{{ form[field].label.text }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            
             <div>
                 <label for="writer_name">Writer Name</label>
-                {{ form.writer_name }}
+                {{ form.writer_name(class="form-control" + (" is-invalid" if form.writer_name.errors else "")) }}
+                {% if form.writer_name.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.writer_name.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
         
             <div>
                 <label for="bio">Bio</label>
-                {{ form.bio }}
+                {{ form.bio(class="form-control" + (" is-invalid" if form.bio.errors else "")) }}
+                {% if form.bio.errors %}
+                    <div class="invalid-feedback">
+                        {% for error in form.bio.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
         
             <div>
                 <label for="profile_picture">Profile Picture</label>
-                {{ form.profile_picture }}
-                <div id="preview-container" style="margin-top:10px;">
+                {{ form.profile_picture(class="form-control" + (" is-invalid" if form.profile_picture.errors else "")) }}
+                <small class="text-muted d-block" style="margin-top:5px; font-size:0.875rem;">Select an image file (JPG, PNG, max 10MB)</small>
+                {% if form.profile_picture.errors %}
+                    <div class="invalid-feedback" style="display:block;">
+                        {% for error in form.profile_picture.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div id="preview-container" style="margin-top:15px;">
                     {% set initial_src = url_for('static', filename=writer.profile_picture) if writer and writer.profile_picture else '' %}
-                    <img id="profilePreview" src="{{ initial_src }}" alt="Profile preview" style="max-width:160px; border-radius:8px; display: {{ 'block' if initial_src else 'none' }};" />
-                    <div id="previewActions" style="margin-top:8px; display: none;">
-                        <button type="button" id="removePhotoBtn" class="btn btn-sm btn-outline-danger">Remove selected</button>
+                    <div id="previewWrapper" style="display: {{ 'block' if initial_src else 'none' }};">
+                        <div style="position: relative; display: inline-block;">
+                            <img id="profilePreview" src="{{ initial_src }}" alt="Profile preview" style="max-width:200px; max-height:200px; border-radius:8px; border:2px solid #dee2e6; object-fit:cover;" />
+                        </div>
+                        <div id="previewActions" style="margin-top:10px; display: none;">
+                            <button type="button" id="removePhotoBtn" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-times"></i> Remove Selected Image
+                            </button>
+                            <span id="fileName" style="margin-left:10px; color:#6c757d; font-size:0.875rem;"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -49,36 +93,77 @@
 
         function showPreview(file) {
             if (!file) return;
+            
+            // Validate file size
             if (file.size > MAX_SIZE) {
-                alert('Profile picture must be less than 10MB.');
+                alert('Profile picture must be less than 10MB. Please select a smaller image.');
                 fileInput.value = '';
                 return;
             }
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Please select a JPG or PNG image file.');
+                fileInput.value = '';
+                return;
+            }
+            
+            // Clean up previous object URL if exists
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+            
+            // Create preview
             objectUrl = URL.createObjectURL(file);
             previewImg.src = objectUrl;
+            
+            // Show preview wrapper and actions
+            const previewWrapper = document.getElementById('previewWrapper');
+            if (previewWrapper) {
+                previewWrapper.style.display = 'block';
+            }
             previewImg.style.display = 'block';
             previewActions.style.display = 'block';
+            
+            // Show file name
+            const fileName = document.getElementById('fileName');
+            if (fileName) {
+                fileName.textContent = file.name;
+            }
         }
 
         function removeSelection() {
-            // Clear the selected file
+            // Clear the selected file from input
             fileInput.value = '';
+            
+            // Clean up object URL
             if (objectUrl) {
                 URL.revokeObjectURL(objectUrl);
                 objectUrl = null;
             }
+            
+            // Clear file name display
+            const fileName = document.getElementById('fileName');
+            if (fileName) {
+                fileName.textContent = '';
+            }
+            
+            // Hide remove button
+            previewActions.style.display = 'none';
+            
+            // Restore or hide preview
             if (initialSrc) {
                 // Restore the original image if it existed
                 previewImg.src = initialSrc;
                 previewImg.style.display = 'block';
-                // Hide actions because there's no pending selection
-                previewActions.style.display = 'none';
             } else {
                 // No original image; hide preview completely
-                previewImg.removeAttribute('src');
+                const previewWrapper = document.getElementById('previewWrapper');
+                if (previewWrapper) {
+                    previewWrapper.style.display = 'none';
+                }
                 previewImg.style.display = 'none';
-                previewActions.style.display = 'none';
             }
         }
 
@@ -86,13 +171,11 @@
             fileInput.addEventListener('change', function (e) {
                 const file = e.target.files && e.target.files[0];
                 if (!file) {
-                    // If user canceled selection
-                    if (!initialSrc) {
-                        previewImg.style.display = 'none';
-                        previewActions.style.display = 'none';
-                    }
+                    // If user canceled file selection dialog
+                    // Don't change anything - keep current state
                     return;
                 }
+                // Show preview of selected file immediately
                 showPreview(file);
             });
         }

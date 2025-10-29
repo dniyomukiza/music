@@ -2253,9 +2253,18 @@
                 
             } catch (error) {
                 showError('Error: ' + error.message);
-            } finally {
-                loading.style.display = 'none';
                 stopProgressAnimation();
+            } finally {
+                // Only hide loading if it wasn't already hidden by showResults
+                const loading = document.getElementById('loading');
+                if (loading && loading.style.display !== 'none') {
+                    loading.style.display = 'none';
+                }
+                // Reset progress text
+                const progressText = document.getElementById('progressText');
+                if (progressText) {
+                    progressText.textContent = 'Initializing...';
+                }
             }
         });
         
@@ -2273,7 +2282,11 @@
         function stopProgressAnimation() {
             if (progressInterval) {
                 clearInterval(progressInterval);
-                document.getElementById('progressFill').style.width = '100%';
+                progressInterval = null; // Clear the reference
+            }
+            const progressFill = document.getElementById('progressFill');
+            if (progressFill) {
+                progressFill.style.width = '100%';
             }
         }
         
@@ -2287,9 +2300,24 @@
                     const data = await response.json();
                     
                     if (data.status === 'completed') {
-                        showResults(data);
+                        // Stop any animations and update progress text
+                        stopProgressAnimation();
+                        const progressText = document.getElementById('progressText');
+                        if (progressText) {
+                            progressText.textContent = 'Generation complete!';
+                        }
+                        
+                        // Small delay before showing results
+                        setTimeout(() => {
+                            const loading = document.getElementById('loading');
+                            if (loading) {
+                                loading.style.display = 'none';
+                            }
+                            showResults(data);
+                        }, 300);
                         return;
                     } else if (data.status === 'failed') {
+                        stopProgressAnimation();
                         isGeneratingNews = false; // Reset flag on failure
                         resetGenerateButtons(); // Re-enable buttons on failure
                         throw new Error(data.error || 'Generation failed');
@@ -2600,12 +2628,29 @@
                         console.log('Task completed successfully!');
                         clearInterval(pollInterval);
                         stopProgressAnimation();
-                        hideLoadingState();
-                        showResults(data);
+                        
+                        // Update progress text to show completion before hiding
+                        const progressText = document.getElementById('progressText');
+                        if (progressText) {
+                            progressText.textContent = 'Generation complete! Loading results...';
+                        }
+                        
+                        // Small delay to show completion message before hiding
+                        setTimeout(() => {
+                            hideLoadingState();
+                            showResults(data);
+                        }, 500);
                     } else if (data.status === 'failed') {
                         console.log('Task failed:', data.error);
                         clearInterval(pollInterval);
                         stopProgressAnimation();
+                        
+                        // Update progress text to show failure
+                        const progressText = document.getElementById('progressText');
+                        if (progressText) {
+                            progressText.textContent = 'Generation failed';
+                        }
+                        
                         hideLoadingState();
                         isGeneratingNews = false; // Reset flag on failure
                         alert('News generation failed: ' + (data.error || 'Unknown error'));
@@ -2689,6 +2734,13 @@
         // Function to hide loading state
         function hideLoadingState() {
             const loading = document.getElementById('loading');
+            const progressText = document.getElementById('progressText');
+            
+            // Reset progress text
+            if (progressText) {
+                progressText.textContent = 'Initializing...';
+            }
+            
             if (loading) {
                 loading.style.display = 'none';
             }
