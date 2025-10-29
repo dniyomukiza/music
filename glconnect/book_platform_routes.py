@@ -183,22 +183,27 @@ def collaboration_required(f):
 # Ink Studio access route - handles redirects based on user type
 @book_bp.route('/ink-studio')
 def ink_studio_access():
-    """Ink Studio access point - redirects writers to dashboard, others to login"""
+    """Ink Studio access point - role-aware redirects for authors."""
     if not current_user.is_authenticated:
         flash('Please log in to access Ink Studio', 'info')
         return redirect(url_for('routes1.login'))
-    
-    # Check if user has writer profile or BookPlatformUser profile
+
+    # Resolve existing profiles
     writer = Writer.query.filter_by(user_id=current_user.user_id).first()
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    
-    if writer or book_user:
-        # User has profile - redirect to Ink Studio dashboard
-        return redirect(url_for('book_platform.dashboard'))
-    else:
-        # No profile - redirect to Ink Studio profile setup
+
+    # Author-specific behavior: require setup if no profile yet
+    if getattr(current_user, 'role', None) == 'author':
+        if writer or book_user:
+            return redirect(url_for('book_platform.dashboard'))
         flash('Please set up your author profile to access Ink Studio.', 'info')
         return redirect(url_for('book_platform.setup_profile'))
+
+    # Non-authors: keep existing fallback behavior
+    if writer or book_user:
+        return redirect(url_for('book_platform.dashboard'))
+    flash('You need a writer profile to access Ink Studio. Please create a writer profile first.', 'info')
+    return redirect(url_for('writer.writer_profile'))
 
 # Main dashboard route
 @book_bp.route('/')
