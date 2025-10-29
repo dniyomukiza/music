@@ -5,6 +5,24 @@ from flask_wtf.file import FileAllowed
 from flask_ckeditor import CKEditorField
 from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,TextAreaField,FileField,IntegerField,FloatField
 from wtforms.validators import DataRequired, Email, EqualTo, Length,ValidationError,Optional
+import os
+
+class FileSize:
+    """Validator to check file size"""
+    def __init__(self, max_size_mb, message=None):
+        self.max_size_mb = max_size_mb
+        self.message = message or f'File size must be less than {max_size_mb}MB'
+
+    def __call__(self, form, field):
+        if field.data:
+            # Check if it's a FileStorage object (Werkzeug)
+            if hasattr(field.data, 'read'):
+                field.data.seek(0, os.SEEK_END)
+                file_size = field.data.tell()
+                field.data.seek(0)  # Reset to beginning
+                max_size_bytes = self.max_size_mb * 1024 * 1024
+                if file_size > max_size_bytes:
+                    raise ValidationError(self.message)
 class RegistrationForm(FlaskForm):
     fname = StringField('First Name', validators=[DataRequired()], render_kw={"placeholder": "First Name"})
     lname = StringField('Last Name', validators=[DataRequired()], render_kw={"placeholder": "Last Name"})
@@ -67,7 +85,11 @@ class PasswordResetForm(FlaskForm):
 class WriterProfileForm(FlaskForm):
     writer_name = StringField('Writer Name', validators=[DataRequired()])
     bio = TextAreaField('Bio')
-    profile_picture = FileField('Profile Picture', validators=[FileAllowed(['jpg', 'jpeg', 'png'])])
+    profile_picture = FileField('Profile Picture', validators=[
+        Optional(), 
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Only JPG, JPEG, and PNG images are allowed!'),
+        FileSize(max_size_mb=10, message='Profile picture must be less than 10MB')
+    ])
     submit = SubmitField('Save Profile')
     recap=RecaptchaField()
 

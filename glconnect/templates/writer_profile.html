@@ -20,6 +20,13 @@
             <div>
                 <label for="profile_picture">Profile Picture</label>
                 {{ form.profile_picture }}
+                <div id="preview-container" style="margin-top:10px;">
+                    {% set initial_src = url_for('static', filename=writer.profile_picture) if writer and writer.profile_picture else '' %}
+                    <img id="profilePreview" src="{{ initial_src }}" alt="Profile preview" style="max-width:160px; border-radius:8px; display: {{ 'block' if initial_src else 'none' }};" />
+                    <div id="previewActions" style="margin-top:8px; display: none;">
+                        <button type="button" id="removePhotoBtn" class="btn btn-sm btn-outline-danger">Remove selected</button>
+                    </div>
+                </div>
             </div>
         
             <button type="submit">Save Profile</button>
@@ -28,4 +35,78 @@
     </div>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='writer_prof.css') }}">
+    <script>
+    (function () {
+        const fileInput = document.getElementById('{{ form.profile_picture.id }}');
+        const previewImg = document.getElementById('profilePreview');
+        const previewActions = document.getElementById('previewActions');
+        const removeBtn = document.getElementById('removePhotoBtn');
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+        // Keep track of the initial server image (if any) to restore on remove
+        const initialSrc = previewImg && previewImg.getAttribute('src') ? previewImg.getAttribute('src') : '';
+        let objectUrl = null;
+
+        function showPreview(file) {
+            if (!file) return;
+            if (file.size > MAX_SIZE) {
+                alert('Profile picture must be less than 10MB.');
+                fileInput.value = '';
+                return;
+            }
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            objectUrl = URL.createObjectURL(file);
+            previewImg.src = objectUrl;
+            previewImg.style.display = 'block';
+            previewActions.style.display = 'block';
+        }
+
+        function removeSelection() {
+            // Clear the selected file
+            fileInput.value = '';
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+                objectUrl = null;
+            }
+            if (initialSrc) {
+                // Restore the original image if it existed
+                previewImg.src = initialSrc;
+                previewImg.style.display = 'block';
+                // Hide actions because there's no pending selection
+                previewActions.style.display = 'none';
+            } else {
+                // No original image; hide preview completely
+                previewImg.removeAttribute('src');
+                previewImg.style.display = 'none';
+                previewActions.style.display = 'none';
+            }
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function (e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) {
+                    // If user canceled selection
+                    if (!initialSrc) {
+                        previewImg.style.display = 'none';
+                        previewActions.style.display = 'none';
+                    }
+                    return;
+                }
+                showPreview(file);
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                removeSelection();
+            });
+        }
+
+        // If there's an existing image, don't show actions until a new selection is made
+        if (initialSrc) {
+            previewActions.style.display = 'none';
+        }
+    })();
+    </script>
 {% endblock %}

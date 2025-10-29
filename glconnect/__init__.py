@@ -53,6 +53,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE='None', # This is correct for cross-site cookies with credentials
         JWT_SECRET_KEY="abarayon",
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
+        MAX_CONTENT_LENGTH=50 * 1024 * 1024,  # 50 MB max upload size
     )
 
     # Secret key for sessions
@@ -96,6 +97,22 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+    # Error handler for file upload size limit (413 Request Entity Too Large)
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        from flask import redirect, url_for, flash
+        from flask_login import current_user
+        
+        # Try to redirect back with error message
+        if current_user.is_authenticated:
+            flash('File upload is too large. Maximum file size is 50MB. Please compress or resize your image and try again.', 'error')
+            # Try to redirect to the previous page or writer profile
+            try:
+                return redirect(url_for('writer.writer_profile'))
+            except:
+                return redirect('/')
+        return 'File upload is too large. Maximum file size is 50MB. Please compress or resize your image and try again.', 413
 
     # Add logging for all requests at app level
     @app.before_request

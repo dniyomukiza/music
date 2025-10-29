@@ -80,27 +80,39 @@ def get_user_profile():
 
 def get_profile_id(user_profile, profile_type):
     """Get the correct ID based on profile type - returns BookPlatformUser.id for consistency"""
-    if profile_type == 'book_platform':
-        return user_profile.id
-    elif profile_type == 'writer':
-        # For writers, always use BookPlatformUser.id since books are stored with that as author_id
-        bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-        if bp_user:
-            return bp_user.id
+    try:
+        if profile_type == 'book_platform':
+            return user_profile.id
+        elif profile_type == 'writer':
+            # For writers, always use BookPlatformUser.id since books are stored with that as author_id
+            if not current_user or not current_user.is_authenticated:
+                print(f"ERROR: current_user not authenticated in get_profile_id")
+                return None
+                
+            bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+            if bp_user:
+                return bp_user.id
+            else:
+                # Create BookPlatformUser if it doesn't exist
+                bp_user = BookPlatformUser(
+                    user_id=current_user.user_id,
+                    pen_name=user_profile.writer_name,
+                    bio=user_profile.bio or "",
+                    profile_picture=user_profile.profile_picture or "static/uploads/default_writer.jpg"
+                )
+                db.session.add(bp_user)
+                db.session.commit()
+                print(f"INFO: Created new BookPlatformUser with id={bp_user.id} for user_id={current_user.user_id}")
+                return bp_user.id
+        elif profile_type == 'temp':
+            return user_profile.user_id
         else:
-            # Create BookPlatformUser if it doesn't exist
-            bp_user = BookPlatformUser(
-                user_id=current_user.user_id,
-                pen_name=user_profile.writer_name,
-                bio=user_profile.bio or "",
-                profile_picture=user_profile.profile_picture or "static/uploads/default_writer.jpg"
-            )
-            db.session.add(bp_user)
-            db.session.commit()
-            return bp_user.id
-    elif profile_type == 'temp':
-        return user_profile.user_id
-    else:
+            print(f"ERROR: Unknown profile_type={profile_type} in get_profile_id")
+            return None
+    except Exception as e:
+        print(f"ERROR in get_profile_id: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def writer_or_book_platform_required(f):
@@ -321,6 +333,12 @@ def view_book(book_id, user_profile, profile_type):
     # Get the correct author_id
     author_id = get_profile_id(user_profile, profile_type)
     
+    # Error handling for profile resolution
+    if author_id is None:
+        print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type} in view_book")
+        flash('Profile configuration error. Please ensure you have a Writer or Ink Studio profile.', 'error')
+        return redirect(url_for('book_platform.books'))
+    
     # Check access
     from glconnect.book_platform_models import BookCollaboration, BookPlatformUser
     bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
@@ -345,7 +363,9 @@ def view_book(book_id, user_profile, profile_type):
     return render_template('book_platform/view_book.html', 
                          book=book, 
                          chapters=chapters,
-                         collaborations=collaborations)
+                         collaborations=collaborations,
+                         is_author=is_author,
+                         is_collaborator=is_collaborator)
 
 @book_bp.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -356,8 +376,15 @@ def edit_book(book_id, user_profile, profile_type):
     # Get the correct author ID based on profile type
     author_id = get_profile_id(user_profile, profile_type)
     
+    # Debug logging
+    if author_id is None:
+        print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
+        flash('Profile configuration error. Please ensure you have a Writer or Ink Studio profile.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
     # Only author can edit book details
     if book.author_id != author_id:
+        print(f"Permission denied: book.author_id={book.author_id}, user author_id={author_id}, user_id={current_user.user_id}")
         flash('Only the author can edit book details', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
@@ -641,9 +668,15 @@ def delete_book(book_id, user_profile, profile_type):
 
     # Get the correct author ID based on profile type
     author_id = get_profile_id(user_profile, profile_type)
+    
+    # Debug logging and error handling
+    if author_id is None:
+        print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
+        return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
 
     # Check if user is the author of the book
     if book.author_id != author_id:
+        print(f"Permission denied: book.author_id={book.author_id}, user author_id={author_id}, user_id={current_user.user_id}")
         return jsonify({'error': 'You can only delete your own books'}), 403
 
     try:

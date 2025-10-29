@@ -2,6 +2,13 @@
 Ink Studio Models - Separate database tables for Ink Studio functionality
 This module contains all database models for Ink Studio functionality.
 These tables are separate from the main application to allow easy removal.
+
+CASCADE DELETE BEHAVIOR:
+- When a User is deleted, their BookPlatformUser profile is automatically deleted (CASCADE)
+- When a BookPlatformUser is deleted, all their authored books (BookProject) are automatically deleted (CASCADE)
+- When a BookProject is deleted, all chapters, comments, collaborations are automatically deleted (cascade='all, delete-orphan')
+- Author information (pen_name, username) is dynamically fetched via SQLAlchemy relationships,
+  so any updates to user/profile information are automatically reflected in book displays
 """
 
 from flask_sqlalchemy import SQLAlchemy
@@ -50,7 +57,7 @@ class BookPlatformUser(db.Model):
     __tablename__ = 'book_platform_users'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False, unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, unique=True)
     pen_name = db.Column(db.String(100), nullable=True)
     bio = db.Column(db.Text, nullable=True)
     profile_picture = db.Column(db.String(200), nullable=True)
@@ -64,7 +71,7 @@ class BookPlatformUser(db.Model):
     
     # Relationships
     user = db.relationship('User', backref='book_platform_profile')
-    authored_books = db.relationship('BookProject', backref='author', lazy=True, foreign_keys='BookProject.author_id')
+    authored_books = db.relationship('BookProject', backref='author', lazy=True, foreign_keys='BookProject.author_id', cascade='all, delete-orphan')
     collaborations = db.relationship('BookCollaboration', backref='collaborator', lazy=True)
     comments = db.relationship('BookComment', backref='commenter', lazy=True)
     purchases = db.relationship('BookPurchase', backref='buyer', lazy=True)
@@ -105,7 +112,7 @@ class BookProject(db.Model):
     audiobook_voice = db.Column(db.String(100), nullable=True)  # TTS voice used
     
     # Foreign Keys
-    author_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='CASCADE'), nullable=False)
     
     # Relationships
     chapters = db.relationship('BookChapter', backref='book_project', lazy=True, cascade='all, delete-orphan')

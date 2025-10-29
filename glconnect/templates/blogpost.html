@@ -1,14 +1,17 @@
 {%extends "parent.html"%}
 {%block content%}
 {% include 'messages.html' %}
-      <form method="POST" action="">
+
+    {{ ckeditor.load() }}
+    {{ ckeditor.config(name='content', upload_url=url_for('blog.upload')) }}
+
+    <form method="POST" action="" enctype="multipart/form-data">
         <legend>{{ legend }}</legend>
-            {{ form.hidden_tag()}}
-            {{ form.title}}
-            {{ form.content | safe}}
-            {{form.submit }}
-          
-      </form>
-     
+        {{ form.hidden_tag()}}
+
+        {{ form.title }}
+        {{ form.content | safe }}
+        {{ form.submit }}
+    </form>
 
 {%endblock content%}
