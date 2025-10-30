@@ -695,11 +695,13 @@ def delete_book(book_id, user_profile, profile_type):
         # 2. Clean up comments (they reference book_project_id)
         BookComment.query.filter_by(book_project_id=book_id).delete()
         
-        # 3. Clean up collaborations (they reference book_project_id)
+        # 3. Clean up invitations via collaborations (CollaborationInvitation has collaboration_id, not book_project_id)
+        from glconnect.book_platform_models import BookCollaboration
+        collab_ids_subq = db.session.query(BookCollaboration.id).filter_by(book_project_id=book_id).subquery()
+        CollaborationInvitation.query.filter(CollaborationInvitation.collaboration_id.in_(collab_ids_subq)).delete(synchronize_session=False)
+
+        # 4. Clean up collaborations (they reference book_project_id)
         BookCollaboration.query.filter_by(book_project_id=book_id).delete()
-        
-        # 4. Clean up invitations (they reference book_project_id)
-        CollaborationInvitation.query.filter_by(book_project_id=book_id).delete()
         
         # 5. Clean up analytics (they reference book_project_id)
         BookAnalytics.query.filter_by(book_project_id=book_id).delete()

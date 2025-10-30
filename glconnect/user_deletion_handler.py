@@ -146,11 +146,12 @@ def cleanup_book_data(book_id):
         # Comments (cascade should handle this, but being explicit)
         BookComment.query.filter_by(book_project_id=book_id).delete()
         
+        # Invitations via collaborations
+        collab_ids_subq = db.session.query(BookCollaboration.id).filter_by(book_project_id=book_id).subquery()
+        CollaborationInvitation.query.filter(CollaborationInvitation.collaboration_id.in_(collab_ids_subq)).delete(synchronize_session=False)
+
         # Collaborations
         BookCollaboration.query.filter_by(book_project_id=book_id).delete()
-        
-        # Invitations
-        CollaborationInvitation.query.filter_by(book_project_id=book_id).delete()
         
         # Analytics
         BookAnalytics.query.filter_by(book_project_id=book_id).delete()
