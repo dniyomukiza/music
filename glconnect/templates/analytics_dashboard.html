@@ -123,6 +123,11 @@
         .refresh-btn:hover {
             background: #2980b9;
         }
+        .refresh-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -130,7 +135,7 @@
         <h1>📊 Analytics Dashboard</h1>
         <p class="subtitle">Comprehensive analytics for your app</p>
         
-        <button class="refresh-btn" onclick="loadAllData()">🔄 Refresh Data</button>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadAllData()">🔄 Refresh Data</button>
         
         <div id="error-container"></div>
         
@@ -163,7 +168,23 @@
     <script>
         async function fetchAPI(endpoint) {
             try {
-                const response = await fetch(endpoint);
+                // Add cache-busting parameter to ensure fresh data
+                const separator = endpoint.includes('?') ? '&' : '?';
+                const url = `${endpoint}${separator}_t=${Date.now()}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 if (!data.success) {
                     throw new Error(data.error || 'Request failed');
@@ -179,8 +200,29 @@
             return new Intl.NumberFormat().format(num);
         }
 
+        function setLoadingState(isLoading) {
+            const elements = ['stats-grid', 'top-pages', 'recent-activity', 'browser-stats', 'device-stats'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && isLoading) {
+                    const currentHTML = el.innerHTML;
+                    if (!currentHTML.includes('Loading')) {
+                        el.dataset.originalContent = currentHTML;
+                        el.innerHTML = '<div class="loading">Loading...</div>';
+                    }
+                }
+            });
+        }
+
         async function loadAllData() {
+            const refreshBtn = document.getElementById('refresh-btn');
+            const originalText = refreshBtn.textContent;
+            
+            // Disable button and show loading state
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Loading...';
             document.getElementById('error-container').innerHTML = '';
+            setLoadingState(true);
             
             try {
                 // Load stats
@@ -196,9 +238,23 @@
                 // Load recent activity
                 const activityData = await fetchAPI('/_analytics/api/recent-activity?limit=20');
                 displayRecentActivity(activityData.activities);
+                
+                setLoadingState(false);
+                refreshBtn.textContent = '✅ Data Loaded';
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                }, 2000);
             } catch (error) {
+                setLoadingState(false);
+                refreshBtn.textContent = '❌ Error';
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                }, 3000);
                 document.getElementById('error-container').innerHTML = 
-                    `<div class="error">Error loading analytics: ${error.message}</div>`;
+                    `<div class="error">Error loading analytics: ${error.message}. Please try clicking "Refresh Data" or reload the page.</div>`;
+                console.error('Failed to load analytics:', error);
+            } finally {
+                refreshBtn.disabled = false;
             }
         }
 
@@ -333,8 +389,13 @@
             document.getElementById('recent-activity').innerHTML = tableHTML;
         }
 
-        // Load data on page load
-        loadAllData();
+        // Load data when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadAllData);
+        } else {
+            // DOM is already ready
+            loadAllData();
+        }
         
         // Auto-refresh every 30 seconds
         setInterval(loadAllData, 30000);

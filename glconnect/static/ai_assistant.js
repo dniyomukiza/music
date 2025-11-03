@@ -199,6 +199,7 @@ class AIWritingAssistant {
             
             .ai-toolbar-content {
                 padding: 12px;
+                color: #333;
             }
             
             .ai-help-text {
@@ -209,21 +210,127 @@ class AIWritingAssistant {
                 border-left: 3px solid #2c3e50;
             }
             
+            .ai-help-text small,
+            .ai-help-text .text-muted {
+                color: #333 !important;
+            }
+            
             .ai-section {
                 margin-bottom: 16px;
             }
             
             .ai-section h6 {
                 margin-bottom: 8px;
-                color: #7f8c8d;
+                color: #2c3e50;
                 font-size: 12px;
                 text-transform: uppercase;
+                font-weight: 600;
             }
             
             .ai-section button {
                 width: 100%;
                 margin-bottom: 4px;
                 font-size: 12px;
+            }
+            
+            /* Ensure all text in AI toolbar is visible */
+            .ai-toolbar,
+            .ai-toolbar * {
+                color: #333;
+            }
+            
+            .ai-toolbar-header h6,
+            .ai-section h6,
+            .ai-help-text,
+            .ai-help-text small {
+                color: #2c3e50 !important;
+            }
+            
+            /* Ensure button text is visible */
+            .ai-section .btn {
+                color: inherit;
+            }
+            
+            .ai-section .btn-outline-primary {
+                color: #007bff;
+            }
+            
+            .ai-section .btn-outline-success {
+                color: #28a745;
+            }
+            
+            .ai-section .btn-outline-info {
+                color: #17a2b8;
+            }
+            
+            /* Modal text visibility */
+            .ai-modal-content,
+            .ai-modal-content * {
+                color: #333;
+            }
+            
+            .ai-modal-content h5 {
+                color: #2c3e50 !important;
+            }
+            
+            .ai-modal-content .btn {
+                color: white;
+            }
+            
+            .ai-modal-content .btn-secondary {
+                background-color: #6c757d;
+                color: white;
+            }
+            
+            /* Ensure form controls are visible */
+            .ai-modal-content .form-control,
+            .ai-modal-content input,
+            .ai-modal-content textarea,
+            .ai-modal-content select {
+                color: #333 !important;
+                background-color: white !important;
+            }
+            
+            .ai-modal-content .form-control::placeholder {
+                color: #6c757d !important;
+            }
+            
+            /* Ensure all text elements in AI modals are visible */
+            .ai-modal-content label {
+                color: #333 !important;
+            }
+            
+            /* Global override for any white text on white background in AI components */
+            .ai-toolbar .text-white,
+            .ai-toolbar .text-light,
+            .ai-modal-content .text-white,
+            .ai-modal-content .text-light {
+                color: #333 !important;
+            }
+            
+            /* Ensure icons are visible but not overriding button colors */
+            .ai-toolbar .fas,
+            .ai-toolbar .fa,
+            .ai-modal-content .fas,
+            .ai-modal-content .fa {
+                color: inherit;
+            }
+            
+            /* Make sure any inherited text colors work (excluding buttons which have their own colors) */
+            .ai-toolbar h6,
+            .ai-toolbar p,
+            .ai-toolbar span:not(.ai-status),
+            .ai-toolbar div:not(.btn):not(button):not(.ai-status) {
+                color: #333 !important;
+            }
+            
+            /* Keep status colors as defined */
+            .ai-toolbar .ai-status.enabled {
+                color: #155724 !important;
+            }
+            
+            .ai-toolbar .ai-status.disabled {
+                color: #721c24 !important;
             }
             
             .ai-modal {
@@ -247,6 +354,13 @@ class AIWritingAssistant {
                 max-height: 80vh;
                 overflow-y: auto;
                 position: relative;
+                color: #333;
+            }
+            
+            .ai-modal-content h5 {
+                color: #2c3e50;
+                font-weight: 600;
+                margin-bottom: 16px;
             }
             
             .ai-modal-close {
@@ -257,11 +371,24 @@ class AIWritingAssistant {
                 border: none;
                 font-size: 24px;
                 cursor: pointer;
+                color: #333;
+                opacity: 0.7;
+            }
+            
+            .ai-modal-close:hover {
+                opacity: 1;
+                color: #000;
             }
             
             .ai-loading {
                 text-align: center;
                 padding: 20px;
+                color: #333;
+            }
+            
+            .ai-loading p {
+                color: #333;
+                margin-top: 12px;
             }
             
             .ai-result {
@@ -270,6 +397,14 @@ class AIWritingAssistant {
                 background: #f8f9fa;
                 border-radius: 4px;
                 border-left: 4px solid #2c3e50;
+                color: #333;
+            }
+            
+            .ai-result pre {
+                color: #333;
+                margin: 0;
+                white-space: pre-wrap;
+                font-family: inherit;
             }
             
             .ai-error {

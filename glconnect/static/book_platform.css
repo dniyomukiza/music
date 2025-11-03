@@ -305,6 +305,44 @@ body {
     backdrop-filter: blur(10px);
     background: rgba(44, 62, 80, 0.95) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1050;
+}
+
+/* Ensure dropdown menu appears above all other elements */
+.navbar .dropdown-menu {
+    z-index: 9999 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    max-height: none !important;
+    pointer-events: auto;
+}
+
+.navbar .dropdown {
+    position: relative;
+    z-index: 9999;
+}
+
+.navbar .dropdown-toggle {
+    position: relative;
+    z-index: 9999;
+}
+
+/* Ensure dropdown items are clickable and visible */
+.navbar .dropdown-item {
+    position: relative;
+    z-index: 10000;
+    background-color: white;
+}
+
+.navbar .dropdown-item:hover {
+    position: relative;
+    z-index: 10000;
+}
+
+/* Make sure dropdown is visible even when navbar has overflow hidden */
+.navbar-nav .dropdown {
+    overflow: visible;
 }
 
 .navbar-brand {
