@@ -75,14 +75,14 @@ class DatabaseOptimizer:
                 return None, [], [], []
             author_id = book_user.id
         
-        # Single query to get all authored books with author info
+        # Single query to get all authored books with author info (eager load nested user relationship)
         authored_books = BookProject.query.options(
-            joinedload(BookProject.author)
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
         ).filter_by(author_id=author_id).all()
         
-        # Single query to get collaborations
+        # Single query to get collaborations with eager loading
         collaborations = BookCollaboration.query.options(
-            joinedload(BookCollaboration.book_project)
+            joinedload(BookCollaboration.book_project).joinedload(BookProject.author).joinedload(BookPlatformUser.user)
         ).filter_by(collaborator_id=author_id, is_active=True).all()
         
         # Single query to get recent notifications

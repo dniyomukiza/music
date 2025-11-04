@@ -263,6 +263,25 @@ class AIWritingAssistant {
                 color: #17a2b8;
             }
             
+            /* Fix: Ensure AI toolbar buttons are visible despite global .btn border overrides */
+            .ai-toolbar .btn {
+                border: 1px solid #ced4da !important;
+                background-color: #ffffff;
+                border-radius: 6px;
+            }
+            .ai-toolbar .btn.btn-outline-primary {
+                border-color: #007bff !important;
+            }
+            .ai-toolbar .btn.btn-outline-success {
+                border-color: #28a745 !important;
+            }
+            .ai-toolbar .btn.btn-outline-info {
+                border-color: #17a2b8 !important;
+            }
+            .ai-toolbar .btn:hover {
+                background-color: #f8f9fa;
+            }
+            
             /* Modal text visibility */
             .ai-modal-content,
             .ai-modal-content * {

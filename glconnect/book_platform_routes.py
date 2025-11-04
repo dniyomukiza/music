@@ -17,6 +17,7 @@ import uuid
 import json
 import logging
 from functools import wraps
+from sqlalchemy.orm import joinedload
 
 # Import models
 from glconnect.models import db, User, Writer
@@ -229,10 +230,15 @@ def dashboard(user_profile, profile_type):
         )[1:]  # Skip the first return value (book_user)
         
     else:
-        # For BookPlatformUsers (legacy), use existing logic
+        # For BookPlatformUsers (legacy), use existing logic with eager loading
         book_user = user_profile
-        authored_books = BookProject.query.filter_by(author_id=book_user.id).all()
-        collaborations = BookCollaboration.query.filter_by(
+        # Eager load author information to ensure fresh data from database
+        authored_books = BookProject.query.options(
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        ).filter_by(author_id=book_user.id).all()
+        collaborations = BookCollaboration.query.options(
+            joinedload(BookCollaboration.book_project).joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        ).filter_by(
             collaborator_id=book_user.id, 
             is_active=True
         ).all()
@@ -301,8 +307,10 @@ def books(user_profile, profile_type):
     # Get the correct author_id (BookPlatformUser.id for consistency)
     author_id = get_profile_id(user_profile, profile_type)
     
-    # Query books
-    books = BookProject.query.filter_by(author_id=author_id).all()
+    # Query books with eager loading of author information to ensure fresh data
+    books = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).filter_by(author_id=author_id).all()
     
     return render_template('book_platform/books.html', books=books)
 
@@ -335,7 +343,10 @@ def create_book(user_profile, profile_type):
 @writer_or_book_platform_required
 def view_book(book_id, user_profile, profile_type):
     """View book details and chapters"""
-    book = BookProject.query.get_or_404(book_id)
+    # Eager load author information to ensure fresh data from database
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).get_or_404(book_id)
     
     # Get the correct author_id
     author_id = get_profile_id(user_profile, profile_type)
@@ -365,7 +376,10 @@ def view_book(book_id, user_profile, profile_type):
         return redirect(url_for('book_platform.books'))
     
     chapters = BookChapter.query.filter_by(book_project_id=book_id).order_by(BookChapter.chapter_number).all()
-    collaborations = BookCollaboration.query.filter_by(book_project_id=book_id, is_active=True).all()
+    # Eager load author info for collaborations
+    collaborations = BookCollaboration.query.options(
+        joinedload(BookCollaboration.collaborator).joinedload(BookPlatformUser.user)
+    ).filter_by(book_project_id=book_id, is_active=True).all()
     
     return render_template('book_platform/view_book.html', 
                          book=book, 
@@ -378,7 +392,10 @@ def view_book(book_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def edit_book(book_id, user_profile, profile_type):
     """Edit book details"""
-    book = BookProject.query.get_or_404(book_id)
+    # Eager load author information to ensure fresh data from database
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).get_or_404(book_id)
     
     # Get the correct author ID based on profile type
     author_id = get_profile_id(user_profile, profile_type)
@@ -689,30 +706,41 @@ def delete_book(book_id, user_profile, profile_type):
     try:
         # Clean up related data in proper order to avoid foreign key constraints
         
-        # 1. Clean up realtime sessions first (they reference book_project_id)
+        # 1. Clean up sales first (they reference book_project_id and purchase_id)
+        # Note: BookSale has book_project_id as NOT NULL, so we must delete, not update
+        BookSale.query.filter_by(book_project_id=book_id).delete()
+        
+        # 2. Clean up purchases (they reference book_project_id)
+        # Note: BookPurchase has book_project_id as NOT NULL, so we must delete, not update
+        BookPurchase.query.filter_by(book_project_id=book_id).delete()
+        
+        # 3. Clean up audio generation tasks (they reference book_project_id)
+        AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
+        
+        # 4. Clean up realtime sessions (they reference book_project_id)
         RealtimeSession.query.filter_by(book_project_id=book_id).delete()
         
-        # 2. Clean up comments (they reference book_project_id)
+        # 5. Clean up comments (they reference book_project_id)
         BookComment.query.filter_by(book_project_id=book_id).delete()
         
-        # 3. Clean up invitations via collaborations (CollaborationInvitation has collaboration_id, not book_project_id)
+        # 6. Clean up invitations via collaborations (CollaborationInvitation has collaboration_id, not book_project_id)
         from glconnect.book_platform_models import BookCollaboration
         collab_ids_subq = db.session.query(BookCollaboration.id).filter_by(book_project_id=book_id).subquery()
         CollaborationInvitation.query.filter(CollaborationInvitation.collaboration_id.in_(collab_ids_subq)).delete(synchronize_session=False)
 
-        # 4. Clean up collaborations (they reference book_project_id)
+        # 7. Clean up collaborations (they reference book_project_id)
         BookCollaboration.query.filter_by(book_project_id=book_id).delete()
         
-        # 5. Clean up analytics (they reference book_project_id)
+        # 8. Clean up analytics (they reference book_project_id)
         BookAnalytics.query.filter_by(book_project_id=book_id).delete()
         
-        # 6. Clean up notifications (they reference book_project_id)
+        # 9. Clean up notifications (they reference book_project_id)
         BookNotification.query.filter_by(book_project_id=book_id).delete()
         
-        # 7. Delete all chapters (cascade should handle this, but being explicit)
+        # 10. Delete all chapters (cascade should handle this, but being explicit)
         BookChapter.query.filter_by(book_project_id=book_id).delete()
         
-        # 8. Finally delete the book
+        # 11. Finally delete the book
         db.session.delete(book)
         db.session.commit()
         
@@ -1332,7 +1360,10 @@ def admin_books():
 @login_required
 def purchase_book(book_id):
     """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
-    book = BookProject.query.get_or_404(book_id)
+    # Eager load author information to ensure fresh data from database
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).get_or_404(book_id)
     
     # Get user profile (Writer or BookPlatformUser) - if no profile, create a temporary one for purchase
     user_profile, profile_type = get_user_profile()

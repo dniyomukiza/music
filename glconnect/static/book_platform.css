@@ -1412,3 +1412,169 @@ a:hover {
     font-size: 0.7rem;
 }
 
+/* Fix: Make buttons visible on white book cards */
+.book-card .btn-outline-primary,
+.book-card .btn-outline-secondary,
+.book-card .btn-outline-danger,
+.book-card .btn-outline-info,
+.book-card .btn-outline-warning {
+    color: #333 !important;
+    border-color: #ced4da !important;
+    background-color: white !important;
+}
+
+.book-card .btn-outline-primary {
+    color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.book-card .btn-outline-primary:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.book-card .btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.book-card .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: white !important;
+    border-color: #6c757d !important;
+}
+
+.book-card .btn-outline-danger {
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.book-card .btn-outline-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border-color: #dc3545 !important;
+}
+
+.book-card .btn-outline-info {
+    color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+}
+
+.book-card .btn-outline-info:hover {
+    background-color: #17a2b8 !important;
+    color: white !important;
+    border-color: #17a2b8 !important;
+}
+
+.book-card .btn-outline-warning {
+    color: #ffc107 !important;
+    border-color: #ffc107 !important;
+}
+
+.book-card .btn-outline-warning:hover {
+    background-color: #ffc107 !important;
+    color: #333 !important;
+    border-color: #ffc107 !important;
+}
+
+/* Also fix buttons in card-body and card-footer on white backgrounds */
+.card-body .btn-outline-primary,
+.card-footer .btn-outline-primary,
+.card-body .btn-outline-secondary,
+.card-footer .btn-outline-secondary,
+.card-body .btn-outline-danger,
+.card-footer .btn-outline-danger,
+.card-body .btn-outline-info,
+.card-footer .btn-outline-info,
+.card-body .btn-outline-warning,
+.card-footer .btn-outline-warning {
+    color: #333 !important;
+    border-color: #ced4da !important;
+    background-color: white !important;
+}
+
+.card-body .btn-outline-primary,
+.card-footer .btn-outline-primary {
+    color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.card-body .btn-outline-primary:hover,
+.card-footer .btn-outline-primary:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.card-body .btn-outline-secondary,
+.card-footer .btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.card-body .btn-outline-secondary:hover,
+.card-footer .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: white !important;
+    border-color: #6c757d !important;
+}
+
+.card-body .btn-outline-danger,
+.card-footer .btn-outline-danger {
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.card-body .btn-outline-danger:hover,
+.card-footer .btn-outline-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border-color: #dc3545 !important;
+}
+
+.card-body .btn-outline-info,
+.card-footer .btn-outline-info {
+    color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+}
+
+.card-body .btn-outline-info:hover,
+.card-footer .btn-outline-info:hover {
+    background-color: #17a2b8 !important;
+    color: white !important;
+    border-color: #17a2b8 !important;
+}
+
+/* Fix: Make Edit, Chapters, Unpublish, Delete buttons and icons black on books listing page */
+.book-card .card-footer .btn-outline-secondary,
+.book-card .card-footer .btn-outline-info,
+.book-card .card-footer .btn-outline-warning,
+.book-card .card-footer .btn-outline-danger {
+    color: #000000 !important;
+    border-color: #ced4da !important;
+}
+
+.book-card .card-footer .btn-outline-secondary i,
+.book-card .card-footer .btn-outline-info i,
+.book-card .card-footer .btn-outline-warning i,
+.book-card .card-footer .btn-outline-danger i {
+    color: #000000 !important;
+}
+
+.book-card .card-footer .btn-outline-secondary:hover,
+.book-card .card-footer .btn-outline-info:hover,
+.book-card .card-footer .btn-outline-warning:hover,
+.book-card .card-footer .btn-outline-danger:hover {
+    color: #000000 !important;
+    background-color: #f8f9fa !important;
+    border-color: #000000 !important;
+}
+
+.book-card .card-footer .btn-outline-secondary:hover i,
+.book-card .card-footer .btn-outline-info:hover i,
+.book-card .card-footer .btn-outline-warning:hover i,
+.book-card .card-footer .btn-outline-danger:hover i {
+    color: #000000 !important;
+}
+
