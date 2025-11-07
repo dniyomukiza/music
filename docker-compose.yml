@@ -35,9 +35,11 @@ services:
       - DATABASE_URL=postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr
       - SENDER_MAIL=info@ndotonic.com
       - SENDER_PASSWORD=uivaqvvdohjovkhi
+      - RECEIVER_MAIL=info@ndotonic.com
       - RECAPTCHAPUB=6LfdZjgrAAAAADyijAp1kSulPN7ZFAWk01fJzaPz
       - RECAPTCHAPRIV=6LfdZjgrAAAAAI2jKpHvpDeXAKK0IuhMMXjul-RK
       - GEMINI_API_KEY=AIzaSyAN9PhRQkawgarggs44LB0TlX3DH5HxeyI
+      - MAIL_TRAP=226e20189690a95934a747828428dc79
 
   nginx:
       build:

@@ -12,7 +12,9 @@ load_dotenv()
 # Load configuration from environment variables
 config = {
     "SENDER_MAIL": os.getenv("SENDER_MAIL"),
-    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD")
+    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD"),
+    "RECEIVER_MAIL": os.getenv("RECEIVER_MAIL"),
+    "MAIL_TRAP": os.getenv("MAIL_TRAP")
 }
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
@@ -55,9 +57,21 @@ def update(post_id):
 def contact():
     form = ContactForm()
     sender = os.getenv("SENDER_MAIL")
-    receiver=config.get("RECEIVER_MAIL")
+    receiver = config.get("RECEIVER_MAIL")
     api_key = config.get("MAIL_TRAP")
+    
     if form.validate_on_submit():
+        # Validate required configuration
+        if not sender:
+            flash("Email configuration error: SENDER_MAIL is not set", "error")
+            return render_template("contact.html", form=form)
+        if not receiver:
+            flash("Email configuration error: RECEIVER_MAIL is not set", "error")
+            return render_template("contact.html", form=form)
+        if not api_key:
+            flash("Email configuration error: MAIL_TRAP API key is not set", "error")
+            return render_template("contact.html", form=form)
+        
         try:
             # Create the Mail object
             mail = Mail(
@@ -77,8 +91,9 @@ def contact():
             client.send(mail)
 
         except Exception as e:
-            print("This is the error that occured: ",e)
-            flash("An error occurred while sending the email")
+            print("This is the error that occured: ", e)
+            print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
+            flash(f"An error occurred while sending the email: {str(e)}", "error")
         else:
             flash("Thank you for reaching out. We will get back to you ASAP.", "success")
             return redirect(url_for("blog.contact"))

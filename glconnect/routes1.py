@@ -12,7 +12,9 @@ from flask_login import login_user,LoginManager,login_required,current_user
 # Load configuration from environment variables
 config = {
     "SENDER_MAIL": os.getenv("SENDER_MAIL"),
-    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD")
+    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD"),
+    "RECEIVER_MAIL": os.getenv("RECEIVER_MAIL"),
+    "MAIL_TRAP": os.getenv("MAIL_TRAP")
 }
 bp1 = Blueprint('routes1', __name__)
 API_URL = "https://www.glc.cool/word/"
@@ -97,8 +99,17 @@ def register():
 
 def send_confirmation_email(to_email, confirm_url):
     sender = os.getenv("SENDER_MAIL")
-    receiver=to_email
+    receiver = to_email
     api_key = config.get("MAIL_TRAP")
+    
+    # Validate configuration
+    if not sender:
+        print("ERROR: SENDER_MAIL is not set in environment variables")
+        return
+    if not api_key:
+        print("ERROR: MAIL_TRAP API key is not set in environment variables")
+        return
+    
     try:
         # Create the Mail object
         mail = Mail(
@@ -114,7 +125,8 @@ def send_confirmation_email(to_email, confirm_url):
         client = MailtrapClient(token=api_key)
         client.send(mail)
     except Exception as e:
-        print("error occured while sinding email")
+        print(f"ERROR: error occurred while sending email: {e}")
+        print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
 
 
 @bp1.route('/confirm/<token>')
@@ -855,8 +867,17 @@ def reset_password_request():
   
 def send_reset_email(to_email, reset_url):
     sender = os.getenv("SENDER_MAIL")
-    receiver=to_email
+    receiver = to_email
     api_key = config.get("MAIL_TRAP")
+    
+    # Validate configuration
+    if not sender:
+        print("ERROR: SENDER_MAIL is not set in environment variables")
+        return
+    if not api_key:
+        print("ERROR: MAIL_TRAP API key is not set in environment variables")
+        return
+    
     try:
         # Create the Mail object
         mail = Mail(
@@ -872,7 +893,8 @@ def send_reset_email(to_email, reset_url):
         client = MailtrapClient(token=api_key)
         client.send(mail)
     except Exception as e:
-        print("error occured while sinding email")
+        print(f"ERROR: error occurred while sending email: {e}")
+        print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
 
 
 
