@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Complete Your Author Profile | GLConnect{% endblock %}
+
+{% block salutation %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-user-edit"></i> Complete Your Author Profile</h3>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <p class="text-muted mb-4">
+                        Welcome to Ink Studio! Let's set up your author profile. You can add a bio and profile picture now, 
+                        or skip and complete it later. All fields are optional.
+                    </p>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        {{ form.writer_name(type="hidden") }}
+                        
+                        <div class="mb-4">
+                            <label for="bio" class="form-label">
+                                <i class="fas fa-book"></i> Bio <span class="text-muted">(Optional)</span>
+                            </label>
+                            {{ form.bio(class="form-control", rows="5", placeholder="Tell us about yourself, your writing style, or your interests...") }}
+                            {% if form.bio.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.bio.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                This bio will be visible on your author profile and book pages.
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="profile_picture" class="form-label">
+                                <i class="fas fa-image"></i> Profile Picture <span class="text-muted">(Optional)</span>
+                            </label>
+                            {{ form.profile_picture(class="form-control") }}
+                            {% if form.profile_picture.errors %}
+                                <div class="text-danger small">
+                                    {% for error in form.profile_picture.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Upload a profile picture (JPG, JPEG, or PNG, max 10MB). This will be displayed on your author profile.
+                            </small>
+                            {% if writer and writer.profile_picture and writer.profile_picture != "static/uploads/default_writer.jpg" %}
+                                <div class="mt-2">
+                                    <small>Current picture:</small><br>
+                                    <img src="{{ url_for('static', filename=writer.profile_picture) }}" 
+                                         alt="Current profile picture" 
+                                         class="img-thumbnail mt-2" 
+                                         style="max-width: 150px;">
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-times"></i> Skip for Now
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Complete Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 10px;
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+    }
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+{% endblock %}
+

@@ -24,7 +24,7 @@ from glconnect.models import db, User, Writer
 from glconnect.book_platform_models import (
     BookPlatformUser, BookProject, BookChapter, BookCollaboration, 
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
-    BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
+    ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
     AudioGenerationTask
 )
@@ -89,22 +89,40 @@ def get_profile_id(user_profile, profile_type):
             if not current_user or not current_user.is_authenticated:
                 print(f"ERROR: current_user not authenticated in get_profile_id")
                 return None
-                
+            
+            # Query for existing BookPlatformUser
             bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
             if bp_user:
+                # Sync pen_name, bio, and profile_picture from Writer profile if they differ
+                needs_update = False
+                if bp_user.pen_name != user_profile.writer_name:
+                    bp_user.pen_name = user_profile.writer_name
+                    needs_update = True
+                if bp_user.bio != (user_profile.bio or ""):
+                    bp_user.bio = user_profile.bio or ""
+                    needs_update = True
+                if user_profile.profile_picture and bp_user.profile_picture != user_profile.profile_picture:
+                    bp_user.profile_picture = user_profile.profile_picture
+                    needs_update = True
+                
+                if needs_update:
+                    db.session.commit()
+                    print(f"INFO: Synced BookPlatformUser (id={bp_user.id}) with Writer profile changes")
+                
                 return bp_user.id
             else:
                 # Create BookPlatformUser if it doesn't exist
-                bp_user = BookPlatformUser(
+                # Use the imported class directly to avoid any scoping issues
+                new_bp_user = BookPlatformUser(
                     user_id=current_user.user_id,
                     pen_name=user_profile.writer_name,
                     bio=user_profile.bio or "",
                     profile_picture=user_profile.profile_picture or "static/uploads/default_writer.jpg"
                 )
-                db.session.add(bp_user)
+                db.session.add(new_bp_user)
                 db.session.commit()
-                print(f"INFO: Created new BookPlatformUser with id={bp_user.id} for user_id={current_user.user_id}")
-                return bp_user.id
+                print(f"INFO: Created new BookPlatformUser with id={new_bp_user.id} for user_id={current_user.user_id}")
+                return new_bp_user.id
         elif profile_type == 'temp':
             return user_profile.user_id
         else:
@@ -231,6 +249,9 @@ def dashboard(user_profile, profile_type):
         
     else:
         # For BookPlatformUsers (legacy), use existing logic with eager loading
+        # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+        from glconnect.book_platform_models import BookPlatformUser
+        
         book_user = user_profile
         # Eager load author information to ensure fresh data from database
         authored_books = BookProject.query.options(
@@ -304,6 +325,9 @@ def setup_profile():
 @writer_or_book_platform_required
 def books(user_profile, profile_type):
     """List all user's books"""
+    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+    from glconnect.book_platform_models import BookPlatformUser
+    
     # Get the correct author_id (BookPlatformUser.id for consistency)
     author_id = get_profile_id(user_profile, profile_type)
     
@@ -343,6 +367,9 @@ def create_book(user_profile, profile_type):
 @writer_or_book_platform_required
 def view_book(book_id, user_profile, profile_type):
     """View book details and chapters"""
+    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+    from glconnect.book_platform_models import BookPlatformUser
+    
     # Eager load author information to ensure fresh data from database
     book = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
@@ -358,7 +385,6 @@ def view_book(book_id, user_profile, profile_type):
         return redirect(url_for('book_platform.books'))
     
     # Check access
-    from glconnect.book_platform_models import BookCollaboration, BookPlatformUser
     bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     collaboration = None
     if bp_user:
@@ -392,6 +418,9 @@ def view_book(book_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def edit_book(book_id, user_profile, profile_type):
     """Edit book details"""
+    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+    from glconnect.book_platform_models import BookPlatformUser
+    
     # Eager load author information to ensure fresh data from database
     book = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
@@ -581,7 +610,6 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             
             # Create version snapshot for change tracking
             try:
-                from .book_platform_models import ChapterVersion, BookPlatformUser
                 # Get the current user's BookPlatformUser or Writer profile ID
                 book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
                 if book_user:
@@ -724,7 +752,6 @@ def delete_book(book_id, user_profile, profile_type):
         BookComment.query.filter_by(book_project_id=book_id).delete()
         
         # 6. Clean up invitations via collaborations (CollaborationInvitation has collaboration_id, not book_project_id)
-        from glconnect.book_platform_models import BookCollaboration
         collab_ids_subq = db.session.query(BookCollaboration.id).filter_by(book_project_id=book_id).subquery()
         CollaborationInvitation.query.filter(CollaborationInvitation.collaboration_id.in_(collab_ids_subq)).delete(synchronize_session=False)
 
@@ -934,8 +961,6 @@ def delete_chapter(book_id, chapter_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def suggest_chapter_edit(book_id, chapter_id, user_profile, profile_type):
     """Collaborator submits suggested edits for approval"""
-    from .book_platform_models import ChapterSuggestion, BookPlatformUser
-    
     book = BookProject.query.get_or_404(book_id)
     chapter = BookChapter.query.get_or_404(chapter_id)
     
@@ -987,8 +1012,6 @@ def suggest_chapter_edit(book_id, chapter_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def view_suggestions(book_id, chapter_id, user_profile, profile_type):
     """View all suggestions for a chapter"""
-    from .book_platform_models import ChapterSuggestion
-    
     book = BookProject.query.get_or_404(book_id)
     chapter = BookChapter.query.get_or_404(chapter_id)
     
@@ -1011,8 +1034,6 @@ def view_suggestions(book_id, chapter_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def approve_suggestion(suggestion_id, user_profile, profile_type):
     """Approve and merge a suggestion into the chapter"""
-    from .book_platform_models import ChapterSuggestion, BookPlatformUser
-    
     suggestion = ChapterSuggestion.query.get_or_404(suggestion_id)
     book = BookProject.query.get_or_404(suggestion.chapter.book_project_id)
     
@@ -1051,8 +1072,6 @@ def approve_suggestion(suggestion_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def reject_suggestion(suggestion_id, user_profile, profile_type):
     """Reject a suggestion"""
-    from .book_platform_models import ChapterSuggestion
-    
     suggestion = ChapterSuggestion.query.get_or_404(suggestion_id)
     book = BookProject.query.get_or_404(suggestion.chapter.book_project_id)
     
@@ -1081,8 +1100,6 @@ def reject_suggestion(suggestion_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def view_suggestion(suggestion_id, user_profile, profile_type):
     """View a specific suggestion (with diff view)"""
-    from .book_platform_models import ChapterSuggestion
-    
     suggestion = ChapterSuggestion.query.get_or_404(suggestion_id)
     book = BookProject.query.get_or_404(suggestion.chapter.book_project_id)
     
@@ -1134,6 +1151,12 @@ def invite_collaborator(book_id, user_profile, profile_type):
     # Only author can invite collaborators
     if book.author_id != author_id:
         return jsonify({'error': 'Only the author can invite collaborators'}), 403
+    
+    # Get the BookPlatformUser object for the inviter
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user:
+        # This should not happen due to the decorator, but handle it gracefully
+        return jsonify({'error': 'Ink Studio profile required'}), 403
     
     data = request.get_json()
     
@@ -1360,6 +1383,9 @@ def admin_books():
 @login_required
 def purchase_book(book_id):
     """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
+    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+    from glconnect.book_platform_models import BookPlatformUser
+    
     # Eager load author information to ensure fresh data from database
     book = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
@@ -1500,6 +1526,59 @@ def collaborators_api(book_id):
         })
     
     return jsonify({'collaborators': collaborators})
+
+# API route for author details
+@book_bp.route('/api/author/<int:author_id>/details', methods=['GET'])
+@login_required
+def get_author_details(author_id):
+    """Get author details for marketplace display"""
+    try:
+        # Ensure BookPlatformUser is accessible
+        from glconnect.book_platform_models import BookPlatformUser, BookStatus
+        
+        # Get the author (BookPlatformUser)
+        author = BookPlatformUser.query.get_or_404(author_id)
+        
+        # Get Writer profile if it exists (for bio and profile picture)
+        writer = Writer.query.filter_by(user_id=author.user_id).first()
+        
+        # Use Writer profile data if available, otherwise use BookPlatformUser data
+        author_name = author.pen_name or author.user.username
+        author_bio = None
+        author_profile_picture = None
+        
+        if writer:
+            # Writer profile takes precedence
+            author_bio = writer.bio
+            author_profile_picture = writer.profile_picture
+        else:
+            # Fall back to BookPlatformUser data
+            author_bio = author.bio
+            author_profile_picture = author.profile_picture
+        
+        # Count published books by this author
+        books_count = BookProject.query.filter_by(
+            author_id=author_id,
+            status=BookStatus.PUBLISHED
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'author': {
+                'id': author.id,
+                'name': author_name,
+                'email': author.user.email if author.user else None,
+                'bio': author_bio,
+                'profile_picture': author_profile_picture,
+                'books_count': books_count
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error fetching author details: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Unable to load author information'
+        }), 500
 
 # Error handlers
 @book_bp.errorhandler(404)

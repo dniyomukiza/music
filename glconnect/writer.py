@@ -13,6 +13,56 @@ UPLOAD_FOLDER = os.path.join("glconnect", "static", "writer_uploads")  # Relativ
 ABS_UPLOAD_FOLDER = os.path.join(os.getcwd(), UPLOAD_FOLDER)  # Absolute path for saving
 
 
+@writer.route('/complete-profile', methods=['GET', 'POST'])
+@login_required
+def complete_profile():
+    """Profile completion page for new authors - simplified version"""
+    # Only allow authors to access this
+    if current_user.role != 'author':
+        flash('This page is only for authors.', 'warning')
+        return redirect(url_for('prof.profile'))
+    
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
+    if not writer:
+        flash('Writer profile not found. Please contact support.', 'error')
+        return redirect(url_for('prof.profile'))
+    
+    form = WriterProfileForm()
+    
+    # Pre-fill form with existing data
+    if writer:
+        form.writer_name.data = writer.writer_name
+        form.bio.data = writer.bio or ""
+    
+    if form.validate_on_submit():
+        bio = form.bio.data
+        profile_pic = form.profile_picture.data
+        
+        # Default to current picture if no new upload
+        relative_path = writer.profile_picture
+        
+        # Check if a new profile picture is uploaded
+        if profile_pic:
+            filename = secure_filename(profile_pic.filename)
+            absolute_path = os.path.join(ABS_UPLOAD_FOLDER, filename)
+            profile_pic.save(absolute_path)
+            relative_path = f"writer_uploads/{filename}"
+        
+        # Update writer profile (bio is optional, but update if provided)
+        if bio:
+            writer.bio = bio
+        writer.profile_picture = relative_path
+        
+        try:
+            db.session.commit()
+            flash("Profile completed successfully! Welcome to Ink Studio.", "success")
+            return redirect(url_for('book_platform.dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred: {e}", "danger")
+    
+    return render_template('writer_complete_profile.html', form=form, writer=writer)
+
 @writer.route('/profile', methods=['GET', 'POST'])
 @login_required
 def writer_profile():

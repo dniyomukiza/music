@@ -163,8 +163,24 @@ def login():
             elif user.role=="artist":
                 return redirect(url_for('music.artist_profile'))
             elif user.role=="author":
-                # Writers go directly to Ink Studio dashboard
-                return redirect(url_for('book_platform.dashboard'))
+                # Check if author needs to complete profile
+                from glconnect.models import Writer
+                writer = Writer.query.filter_by(user_id=user.user_id).first()
+                
+                # Check if profile needs completion (empty bio or default picture)
+                needs_completion = False
+                if writer:
+                    if not writer.bio or writer.bio.strip() == "":
+                        needs_completion = True
+                    if writer.profile_picture == "static/uploads/default_writer.jpg":
+                        needs_completion = True
+                
+                if needs_completion:
+                    flash('Welcome! Please complete your author profile to get started.', 'info')
+                    return redirect(url_for('writer.complete_profile'))
+                else:
+                    # Authors go directly to Ink Studio dashboard
+                    return redirect(url_for('book_platform.dashboard'))
             else:
                 return redirect(url_for('prof.profile'))
         else:

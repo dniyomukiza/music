@@ -211,7 +211,11 @@
                                         <div class="card-body d-flex flex-column">
                                             <h5 class="card-title text-dark mb-2">{{ book.title }}</h5>
                                             <p class="card-text text-muted small mb-2">
-                                                <i class="fas fa-user me-1"></i>by {{ book.author.pen_name or book.author.user.username }}
+                                                <i class="fas fa-user me-1"></i>by 
+                                                <a href="#" class="text-primary text-decoration-none author-link" 
+                                                   onclick="showAuthorDetails({{ book.author.id }}, event)">
+                                                    {{ book.author.pen_name or book.author.user.username }}
+                                                </a>
                                             </p>
                                             
                                             {% if book.description %}
@@ -334,6 +338,31 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="purchaseButton">Purchase</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Author Details Modal -->
+    <div class="modal fade" id="authorDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="authorDetailsTitle">
+                        <i class="fas fa-user-circle me-2"></i>Author Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="authorDetailsBody">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading author information...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -631,6 +660,122 @@
                 searchBooks();
             }
         });
+
+        // Author Details Function
+        function showAuthorDetails(authorId, event) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('authorDetailsModal'));
+            const modalBody = document.getElementById('authorDetailsBody');
+            
+            // Show loading state
+            modalBody.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading author information...</p>
+                </div>
+            `;
+            modal.show();
+            
+            // Fetch author details
+            fetch(`/mybook/api/author/${authorId}/details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const author = data.author;
+                        let profilePictureHtml = '';
+                        
+                        if (author.profile_picture && author.profile_picture !== 'static/uploads/default_writer.jpg') {
+                            // Handle different path formats
+                            let imagePath = author.profile_picture;
+                            if (!imagePath.startsWith('/static/') && !imagePath.startsWith('http')) {
+                                if (imagePath.startsWith('static/')) {
+                                    imagePath = '/' + imagePath;
+                                } else if (imagePath.startsWith('writer_uploads/')) {
+                                    imagePath = '/static/' + imagePath;
+                                } else {
+                                    imagePath = '/static/' + imagePath;
+                                }
+                            }
+                            
+                            profilePictureHtml = `
+                                <div class="mb-4">
+                                    <img src="${imagePath}" 
+                                         alt="${author.name}" 
+                                         class="img-fluid rounded-circle shadow" 
+                                         style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #0d6efd;">
+                                </div>
+                            `;
+                        } else {
+                            profilePictureHtml = `
+                                <div class="mb-4">
+                                    <div class="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center shadow" 
+                                         style="width: 150px; height: 150px;">
+                                        <i class="fas fa-user fa-4x text-white"></i>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        let bioHtml = '';
+                        if (author.bio && author.bio.trim()) {
+                            bioHtml = `
+                                <div class="mt-4">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-book-open me-2"></i>About the Author
+                                    </h6>
+                                    <p class="text-muted" style="line-height: 1.8; white-space: pre-wrap;">${author.bio}</p>
+                                </div>
+                            `;
+                        } else {
+                            bioHtml = `
+                                <div class="mt-4">
+                                    <p class="text-muted fst-italic">No bio available for this author.</p>
+                                </div>
+                            `;
+                        }
+                        
+                        modalBody.innerHTML = `
+                            <div class="text-center">
+                                ${profilePictureHtml}
+                                <h4 class="mb-2">${author.name}</h4>
+                                <p class="text-muted mb-3">
+                                    <i class="fas fa-envelope me-1"></i>${author.email || 'Email not available'}
+                                </p>
+                                ${bioHtml}
+                                ${author.books_count > 0 ? `
+                                    <div class="mt-4 pt-3 border-top">
+                                        <p class="text-muted mb-0">
+                                            <i class="fas fa-book me-2"></i>
+                                            <strong>${author.books_count}</strong> ${author.books_count === 1 ? 'book' : 'books'} available in marketplace
+                                        </p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    } else {
+                        modalBody.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                ${data.error || 'Unable to load author information. Please try again.'}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching author details:', error);
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            An error occurred while loading author information. Please try again later.
+                        </div>
+                    `;
+                });
+        }
     </script>
 </body>
 </html>
