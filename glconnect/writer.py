@@ -42,24 +42,39 @@ def complete_profile():
         relative_path = writer.profile_picture
         
         # Check if a new profile picture is uploaded
-        if profile_pic:
-            filename = secure_filename(profile_pic.filename)
-            absolute_path = os.path.join(ABS_UPLOAD_FOLDER, filename)
-            profile_pic.save(absolute_path)
-            relative_path = f"writer_uploads/{filename}"
+        if profile_pic and hasattr(profile_pic, 'filename') and profile_pic.filename:
+            try:
+                # Ensure upload folder exists
+                os.makedirs(ABS_UPLOAD_FOLDER, exist_ok=True)
+                
+                filename = secure_filename(profile_pic.filename)
+                if not filename:
+                    flash("Invalid filename for profile picture.", "danger")
+                    return render_template('writer_complete_profile.html', form=form, writer=writer)
+                
+                absolute_path = os.path.join(ABS_UPLOAD_FOLDER, filename)
+                profile_pic.save(absolute_path)
+                relative_path = f"writer_uploads/{filename}"
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error uploading profile picture: {str(e)}", "danger")
+                return render_template('writer_complete_profile.html', form=form, writer=writer)
         
         # Update writer profile (bio is optional, but update if provided)
-        if bio:
-            writer.bio = bio
-        writer.profile_picture = relative_path
-        
         try:
+            if bio:
+                writer.bio = bio
+            writer.profile_picture = relative_path
+            
             db.session.commit()
             flash("Profile completed successfully! Welcome to Ink Studio.", "success")
+            # Return immediately after redirect - no code should run after this
             return redirect(url_for('book_platform.dashboard'))
         except Exception as e:
             db.session.rollback()
-            flash(f"An error occurred: {e}", "danger")
+            flash(f"An error occurred while saving: {str(e)}", "danger")
+            # Return immediately on error too
+            return render_template('writer_complete_profile.html', form=form, writer=writer)
     
     return render_template('writer_complete_profile.html', form=form, writer=writer)
 
