@@ -127,3 +127,69 @@ class DigitalBookUploadForm(FlaskForm):
     
     submit = SubmitField('Upload Digital Book')
     recap = RecaptchaField()
+
+# Reviewer Registration Form
+class ReviewerRegistrationForm(FlaskForm):
+    reviewer_name = StringField('Reviewer Name', validators=[DataRequired(), Length(min=2, max=100)], 
+                                render_kw={"placeholder": "Your professional reviewer name"})
+    bio = TextAreaField('Bio', validators=[Optional(), Length(max=1000)], 
+                       render_kw={"placeholder": "Tell us about your reviewing experience"})
+    profile_picture = FileField('Profile Picture', validators=[
+        Optional(), 
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Only JPG, JPEG, and PNG images are allowed!'),
+        FileSize(max_size_mb=5, message='Profile picture must be less than 5MB')
+    ])
+    portfolio_url = StringField('Portfolio URL', validators=[Optional(), Length(max=500)],
+                               render_kw={"placeholder": "Link to your published reviews or portfolio"})
+    specialties = TextAreaField('Genres You Review', validators=[Optional()],
+                              render_kw={"placeholder": "e.g., Fiction, Non-fiction, Mystery, Romance (comma-separated)"})
+    credentials = TextAreaField('Credentials', validators=[Optional(), Length(max=1000)],
+                               render_kw={"placeholder": "Education, certifications, publications, etc."})
+    default_revenue_share = FloatField('Default Revenue Share %', validators=[Optional()], default=2.5,
+                                     render_kw={"placeholder": "Default percentage (e.g., 2.5)"})
+    submit = SubmitField('Apply for Accreditation')
+    recap = RecaptchaField()
+
+# Book Review Submission Form
+class BookReviewForm(FlaskForm):
+    title = StringField('Review Title', validators=[DataRequired(), Length(min=5, max=200)],
+                       render_kw={"placeholder": "Give your review a title"})
+    content = CKEditorField('Review Content', validators=[DataRequired()])
+    rating = IntegerField('Rating (1-5 stars)', validators=[DataRequired()],
+                         render_kw={"placeholder": "1-5", "min": 1, "max": 5})
+    revenue_share_percentage = FloatField('Revenue Share %', validators=[DataRequired()], default=2.5,
+                                         render_kw={"placeholder": "e.g., 2.5"})
+    minimum_sales_threshold = IntegerField('Minimum Sales Threshold', validators=[Optional()], default=0,
+                                           render_kw={"placeholder": "Minimum sales before earning (0 = no threshold)"})
+    is_public = BooleanField('Make Review Public', default=True)
+    submit = SubmitField('Submit Review')
+
+# Investment Campaign Form
+class InvestmentCampaignForm(FlaskForm):
+    title = StringField('Campaign Title', validators=[DataRequired(), Length(min=5, max=200)],
+                       render_kw={"placeholder": "e.g., Help publish my debut novel"})
+    description = CKEditorField('Campaign Description', validators=[DataRequired()],
+                               render_kw={"placeholder": "Tell investors why they should invest in your book"})
+    pitch_video_url = StringField('Pitch Video URL (Optional)', validators=[Optional(), Length(max=500)],
+                                 render_kw={"placeholder": "YouTube, Vimeo, or other video link"})
+    funding_goal = FloatField('Funding Goal (USD)', validators=[DataRequired()],
+                             render_kw={"placeholder": "e.g., 5000.00", "step": "0.01"})
+    minimum_investment = FloatField('Minimum Investment (USD)', validators=[DataRequired()],
+                                   render_kw={"placeholder": "e.g., 50.00", "step": "0.01"})
+    maximum_investment = FloatField('Maximum Investment (USD)', validators=[Optional()],
+                                   render_kw={"placeholder": "e.g., 1000.00 (leave empty for no limit)", "step": "0.01"})
+    revenue_share_percentage = FloatField('Revenue Share % for Investors', validators=[DataRequired()], default=25.0,
+                                         render_kw={"placeholder": "Total % of sales shared with all investors (e.g., 25)"})
+    return_multiplier_cap = FloatField('Return Multiplier Cap', validators=[DataRequired()], default=3.0,
+                                      render_kw={"placeholder": "Maximum return (e.g., 3.0 = 3x investment)"})
+    investment_period_days = IntegerField('Campaign Duration (Days)', validators=[DataRequired()], default=30,
+                                         render_kw={"placeholder": "e.g., 30"})
+    submit = SubmitField('Create Campaign')
+    recap = RecaptchaField()
+
+# Investment Form
+class InvestmentForm(FlaskForm):
+    amount = FloatField('Investment Amount (USD)', validators=[DataRequired()],
+                       render_kw={"placeholder": "Enter amount", "step": "0.01"})
+    submit = SubmitField('Invest Now')
+    recap = RecaptchaField()

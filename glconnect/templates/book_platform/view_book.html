@@ -305,6 +305,18 @@
                     <div class="col-md-4">
                         <div class="card text-center">
                             <div class="card-body">
+                                <i class="fas fa-chart-pie fa-2x text-info mb-2"></i>
+                                <h6>Sales Transparency</h6>
+                                <p class="text-muted">Track sales & earnings</p>
+                                <a href="{{ url_for('book_platform.book_sales_transparency', book_id=book.id) }}" class="btn btn-outline-info btn-sm">
+                                    View Sales
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
                                 <i class="fas fa-download fa-2x text-success mb-2"></i>
                                 <h6>Export</h6>
                                 <p class="text-muted">Download as EPUB/PDF</p>

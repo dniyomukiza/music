@@ -26,14 +26,18 @@ from glconnect.book_platform_models import (
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
     ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
-    AudioGenerationTask
+    AudioGenerationTask, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
+    RevenueDistribution, ReviewerEarning, InvestmentPayout, RefundRequest, ReviewerStatus, ReviewerLevel,
+    ReviewStatus, InvestmentStatus, CampaignStatus, DistributionType
 )
 
 # Import additional modules
-from glconnect.forms import DigitalBookUploadForm
+from glconnect.forms import DigitalBookUploadForm, ReviewerRegistrationForm, BookReviewForm, InvestmentCampaignForm, InvestmentForm
 from glconnect.digital_book_processor import digital_book_processor
 from glconnect.audio_book_generator import audio_book_generator
+from glconnect.revenue_distribution_service import distribute_revenue
 import threading
+from werkzeug.utils import secure_filename
 
 # Create blueprint
 book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
@@ -1379,6 +1383,147 @@ def admin_books():
     
     return render_template('book_platform/admin_books.html', books=books)
 
+# Admin Reviewer Management Routes
+@book_bp.route('/admin/reviewers')
+@login_required
+def admin_reviewers():
+    """Admin panel to manage reviewer accreditation"""
+    # Check if user is admin
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    
+    status_filter = request.args.get('status', 'pending')
+    
+    query = AccreditedReviewer.query
+    
+    if status_filter == 'pending':
+        query = query.filter_by(accreditation_status=ReviewerStatus.PENDING)
+    elif status_filter == 'accredited':
+        query = query.filter_by(accreditation_status=ReviewerStatus.ACCREDITED)
+    elif status_filter == 'all':
+        pass  # Show all
+    
+    reviewers = query.order_by(AccreditedReviewer.created_at.desc()).all()
+    
+    return render_template('book_platform/admin_reviewers.html', 
+                         reviewers=reviewers,
+                         status_filter=status_filter)
+
+@book_bp.route('/admin/reviewers/<int:reviewer_id>/approve', methods=['POST'])
+@login_required
+def approve_reviewer(reviewer_id):
+    """Approve a reviewer application"""
+    # Check if user is admin
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
+        
+        if reviewer.accreditation_status != ReviewerStatus.PENDING:
+            return jsonify({
+                'success': False, 
+                'message': f'Reviewer is already {reviewer.accreditation_status.value}'
+            }), 400
+        
+        # Approve the reviewer
+        reviewer.accreditation_status = ReviewerStatus.ACCREDITED
+        reviewer.accreditation_date = datetime.now(timezone.utc)
+        # Set expiration to 1 year from now
+        from datetime import timedelta
+        reviewer.accreditation_expires_at = datetime.now(timezone.utc) + timedelta(days=365)
+        
+        # Set initial level based on credentials (can be upgraded later)
+        if reviewer.credentials and len(reviewer.credentials) > 200:
+            reviewer.accreditation_level = ReviewerLevel.SILVER
+        else:
+            reviewer.accreditation_level = ReviewerLevel.BRONZE
+        
+        db.session.commit()
+        
+        logger.info(f"Reviewer {reviewer.reviewer_name} (ID: {reviewer_id}) approved by admin {current_user.username}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Reviewer "{reviewer.reviewer_name}" has been approved and accredited.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error approving reviewer {reviewer_id}: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Error approving reviewer'}), 500
+
+@book_bp.route('/admin/reviewers/<int:reviewer_id>/reject', methods=['POST'])
+@login_required
+def reject_reviewer(reviewer_id):
+    """Reject a reviewer application"""
+    # Check if user is admin
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
+        
+        if reviewer.accreditation_status != ReviewerStatus.PENDING:
+            return jsonify({
+                'success': False, 
+                'message': f'Reviewer is already {reviewer.accreditation_status.value}'
+            }), 400
+        
+        # Get rejection reason from request
+        rejection_reason = request.json.get('reason', '') if request.is_json else ''
+        
+        # Reject the reviewer (or revoke if already accredited)
+        reviewer.accreditation_status = ReviewerStatus.REVOKED
+        
+        db.session.commit()
+        
+        logger.info(f"Reviewer {reviewer.reviewer_name} (ID: {reviewer_id}) rejected by admin {current_user.username}. Reason: {rejection_reason}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Reviewer application for "{reviewer.reviewer_name}" has been rejected.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error rejecting reviewer {reviewer_id}: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Error rejecting reviewer'}), 500
+
+@book_bp.route('/admin/reviewers/<int:reviewer_id>/suspend', methods=['POST'])
+@login_required
+def suspend_reviewer(reviewer_id):
+    """Suspend an accredited reviewer"""
+    # Check if user is admin
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
+        
+        if reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
+            return jsonify({
+                'success': False, 
+                'message': 'Can only suspend accredited reviewers'
+            }), 400
+        
+        reviewer.accreditation_status = ReviewerStatus.SUSPENDED
+        
+        db.session.commit()
+        
+        logger.info(f"Reviewer {reviewer.reviewer_name} (ID: {reviewer_id}) suspended by admin {current_user.username}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Reviewer "{reviewer.reviewer_name}" has been suspended.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error suspending reviewer {reviewer_id}: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Error suspending reviewer'}), 500
+
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required
 def purchase_book(book_id):
@@ -1454,6 +1599,16 @@ def purchase_book(book_id):
     
     db.session.add(sale)
     db.session.commit()
+    
+    # Trigger revenue distribution
+    try:
+        from glconnect.revenue_distribution_service import distribute_revenue
+        distribution_result = distribute_revenue(sale, db)
+        if not distribution_result.get('success'):
+            logger.warning(f"Revenue distribution failed for sale {sale.id}: {distribution_result.get('error')}")
+    except Exception as e:
+        logger.error(f"Error triggering revenue distribution for sale {sale.id}: {str(e)}", exc_info=True)
+        # Don't fail the purchase if distribution fails - it can be retried later
     
     return jsonify({'success': True, 'purchase_id': purchase.id})
 
@@ -1944,3 +2099,779 @@ def download_audio_book(book_id):
         as_attachment=True,
         download_name=f"{book.title}_audiobook.mp3"
     )
+
+# ============================================================================
+# REVIEWER & INVESTMENT SYSTEM ROUTES
+# ============================================================================
+
+# Reviewer Registration
+@book_bp.route('/reviewers/register', methods=['GET', 'POST'])
+@login_required
+def register_reviewer():
+    """Register as an accredited reviewer"""
+    # Check if already registered
+    existing_reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    if existing_reviewer:
+        flash('You are already registered as a reviewer.', 'info')
+        return redirect(url_for('book_platform.reviewer_profile', reviewer_id=existing_reviewer.id))
+    
+    form = ReviewerRegistrationForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Parse specialties
+            specialties = []
+            if form.specialties.data:
+                specialties = [s.strip() for s in form.specialties.data.split(',') if s.strip()]
+            
+            # Handle profile picture upload
+            profile_picture_path = None
+            if form.profile_picture.data and form.profile_picture.data.filename:
+                upload_folder = os.path.join(current_app.root_path, 'static', 'reviewer_uploads')
+                os.makedirs(upload_folder, exist_ok=True)
+                filename = secure_filename(form.profile_picture.data.filename)
+                filepath = os.path.join(upload_folder, filename)
+                form.profile_picture.data.save(filepath)
+                profile_picture_path = f"reviewer_uploads/{filename}"
+            
+            # Create reviewer profile
+            reviewer = AccreditedReviewer(
+                user_id=current_user.user_id,
+                reviewer_name=form.reviewer_name.data,
+                bio=form.bio.data,
+                profile_picture=profile_picture_path,
+                portfolio_url=form.portfolio_url.data,
+                specialties=specialties if specialties else None,
+                credentials=form.credentials.data,
+                default_revenue_share_percentage=form.default_revenue_share.data or 2.5,
+                accreditation_status=ReviewerStatus.PENDING
+            )
+            
+            db.session.add(reviewer)
+            db.session.commit()
+            
+            flash('Reviewer application submitted! It will be reviewed by our team.', 'success')
+            return redirect(url_for('book_platform.reviewers'))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error registering reviewer: {str(e)}", exc_info=True)
+            flash(f'An error occurred: {str(e)}', 'error')
+    
+    return render_template('book_platform/register_reviewer.html', form=form)
+
+# Reviewer Marketplace
+@book_bp.route('/reviewers', methods=['GET'])
+def reviewers():
+    """Browse accredited reviewers"""
+    status_filter = request.args.get('status', 'accredited')
+    genre_filter = request.args.get('genre', '')
+    search_query = request.args.get('q', '')
+    
+    query = AccreditedReviewer.query
+    
+    if status_filter == 'accredited':
+        query = query.filter_by(accreditation_status=ReviewerStatus.ACCREDITED)
+    elif status_filter == 'all':
+        pass  # Show all
+    
+    if genre_filter:
+        query = query.filter(AccreditedReviewer.specialties.contains([genre_filter]))
+    
+    if search_query:
+        query = query.filter(
+            db.or_(
+                AccreditedReviewer.reviewer_name.ilike(f'%{search_query}%'),
+                AccreditedReviewer.bio.ilike(f'%{search_query}%')
+            )
+        )
+    
+    reviewers_list = query.order_by(AccreditedReviewer.average_rating.desc()).all()
+    
+    return render_template('book_platform/reviewers.html', 
+                         reviewers=reviewers_list,
+                         status_filter=status_filter,
+                         genre_filter=genre_filter,
+                         search_query=search_query)
+
+# Reviewer Profile
+@book_bp.route('/reviewers/<int:reviewer_id>', methods=['GET'])
+def reviewer_profile(reviewer_id):
+    """View reviewer profile"""
+    reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
+    reviews = BookReview.query.filter_by(reviewer_id=reviewer_id, status=ReviewStatus.PUBLISHED).all()
+    
+    return render_template('book_platform/reviewer_profile.html', reviewer=reviewer, reviews=reviews)
+
+# Request Review for Book
+@book_bp.route('/books/<int:book_id>/request-review', methods=['GET', 'POST'])
+@writer_or_book_platform_required
+def request_review(book_id, user_profile, profile_type):
+    """Author requests a review from accredited reviewers"""
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    
+    if book.author_id != author_id:
+        flash('You can only request reviews for your own books.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    if request.method == 'POST':
+        reviewer_id = request.form.get('reviewer_id')
+        if reviewer_id:
+            reviewer = AccreditedReviewer.query.get(reviewer_id)
+            if reviewer and reviewer.accreditation_status == ReviewerStatus.ACCREDITED:
+                # Create a review request (could be a notification or separate model)
+                flash(f'Review request sent to {reviewer.reviewer_name}. They will be notified.', 'success')
+                return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    # Get available reviewers
+    available_reviewers = AccreditedReviewer.query.filter_by(
+        accreditation_status=ReviewerStatus.ACCREDITED
+    ).all()
+    
+    return render_template('book_platform/request_review.html', 
+                         book=book, 
+                         reviewers=available_reviewers)
+
+# Submit Review
+@book_bp.route('/books/<int:book_id>/reviews/submit', methods=['GET', 'POST'])
+@login_required
+def submit_review(book_id):
+    """Reviewer submits a review for a book"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check if user is an accredited reviewer
+    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    if not reviewer or reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
+        flash('You must be an accredited reviewer to submit reviews.', 'error')
+        return redirect(url_for('book_platform.register_reviewer'))
+    
+    # Check if already reviewed
+    existing_review = BookReview.query.filter_by(
+        book_project_id=book_id,
+        reviewer_id=reviewer.id
+    ).first()
+    
+    if existing_review:
+        flash('You have already submitted a review for this book.', 'info')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    form = BookReviewForm()
+    
+    if form.validate_on_submit():
+        try:
+            review = BookReview(
+                book_project_id=book_id,
+                reviewer_id=reviewer.id,
+                title=form.title.data,
+                content=form.content.data,
+                rating=form.rating.data,
+                revenue_share_percentage=form.revenue_share_percentage.data,
+                minimum_sales_threshold=form.minimum_sales_threshold.data or 0,
+                is_public=form.is_public.data,
+                status=ReviewStatus.SUBMITTED,
+                submitted_at=datetime.now(timezone.utc)
+            )
+            
+            db.session.add(review)
+            
+            # Update reviewer stats
+            reviewer.total_reviews += 1
+            
+            db.session.commit()
+            
+            flash('Review submitted successfully! It will be published after author approval.', 'success')
+            return redirect(url_for('book_platform.view_book', book_id=book_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error submitting review: {str(e)}", exc_info=True)
+            flash(f'An error occurred: {str(e)}', 'error')
+    
+    return render_template('book_platform/submit_review.html', form=form, book=book)
+
+# Investment Campaign Creation
+@book_bp.route('/books/<int:book_id>/create-campaign', methods=['GET', 'POST'])
+@writer_or_book_platform_required
+def create_investment_campaign(book_id, user_profile, profile_type):
+    """Author creates an investment campaign for their book"""
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    
+    if book.author_id != author_id:
+        flash('You can only create campaigns for your own books.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    # Check if campaign already exists
+    existing_campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
+    if existing_campaign:
+        flash('An investment campaign already exists for this book.', 'info')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=existing_campaign.id))
+    
+    form = InvestmentCampaignForm()
+    
+    if form.validate_on_submit():
+        try:
+            from datetime import timedelta
+            
+            start_date = datetime.now(timezone.utc)
+            end_date = start_date + timedelta(days=form.investment_period_days.data)
+            
+            campaign = InvestmentCampaign(
+                book_project_id=book_id,
+                title=form.title.data,
+                description=form.description.data,
+                pitch_video_url=form.pitch_video_url.data,
+                funding_goal=form.funding_goal.data,
+                minimum_investment=form.minimum_investment.data,
+                maximum_investment=form.maximum_investment.data if form.maximum_investment.data else None,
+                revenue_share_percentage=form.revenue_share_percentage.data,
+                return_multiplier_cap=form.return_multiplier_cap.data,
+                investment_period_days=form.investment_period_days.data,
+                status=CampaignStatus.ACTIVE,
+                start_date=start_date,
+                end_date=end_date
+            )
+            
+            db.session.add(campaign)
+            book.has_investment_campaign = True
+            db.session.commit()
+            
+            flash('Investment campaign created successfully!', 'success')
+            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating campaign: {str(e)}", exc_info=True)
+            flash(f'An error occurred: {str(e)}', 'error')
+    
+    return render_template('book_platform/create_campaign.html', form=form, book=book)
+
+# Investment Marketplace
+@book_bp.route('/investments', methods=['GET'])
+def investments():
+    """Browse investment campaigns"""
+    status_filter = request.args.get('status', 'active')
+    search_query = request.args.get('q', '')
+    
+    query = InvestmentCampaign.query
+    
+    if status_filter == 'active':
+        query = query.filter_by(status=CampaignStatus.ACTIVE)
+    elif status_filter == 'funded':
+        query = query.filter_by(status=CampaignStatus.FUNDED)
+    
+    if search_query:
+        query = query.join(BookProject).filter(
+            db.or_(
+                InvestmentCampaign.title.ilike(f'%{search_query}%'),
+                BookProject.title.ilike(f'%{search_query}%')
+            )
+        )
+    
+    campaigns = query.order_by(InvestmentCampaign.created_at.desc()).all()
+    
+    return render_template('book_platform/investments.html', 
+                         campaigns=campaigns,
+                         status_filter=status_filter,
+                         search_query=search_query)
+
+# Investment Campaign Details
+@book_bp.route('/investments/<int:campaign_id>', methods=['GET'])
+def investment_campaign(campaign_id):
+    """View investment campaign details"""
+    campaign = InvestmentCampaign.query.get_or_404(campaign_id)
+    book = campaign.book_project
+    investments = BookInvestment.query.filter_by(campaign_id=campaign_id).all()
+    
+    # Calculate progress
+    progress_percentage = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0
+    
+    # Get author information
+    author = book.author if book else None
+    
+    # Get book reviews (accredited reviews)
+    from glconnect.book_platform_models import BookReview, ReviewStatus
+    accredited_reviews = BookReview.query.filter_by(
+        book_project_id=book.id,
+        status=ReviewStatus.PUBLISHED
+    ).all() if book else []
+    
+    # Calculate average rating
+    avg_rating = sum(r.rating for r in accredited_reviews) / len(accredited_reviews) if accredited_reviews else 0
+    
+    # Get book chapters count and completed chapters
+    chapters_count = len(book.chapters) if book and book.chapters else 0
+    completed_chapters = [ch for ch in book.chapters if ch.content] if book and book.chapters else []
+    completed_chapters_count = len(completed_chapters)
+    
+    # Calculate days remaining
+    from datetime import timedelta
+    days_remaining = 0
+    if campaign.end_date:
+        days_remaining = max(0, (campaign.end_date - datetime.now(timezone.utc)).days)
+    
+    # Get author's other books (for track record)
+    author_other_books = []
+    if author:
+        author_other_books = BookProject.query.filter_by(
+            author_id=author.id
+        ).filter(BookProject.id != book.id).limit(5).all()
+    
+    return render_template('book_platform/campaign_details.html', 
+                         campaign=campaign,
+                         book=book,
+                         investments=investments,
+                         progress_percentage=progress_percentage,
+                         author=author,
+                         accredited_reviews=accredited_reviews,
+                         avg_rating=avg_rating,
+                         chapters_count=chapters_count,
+                         completed_chapters=completed_chapters[:3],  # First 3 for preview
+                         completed_chapters_count=completed_chapters_count,
+                         days_remaining=days_remaining,
+                         author_other_books=author_other_books)
+
+# Make Investment
+@book_bp.route('/investments/<int:campaign_id>/invest', methods=['GET', 'POST'])
+@login_required
+def make_investment(campaign_id):
+    """User invests in a campaign"""
+    campaign = InvestmentCampaign.query.get_or_404(campaign_id)
+    
+    if campaign.status != CampaignStatus.ACTIVE:
+        flash('This campaign is not currently accepting investments.', 'error')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    
+    # Check if campaign has expired
+    if campaign.end_date and campaign.end_date < datetime.now(timezone.utc):
+        flash('This campaign has expired.', 'error')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    
+    # Get user profile
+    user_profile, profile_type = get_user_profile()
+    if not user_profile:
+        flash('You need a profile to invest.', 'error')
+        return redirect(url_for('book_platform.setup_profile'))
+    
+    investor_id = get_profile_id(user_profile, profile_type)
+    
+    # Check if already invested
+    existing_investment = BookInvestment.query.filter_by(
+        campaign_id=campaign_id,
+        investor_id=investor_id
+    ).first()
+    
+    form = InvestmentForm()
+    
+    if form.validate_on_submit():
+        try:
+            amount = form.amount.data
+            
+            # Validate amount
+            if amount < campaign.minimum_investment:
+                flash(f'Minimum investment is ${campaign.minimum_investment:.2f}', 'error')
+                return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+            
+            if campaign.maximum_investment and amount > campaign.maximum_investment:
+                flash(f'Maximum investment is ${campaign.maximum_investment:.2f}', 'error')
+                return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+            
+            # Check if goal would be exceeded
+            if campaign.current_funding + amount > campaign.funding_goal:
+                flash(f'Investment would exceed the funding goal. Maximum remaining: ${campaign.funding_goal - campaign.current_funding:.2f}', 'error')
+                return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+            
+            # Calculate investment percentage
+            investment_percentage = (amount / campaign.funding_goal) * 100
+            
+            # Create investment
+            investment = BookInvestment(
+                campaign_id=campaign_id,
+                investor_id=investor_id,
+                book_project_id=campaign.book_project_id,
+                amount=amount,
+                currency='USD',
+                investment_percentage=investment_percentage,
+                revenue_share_percentage=campaign.revenue_share_percentage,
+                return_multiplier=campaign.return_multiplier_cap,
+                status=InvestmentStatus.PENDING,
+                payment_status=TransactionStatus.PENDING
+            )
+            
+            db.session.add(investment)
+            
+            # Update campaign funding
+            campaign.current_funding += amount
+            
+            # Check if goal reached
+            if campaign.current_funding >= campaign.funding_goal:
+                campaign.status = CampaignStatus.FUNDED
+                campaign.funded_at = datetime.now(timezone.utc)
+                # Set return start date (when book is published)
+                for inv in campaign.investments:
+                    inv.return_start_date = datetime.now(timezone.utc)
+                    inv.status = InvestmentStatus.ACTIVE
+            
+            db.session.commit()
+            
+            # TODO: Integrate with payment processor (Stripe)
+            # For now, mark as confirmed
+            investment.payment_status = TransactionStatus.COMPLETED
+            investment.status = InvestmentStatus.CONFIRMED
+            investment.invested_at = datetime.now(timezone.utc)
+            db.session.commit()
+            
+            flash('Investment successful! Thank you for supporting this book.', 'success')
+            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error making investment: {str(e)}", exc_info=True)
+            flash(f'An error occurred: {str(e)}', 'error')
+    
+    return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+
+# Earnings Dashboard
+@book_bp.route('/earnings', methods=['GET'])
+@login_required
+def earnings_dashboard():
+    """View earnings for reviewers, investors, and authors"""
+    user_profile, profile_type = get_user_profile()
+    
+    earnings_data = {
+        'reviewer_earnings': [],
+        'investment_returns': [],
+        'author_sales': [],
+        'reviewer_earnings_by_book': {},
+        'investment_returns_by_book': {},
+        'author_sales_by_book': {}
+    }
+    
+    # Reviewer earnings
+    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    if reviewer:
+        earnings_data['reviewer_earnings'] = ReviewerEarning.query.filter_by(
+            reviewer_id=reviewer.id
+        ).order_by(ReviewerEarning.created_at.desc()).limit(50).all()
+        earnings_data['total_reviewer_earnings'] = reviewer.total_earnings
+        
+        # Group earnings by book
+        from collections import defaultdict
+        earnings_by_book = defaultdict(lambda: {'earnings': [], 'total': 0.0, 'book': None})
+        for earning in earnings_data['reviewer_earnings']:
+            book_id = earning.review.book_project_id
+            earnings_by_book[book_id]['earnings'].append(earning)
+            earnings_by_book[book_id]['total'] += earning.amount
+            if not earnings_by_book[book_id]['book']:
+                earnings_by_book[book_id]['book'] = earning.review.book_project
+        earnings_data['reviewer_earnings_by_book'] = dict(earnings_by_book)
+    
+    # Investment returns
+    if user_profile:
+        investor_id = get_profile_id(user_profile, profile_type)
+        investments = BookInvestment.query.filter_by(investor_id=investor_id).all()
+        earnings_data['investments'] = investments
+        earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
+        
+        # Get payout history for each investment
+        for investment in investments:
+            investment.payouts_list = InvestmentPayout.query.filter_by(
+                investment_id=investment.id
+            ).order_by(InvestmentPayout.created_at.desc()).limit(20).all()
+    
+    # Author sales
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        sales = BookSale.query.filter_by(seller_id=author_id).order_by(
+            BookSale.created_at.desc()
+        ).limit(50).all()
+        earnings_data['author_sales'] = sales
+        earnings_data['total_author_revenue'] = sum(sale.net_amount for sale in sales)
+        
+        # Group sales by book
+        sales_by_book = defaultdict(lambda: {'sales': [], 'total': 0.0, 'book': None})
+        for sale in sales:
+            book_id = sale.book_project_id
+            sales_by_book[book_id]['sales'].append(sale)
+            sales_by_book[book_id]['total'] += sale.net_amount
+            if not sales_by_book[book_id]['book']:
+                sales_by_book[book_id]['book'] = sale.book_project
+        earnings_data['author_sales_by_book'] = dict(sales_by_book)
+    
+    return render_template('book_platform/earnings.html', earnings_data=earnings_data)
+
+# Book Sales Transparency Page
+@book_bp.route('/books/<int:book_id>/sales-transparency', methods=['GET'])
+@login_required
+def book_sales_transparency(book_id):
+    """Transparent view of all sales and revenue distributions for a book"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check if user has access (author, reviewer, or investor)
+    user_profile, profile_type = get_user_profile()
+    has_access = False
+    user_role = None
+    
+    # Check if author
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        if book.author_id == author_id:
+            has_access = True
+            user_role = 'author'
+    
+    # Check if reviewer
+    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    if reviewer:
+        review = BookReview.query.filter_by(
+            book_project_id=book_id,
+            reviewer_id=reviewer.id
+        ).first()
+        if review:
+            has_access = True
+            user_role = 'reviewer'
+    
+    # Check if investor
+    if user_profile:
+        investor_id = get_profile_id(user_profile, profile_type)
+        investment = BookInvestment.query.filter_by(
+            book_project_id=book_id,
+            investor_id=investor_id
+        ).first()
+        if investment:
+            has_access = True
+            user_role = 'investor'
+    
+    if not has_access:
+        flash('You do not have access to view sales data for this book.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    
+    # Get all sales with distributions
+    sales = BookSale.query.filter_by(
+        book_project_id=book_id
+    ).order_by(BookSale.created_at.desc()).all()
+    
+    # Get distributions for each sale
+    sales_data = []
+    for sale in sales:
+        distributions = RevenueDistribution.query.filter_by(
+            source_sale_id=sale.id
+        ).all()
+        
+        sale_info = {
+            'sale': sale,
+            'distributions': distributions,
+            'total_sale_amount': sale.net_amount + sale.platform_fee,
+            'platform': next((d for d in distributions if d.distribution_type == DistributionType.PLATFORM), None),
+            'reviewers': [d for d in distributions if d.distribution_type == DistributionType.REVIEWER],
+            'investors': [d for d in distributions if d.distribution_type == DistributionType.INVESTOR],
+            'author': next((d for d in distributions if d.distribution_type == DistributionType.AUTHOR), None)
+        }
+        sales_data.append(sale_info)
+    
+    # Calculate totals
+    total_sales = len(sales)
+    total_revenue = sum(s.net_amount + s.platform_fee for s in sales)
+    total_platform = sum(s.platform_fee for s in sales)
+    total_reviewers = sum(s.distributed_to_reviewers for s in sales)
+    total_investors = sum(s.distributed_to_investors for s in sales)
+    total_author = total_revenue - total_platform - total_reviewers - total_investors
+    
+    # Get user-specific earnings
+    user_earnings = {
+        'total': 0.0,
+        'per_sale': []
+    }
+    
+    if user_role == 'reviewer' and reviewer:
+        review = BookReview.query.filter_by(
+            book_project_id=book_id,
+            reviewer_id=reviewer.id
+        ).first()
+        if review:
+            earnings = ReviewerEarning.query.filter_by(
+                reviewer_id=reviewer.id,
+                review_id=review.id
+            ).order_by(ReviewerEarning.created_at.desc()).all()
+            user_earnings['total'] = sum(e.amount for e in earnings)
+            user_earnings['per_sale'] = earnings
+    
+    elif user_role == 'investor' and user_profile:
+        investor_id = get_profile_id(user_profile, profile_type)
+        investment = BookInvestment.query.filter_by(
+            book_project_id=book_id,
+            investor_id=investor_id
+        ).first()
+        if investment:
+            payouts = InvestmentPayout.query.filter_by(
+                investment_id=investment.id
+            ).order_by(InvestmentPayout.created_at.desc()).all()
+            user_earnings['total'] = investment.total_returns
+            user_earnings['per_sale'] = payouts
+    
+    elif user_role == 'author':
+        user_earnings['total'] = total_author
+        user_earnings['per_sale'] = [s['author'] for s in sales_data if s['author']]
+    
+    return render_template('book_platform/sales_transparency.html',
+                         book=book,
+                         sales_data=sales_data,
+                         total_sales=total_sales,
+                         total_revenue=total_revenue,
+                         total_platform=total_platform,
+                         total_reviewers=total_reviewers,
+                         total_investors=total_investors,
+                         total_author=total_author,
+                         user_role=user_role,
+                         user_earnings=user_earnings)
+
+# Reviewer Earnings by Book
+@book_bp.route('/reviewers/my-earnings/<int:book_id>', methods=['GET'])
+@login_required
+def reviewer_earnings_by_book(book_id):
+    """Reviewer view of their earnings for a specific book"""
+    book = BookProject.query.get_or_404(book_id)
+    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    
+    if not reviewer:
+        flash('You must be an accredited reviewer to view this page.', 'error')
+        return redirect(url_for('book_platform.register_reviewer'))
+    
+    review = BookReview.query.filter_by(
+        book_project_id=book_id,
+        reviewer_id=reviewer.id
+    ).first_or_404()
+    
+    # Get all earnings for this review
+    earnings = ReviewerEarning.query.filter_by(
+        reviewer_id=reviewer.id,
+        review_id=review.id
+    ).order_by(ReviewerEarning.created_at.desc()).all()
+    
+    # Get sales data
+    sales = BookSale.query.filter_by(
+        book_project_id=book_id
+    ).order_by(BookSale.created_at.desc()).all()
+    
+    # Match earnings to sales
+    earnings_by_sale = {}
+    for earning in earnings:
+        if earning.distribution:
+            sale_id = earning.distribution.source_sale_id
+            earnings_by_sale[sale_id] = earning
+    
+    return render_template('book_platform/reviewer_earnings_book.html',
+                         book=book,
+                         review=review,
+                         earnings=earnings,
+                         sales=sales,
+                         earnings_by_sale=earnings_by_sale,
+                         total_earnings=sum(e.amount for e in earnings))
+
+# Investor Returns by Book
+@book_bp.route('/investments/my-returns/<int:book_id>', methods=['GET'])
+@login_required
+def investor_returns_by_book(book_id):
+    """Investor view of their returns for a specific book"""
+    book = BookProject.query.get_or_404(book_id)
+    user_profile, profile_type = get_user_profile()
+    
+    if not user_profile:
+        flash('You need a profile to view investment returns.', 'error')
+        return redirect(url_for('book_platform.setup_profile'))
+    
+    investor_id = get_profile_id(user_profile, profile_type)
+    investment = BookInvestment.query.filter_by(
+        book_project_id=book_id,
+        investor_id=investor_id
+    ).first_or_404()
+    
+    # Get all payouts for this investment
+    payouts = InvestmentPayout.query.filter_by(
+        investment_id=investment.id
+    ).order_by(InvestmentPayout.created_at.desc()).all()
+    
+    # Get sales data
+    sales = BookSale.query.filter_by(
+        book_project_id=book_id
+    ).order_by(BookSale.created_at.desc()).all()
+    
+    # Match payouts to sales
+    payouts_by_sale = {}
+    for payout in payouts:
+        if payout.distribution:
+            sale_id = payout.distribution.source_sale_id
+            payouts_by_sale[sale_id] = payout
+    
+    # Calculate ROI
+    roi_percentage = (investment.total_returns / investment.amount * 100) if investment.amount > 0 else 0
+    max_possible_return = investment.amount * investment.return_multiplier
+    progress_to_cap = (investment.total_returns / max_possible_return * 100) if max_possible_return > 0 else 0
+    
+    return render_template('book_platform/investor_returns_book.html',
+                         book=book,
+                         investment=investment,
+                         payouts=payouts,
+                         sales=sales,
+                         payouts_by_sale=payouts_by_sale,
+                         roi_percentage=roi_percentage,
+                         max_possible_return=max_possible_return,
+                         progress_to_cap=progress_to_cap)
+
+# Accountability & Refund Routes
+@book_bp.route('/books/<int:book_id>/accountability', methods=['GET'])
+@login_required
+def book_accountability_status(book_id):
+    """View accountability status for a book"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Check if user is author
+    user_profile, profile_type = get_user_profile()
+    if not user_profile:
+        flash('You need a profile to view this page.', 'error')
+        return redirect(url_for('book_platform.setup_profile'))
+    
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        flash('Only the author can view accountability status.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    # Get accountability status
+    from glconnect.accountability_service import get_accountability_status
+    status_result = get_accountability_status(book_id, db)
+    
+    if not status_result.get('success'):
+        flash('Error loading accountability status.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    return render_template('book_platform/accountability_status.html',
+                         book=book,
+                         status=status_result.get('status'))
+
+@book_bp.route('/investments/<int:investment_id>/refund-status', methods=['GET'])
+@login_required
+def investment_refund_status(investment_id):
+    """View refund status for an investment"""
+    from glconnect.book_platform_models import BookInvestment, RefundRequest
+    
+    investment = BookInvestment.query.get_or_404(investment_id)
+    
+    # Check if user is the investor
+    user_profile, profile_type = get_user_profile()
+    if not user_profile:
+        flash('You need a profile to view this page.', 'error')
+        return redirect(url_for('book_platform.investments'))
+    
+    investor_id = get_profile_id(user_profile, profile_type)
+    if investment.investor_id != investor_id:
+        flash('You can only view your own investment refunds.', 'error')
+        return redirect(url_for('book_platform.investments'))
+    
+    # Get refund requests
+    refunds = RefundRequest.query.filter_by(
+        investment_id=investment_id
+    ).order_by(RefundRequest.created_at.desc()).all()
+    
+    return render_template('book_platform/investment_refund_status.html',
+                         investment=investment,
+                         refunds=refunds)

@@ -82,11 +82,28 @@ def create_app():
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
+        'pool_reset_on_return': 'commit',  # Reset connections on return
     }
     app.config["JWT_SECRET_KEY"] = "abarayon"
 
     # Initialize extensions
     db.init_app(app)
+    
+    # Add teardown handler to rollback failed transactions
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        """Rollback database session on errors to prevent 'transaction aborted' errors"""
+        try:
+            # Always rollback on exception to clear any failed transactions
+            if exception:
+                db.session.rollback()
+        except Exception as e:
+            # If rollback fails, log it but continue
+            print(f"Warning: Error during session rollback: {e}")
+        finally:
+            # Always remove the session to clear connection state
+            # This is critical to prevent "transaction aborted" errors from persisting
+            db.session.remove()
     jwt.init_app(app)
     login_manager.init_app(app)
     ckeditor.init_app(app)

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accountability Status - {{ book.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
+                    <i class="fas fa-arrow-left"></i> Back to Book
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-clipboard-check me-2"></i>Accountability Status
+                </h1>
+                <p class="lead text-muted">Track your book completion and publication deadlines</p>
+                <h3 class="mt-3">{{ book.title }}</h3>
+            </div>
+        </div>
+
+        <!-- Status Overview -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Current Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p><strong>Book Status:</strong></p>
+                                <span class="badge bg-{% if status.book_status == 'published' %}success{% elif status.book_status == 'draft' %}warning{% else %}secondary{% endif %} fs-6">
+                                    {{ status.book_status|title if status.book_status else 'N/A' }}
+                                </span>
+                            </div>
+                            <div class="col-md-4">
+                                <p><strong>Has Investment Campaign:</strong></p>
+                                <span class="badge bg-{% if status.has_campaign %}primary{% else %}secondary{% endif %} fs-6">
+                                    {{ 'Yes' if status.has_campaign else 'No' }}
+                                </span>
+                            </div>
+                            <div class="col-md-4">
+                                <p><strong>Campaign Status:</strong></p>
+                                <span class="badge bg-{% if status.campaign_status == 'funded' %}success{% elif status.campaign_status == 'active' %}primary{% elif status.campaign_status == 'cancelled' %}danger{% else %}secondary{% endif %} fs-6">
+                                    {{ status.campaign_status|title if status.campaign_status else 'N/A' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deadlines -->
+        {% if status.deadlines %}
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Deadlines</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if status.deadlines.completion %}
+                        <div class="mb-3">
+                            <h6>Completion Deadline</h6>
+                            <div class="progress mb-2" style="height: 25px;">
+                                {% set completion = status.deadlines.completion %}
+                                {% set progress = ((completion.deadline_days - completion.days_remaining) / completion.deadline_days * 100) if completion.deadline_days > 0 else 0 %}
+                                <div class="progress-bar {% if completion.is_overdue %}bg-danger{% elif completion.days_remaining < 30 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ progress }}%"
+                                     aria-valuenow="{{ progress }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ completion.days_remaining }} days remaining
+                                </div>
+                            </div>
+                            <p class="text-muted small">
+                                <i class="fas fa-clock me-1"></i>
+                                Deadline: {{ completion.deadline_days }} days after funding
+                                {% if completion.days_elapsed > 0 %}
+                                | Elapsed: {{ completion.days_elapsed }} days
+                                {% endif %}
+                            </p>
+                            {% if completion.is_overdue %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Overdue!</strong> You have exceeded the completion deadline by {{ -completion.days_remaining }} days.
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if status.deadlines.publication %}
+                        <div class="mb-3">
+                            <h6>Publication Deadline</h6>
+                            <div class="progress mb-2" style="height: 25px;">
+                                {% set publication = status.deadlines.publication %}
+                                {% set progress = ((publication.deadline_days - publication.days_remaining) / publication.deadline_days * 100) if publication.deadline_days > 0 else 0 %}
+                                <div class="progress-bar {% if publication.is_overdue %}bg-danger{% elif publication.days_remaining < 7 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ progress }}%"
+                                     aria-valuenow="{{ progress }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ publication.days_remaining }} days remaining
+                                </div>
+                            </div>
+                            <p class="text-muted small">
+                                <i class="fas fa-clock me-1"></i>
+                                Deadline: {{ publication.deadline_days }} days after funding
+                                {% if publication.days_elapsed > 0 %}
+                                | Elapsed: {{ publication.days_elapsed }} days
+                                {% endif %}
+                            </p>
+                            {% if publication.is_overdue %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Overdue!</strong> You have exceeded the publication deadline by {{ -publication.days_remaining }} days.
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Warnings -->
+        {% if status.warnings %}
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Warnings</h5>
+                    <ul class="mb-0">
+                        {% for warning in status.warnings %}
+                        <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Information -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Important Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Completion Deadline:</strong> You have 180 days (6 months) to complete your book after receiving funding.</li>
+                            <li><strong>Publication Deadline:</strong> Once completed, you have 30 days to publish your book.</li>
+                            <li><strong>Consequences:</strong> If you fail to meet these deadlines, investors will be automatically refunded and reviewers will receive guarantee payments.</li>
+                            <li><strong>Transparency:</strong> All deadlines and progress are visible to investors and reviewers.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

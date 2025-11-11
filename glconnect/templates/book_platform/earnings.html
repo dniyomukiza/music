@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Dashboard - Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4"><i class="fas fa-dollar-sign me-2"></i>Earnings Dashboard</h1>
+
+        <!-- Reviewer Earnings -->
+        {% if earnings_data.reviewer_earnings %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-star me-2"></i>Reviewer Earnings</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h4>Total Earnings: ${{ "%.2f"|format(earnings_data.total_reviewer_earnings) }}</h4>
+                </div>
+                
+                <!-- Earnings by Book -->
+                {% if earnings_data.reviewer_earnings_by_book %}
+                <h5 class="mt-4 mb-3">Earnings by Book</h5>
+                {% for book_id, book_data in earnings_data.reviewer_earnings_by_book.items() %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">{{ book_data.book.title if book_data.book else 'Unknown Book' }}</h6>
+                            <div>
+                                <strong class="text-success">${{ "%.2f"|format(book_data.total) }}</strong>
+                                <a href="{{ url_for('book_platform.reviewer_earnings_by_book', book_id=book_id) }}" 
+                                   class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="fas fa-chart-line"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ book_data.earnings|length }} earning{{ 's' if book_data.earnings|length != 1 else '' }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Book</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for earning in earnings_data.reviewer_earnings %}
+                            <tr>
+                                <td>{{ earning.created_at.strftime('%B %d, %Y') }}</td>
+                                <td>{{ earning.review.book_project.title if earning.review and earning.review.book_project else 'N/A' }}</td>
+                                <td>${{ "%.2f"|format(earning.amount) }}</td>
+                                <td>
+                                    <span class="badge bg-{% if earning.status.value == 'completed' %}success{% else %}warning{% endif %}">
+                                        {{ earning.status.value|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Investment Returns -->
+        {% if earnings_data.investments %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0"><i class="fas fa-chart-line me-2"></i>Investment Returns</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h4>Total Returns: ${{ "%.2f"|format(earnings_data.total_investment_returns) }}</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Book</th>
+                                <th>Investment</th>
+                                <th>Returns</th>
+                                <th>ROI</th>
+                                <th>Max Return</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for investment in earnings_data.investments %}
+                            <tr>
+                                <td>{{ investment.book_project.title }}</td>
+                                <td>${{ "%.2f"|format(investment.amount) }}</td>
+                                <td>${{ "%.2f"|format(investment.total_returns) }}</td>
+                                <td>
+                                    <strong class="text-success">
+                                        {{ "%.1f"|format((investment.total_returns / investment.amount * 100) if investment.amount > 0 else 0) }}%
+                                    </strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${{ "%.2f"|format(investment.amount * investment.return_multiplier) }} 
+                                        ({{ investment.return_multiplier }}x)
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if investment.status.value == 'active' %}success{% else %}secondary{% endif %}">
+                                        {{ investment.status.value|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('book_platform.investor_returns_by_book', book_id=investment.book_project_id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Author Sales -->
+        {% if earnings_data.author_sales %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0"><i class="fas fa-book me-2"></i>Author Sales</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h4>Total Revenue: ${{ "%.2f"|format(earnings_data.total_author_revenue) }}</h4>
+                </div>
+                
+                <!-- Sales by Book -->
+                {% if earnings_data.author_sales_by_book %}
+                <h5 class="mt-4 mb-3">Sales by Book</h5>
+                {% for book_id, book_data in earnings_data.author_sales_by_book.items() %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">{{ book_data.book.title if book_data.book else 'Unknown Book' }}</h6>
+                            <div>
+                                <strong class="text-info">${{ "%.2f"|format(book_data.total) }}</strong>
+                                <span class="badge bg-secondary ms-2">{{ book_data.sales|length }} sale{{ 's' if book_data.sales|length != 1 else '' }}</span>
+                                <a href="{{ url_for('book_platform.book_sales_transparency', book_id=book_id) }}" 
+                                   class="btn btn-sm btn-outline-info ms-2">
+                                    <i class="fas fa-chart-pie"></i> View Transparency
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Book</th>
+                                <th>Sale Amount</th>
+                                <th>Net Amount</th>
+                                <th>Distributed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in earnings_data.author_sales %}
+                            <tr>
+                                <td>{{ sale.created_at.strftime('%B %d, %Y') }}</td>
+                                <td>{{ sale.book_project.title }}</td>
+                                <td>${{ "%.2f"|format(sale.net_amount + sale.platform_fee) }}</td>
+                                <td>${{ "%.2f"|format(sale.net_amount) }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        Reviewers: ${{ "%.2f"|format(sale.distributed_to_reviewers) }}<br>
+                                        Investors: ${{ "%.2f"|format(sale.distributed_to_investors) }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if sale.status.value == 'completed' %}success{% else %}warning{% endif %}">
+                                        {{ sale.status.value|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not earnings_data.reviewer_earnings and not earnings_data.investments and not earnings_data.author_sales %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h4>No earnings yet</h4>
+            <p>Start reviewing books, investing in campaigns, or selling your books to see earnings here.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+

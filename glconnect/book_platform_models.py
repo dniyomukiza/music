@@ -52,6 +52,46 @@ class TransactionStatus(PyEnum):
     FAILED = "failed"
     REFUNDED = "refunded"
 
+# Reviewer and Investment System Enums
+class ReviewerStatus(PyEnum):
+    PENDING = "pending"
+    ACCREDITED = "accredited"
+    SUSPENDED = "suspended"
+    REVOKED = "revoked"
+
+class ReviewerLevel(PyEnum):
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
+    PLATINUM = "platinum"
+
+class ReviewStatus(PyEnum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    PUBLISHED = "published"
+    REJECTED = "rejected"
+
+class InvestmentStatus(PyEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+class CampaignStatus(PyEnum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    FUNDED = "funded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class DistributionType(PyEnum):
+    REVIEWER = "reviewer"
+    INVESTOR = "investor"
+    AUTHOR = "author"
+    PLATFORM = "platform"
+
 # Ink Studio User Model (extends existing User with book-specific fields)
 class BookPlatformUser(db.Model):
     __tablename__ = 'book_platform_users'
@@ -110,6 +150,11 @@ class BookProject(db.Model):
     audiobook_duration = db.Column(db.Integer, nullable=True)  # Duration in seconds
     audiobook_generated_at = db.Column(db.DateTime, nullable=True)
     audiobook_voice = db.Column(db.String(100), nullable=True)  # TTS voice used
+    
+    # Investment & Sales Tracking
+    has_investment_campaign = db.Column(db.Boolean, default=False)
+    total_sales = db.Column(db.Integer, default=0)
+    total_revenue = db.Column(db.Float, default=0.0)
     
     # Foreign Keys
     author_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='CASCADE'), nullable=False)
@@ -315,6 +360,11 @@ class BookSale(db.Model):
     paid_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
+    # Revenue Distribution Tracking
+    distributed_to_reviewers = db.Column(db.Float, default=0.0)
+    distributed_to_investors = db.Column(db.Float, default=0.0)
+    distribution_completed = db.Column(db.Boolean, default=False)
+    
     # Foreign Keys
     seller_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=False)
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
@@ -390,4 +440,267 @@ class BookNotification(db.Model):
     # Relationships
     user = db.relationship('BookPlatformUser', backref='notifications')
     book_project = db.relationship('BookProject', backref='notifications')
+
+# Accredited Reviewer Model
+class AccreditedReviewer(db.Model):
+    __tablename__ = 'accredited_reviewers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, unique=True)
+    reviewer_name = db.Column(db.String(100), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    profile_picture = db.Column(db.String(200), nullable=True)
+    
+    # Accreditation Details
+    accreditation_status = db.Column(db.Enum(ReviewerStatus), default=ReviewerStatus.PENDING)
+    accreditation_level = db.Column(db.Enum(ReviewerLevel), default=ReviewerLevel.BRONZE)
+    accreditation_date = db.Column(db.DateTime, nullable=True)
+    accreditation_expires_at = db.Column(db.DateTime, nullable=True)
+    
+    # Credentials
+    credentials = db.Column(JSON, nullable=True)  # Education, certifications, publications
+    specialties = db.Column(JSON, nullable=True)  # Genres they review
+    portfolio_url = db.Column(db.String(500), nullable=True)
+    
+    # Performance Metrics
+    total_reviews = db.Column(db.Integer, default=0)
+    average_rating = db.Column(db.Float, default=0.0)
+    total_earnings = db.Column(db.Float, default=0.0)
+    books_reviewed = db.Column(db.Integer, default=0)
+    
+    # Financial
+    payment_info = db.Column(JSON, nullable=True)
+    default_revenue_share_percentage = db.Column(db.Float, default=2.5)  # Default % per book
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    user = db.relationship('User', backref='reviewer_profile')
+    reviews = db.relationship('BookReview', backref='reviewer', lazy=True)
+    earnings = db.relationship('ReviewerEarning', backref='reviewer', lazy=True)
+
+# Book Review Model
+class BookReview(db.Model):
+    __tablename__ = 'book_reviews'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    # Review Content
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    rating = db.Column(db.Integer, nullable=False)  # 1-5 stars
+    is_featured = db.Column(db.Boolean, default=False)
+    is_public = db.Column(db.Boolean, default=True)
+    
+    # Review Status
+    status = db.Column(db.Enum(ReviewStatus), default=ReviewStatus.DRAFT)
+    submitted_at = db.Column(db.DateTime, nullable=True)
+    published_at = db.Column(db.DateTime, nullable=True)
+    
+    # Revenue Share Agreement
+    revenue_share_percentage = db.Column(db.Float, nullable=False)  # e.g., 2.5% of sales
+    minimum_sales_threshold = db.Column(db.Integer, default=0)  # Minimum sales before earning
+    
+    # Foreign Keys
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('accredited_reviewers.id', ondelete='CASCADE'), nullable=False)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    book_project = db.relationship('BookProject', backref='accredited_reviews')
+    earnings = db.relationship('ReviewerEarning', backref='review', lazy=True)
+
+# Investment Campaign Model
+class InvestmentCampaign(db.Model):
+    __tablename__ = 'investment_campaigns'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    # Campaign Details
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    pitch_video_url = db.Column(db.String(500), nullable=True)
+    
+    # Funding Goals
+    funding_goal = db.Column(db.Float, nullable=False)
+    minimum_investment = db.Column(db.Float, nullable=False)
+    maximum_investment = db.Column(db.Float, nullable=True)
+    current_funding = db.Column(db.Float, default=0.0)
+    
+    # Terms
+    revenue_share_percentage = db.Column(db.Float, nullable=False)  # Total % shared with investors
+    return_multiplier_cap = db.Column(db.Float, nullable=False, default=3.0)  # Max return (e.g., 3x)
+    investment_period_days = db.Column(db.Integer, default=30)  # Days to reach goal
+    
+    # Status
+    status = db.Column(db.Enum(CampaignStatus), default=CampaignStatus.DRAFT)
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
+    funded_at = db.Column(db.DateTime, nullable=True)
+    cancelled_at = db.Column(db.DateTime, nullable=True)
+    cancellation_reason = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Foreign Keys
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, unique=True)
+    
+    # Relationships
+    book_project = db.relationship('BookProject', backref='investment_campaign', uselist=False)
+    investments = db.relationship('BookInvestment', backref='campaign', lazy=True, cascade='all, delete-orphan')
+
+# Book Investment Model
+class BookInvestment(db.Model):
+    __tablename__ = 'book_investments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    # Investment Details
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    investment_percentage = db.Column(db.Float, nullable=False)  # % of total funding goal
+    
+    # Terms (inherited from campaign, but stored for historical accuracy)
+    revenue_share_percentage = db.Column(db.Float, nullable=False)  # % of sales revenue
+    return_multiplier = db.Column(db.Float, nullable=False)  # e.g., 1.5x return cap
+    minimum_return = db.Column(db.Float, nullable=True)  # Guaranteed minimum return
+    
+    # Status
+    status = db.Column(db.Enum(InvestmentStatus), default=InvestmentStatus.PENDING)
+    payment_status = db.Column(db.Enum(TransactionStatus), default=TransactionStatus.PENDING)
+    
+    # Timeline
+    invested_at = db.Column(db.DateTime, nullable=True)
+    return_start_date = db.Column(db.DateTime, nullable=True)  # When returns begin
+    return_end_date = db.Column(db.DateTime, nullable=True)  # When returns stop
+    
+    # Returns Tracking
+    total_returns = db.Column(db.Float, default=0.0)
+    last_payout_date = db.Column(db.DateTime, nullable=True)
+    
+    # Refund tracking
+    refunded_at = db.Column(db.DateTime, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Foreign Keys
+    investor_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='CASCADE'), nullable=False)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('investment_campaigns.id', ondelete='CASCADE'), nullable=False)
+    
+    # Relationships
+    investor = db.relationship('BookPlatformUser', backref='investments')
+    book_project = db.relationship('BookProject', backref='investments')
+    payouts = db.relationship('InvestmentPayout', backref='investment', lazy=True)
+
+# Revenue Distribution Model
+class RevenueDistribution(db.Model):
+    __tablename__ = 'revenue_distributions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    # Distribution Details
+    distribution_type = db.Column(db.Enum(DistributionType), nullable=False)  # REVIEWER, INVESTOR, AUTHOR, PLATFORM
+    amount = db.Column(db.Float, nullable=False)
+    percentage = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    
+    # Status
+    status = db.Column(db.Enum(TransactionStatus), default=TransactionStatus.PENDING)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    payment_method = db.Column(db.String(50), nullable=True)
+    transaction_id = db.Column(db.String(100), nullable=True)
+    
+    # Source
+    source_sale_id = db.Column(db.Integer, db.ForeignKey('book_sales.id', ondelete='CASCADE'), nullable=False)
+    recipient_id = db.Column(db.Integer, nullable=False)  # Reviewer ID, Investor ID, or Author ID
+    recipient_type = db.Column(db.String(50), nullable=False)  # 'reviewer', 'investor', 'author', 'platform'
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    source_sale = db.relationship('BookSale', backref='distributions')
+
+# Reviewer Earning Model (for tracking earnings)
+class ReviewerEarning(db.Model):
+    __tablename__ = 'reviewer_earnings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    status = db.Column(db.Enum(TransactionStatus), default=TransactionStatus.PENDING)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    
+    # Guarantee payment flag (for when book isn't published)
+    is_guarantee_payment = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text, nullable=True)
+    
+    # Foreign Keys
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('accredited_reviewers.id', ondelete='CASCADE'), nullable=False)
+    review_id = db.Column(db.Integer, db.ForeignKey('book_reviews.id', ondelete='CASCADE'), nullable=False)
+    distribution_id = db.Column(db.Integer, db.ForeignKey('revenue_distributions.id', ondelete='SET NULL'), nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    distribution = db.relationship('RevenueDistribution', backref='reviewer_earnings')
+
+# Investment Payout Model (for tracking payouts)
+class InvestmentPayout(db.Model):
+    __tablename__ = 'investment_payouts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    status = db.Column(db.Enum(TransactionStatus), default=TransactionStatus.PENDING)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    
+    # Foreign Keys
+    investment_id = db.Column(db.Integer, db.ForeignKey('book_investments.id', ondelete='CASCADE'), nullable=False)
+    distribution_id = db.Column(db.Integer, db.ForeignKey('revenue_distributions.id', ondelete='SET NULL'), nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    distribution = db.relationship('RevenueDistribution', backref='investment_payouts')
+
+# Refund Request Model
+class RefundRequest(db.Model):
+    __tablename__ = 'refund_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    # Refund Details
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    reason = db.Column(db.Text, nullable=False)
+    
+    # Status
+    status = db.Column(db.Enum(TransactionStatus), default=TransactionStatus.PENDING)
+    processed_at = db.Column(db.DateTime, nullable=True)
+    requested_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    
+    # Payment processor info
+    refund_transaction_id = db.Column(db.String(100), nullable=True)
+    payment_method = db.Column(db.String(50), nullable=True)
+    
+    # Foreign Keys
+    investment_id = db.Column(db.Integer, db.ForeignKey('book_investments.id', ondelete='CASCADE'), nullable=False)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    investment = db.relationship('BookInvestment', backref='refund_requests')
 

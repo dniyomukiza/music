@@ -8608,3 +8608,717 @@
     Device: Desktop
     User-Agent: curl/8.7.1
 --------------------------------------------------------------------------------
+[2025-11-09 02:57:47 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-09 02:58:26 UTC] GET /mybook/reviewers
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 02:59:04 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:00:51 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:00:52 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:00:52 UTC] GET /favicon.ico
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:04 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:05 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:10 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:11 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:17 UTC] GET /mybook/reviewers
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:17 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:23 UTC] GET /mybook/reviewers/register
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:23 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:24 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:24 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:24 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:36 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:37 UTC] GET /mybook/reviewers/register
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:01:37 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:02:59 UTC] POST /mybook/reviewers/register
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:03:00 UTC] GET /mybook/reviewers
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:03:01 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:04:08 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:29 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:29 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:30 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:30 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:30 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:31 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:06:32 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:21:06 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:21:06 UTC] HEAD /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-09 03:21:15 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:21:17 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:19 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:19 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:39 UTC] GET /mybook/admin/reviewers
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:39 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:39 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:39 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:39 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:41 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:42 UTC] GET /mybook/admin/reviewers
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:23:42 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:24:43 UTC] GET /mybook/investments/<campaign_id>/invest
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:25:01 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:29:58 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:29:58 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:29:59 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:29:59 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:29:59 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:30:09 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:30:09 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:30:09 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:30:09 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:30:11 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:30:12 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-09 03:47:07 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-11 05:13:33 UTC] GET /
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:13:42 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-11 05:13:49 UTC] GET /
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:00 UTC] GET /mybook/reviewers/register
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:00 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:00 UTC] GET /mybook/reviewers
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:01 UTC] GET /mybook/admin/reviewers
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:01 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:01 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:02 UTC] GET /mybook/books/1/create-campaign
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:02 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:02 UTC] GET /mybook/investments/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:03 UTC] GET /mybook/investments/1/invest
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:03 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:03 UTC] GET /mybook/books/1/request-review
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:03 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:04 UTC] GET /mybook/books/1/reviews/submit
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:04 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:04 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:04 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:04 UTC] GET /mybook/books/1/sales-transparency
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:05 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:05 UTC] GET /mybook/reviewers/my-earnings/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:05 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:05 UTC] GET /mybook/investments/my-returns/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:05 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:06 UTC] GET /mybook/books/1/accountability
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:06 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:06 UTC] GET /mybook/investments/1/refund-status
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:14:06 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:15:39 UTC] GET /mybook/investments/1
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-11 05:15:49 UTC] GET /
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:01 UTC] GET /mybook/reviewers/register
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:01 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:02 UTC] GET /mybook/reviewers
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:02 UTC] GET /mybook/admin/reviewers
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:02 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:03 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:03 UTC] GET /mybook/books/1/create-campaign
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:04 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:04 UTC] GET /mybook/investments/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:04 UTC] GET /mybook/investments/1/invest
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:05 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:05 UTC] GET /mybook/books/1/request-review
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:05 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:05 UTC] GET /mybook/books/1/reviews/submit
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:06 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:06 UTC] GET /mybook/earnings
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:06 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:06 UTC] GET /mybook/books/1/sales-transparency
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:07 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:07 UTC] GET /mybook/reviewers/my-earnings/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:07 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:08 UTC] GET /mybook/investments/my-returns/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:08 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:08 UTC] GET /mybook/books/1/accountability
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:08 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:09 UTC] GET /mybook/investments/1/refund-status
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:09 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: python-requests/2.32.3
+--------------------------------------------------------------------------------
+[2025-11-11 05:16:16 UTC] GET /mybook/investments/999999
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
