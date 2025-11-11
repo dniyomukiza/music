@@ -272,12 +272,47 @@ def dashboard(user_profile, profile_type):
             is_read=False
         ).order_by(BookNotification.created_at.desc()).limit(5).all()
     
+    # Determine if user is an author (has authored books)
+    is_author = len(authored_books) > 0
+    
+    # Get additional data for authors
+    investment_campaigns = []
+    review_requests = []
+    if is_author:
+        from glconnect.book_platform_models import InvestmentCampaign, BookReview, CampaignStatus, ReviewStatus
+        author_id = get_profile_id(user_profile, profile_type)
+        books_with_ids = [book.id for book in authored_books]
+        if books_with_ids:
+            investment_campaigns = InvestmentCampaign.query.filter(
+                InvestmentCampaign.book_project_id.in_(books_with_ids)
+            ).all()
+            # Get books with pending review requests
+            review_requests = BookReview.query.filter(
+                BookReview.book_project_id.in_(books_with_ids),
+                BookReview.status == ReviewStatus.SUBMITTED
+            ).all()
+    
+    # Get data for regular users (reviewers/investors)
+    user_reviewer_profile = None
+    user_investments = []
+    if not is_author:
+        from glconnect.book_platform_models import AccreditedReviewer, BookInvestment, ReviewerStatus, InvestmentStatus
+        user_reviewer_profile = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+        user_investments = BookInvestment.query.filter_by(
+            investor_id=get_profile_id(user_profile, profile_type)
+        ).filter(BookInvestment.status.in_([InvestmentStatus.ACTIVE, InvestmentStatus.CONFIRMED])).limit(5).all()
+    
     return render_template('book_platform/dashboard.html', 
                          authored_books=authored_books,
                          collaborations=collaborations,
                          notifications=notifications,
                          user_profile=book_user,
-                         profile_type=profile_type)
+                         profile_type=profile_type,
+                         is_author=is_author,
+                         investment_campaigns=investment_campaigns,
+                         review_requests=review_requests,
+                         user_reviewer_profile=user_reviewer_profile,
+                         user_investments=user_investments)
 
 # Profile setup
 @book_bp.route('/setup-profile', methods=['GET', 'POST'])

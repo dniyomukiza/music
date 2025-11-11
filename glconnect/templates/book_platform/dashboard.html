@@ -24,20 +24,42 @@
                             <i class="fas fa-home"></i> Dashboard
                         </a>
                     </li>
+                    {% if is_author %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.books') }}">
                             <i class="fas fa-book-open"></i> My Books
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
                             <i class="fas fa-store"></i> Marketplace
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.reviewers') }}">
+                            <i class="fas fa-star"></i> Reviewers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
+                            <i class="fas fa-chart-line"></i> Investments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
+                            <i class="fas fa-dollar-sign"></i> Earnings
                         </a>
                     </li>
                     {% if current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.admin_books') }}">
                             <i class="fas fa-cogs"></i> Admin Panel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.admin_reviewers') }}">
+                            <i class="fas fa-user-check"></i> Admin Reviewers
                         </a>
                     </li>
                     {% endif %}
@@ -63,6 +85,8 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-8">
+                    {% if is_author %}
+                    <h1 class="display-4 fw-bold mb-3">Welcome, Author!</h1>
                     <p class="lead mb-4">Your professional writing platform for creating, collaborating, and publishing digital books</p>
                     <div class="d-flex gap-3">
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
@@ -72,14 +96,37 @@
                             <i class="fas fa-store me-2"></i>Browse Marketplace
                         </a>
                     </div>
+                    {% else %}
+                    <h1 class="display-4 fw-bold mb-3">Welcome to Ink Studio!</h1>
+                    <p class="lead mb-4">Discover amazing books, become a reviewer, or invest in promising authors</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-store me-2"></i>Browse Books
+                        </a>
+                        <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-star me-2"></i>Become a Reviewer
+                        </a>
+                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-success btn-lg">
+                            <i class="fas fa-chart-line me-2"></i>Browse Investments
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="col-lg-4 text-center">
                     <div class="hero-stats">
+                        {% if is_author %}
                         <div class="stat-circle">
                             <i class="fas fa-book-open fa-2x"></i>
                             <div class="stat-number">{{ authored_books|length }}</div>
-                            <div class="stat-label">Books</div>
+                            <div class="stat-label">My Books</div>
                         </div>
+                        {% else %}
+                        <div class="stat-circle">
+                            <i class="fas fa-user-circle fa-2x"></i>
+                            <div class="stat-number">{{ user_investments|length if user_investments else 0 }}</div>
+                            <div class="stat-label">My Investments</div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -183,7 +230,8 @@
                     </div>
                 </div>
 
-                <!-- My Books Section -->
+                {% if is_author %}
+                <!-- My Books Section (Authors Only) -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <div class="d-flex justify-content-between align-items-center">
@@ -279,7 +327,70 @@
                     </div>
                 </div>
 
-                <!-- Collaborations Section -->
+                <!-- Investment Campaigns Section (Authors Only) -->
+                {% if investment_campaigns %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>My Investment Campaigns
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            {% for campaign in investment_campaigns[:3] %}
+                            <div class="col-md-4">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ campaign.title }}</h6>
+                                        <p class="text-muted small mb-2">{{ campaign.book_project.title }}</p>
+                                        <div class="progress mb-2" style="height: 8px;">
+                                            {% set progress = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
+                                            <div class="progress-bar" role="progressbar" style="width: {{ progress }}%"></div>
+                                        </div>
+                                        <p class="small mb-0">
+                                            <strong>${{ "%.2f"|format(campaign.current_funding) }}</strong> / ${{ "%.2f"|format(campaign.funding_goal) }}
+                                        </p>
+                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                                            View Campaign
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Review Requests Section (Authors Only) -->
+                {% if review_requests %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-star me-2"></i>Pending Review Requests
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for review in review_requests[:5] %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ review.book_project.title }}</h6>
+                                        <p class="mb-0 text-muted small">Review submitted by {{ review.reviewer.reviewer_name }}</p>
+                                    </div>
+                                    <a href="{{ url_for('book_platform.view_book', book_id=review.book_project_id) }}" class="btn btn-sm btn-primary">
+                                        View Review
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Collaborations Section (Authors Only) -->
                 <div class="card">
                     <div class="card-header">
                         <h5><i class="fas fa-users"></i> My Collaborations</h5>
