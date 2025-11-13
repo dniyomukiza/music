@@ -126,6 +126,7 @@ class BookProject(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     genre = db.Column(db.String(100), nullable=True)
+    language = db.Column(db.String(50), nullable=True)  # Language of the book (e.g., 'en', 'es', 'fr', 'de', etc.)
     target_audience = db.Column(db.String(100), nullable=True)
     word_count = db.Column(db.Integer, default=0)
     status = db.Column(db.Enum(BookStatus), default=BookStatus.DRAFT)

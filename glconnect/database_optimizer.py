@@ -94,7 +94,7 @@ class DatabaseOptimizer:
     
     @staticmethod
     @query_performance_monitor
-    def get_marketplace_books(limit=50, genre=None, search_term=None):
+    def get_marketplace_books(limit=50, genre=None, language=None, search_term=None):
         """Get marketplace books with optimized queries"""
         from .book_platform_models import BookProject, BookStatus, BookPlatformUser
         
@@ -105,6 +105,9 @@ class DatabaseOptimizer:
         if genre:
             query = query.filter(BookProject.genre == genre)
         
+        if language:
+            query = query.filter(BookProject.language == language)
+        
         if search_term:
             query = query.filter(
                 BookProject.title.ilike(f'%{search_term}%') |
@@ -112,6 +115,40 @@ class DatabaseOptimizer:
             )
         
         return query.limit(limit).all()
+    
+    @staticmethod
+    @query_performance_monitor
+    def get_available_languages():
+        """Get all unique languages from published books with book counts"""
+        from .book_platform_models import BookProject, BookStatus
+        
+        languages = BookProject.query.with_entities(
+            BookProject.language,
+            func.count(BookProject.id).label('count')
+        ).filter(
+            BookProject.status == BookStatus.PUBLISHED,
+            BookProject.language.isnot(None),
+            BookProject.language != ''
+        ).group_by(BookProject.language).order_by(BookProject.language).all()
+        
+        return [{'language': lang.language, 'count': lang.count} for lang in languages]
+    
+    @staticmethod
+    @query_performance_monitor
+    def get_available_genres():
+        """Get all unique genres from published books with book counts"""
+        from .book_platform_models import BookProject, BookStatus
+        
+        genres = BookProject.query.with_entities(
+            BookProject.genre,
+            func.count(BookProject.id).label('count')
+        ).filter(
+            BookProject.status == BookStatus.PUBLISHED,
+            BookProject.genre.isnot(None),
+            BookProject.genre != ''
+        ).group_by(BookProject.genre).order_by(BookProject.genre).all()
+        
+        return [{'genre': genre.genre, 'count': genre.count} for genre in genres]
     
     @staticmethod
     @query_performance_monitor

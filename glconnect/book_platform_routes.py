@@ -391,6 +391,7 @@ def create_book(user_profile, profile_type):
             title=data['title'],
             description=data.get('description'),
             genre=data.get('genre'),
+            language=data.get('language'),
             target_audience=data.get('target_audience'),
             author_id=author_id
         )
@@ -492,6 +493,7 @@ def edit_book(book_id, user_profile, profile_type):
             book.title = data['title']
             book.description = data.get('description', '')
             book.genre = data.get('genre', '')
+            book.language = data.get('language', '')
             book.target_audience = data.get('target_audience', '')
             book.price = float(data.get('price', 0)) if data.get('price') else None
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
@@ -1330,8 +1332,17 @@ def marketplace():
         page = request.args.get('page', 1, type=int)
         per_page = 20  # Limit to 20 books per page
         
-        # Use optimized database queries with pagination
-        books = DatabaseOptimizer.get_marketplace_books(limit=per_page)
+        # Get filter parameters
+        genre = request.args.get('genre', None)
+        language = request.args.get('language', None)
+        search_term = request.args.get('search', None)
+        
+        # Use optimized database queries with pagination and filters
+        books = DatabaseOptimizer.get_marketplace_books(limit=per_page, genre=genre, language=language, search_term=search_term)
+        
+        # Get available genres and languages with book counts
+        available_genres = DatabaseOptimizer.get_available_genres()
+        available_languages = DatabaseOptimizer.get_available_languages()
         
         # Check if user has writer profile for conditional UI elements
         has_writer_profile = Writer.query.filter_by(user_id=current_user.user_id).first() is not None
@@ -1340,7 +1351,12 @@ def marketplace():
                              books=books, 
                              has_writer_profile=has_writer_profile,
                              page=page,
-                             per_page=per_page)
+                             per_page=per_page,
+                             selected_genre=genre,
+                             selected_language=language,
+                             available_genres=available_genres,
+                             available_languages=available_languages,
+                             search_term=search_term)
     except Exception as e:
         print(f"Marketplace error: {str(e)}")
         import traceback
@@ -1350,7 +1366,12 @@ def marketplace():
                              books=[], 
                              has_writer_profile=False,
                              page=1,
-                             per_page=20)
+                             per_page=20,
+                             selected_genre=None,
+                             selected_language=None,
+                             available_genres=[],
+                             available_languages=[],
+                             search_term=None)
 
 @book_bp.route('/books/<int:book_id>/publish', methods=['POST'])
 @book_platform_required

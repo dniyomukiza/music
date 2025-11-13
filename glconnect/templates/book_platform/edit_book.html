@@ -69,6 +69,79 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
+                                        <label for="language" class="form-label">Language *</label>
+                                        <select class="form-select" id="language" name="language" required>
+                                            <option value="">Select language</option>
+                                            <option value="en" {% if book.language == 'en' %}selected{% endif %}>English</option>
+                                            <option value="es" {% if book.language == 'es' %}selected{% endif %}>Spanish</option>
+                                            <option value="fr" {% if book.language == 'fr' %}selected{% endif %}>French</option>
+                                            <option value="de" {% if book.language == 'de' %}selected{% endif %}>German</option>
+                                            <option value="it" {% if book.language == 'it' %}selected{% endif %}>Italian</option>
+                                            <option value="pt" {% if book.language == 'pt' %}selected{% endif %}>Portuguese</option>
+                                            <option value="ru" {% if book.language == 'ru' %}selected{% endif %}>Russian</option>
+                                            <option value="zh" {% if book.language == 'zh' %}selected{% endif %}>Chinese</option>
+                                            <option value="ja" {% if book.language == 'ja' %}selected{% endif %}>Japanese</option>
+                                            <option value="ko" {% if book.language == 'ko' %}selected{% endif %}>Korean</option>
+                                            <option value="ar" {% if book.language == 'ar' %}selected{% endif %}>Arabic</option>
+                                            <option value="hi" {% if book.language == 'hi' %}selected{% endif %}>Hindi</option>
+                                            <option value="nl" {% if book.language == 'nl' %}selected{% endif %}>Dutch</option>
+                                            <option value="sv" {% if book.language == 'sv' %}selected{% endif %}>Swedish</option>
+                                            <option value="pl" {% if book.language == 'pl' %}selected{% endif %}>Polish</option>
+                                            <option value="tr" {% if book.language == 'tr' %}selected{% endif %}>Turkish</option>
+                                            <option value="vi" {% if book.language == 'vi' %}selected{% endif %}>Vietnamese</option>
+                                            <option value="th" {% if book.language == 'th' %}selected{% endif %}>Thai</option>
+                                            <option value="id" {% if book.language == 'id' %}selected{% endif %}>Indonesian</option>
+                                            <option value="cs" {% if book.language == 'cs' %}selected{% endif %}>Czech</option>
+                                            <option value="ro" {% if book.language == 'ro' %}selected{% endif %}>Romanian</option>
+                                            <option value="hu" {% if book.language == 'hu' %}selected{% endif %}>Hungarian</option>
+                                            <option value="fi" {% if book.language == 'fi' %}selected{% endif %}>Finnish</option>
+                                            <option value="da" {% if book.language == 'da' %}selected{% endif %}>Danish</option>
+                                            <option value="no" {% if book.language == 'no' %}selected{% endif %}>Norwegian</option>
+                                            <option value="he" {% if book.language == 'he' %}selected{% endif %}>Hebrew</option>
+                                            <option value="uk" {% if book.language == 'uk' %}selected{% endif %}>Ukrainian</option>
+                                            <option value="el" {% if book.language == 'el' %}selected{% endif %}>Greek</option>
+                                            <option value="bg" {% if book.language == 'bg' %}selected{% endif %}>Bulgarian</option>
+                                            <option value="hr" {% if book.language == 'hr' %}selected{% endif %}>Croatian</option>
+                                            <option value="sk" {% if book.language == 'sk' %}selected{% endif %}>Slovak</option>
+                                            <option value="sl" {% if book.language == 'sl' %}selected{% endif %}>Slovenian</option>
+                                            <option value="sr" {% if book.language == 'sr' %}selected{% endif %}>Serbian</option>
+                                            <option value="et" {% if book.language == 'et' %}selected{% endif %}>Estonian</option>
+                                            <option value="lv" {% if book.language == 'lv' %}selected{% endif %}>Latvian</option>
+                                            <option value="lt" {% if book.language == 'lt' %}selected{% endif %}>Lithuanian</option>
+                                            <option value="mt" {% if book.language == 'mt' %}selected{% endif %}>Maltese</option>
+                                            <option value="ga" {% if book.language == 'ga' %}selected{% endif %}>Irish</option>
+                                            <option value="cy" {% if book.language == 'cy' %}selected{% endif %}>Welsh</option>
+                                            <option value="is" {% if book.language == 'is' %}selected{% endif %}>Icelandic</option>
+                                            <option value="mk" {% if book.language == 'mk' %}selected{% endif %}>Macedonian</option>
+                                            <option value="sq" {% if book.language == 'sq' %}selected{% endif %}>Albanian</option>
+                                            <option value="bs" {% if book.language == 'bs' %}selected{% endif %}>Bosnian</option>
+                                            <option value="sw" {% if book.language == 'sw' %}selected{% endif %}>Swahili</option>
+                                            <option value="af" {% if book.language == 'af' %}selected{% endif %}>Afrikaans</option>
+                                            <option value="zu" {% if book.language == 'zu' %}selected{% endif %}>Zulu</option>
+                                            <option value="xh" {% if book.language == 'xh' %}selected{% endif %}>Xhosa</option>
+                                            <option value="am" {% if book.language == 'am' %}selected{% endif %}>Amharic</option>
+                                            <option value="bn" {% if book.language == 'bn' %}selected{% endif %}>Bengali</option>
+                                            <option value="ta" {% if book.language == 'ta' %}selected{% endif %}>Tamil</option>
+                                            <option value="te" {% if book.language == 'te' %}selected{% endif %}>Telugu</option>
+                                            <option value="ml" {% if book.language == 'ml' %}selected{% endif %}>Malayalam</option>
+                                            <option value="kn" {% if book.language == 'kn' %}selected{% endif %}>Kannada</option>
+                                            <option value="gu" {% if book.language == 'gu' %}selected{% endif %}>Gujarati</option>
+                                            <option value="pa" {% if book.language == 'pa' %}selected{% endif %}>Punjabi</option>
+                                            <option value="ur" {% if book.language == 'ur' %}selected{% endif %}>Urdu</option>
+                                            <option value="fa" {% if book.language == 'fa' %}selected{% endif %}>Persian</option>
+                                            <option value="ms" {% if book.language == 'ms' %}selected{% endif %}>Malay</option>
+                                            <option value="tl" {% if book.language == 'tl' %}selected{% endif %}>Tagalog</option>
+                                            <option value="haw" {% if book.language == 'haw' %}selected{% endif %}>Hawaiian</option>
+                                            <option value="other" {% if book.language == 'other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                        <small class="form-text text-muted">Select the primary language of your book</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
                                         <label for="target_audience" class="form-label">Target Audience</label>
                                         <select class="form-select" id="target_audience" name="target_audience">
                                             <option value="">Select target audience</option>

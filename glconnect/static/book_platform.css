@@ -1578,3 +1578,69 @@ a:hover {
     color: #000000 !important;
 }
 
+/* Category Buttons Styles */
+
+.category-btn {
+    border-radius: 25px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    background-color: white;
+}
+
+.category-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(44, 62, 80, 0.2);
+    text-decoration: none;
+}
+
+.category-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(44, 62, 80, 0.3);
+}
+
+.category-btn.active:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.category-btn .badge {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.category-btn.active .badge {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    color: white;
+}
+
+/* Category Section Background */
+.category-container {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+/* Responsive Category Buttons */
+@media (max-width: 768px) {
+    .category-container {
+        padding: 1rem;
+    }
+    
+    .category-btn {
+        font-size: 0.875rem;
+        padding: 0.4rem 1rem;
+    }
+}
+

@@ -440,6 +440,130 @@
                         {% endif %}
                     </div>
                 </div>
+                {% else %}
+                <!-- Regular User Content -->
+                
+                <!-- Reviewer Status Section -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-star me-2"></i>Reviewer Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if user_reviewer_profile %}
+                            {% if user_reviewer_profile.accreditation_status.value == 'accredited' %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>You are an Accredited Reviewer!</strong>
+                                <p class="mb-0 mt-2">You can now submit reviews and earn from book sales.</p>
+                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-sm btn-success mt-2">
+                                    Browse Review Opportunities
+                                </a>
+                            </div>
+                            {% elif user_reviewer_profile.accreditation_status.value == 'pending' %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Reviewer Application Pending</strong>
+                                <p class="mb-0 mt-2">Your application is being reviewed. We'll notify you once it's approved.</p>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Reviewer Status: {{ user_reviewer_profile.accreditation_status.value|title }}</strong>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted mb-3">Become an Accredited Reviewer</h5>
+                                <p class="text-muted mb-4">Earn money by reviewing books and helping authors improve their work.</p>
+                                <a href="{{ url_for('book_platform.register_reviewer') }}" class="btn btn-primary">
+                                    <i class="fas fa-user-plus me-2"></i>Register as Reviewer
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- My Investments Section -->
+                {% if user_investments %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>My Investments
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            {% for investment in user_investments %}
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ investment.book_project.title }}</h6>
+                                        <p class="text-muted small mb-2">Investment: ${{ "%.2f"|format(investment.amount) }}</p>
+                                        <p class="text-muted small mb-2">Returns: ${{ "%.2f"|format(investment.total_returns) }}</p>
+                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id) }}" class="btn btn-sm btn-outline-primary">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-primary">
+                                View All Investments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Invest in Books
+                        </h5>
+                    </div>
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted mb-3">Start Investing in Books</h5>
+                        <p class="text-muted mb-4">Support authors and earn returns when their books sell.</p>
+                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Browse Investment Opportunities
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Quick Actions for Regular Users -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-store me-2"></i>Browse Books
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-outline-success w-100">
+                                    <i class="fas fa-dollar-sign me-2"></i>View Earnings
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-warning w-100">
+                                    <i class="fas fa-star me-2"></i>Find Reviewers
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
