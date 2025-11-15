@@ -138,6 +138,34 @@ def get_profile_id(user_profile, profile_type):
         traceback.print_exc()
         return None
 
+def count_words_from_html(html_content):
+    """Count words from HTML content by stripping HTML tags first"""
+    if not html_content:
+        return 0
+    import re
+    # Strip HTML tags
+    text = re.sub(r'<[^>]+>', '', html_content)
+    # Strip HTML entities
+    text = re.sub(r'&[a-zA-Z]+;', ' ', text)
+    # Split on whitespace and count non-empty words
+    words = [w for w in text.split() if w.strip()]
+    return len(words)
+
+def update_book_word_count(book):
+    """Recalculate and update the book's total word count from all chapters"""
+    # Ensure all chapters have their word count calculated
+    total_words = 0
+    for chapter in book.chapters:
+        # If chapter word count is missing or 0 but has content, calculate it
+        if (not chapter.word_count or chapter.word_count == 0) and chapter.content:
+            chapter.word_count = count_words_from_html(chapter.content)
+        # Recalculate if content exists (to ensure accuracy)
+        elif chapter.content:
+            chapter.word_count = count_words_from_html(chapter.content)
+        total_words += chapter.word_count or 0
+    book.word_count = int(total_words)
+    return book.word_count
+
 def check_investment_readiness(book):
     """Check if a book is ready for investment and return readiness status"""
     issues = []
@@ -156,13 +184,12 @@ def check_investment_readiness(book):
     if chapter_count == 0:
         issues.append("Book must have at least one chapter")
     
+    # Ensure word count is up to date before checking
+    update_book_word_count(book)
+    
     # Check if book has some content (word count)
     if book.word_count < 1000:
         issues.append("Book should have at least 1,000 words of content")
-    
-    # Check if book is published (required for investment)
-    if book.status != BookStatus.PUBLISHED:
-        issues.append("Book must be published before creating an investment campaign")
     
     return {
         'is_ready': len(issues) == 0,
@@ -490,6 +517,10 @@ def view_book(book_id, user_profile, profile_type):
         joinedload(BookCollaboration.collaborator).joinedload(BookPlatformUser.user)
     ).filter_by(book_project_id=book_id, is_active=True).all()
     
+    # Ensure book word count is up to date
+    update_book_word_count(book)
+    db.session.commit()
+    
     # Check investment readiness
     investment_readiness = check_investment_readiness(book)
     
@@ -594,17 +625,27 @@ def create_chapter(book_id):
             # Use provided chapter number or calculate next
             chapter_number = int(data.get('chapter_number', next_number))
             
+            # Calculate word count from content (strip HTML tags)
+            content = data.get('content', '')
+            word_count = count_words_from_html(content) if content else 0
+            
             chapter = BookChapter(
                 title=data['title'],
-                content=data.get('content', ''),
+                content=content,
                 summary=data.get('summary', ''),
                 chapter_number=chapter_number,
+                word_count=word_count,
                 word_count_target=int(data.get('word_count_target', 0)) if data.get('word_count_target') else None,
                 book_project_id=book_id,
                 is_published=data.get('is_published') == 'on' or data.get('is_published') == True
             )
             
             db.session.add(chapter)
+            db.session.flush()  # Flush to get chapter ID
+            
+            # Update book's total word count
+            update_book_word_count(book)
+            
             db.session.commit()
             
             return jsonify({
@@ -693,7 +734,9 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 chapter.word_count_target = None
             
             chapter.is_published = data.get('is_published') == 'on' or data.get('is_published') == True
-            chapter.word_count = len(data.get('content', '').split()) if data.get('content') else chapter.word_count
+            # Recalculate word count from content (strip HTML tags)
+            if data.get('content'):
+                chapter.word_count = count_words_from_html(data.get('content', ''))
             chapter.updated_at = datetime.now(timezone.utc)
             
             # Create version snapshot for change tracking
@@ -724,6 +767,9 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             except Exception as e:
                 print(f"Version tracking error: {e}")
                 # Don't fail the edit if version tracking fails
+            
+            # Update book's total word count
+            update_book_word_count(book)
             
             db.session.commit()
             
@@ -1063,6 +1109,11 @@ def delete_chapter(book_id, chapter_id, user_profile, profile_type):
     try:
         # Delete the chapter
         db.session.delete(chapter)
+        db.session.flush()  # Flush to ensure deletion is processed
+        
+        # Update book's total word count
+        update_book_word_count(book)
+        
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Chapter deleted successfully'})
@@ -1167,7 +1218,12 @@ def approve_suggestion(suggestion_id, user_profile, profile_type):
     chapter.title = suggestion.suggested_title
     chapter.summary = suggestion.suggested_summary or chapter.summary
     chapter.updated_at = datetime.now(timezone.utc)
-    chapter.word_count = len(suggestion.suggested_content.split()) if suggestion.suggested_content else chapter.word_count
+    # Recalculate word count from content (strip HTML tags)
+    if suggestion.suggested_content:
+        chapter.word_count = count_words_from_html(suggestion.suggested_content)
+    
+    # Update book's total word count
+    update_book_word_count(book)
     
     # Update suggestion status
     suggestion.status = 'approved'
@@ -1784,8 +1840,14 @@ def chapter_content_api(book_id, chapter_id):
         # Update chapter content
         chapter.content = data.get('content', chapter.content)
         chapter.title = data.get('title', chapter.title)
-        chapter.word_count = len(data.get('content', '').split()) if data.get('content') else chapter.word_count
+        # Recalculate word count from content (strip HTML tags)
+        if data.get('content'):
+            chapter.word_count = count_words_from_html(data.get('content', ''))
         chapter.updated_at = datetime.now(timezone.utc)
+        
+        # Update book's total word count
+        book = chapter.book_project
+        update_book_word_count(book)
         
         db.session.commit()
         

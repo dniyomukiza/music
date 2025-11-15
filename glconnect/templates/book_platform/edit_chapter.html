@@ -276,11 +276,6 @@
                 const content = document.getElementById('content').value;
                 const decodedContent = decodeHtmlEntities(content);
                 editor.setData(decodedContent);
-                
-                // Debug: Check if indent/outdent commands are available
-                console.log('Available commands:', Array.from(editor.commands._commands.keys()));
-                console.log('Indent command available:', editor.commands.has('indent'));
-                console.log('Outdent command available:', editor.commands.has('outdent'));
             })
             .catch(error => {
                 console.error('Error initializing CKEditor:', error);
