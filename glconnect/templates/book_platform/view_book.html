@@ -49,6 +49,11 @@
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-tag me-2"></i>{{ book.genre or 'No genre' }}
                         </span>
+                        {% if book.language %}
+                        <span class="badge bg-white text-dark fs-6">
+                            <i class="fas fa-language me-2"></i>{{ book.language|upper }}
+                        </span>
+                        {% endif %}
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-list me-2"></i>{{ chapters|length }} Chapters
                         </span>
@@ -125,6 +130,53 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Investment Readiness Status -->
+                {% if is_author and investment_readiness %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Investment Readiness
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if investment_readiness.is_ready %}
+                            <div class="alert alert-success mb-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Ready for Investment!</strong>
+                                <p class="mb-0 small mt-2">Your book meets all requirements to create an investment campaign.</p>
+                            </div>
+                            {% if not book.has_investment_campaign %}
+                            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-success w-100">
+                                <i class="fas fa-plus-circle me-2"></i>Create Investment Campaign
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('book_platform.investment_campaign', campaign_id=book.investment_campaign.id) }}" class="btn btn-primary w-100">
+                                <i class="fas fa-eye me-2"></i>View Campaign
+                            </a>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Not Ready Yet</strong>
+                                <p class="mb-2 small mt-2">Complete these requirements to make your book investment-ready:</p>
+                                <ul class="small mb-0 ps-3">
+                                    {% for issue in investment_readiness.issues %}
+                                    <li>{{ issue }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                {% set total_requirements = 6 %}
+                                {% set completed = total_requirements - investment_readiness.issues|length %}
+                                {% set progress_pct = (completed / total_requirements * 100)|round %}
+                                <div class="progress-bar" role="progressbar" style="width: {{ progress_pct }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ completed }}/{{ total_requirements }} requirements met</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Quick Actions -->
                 <div class="card shadow-sm border-0 mb-4">

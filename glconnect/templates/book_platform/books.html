@@ -76,9 +76,11 @@
                 </div>
 
                 <!-- Books Grid -->
-                {% if books %}
+                {% if books_with_readiness %}
                     <div class="row">
-                        {% for book in books %}
+                        {% for item in books_with_readiness %}
+                            {% set book = item.book %}
+                            {% set investment_readiness = item.investment_readiness %}
                             <div class="col-md-6 col-lg-4 mb-4">
                                 <div class="card book-card h-100">
                                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -103,6 +105,23 @@
                                             {% endif %}
                                         </div>
 
+                                        <!-- Investment Campaign Status -->
+                                        {% if investment_readiness.is_ready and not book.has_investment_campaign %}
+                                        <div class="alert alert-success py-2 px-3 mb-3">
+                                            <small>
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                <strong>Ready for Investment</strong>
+                                            </small>
+                                        </div>
+                                        {% elif book.has_investment_campaign %}
+                                        <div class="alert alert-info py-2 px-3 mb-3">
+                                            <small>
+                                                <i class="fas fa-chart-line me-1"></i>
+                                                <strong>Campaign Active</strong>
+                                            </small>
+                                        </div>
+                                        {% endif %}
+
                                         <div class="book-stats">
                                             <small class="text-muted">
                                                 <i class="fas fa-calendar"></i> Created: {{ book.created_at.strftime('%Y-%m-%d') }}
@@ -113,6 +132,17 @@
                                         </div>
                                     </div>
                                     <div class="card-footer">
+                                        <!-- Create Campaign Button (if ready and no campaign exists) -->
+                                        {% if investment_readiness.is_ready and not book.has_investment_campaign %}
+                                        <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-success btn-sm w-100 mb-2">
+                                            <i class="fas fa-plus-circle me-1"></i>Start Campaign
+                                        </a>
+                                        {% elif book.has_investment_campaign %}
+                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=book.investment_campaign.id) }}" class="btn btn-info btn-sm w-100 mb-2">
+                                            <i class="fas fa-chart-line me-1"></i>View Campaign
+                                        </a>
+                                        {% endif %}
+                                        
                                         <div class="btn-group w-100" role="group">
                                             <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-outline-primary btn-sm">
                                                 <i class="fas fa-eye"></i> View
@@ -152,7 +182,7 @@
                 {% endif %}
 
                 <!-- Quick Stats -->
-                {% if books %}
+                {% if books_with_readiness %}
                 <div class="row mt-5">
                     <div class="col-12">
                         <div class="card">
@@ -163,25 +193,25 @@
                                 <div class="row text-center">
                                     <div class="col-md-3">
                                         <div class="stat-item">
-                                            <h3 class="text-primary">{{ books|length }}</h3>
+                                            <h3 class="text-primary">{{ books_with_readiness|length }}</h3>
                                             <p class="text-muted">Total Books</p>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="stat-item">
-                                            <h3 class="text-success">{{ books|selectattr('status.value', 'equalto', 'published')|list|length }}</h3>
+                                            <h3 class="text-success">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'published')|list|length }}</h3>
                                             <p class="text-muted">Published</p>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="stat-item">
-                                            <h3 class="text-warning">{{ books|selectattr('status.value', 'equalto', 'draft')|list|length }}</h3>
+                                            <h3 class="text-warning">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'draft')|list|length }}</h3>
                                             <p class="text-muted">Drafts</p>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="stat-item">
-                                            <h3 class="text-info">{{ books|sum(attribute='word_count') }}</h3>
+                                            <h3 class="text-info">{{ books_with_readiness|sum(attribute='book.word_count') }}</h3>
                                             <p class="text-muted">Total Words</p>
                                         </div>
                                     </div>

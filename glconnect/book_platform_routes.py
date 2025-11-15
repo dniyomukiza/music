@@ -138,6 +138,39 @@ def get_profile_id(user_profile, profile_type):
         traceback.print_exc()
         return None
 
+def check_investment_readiness(book):
+    """Check if a book is ready for investment and return readiness status"""
+    issues = []
+    
+    if not book.title or len(book.title.strip()) < 3:
+        issues.append("Book must have a title (at least 3 characters)")
+    if not book.description or len(book.description.strip()) < 50:
+        issues.append("Book must have a description (at least 50 characters)")
+    if not book.genre:
+        issues.append("Book must have a genre selected")
+    if not book.language:
+        issues.append("Book must have a language selected")
+    
+    # Check if book has at least one chapter
+    chapter_count = len(book.chapters) if book.chapters else 0
+    if chapter_count == 0:
+        issues.append("Book must have at least one chapter")
+    
+    # Check if book has some content (word count)
+    if book.word_count < 1000:
+        issues.append("Book should have at least 1,000 words of content")
+    
+    # Check if book is published (required for investment)
+    if book.status != BookStatus.PUBLISHED:
+        issues.append("Book must be published before creating an investment campaign")
+    
+    return {
+        'is_ready': len(issues) == 0,
+        'issues': issues,
+        'chapter_count': chapter_count,
+        'word_count': book.word_count or 0
+    }
+
 def writer_or_book_platform_required(f):
     """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for Ink Studio access"""
     @wraps(f)
@@ -272,8 +305,9 @@ def dashboard(user_profile, profile_type):
             is_read=False
         ).order_by(BookNotification.created_at.desc()).limit(5).all()
     
-    # Determine if user is an author (has authored books)
-    is_author = len(authored_books) > 0
+    # Determine if user is an author (has writer/book platform profile, not just authored books)
+    # Users with writer or book platform profiles are considered authors even if they haven't created books yet
+    is_author = profile_type == 'writer' or (profile_type == 'book_platform' and book_user is not None)
     
     # Get additional data for authors
     investment_campaigns = []
@@ -375,7 +409,16 @@ def books(user_profile, profile_type):
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
     ).filter_by(author_id=author_id).all()
     
-    return render_template('book_platform/books.html', books=books)
+    # Calculate investment readiness for each book
+    books_with_readiness = []
+    for book in books:
+        readiness = check_investment_readiness(book)
+        books_with_readiness.append({
+            'book': book,
+            'investment_readiness': readiness
+        })
+    
+    return render_template('book_platform/books.html', books_with_readiness=books_with_readiness)
 
 @book_bp.route('/books/create', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -447,12 +490,16 @@ def view_book(book_id, user_profile, profile_type):
         joinedload(BookCollaboration.collaborator).joinedload(BookPlatformUser.user)
     ).filter_by(book_project_id=book_id, is_active=True).all()
     
+    # Check investment readiness
+    investment_readiness = check_investment_readiness(book)
+    
     return render_template('book_platform/view_book.html', 
                          book=book, 
                          chapters=chapters,
                          collaborations=collaborations,
                          is_author=is_author,
-                         is_collaborator=is_collaborator)
+                         is_collaborator=is_collaborator,
+                         investment_readiness=investment_readiness)
 
 @book_bp.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -754,69 +801,95 @@ def cleanup_orphaned_sessions():
 @writer_or_book_platform_required
 def delete_book(book_id, user_profile, profile_type):
     """Delete a book and all its chapters"""
-    # Clean up any orphaned sessions first
-    cleanup_orphaned_sessions()
-    
-    book = BookProject.query.get_or_404(book_id)
-
-    # Get the correct author ID based on profile type
-    author_id = get_profile_id(user_profile, profile_type)
-    
-    # Debug logging and error handling
-    if author_id is None:
-        print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
-        return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
-
-    # Check if user is the author of the book
-    if book.author_id != author_id:
-        print(f"Permission denied: book.author_id={book.author_id}, user author_id={author_id}, user_id={current_user.user_id}")
-        return jsonify({'error': 'You can only delete your own books'}), 403
-
     try:
+        # Clean up any orphaned sessions first (don't let errors here break the flow)
+        try:
+            cleanup_orphaned_sessions()
+        except Exception as cleanup_error:
+            logger.warning(f"Error in cleanup_orphaned_sessions during book deletion: {str(cleanup_error)}")
+        
+        # Use get() instead of get_or_404() to return JSON error instead of HTML
+        book = BookProject.query.get(book_id)
+        if not book:
+            return jsonify({'error': 'Book not found'}), 404
+
+        # Get the correct author ID based on profile type
+        author_id = get_profile_id(user_profile, profile_type)
+        
+        # Debug logging and error handling
+        if author_id is None:
+            print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
+            return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
+
+        # Check if user is the author of the book
+        if book.author_id != author_id:
+            print(f"Permission denied: book.author_id={book.author_id}, user author_id={author_id}, user_id={current_user.user_id}")
+            return jsonify({'error': 'You can only delete your own books'}), 403
+
         # Clean up related data in proper order to avoid foreign key constraints
         
-        # 1. Clean up sales first (they reference book_project_id and purchase_id)
+        # 1. Clean up investment payouts first (they reference investments which reference campaigns)
+        campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
+        if campaign:
+            # Get all investments for this campaign
+            investments = BookInvestment.query.filter_by(campaign_id=campaign.id).all()
+            investment_ids = [inv.id for inv in investments]
+            if investment_ids:
+                InvestmentPayout.query.filter(InvestmentPayout.investment_id.in_(investment_ids)).delete(synchronize_session=False)
+            
+            # 2. Clean up investments (they reference campaign_id and book_project_id)
+            BookInvestment.query.filter_by(campaign_id=campaign.id).delete()
+            
+            # 3. Clean up investment campaign (references book_project_id)
+            db.session.delete(campaign)
+        
+        # 4. Clean up sales (they reference book_project_id and purchase_id)
         # Note: BookSale has book_project_id as NOT NULL, so we must delete, not update
         BookSale.query.filter_by(book_project_id=book_id).delete()
         
-        # 2. Clean up purchases (they reference book_project_id)
+        # 5. Clean up purchases (they reference book_project_id)
         # Note: BookPurchase has book_project_id as NOT NULL, so we must delete, not update
         BookPurchase.query.filter_by(book_project_id=book_id).delete()
         
-        # 3. Clean up audio generation tasks (they reference book_project_id)
+        # 6. Clean up audio generation tasks (they reference book_project_id)
         AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
         
-        # 4. Clean up realtime sessions (they reference book_project_id)
+        # 7. Clean up realtime sessions (they reference book_project_id)
         RealtimeSession.query.filter_by(book_project_id=book_id).delete()
         
-        # 5. Clean up comments (they reference book_project_id)
+        # 8. Clean up comments (they reference book_project_id)
         BookComment.query.filter_by(book_project_id=book_id).delete()
         
-        # 6. Clean up invitations via collaborations (CollaborationInvitation has collaboration_id, not book_project_id)
+        # 9. Clean up invitations via collaborations (CollaborationInvitation has collaboration_id, not book_project_id)
         collab_ids_subq = db.session.query(BookCollaboration.id).filter_by(book_project_id=book_id).subquery()
         CollaborationInvitation.query.filter(CollaborationInvitation.collaboration_id.in_(collab_ids_subq)).delete(synchronize_session=False)
 
-        # 7. Clean up collaborations (they reference book_project_id)
+        # 10. Clean up collaborations (they reference book_project_id)
         BookCollaboration.query.filter_by(book_project_id=book_id).delete()
         
-        # 8. Clean up analytics (they reference book_project_id)
+        # 11. Clean up analytics (they reference book_project_id)
         BookAnalytics.query.filter_by(book_project_id=book_id).delete()
         
-        # 9. Clean up notifications (they reference book_project_id)
+        # 12. Clean up notifications (they reference book_project_id)
         BookNotification.query.filter_by(book_project_id=book_id).delete()
         
-        # 10. Delete all chapters (cascade should handle this, but being explicit)
+        # 13. Clean up reviews (they reference book_project_id)
+        BookReview.query.filter_by(book_project_id=book_id).delete()
+        
+        # 14. Delete all chapters (cascade should handle this, but being explicit)
         BookChapter.query.filter_by(book_project_id=book_id).delete()
         
-        # 11. Finally delete the book
+        # 15. Finally delete the book
         db.session.delete(book)
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Book deleted successfully'})
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error deleting book {book_id}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Error deleting book {book_id}: {str(e)}\n{error_trace}")
+        return jsonify({'error': f'Failed to delete book: {str(e)}'}), 500
 
 @book_bp.route('/books/<int:book_id>/generate-audiobook', methods=['POST'])
 @book_platform_required
@@ -2364,6 +2437,15 @@ def create_investment_campaign(book_id, user_profile, profile_type):
         flash('An investment campaign already exists for this book.', 'info')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=existing_campaign.id))
     
+    # Check if book is ready for investment
+    investment_readiness = check_investment_readiness(book)
+    
+    if not investment_readiness['is_ready']:
+        flash('Your book is not ready for investment yet. Please complete the following requirements:', 'warning')
+        for issue in investment_readiness['issues']:
+            flash(f'• {issue}', 'info')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
     form = InvestmentCampaignForm()
     
     if form.validate_on_submit():
@@ -2405,23 +2487,41 @@ def create_investment_campaign(book_id, user_profile, profile_type):
 
 # Investment Marketplace
 @book_bp.route('/investments', methods=['GET'])
+@login_required
 def investments():
-    """Browse investment campaigns"""
+    """Browse investment campaigns - only shows campaigns for published books"""
     status_filter = request.args.get('status', 'active')
     search_query = request.args.get('q', '')
     
-    query = InvestmentCampaign.query
+    # Join with BookProject to filter by book status and enable search
+    query = InvestmentCampaign.query.join(BookProject).filter(
+        BookProject.status == BookStatus.PUBLISHED  # Only show campaigns for published books
+    )
     
+    # Filter by campaign status
     if status_filter == 'active':
-        query = query.filter_by(status=CampaignStatus.ACTIVE)
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.ACTIVE)
     elif status_filter == 'funded':
-        query = query.filter_by(status=CampaignStatus.FUNDED)
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.FUNDED)
+    elif status_filter == 'draft':
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.DRAFT)
+    elif status_filter == 'all':
+        # Show all campaigns except cancelled/failed
+        query = query.filter(
+            InvestmentCampaign.status.in_([
+                CampaignStatus.DRAFT,
+                CampaignStatus.ACTIVE,
+                CampaignStatus.FUNDED
+            ])
+        )
+    # Default to active if no valid filter
     
     if search_query:
-        query = query.join(BookProject).filter(
+        query = query.filter(
             db.or_(
                 InvestmentCampaign.title.ilike(f'%{search_query}%'),
-                BookProject.title.ilike(f'%{search_query}%')
+                BookProject.title.ilike(f'%{search_query}%'),
+                BookProject.description.ilike(f'%{search_query}%')
             )
         )
     

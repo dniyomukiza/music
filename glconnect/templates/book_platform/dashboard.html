@@ -86,7 +86,7 @@
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     {% if is_author %}
-                    <h1 class="display-4 fw-bold mb-3">Welcome, Author!</h1>
+                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ user_profile.pen_name or current_user.first_name or current_user.username }}!</h1>
                     <p class="lead mb-4">Your professional writing platform for creating, collaborating, and publishing digital books</p>
                     <div class="d-flex gap-3">
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
@@ -97,7 +97,7 @@
                         </a>
                     </div>
                     {% else %}
-                    <h1 class="display-4 fw-bold mb-3">Welcome to Ink Studio!</h1>
+                    <h1 class="display-4 fw-bold mb-3">Ink Studio</h1>
                     <p class="lead mb-4">Discover amazing books, become a reviewer, or invest in promising authors</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">

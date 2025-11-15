@@ -41,8 +41,10 @@
                     </div>
                     <div class="col-md-2">
                         <select name="status" class="form-select">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Campaigns</option>
                             <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                             <option value="funded" {% if status_filter == 'funded' %}selected{% endif %}>Funded</option>
+                            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -112,7 +114,20 @@
         <div class="alert alert-info text-center">
             <i class="fas fa-info-circle fa-2x mb-3"></i>
             <h4>No investment campaigns found</h4>
-            <p>Try adjusting your search criteria or check back later.</p>
+            <p class="mb-3">Try adjusting your search criteria or check back later.</p>
+            {% if status_filter == 'active' %}
+            <p class="mb-3">
+                <strong>To create a campaign:</strong><br>
+                1. Go to your book's page<br>
+                2. Click "Create Investment Campaign"<br>
+                3. Fill out the campaign details and submit
+            </p>
+            <p class="mb-0">
+                <a href="?status=all" class="btn btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Campaigns (including drafts)
+                </a>
+            </p>
+            {% endif %}
         </div>
         {% endif %}
     </div>

@@ -97,13 +97,23 @@ def create_app():
             # Always rollback on exception to clear any failed transactions
             if exception:
                 db.session.rollback()
+            # Also rollback if there's an active transaction that might be in a bad state
+            elif db.session.is_active and db.session.in_transaction():
+                try:
+                    db.session.rollback()
+                except Exception:
+                    # If rollback fails, that's okay - we'll remove the session anyway
+                    pass
         except Exception as e:
-            # If rollback fails, log it but continue
-            print(f"Warning: Error during session rollback: {e}")
+            # If anything fails, log it but continue
+            print(f"Warning: Error during session teardown: {e}")
         finally:
             # Always remove the session to clear connection state
             # This is critical to prevent "transaction aborted" errors from persisting
-            db.session.remove()
+            try:
+                db.session.remove()
+            except Exception as e:
+                print(f"Warning: Error removing session: {e}")
     jwt.init_app(app)
     login_manager.init_app(app)
     ckeditor.init_app(app)
