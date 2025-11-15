@@ -16,6 +16,7 @@ import os
 import uuid
 import json
 import logging
+import re
 from functools import wraps
 from sqlalchemy.orm import joinedload
 
@@ -142,29 +143,45 @@ def count_words_from_html(html_content):
     """Count words from HTML content by stripping HTML tags first"""
     if not html_content:
         return 0
-    import re
-    # Strip HTML tags
-    text = re.sub(r'<[^>]+>', '', html_content)
-    # Strip HTML entities
-    text = re.sub(r'&[a-zA-Z]+;', ' ', text)
-    # Split on whitespace and count non-empty words
-    words = [w for w in text.split() if w.strip()]
-    return len(words)
+    try:
+        # Strip HTML tags
+        text = re.sub(r'<[^>]+>', '', html_content)
+        # Strip HTML entities
+        text = re.sub(r'&[a-zA-Z]+;', ' ', text)
+        # Decode common HTML entities
+        text = text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+        # Split on whitespace and count non-empty words
+        words = [w for w in text.split() if w.strip()]
+        return len(words)
+    except Exception as e:
+        # Fallback to simple split if regex fails
+        logging.error(f"Error counting words from HTML: {e}")
+        return len(html_content.split())
 
 def update_book_word_count(book):
     """Recalculate and update the book's total word count from all chapters"""
-    # Ensure all chapters have their word count calculated
-    total_words = 0
-    for chapter in book.chapters:
-        # If chapter word count is missing or 0 but has content, calculate it
-        if (not chapter.word_count or chapter.word_count == 0) and chapter.content:
-            chapter.word_count = count_words_from_html(chapter.content)
-        # Recalculate if content exists (to ensure accuracy)
-        elif chapter.content:
-            chapter.word_count = count_words_from_html(chapter.content)
-        total_words += chapter.word_count or 0
-    book.word_count = int(total_words)
-    return book.word_count
+    try:
+        # Ensure all chapters have their word count calculated
+        total_words = 0
+        for chapter in book.chapters:
+            try:
+                # If chapter word count is missing or 0 but has content, calculate it
+                if (not chapter.word_count or chapter.word_count == 0) and chapter.content:
+                    chapter.word_count = count_words_from_html(chapter.content)
+                # Recalculate if content exists (to ensure accuracy)
+                elif chapter.content:
+                    chapter.word_count = count_words_from_html(chapter.content)
+                total_words += chapter.word_count or 0
+            except Exception as e:
+                logging.error(f"Error calculating word count for chapter {chapter.id}: {e}")
+                # Use existing word count if calculation fails
+                total_words += chapter.word_count or 0
+        book.word_count = int(total_words)
+        return book.word_count
+    except Exception as e:
+        logging.error(f"Error updating book word count for book {book.id}: {e}")
+        # Return existing word count if update fails
+        return book.word_count or 0
 
 def check_investment_readiness(book):
     """Check if a book is ready for investment and return readiness status"""
@@ -735,8 +752,16 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             
             chapter.is_published = data.get('is_published') == 'on' or data.get('is_published') == True
             # Recalculate word count from content (strip HTML tags)
-            if data.get('content'):
-                chapter.word_count = count_words_from_html(data.get('content', ''))
+            content = data.get('content', '')
+            if content:
+                try:
+                    chapter.word_count = count_words_from_html(content)
+                except Exception as e:
+                    logging.error(f"Error calculating word count: {e}")
+                    # Fallback: use simple split if HTML parsing fails
+                    chapter.word_count = len(content.split()) if content else 0
+            else:
+                chapter.word_count = 0
             chapter.updated_at = datetime.now(timezone.utc)
             
             # Create version snapshot for change tracking
@@ -781,13 +806,18 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 
         except Exception as e:
             db.session.rollback()
-            print(f"Chapter update error: {e}")
+            error_msg = str(e)
+            logging.error(f"Chapter update error: {error_msg}", exc_info=True)
+            print(f"Chapter update error: {error_msg}")
             print(f"Error type: {type(e)}")
-            print(f"Data received: {data}")
+            try:
+                print(f"Data received: {data}")
+            except:
+                print("Data not available in error handler")
             if request.is_json:
-                return jsonify({'success': False, 'error': str(e)}), 500
+                return jsonify({'success': False, 'error': f'An unexpected error occurred: {error_msg}'}), 500
             else:
-                flash(f'Error updating chapter: {str(e)}', 'error')
+                flash(f'An unexpected error occurred while editing chapter: {error_msg}', 'error')
     
     # GET request - show edit form
     return render_template('book_platform/edit_chapter.html', 
