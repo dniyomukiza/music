@@ -365,12 +365,16 @@
                         showNotification(result.error || 'Failed to update chapter', 'error');
                     }
                 } else {
-                    // Non-JSON response, likely HTML (error page)
-                    showNotification('An unexpected error occurred', 'error');
+                    // Non-JSON response, likely HTML (error page) or redirect
+                    // Try to get error message from response text
+                    const responseText = await response.text();
+                    if (responseText.includes('error') || response.status >= 400) {
+                        showNotification('An unexpected error occurred while saving changes on book chapter', 'error');
+                    }
                 }
             } catch (error) {
                 console.error('Error updating chapter:', error);
-                showNotification('An error occurred while updating the chapter', 'error');
+                showNotification('An unexpected error occurred while saving changes on book chapter: ' + (error.message || 'Unknown error'), 'error');
             }
         });
 

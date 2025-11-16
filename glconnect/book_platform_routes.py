@@ -769,14 +769,35 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 # Get the current user's BookPlatformUser or Writer profile ID
                 book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
                 if book_user:
+                    # Get or create a BookVersion for this book
+                    book_version = BookVersion.query.filter_by(book_project_id=book_id, is_current=True).first()
+                    if not book_version:
+                        # Create a new book version if none exists
+                        existing_book_versions = BookVersion.query.filter_by(book_project_id=book_id).count()
+                        book_version = BookVersion(
+                            book_project_id=book_id,
+                            version_number=f"{existing_book_versions + 1}.0",
+                            title=book.title,
+                            word_count=book.word_count or 0,
+                            is_current=True,
+                            created_by_id=book_user.id
+                        )
+                        db.session.add(book_version)
+                        db.session.flush()  # Flush to get book_version.id
+                        # Set all other book versions to not current
+                        BookVersion.query.filter_by(book_project_id=book_id).filter(BookVersion.id != book_version.id).update({'is_current': False})
+                    
                     # Get next version number
                     existing_versions = ChapterVersion.query.filter_by(chapter_id=chapter_id).count()
                     version_number = f"{existing_versions + 1}.0"
                     
+                    # Set all other versions to not current BEFORE creating new one
+                    ChapterVersion.query.filter_by(chapter_id=chapter_id).update({'is_current': False})
+                    
                     # Create version
                     version = ChapterVersion(
                         chapter_id=chapter_id,
-                        book_version_id=1,  # Placeholder - can be linked to BookVersion if needed
+                        book_version_id=book_version.id,
                         version_number=version_number,
                         title=chapter.title,
                         content=chapter.content,
@@ -785,12 +806,8 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                         created_by_id=book_user.id
                     )
                     db.session.add(version)
-                    
-                    # Set all other versions to not current
-                    ChapterVersion.query.filter_by(chapter_id=chapter_id).update({'is_current': False})
-                    version.is_current = True
             except Exception as e:
-                print(f"Version tracking error: {e}")
+                logging.error(f"Version tracking error: {e}", exc_info=True)
                 # Don't fail the edit if version tracking fails
             
             # Update book's total word count
