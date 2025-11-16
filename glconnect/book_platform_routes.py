@@ -2648,8 +2648,16 @@ def investments():
 @book_bp.route('/investments/<int:campaign_id>', methods=['GET'])
 def investment_campaign(campaign_id):
     """View investment campaign details"""
-    campaign = InvestmentCampaign.query.get_or_404(campaign_id)
+    campaign = InvestmentCampaign.query.options(
+        joinedload(InvestmentCampaign.book_project)
+    ).get_or_404(campaign_id)
     book = campaign.book_project
+    
+    # Safety check: ensure book is a single object, not a collection
+    if book is None:
+        flash('Book project not found for this campaign.', 'error')
+        return redirect(url_for('book_platform.investments'))
+    
     investments = BookInvestment.query.filter_by(campaign_id=campaign_id).all()
     
     # Group investments by investor to show unique investors with totals
@@ -2694,18 +2702,24 @@ def investment_campaign(campaign_id):
     
     # Get book reviews (accredited reviews)
     from glconnect.book_platform_models import BookReview, ReviewStatus
-    accredited_reviews = BookReview.query.filter_by(
-        book_project_id=book.id,
-        status=ReviewStatus.PUBLISHED
-    ).all() if book else []
+    accredited_reviews = []
+    if book and hasattr(book, 'id'):
+        accredited_reviews = BookReview.query.filter_by(
+            book_project_id=book.id,
+            status=ReviewStatus.PUBLISHED
+        ).all()
     
     # Calculate average rating
     avg_rating = sum(r.rating for r in accredited_reviews) / len(accredited_reviews) if accredited_reviews else 0
     
     # Get book chapters count and completed chapters
-    chapters_count = len(book.chapters) if book and book.chapters else 0
-    completed_chapters = [ch for ch in book.chapters if ch.content] if book and book.chapters else []
-    completed_chapters_count = len(completed_chapters)
+    chapters_count = 0
+    completed_chapters = []
+    completed_chapters_count = 0
+    if book and hasattr(book, 'chapters') and book.chapters:
+        chapters_count = len(book.chapters)
+        completed_chapters = [ch for ch in book.chapters if ch.content and hasattr(ch, 'id')]
+        completed_chapters_count = len(completed_chapters)
     
     # Calculate days remaining
     from datetime import timedelta
@@ -2724,6 +2738,15 @@ def investment_campaign(campaign_id):
             author_id=author.id
         ).filter(BookProject.id != book.id).limit(5).all()
     
+    # Check if current user is the author (to conditionally show/hide Invest Now button)
+    is_author = False
+    if current_user.is_authenticated and book:
+        user_profile, profile_type = get_user_profile()
+        if user_profile and hasattr(book, 'author_id'):
+            current_user_id = get_profile_id(user_profile, profile_type)
+            if current_user_id:
+                is_author = (book.author_id == current_user_id)
+    
     return render_template('book_platform/campaign_details.html', 
                          campaign=campaign,
                          book=book,
@@ -2738,14 +2761,17 @@ def investment_campaign(campaign_id):
                          completed_chapters=completed_chapters[:3],  # First 3 for preview
                          completed_chapters_count=completed_chapters_count,
                          days_remaining=days_remaining,
-                         author_other_books=author_other_books)
+                         author_other_books=author_other_books,
+                         is_author=is_author)
 
 # Make Investment
 @book_bp.route('/investments/<int:campaign_id>/invest', methods=['GET', 'POST'])
 @login_required
 def make_investment(campaign_id):
     """User invests in a campaign"""
-    campaign = InvestmentCampaign.query.get_or_404(campaign_id)
+    campaign = InvestmentCampaign.query.options(
+        joinedload(InvestmentCampaign.book_project)
+    ).get_or_404(campaign_id)
     
     if campaign.status != CampaignStatus.ACTIVE:
         flash('This campaign is not currently accepting investments.', 'error')
@@ -2768,6 +2794,16 @@ def make_investment(campaign_id):
         return redirect(url_for('book_platform.setup_profile'))
     
     investor_id = get_profile_id(user_profile, profile_type)
+    if not investor_id:
+        flash('Unable to determine your profile. Please try again.', 'error')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    
+    # Prevent authors from investing in their own books
+    # Authors can invest in other authors' books, but not their own
+    book = campaign.book_project
+    if book and hasattr(book, 'author_id') and book.author_id == investor_id:
+        flash('You cannot invest in your own book. Authors can invest in other authors\' books in the marketplace.', 'error')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Check if already invested
     existing_investment = BookInvestment.query.filter_by(
