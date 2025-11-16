@@ -2559,8 +2559,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     
     if form.validate_on_submit():
         try:
-            from datetime import timedelta
-            
+            # Create timezone-aware datetimes in UTC
             start_date = datetime.now(timezone.utc)
             end_date = start_date + timedelta(days=form.investment_period_days.data)
             
@@ -2674,7 +2673,11 @@ def investment_campaign(campaign_id):
     from datetime import timedelta
     days_remaining = 0
     if campaign.end_date:
-        days_remaining = max(0, (campaign.end_date - datetime.now(timezone.utc)).days)
+        # Ensure end_date is timezone-aware for comparison
+        end_date = campaign.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        days_remaining = max(0, (end_date - datetime.now(timezone.utc)).days)
     
     # Get author's other books (for track record)
     author_other_books = []
@@ -2709,9 +2712,14 @@ def make_investment(campaign_id):
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Check if campaign has expired
-    if campaign.end_date and campaign.end_date < datetime.now(timezone.utc):
-        flash('This campaign has expired.', 'error')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    if campaign.end_date:
+        # Ensure end_date is timezone-aware for comparison
+        end_date = campaign.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        if end_date < datetime.now(timezone.utc):
+            flash('This campaign has expired.', 'error')
+            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Get user profile
     user_profile, profile_type = get_user_profile()
