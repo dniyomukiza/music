@@ -2597,14 +2597,18 @@ def create_investment_campaign(book_id, user_profile, profile_type):
 @book_bp.route('/investments', methods=['GET'])
 @login_required
 def investments():
-    """Browse investment campaigns - only shows campaigns for published books"""
+    """Browse investment campaigns - visible to investors regardless of book publication status
+    
+    Investment campaigns are designed to get funding BEFORE publishing, so campaigns
+    are visible as soon as they're created (ACTIVE status), even if the book is still in draft.
+    """
     status_filter = request.args.get('status', 'active')
     search_query = request.args.get('q', '')
     
-    # Join with BookProject to filter by book status and enable search
-    query = InvestmentCampaign.query.join(BookProject).filter(
-        BookProject.status == BookStatus.PUBLISHED  # Only show campaigns for published books
-    )
+    # Join with BookProject to enable search
+    # Campaigns are visible based on their status (ACTIVE, FUNDED, DRAFT), not book status
+    # This allows investors to fund books before they're published
+    query = InvestmentCampaign.query.join(BookProject)
     
     # Filter by campaign status
     if status_filter == 'active':
@@ -2648,6 +2652,40 @@ def investment_campaign(campaign_id):
     book = campaign.book_project
     investments = BookInvestment.query.filter_by(campaign_id=campaign_id).all()
     
+    # Group investments by investor to show unique investors with totals
+    from collections import defaultdict
+    investor_totals = defaultdict(lambda: {'total_amount': 0.0, 'investments': [], 'first_investment_date': None, 'last_investment_date': None})
+    
+    for investment in investments:
+        investor_id = investment.investor_id
+        investor_totals[investor_id]['total_amount'] += investment.amount
+        investor_totals[investor_id]['investments'].append(investment)
+        if investment.invested_at:
+            if investor_totals[investor_id]['first_investment_date'] is None or investment.invested_at < investor_totals[investor_id]['first_investment_date']:
+                investor_totals[investor_id]['first_investment_date'] = investment.invested_at
+            if investor_totals[investor_id]['last_investment_date'] is None or investment.invested_at > investor_totals[investor_id]['last_investment_date']:
+                investor_totals[investor_id]['last_investment_date'] = investment.invested_at
+    
+    # Convert to list of investor summaries with investor info
+    investor_summaries = []
+    for investor_id, data in investor_totals.items():
+        # Get investor info from first investment
+        first_investment = data['investments'][0]
+        investor = first_investment.investor
+        investor_summaries.append({
+            'investor_id': investor_id,
+            'investor': investor,
+            'total_amount': data['total_amount'],
+            'investment_count': len(data['investments']),
+            'first_investment_date': data['first_investment_date'],
+            'last_investment_date': data['last_investment_date'],
+            'investments': data['investments']  # Keep individual investments for detailed view if needed
+        })
+    
+    # Sort by total amount descending
+    investor_summaries.sort(key=lambda x: x['total_amount'], reverse=True)
+    unique_investor_count = len(investor_summaries)
+    
     # Calculate progress
     progress_percentage = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0
     
@@ -2689,7 +2727,9 @@ def investment_campaign(campaign_id):
     return render_template('book_platform/campaign_details.html', 
                          campaign=campaign,
                          book=book,
-                         investments=investments,
+                         investments=investments,  # Keep for backward compatibility
+                         investor_summaries=investor_summaries,  # New grouped data
+                         unique_investor_count=unique_investor_count,  # Count of unique investors
                          progress_percentage=progress_percentage,
                          author=author,
                          accredited_reviews=accredited_reviews,
@@ -2840,9 +2880,12 @@ def earnings_dashboard():
                 earnings_by_book[book_id]['book'] = earning.review.book_project
         earnings_data['reviewer_earnings_by_book'] = dict(earnings_by_book)
     
-    # Investment returns
-    if user_profile:
-        investor_id = get_profile_id(user_profile, profile_type)
+    # Investment returns - accessible to all users who have invested
+    # Non-author users can be investors, so check by user_id through BookPlatformUser
+    from glconnect.book_platform_models import BookPlatformUser
+    book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if book_platform_user:
+        investor_id = book_platform_user.id
         investments = BookInvestment.query.filter_by(investor_id=investor_id).all()
         earnings_data['investments'] = investments
         earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
@@ -2853,7 +2896,7 @@ def earnings_dashboard():
                 investment_id=investment.id
             ).order_by(InvestmentPayout.created_at.desc()).limit(20).all()
     
-    # Author sales
+    # Author sales - only for users who are authors
     if user_profile:
         author_id = get_profile_id(user_profile, profile_type)
         sales = BookSale.query.filter_by(seller_id=author_id).order_by(

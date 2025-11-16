@@ -350,19 +350,45 @@
                 <!-- Social Proof: Investors -->
                 <div class="card shadow">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Investors ({{ investments|length }})</h5>
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Investors ({{ unique_investor_count }})</h5>
                     </div>
                     <div class="card-body">
-                        {% if investments %}
+                        {% if investor_summaries %}
                         <div class="list-group">
-                            {% for investment in investments %}
+                            {% for summary in investor_summaries %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <strong>${{ "%.2f"|format(investment.amount) }}</strong>
-                                        <small class="text-muted ms-2">{{ "%.2f"|format(investment.investment_percentage) }}% of goal</small>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <strong class="me-2">${{ "%.2f"|format(summary.total_amount) }}</strong>
+                                            {% if summary.investment_count > 1 %}
+                                            <span class="badge bg-secondary">{{ summary.investment_count }} investments</span>
+                                            {% endif %}
+                                        </div>
+                                        {% set total_percentage = (summary.total_amount / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
+                                        <small class="text-muted">{{ "%.2f"|format(total_percentage) }}% of goal</small>
+                                        {% if summary.investor %}
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>{{ summary.investor.pen_name or summary.investor.username or 'Anonymous' }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    <small class="text-muted">{{ investment.invested_at.strftime('%B %d, %Y') if investment.invested_at else 'Pending' }}</small>
+                                    <div class="text-end">
+                                        {% if summary.first_investment_date %}
+                                        <small class="text-muted d-block">
+                                            {% if summary.investment_count > 1 %}
+                                            First: {{ summary.first_investment_date.strftime('%b %d, %Y') }}<br>
+                                            Last: {{ summary.last_investment_date.strftime('%b %d, %Y') }}
+                                            {% else %}
+                                            {{ summary.first_investment_date.strftime('%B %d, %Y') }}
+                                            {% endif %}
+                                        </small>
+                                        {% else %}
+                                        <small class="text-muted">Pending</small>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             {% endfor %}
@@ -370,7 +396,7 @@
                         <div class="mt-3">
                             <small class="text-muted">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Total invested: ${{ "%.2f"|format(campaign.current_funding) }} by {{ investments|length }} investor(s)
+                                Total invested: ${{ "%.2f"|format(campaign.current_funding) }} by {{ unique_investor_count }} investor{{ 's' if unique_investor_count != 1 else '' }}
                             </small>
                         </div>
                         {% else %}
