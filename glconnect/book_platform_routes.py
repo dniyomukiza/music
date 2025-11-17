@@ -19,6 +19,7 @@ import logging
 import re
 from functools import wraps
 from sqlalchemy.orm import joinedload
+from mailtrap import MailtrapClient, Mail, Address
 
 # Import models
 from glconnect.models import db, User, Writer
@@ -448,14 +449,36 @@ def books(user_profile, profile_type):
     # Get the correct author_id (BookPlatformUser.id for consistency)
     author_id = get_profile_id(user_profile, profile_type)
     
-    # Query books with eager loading of author information to ensure fresh data
+    # Query books with eager loading of author information and investment campaign
     books = BookProject.query.options(
-        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user),
+        joinedload(BookProject.investment_campaign)
     ).filter_by(author_id=author_id).all()
     
     # Calculate investment readiness for each book
+    from glconnect.book_platform_models import InvestmentCampaign
     books_with_readiness = []
     for book in books:
+        # Ensure investment_campaign is a single object, not a list
+        # This can happen if there are data inconsistencies (multiple campaigns for same book)
+        if hasattr(book, 'investment_campaign'):
+            campaign = book.investment_campaign
+            # Check if it's a collection (InstrumentedList) instead of a single object
+            # SQLAlchemy InstrumentedList has __class__.__name__ == 'InstrumentedList'
+            if campaign is not None:
+                # Check if it's an InstrumentedList or regular list
+                if hasattr(campaign, '__class__') and 'InstrumentedList' in str(type(campaign)):
+                    # It's a collection, get the first one
+                    try:
+                        campaign_list = list(campaign)
+                        book.investment_campaign = campaign_list[0] if len(campaign_list) > 0 else None
+                    except (TypeError, AttributeError):
+                        # If conversion fails, query directly
+                        book.investment_campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
+                elif isinstance(campaign, list):
+                    # Regular Python list
+                    book.investment_campaign = campaign[0] if len(campaign) > 0 else None
+        
         readiness = check_investment_readiness(book)
         books_with_readiness.append({
             'book': book,
@@ -1331,6 +1354,65 @@ def view_suggestion(suggestion_id, user_profile, profile_type):
                          book=book,
                          chapter=suggestion.chapter)
 
+# Helper function to send collaboration invitation email
+def send_collaboration_invitation_email(invitation, book, inviter):
+    """Send collaboration invitation email via Mailtrap"""
+    sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
+    api_key = os.getenv("MAIL_TRAP")
+    
+    if not api_key:
+        logger.warning("MAIL_TRAP API key not set. Cannot send collaboration invitation email.")
+        return False
+    
+    # Generate invitation URL
+    invitation_url = url_for('book_platform.accept_invitation', 
+                            invitation_uuid=invitation.uuid, 
+                            _external=True)
+    
+    # Get inviter name
+    inviter_name = inviter.pen_name or (inviter.user.username if hasattr(inviter, 'user') and inviter.user else "The Author")
+    
+    # Build email content
+    role_display = invitation.role.value.replace('_', ' ').title()
+    subject = f"Collaboration Invitation: {book.title}"
+    
+    message_text = f"""Hello,
+
+{inviter_name} has invited you to collaborate on the book "{book.title}" as a {role_display}.
+
+"""
+    
+    if invitation.message:
+        message_text += f"Message from {inviter_name}:\n{invitation.message}\n\n"
+    
+    message_text += f"""To accept this invitation, please click the link below:
+
+{invitation_url}
+
+This invitation will expire in 7 days.
+
+If you don't have an account yet, you'll be prompted to create one when you click the link.
+
+Best regards,
+Ink Studio Team
+"""
+    
+    try:
+        mail = Mail(
+            sender=Address(email=sender, name="Ink Studio"),
+            to=[Address(email=invitation.email)],
+            subject=subject,
+            text=message_text,
+            category="Collaboration Invitation"
+        )
+        client = MailtrapClient(token=api_key)
+        client.send(mail)
+        logger.info(f"Collaboration invitation email sent to {invitation.email} for book {book.id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send collaboration invitation email: {str(e)}", exc_info=True)
+        return False
+
 # Collaboration routes
 @book_bp.route('/books/<int:book_id>/collaborate')
 @writer_or_book_platform_required
@@ -1399,7 +1481,12 @@ def invite_collaborator(book_id, user_profile, profile_type):
     db.session.add(invitation)
     db.session.commit()
     
-    # TODO: Send email invitation
+    # Send email invitation via Mailtrap
+    try:
+        send_collaboration_invitation_email(invitation, book, book_user)
+    except Exception as e:
+        logger.error(f"Failed to send collaboration invitation email: {str(e)}", exc_info=True)
+        # Don't fail the invitation if email fails - invitation is still created
     
     return jsonify({'success': True, 'invitation_id': invitation.id})
 

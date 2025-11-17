@@ -19,6 +19,8 @@ gospel.m3u
 satmix.m3u
 liquidsoap.tar
 icecast2.tar
+docker-image-backups/
+*.tar
 tts.json
 glconfig.json
 
