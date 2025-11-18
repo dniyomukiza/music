@@ -32,8 +32,23 @@
                     </li>
                     {% endif %}
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
+                            <i class="fas fa-th-large"></i> Content Hub
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
                             <i class="fas fa-store"></i> Marketplace
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.stories_redirect') }}">
+                            <i class="fas fa-newspaper"></i> Stories & News
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.podcasts_redirect') }}">
+                            <i class="fas fa-podcast"></i> Podcasts & Audio
                         </a>
                     </li>
                     <li class="nav-item">
@@ -98,10 +113,19 @@
                     </div>
                     {% else %}
                     <h1 class="display-4 fw-bold mb-3">Ink Studio</h1>
-                    <p class="lead mb-4">Discover amazing books, become a reviewer, or invest in promising authors</p>
+                    <p class="lead mb-4">Your all-in-one digital content platform: Books, Stories, News, Podcasts, and more</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-store me-2"></i>Browse Books
+                        </a>
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-th-large me-2"></i>Content Hub
+                        </a>
+                        <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-newspaper me-2"></i>Read Stories
+                        </a>
+                        <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-podcast me-2"></i>Listen to Podcasts
                         </a>
                         <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-primary btn-lg">
                             <i class="fas fa-star me-2"></i>Become a Reviewer

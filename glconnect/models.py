@@ -26,6 +26,26 @@ class Post(db.Model):
     content = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    # New fields for filtering and translation
+    category = db.Column(db.String(100), nullable=True)  # e.g., News, Features, Opinion, Investigative
+    language = db.Column(db.String(50), nullable=True, default='en')  # ISO language code (en, es, fr, etc.)
+    country = db.Column(db.String(100), nullable=True)  # Country name or code
+    # Relationships
+    translations = db.relationship('StoryTranslation', backref='original_post', lazy=True, cascade='all, delete-orphan')
+
+class StoryTranslation(db.Model):
+    """Store translated versions of blog posts/stories"""
+    __tablename__ = 'story_translations'
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), nullable=False)
+    language = db.Column(db.String(50), nullable=False)  # Target language code (e.g., 'es', 'fr', 'de')
+    translated_title = db.Column(db.String(255), nullable=False)
+    translated_content = db.Column(db.Text, nullable=False)
+    translated_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    translation_method = db.Column(db.String(50), default='gemini')  # 'gemini', 'manual', etc.
+    
+    # Index for faster lookups
+    __table_args__ = (db.Index('idx_post_language', 'post_id', 'language'),)
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'

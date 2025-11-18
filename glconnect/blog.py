@@ -4,10 +4,11 @@ from .models import *
 from .forms import *
 from dotenv import load_dotenv
 from mailtrap import MailtrapClient, Mail, Address
-from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory
+from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory,jsonify
 from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
 from flask_login import current_user, login_required, logout_user
 from flask_ckeditor import CKEditor,upload_success, upload_fail
+import google.generativeai as genai
 load_dotenv()
 # Load configuration from environment variables
 config = {
@@ -19,17 +20,28 @@ config = {
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
+# Blog routes are part of Ink Studio's public digital space
+# Accessible to ALL logged-in users (general accounts), not just authors/writers
+# No author/writer profile required - just a regular user account
+
 @blog.route("/blogpost",methods=['GET','POST'])
-@login_required
+@login_required  # Only requires general login - any user can post
 def blogpost():
     #log_web_visit()
     form = PostForm()
     if form.validate_on_submit():
-        post=Post(title=form.title.data,content=form.content.data,author=current_user)
+        post = Post(
+            title=form.title.data,
+            content=form.content.data,
+            author=current_user,
+            category=form.category.data if form.category.data else None,
+            language=form.language.data if form.language.data else 'en',
+            country=form.country.data if form.country.data else None
+        )
         db.session.add(post)
         db.session.commit()
         flash("Your post has been created!")
-        return redirect(url_for('routes.home'))
+        return redirect(url_for('blog.blogs'))
     return render_template("blogpost.html",title="New Post",form=form)
 
 @blog.errorhandler(401)
@@ -39,13 +51,51 @@ def unauthorized(error):
 
 @blog.route("/blogs",methods=['GET','POST'])
 def blogs():
+    """
+    Public blog listing - accessible to everyone (no login required for viewing)
+    Part of Ink Studio's public digital space for freelance journalists and storytellers
+    """
     #log_web_visit()
-    p=request.args.get('page',1, type=int)
-    posts=Post.query.paginate(per_page=2,page=p)
-
-    for post in posts:
-        print(post.author)
-    return render_template("blogs.html",posts=posts)
+    p = request.args.get('page', 1, type=int)
+    category = request.args.get('category', None)
+    language = request.args.get('language', None)
+    country = request.args.get('country', None)
+    
+    # Build query with filters
+    query = Post.query
+    
+    if category:
+        query = query.filter(Post.category == category)
+    if language:
+        query = query.filter(Post.language == language)
+    if country:
+        query = query.filter(Post.country.ilike(f'%{country}%'))
+    
+    # Order by date (newest first)
+    query = query.order_by(Post.date_posted.desc())
+    
+    posts = query.paginate(per_page=10, page=p, error_out=False)
+    
+    # Get available filter options for dropdowns
+    available_categories = db.session.query(Post.category).distinct().filter(Post.category.isnot(None)).all()
+    available_categories = [cat[0] for cat in available_categories if cat[0]]
+    
+    available_languages = db.session.query(Post.language).distinct().filter(Post.language.isnot(None)).all()
+    available_languages = [lang[0] for lang in available_languages if lang[0]]
+    
+    available_countries = db.session.query(Post.country).distinct().filter(Post.country.isnot(None)).all()
+    available_countries = [country[0] for country in available_countries if country[0]]
+    
+    return render_template(
+        "blogs.html",
+        posts=posts,
+        selected_category=category,
+        selected_language=language,
+        selected_country=country,
+        available_categories=available_categories,
+        available_languages=available_languages,
+        available_countries=available_countries
+    )
 
 @blog.route("/post/<int:post_id>")
 def update(post_id):
@@ -136,12 +186,18 @@ def update2(post_id):
     if form.validate_on_submit():  
         post.title = form.title.data
         post.content = form.content.data
+        post.category = form.category.data if form.category.data else None
+        post.language = form.language.data if form.language.data else 'en'
+        post.country = form.country.data if form.country.data else None
         db.session.commit()
         flash("Blog has been updated!")
         return redirect(url_for("blog.blogs", post_id=post.id))  
     elif request.method == 'GET':
         form.title.data = post.title
         form.content.data = post.content
+        form.category.data = post.category or ''
+        form.language.data = post.language or 'en'
+        form.country.data = post.country or ''
     return render_template("blogpost.html", title="Update Post", form=form, legend="Update your blog")
 
 @blog.route("/post/<int:post_id>/delete", methods=['GET', 'POST'])
@@ -218,3 +274,165 @@ def play_audio(post_id):
 
     # Return the audio file as a response
     return send_file(audio_path, mimetype="audio/mp3")
+
+# Translation functionality using Gemini
+def get_gemini_model():
+    """Get configured Gemini model for translation"""
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+    try:
+        genai.configure(api_key=api_key)
+        return genai.GenerativeModel('gemini-2.0-flash')
+    except Exception as e:
+        print(f"Error initializing Gemini: {e}")
+        return None
+
+# Language code to name mapping
+LANGUAGE_NAMES = {
+    'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+    'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
+    'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi',
+    'sw': 'Swahili', 'rw': 'Kinyarwanda', 'nl': 'Dutch', 'pl': 'Polish',
+    'tr': 'Turkish', 'vi': 'Vietnamese', 'th': 'Thai', 'id': 'Indonesian',
+    'cs': 'Czech', 'sv': 'Swedish', 'da': 'Danish', 'fi': 'Finnish',
+    'no': 'Norwegian', 'he': 'Hebrew', 'uk': 'Ukrainian', 'ro': 'Romanian',
+    'hu': 'Hungarian', 'el': 'Greek', 'bg': 'Bulgarian', 'hr': 'Croatian',
+    'sk': 'Slovak', 'sl': 'Slovenian', 'et': 'Estonian', 'lv': 'Latvian',
+    'lt': 'Lithuanian', 'mt': 'Maltese', 'ga': 'Irish', 'cy': 'Welsh'
+}
+
+@blog.route("/post/<int:post_id>/translate", methods=['POST'])
+def translate_post(post_id):
+    """Translate a blog post to a target language using Gemini"""
+    try:
+        post = Post.query.get_or_404(post_id)
+        data = request.get_json()
+        target_language = data.get('target_language')
+        
+        if not target_language:
+            return jsonify({'success': False, 'error': 'Target language is required'}), 400
+        
+        # Check if translation already exists
+        existing_translation = StoryTranslation.query.filter_by(
+            post_id=post_id,
+            language=target_language
+        ).first()
+        
+        if existing_translation:
+            return jsonify({
+                'success': True,
+                'translated_title': existing_translation.translated_title,
+                'translated_content': existing_translation.translated_content,
+                'language': existing_translation.language,
+                'cached': True
+            })
+        
+        # Get Gemini model
+        model = get_gemini_model()
+        if not model:
+            return jsonify({'success': False, 'error': 'Translation service not available'}), 500
+        
+        # Get source and target language names
+        source_lang_name = LANGUAGE_NAMES.get(post.language or 'en', 'English')
+        target_lang_name = LANGUAGE_NAMES.get(target_language, target_language)
+        
+        # Create translation prompt
+        translation_prompt = f"""Translate the following blog post from {source_lang_name} to {target_lang_name}. 
+Maintain the original formatting, tone, and style. Preserve any HTML tags if present.
+
+Title: {post.title}
+
+Content:
+{post.content}
+
+Please provide the translation in the following JSON format:
+{{
+    "translated_title": "translated title here",
+    "translated_content": "translated content here"
+}}"""
+        
+        # Generate translation
+        response = model.generate_content(
+            translation_prompt,
+            generation_config=genai.types.GenerationConfig(
+                max_output_tokens=8000,
+                temperature=0.3,  # Lower temperature for more accurate translations
+                top_p=0.8,
+                top_k=40
+            )
+        )
+        
+        if not response.parts or len(response.parts) == 0:
+            return jsonify({'success': False, 'error': 'Translation failed - no response from AI'}), 500
+        
+        translated_text = response.text.strip()
+        
+        # Try to parse JSON response
+        try:
+            # Extract JSON from response (in case there's extra text)
+            import re
+            json_match = re.search(r'\{.*\}', translated_text, re.DOTALL)
+            if json_match:
+                translation_data = json.loads(json_match.group())
+            else:
+                # If no JSON found, treat entire response as content
+                translation_data = {
+                    'translated_title': post.title,  # Fallback
+                    'translated_content': translated_text
+                }
+        except json.JSONDecodeError:
+            # If JSON parsing fails, split response into title and content
+            lines = translated_text.split('\n', 1)
+            translation_data = {
+                'translated_title': lines[0] if lines else post.title,
+                'translated_content': lines[1] if len(lines) > 1 else translated_text
+            }
+        
+        translated_title = translation_data.get('translated_title', post.title)
+        translated_content = translation_data.get('translated_content', translated_text)
+        
+        # Save translation to database
+        translation = StoryTranslation(
+            post_id=post_id,
+            language=target_language,
+            translated_title=translated_title,
+            translated_content=translated_content,
+            translation_method='gemini'
+        )
+        db.session.add(translation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'translated_title': translated_title,
+            'translated_content': translated_content,
+            'language': target_language,
+            'cached': False
+        })
+        
+    except Exception as e:
+        print(f"Translation error: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog.route("/post/<int:post_id>/translations")
+def get_post_translations(post_id):
+    """Get all available translations for a post"""
+    post = Post.query.get_or_404(post_id)
+    translations = StoryTranslation.query.filter_by(post_id=post_id).all()
+    
+    return jsonify({
+        'success': True,
+        'original_language': post.language or 'en',
+        'translations': [
+            {
+                'id': t.id,
+                'language': t.language,
+                'language_name': LANGUAGE_NAMES.get(t.language, t.language),
+                'translated_title': t.translated_title,
+                'translated_at': t.translated_at.isoformat() if t.translated_at else None
+            }
+            for t in translations
+        ]
+    })

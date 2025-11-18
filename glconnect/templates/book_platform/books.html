@@ -137,17 +137,12 @@
                                         <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-success btn-sm w-100 mb-2">
                                             <i class="fas fa-plus-circle me-1"></i>Start Campaign
                                         </a>
-                                        {% elif book.has_investment_campaign %}
+                                        {% elif book.has_investment_campaign and book.investment_campaign %}
                                             {% set campaign = book.investment_campaign %}
-                                            {% if campaign %}
-                                                {% if campaign is iterable and campaign is not string %}
-                                                    {% set campaign = campaign[0] if campaign|length > 0 else None %}
-                                                {% endif %}
-                                                {% if campaign and campaign.id %}
-                                                <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-info btn-sm w-100 mb-2">
-                                                    <i class="fas fa-chart-line me-1"></i>View Campaign
-                                                </a>
-                                                {% endif %}
+                                            {% if campaign and campaign.id is defined %}
+                                            <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-info btn-sm w-100 mb-2">
+                                                <i class="fas fa-chart-line me-1"></i>View Campaign
+                                            </a>
                                             {% endif %}
                                         {% endif %}
                                         

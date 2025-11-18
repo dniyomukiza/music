@@ -69,6 +69,40 @@ class ContactForm(FlaskForm):
 class PostForm(FlaskForm):
     title=StringField("Title",validators=[DataRequired()],render_kw={"placeholder":"Blog Title"})
     content = CKEditorField('Content')
+    category = SelectField('Category', choices=[
+        ('', 'Select Category'),
+        ('News', 'News'),
+        ('Features', 'Features'),
+        ('Opinion', 'Opinion'),
+        ('Investigative', 'Investigative'),
+        ('Technology', 'Technology'),
+        ('Business', 'Business'),
+        ('Culture', 'Culture'),
+        ('Sports', 'Sports'),
+        ('Entertainment', 'Entertainment'),
+        ('Health', 'Health'),
+        ('Science', 'Science'),
+        ('Politics', 'Politics'),
+        ('Other', 'Other')
+    ], validators=[Optional()], default='')
+    language = SelectField('Language', choices=[
+        ('en', 'English'),
+        ('es', 'Spanish'),
+        ('fr', 'French'),
+        ('de', 'German'),
+        ('it', 'Italian'),
+        ('pt', 'Portuguese'),
+        ('ru', 'Russian'),
+        ('zh', 'Chinese'),
+        ('ja', 'Japanese'),
+        ('ko', 'Korean'),
+        ('ar', 'Arabic'),
+        ('hi', 'Hindi'),
+        ('sw', 'Swahili'),
+        ('rw', 'Kinyarwanda'),
+        ('other', 'Other')
+    ], validators=[Optional()], default='en')
+    country = StringField('Country', validators=[Optional()], render_kw={"placeholder": "e.g., United States, Rwanda, Kenya"})
     submit=SubmitField('Post')
 
 class ResetRequestForm(FlaskForm):

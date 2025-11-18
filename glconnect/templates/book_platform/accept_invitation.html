@@ -24,13 +24,25 @@
                                 </div>
                                 
                                 <div class="invitation-info">
-                                    <h6><strong>Book:</strong> {{ invitation.collaboration.book_project.title }}</h6>
+                                    <h6><strong>Book:</strong> 
+                                        {% if invitation.collaboration and invitation.collaboration.book_project %}
+                                            {{ invitation.collaboration.book_project.title }}
+                                        {% else %}
+                                            Unknown Book
+                                        {% endif %}
+                                    </h6>
                                     <h6><strong>Role:</strong> 
                                         <span class="badge badge-{{ 'primary' if invitation.role.value == 'editor' else 'success' if invitation.role.value == 'co_author' else 'info' }}">
                                             {{ invitation.role.value.replace('_', ' ').title() }}
                                         </span>
                                     </h6>
-                                    <h6><strong>Invited by:</strong> {{ invitation.invited_by.pen_name or invitation.invited_by.user.username }}</h6>
+                                    <h6><strong>Invited by:</strong> 
+                                        {% if invitation.invited_by %}
+                                            {{ invitation.invited_by.pen_name or (invitation.invited_by.user.username if invitation.invited_by.user else 'Unknown') }}
+                                        {% else %}
+                                            Unknown
+                                        {% endif %}
+                                    </h6>
                                     <h6><strong>Expires:</strong> {{ invitation.expires_at.strftime('%Y-%m-%d %H:%M') }}</h6>
                                     
                                     {% if invitation.message %}
@@ -113,9 +125,15 @@
                                 <p>You have already accepted this collaboration invitation.</p>
                             </div>
                             <div class="d-grid">
-                                <a href="{{ url_for('book_platform.view_book', book_id=invitation.collaboration.book_project_id) }}" class="btn btn-primary">
-                                    <i class="fas fa-book"></i> View Book
-                                </a>
+                                {% if invitation.collaboration and invitation.collaboration.book_project_id %}
+                                    <a href="{{ url_for('book_platform.view_book', book_id=invitation.collaboration.book_project_id) }}" class="btn btn-primary">
+                                        <i class="fas fa-book"></i> View Book
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-primary">
+                                        <i class="fas fa-home"></i> Go to Dashboard
+                                    </a>
+                                {% endif %}
                             </div>
                         {% elif invitation.status.value == 'expired' %}
                             <div class="alert alert-danger">

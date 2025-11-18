@@ -5,26 +5,175 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blogs</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .filters-container {
+            background: #f5f5f5;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-filter {
+            padding: 8px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-filter:hover {
+            background: #0056b3;
+        }
+        .btn-clear {
+            background: #6c757d;
+        }
+        .btn-clear:hover {
+            background: #545b62;
+        }
+        .post-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .meta-badge {
+            background: #e9ecef;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #495057;
+        }
+        .meta-badge.category {
+            background: #007bff;
+            color: white;
+        }
+        .meta-badge.language {
+            background: #28a745;
+            color: white;
+        }
+        .meta-badge.country {
+            background: #ffc107;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
     {% include 'messages.html' %}
+    <!-- Ink Studio Integration Banner -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+                <h3 style="margin: 0; font-size: 20px;">
+                    <i class="fas fa-pen-fancy"></i> Stories & News - Ink Studio
+                </h3>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
+                    Part of Ink Studio's unified content platform
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('book_platform.ink_studio_access') }}" 
+                   style="background: white; color: #667eea; padding: 8px 20px; border-radius: 5px; text-decoration: none; font-weight: bold;">
+                    <i class="fas fa-th-large me-1"></i>Content Hub
+                </a>
+            </div>
+        </div>
+    </div>
+    
     <div style="margin-bottom: 20px;">
         <div class="button-container">
-            <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
-            <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Blog</a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
+                <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Story</a>
+                <a href="{{ url_for('book_platform.content_hub') }}" class="btn" style="background: #667eea; color: white;">
+                    <i class="fas fa-th-large me-1"></i>Back to Content Hub
+                </a>
+            {% else %}
+                <a href="{{ url_for('routes1.login') }}" class="btn">Login to Post</a>
+            {% endif %}
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-container">
+            <form method="GET" action="{{ url_for('blog.blogs') }}" style="display: flex; flex-wrap: wrap; gap: 15px; width: 100%; align-items: flex-end;">
+                <div class="filter-group">
+                    <label for="category">Category</label>
+                    <select name="category" id="category">
+                        <option value="">All Categories</option>
+                        {% for cat in available_categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="language">Language</label>
+                    <select name="language" id="language">
+                        <option value="">All Languages</option>
+                        {% for lang in available_languages %}
+                        <option value="{{ lang }}" {% if selected_language == lang %}selected{% endif %}>{{ lang }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="country">Country</label>
+                    <input type="text" name="country" id="country" value="{{ selected_country or '' }}" placeholder="Enter country name">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn-filter">Apply Filters</button>
+                    <a href="{{ url_for('blog.blogs') }}" class="btn-filter btn-clear">Clear</a>
+                </div>
+            </form>
         </div>
 
         {% for post in posts.items %}
-        <div style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc;">
+        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #ccc; background: white; border-radius: 4px;">
             <div style="font-size: 12px; margin-bottom: 5px;">
                 <small>Posted by: {{ post.author.username }}</small>
                 <br>
-                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d") }}</small>
+                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") }}</small>
             </div>
             <h2 style="font-size: 24px; margin-bottom: 10px;">
                 <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: rgb(70, 24, 24); text-decoration: none;">{{ post.title }}</a>
             </h2>
-            <p style="font-size: 16px; margin-bottom: 10px;">{{ post.content | safe }}</p>
+            <div class="post-meta">
+                {% if post.category %}
+                <span class="meta-badge category">{{ post.category }}</span>
+                {% endif %}
+                {% if post.language %}
+                <span class="meta-badge language">{{ post.language }}</span>
+                {% endif %}
+                {% if post.country %}
+                <span class="meta-badge country">{{ post.country }}</span>
+                {% endif %}
+            </div>
+            <p style="font-size: 16px; margin-bottom: 10px; margin-top: 10px;">{{ post.content | safe | truncate(300) }}</p>
 
             <!-- Play Audio Button -->
             <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
@@ -36,11 +185,11 @@
         <!-- Pagination Controls -->
         <div style="text-align: center; margin-top: 20px;">
             {% if posts.has_prev %}
-                <a href="{{ url_for('blog.blogs', page=posts.prev_num) }}" class="btn">Previous</a>
+                <a href="{{ url_for('blog.blogs', page=posts.prev_num, category=selected_category, language=selected_language, country=selected_country) }}" class="btn">Previous</a>
             {% endif %}
             <span>Page {{ posts.page }} of {{ posts.pages }}</span>
             {% if posts.has_next %}
-                <a href="{{ url_for('blog.blogs', page=posts.next_num) }}" class="btn">Next</a>
+                <a href="{{ url_for('blog.blogs', page=posts.next_num, category=selected_category, language=selected_language, country=selected_country) }}" class="btn">Next</a>
             {% endif %}
         </div>
     </div>

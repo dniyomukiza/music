@@ -4,7 +4,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ post.title }}</title>
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/singlepost.css') }}"> -->
+    <style>
+        .post-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .post-header {
+            margin-bottom: 20px;
+        }
+        .post-meta {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .meta-badge {
+            background: #e9ecef;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            color: #495057;
+        }
+        .meta-badge.category { background: #007bff; color: white; }
+        .meta-badge.language { background: #28a745; color: white; }
+        .meta-badge.country { background: #ffc107; color: #333; }
+        .translation-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .translation-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .translation-controls select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn-translate {
+            padding: 8px 20px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-translate:hover {
+            background: #138496;
+        }
+        .btn-translate:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .translation-loading {
+            color: #17a2b8;
+            font-style: italic;
+        }
+        .translation-error {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+        .available-translations {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+        .translation-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 5px 12px;
+            background: white;
+            border: 1px solid #17a2b8;
+            border-radius: 4px;
+            color: #17a2b8;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .translation-link:hover {
+            background: #17a2b8;
+            color: white;
+        }
+    </style>
 </head>
 <body>
     {% include 'messages.html' %}
@@ -18,13 +107,61 @@
             {% endif %}
 
             <div class="post-header">
-                <h2>{{ post.title }}</h2>
+                <h2 id="post-title">{{ post.title }}</h2>
+                <div class="post-meta">
+                    {% if post.category %}
+                    <span class="meta-badge category">{{ post.category }}</span>
+                    {% endif %}
+                    {% if post.language %}
+                    <span class="meta-badge language">{{ post.language }}</span>
+                    {% endif %}
+                    {% if post.country %}
+                    <span class="meta-badge country">{{ post.country }}</span>
+                    {% endif %}
+                </div>
             </div>
-            <p>{{ post.content | safe }}</p>
+            <div id="post-content">{{ post.content | safe }}</div>
 
             <!-- Play Button -->
             <button onclick="playAudio({{ post.id }})" class="btn play-btn">▶️ Play Audio</button>
             <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
+
+            <!-- Translation Section -->
+            <div class="translation-section">
+                <h3>🌐 Translate This Story</h3>
+                <div class="translation-controls">
+                    <label for="target-language">Translate to:</label>
+                    <select id="target-language">
+                        <option value="">Select Language</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="ar">Arabic</option>
+                        <option value="hi">Hindi</option>
+                        <option value="sw">Swahili</option>
+                        <option value="rw">Kinyarwanda</option>
+                        <option value="nl">Dutch</option>
+                        <option value="pl">Polish</option>
+                        <option value="tr">Turkish</option>
+                        <option value="vi">Vietnamese</option>
+                        <option value="th">Thai</option>
+                        <option value="id">Indonesian</option>
+                    </select>
+                    <button onclick="translatePost({{ post.id }})" class="btn-translate" id="translate-btn">Translate</button>
+                </div>
+                <div id="translation-status"></div>
+                <div id="translation-result"></div>
+                <div class="available-translations" id="available-translations" style="display: none;">
+                    <strong>Available Translations:</strong>
+                    <div id="translation-links"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -34,6 +171,93 @@
         audioElement.src = `/blog/play-audio/${postId}`;
         audioElement.style.display = "block";
         audioElement.play();
+    }
+
+    // Load available translations on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        loadAvailableTranslations({{ post.id }});
+    });
+
+    function loadAvailableTranslations(postId) {
+        fetch(`/blog/post/${postId}/translations`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.translations.length > 0) {
+                    const container = document.getElementById('available-translations');
+                    const linksContainer = document.getElementById('translation-links');
+                    container.style.display = 'block';
+                    
+                    const languageNames = {
+                        'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
+                        'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese', 'ja': 'Japanese',
+                        'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi', 'sw': 'Swahili',
+                        'rw': 'Kinyarwanda', 'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish',
+                        'vi': 'Vietnamese', 'th': 'Thai', 'id': 'Indonesian'
+                    };
+                    
+                    linksContainer.innerHTML = data.translations.map(t => 
+                        `<a href="#" class="translation-link" onclick="loadTranslation(${postId}, '${t.language}'); return false;">
+                            ${languageNames[t.language] || t.language}
+                        </a>`
+                    ).join('');
+                }
+            })
+            .catch(error => console.error('Error loading translations:', error));
+    }
+
+    function translatePost(postId) {
+        const targetLanguage = document.getElementById('target-language').value;
+        if (!targetLanguage) {
+            alert('Please select a target language');
+            return;
+        }
+
+        const statusDiv = document.getElementById('translation-status');
+        const resultDiv = document.getElementById('translation-result');
+        const translateBtn = document.getElementById('translate-btn');
+        
+        statusDiv.innerHTML = '<div class="translation-loading">Translating... Please wait.</div>';
+        resultDiv.innerHTML = '';
+        translateBtn.disabled = true;
+
+        fetch(`/blog/post/${postId}/translate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ target_language: targetLanguage })
+        })
+        .then(response => response.json())
+        .then(data => {
+            translateBtn.disabled = false;
+            statusDiv.innerHTML = '';
+            
+            if (data.success) {
+                // Update the post content with translation
+                document.getElementById('post-title').textContent = data.translated_title;
+                document.getElementById('post-content').innerHTML = data.translated_content;
+                
+                resultDiv.innerHTML = `<div style="color: #28a745; margin-top: 10px;">
+                    ✓ Translation completed ${data.cached ? '(from cache)' : ''}
+                </div>`;
+                
+                // Reload available translations
+                loadAvailableTranslations(postId);
+            } else {
+                resultDiv.innerHTML = `<div class="translation-error">Error: ${data.error || 'Translation failed'}</div>`;
+            }
+        })
+        .catch(error => {
+            translateBtn.disabled = false;
+            statusDiv.innerHTML = '';
+            resultDiv.innerHTML = `<div class="translation-error">Error: ${error.message}</div>`;
+        });
+    }
+
+    function loadTranslation(postId, language) {
+        // Trigger translation for the selected language
+        document.getElementById('target-language').value = language;
+        translatePost(postId);
     }
     </script>
 </body>

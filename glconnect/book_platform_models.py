@@ -34,6 +34,7 @@ class CollaborationRole(PyEnum):
     EDITOR = "editor"
     REVIEWER = "reviewer"
     VIEWER = "viewer"
+    CO_AUTHOR = "co_author"
 
 class InvitationStatus(PyEnum):
     PENDING = "pending"

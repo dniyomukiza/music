@@ -449,41 +449,36 @@ def books(user_profile, profile_type):
     # Get the correct author_id (BookPlatformUser.id for consistency)
     author_id = get_profile_id(user_profile, profile_type)
     
-    # Query books with eager loading of author information and investment campaign
+    # Query books with eager loading of author information
+    # Note: We don't eager load investment_campaign to avoid collection type issues
+    # It will be loaded lazily when accessed, and the relationship uses uselist=False
     books = BookProject.query.options(
-        joinedload(BookProject.author).joinedload(BookPlatformUser.user),
-        joinedload(BookProject.investment_campaign)
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
     ).filter_by(author_id=author_id).all()
     
     # Calculate investment readiness for each book
-    from glconnect.book_platform_models import InvestmentCampaign
     books_with_readiness = []
     for book in books:
-        # Ensure investment_campaign is a single object, not a list
-        # This can happen if there are data inconsistencies (multiple campaigns for same book)
-        if hasattr(book, 'investment_campaign'):
-            campaign = book.investment_campaign
-            # Check if it's a collection (InstrumentedList) instead of a single object
-            # SQLAlchemy InstrumentedList has __class__.__name__ == 'InstrumentedList'
-            if campaign is not None:
-                # Check if it's an InstrumentedList or regular list
-                if hasattr(campaign, '__class__') and 'InstrumentedList' in str(type(campaign)):
-                    # It's a collection, get the first one
-                    try:
-                        campaign_list = list(campaign)
-                        book.investment_campaign = campaign_list[0] if len(campaign_list) > 0 else None
-                    except (TypeError, AttributeError):
-                        # If conversion fails, query directly
-                        book.investment_campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
-                elif isinstance(campaign, list):
-                    # Regular Python list
-                    book.investment_campaign = campaign[0] if len(campaign) > 0 else None
-        
-        readiness = check_investment_readiness(book)
-        books_with_readiness.append({
-            'book': book,
-            'investment_readiness': readiness
-        })
+        try:
+            # The investment_campaign relationship uses uselist=False, so it should always be
+            # a single object or None. If there's a data inconsistency, we'll handle it in the template.
+            readiness = check_investment_readiness(book)
+            books_with_readiness.append({
+                'book': book,
+                'investment_readiness': readiness
+            })
+        except Exception as e:
+            logger.error(f"Error processing book {book.id} for investment readiness: {str(e)}", exc_info=True)
+            # Add book with default readiness to prevent complete failure
+            books_with_readiness.append({
+                'book': book,
+                'investment_readiness': {
+                    'is_ready': False,
+                    'issues': [f'Error checking readiness: {str(e)}'],
+                    'chapter_count': 0,
+                    'word_count': 0
+                }
+            })
     
     return render_template('book_platform/books.html', books_with_readiness=books_with_readiness)
 
@@ -1391,7 +1386,9 @@ def send_collaboration_invitation_email(invitation, book, inviter):
 
 This invitation will expire in 7 days.
 
-If you don't have an account yet, you'll be prompted to create one when you click the link.
+Account Requirements:
+- If you don't have an account yet, you'll be prompted to create one when you click the link
+- After logging in, you'll need to set up your Ink Studio profile (a quick one-time setup) to accept the invitation and start collaborating
 
 Best regards,
 Ink Studio Team
@@ -1493,13 +1490,23 @@ def invite_collaborator(book_id, user_profile, profile_type):
 @book_bp.route('/invitations/<string:invitation_uuid>')
 def accept_invitation(invitation_uuid):
     """Accept collaboration invitation"""
-    invitation = CollaborationInvitation.query.filter_by(uuid=invitation_uuid).first_or_404()
+    invitation = CollaborationInvitation.query.options(
+        joinedload(CollaborationInvitation.collaboration).joinedload(BookCollaboration.book_project),
+        joinedload(CollaborationInvitation.invited_by).joinedload(BookPlatformUser.user)
+    ).filter_by(uuid=invitation_uuid).first_or_404()
     
     if invitation.status != InvitationStatus.PENDING:
         flash('This invitation is no longer valid', 'error')
         return redirect(url_for('book_platform.dashboard'))
     
-    if invitation.expires_at < datetime.now(timezone.utc):
+    # Check expiration - ensure both datetimes are timezone-aware
+    expires_at = invitation.expires_at
+    if expires_at.tzinfo is None:
+        # If timezone-naive, assume it's UTC
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    now = datetime.now(timezone.utc)
+    if expires_at < now:
         invitation.status = InvitationStatus.EXPIRED
         db.session.commit()
         flash('This invitation has expired', 'error')
@@ -1517,6 +1524,10 @@ def accept_invitation(invitation_uuid):
         
         # Update collaboration with actual user
         collaboration = invitation.collaboration
+        if not collaboration:
+            flash('Invalid invitation: collaboration not found', 'error')
+            return redirect(url_for('book_platform.dashboard'))
+        
         collaboration.collaborator_id = book_user.id
         collaboration.joined_at = datetime.now(timezone.utc)
         
@@ -3314,3 +3325,55 @@ def investment_refund_status(investment_id):
     return render_template('book_platform/investment_refund_status.html',
                          investment=investment,
                          refunds=refunds)
+
+# ============================================================================
+# UNIFIED CONTENT HUB - BLOGS, NEWS, FREELANCING
+# ============================================================================
+
+@book_bp.route('/content-hub')
+@login_required
+def content_hub():
+    """
+    Unified Content Hub - Access point for all content types:
+    - Stories & News (Blogs)
+    - Podcasts & Audio (News broadcasts)
+    - Freelance Journalism
+    Maintains backward compatibility with existing routes
+    """
+    from glconnect.models import Post
+    
+    # Get recent blog posts for preview
+    recent_posts = Post.query.order_by(Post.date_posted.desc()).limit(5).all()
+    
+    # Get user's posts if any
+    user_posts = []
+    if current_user.is_authenticated:
+        user_posts = Post.query.filter_by(user_id=current_user.user_id).order_by(Post.date_posted.desc()).limit(5).all()
+    
+    return render_template('book_platform/content_hub.html',
+                         recent_posts=recent_posts,
+                         user_posts=user_posts)
+
+@book_bp.route('/stories')
+@login_required
+def stories_redirect():
+    """Redirect to blogs/stories - maintains Ink Studio context"""
+    return redirect(url_for('blog.blogs'))
+
+@book_bp.route('/stories/create')
+@login_required
+def create_story_redirect():
+    """Redirect to create blog post - maintains Ink Studio context"""
+    return redirect(url_for('blog.blogpost'))
+
+@book_bp.route('/podcasts')
+@login_required
+def podcasts_redirect():
+    """Redirect to news/podcasts - maintains Ink Studio context"""
+    return redirect('/routes2/news')
+
+@book_bp.route('/news')
+@login_required
+def news_redirect():
+    """Redirect to news broadcasts - maintains Ink Studio context"""
+    return redirect('/routes2/news')
