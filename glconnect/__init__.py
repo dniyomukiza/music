@@ -53,7 +53,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE='None', # This is correct for cross-site cookies with credentials
         JWT_SECRET_KEY="abarayon",
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
-        MAX_CONTENT_LENGTH=50 * 1024 * 1024,  # 50 MB max upload size
+        MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
     )
 
     # Secret key for sessions

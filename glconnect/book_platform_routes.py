@@ -3753,3 +3753,16 @@ def play_podcast(podcast_id):
         return redirect(url_for('book_platform.my_podcasts'))
     
     return send_file(podcast.file_path, as_attachment=False)
+
+@book_bp.route('/podcasts/library')
+@login_required
+def podcast_library():
+    """Public-facing library of approved podcasts"""
+    from glconnect.models import PodcastSubmission, User
+    
+    podcasts = PodcastSubmission.query.filter_by(status='approved').order_by(
+        PodcastSubmission.reviewed_at.desc().nullslast(),
+        PodcastSubmission.submitted_at.desc()
+    ).all()
+    
+    return render_template('book_platform/podcast_library.html', podcasts=podcasts)
