@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ post.title }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         .post-container {
             max-width: 900px;
@@ -93,6 +94,13 @@
             background: #17a2b8;
             color: white;
         }
+        .btn-like:hover {
+            background: #f0f0f0 !important;
+            transform: scale(1.1);
+        }
+        .btn-like:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -122,8 +130,47 @@
             </div>
             <div id="post-content">{{ post.content | safe }}</div>
 
-            <!-- Play Button -->
-            <button onclick="playAudio({{ post.id }})" class="btn play-btn">▶️ Play Audio</button>
+            <!-- Metrics and Actions Section -->
+            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                    <div style="display: flex; gap: 30px; align-items: center;">
+                        <!-- Likes -->
+                        <div style="text-align: center;">
+                            <button id="like-btn-{{ post.id }}" 
+                                    onclick="toggleLike({{ post.id }})" 
+                                    class="btn-like" 
+                                    style="background: none; border: none; cursor: pointer; padding: 10px; border-radius: 50%; transition: all 0.2s;"
+                                    data-liked="{{ 'true' if user_has_liked else 'false' }}">
+                                <i class="fas fa-heart" style="font-size: 24px; color: {% if user_has_liked %}#dc3545{% else %}#999{% endif %};"></i>
+                            </button>
+                            <div style="margin-top: 5px;">
+                                <span id="likes-count-{{ post.id }}" style="font-size: 18px; font-weight: bold; color: #333;">
+                                    {{ post.likes_count if post.likes_count else 0 }}
+                                </span>
+                                <div style="font-size: 12px; color: #666;">Likes</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Impressions -->
+                        <div style="text-align: center;">
+                            <div style="padding: 10px;">
+                                <i class="fas fa-eye" style="font-size: 24px; color: #007bff;"></i>
+                            </div>
+                            <div style="margin-top: 5px;">
+                                <span id="impressions-count-{{ post.id }}" style="font-size: 18px; font-weight: bold; color: #333;">
+                                    {{ post.impressions_count if post.impressions_count else 0 }}
+                                </span>
+                                <div style="font-size: 12px; color: #666;">Views</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button onclick="playAudio({{ post.id }})" class="btn play-btn">▶️ Play Audio</button>
+                    </div>
+                </div>
+            </div>
+            
             <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
 
             <!-- Translation Section -->
@@ -258,6 +305,115 @@
         // Trigger translation for the selected language
         document.getElementById('target-language').value = language;
         translatePost(postId);
+    }
+
+    // Like/Unlike functionality
+    function toggleLike(postId) {
+        {% if current_user.is_authenticated %}
+        const likeBtn = document.getElementById(`like-btn-${postId}`);
+        const likesCountEl = document.getElementById(`likes-count-${postId}`);
+        const icon = likeBtn.querySelector('i');
+        const isLiked = likeBtn.dataset.liked === 'true';
+        
+        // Optimistic UI update
+        const currentCount = parseInt(likesCountEl.textContent) || 0;
+        if (isLiked) {
+            likesCountEl.textContent = Math.max(0, currentCount - 1);
+            icon.style.color = '#999';
+            likeBtn.dataset.liked = 'false';
+        } else {
+            likesCountEl.textContent = currentCount + 1;
+            icon.style.color = '#dc3545';
+            likeBtn.dataset.liked = 'true';
+        }
+        
+        // Send request to server
+        fetch(`/blog/post/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update with server response
+                likesCountEl.textContent = data.likes_count;
+                likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                icon.style.color = data.user_has_liked ? '#dc3545' : '#999';
+            } else {
+                // Revert on error
+                likesCountEl.textContent = currentCount;
+                likeBtn.dataset.liked = isLiked ? 'true' : 'false';
+                icon.style.color = isLiked ? '#dc3545' : '#999';
+                alert('Error: ' + (data.error || 'Failed to update like'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Revert on error
+            likesCountEl.textContent = currentCount;
+            likeBtn.dataset.liked = isLiked ? 'true' : 'false';
+            icon.style.color = isLiked ? '#dc3545' : '#999';
+        });
+        {% else %}
+        alert('Please log in to like stories');
+        {% endif %}
+    }
+
+    // Real-time metrics updates
+    function updatePostMetrics(postId) {
+        fetch(`/blog/post/${postId}/metrics`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update likes count
+                    const likesEl = document.getElementById(`likes-count-${postId}`);
+                    if (likesEl) {
+                        likesEl.textContent = data.likes_count;
+                    }
+                    
+                    // Update impressions count
+                    const impressionsEl = document.getElementById(`impressions-count-${postId}`);
+                    if (impressionsEl) {
+                        impressionsEl.textContent = data.impressions_count;
+                    }
+                    
+                    // Update like button state
+                    const likeBtn = document.getElementById(`like-btn-${postId}`);
+                    if (likeBtn) {
+                        likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                        const icon = likeBtn.querySelector('i');
+                        if (icon) {
+                            icon.style.color = data.user_has_liked ? '#dc3545' : '#999';
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error updating metrics:', error));
+    }
+
+    // Set up real-time updates via polling (every 5 seconds)
+    const postId = {{ post.id }};
+    setInterval(() => {
+        updatePostMetrics(postId);
+    }, 5000);
+
+    // Also try WebSocket if available
+    if (typeof io !== 'undefined') {
+        try {
+            const socket = io();
+            socket.on('post_metrics_update', function(data) {
+                if (data.post_id === postId) {
+                    const likesEl = document.getElementById(`likes-count-${postId}`);
+                    const impressionsEl = document.getElementById(`impressions-count-${postId}`);
+                    if (likesEl) likesEl.textContent = data.likes_count;
+                    if (impressionsEl) impressionsEl.textContent = data.impressions_count;
+                }
+            });
+        } catch (e) {
+            console.log('WebSocket not available, using polling');
+        }
     }
     </script>
 </body>

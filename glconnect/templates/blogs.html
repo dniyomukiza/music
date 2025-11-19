@@ -6,6 +6,7 @@
     <title>Blogs</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         .filters-container {
             background: #f5f5f5;
@@ -153,11 +154,11 @@
         </div>
 
         {% for post in posts.items %}
-        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #ccc; background: white; border-radius: 4px;">
+        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #ccc; background: white; border-radius: 4px;" data-post-id="{{ post.id }}">
             <div style="font-size: 12px; margin-bottom: 5px;">
-                <small>Posted by: {{ post.author.username }}</small>
+                <small>Posted by: {{ post.author.username if post.author else 'Unknown' }}</small>
                 <br>
-                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") }}</small>
+                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") if post.date_posted else 'N/A' }}</small>
             </div>
             <h2 style="font-size: 24px; margin-bottom: 10px;">
                 <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: rgb(70, 24, 24); text-decoration: none;">{{ post.title }}</a>
@@ -175,8 +176,24 @@
             </div>
             <p style="font-size: 16px; margin-bottom: 10px; margin-top: 10px;">{{ post.content | safe | truncate(300) }}</p>
 
-            <!-- Play Audio Button -->
-            <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
+            <!-- Metrics and Actions -->
+            <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-heart" style="color: #dc3545;"></i>
+                        <span class="likes-count-{{ post.id }}" style="font-weight: bold;">{{ post.likes_count if post.likes_count else 0 }}</span>
+                        <span style="color: #666; font-size: 12px;">likes</span>
+                    </div>
+                    <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-eye" style="color: #007bff;"></i>
+                        <span class="impressions-count-{{ post.id }}" style="font-weight: bold;">{{ post.impressions_count if post.impressions_count else 0 }}</span>
+                        <span style="color: #666; font-size: 12px;">views</span>
+                    </div>
+                </div>
+                <div style="margin-left: auto;">
+                    <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
+                </div>
+            </div>
 
             <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
         </div>
@@ -201,6 +218,49 @@
         audioElement.src = `/blog/play-audio/${postId}`;
         audioElement.style.display = "block";
         audioElement.play();
+    }
+    </script>
+    
+    <!-- Real-time metrics updates for blog listing -->
+    <script>
+    // Update metrics for all visible posts every 10 seconds
+    function updateAllPostMetrics() {
+        const postElements = document.querySelectorAll('[data-post-id]');
+        postElements.forEach(function(element) {
+            const postId = element.getAttribute('data-post-id');
+            fetch(`/blog/post/${postId}/metrics`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const likesEl = element.querySelector(`.likes-count-${postId}`);
+                        const impressionsEl = element.querySelector(`.impressions-count-${postId}`);
+                        if (likesEl) likesEl.textContent = data.likes_count;
+                        if (impressionsEl) impressionsEl.textContent = data.impressions_count;
+                    }
+                })
+                .catch(error => console.error('Error updating metrics:', error));
+        });
+    }
+    
+    // Update metrics every 10 seconds
+    setInterval(updateAllPostMetrics, 10000);
+    
+    // Also try WebSocket if available
+    if (typeof io !== 'undefined') {
+        try {
+            const socket = io();
+            socket.on('post_metrics_update', function(data) {
+                const postElement = document.querySelector(`[data-post-id="${data.post_id}"]`);
+                if (postElement) {
+                    const likesEl = postElement.querySelector(`.likes-count-${data.post_id}`);
+                    const impressionsEl = postElement.querySelector(`.impressions-count-${data.post_id}`);
+                    if (likesEl) likesEl.textContent = data.likes_count;
+                    if (impressionsEl) impressionsEl.textContent = data.impressions_count;
+                }
+            });
+        } catch (e) {
+            console.log('WebSocket not available, using polling');
+        }
     }
     </script>
 </body>

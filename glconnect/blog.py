@@ -76,6 +76,13 @@ def blogs():
     
     posts = query.paginate(per_page=10, page=p, error_out=False)
     
+    # Ensure metrics are initialized (for backward compatibility)
+    for post in posts.items:
+        if not hasattr(post, 'likes_count') or post.likes_count is None:
+            post.likes_count = 0
+        if not hasattr(post, 'impressions_count') or post.impressions_count is None:
+            post.impressions_count = 0
+    
     # Get available filter options for dropdowns
     available_categories = db.session.query(Post.category).distinct().filter(Post.category.isnot(None)).all()
     available_categories = [cat[0] for cat in available_categories if cat[0]]
@@ -100,8 +107,18 @@ def blogs():
 @blog.route("/post/<int:post_id>")
 def update(post_id):
      #log_web_visit()
-     post=Post.query.get_or_404(post_id)
-     return render_template("singlepost.html",title=post.title, post=post)
+     post = Post.query.get_or_404(post_id)
+     
+     # Track impression/view
+     track_post_view(post_id)
+     
+     # Check if current user has liked this post
+     user_has_liked = False
+     if current_user.is_authenticated:
+         user_like = PostLike.query.filter_by(post_id=post_id, user_id=current_user.user_id).first()
+         user_has_liked = user_like is not None
+     
+     return render_template("singlepost.html", title=post.title, post=post, user_has_liked=user_has_liked)
 
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
@@ -436,3 +453,144 @@ def get_post_translations(post_id):
             for t in translations
         ]
     })
+
+# Helper function to track post views/impressions
+def track_post_view(post_id):
+    """Track a view/impression for a post"""
+    try:
+        post = Post.query.get(post_id)
+        if not post:
+            return
+        
+        # Get user ID if authenticated
+        user_id = current_user.user_id if current_user.is_authenticated else None
+        
+        # Get IP address and session ID for anonymous tracking
+        ip_address = request.remote_addr
+        session_id = session.get('session_id', None)
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+        
+        # Check if this is a unique view
+        # For logged-in users: check by user_id
+        if user_id:
+            existing_view = PostView.query.filter_by(
+                post_id=post_id,
+                user_id=user_id
+            ).first()
+        else:
+            # For anonymous: check by IP and session within last 24 hours
+            yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+            existing_view = PostView.query.filter(
+                PostView.post_id == post_id,
+                PostView.ip_address == ip_address,
+                PostView.session_id == session_id,
+                PostView.viewed_at >= yesterday
+            ).first()
+        
+        # Only count as new impression if unique
+        if not existing_view:
+            new_view = PostView(
+                post_id=post_id,
+                user_id=user_id,
+                ip_address=ip_address,
+                session_id=session_id
+            )
+            db.session.add(new_view)
+            
+            # Update post impressions count
+            post.impressions_count = PostView.query.filter_by(post_id=post_id).count()
+            db.session.commit()
+            
+            # Emit real-time update via WebSocket if available
+            try:
+                from glconnect.book_platform_integration import socketio
+                if socketio:
+                    socketio.emit('post_metrics_update', {
+                        'post_id': post_id,
+                        'impressions_count': post.impressions_count,
+                        'likes_count': post.likes_count
+                    }, namespace='/', broadcast=True)
+            except:
+                pass  # WebSocket not available, continue silently
+                
+    except Exception as e:
+        print(f"Error tracking post view: {e}")
+        db.session.rollback()
+
+@blog.route("/post/<int:post_id>/like", methods=['POST'])
+@login_required
+def like_post(post_id):
+    """Like or unlike a post"""
+    try:
+        post = Post.query.get_or_404(post_id)
+        
+        # Check if user already liked this post
+        existing_like = PostLike.query.filter_by(
+            post_id=post_id,
+            user_id=current_user.user_id
+        ).first()
+        
+        if existing_like:
+            # Unlike: remove the like
+            db.session.delete(existing_like)
+            post.likes_count = max(0, post.likes_count - 1)
+            action = 'unliked'
+        else:
+            # Like: add the like
+            new_like = PostLike(
+                post_id=post_id,
+                user_id=current_user.user_id
+            )
+            db.session.add(new_like)
+            post.likes_count = post.likes_count + 1
+            action = 'liked'
+        
+        db.session.commit()
+        
+        # Emit real-time update via WebSocket if available
+        try:
+            from glconnect.book_platform_integration import socketio
+            if socketio:
+                socketio.emit('post_metrics_update', {
+                    'post_id': post_id,
+                    'impressions_count': post.impressions_count,
+                    'likes_count': post.likes_count
+                }, namespace='/', broadcast=True)
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'action': action,
+            'likes_count': post.likes_count,
+            'user_has_liked': action == 'liked'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error liking post: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog.route("/post/<int:post_id>/metrics")
+def get_post_metrics(post_id):
+    """Get current metrics for a post (for real-time updates)"""
+    try:
+        post = Post.query.get_or_404(post_id)
+        
+        # Check if user has liked
+        user_has_liked = False
+        if current_user.is_authenticated:
+            user_like = PostLike.query.filter_by(post_id=post_id, user_id=current_user.user_id).first()
+            user_has_liked = user_like is not None
+        
+        return jsonify({
+            'success': True,
+            'post_id': post_id,
+            'likes_count': post.likes_count,
+            'impressions_count': post.impressions_count,
+            'user_has_liked': user_has_liked
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -30,8 +30,13 @@ class Post(db.Model):
     category = db.Column(db.String(100), nullable=True)  # e.g., News, Features, Opinion, Investigative
     language = db.Column(db.String(50), nullable=True, default='en')  # ISO language code (en, es, fr, etc.)
     country = db.Column(db.String(100), nullable=True)  # Country name or code
+    # Metrics for freelancer awards
+    likes_count = db.Column(db.Integer, default=0, nullable=False)  # Total number of likes
+    impressions_count = db.Column(db.Integer, default=0, nullable=False)  # Total number of views/impressions
     # Relationships
     translations = db.relationship('StoryTranslation', backref='original_post', lazy=True, cascade='all, delete-orphan')
+    likes = db.relationship('PostLike', backref='post', lazy=True, cascade='all, delete-orphan')
+    views = db.relationship('PostView', backref='post', lazy=True, cascade='all, delete-orphan')
 
 class StoryTranslation(db.Model):
     """Store translated versions of blog posts/stories"""
@@ -46,6 +51,37 @@ class StoryTranslation(db.Model):
     
     # Index for faster lookups
     __table_args__ = (db.Index('idx_post_language', 'post_id', 'language'),)
+
+class PostLike(db.Model):
+    """Track user likes on blog posts/stories"""
+    __tablename__ = 'post_likes'
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False)
+    liked_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    
+    # Ensure one like per user per post
+    __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
+    
+    # Relationships
+    user = db.relationship('User', backref='post_likes')
+
+class PostView(db.Model):
+    """Track unique impressions/views on blog posts/stories"""
+    __tablename__ = 'post_views'
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=True)  # Nullable for anonymous views
+    ip_address = db.Column(db.String(45), nullable=True)  # Store IP for anonymous tracking
+    viewed_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    session_id = db.Column(db.String(255), nullable=True)  # Track by session for better uniqueness
+    
+    # Index for faster lookups and uniqueness checks
+    __table_args__ = (
+        db.Index('idx_post_user_view', 'post_id', 'user_id'),
+        db.Index('idx_post_ip_view', 'post_id', 'ip_address'),
+        db.Index('idx_post_session_view', 'post_id', 'session_id'),
+    )
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'

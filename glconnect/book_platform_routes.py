@@ -3338,17 +3338,78 @@ def content_hub():
     - Stories & News (Blogs)
     - Podcasts & Audio (News broadcasts)
     - Freelance Journalism
+    Accessible to ALL logged-in users (no author profile required)
     Maintains backward compatibility with existing routes
     """
     from glconnect.models import Post
+    from sqlalchemy import inspect
     
-    # Get recent blog posts for preview
-    recent_posts = Post.query.order_by(Post.date_posted.desc()).limit(5).all()
+    # Get recent blog posts for preview - handle missing columns gracefully
+    try:
+        # Check if new columns exist in database
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('post')]
+        has_new_columns = all(col in columns for col in ['category', 'language', 'country'])
+        
+        if has_new_columns:
+            # Query with new columns
+            recent_posts = Post.query.order_by(Post.date_posted.desc()).limit(5).all()
+        else:
+            # Query only existing columns (backward compatible)
+            recent_posts = db.session.query(
+                Post.id, Post.title, Post.content, Post.date_posted, Post.user_id
+            ).order_by(Post.date_posted.desc()).limit(5).all()
+            # Convert to Post-like objects for template compatibility
+            class SimplePost:
+                def __init__(self, id, title, content, date_posted, user_id):
+                    self.id = id
+                    self.title = title
+                    self.content = content
+                    self.date_posted = date_posted
+                    self.user_id = user_id
+                    self.category = None
+                    self.language = None
+                    self.country = None
+                    # Get author relationship
+                    self.author = User.query.get(user_id)
+            
+            recent_posts = [SimplePost(*post) for post in recent_posts]
+    except Exception as e:
+        logger.error(f"Error fetching recent posts: {e}")
+        recent_posts = []
     
-    # Get user's posts if any
+    # Get user's posts if any - handle missing columns gracefully
     user_posts = []
     if current_user.is_authenticated:
-        user_posts = Post.query.filter_by(user_id=current_user.user_id).order_by(Post.date_posted.desc()).limit(5).all()
+        try:
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('post')]
+            has_new_columns = all(col in columns for col in ['category', 'language', 'country'])
+            
+            if has_new_columns:
+                user_posts = Post.query.filter_by(user_id=current_user.user_id).order_by(Post.date_posted.desc()).limit(5).all()
+            else:
+                # Query only existing columns
+                posts_data = db.session.query(
+                    Post.id, Post.title, Post.content, Post.date_posted, Post.user_id
+                ).filter_by(user_id=current_user.user_id).order_by(Post.date_posted.desc()).limit(5).all()
+                
+                class SimplePost:
+                    def __init__(self, id, title, content, date_posted, user_id):
+                        self.id = id
+                        self.title = title
+                        self.content = content
+                        self.date_posted = date_posted
+                        self.user_id = user_id
+                        self.category = None
+                        self.language = None
+                        self.country = None
+                        self.author = User.query.get(user_id)
+                
+                user_posts = [SimplePost(*post) for post in posts_data]
+        except Exception as e:
+            logger.error(f"Error fetching user posts: {e}")
+            user_posts = []
     
     return render_template('book_platform/content_hub.html',
                          recent_posts=recent_posts,

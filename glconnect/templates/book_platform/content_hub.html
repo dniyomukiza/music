@@ -28,12 +28,12 @@
             font-size: 24px;
             margin-bottom: 15px;
         }
-        .icon-stories { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .icon-podcasts { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .icon-freelance { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .icon-books { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .icon-stories { background: #007bff; }
+        .icon-podcasts { background: #28a745; }
+        .icon-freelance { background: #17a2b8; }
+        .icon-books { background: #ffc107; }
         .quick-stats {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #007bff;
             color: white;
             border-radius: 12px;
             padding: 20px;
@@ -212,8 +212,8 @@
                                         </a>
                                     </h6>
                                     <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>{{ post.author.username }}
-                                        <i class="fas fa-calendar ms-2 me-1"></i>{{ post.date_posted.strftime('%Y-%m-%d') }}
+                                        <i class="fas fa-user me-1"></i>{{ post.author.username if post.author else 'Unknown' }}
+                                        <i class="fas fa-calendar ms-2 me-1"></i>{{ post.date_posted.strftime('%Y-%m-%d') if post.date_posted else 'N/A' }}
                                         {% if post.category %}
                                         <span class="badge bg-primary ms-2">{{ post.category }}</span>
                                         {% endif %}
@@ -257,7 +257,7 @@
                                         </a>
                                     </h6>
                                     <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i>{{ post.date_posted.strftime('%Y-%m-%d') }}
+                                        <i class="fas fa-calendar me-1"></i>{{ post.date_posted.strftime('%Y-%m-%d') if post.date_posted else 'N/A' }}
                                         {% if post.category %}
                                         <span class="badge bg-primary ms-2">{{ post.category }}</span>
                                         {% endif %}
@@ -288,54 +288,6 @@
             </div>
         </div>
 
-        <!-- Quick Links -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-link text-info me-2"></i>Quick Links
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
-                                <a href="{{ url_for('book_platform.dashboard') }}" class="text-decoration-none">
-                                    <div class="p-3 border rounded text-center">
-                                        <i class="fas fa-home fa-2x text-primary mb-2"></i>
-                                        <div>Dashboard</div>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <a href="{{ url_for('book_platform.marketplace') }}" class="text-decoration-none">
-                                    <div class="p-3 border rounded text-center">
-                                        <i class="fas fa-store fa-2x text-success mb-2"></i>
-                                        <div>Marketplace</div>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <a href="{{ url_for('book_platform.stories_redirect') }}" class="text-decoration-none">
-                                    <div class="p-3 border rounded text-center">
-                                        <i class="fas fa-newspaper fa-2x text-danger mb-2"></i>
-                                        <div>All Stories</div>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="text-decoration-none">
-                                    <div class="p-3 border rounded text-center">
-                                        <i class="fas fa-podcast fa-2x text-warning mb-2"></i>
-                                        <div>Podcasts</div>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
