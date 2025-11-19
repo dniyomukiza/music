@@ -350,9 +350,11 @@ def dashboard(user_profile, profile_type):
             is_read=False
         ).order_by(BookNotification.created_at.desc()).limit(5).all()
     
-    # Determine if user is an author (has writer/book platform profile, not just authored books)
-    # Users with writer or book platform profiles are considered authors even if they haven't created books yet
-    is_author = profile_type == 'writer' or (profile_type == 'book_platform' and book_user is not None)
+    # Determine if user is an author
+    # Only users with Writer profiles OR BookPlatformUsers who have actually authored books are considered authors
+    # This prevents non-authors from accessing author-only features
+    has_authored_books = len(authored_books) > 0
+    is_author = profile_type == 'writer' or (profile_type == 'book_platform' and has_authored_books)
     
     # Get additional data for authors
     investment_campaigns = []
@@ -442,12 +444,20 @@ def setup_profile():
 @book_bp.route('/books')
 @writer_or_book_platform_required
 def books(user_profile, profile_type):
-    """List all user's books"""
+    """List all user's books - Only accessible to authors (Writer profiles or users who have authored books)"""
     # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
     from glconnect.book_platform_models import BookPlatformUser
     
     # Get the correct author_id (BookPlatformUser.id for consistency)
     author_id = get_profile_id(user_profile, profile_type)
+    
+    # Check if user is actually an author
+    # Writer profiles are always authors, but BookPlatformUsers must have authored books
+    if profile_type != 'writer':
+        authored_books_count = BookProject.query.filter_by(author_id=author_id).count()
+        if authored_books_count == 0:
+            flash('You need to be an author to access this page. Create a Writer profile or start writing your first book.', 'warning')
+            return redirect(url_for('book_platform.dashboard'))
     
     # Query books with eager loading of author information
     # Note: We don't eager load investment_campaign to avoid collection type issues
@@ -486,6 +496,9 @@ def books(user_profile, profile_type):
 @writer_or_book_platform_required
 def create_book(user_profile, profile_type):
     """Create a new book project - Writer profiles are primary users"""
+    # Note: We allow access here to enable first-time book creation
+    # The dashboard template will hide the "Start Writing" button for non-authors
+    # This allows Writer profiles to create books immediately
     if request.method == 'POST':
         data = request.get_json()
         
@@ -3457,3 +3470,286 @@ def podcasts_redirect():
 def news_redirect():
     """Redirect to news broadcasts - maintains Ink Studio context"""
     return redirect('/routes2/news')
+
+# ============================================================================
+# PODCAST UPLOAD & ADMIN APPROVAL SYSTEM
+# ============================================================================
+
+@book_bp.route('/podcasts/upload', methods=['GET', 'POST'])
+@login_required
+def upload_podcast():
+    """Upload a podcast (audio or video) - max 30 minutes, requires admin approval"""
+    if request.method == 'GET':
+        return render_template('book_platform/upload_podcast.html')
+    
+    try:
+        from glconnect.models import PodcastSubmission
+        import os
+        from werkzeug.utils import secure_filename
+        
+        # Try to import moviepy for duration checking
+        try:
+            from moviepy.editor import VideoFileClip, AudioFileClip
+            MOVIEPY_AVAILABLE = True
+        except ImportError:
+            MOVIEPY_AVAILABLE = False
+            logger.warning("moviepy not available. Duration validation will be limited.")
+        
+        # Get form data
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        language = request.form.get('language', 'en')
+        file = request.files.get('podcast_file')
+        
+        # Validation
+        if not title:
+            flash('Title is required', 'error')
+            return redirect(url_for('book_platform.upload_podcast'))
+        
+        if not file or file.filename == '':
+            flash('Please select a podcast file to upload', 'error')
+            return redirect(url_for('book_platform.upload_podcast'))
+        
+        # Check file extension
+        allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.mp4', '.mov', '.avi', '.mkv'}
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            flash(f'Invalid file type. Allowed: {", ".join(allowed_extensions)}', 'error')
+            return redirect(url_for('book_platform.upload_podcast'))
+        
+        # Determine file type
+        is_video = file_ext in {'.mp4', '.mov', '.avi', '.mkv'}
+        file_type = 'video' if is_video else 'audio'
+        
+        # Save file temporarily to check duration
+        temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'temp_podcasts')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_file_path = os.path.join(temp_dir, secure_filename(file.filename))
+        file.save(temp_file_path)
+        
+        # Get file size first
+        file_size = os.path.getsize(temp_file_path)
+        
+        # Check duration (max 30 minutes = 1800 seconds)
+        MAX_DURATION_SECONDS = 30 * 60  # 30 minutes
+        duration = 0
+        
+        if MOVIEPY_AVAILABLE:
+            try:
+                if is_video:
+                    clip = VideoFileClip(temp_file_path)
+                    duration = int(clip.duration)
+                    clip.close()
+                else:
+                    clip = AudioFileClip(temp_file_path)
+                    duration = int(clip.duration)
+                    clip.close()
+                
+                if duration > MAX_DURATION_SECONDS:
+                    os.remove(temp_file_path)
+                    flash(f'Podcast duration ({duration // 60} minutes) exceeds maximum allowed duration of 30 minutes', 'error')
+                    return redirect(url_for('book_platform.upload_podcast'))
+                
+                if duration < 1:
+                    os.remove(temp_file_path)
+                    flash('Podcast file appears to be empty or corrupted', 'error')
+                    return redirect(url_for('book_platform.upload_podcast'))
+                    
+            except Exception as e:
+                os.remove(temp_file_path)
+                logger.error(f"Error checking podcast duration: {e}")
+                flash('Error processing podcast file. Please ensure the file is valid.', 'error')
+                return redirect(url_for('book_platform.upload_podcast'))
+        else:
+            # Fallback: Use file size as rough estimate (not accurate but better than nothing)
+            # Approximate: 1MB per minute for audio, 10MB per minute for video
+            file_size_mb = file_size / (1024 * 1024)
+            if is_video:
+                estimated_duration = int(file_size_mb / 10 * 60)  # Rough estimate
+            else:
+                estimated_duration = int(file_size_mb / 1 * 60)  # Rough estimate
+            
+            if estimated_duration > MAX_DURATION_SECONDS:
+                os.remove(temp_file_path)
+                flash(f'File size suggests duration exceeds 30 minutes. Please ensure your podcast is under 30 minutes.', 'error')
+                return redirect(url_for('book_platform.upload_podcast'))
+            
+            duration = estimated_duration  # Use estimate, admin can verify during review
+            flash('Note: Duration validation is limited. Admin will verify the actual duration during review.', 'info')
+        
+        # Move to permanent location
+        podcast_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'podcasts')
+        os.makedirs(podcast_dir, exist_ok=True)
+        
+        # Generate unique filename
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+        safe_title = secure_filename(title[:50])  # Limit title length for filename
+        unique_filename = f"{current_user.user_id}_{timestamp}_{safe_title}{file_ext}"
+        final_file_path = os.path.join(podcast_dir, unique_filename)
+        
+        # Move file
+        os.rename(temp_file_path, final_file_path)
+        
+        # Create database record
+        podcast = PodcastSubmission(
+            user_id=current_user.user_id,
+            title=title,
+            description=description,
+            file_path=final_file_path,
+            file_type=file_type,
+            duration_seconds=duration,
+            file_size=file_size,
+            status='pending',
+            category=category if category else None,
+            language=language
+        )
+        db.session.add(podcast)
+        db.session.commit()
+        
+        flash('Podcast uploaded successfully! It will be reviewed by an admin before going live.', 'success')
+        return redirect(url_for('book_platform.my_podcasts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error uploading podcast: {e}")
+        flash('An error occurred while uploading your podcast. Please try again.', 'error')
+        return redirect(url_for('book_platform.upload_podcast'))
+
+@book_bp.route('/podcasts/my-podcasts')
+@login_required
+def my_podcasts():
+    """View user's submitted podcasts"""
+    from glconnect.models import PodcastSubmission
+    
+    podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
+        PodcastSubmission.submitted_at.desc()
+    ).all()
+    
+    return render_template('book_platform/my_podcasts.html', podcasts=podcasts)
+
+@book_bp.route('/podcasts/<int:podcast_id>/delete', methods=['POST'])
+@login_required
+def delete_podcast(podcast_id):
+    """Delete a podcast submission (only if pending or rejected)"""
+    from glconnect.models import PodcastSubmission
+    import os
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    
+    # Only allow deletion if user owns it and it's not approved
+    if podcast.user_id != current_user.user_id:
+        flash('You do not have permission to delete this podcast', 'error')
+        return redirect(url_for('book_platform.my_podcasts'))
+    
+    if podcast.status == 'approved':
+        flash('Approved podcasts cannot be deleted. Contact admin if needed.', 'error')
+        return redirect(url_for('book_platform.my_podcasts'))
+    
+    # Delete file if exists
+    if os.path.exists(podcast.file_path):
+        try:
+            os.remove(podcast.file_path)
+        except Exception as e:
+            logger.error(f"Error deleting podcast file: {e}")
+    
+    db.session.delete(podcast)
+    db.session.commit()
+    
+    flash('Podcast deleted successfully', 'success')
+    return redirect(url_for('book_platform.my_podcasts'))
+
+# Admin routes for podcast approval
+@book_bp.route('/admin/podcasts')
+@login_required
+def admin_podcasts():
+    """Admin interface to review and approve/reject podcasts"""
+    from glconnect.models import PodcastSubmission
+    
+    # Check if user is admin
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    # Get pending podcasts
+    pending_podcasts = PodcastSubmission.query.filter_by(status='pending').order_by(
+        PodcastSubmission.submitted_at.asc()
+    ).all()
+    
+    # Get all podcasts for review history
+    all_podcasts = PodcastSubmission.query.order_by(
+        PodcastSubmission.submitted_at.desc()
+    ).limit(50).all()
+    
+    return render_template('book_platform/admin_podcasts.html', 
+                         pending_podcasts=pending_podcasts,
+                         all_podcasts=all_podcasts)
+
+@book_bp.route('/admin/podcasts/<int:podcast_id>/approve', methods=['POST'])
+@login_required
+def approve_podcast(podcast_id):
+    """Approve a podcast submission"""
+    from glconnect.models import PodcastSubmission
+    
+    # Check if user is admin
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    
+    if podcast.status != 'pending':
+        return jsonify({'success': False, 'error': 'Podcast is not pending approval'}), 400
+    
+    podcast.status = 'approved'
+    podcast.reviewed_at = datetime.now(timezone.utc)
+    podcast.reviewed_by = current_user.user_id
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Podcast approved successfully'})
+
+@book_bp.route('/admin/podcasts/<int:podcast_id>/reject', methods=['POST'])
+@login_required
+def reject_podcast(podcast_id):
+    """Reject a podcast submission"""
+    from glconnect.models import PodcastSubmission
+    
+    # Check if user is admin
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    data = request.get_json()
+    rejection_reason = data.get('reason', 'No reason provided')
+    
+    if podcast.status != 'pending':
+        return jsonify({'success': False, 'error': 'Podcast is not pending approval'}), 400
+    
+    podcast.status = 'rejected'
+    podcast.reviewed_at = datetime.now(timezone.utc)
+    podcast.reviewed_by = current_user.user_id
+    podcast.rejection_reason = rejection_reason
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Podcast rejected'})
+
+@book_bp.route('/podcasts/<int:podcast_id>/play')
+@login_required
+def play_podcast(podcast_id):
+    """Serve podcast file for playback"""
+    from glconnect.models import PodcastSubmission
+    from flask import send_file
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    
+    # Only allow access if approved, or if user owns it
+    if not podcast.is_approved() and podcast.user_id != current_user.user_id:
+        flash('This podcast is not available', 'error')
+        return redirect(url_for('book_platform.my_podcasts'))
+    
+    if not os.path.exists(podcast.file_path):
+        flash('Podcast file not found', 'error')
+        return redirect(url_for('book_platform.my_podcasts'))
+    
+    return send_file(podcast.file_path, as_attachment=False)

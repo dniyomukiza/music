@@ -83,6 +83,38 @@ class PostView(db.Model):
         db.Index('idx_post_session_view', 'post_id', 'session_id'),
     )
 
+class PodcastSubmission(db.Model):
+    """Store user-submitted podcasts awaiting admin approval"""
+    __tablename__ = 'podcast_submissions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    file_path = db.Column(db.String(500), nullable=False)  # Path to uploaded file
+    file_type = db.Column(db.String(20), nullable=False)  # 'audio' or 'video'
+    duration_seconds = db.Column(db.Integer, nullable=False)  # Duration in seconds
+    file_size = db.Column(db.Integer, nullable=False)  # File size in bytes
+    status = db.Column(db.String(20), default='pending', nullable=False)  # 'pending', 'approved', 'rejected'
+    submitted_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='SET NULL'), nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)  # Reason if rejected
+    category = db.Column(db.String(100), nullable=True)  # e.g., News, Entertainment, Education
+    language = db.Column(db.String(50), nullable=True, default='en')
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='podcast_submissions')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by], backref='reviewed_podcasts')
+    
+    def is_approved(self):
+        return self.status == 'approved'
+    
+    def is_pending(self):
+        return self.status == 'pending'
+    
+    def is_rejected(self):
+        return self.status == 'rejected'
+
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
     user_id = db.Column(db.Integer, primary_key=True)
