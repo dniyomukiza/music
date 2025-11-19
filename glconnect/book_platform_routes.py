@@ -3346,6 +3346,9 @@ def content_hub():
     
     # Get recent blog posts for preview - handle missing columns gracefully
     try:
+        # Rollback any existing failed transaction first
+        db.session.rollback()
+        
         # Check if new columns exist in database
         inspector = inspect(db.engine)
         columns = [col['name'] for col in inspector.get_columns('post')]
@@ -3370,18 +3373,27 @@ def content_hub():
                     self.category = None
                     self.language = None
                     self.country = None
-                    # Get author relationship
-                    self.author = User.query.get(user_id)
+                    self.likes_count = 0
+                    self.impressions_count = 0
+                    # Get author relationship - use db.session.get to avoid transaction issues
+                    try:
+                        self.author = db.session.get(User, user_id)
+                    except:
+                        self.author = None
             
             recent_posts = [SimplePost(*post) for post in recent_posts]
     except Exception as e:
         logger.error(f"Error fetching recent posts: {e}")
+        db.session.rollback()  # Rollback on error
         recent_posts = []
     
     # Get user's posts if any - handle missing columns gracefully
     user_posts = []
     if current_user.is_authenticated:
         try:
+            # Rollback any existing failed transaction first
+            db.session.rollback()
+            
             inspector = inspect(db.engine)
             columns = [col['name'] for col in inspector.get_columns('post')]
             has_new_columns = all(col in columns for col in ['category', 'language', 'country'])
@@ -3404,11 +3416,18 @@ def content_hub():
                         self.category = None
                         self.language = None
                         self.country = None
-                        self.author = User.query.get(user_id)
+                        self.likes_count = 0
+                        self.impressions_count = 0
+                        # Get author relationship - use db.session.get to avoid transaction issues
+                        try:
+                            self.author = db.session.get(User, user_id)
+                        except:
+                            self.author = None
                 
                 user_posts = [SimplePost(*post) for post in posts_data]
         except Exception as e:
             logger.error(f"Error fetching user posts: {e}")
+            db.session.rollback()  # Rollback on error
             user_posts = []
     
     return render_template('book_platform/content_hub.html',
