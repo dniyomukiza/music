@@ -3480,7 +3480,12 @@ def news_redirect():
 def upload_podcast():
     """Upload a podcast (audio or video) - max 30 minutes, requires admin approval"""
     if request.method == 'GET':
-        return render_template('book_platform/upload_podcast.html')
+        from glconnect.models import PodcastSubmission
+        # Get user's existing podcasts for replace option
+        user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
+            PodcastSubmission.submitted_at.desc()
+        ).all()
+        return render_template('book_platform/upload_podcast.html', user_podcasts=user_podcasts)
     
     try:
         from glconnect.models import PodcastSubmission
