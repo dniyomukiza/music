@@ -3630,6 +3630,168 @@ def my_podcasts():
     
     return render_template('book_platform/my_podcasts.html', podcasts=podcasts)
 
+@book_bp.route('/podcasts/<int:podcast_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_podcast(podcast_id):
+    """Edit or replace an existing podcast (only if pending or rejected)"""
+    from glconnect.models import PodcastSubmission
+    import os
+    from werkzeug.utils import secure_filename
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    
+    # Only allow editing if user owns it and it's not approved
+    if podcast.user_id != current_user.user_id:
+        flash('You do not have permission to edit this podcast', 'error')
+        return redirect(url_for('book_platform.my_podcasts'))
+    
+    if podcast.status == 'approved':
+        flash('Approved podcasts cannot be edited. Contact admin if you need to make changes.', 'error')
+        return redirect(url_for('book_platform.my_podcasts'))
+    
+    if request.method == 'GET':
+        # Get user's other podcasts for reference
+        user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
+            PodcastSubmission.submitted_at.desc()
+        ).all()
+        return render_template('book_platform/edit_podcast.html', podcast=podcast, user_podcasts=user_podcasts)
+    
+    # Handle POST - update podcast
+    try:
+        # Try to import moviepy for duration checking
+        try:
+            from moviepy.editor import VideoFileClip, AudioFileClip
+            MOVIEPY_AVAILABLE = True
+        except ImportError:
+            MOVIEPY_AVAILABLE = False
+            logger.warning("moviepy not available. Duration validation will be limited.")
+        
+        # Get form data
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        language = request.form.get('language', 'en')
+        file = request.files.get('podcast_file')
+        
+        # Validation
+        if not title:
+            flash('Title is required', 'error')
+            return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+        
+        # Update metadata
+        podcast.title = title
+        podcast.description = description
+        podcast.category = category if category else None
+        podcast.language = language
+        
+        # If new file is uploaded, replace the old one
+        if file and file.filename != '':
+            # Check file extension
+            allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.mp4', '.mov', '.avi', '.mkv'}
+            file_ext = os.path.splitext(file.filename)[1].lower()
+            if file_ext not in allowed_extensions:
+                flash(f'Invalid file type. Allowed: {", ".join(allowed_extensions)}', 'error')
+                return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+            
+            # Determine file type
+            is_video = file_ext in {'.mp4', '.mov', '.avi', '.mkv'}
+            file_type = 'video' if is_video else 'audio'
+            
+            # Save file temporarily to check duration
+            temp_dir = os.path.join(current_app.root_path, 'static', 'temp_podcasts')
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_file_path = os.path.join(temp_dir, secure_filename(file.filename))
+            file.save(temp_file_path)
+            
+            # Get file size
+            file_size = os.path.getsize(temp_file_path)
+            
+            # Check duration (max 30 minutes = 1800 seconds)
+            MAX_DURATION_SECONDS = 30 * 60
+            duration = 0
+            
+            if MOVIEPY_AVAILABLE:
+                try:
+                    if is_video:
+                        clip = VideoFileClip(temp_file_path)
+                        duration = int(clip.duration)
+                        clip.close()
+                    else:
+                        clip = AudioFileClip(temp_file_path)
+                        duration = int(clip.duration)
+                        clip.close()
+                    
+                    if duration > MAX_DURATION_SECONDS:
+                        os.remove(temp_file_path)
+                        flash(f'Podcast duration ({duration // 60} minutes) exceeds maximum allowed duration of 30 minutes', 'error')
+                        return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+                    
+                    if duration < 1:
+                        os.remove(temp_file_path)
+                        flash('Podcast file appears to be empty or corrupted', 'error')
+                        return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+                        
+                except Exception as e:
+                    os.remove(temp_file_path)
+                    logger.error(f"Error checking podcast duration: {e}")
+                    flash('Error processing podcast file. Please ensure the file is valid.', 'error')
+                    return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+            else:
+                # Fallback: Use file size as rough estimate
+                file_size_mb = file_size / (1024 * 1024)
+                if is_video:
+                    estimated_duration = int(file_size_mb / 10 * 60)
+                else:
+                    estimated_duration = int(file_size_mb / 1 * 60)
+                
+                if estimated_duration > MAX_DURATION_SECONDS:
+                    os.remove(temp_file_path)
+                    flash(f'File size suggests duration exceeds 30 minutes. Please ensure your podcast is under 30 minutes.', 'error')
+                    return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+                
+                duration = estimated_duration
+                flash('Note: Duration validation is limited. Admin will verify the actual duration during review.', 'info')
+            
+            # Delete old file if exists
+            if os.path.exists(podcast.file_path):
+                try:
+                    os.remove(podcast.file_path)
+                except Exception as e:
+                    logger.error(f"Error deleting old podcast file: {e}")
+            
+            # Move new file to permanent location
+            podcast_dir = os.path.join(current_app.root_path, 'static', 'podcasts')
+            os.makedirs(podcast_dir, exist_ok=True)
+            
+            # Generate unique filename
+            timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+            safe_title = secure_filename(title[:50])
+            unique_filename = f"{current_user.user_id}_{timestamp}_{safe_title}{file_ext}"
+            final_file_path = os.path.join(podcast_dir, unique_filename)
+            
+            # Move file
+            os.rename(temp_file_path, final_file_path)
+            
+            # Update file info
+            podcast.file_path = final_file_path
+            podcast.file_type = file_type
+            podcast.duration_seconds = duration
+            podcast.file_size = file_size
+            # Reset status to pending if it was rejected
+            if podcast.status == 'rejected':
+                podcast.status = 'pending'
+                podcast.rejection_reason = None
+        
+        db.session.commit()
+        flash('Podcast updated successfully! It will be reviewed by an admin if a new file was uploaded.', 'success')
+        return redirect(url_for('book_platform.my_podcasts'))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating podcast: {e}")
+        flash('An error occurred while updating your podcast. Please try again.', 'error')
+        return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+
 @book_bp.route('/podcasts/<int:podcast_id>/delete', methods=['POST'])
 @login_required
 def delete_podcast(podcast_id):
