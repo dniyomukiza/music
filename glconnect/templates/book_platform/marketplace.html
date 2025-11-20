@@ -33,15 +33,13 @@
                         <i class="fas fa-store me-3"></i>Marketplace
                     </h1>
                     <p class="lead mb-4">Discover amazing books from talented authors around the world</p>
-                    {% if not has_writer_profile %}
-                    <!-- Content Hub for Non-Authors -->
+                    <!-- Content Hub Button - Visible to All Users -->
                     <div class="mb-4">
                         <a href="{{ url_for('book_platform.content_hub') }}" 
-                           class="btn btn-lg btn-primary">
+                           class="btn btn-lg btn-light">
                             <i class="fas fa-th-large me-2"></i>Content Hub - Stories, News & Podcasts
                         </a>
                     </div>
-                    {% endif %}
                     <div class="d-flex gap-3">
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-book me-2"></i>{{ books|length }} Books Available

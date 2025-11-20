@@ -24,15 +24,15 @@
                             <i class="fas fa-home"></i> Dashboard
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
+                            <i class="fas fa-th-large"></i> Content Hub
+                        </a>
+                    </li>
                     {% if is_author %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.books') }}">
                             <i class="fas fa-book-open"></i> My Books
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
-                            <i class="fas fa-th-large"></i> Content Hub
                         </a>
                     </li>
                     {% endif %}
@@ -234,10 +234,78 @@
                             <h3 class="text-primary mb-2">
                                 <i class="fas fa-user-circle me-2"></i>{{ current_user.username }}
                             </h3>
-                            <p class="text-muted mb-0">Ready to continue your writing journey? Let's create something amazing together.</p>
+                            <p class="text-muted mb-0">Ready to continue your creative journey? Let's create something amazing together.</p>
                         </div>
                       
                     </div>
+                </div>
+
+                <!-- Role-Specific Quick Actions -->
+                <div class="row g-3 mb-4">
+                    <!-- Podcast Actions -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-podcast fa-3x text-success"></i>
+                                </div>
+                                <h5 class="card-title">Podcasts</h5>
+                                <p class="card-text text-muted small">Manage your podcast content</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.upload_podcast') }}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-upload me-1"></i>Upload Podcast
+                                    </a>
+                                    <a href="{{ url_for('book_platform.my_podcasts') }}" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-list me-1"></i>My Podcasts
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blog/Story Actions -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-newspaper fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="card-title">Stories & News</h5>
+                                <p class="card-text text-muted small">Write and manage your stories</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-pen me-1"></i>Write Story
+                                    </a>
+                                    <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-list me-1"></i>My Stories
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Author Actions (if author) -->
+                    {% if is_author %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-book fa-3x text-warning"></i>
+                                </div>
+                                <h5 class="card-title">Books</h5>
+                                <p class="card-text text-muted small">Create and manage your books</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-warning btn-sm">
+                                        <i class="fas fa-plus me-1"></i>Create Book
+                                    </a>
+                                    <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-book-open me-1"></i>My Books
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 {% if is_author %}

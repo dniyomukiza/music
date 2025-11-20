@@ -157,7 +157,7 @@
                     <h1 class="display-5 fw-bold mb-3">
                         <i class="fas fa-th-large me-2"></i>Content Hub
                     </h1>
-                    <p class="lead mb-0">Access all your content in one place: Stories, News, Podcasts, Books, and more</p>
+                    <p class="lead mb-0">Browse and discover content from creators worldwide: Stories, News, Podcasts, Books, and more</p>
                 </div>
             </div>
         </div>
@@ -173,14 +173,11 @@
                         </div>
                         <h4 class="card-title mb-3">Stories & News</h4>
                         <p class="card-text text-muted mb-4">
-                            Read and write stories from freelance journalists worldwide. Filter by category, language, and country.
+                            Read stories from freelance journalists worldwide. Filter by category, language, and country.
                         </p>
                         <div class="d-grid gap-2">
                             <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-primary">
                                 <i class="fas fa-book-reader me-2"></i>Browse Stories
-                            </a>
-                            <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-pen me-2"></i>Write Story
                             </a>
                         </div>
                     </div>
@@ -196,19 +193,13 @@
                         </div>
                         <h4 class="card-title mb-3">Podcasts & Audio</h4>
                         <p class="card-text text-muted mb-4">
-                            Upload your own podcasts (audio or video, max 30 min). Listen to AI-generated news broadcasts and user-submitted content.
+                            Listen to approved podcasts and AI-generated news broadcasts. Discover audio and video content from creators worldwide.
                         </p>
                         <div class="d-grid gap-2">
-                            <a href="{{ url_for('book_platform.upload_podcast') }}" class="btn btn-primary">
-                                <i class="fas fa-upload me-2"></i>Upload Podcast
-                            </a>
-                            <a href="{{ url_for('book_platform.my_podcasts') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-list me-2"></i>My Podcasts
-                            </a>
-                            <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-outline-success">
+                            <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-primary">
                                 <i class="fas fa-headphones me-2"></i>Browse Podcasts
                             </a>
-                            <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-headphones me-2"></i>Listen to News
                             </a>
                         </div>
@@ -225,14 +216,11 @@
                         </div>
                         <h4 class="card-title mb-3">Freelance Journalism</h4>
                         <p class="card-text text-muted mb-4">
-                            Submit stories for review. Get paid when approved. Build your portfolio as a freelance journalist.
+                            Read stories from freelance journalists. Discover quality journalism from around the world.
                         </p>
                         <div class="d-grid gap-2">
-                            <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-primary">
-                                <i class="fas fa-plus-circle me-2"></i>Submit Story
-                            </a>
-                            <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-chart-line me-2"></i>My Stories
+                            <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-primary">
+                                <i class="fas fa-book-reader me-2"></i>Browse Stories
                             </a>
                         </div>
                     </div>
@@ -253,9 +241,6 @@
                         <div class="d-grid gap-2">
                             <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary">
                                 <i class="fas fa-store me-2"></i>Browse Books
-                            </a>
-                            <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-primary">
-                                <i class="fas fa-book-open me-2"></i>My Books
                             </a>
                         </div>
                     </div>
@@ -310,51 +295,21 @@
                 </div>
             </div>
 
-            <!-- Your Stories -->
+            <!-- Popular Authors -->
             <div class="col-lg-6 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-header bg-white">
                         <h5 class="mb-0">
-                            <i class="fas fa-user-edit text-success me-2"></i>Your Stories
+                            <i class="fas fa-users text-info me-2"></i>Popular Authors
                         </h5>
                     </div>
                     <div class="card-body">
-                        {% if user_posts %}
-                            {% for post in user_posts[:5] %}
-                            <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <a href="{{ url_for('blog.update', post_id=post.id) }}" class="text-decoration-none">
-                                            {{ post.title }}
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i>{{ post.date_posted.strftime('%Y-%m-%d') if post.date_posted else 'N/A' }}
-                                        {% if post.category %}
-                                        <span class="badge bg-primary ms-2">{{ post.category }}</span>
-                                        {% endif %}
-                                    </small>
-                                </div>
-                                <div>
-                                    <a href="{{ url_for('blog.update2', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            <div class="text-center mt-3">
-                                <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-plus me-1"></i>Create New Story
-                                </a>
-                            </div>
-                        {% else %}
-                            <p class="text-muted text-center py-3">You haven't written any stories yet.</p>
-                            <div class="text-center">
-                                <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-primary">
-                                    <i class="fas fa-pen me-2"></i>Write Your First Story
-                                </a>
-                            </div>
-                        {% endif %}
+                        <p class="text-muted text-center py-3">Discover talented authors and their works.</p>
+                        <div class="text-center">
+                            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary">
+                                <i class="fas fa-store me-2"></i>Browse Authors & Books
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

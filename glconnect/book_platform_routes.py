@@ -3523,7 +3523,8 @@ def upload_podcast():
         file_type = 'video' if is_video else 'audio'
         
         # Save file temporarily to check duration
-        temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'temp_podcasts')
+        # Files are stored in glconnect/static/podcasts/ (matches /liqfolder/glconnect/static/podcasts/ in Docker)
+        temp_dir = os.path.join(current_app.root_path, 'static', 'temp_podcasts')
         os.makedirs(temp_dir, exist_ok=True)
         temp_file_path = os.path.join(temp_dir, secure_filename(file.filename))
         file.save(temp_file_path)
@@ -3579,7 +3580,8 @@ def upload_podcast():
             flash('Note: Duration validation is limited. Admin will verify the actual duration during review.', 'info')
         
         # Move to permanent location
-        podcast_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'podcasts')
+        # Store in glconnect/static/podcasts/ (matches /liqfolder/glconnect/static/podcasts/ in Docker)
+        podcast_dir = os.path.join(current_app.root_path, 'static', 'podcasts')
         os.makedirs(podcast_dir, exist_ok=True)
         
         # Generate unique filename
@@ -3743,16 +3745,53 @@ def play_podcast(podcast_id):
     
     podcast = PodcastSubmission.query.get_or_404(podcast_id)
     
-    # Only allow access if approved, or if user owns it
-    if not podcast.is_approved() and podcast.user_id != current_user.user_id:
+    # Allow access if approved, if user owns it, or if user is admin (for reviewing pending podcasts)
+    if not podcast.is_approved() and podcast.user_id != current_user.user_id and current_user.role != 'admin':
         flash('This podcast is not available', 'error')
         return redirect(url_for('book_platform.my_podcasts'))
     
-    if not os.path.exists(podcast.file_path):
-        flash('Podcast file not found', 'error')
+    # Try to resolve the file path - handle both absolute and relative paths
+    # Files are stored in glconnect/static/podcasts/ (matches /liqfolder/glconnect/static/podcasts/ in Docker)
+    file_path = podcast.file_path
+    filename = os.path.basename(file_path) if file_path else None
+    
+    # The correct path where files should be stored
+    correct_path = os.path.join(current_app.root_path, 'static', 'podcasts', filename) if filename else None
+    
+    # Try multiple possible locations in order of likelihood
+    possible_paths = []
+    
+    # 1. First try the stored path (might be correct if file exists there)
+    if file_path and os.path.exists(file_path):
+        possible_paths.append(file_path)
+    
+    # 2. Try the correct path (where files should be: glconnect/static/podcasts/)
+    if correct_path and os.path.exists(correct_path):
+        possible_paths.append(correct_path)
+    
+    # 3. Try old wrong path formats (for backwards compatibility)
+    if filename:
+        old_paths = [
+            os.path.join(current_app.root_path, 'uploads', 'podcasts', filename),  # Old wrong location
+            os.path.join(os.path.dirname(current_app.root_path), 'uploads', 'podcasts', filename),  # Another old location
+            os.path.join(current_app.root_path, 'static', 'uploads', 'podcasts', filename),  # Alternative location
+        ]
+        for old_path in old_paths:
+            if old_path not in possible_paths and os.path.exists(old_path):
+                possible_paths.append(old_path)
+    
+    # Use the first path that exists
+    if possible_paths:
+        file_path = possible_paths[0]
+        if len(possible_paths) > 1:
+            logger.info(f"Found podcast file at: {file_path} (tried {len(possible_paths)} locations)")
+    else:
+        # File not found in any location
+        logger.error(f"Podcast file not found. Stored path: {podcast.file_path}, Expected: {correct_path}")
+        flash(f'Podcast file not found. The file may have been moved or deleted. File: {filename or "unknown"}', 'error')
         return redirect(url_for('book_platform.my_podcasts'))
     
-    return send_file(podcast.file_path, as_attachment=False)
+    return send_file(file_path, as_attachment=False)
 
 @book_bp.route('/podcasts/library')
 @login_required
