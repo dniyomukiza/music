@@ -96,14 +96,10 @@ def create_app():
         try:
             # Always rollback on exception to clear any failed transactions
             if exception:
-                db.session.rollback()
-            # Also rollback if there's an active transaction that might be in a bad state
-            elif db.session.is_active and db.session.in_transaction():
                 try:
                     db.session.rollback()
                 except Exception:
-                    # If rollback fails, that's okay - we'll remove the session anyway
-                    pass
+                    pass  # Ignore rollback errors
         except Exception as e:
             # If anything fails, log it but continue
             print(f"Warning: Error during session teardown: {e}")

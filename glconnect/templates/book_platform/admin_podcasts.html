@@ -71,14 +71,17 @@
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{{ url_for('book_platform.play_podcast', podcast_id=podcast.id) }}" 
-                                           class="btn btn-outline-primary" target="_blank">
+                                           class="btn btn-outline-primary">
                                             <i class="fas fa-play"></i> Preview
                                         </a>
                                         <button class="btn btn-success" onclick="approvePodcast({{ podcast.id }})">
                                             <i class="fas fa-check"></i> Approve
                                         </button>
-                                        <button class="btn btn-danger" onclick="rejectPodcast({{ podcast.id }}, '{{ podcast.title }}')">
+                                        <button class="btn btn-warning" onclick="rejectPodcast({{ podcast.id }}, '{{ podcast.title }}')">
                                             <i class="fas fa-times"></i> Reject
+                                        </button>
+                                        <button class="btn btn-danger" onclick="deletePodcast({{ podcast.id }}, '{{ podcast.title }}')">
+                                            <i class="fas fa-trash"></i> Delete
                                         </button>
                                     </div>
                                 </td>
@@ -110,12 +113,18 @@
                                 <th>Status</th>
                                 <th>Reviewed By</th>
                                 <th>Reviewed At</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for podcast in all_podcasts %}
                             <tr>
-                                <td>{{ podcast.title }}</td>
+                                <td>
+                                    <strong>{{ podcast.title }}</strong>
+                                    {% if podcast.description %}
+                                    <br><small class="text-muted">{{ podcast.description[:80] }}{% if podcast.description|length > 80 %}...{% endif %}</small>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if podcast.status == 'approved' %}
                                     <span class="badge bg-success">Approved</span>
@@ -127,6 +136,17 @@
                                 </td>
                                 <td>{{ podcast.reviewer.username if podcast.reviewer else 'N/A' }}</td>
                                 <td>{{ podcast.reviewed_at.strftime('%Y-%m-%d %H:%M') if podcast.reviewed_at else 'N/A' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('book_platform.play_podcast', podcast_id=podcast.id) }}" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-play"></i>
+                                        </a>
+                                        <button class="btn btn-danger btn-sm" onclick="deletePodcast({{ podcast.id }}, '{{ podcast.title }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -216,6 +236,30 @@
             .catch(error => {
                 console.error('Error:', error);
                 alert('Error rejecting podcast');
+            });
+        }
+
+        function deletePodcast(podcastId, title) {
+            if (!confirm(`Are you sure you want to permanently delete "${title}"?\n\nThis action cannot be undone and will delete both the podcast record and the file.`)) {
+                return;
+            }
+
+            fetch(`/mybook/admin/podcasts/${podcastId}/delete`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Podcast deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete podcast'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting podcast');
             });
         }
     </script>

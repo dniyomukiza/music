@@ -95,7 +95,7 @@
                         <div class="d-flex gap-2 mt-3">
                             {% if podcast.status == 'approved' or podcast.user_id == current_user.user_id %}
                             <a href="{{ url_for('book_platform.play_podcast', podcast_id=podcast.id) }}" 
-                               class="btn btn-sm btn-primary" target="_blank">
+                               class="btn btn-sm btn-primary">
                                 <i class="fas fa-play me-1"></i>Play
                             </a>
                             {% endif %}

@@ -8,7 +8,7 @@ This module contains all routes for Ink Studio including:
 - User management
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, current_app, send_from_directory
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, current_app, send_from_directory, send_file, abort
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
@@ -3910,13 +3910,69 @@ def reject_podcast(podcast_id):
     
     return jsonify({'success': True, 'message': 'Podcast rejected'})
 
+@book_bp.route('/admin/podcasts/<int:podcast_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_podcast(podcast_id):
+    """Admin route to delete any podcast (approved, pending, or rejected)"""
+    from glconnect.models import PodcastSubmission
+    import os
+    
+    # Check if user is admin
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    podcast_title = podcast.title
+    
+    # Delete file if exists - try multiple possible locations
+    file_path = podcast.file_path
+    filename = os.path.basename(file_path) if file_path else None
+    
+    # Try multiple possible locations
+    possible_paths = []
+    if file_path and os.path.exists(file_path):
+        possible_paths.append(file_path)
+    
+    if filename:
+        correct_path = os.path.join(current_app.root_path, 'static', 'podcasts', filename)
+        if os.path.exists(correct_path):
+            possible_paths.append(correct_path)
+        
+        # Try old locations
+        old_paths = [
+            os.path.join(current_app.root_path, 'uploads', 'podcasts', filename),
+            os.path.join(os.path.dirname(current_app.root_path), 'uploads', 'podcasts', filename),
+            os.path.join(current_app.root_path, 'static', 'uploads', 'podcasts', filename),
+        ]
+        for old_path in old_paths:
+            if os.path.exists(old_path):
+                possible_paths.append(old_path)
+    
+    # Delete all found files
+    for path in possible_paths:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                logger.info(f"Deleted podcast file: {path}")
+        except Exception as e:
+            logger.error(f"Error deleting podcast file {path}: {e}")
+    
+    # Delete from database
+    try:
+        db.session.delete(podcast)
+        db.session.commit()
+        logger.info(f"Admin {current_user.username} deleted podcast: {podcast_title} (ID: {podcast_id})")
+        return jsonify({'success': True, 'message': f'Podcast "{podcast_title}" deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting podcast from database: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @book_bp.route('/podcasts/<int:podcast_id>/play')
 @login_required
 def play_podcast(podcast_id):
-    """Serve podcast file for playback"""
+    """Display podcast player page with HTML5 video/audio element"""
     from glconnect.models import PodcastSubmission
-    from flask import send_file
-    import mimetypes
     
     podcast = PodcastSubmission.query.get_or_404(podcast_id)
     
@@ -3925,8 +3981,27 @@ def play_podcast(podcast_id):
         flash('This podcast is not available', 'error')
         return redirect(url_for('book_platform.my_podcasts'))
     
+    # Generate the URL to serve the file (using a separate route for actual file serving)
+    media_url = url_for('book_platform.serve_podcast_file', podcast_id=podcast_id)
+    
+    return render_template('book_platform/podcast_player.html', 
+                         podcast=podcast, 
+                         media_url=media_url)
+
+@book_bp.route('/podcasts/<int:podcast_id>/file')
+@login_required
+def serve_podcast_file(podcast_id):
+    """Serve the actual podcast file with proper headers for streaming"""
+    from glconnect.models import PodcastSubmission
+    import mimetypes
+    
+    podcast = PodcastSubmission.query.get_or_404(podcast_id)
+    
+    # Allow access if approved, if user owns it, or if user is admin
+    if not podcast.is_approved() and podcast.user_id != current_user.user_id and current_user.role != 'admin':
+        return abort(403)
+    
     # Try to resolve the file path - handle both absolute and relative paths
-    # Files are stored in glconnect/static/podcasts/ (matches /liqfolder/glconnect/static/podcasts/ in Docker)
     file_path = podcast.file_path
     filename = os.path.basename(file_path) if file_path else None
     
@@ -3947,9 +4022,9 @@ def play_podcast(podcast_id):
     # 3. Try old wrong path formats (for backwards compatibility)
     if filename:
         old_paths = [
-            os.path.join(current_app.root_path, 'uploads', 'podcasts', filename),  # Old wrong location
-            os.path.join(os.path.dirname(current_app.root_path), 'uploads', 'podcasts', filename),  # Another old location
-            os.path.join(current_app.root_path, 'static', 'uploads', 'podcasts', filename),  # Alternative location
+            os.path.join(current_app.root_path, 'uploads', 'podcasts', filename),
+            os.path.join(os.path.dirname(current_app.root_path), 'uploads', 'podcasts', filename),
+            os.path.join(current_app.root_path, 'static', 'uploads', 'podcasts', filename),
         ]
         for old_path in old_paths:
             if old_path not in possible_paths and os.path.exists(old_path):
@@ -3961,10 +4036,8 @@ def play_podcast(podcast_id):
         if len(possible_paths) > 1:
             logger.info(f"Found podcast file at: {file_path} (tried {len(possible_paths)} locations)")
     else:
-        # File not found in any location
         logger.error(f"Podcast file not found. Stored path: {podcast.file_path}, Expected: {correct_path}")
-        flash(f'Podcast file not found. The file may have been moved or deleted. File: {filename or "unknown"}', 'error')
-        return redirect(url_for('book_platform.my_podcasts'))
+        return abort(404)
     
     # Determine MIME type based on file extension
     file_ext = os.path.splitext(file_path)[1].lower()
@@ -3981,16 +4054,20 @@ def play_podcast(podcast_id):
     
     mimetype = mime_type_map.get(file_ext)
     if not mimetype:
-        # Fallback to mimetypes module
         mimetype, _ = mimetypes.guess_type(file_path)
         if not mimetype:
-            # Default based on podcast type
             mimetype = 'audio/mpeg' if podcast.file_type == 'audio' else 'video/mp4'
     
-    # Set headers for inline playback (not download)
+    # Set headers for streaming (not download)
     response = send_file(file_path, mimetype=mimetype, as_attachment=False)
+    response.headers['Content-Type'] = mimetype
     response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
     response.headers['Accept-Ranges'] = 'bytes'  # Enable range requests for seeking
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # For video files, ensure proper streaming
+    if podcast.file_type == 'video':
+        response.headers['Content-Length'] = str(os.path.getsize(file_path))
     
     return response
 
