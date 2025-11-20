@@ -242,7 +242,8 @@
 
                 <!-- Role-Specific Quick Actions -->
                 <div class="row g-3 mb-4">
-                    <!-- Podcast Actions -->
+                    <!-- Podcast Actions (Podcasters Only) -->
+                    {% if current_user.role == 'podcaster' %}
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-body text-center">
@@ -262,8 +263,10 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
-                    <!-- Blog/Story Actions -->
+                    <!-- Blog/Story Actions (Bloggers Only) -->
+                    {% if current_user.role == 'blogger' %}
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-body text-center">
@@ -283,6 +286,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <!-- Author Actions (if author) -->
                     {% if is_author %}

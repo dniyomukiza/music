@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blogs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='book_platform.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
+        body {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+            min-height: 100vh;
+        }
         .filters-container {
-            background: #f5f5f5;
+            background: rgba(255, 255, 255, 0.1);
             padding: 20px;
             margin-bottom: 20px;
             border-radius: 8px;
@@ -17,6 +22,8 @@
             flex-wrap: wrap;
             gap: 15px;
             align-items: flex-end;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .filter-group {
             flex: 1;
@@ -26,15 +33,21 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: #333;
+            color: #ecf0f1;
         }
         .filter-group select,
         .filter-group input {
             width: 100%;
             padding: 8px;
-            border: 1px solid #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 4px;
             font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ecf0f1;
+        }
+        .filter-group select option {
+            background: #2c3e50;
+            color: #ecf0f1;
         }
         .filter-actions {
             display: flex;
@@ -42,22 +55,23 @@
         }
         .btn-filter {
             padding: 8px 20px;
-            background: #007bff;
+            background: #3498db;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
+            transition: background 0.3s;
         }
         .btn-filter:hover {
-            background: #0056b3;
+            background: #2980b9;
         }
         .btn-clear {
-            background: #6c757d;
+            background: #7f8c8d;
         }
         .btn-clear:hover {
-            background: #545b62;
+            background: #5d6d7e;
         }
         .post-meta {
             display: flex;
@@ -66,30 +80,30 @@
             margin-top: 10px;
         }
         .meta-badge {
-            background: #e9ecef;
+            background: rgba(255, 255, 255, 0.2);
             padding: 4px 10px;
             border-radius: 12px;
             font-size: 12px;
-            color: #495057;
+            color: #ecf0f1;
         }
         .meta-badge.category {
-            background: #007bff;
+            background: #3498db;
             color: white;
         }
         .meta-badge.language {
-            background: #28a745;
+            background: #27ae60;
             color: white;
         }
         .meta-badge.country {
-            background: #ffc107;
-            color: #333;
+            background: #f39c12;
+            color: white;
         }
     </style>
 </head>
 <body>
     {% include 'messages.html' %}
     <!-- Ink Studio Integration Banner -->
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
                 <h3 style="margin: 0; font-size: 20px;">
@@ -101,7 +115,8 @@
             </div>
             <div>
                 <a href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('book_platform.ink_studio_access') }}" 
-                   style="background: white; color: #667eea; padding: 8px 20px; border-radius: 5px; text-decoration: none; font-weight: bold;">
+                   style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; border: 1px solid rgba(255, 255, 255, 0.3); transition: background 0.3s;"
+                   onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
                     <i class="fas fa-th-large me-1"></i>Content Hub
                 </a>
             </div>
@@ -113,7 +128,7 @@
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
                 <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Story</a>
-                <a href="{{ url_for('book_platform.content_hub') }}" class="btn" style="background: #667eea; color: white;">
+                <a href="{{ url_for('book_platform.content_hub') }}" class="btn" style="background: #3498db; color: white;">
                     <i class="fas fa-th-large me-1"></i>Back to Content Hub
                 </a>
             {% else %}
@@ -123,10 +138,10 @@
 
         <!-- Filters Section -->
         {% if is_freelance_filter %}
-        <div style="background: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+        <div style="background: rgba(52, 152, 219, 0.2); border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #ecf0f1;">
             <strong><i class="fas fa-newspaper me-2"></i>Showing Freelance Journalism Stories</strong>
-            <p class="mb-0 text-muted small">Filtered by: News, Features, Opinion, Investigative, Analysis, Editorial</p>
-            <a href="{{ url_for('blog.blogs') }}" class="btn btn-sm btn-outline-primary mt-2">
+            <p class="mb-0 small" style="opacity: 0.8; margin-top: 5px;">Filtered by: News, Features, Opinion, Investigative, Analysis, Editorial</p>
+            <a href="{{ url_for('blog.blogs') }}" class="btn btn-sm btn-outline-primary mt-2" style="background: #3498db; color: white; border: 1px solid #3498db; padding: 6px 15px; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 10px;">
                 <i class="fas fa-times me-1"></i>Show All Blogs
             </a>
         </div>
@@ -166,14 +181,14 @@
         </div>
 
         {% for post in posts.items %}
-        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #ccc; background: white; border-radius: 4px;" data-post-id="{{ post.id }}">
-            <div style="font-size: 12px; margin-bottom: 5px;">
+        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); border-radius: 4px; backdrop-filter: blur(10px);" data-post-id="{{ post.id }}">
+            <div style="font-size: 12px; margin-bottom: 5px; color: #bdc3c7;">
                 <small>Posted by: {{ post.author.username if post.author else 'Unknown' }}</small>
                 <br>
                 <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") if post.date_posted else 'N/A' }}</small>
             </div>
             <h2 style="font-size: 24px; margin-bottom: 10px;">
-                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: rgb(70, 24, 24); text-decoration: none;">{{ post.title }}</a>
+                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: #ecf0f1; text-decoration: none;">{{ post.title }}</a>
             </h2>
             <div class="post-meta">
                 {% if post.category %}
@@ -186,23 +201,36 @@
                 <span class="meta-badge country">{{ post.country }}</span>
                 {% endif %}
             </div>
-            <p style="font-size: 16px; margin-bottom: 10px; margin-top: 10px;">{{ post.content | safe | truncate(300) }}</p>
+            <p style="font-size: 16px; margin-bottom: 10px; margin-top: 10px; color: #bdc3c7;">{{ post.content | safe | truncate(300) }}</p>
 
             <!-- Metrics and Actions -->
             <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
                 <div style="display: flex; gap: 20px; align-items: center;">
                     <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-heart" style="color: #dc3545;"></i>
-                        <span class="likes-count-{{ post.id }}" style="font-weight: bold;">{{ post.likes_count if post.likes_count else 0 }}</span>
-                        <span style="color: #666; font-size: 12px;">likes</span>
+                        <button id="like-btn-{{ post.id }}" 
+                                onclick="toggleLike({{ post.id }})" 
+                                style="background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; transition: all 0.2s; display: flex; align-items: center;"
+                                title="{% if current_user.is_authenticated %}Click to like{% else %}Login to like{% endif %}"
+                                data-liked="{{ 'true' if (post.user_liked if hasattr(post, 'user_liked') else False) else 'false' }}">
+                            <i class="fas fa-heart like-icon-{{ post.id }}" style="color: {% if hasattr(post, 'user_liked') and post.user_liked %}#e74c3c{% else %}#95a5a6{% endif %}; font-size: 18px; transition: color 0.2s;"></i>
+                        </button>
+                        <span class="likes-count-{{ post.id }}" style="font-weight: bold; color: #ecf0f1;">{{ post.likes_count if post.likes_count else 0 }}</span>
+                        <span style="color: #bdc3c7; font-size: 12px;">likes</span>
                     </div>
                     <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-eye" style="color: #007bff;"></i>
-                        <span class="impressions-count-{{ post.id }}" style="font-weight: bold;">{{ post.impressions_count if post.impressions_count else 0 }}</span>
-                        <span style="color: #666; font-size: 12px;">views</span>
+                        <i class="fas fa-eye" style="color: #3498db;"></i>
+                        <span class="impressions-count-{{ post.id }}" style="font-weight: bold; color: #ecf0f1;">{{ post.impressions_count if post.impressions_count else 0 }}</span>
+                        <span style="color: #bdc3c7; font-size: 12px;">views</span>
                     </div>
                 </div>
-                <div style="margin-left: auto;">
+                <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                    <button onclick="copyPostLink({{ post.id }})" 
+                            class="btn" 
+                            style="background: rgba(52, 152, 219, 0.3); color: #ecf0f1; border: 1px solid rgba(52, 152, 219, 0.5); padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: all 0.3s;"
+                            title="Copy link to share"
+                            id="share-btn-{{ post.id }}">
+                        <i class="fas fa-share-alt" style="margin-right: 5px;"></i>Share
+                    </button>
                     <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
                 </div>
             </div>
@@ -230,6 +258,158 @@
         audioElement.src = `/blog/play-audio/${postId}`;
         audioElement.style.display = "block";
         audioElement.play();
+    }
+    
+    // Copy post link to clipboard
+    function copyPostLink(postId) {
+        const postUrl = window.location.origin + '{{ url_for("blog.update", post_id=0) }}'.replace('0', postId);
+        const shareBtn = document.getElementById(`share-btn-${postId}`);
+        const originalText = shareBtn.innerHTML;
+        
+        // Try to use the Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(postUrl)
+                .then(() => {
+                    shareBtn.innerHTML = '<i class="fas fa-check" style="margin-right: 5px;"></i>Copied!';
+                    shareBtn.style.background = 'rgba(39, 174, 96, 0.3)';
+                    shareBtn.style.borderColor = 'rgba(39, 174, 96, 0.5)';
+                    setTimeout(() => {
+                        shareBtn.innerHTML = originalText;
+                        shareBtn.style.background = 'rgba(52, 152, 219, 0.3)';
+                        shareBtn.style.borderColor = 'rgba(52, 152, 219, 0.5)';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    fallbackCopyTextToClipboard(postUrl, shareBtn, originalText);
+                });
+        } else {
+            // Fallback for older browsers
+            fallbackCopyTextToClipboard(postUrl, shareBtn, originalText);
+        }
+    }
+    
+    // Fallback copy function for older browsers
+    function fallbackCopyTextToClipboard(text, button, originalText) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                button.innerHTML = '<i class="fas fa-check" style="margin-right: 5px;"></i>Copied!';
+                button.style.background = 'rgba(39, 174, 96, 0.3)';
+                button.style.borderColor = 'rgba(39, 174, 96, 0.5)';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = 'rgba(52, 152, 219, 0.3)';
+                    button.style.borderColor = 'rgba(52, 152, 219, 0.5)';
+                }, 2000);
+            } else {
+                // If copy fails, show the URL in a prompt
+                prompt('Copy this link:', text);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            prompt('Copy this link:', text);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    // Like/Unlike functionality - prevents duplicate likes
+    let likeRequestInProgress = {}; // Track ongoing like requests per post
+    
+    function toggleLike(postId) {
+        {% if current_user.is_authenticated %}
+        // Prevent multiple simultaneous requests for the same post
+        if (likeRequestInProgress[postId]) {
+            console.log('Like request already in progress for post:', postId);
+            return;
+        }
+        
+        const likeBtn = document.getElementById(`like-btn-${postId}`);
+        const likesCountEl = document.querySelector(`.likes-count-${postId}`);
+        const icon = document.querySelector(`.like-icon-${postId}`);
+        
+        if (!likeBtn || !likesCountEl || !icon) {
+            console.error('Like button elements not found for post:', postId);
+            return;
+        }
+        
+        const isLiked = likeBtn.dataset.liked === 'true';
+        
+        // Disable button during request
+        likeBtn.style.pointerEvents = 'none';
+        likeBtn.style.opacity = '0.6';
+        likeRequestInProgress[postId] = true;
+        
+        // Optimistic UI update
+        const currentCount = parseInt(likesCountEl.textContent) || 0;
+        if (isLiked) {
+            likesCountEl.textContent = Math.max(0, currentCount - 1);
+            icon.style.color = '#95a5a6';
+            likeBtn.dataset.liked = 'false';
+        } else {
+            likesCountEl.textContent = currentCount + 1;
+            icon.style.color = '#e74c3c';
+            likeBtn.dataset.liked = 'true';
+        }
+        
+        // Send request to server
+        fetch(`/blog/post/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update with server response (ensures accuracy)
+                likesCountEl.textContent = data.likes_count;
+                likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                icon.style.color = data.user_has_liked ? '#e74c3c' : '#95a5a6';
+            } else {
+                // Revert on error
+                likesCountEl.textContent = currentCount;
+                likeBtn.dataset.liked = isLiked ? 'true' : 'false';
+                icon.style.color = isLiked ? '#e74c3c' : '#95a5a6';
+                // Update with server state if available
+                if (data.likes_count !== undefined) {
+                    likesCountEl.textContent = data.likes_count;
+                }
+                if (data.user_has_liked !== undefined) {
+                    likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                    icon.style.color = data.user_has_liked ? '#e74c3c' : '#95a5a6';
+                }
+                console.error('Like error:', data.error || 'Failed to update like');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Revert on error
+            likesCountEl.textContent = currentCount;
+            likeBtn.dataset.liked = isLiked ? 'true' : 'false';
+            icon.style.color = isLiked ? '#e74c3c' : '#95a5a6';
+        })
+        .finally(() => {
+            // Re-enable button
+            likeBtn.style.pointerEvents = '';
+            likeBtn.style.opacity = '1';
+            delete likeRequestInProgress[postId];
+        });
+        {% else %}
+        alert('Please log in to like stories');
+        window.location.href = '{{ url_for("routes1.login") }}';
+        {% endif %}
     }
     </script>
     

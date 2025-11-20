@@ -29,7 +29,7 @@ class RegistrationForm(FlaskForm):
     username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Username"})
     password = StringField(validators=[DataRequired(), Length(min=2, max=20)], render_kw={"placeholder": "Password"})
     email = StringField('Email', validators=[DataRequired(), Email()], render_kw={"placeholder": "Email"})
-    role = SelectField('Role', choices=[('artist', 'Artist'), ('author', 'Author'), ('blogger', 'Blogger'), ('other', 'Other')], default='other')
+    role = SelectField('Role', choices=[('artist', 'Artist'), ('author', 'Author'), ('blogger', 'Blogger'), ('podcaster', 'Podcaster'), ('other', 'Other')], default='other')
     submit = SubmitField('Sign up')
     recap=RecaptchaField()
 

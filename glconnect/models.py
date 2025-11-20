@@ -30,9 +30,9 @@ class Post(db.Model):
     category = db.Column(db.String(100), nullable=True)  # e.g., News, Features, Opinion, Investigative
     language = db.Column(db.String(50), nullable=True, default='en')  # ISO language code (en, es, fr, etc.)
     country = db.Column(db.String(100), nullable=True)  # Country name or code
-    # Metrics for freelancer awards
-    likes_count = db.Column(db.Integer, default=0, nullable=False)  # Total number of likes
-    impressions_count = db.Column(db.Integer, default=0, nullable=False)  # Total number of views/impressions
+    # Metrics for freelancer awards (nullable to handle missing columns gracefully)
+    likes_count = db.Column(db.Integer, default=0, nullable=True)  # Total number of likes
+    impressions_count = db.Column(db.Integer, default=0, nullable=True)  # Total number of views/impressions
     # Relationships
     translations = db.relationship('StoryTranslation', backref='original_post', lazy=True, cascade='all, delete-orphan')
     likes = db.relationship('PostLike', backref='post', lazy=True, cascade='all, delete-orphan')

@@ -1203,7 +1203,33 @@
                             <i class="fas fa-arrow-right"></i>
                         </div>
                     </a>
+                    <div class="feature-card clickable-card" onclick="toggleLiveRadio()" id="liveRadioCard" style="cursor: pointer;">
+                        <div class="feature-icon"><i class="fas fa-radio"></i></div>
+                        <h3>Live Radio</h3>
+                        <p>Listen to our live radio broadcast. Click to start streaming live audio content</p>
+                        <div class="card-hover-effect" id="radioHoverEffect">
+                            <i class="fas fa-play" id="radioPlayIcon"></i>
+                        </div>
+                        <div id="radioStatus" style="margin-top: 10px; font-size: 12px; color: #666; display: none;">
+                            <i class="fas fa-circle" style="color: #e74c3c; animation: pulse 2s infinite;"></i>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('book_platform.music_dashboard') }}" class="feature-card clickable-card" style="text-decoration: none; color: inherit;">
+                        <div class="feature-icon"><i class="fas fa-music"></i></div>
+                        <h3>Music Dashboard</h3>
+                        <p>Open Ink Studio's music experience to search artists, listen to tracks, and manage your playlist.</p>
+                        <div class="card-hover-effect">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </a>
                 </div>
+                
+                <!-- Hidden audio element for live radio -->
+                <audio id="liveRadioPlayer" preload="none" style="display: none;">
+                    <source src="https://glc.cool/station" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
 
                 <!-- Flask Form for server-side validation -->
                 <form method="POST" id="flaskForm">
@@ -1355,6 +1381,53 @@
     </div>
 
     <script>
+        // Live Radio functionality
+        let isRadioPlaying = false;
+        
+        function toggleLiveRadio() {
+            const liveRadioPlayer = document.getElementById('liveRadioPlayer');
+            const liveRadioCard = document.getElementById('liveRadioCard');
+            const radioStatus = document.getElementById('radioStatus');
+            const radioHoverEffect = document.getElementById('radioHoverEffect');
+            
+            if (!isRadioPlaying) {
+                // Start playing
+                liveRadioPlayer.play().then(() => {
+                    isRadioPlaying = true;
+                    liveRadioCard.style.borderColor = '#e74c3c';
+                    liveRadioCard.style.background = '#fff5f5';
+                    radioStatus.style.display = 'block';
+                    if (radioHoverEffect) {
+                        radioHoverEffect.innerHTML = '<i class="fas fa-stop"></i>';
+                    }
+                }).catch(error => {
+                    console.error('Error playing live radio:', error);
+                    alert('Unable to play live radio. Please check your connection.');
+                });
+            } else {
+                // Stop playing
+                liveRadioPlayer.pause();
+                liveRadioPlayer.currentTime = 0;
+                isRadioPlaying = false;
+                liveRadioCard.style.borderColor = '';
+                liveRadioCard.style.background = '';
+                radioStatus.style.display = 'none';
+                if (radioHoverEffect) {
+                    radioHoverEffect.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            }
+        }
+        
+        // Add pulse animation for live indicator
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(style);
+        
         let approvedTopics = [];
         let topicValidations = {};
         let progressInterval;

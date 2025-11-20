@@ -3460,10 +3460,20 @@ def blogs_redirect():
     """Redirect to all blogs - no filtering"""
     return redirect(url_for('blog.blogs'))
 
+@book_bp.route('/music')
+@login_required
+def music_dashboard():
+    """Standalone music dashboard for searching songs and managing playlists"""
+    return render_template('book_platform/music_dashboard.html')
+
 @book_bp.route('/stories/create')
 @login_required
 def create_story_redirect():
     """Redirect to create blog post - maintains Ink Studio context"""
+    # Only bloggers can create stories
+    if current_user.role != 'blogger':
+        flash('Only users with blogger role can create stories. Please contact admin to change your role.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
     return redirect(url_for('blog.blogpost'))
 
 @book_bp.route('/podcasts')
@@ -3486,6 +3496,11 @@ def news_redirect():
 @login_required
 def upload_podcast():
     """Upload a podcast (audio or video) - max 30 minutes, requires admin approval"""
+    # Only podcasters can upload podcasts
+    if current_user.role != 'podcaster':
+        flash('Only users with podcaster role can upload podcasts. Please contact admin to change your role.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
     if request.method == 'GET':
         from glconnect.models import PodcastSubmission
         # Get user's existing podcasts for replace option
@@ -3633,7 +3648,12 @@ def upload_podcast():
 @book_bp.route('/podcasts/my-podcasts')
 @login_required
 def my_podcasts():
-    """View user's submitted podcasts"""
+    """View user's submitted podcasts - only for podcasters"""
+    # Only podcasters can view their podcasts
+    if current_user.role != 'podcaster':
+        flash('Only users with podcaster role can manage podcasts. Please contact admin to change your role.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
     from glconnect.models import PodcastSubmission
     
     podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(

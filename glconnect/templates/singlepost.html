@@ -307,13 +307,26 @@
         translatePost(postId);
     }
 
-    // Like/Unlike functionality
+    // Like/Unlike functionality - prevents duplicate likes
+    let likeRequestInProgress = {}; // Track ongoing like requests per post
+    
     function toggleLike(postId) {
         {% if current_user.is_authenticated %}
+        // Prevent multiple simultaneous requests for the same post
+        if (likeRequestInProgress[postId]) {
+            console.log('Like request already in progress for post:', postId);
+            return;
+        }
+        
         const likeBtn = document.getElementById(`like-btn-${postId}`);
         const likesCountEl = document.getElementById(`likes-count-${postId}`);
         const icon = likeBtn.querySelector('i');
         const isLiked = likeBtn.dataset.liked === 'true';
+        
+        // Disable button during request
+        likeBtn.style.pointerEvents = 'none';
+        likeBtn.style.opacity = '0.6';
+        likeRequestInProgress[postId] = true;
         
         // Optimistic UI update
         const currentCount = parseInt(likesCountEl.textContent) || 0;
@@ -337,7 +350,7 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Update with server response
+                // Update with server response (ensures accuracy)
                 likesCountEl.textContent = data.likes_count;
                 likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
                 icon.style.color = data.user_has_liked ? '#dc3545' : '#999';
@@ -346,7 +359,15 @@
                 likesCountEl.textContent = currentCount;
                 likeBtn.dataset.liked = isLiked ? 'true' : 'false';
                 icon.style.color = isLiked ? '#dc3545' : '#999';
-                alert('Error: ' + (data.error || 'Failed to update like'));
+                // Update with server state if available
+                if (data.likes_count !== undefined) {
+                    likesCountEl.textContent = data.likes_count;
+                }
+                if (data.user_has_liked !== undefined) {
+                    likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                    icon.style.color = data.user_has_liked ? '#dc3545' : '#999';
+                }
+                console.error('Like error:', data.error || 'Failed to update like');
             }
         })
         .catch(error => {
@@ -355,6 +376,12 @@
             likesCountEl.textContent = currentCount;
             likeBtn.dataset.liked = isLiked ? 'true' : 'false';
             icon.style.color = isLiked ? '#dc3545' : '#999';
+        })
+        .finally(() => {
+            // Re-enable button
+            likeBtn.style.pointerEvents = '';
+            likeBtn.style.opacity = '1';
+            delete likeRequestInProgress[postId];
         });
         {% else %}
         alert('Please log in to like stories');

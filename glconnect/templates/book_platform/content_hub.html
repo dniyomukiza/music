@@ -32,6 +32,7 @@
         .icon-podcasts { background: #28a745; }
         .icon-freelance { background: #17a2b8; }
         .icon-books { background: #ffc107; }
+        .icon-music { background: #e74c3c; }
         .quick-stats {
             background: #007bff;
             color: white;
@@ -219,7 +220,7 @@
                         </div>
                         <h4 class="card-title mb-3">Books & Audiobooks</h4>
                         <p class="card-text text-muted mb-4">
-                            Browse thousands of ebooks and audiobooks. Create, publish, and sell your own books.
+                            Browse thousands of ebooks and audiobooks from talented authors worldwide.
                         </p>
                         <div class="d-grid gap-2">
                             <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary">
@@ -229,57 +230,32 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Music -->
+            <div class="col-md-6 col-lg-3">
+                <div class="card content-card h-100 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="content-icon icon-music text-white mx-auto">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <h4 class="card-title mb-3">Music</h4>
+                        <p class="card-text text-muted mb-4">
+                            Search for artists and songs, listen to available tracks, and manage your playlist.
+                        </p>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('book_platform.music_dashboard') }}" class="btn btn-primary">
+                                <i class="fas fa-music me-2"></i>Open Music Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Recent Content -->
         <div class="row">
-            <!-- Recent Stories -->
-            <div class="col-lg-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-newspaper text-primary me-2"></i>Recent Stories
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        {% if recent_posts %}
-                            {% for post in recent_posts[:5] %}
-                            <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <a href="{{ url_for('blog.update', post_id=post.id) }}" class="text-decoration-none">
-                                            {{ post.title }}
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>{{ post.author.username if post.author else 'Unknown' }}
-                                        <i class="fas fa-calendar ms-2 me-1"></i>{{ post.date_posted.strftime('%Y-%m-%d') if post.date_posted else 'N/A' }}
-                                        {% if post.category %}
-                                        <span class="badge bg-primary ms-2">{{ post.category }}</span>
-                                        {% endif %}
-                                    </small>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            <div class="text-center mt-3">
-                                <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-sm btn-outline-primary">
-                                    View All Stories <i class="fas fa-arrow-right ms-1"></i>
-                                </a>
-                            </div>
-                        {% else %}
-                            <p class="text-muted text-center py-3">No stories available yet. Check back later for new content!</p>
-                            <div class="text-center">
-                                <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-outline-primary">
-                                    <i class="fas fa-book-reader me-2"></i>Browse All Stories
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
             <!-- Popular Authors -->
-            <div class="col-lg-6 mb-4">
+            <div class="col-lg-12 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-header bg-white">
                         <h5 class="mb-0">
@@ -415,7 +391,7 @@
         input.focus();
     }
     
-    // Add to playlist function (if needed)
+    // Add to playlist function
     function addToPlaylist(songId, songName, userId) {
         fetch('/playlist2/add_to_playlist', {
             method: 'POST',
@@ -448,6 +424,7 @@
             searchAll();
         }
     });
+    
     </script>
     
     <style>

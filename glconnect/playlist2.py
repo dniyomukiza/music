@@ -13,36 +13,79 @@ def playlist2():
     if not query:
         return jsonify([])
 
-    # 1. Exact match for artist (case-insensitive)
+    # 1. Exact match for artist (case-insensitive) - redirect to profile
     artist = Artist.query.filter(db.func.lower(Artist.artist_name) == query).first()
     if artist:
         return jsonify({
             'redirect': url_for('art.artist_profile', artist_id=artist.artist_id)
         })
 
-    # 2. Partial match for artist name (if exact match fails)
+    # 2. Search for songs matching the query (partial match for song name)
+    songs = Song.query.filter(db.func.lower(Song.name).like(f'%{query}%')).limit(20).all()
+    
+    if songs:
+        # Return array of songs
+        songs_data = []
+        for song in songs:
+            # Get artist name - prefer artist field, fallback to artist_id lookup
+            artist_name = song.artist if song.artist else 'Unknown'
+            if not artist_name or artist_name == 'Unknown':
+                if song.artist_id:
+                    artist = Artist.query.get(song.artist_id)
+                    if artist:
+                        artist_name = artist.artist_name
+            
+            songs_data.append({
+                'id': song.id,
+                'name': song.name,
+                'artist': artist_name
+            })
+        return jsonify(songs_data)
+    
+    # 3. Partial match for artist name (if no songs found)
     artist_partial = Artist.query.filter(db.func.lower(Artist.artist_name).like(f'%{query}%')).first()
     if artist_partial:
         return jsonify({
             'redirect': url_for('art.artist_profile', artist_id=artist_partial.artist_id)
         })
 
-    # 3. Exact match for song name
+    # 4. Exact match for song name (if no partial matches)
     song = Song.query.filter(db.func.lower(Song.name) == query).first()
     if song:
         return jsonify({
             'redirect': url_for('art.artist_profile', artist_id=song.artist_id)
         })
 
-    # 4. Partial match for song name
-    song_partial = Song.query.filter(db.func.lower(Song.name).like(f'%{query}%')).first()
-    if song_partial:
-        return jsonify({
-            'redirect': url_for('art.artist_profile', artist_id=song_partial.artist_id)
-        })
-
     # No match found
     return jsonify([])
+
+@play.route('/get_available_songs', methods=['GET'])
+def get_available_songs():
+    """Get list of available songs for display"""
+    try:
+        # Get a limited number of songs (e.g., 12 most recent or popular)
+        songs = Song.query.order_by(Song.id.desc()).limit(12).all()
+        
+        songs_data = []
+        for song in songs:
+            # Get artist name - prefer artist field, fallback to artist_id lookup
+            artist_name = song.artist if song.artist else 'Unknown'
+            if not artist_name or artist_name == 'Unknown':
+                if song.artist_id:
+                    artist = Artist.query.get(song.artist_id)
+                    if artist:
+                        artist_name = artist.artist_name
+            
+            songs_data.append({
+                'id': song.id,
+                'name': song.name,
+                'artist': artist_name
+            })
+        
+        return jsonify(songs_data)
+    except Exception as e:
+        print(f"Error fetching available songs: {e}")
+        return jsonify([])
 
 
 

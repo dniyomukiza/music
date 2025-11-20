@@ -9,6 +9,10 @@ from flask import Blueprint,render_template,request,flash,redirect,url_for,send_
 from flask_login import current_user, login_required, logout_user
 from flask_ckeditor import CKEditor,upload_success, upload_fail
 import google.generativeai as genai
+from sqlalchemy import inspect
+import logging
+
+logger = logging.getLogger(__name__)
 load_dotenv()
 # Load configuration from environment variables
 config = {
@@ -25,8 +29,14 @@ creditor = CKEditor()
 # No author/writer profile required - just a regular user account
 
 @blog.route("/blogpost",methods=['GET','POST'])
-@login_required  # Only requires general login - any user can post
+@login_required
 def blogpost():
+    """Create a blog post - only bloggers can create stories"""
+    # Only bloggers can create stories
+    if current_user.role != 'blogger':
+        flash('Only users with blogger role can create stories. Please contact admin to change your role.', 'error')
+        return redirect(url_for('blog.blogs'))
+    
     #log_web_visit()
     form = PostForm()
     if form.validate_on_submit():
@@ -55,6 +65,8 @@ def blogs():
     Public blog listing - accessible to everyone (no login required for viewing)
     Part of Ink Studio's public digital space for freelance journalists and storytellers
     """
+    from sqlalchemy import inspect
+    
     #log_web_visit()
     p = request.args.get('page', 1, type=int)
     category = request.args.get('category', None)
@@ -62,42 +74,132 @@ def blogs():
     country = request.args.get('country', None)
     freelance = request.args.get('freelance', None)  # Filter for freelance journalism stories
     
-    # Build query with filters
-    query = Post.query
+    # Check if new columns exist in database
+    try:
+        db.session.rollback()  # Rollback any failed transaction first
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('post')]
+        has_metrics_columns = all(col in columns for col in ['likes_count', 'impressions_count'])
+        has_filter_columns = all(col in columns for col in ['category', 'language', 'country'])
+    except Exception as e:
+        logger.error(f"Error checking database columns: {e}")
+        has_metrics_columns = False
+        has_filter_columns = False
     
-    # If freelance filter is requested, filter by journalism categories
-    if freelance:
-        freelance_categories = ['News', 'Features', 'Opinion', 'Investigative', 'Analysis', 'Editorial']
-        query = query.filter(Post.category.in_(freelance_categories))
-    elif category:
-        query = query.filter(Post.category == category)
-    
-    if language:
-        query = query.filter(Post.language == language)
-    if country:
-        query = query.filter(Post.country.ilike(f'%{country}%'))
-    
-    # Order by date (newest first)
-    query = query.order_by(Post.date_posted.desc())
-    
-    posts = query.paginate(per_page=10, page=p, error_out=False)
+    # Build query - handle missing columns gracefully
+    try:
+        # Use explicit column selection to avoid selecting non-existent columns
+        # Never use Post.query directly as it tries to select ALL model columns
+        base_columns = [Post.id, Post.title, Post.content, Post.date_posted, Post.user_id]
+        
+        # Add optional columns if they exist
+        if has_filter_columns:
+            base_columns.extend([Post.category, Post.language, Post.country])
+        
+        query = db.session.query(*base_columns)
+        
+        # Apply filters only if columns exist
+        if has_filter_columns:
+            if freelance:
+                freelance_categories = ['News', 'Features', 'Opinion', 'Investigative', 'Analysis', 'Editorial']
+                query = query.filter(Post.category.in_(freelance_categories))
+            elif category:
+                query = query.filter(Post.category == category)
+            
+            if language:
+                query = query.filter(Post.language == language)
+            if country:
+                query = query.filter(Post.country.ilike(f'%{country}%'))
+        
+        # Order by date (newest first)
+        query = query.order_by(Post.date_posted.desc())
+        
+        # Manual pagination (always use this to avoid Post.query issues)
+        total = query.count()
+        offset = (p - 1) * 10
+        posts_data = query.limit(10).offset(offset).all()
+        
+        # Create SimplePost objects
+        class SimplePost:
+            def __init__(self, id, title, content, date_posted, user_id, category=None, language=None, country=None):
+                self.id = id
+                self.title = title
+                self.content = content
+                self.date_posted = date_posted
+                self.user_id = user_id
+                self.category = category if has_filter_columns else None
+                self.language = language if has_filter_columns else None
+                self.country = country if has_filter_columns else None
+                self.likes_count = 0
+                self.impressions_count = 0
+                try:
+                    self.author = db.session.get(User, user_id)
+                except:
+                    self.author = None
+        
+        # Create pagination object
+        class Page:
+            def __init__(self, items, page, total, per_page):
+                self.items = items
+                self.page = page
+                self.pages = (total + per_page - 1) // per_page
+                self.per_page = per_page
+                self.total = total
+                self.has_next = offset + per_page < total
+                self.has_prev = page > 1
+        
+        posts = Page([SimplePost(*post) for post in posts_data], p, total, 10)
+    except Exception as e:
+        logger.error(f"Error querying posts: {e}")
+        db.session.rollback()
+        # Return empty result on error
+        class EmptyPage:
+            items = []
+            page = p
+            pages = 0
+            per_page = 10
+            total = 0
+            has_next = False
+            has_prev = False
+        posts = EmptyPage()
     
     # Ensure metrics are initialized (for backward compatibility)
+    # Also check which posts the user has liked
+    user_liked_posts = set()
+    if current_user.is_authenticated:
+        try:
+            liked_post_ids = db.session.query(PostLike.post_id).filter_by(user_id=current_user.user_id).all()
+            user_liked_posts = {post_id[0] for post_id in liked_post_ids}
+        except Exception as e:
+            logger.error(f"Error fetching user likes: {e}")
+            db.session.rollback()
+    
     for post in posts.items:
         if not hasattr(post, 'likes_count') or post.likes_count is None:
             post.likes_count = 0
         if not hasattr(post, 'impressions_count') or post.impressions_count is None:
             post.impressions_count = 0
+        # Add user_liked attribute
+        post.user_liked = post.id in user_liked_posts
     
-    # Get available filter options for dropdowns
-    available_categories = db.session.query(Post.category).distinct().filter(Post.category.isnot(None)).all()
-    available_categories = [cat[0] for cat in available_categories if cat[0]]
+    # Get available filter options for dropdowns - only if columns exist
+    available_categories = []
+    available_languages = []
+    available_countries = []
     
-    available_languages = db.session.query(Post.language).distinct().filter(Post.language.isnot(None)).all()
-    available_languages = [lang[0] for lang in available_languages if lang[0]]
-    
-    available_countries = db.session.query(Post.country).distinct().filter(Post.country.isnot(None)).all()
-    available_countries = [country[0] for country in available_countries if country[0]]
+    if has_filter_columns:
+        try:
+            available_categories = db.session.query(Post.category).distinct().filter(Post.category.isnot(None)).all()
+            available_categories = [cat[0] for cat in available_categories if cat[0]]
+            
+            available_languages = db.session.query(Post.language).distinct().filter(Post.language.isnot(None)).all()
+            available_languages = [lang[0] for lang in available_languages if lang[0]]
+            
+            available_countries = db.session.query(Post.country).distinct().filter(Post.country.isnot(None)).all()
+            available_countries = [country[0] for country in available_countries if country[0]]
+        except Exception as e:
+            logger.error(f"Error fetching filter options: {e}")
+            db.session.rollback()
     
     return render_template(
         "blogs.html",
@@ -529,11 +631,11 @@ def track_post_view(post_id):
 @blog.route("/post/<int:post_id>/like", methods=['POST'])
 @login_required
 def like_post(post_id):
-    """Like or unlike a post"""
+    """Like or unlike a post - ensures only one like per user per post"""
     try:
         post = Post.query.get_or_404(post_id)
         
-        # Check if user already liked this post
+        # Check if user already liked this post (with explicit lock to prevent race conditions)
         existing_like = PostLike.query.filter_by(
             post_id=post_id,
             user_id=current_user.user_id
@@ -544,16 +646,61 @@ def like_post(post_id):
             db.session.delete(existing_like)
             post.likes_count = max(0, post.likes_count - 1)
             action = 'unliked'
+            user_has_liked = False
         else:
-            # Like: add the like
-            new_like = PostLike(
+            # Double-check to prevent race conditions (check again before adding)
+            duplicate_check = PostLike.query.filter_by(
                 post_id=post_id,
                 user_id=current_user.user_id
-            )
-            db.session.add(new_like)
-            post.likes_count = post.likes_count + 1
-            action = 'liked'
+            ).first()
+            
+            if duplicate_check:
+                # Another request already added the like, just return current state
+                post.likes_count = PostLike.query.filter_by(post_id=post_id).count()
+                action = 'liked'
+                user_has_liked = True
+            else:
+                # Like: add the like
+                new_like = PostLike(
+                    post_id=post_id,
+                    user_id=current_user.user_id
+                )
+                db.session.add(new_like)
+                post.likes_count = post.likes_count + 1
+                action = 'liked'
+                user_has_liked = True
         
+        try:
+            db.session.commit()
+        except Exception as commit_error:
+            # Handle unique constraint violation (race condition)
+            db.session.rollback()
+            # Re-query to get actual state
+            existing_like_check = PostLike.query.filter_by(
+                post_id=post_id,
+                user_id=current_user.user_id
+            ).first()
+            
+            if existing_like_check:
+                # Like already exists, return current state
+                post.likes_count = PostLike.query.filter_by(post_id=post_id).count()
+                action = 'liked'
+                user_has_liked = True
+            else:
+                # Like doesn't exist, try again
+                new_like = PostLike(
+                    post_id=post_id,
+                    user_id=current_user.user_id
+                )
+                db.session.add(new_like)
+                post.likes_count = PostLike.query.filter_by(post_id=post_id).count() + 1
+                db.session.commit()
+                action = 'liked'
+                user_has_liked = True
+        
+        # Refresh likes count from database to ensure accuracy
+        actual_likes_count = PostLike.query.filter_by(post_id=post_id).count()
+        post.likes_count = actual_likes_count
         db.session.commit()
         
         # Emit real-time update via WebSocket if available
@@ -572,13 +719,27 @@ def like_post(post_id):
             'success': True,
             'action': action,
             'likes_count': post.likes_count,
-            'user_has_liked': action == 'liked'
+            'user_has_liked': user_has_liked
         })
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error liking post: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error liking post {post_id}: {e}")
+        # Return current state even on error
+        try:
+            existing_like = PostLike.query.filter_by(
+                post_id=post_id,
+                user_id=current_user.user_id
+            ).first()
+            actual_likes_count = PostLike.query.filter_by(post_id=post_id).count()
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'likes_count': actual_likes_count,
+                'user_has_liked': existing_like is not None
+            }), 500
+        except:
+            return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog.route("/post/<int:post_id>/metrics")
 def get_post_metrics(post_id):
