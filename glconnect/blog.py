@@ -60,12 +60,18 @@ def blogs():
     category = request.args.get('category', None)
     language = request.args.get('language', None)
     country = request.args.get('country', None)
+    freelance = request.args.get('freelance', None)  # Filter for freelance journalism stories
     
     # Build query with filters
     query = Post.query
     
-    if category:
+    # If freelance filter is requested, filter by journalism categories
+    if freelance:
+        freelance_categories = ['News', 'Features', 'Opinion', 'Investigative', 'Analysis', 'Editorial']
+        query = query.filter(Post.category.in_(freelance_categories))
+    elif category:
         query = query.filter(Post.category == category)
+    
     if language:
         query = query.filter(Post.language == language)
     if country:
@@ -99,6 +105,7 @@ def blogs():
         selected_category=category,
         selected_language=language,
         selected_country=country,
+        is_freelance_filter=bool(freelance),
         available_categories=available_categories,
         available_languages=available_languages,
         available_countries=available_countries

@@ -3450,7 +3450,14 @@ def content_hub():
 @book_bp.route('/stories')
 @login_required
 def stories_redirect():
-    """Redirect to blogs/stories - maintains Ink Studio context"""
+    """Redirect to approved freelance stories - filtered by journalism categories"""
+    # Redirect to blogs filtered by freelance journalism categories
+    return redirect(url_for('blog.blogs', freelance='true'))
+
+@book_bp.route('/blogs')
+@login_required
+def blogs_redirect():
+    """Redirect to all blogs - no filtering"""
     return redirect(url_for('blog.blogs'))
 
 @book_bp.route('/stories/create')
@@ -3909,6 +3916,7 @@ def play_podcast(podcast_id):
     """Serve podcast file for playback"""
     from glconnect.models import PodcastSubmission
     from flask import send_file
+    import mimetypes
     
     podcast = PodcastSubmission.query.get_or_404(podcast_id)
     
@@ -3958,7 +3966,33 @@ def play_podcast(podcast_id):
         flash(f'Podcast file not found. The file may have been moved or deleted. File: {filename or "unknown"}', 'error')
         return redirect(url_for('book_platform.my_podcasts'))
     
-    return send_file(file_path, as_attachment=False)
+    # Determine MIME type based on file extension
+    file_ext = os.path.splitext(file_path)[1].lower()
+    mime_type_map = {
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.m4a': 'audio/mp4',
+        '.ogg': 'audio/ogg',
+        '.mp4': 'video/mp4',
+        '.mov': 'video/quicktime',
+        '.avi': 'video/x-msvideo',
+        '.mkv': 'video/x-matroska'
+    }
+    
+    mimetype = mime_type_map.get(file_ext)
+    if not mimetype:
+        # Fallback to mimetypes module
+        mimetype, _ = mimetypes.guess_type(file_path)
+        if not mimetype:
+            # Default based on podcast type
+            mimetype = 'audio/mpeg' if podcast.file_type == 'audio' else 'video/mp4'
+    
+    # Set headers for inline playback (not download)
+    response = send_file(file_path, mimetype=mimetype, as_attachment=False)
+    response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+    response.headers['Accept-Ranges'] = 'bytes'  # Enable range requests for seeking
+    
+    return response
 
 @book_bp.route('/podcasts/library')
 @login_required

@@ -179,6 +179,9 @@
                             <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-primary">
                                 <i class="fas fa-book-reader me-2"></i>Browse Stories
                             </a>
+                            <a href="{{ url_for('book_platform.blogs_redirect') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-newspaper me-2"></i>View Blogs
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -201,26 +204,6 @@
                             </a>
                             <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-headphones me-2"></i>Listen to News
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Freelance Journalism -->
-            <div class="col-md-6 col-lg-3">
-                <div class="card content-card h-100 shadow-sm">
-                    <div class="card-body text-center p-4">
-                        <div class="content-icon icon-freelance text-white mx-auto">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <h4 class="card-title mb-3">Freelance Journalism</h4>
-                        <p class="card-text text-muted mb-4">
-                            Read stories from freelance journalists. Discover quality journalism from around the world.
-                        </p>
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-primary">
-                                <i class="fas fa-book-reader me-2"></i>Browse Stories
                             </a>
                         </div>
                     </div>
@@ -284,10 +267,10 @@
                                 </a>
                             </div>
                         {% else %}
-                            <p class="text-muted text-center py-3">No stories yet. Be the first to write one!</p>
+                            <p class="text-muted text-center py-3">No stories available yet. Check back later for new content!</p>
                             <div class="text-center">
-                                <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-primary">
-                                    <i class="fas fa-pen me-2"></i>Write Your First Story
+                                <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-book-reader me-2"></i>Browse All Stories
                                 </a>
                             </div>
                         {% endif %}

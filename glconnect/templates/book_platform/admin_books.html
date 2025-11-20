@@ -39,9 +39,9 @@
                         </span>
                     </div>
                     <h1 class="display-4 fw-bold mb-3">
-                        <i class="fas fa-cogs me-3"></i>Book Management
+                        <i class="fas fa-cogs me-3"></i>Admin Panel
                     </h1>
-                    <p class="lead mb-4">Manage all books in the Ink Studio platform with full administrative control</p>
+                    <p class="lead mb-4">Manage all content in the Ink Studio platform: Books, Podcasts, Stories, and Blogs</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-book me-2"></i>{{ books|length }} Total Books
@@ -68,6 +68,129 @@
     </div>
 
     <div class="container py-5">
+        <!-- Admin Management Navigation -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h4 class="mb-0">
+                            <i class="fas fa-tasks me-2 text-primary"></i>Quick Access - Admin Management
+                        </h4>
+                        <p class="text-muted mb-0 small">Navigate to different admin panels for managing platform content</p>
+                    </div>
+                    <div class="card-body">
+                <div class="row g-3">
+                    <!-- Books Management (Current Page) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #007bff !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-book fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Books</h5>
+                                        <small class="text-muted">Manage all books</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review, publish, unpublish, and manage all books in the platform</p>
+                                <a href="{{ url_for('book_platform.admin_books') }}" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-cog me-1"></i>Manage Books
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Podcasts Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #28a745 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-podcast fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Podcasts</h5>
+                                        <small class="text-muted">Review & approve</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review pending podcasts, approve or reject submissions from users</p>
+                                <a href="{{ url_for('book_platform.admin_podcasts') }}" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-check-circle me-1"></i>Review Podcasts
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Freelance Stories Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #17a2b8 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-info text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-newspaper fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Freelance Stories</h5>
+                                        <small class="text-muted">Manage stories</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review and manage stories from freelance journalists worldwide</p>
+                                <a href="{{ url_for('blog.blogs') }}?freelance=true" class="btn btn-info btn-sm w-100">
+                                    <i class="fas fa-edit me-1"></i>Manage Stories
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blogs Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #ffc107 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-warning text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-blog fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Blogs</h5>
+                                        <small class="text-muted">Content management</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Manage all blog posts, moderate content, and review submissions</p>
+                                <a href="{{ url_for('blog.blogs') }}" class="btn btn-warning btn-sm w-100">
+                                    <i class="fas fa-list me-1"></i>Manage Blogs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reviewers Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #6f42c1 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-purple text-white rounded-circle p-3 me-3" style="background-color: #6f42c1 !important;">
+                                        <i class="fas fa-user-check fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Reviewers</h5>
+                                        <small class="text-muted">Accreditation</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Manage accredited reviewers, approve applications, and monitor performance</p>
+                                <a href="{{ url_for('book_platform.admin_reviewers') }}" class="btn btn-sm w-100" style="background-color: #6f42c1; color: white; border-color: #6f42c1;">
+                                    <i class="fas fa-user-shield me-1"></i>Manage Reviewers
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Books Management Section -->
         <div class="row">
             <div class="col-12">
                 <!-- Admin Controls -->

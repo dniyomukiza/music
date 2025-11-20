@@ -33,11 +33,19 @@
                         <i class="fas fa-store me-3"></i>Marketplace
                     </h1>
                     <p class="lead mb-4">Discover amazing books from talented authors around the world</p>
-                    <!-- Content Hub Button - Visible to All Users -->
-                    <div class="mb-4">
+                    <!-- Action Buttons -->
+                    <div class="mb-4 d-flex flex-wrap gap-3">
                         <a href="{{ url_for('book_platform.content_hub') }}" 
                            class="btn btn-lg btn-light">
-                            <i class="fas fa-th-large me-2"></i>Content Hub - Stories, News & Podcasts
+                            <i class="fas fa-th-large me-2"></i>Content Hub
+                        </a>
+                        <a href="{{ url_for('book_platform.investments') }}" 
+                           class="btn btn-lg btn-success">
+                            <i class="fas fa-chart-line me-2"></i>Browse Investments
+                        </a>
+                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" 
+                           class="btn btn-lg btn-warning">
+                            <i class="fas fa-dollar-sign me-2"></i>My Earnings
                         </a>
                     </div>
                     <div class="d-flex gap-3">
@@ -90,6 +98,39 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Investment Opportunities Section -->
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <div class="card-body text-white p-4">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <h3 class="mb-3">
+                                    <i class="fas fa-chart-line me-2"></i>Investment Opportunities
+                                </h3>
+                                <p class="lead mb-3">Invest in books before they're published and earn returns from sales</p>
+                                <p class="mb-0">Browse active investment campaigns, support authors, and share in book revenue. Track your investments and earnings all in one place.</p>
+                            </div>
+                            <div class="col-lg-4 text-center">
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.investments') }}" 
+                                       class="btn btn-light btn-lg">
+                                        <i class="fas fa-search-dollar me-2"></i>Browse Investments
+                                    </a>
+                                    <a href="{{ url_for('book_platform.earnings_dashboard') }}" 
+                                       class="btn btn-outline-light btn-lg">
+                                        <i class="fas fa-dollar-sign me-2"></i>View Earnings
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Category Section -->
     <div class="container">
