@@ -101,12 +101,29 @@
                             <i class="fas fa-store me-2"></i>Browse Marketplace
                         </a>
                     </div>
+                    {% elif is_freelancer or current_user.role == 'freelancer' %}
+                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ current_user.username }}!</h1>
+                    <p class="lead mb-4">Your freelance journalism platform - Create stories, access content hub, and browse the marketplace</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info btn-lg">
+                            <i class="fas fa-pen me-2"></i>Write Story
+                        </a>
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-th-large me-2"></i>Content Hub
+                        </a>
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-store me-2"></i>Marketplace
+                        </a>
+                    </div>
                     {% else %}
                     <h1 class="display-4 fw-bold mb-3">Ink Studio</h1>
                     <p class="lead mb-4">Your all-in-one digital content platform: Books, Stories, News, Podcasts, and more</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-store me-2"></i>Browse Books
+                        </a>
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-th-large me-2"></i>Content Hub
                         </a>
                         {% if is_author %}
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-primary btn-lg">
@@ -129,6 +146,12 @@
                             <i class="fas fa-book-open fa-2x"></i>
                             <div class="stat-number">{{ authored_books|length }}</div>
                             <div class="stat-label">My Books</div>
+                        </div>
+                        {% elif is_freelancer or current_user.role == 'freelancer' %}
+                        <div class="stat-circle">
+                            <i class="fas fa-newspaper fa-2x"></i>
+                            <div class="stat-number">{{ freelancer_stories|length if freelancer_stories else 0 }}</div>
+                            <div class="stat-label">My Stories</div>
                         </div>
                         {% else %}
                         <div class="stat-circle">
@@ -288,6 +311,29 @@
                     </div>
                     {% endif %}
 
+                    <!-- Freelancing Actions (Freelancers Only) -->
+                    {% if current_user.role == 'freelancer' or is_freelancer %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-pen-fancy fa-3x text-info"></i>
+                                </div>
+                                <h5 class="card-title">Freelance Journalism</h5>
+                                <p class="card-text text-muted small">Create and manage your freelance stories</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info btn-sm">
+                                        <i class="fas fa-pen me-1"></i>Write Story
+                                    </a>
+                                    <a href="{{ url_for('blog.blogs') }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-list me-1"></i>View All Stories
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Author Actions (if author) -->
                     {% if is_author %}
                     <div class="col-md-6 col-lg-4">
@@ -408,6 +454,76 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- My Stories Section (Freelancers Only) -->
+                {% if is_freelancer or current_user.role == 'freelancer' %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title text-primary mb-0">
+                                <i class="fas fa-newspaper me-2"></i>My Freelance Stories
+                            </h5>
+                            <span class="badge bg-info">{{ freelancer_stories|length if freelancer_stories else 0 }} total</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if freelancer_stories %}
+                            <div class="list-group">
+                                {% for story in freelancer_stories %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <a href="{{ url_for('blog.update', post_id=story.id) }}" class="text-dark text-decoration-none">
+                                                    {{ story.title }}
+                                                </a>
+                                            </h6>
+                                            <p class="mb-1 text-muted small">
+                                                {{ story.content[:150] }}{% if story.content|length > 150 %}...{% endif %}
+                                            </p>
+                                            <div class="d-flex gap-3 mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>{{ story.date_posted.strftime('%b %d, %Y') if story.date_posted else 'Recently' }}
+                                                </small>
+                                                {% if story.category %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-tag me-1"></i>{{ story.category }}
+                                                </small>
+                                                {% endif %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-eye me-1"></i>{{ story.impressions_count or 0 }} views
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="ms-3">
+                                            <a href="{{ url_for('blog.update', post_id=story.id) }}" class="btn btn-sm btn-outline-info">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3 text-center">
+                                <a href="{{ url_for('blog.blogs') }}" class="btn btn-info">
+                                    <i class="fas fa-list me-1"></i>View All Stories
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="empty-state text-center py-5">
+                                <div class="empty-icon mb-4">
+                                    <i class="fas fa-newspaper fa-4x text-muted"></i>
+                                </div>
+                                <h4 class="text-muted mb-3">No stories yet</h4>
+                                <p class="text-muted mb-4">Start your freelance journalism journey by creating your first story.</p>
+                                <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info">
+                                    <i class="fas fa-pen me-1"></i>Write Your First Story
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Investment Campaigns Section (Authors Only) -->
                 {% if investment_campaigns %}

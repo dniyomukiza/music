@@ -39,12 +39,23 @@
                 {{ song.name if song.name is defined else song.name_song }}
             </p>
             
-            <form action="{{ url_for('music.delete_song', song_id=song.id if song.id is defined else song.upload_id) }}" method="POST">
-                <button type="submit" class="btn delete-song-btn">Remove</button>
-            </form>
+            <!-- Audio player for the song -->
+            {% if song.song_path %}
+            <audio controls style="width: 100%; margin: 10px 0;">
+                <source src="{{ song.song_path }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            {% endif %}
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <form action="{{ url_for('music.delete_song', song_id=song.id if song.id is defined else song.upload_id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn delete-song-btn" onclick="return confirm('Are you sure you want to remove this song?')">🗑️ Remove</button>
+                </form>
+                <a href="{{ url_for('art.artist_profile', artist_id=artist.artist_id) }}" class="btn" style="background: #3498db; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px;">👁️ View Public Profile</a>
+            </div>
         </div>
         {% else %}
-        <p>No songs found.</p>
+        <p>No songs found. <a href="{{ url_for('music.upload_song') }}">Upload your first song</a> to get started!</p>
         {% endfor %}
     </div>
     

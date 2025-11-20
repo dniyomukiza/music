@@ -217,11 +217,26 @@ def check_investment_readiness(book):
     }
 
 def writer_or_book_platform_required(f):
-    """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for Ink Studio access"""
+    """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for Ink Studio access.
+    Also allows freelancers to access with limited features."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('routes1.login'))
+        
+        # Allow freelancers to access with a temporary profile
+        if current_user.role == 'freelancer':
+            class FreelancerProfile:
+                def __init__(self, user):
+                    self.id = user.user_id
+                    self.user_id = user.user_id
+                    self.pen_name = user.username
+                    self.bio = None
+                    self.profile_picture = None
+            
+            kwargs['user_profile'] = FreelancerProfile(current_user)
+            kwargs['profile_type'] = 'freelancer'
+            return f(*args, **kwargs)
         
         user_profile, profile_type = get_user_profile()
         if not user_profile:
@@ -310,7 +325,28 @@ def ink_studio_access():
 @book_bp.route('/')
 @writer_or_book_platform_required
 def dashboard(user_profile, profile_type):
-    """Main Ink Studio dashboard - Writer profiles are primary users"""
+    """Main Ink Studio dashboard - Writer profiles are primary users, freelancers have limited access"""
+    
+    # Handle freelancers separately - they get limited dashboard access
+    if profile_type == 'freelancer':
+        # Freelancers get a simplified dashboard focused on freelancing features
+        from glconnect.models import Post
+        # Get freelancer's stories
+        freelancer_stories = Post.query.filter_by(user_id=current_user.user_id).order_by(Post.date_posted.desc()).limit(10).all()
+        
+        return render_template('book_platform/dashboard.html',
+                             authored_books=[],
+                             collaborations=[],
+                             notifications=[],
+                             user_profile=user_profile,
+                             profile_type=profile_type,
+                             is_author=False,
+                             investment_campaigns=[],
+                             review_requests=[],
+                             user_reviewer_profile=None,
+                             user_investments=[],
+                             freelancer_stories=freelancer_stories,
+                             is_freelancer=True)
     
     if profile_type == 'writer':
         # For writers, create a temporary BookPlatformUser-like object
@@ -393,7 +429,9 @@ def dashboard(user_profile, profile_type):
                          investment_campaigns=investment_campaigns,
                          review_requests=review_requests,
                          user_reviewer_profile=user_reviewer_profile,
-                         user_investments=user_investments)
+                         user_investments=user_investments,
+                         freelancer_stories=[],
+                         is_freelancer=False)
 
 # Profile setup
 @book_bp.route('/setup-profile', methods=['GET', 'POST'])
@@ -3351,10 +3389,13 @@ def content_hub():
     - Stories & News (Blogs)
     - Podcasts & Audio (News broadcasts)
     - Freelance Journalism
+    - Music (Artists & Songs)
     Accessible to ALL logged-in users (no author profile required)
     Maintains backward compatibility with existing routes
     """
-    from glconnect.models import Post
+    from glconnect.models import Post, Artist
+    # Check if user has an artist profile
+    artist_profile = Artist.query.filter_by(user_id=current_user.user_id).first()
     from sqlalchemy import inspect
     
     # Get recent blog posts for preview - handle missing columns gracefully
@@ -3445,7 +3486,9 @@ def content_hub():
     
     return render_template('book_platform/content_hub.html',
                          recent_posts=recent_posts,
-                         user_posts=user_posts)
+                         user_posts=user_posts,
+                         has_artist_profile=artist_profile is not None,
+                         artist_profile=artist_profile)
 
 @book_bp.route('/stories')
 @login_required
@@ -3464,16 +3507,197 @@ def blogs_redirect():
 @login_required
 def music_dashboard():
     """Standalone music dashboard for searching songs and managing playlists"""
-    return render_template('book_platform/music_dashboard.html')
+    from glconnect.models import Artist
+    # Check if user has an artist profile
+    artist_profile = Artist.query.filter_by(user_id=current_user.user_id).first()
+    return render_template('book_platform/music_dashboard.html', has_artist_profile=artist_profile is not None, artist_profile=artist_profile)
+
+@book_bp.route('/music/create-artist-profile', methods=['POST'])
+@login_required
+def create_artist_profile():
+    """Create an artist profile for the current user"""
+    try:
+        from glconnect.models import Artist
+        import os
+        from werkzeug.utils import secure_filename
+        
+        # Check if user already has an artist profile
+        existing_artist = Artist.query.filter_by(user_id=current_user.user_id).first()
+        if existing_artist:
+            return jsonify({'success': False, 'message': 'You already have an artist profile.'}), 400
+        
+        data = request.get_json()
+        artist_name = data.get('artist_name', '').strip()
+        bio = data.get('bio', '').strip()
+        
+        if not artist_name:
+            return jsonify({'success': False, 'message': 'Artist name is required.'}), 400
+        
+        # Check if artist name already exists
+        existing_name = Artist.query.filter_by(artist_name=artist_name).first()
+        if existing_name:
+            return jsonify({'success': False, 'message': 'This artist name is already taken.'}), 400
+        
+        # Create new artist profile
+        new_artist = Artist(
+            user_id=current_user.user_id,
+            artist_name=artist_name,
+            bio=bio or None,
+            profile_pic="default.jpg"
+        )
+        
+        db.session.add(new_artist)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Artist profile created successfully!',
+            'artist_id': new_artist.artist_id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating artist profile: {e}")
+        return jsonify({'success': False, 'message': f'Error creating profile: {str(e)}'}), 500
+
+def sanitize_input_music(input_string):
+    """Sanitize user inputs for music uploads"""
+    if input_string:
+        sanitized = input_string.strip()
+        sanitized = re.sub(r'[^a-zA-Z0-9\s\-\.\/\:]', '', sanitized)
+        return sanitized
+    return ""
+
+def sanitize_url_music(url):
+    """Sanitize and enforce HTTPS for URLs"""
+    if url:
+        sanitized = sanitize_input_music(url)
+        if not sanitized.startswith('http://') and not sanitized.startswith('https://'):
+            sanitized = 'https://' + sanitized
+        from urllib.parse import urlparse
+        parsed = urlparse(sanitized)
+        if parsed.scheme in ['http', 'https'] and parsed.netloc:
+            return sanitized
+    return ""
+
+@book_bp.route('/music/upload-song', methods=['POST'])
+@login_required
+def upload_song_music_dashboard():
+    """Upload a song from the music dashboard"""
+    try:
+        from glconnect.models import Artist, Song_upload
+        import os
+        
+        # Check if user has an artist profile
+        artist = Artist.query.filter_by(user_id=current_user.user_id).first()
+        if not artist:
+            return jsonify({'success': False, 'message': 'Please create an artist profile first.'}), 400
+        
+        # Get form data
+        song_name = sanitize_input_music(request.form.get('song_name', '').strip())
+        song_file = request.files.get('song_file')
+        cover_image_file = request.files.get('cover_image')
+        
+        # Social media links
+        twitter_link = sanitize_url_music(request.form.get('twitter', ''))
+        instagram_link = sanitize_url_music(request.form.get('instagram', ''))
+        spotify_link = sanitize_url_music(request.form.get('spotify', ''))
+        apple_music_link = sanitize_url_music(request.form.get('apple_music', ''))
+        
+        # Validation
+        if not song_name:
+            return jsonify({'success': False, 'message': 'Song name is required.'}), 400
+        
+        if not song_file or song_file.filename == '':
+            return jsonify({'success': False, 'message': 'Song file is required.'}), 400
+        
+        if not song_file.filename.lower().endswith('.mp3'):
+            return jsonify({'success': False, 'message': 'Only MP3 files are allowed.'}), 400
+        
+        # Check file size (50 MB limit)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+        song_file.seek(0, os.SEEK_END)
+        file_size = song_file.tell()
+        song_file.seek(0)
+        if file_size > MAX_FILE_SIZE:
+            return jsonify({'success': False, 'message': 'File is too large. Maximum allowed size is 50 MB.'}), 400
+        
+        # Save to afro directory for searchability (matching the search path structure)
+        afro_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'afro')
+        os.makedirs(afro_folder, exist_ok=True)
+        
+        # Secure and unique file naming
+        base_filename = secure_filename(f"{artist.artist_name} - {song_name}")
+        mp3_filename = f"{base_filename}.mp3"
+        mp3_path = os.path.join(afro_folder, mp3_filename)
+        
+        counter = 1
+        while os.path.exists(mp3_path):
+            mp3_filename = f"{base_filename} ({counter}).mp3"
+            mp3_path = os.path.join(afro_folder, mp3_filename)
+            counter += 1
+        
+        song_file.save(mp3_path)
+        
+        # Handle cover image - save to images folder
+        images_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'images')
+        os.makedirs(images_folder, exist_ok=True)
+        
+        if cover_image_file and cover_image_file.filename != '':
+            cover_filename = secure_filename(cover_image_file.filename)
+            cover_path = os.path.join(images_folder, cover_filename)
+            cover_image_file.save(cover_path)
+        else:
+            cover_filename = "photo3.webp"
+        
+        # Save to Song model for searchability (this is what the search uses)
+        from glconnect.models import Song
+        new_song = Song(
+            name=song_name,
+            artist=artist.artist_name,
+            artist_id=artist.artist_id,
+            local_path=mp3_filename,  # Just the filename, path is /static/afro/
+            cover_image=cover_filename
+        )
+        db.session.add(new_song)
+        
+        # Also create Song_upload entry for compatibility
+        new_song_upload = Song_upload(
+            name_song=song_name,
+            name_artist=artist.artist_name,
+            local_path=f"/static/afro/{mp3_filename}",
+            cover_image=cover_filename,
+            twitter_link=twitter_link,
+            instagram_link=instagram_link,
+            spotify_link=spotify_link,
+            apple_music_link=apple_music_link,
+            artist_id=artist.artist_id
+        )
+        db.session.add(new_song_upload)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Song uploaded successfully! It will appear in search results.',
+            'song_id': new_song.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error uploading song: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error uploading song: {str(e)}'}), 500
 
 @book_bp.route('/stories/create')
 @login_required
 def create_story_redirect():
     """Redirect to create blog post - maintains Ink Studio context"""
-    # Only bloggers can create stories
-    if current_user.role != 'blogger':
-        flash('Only users with blogger role can create stories. Please contact admin to change your role.', 'error')
-        return redirect(url_for('book_platform.dashboard'))
+    # Bloggers and freelancers can create stories
+    if current_user.role not in ['blogger', 'freelancer']:
+        flash('Only users with blogger or freelancer role can create stories. Please contact admin to change your role.', 'error')
+        return redirect(url_for('book_platform.content_hub'))
     return redirect(url_for('blog.blogpost'))
 
 @book_bp.route('/podcasts')

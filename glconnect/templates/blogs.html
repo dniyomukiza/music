@@ -128,9 +128,6 @@
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
                 <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Story</a>
-                <a href="{{ url_for('book_platform.content_hub') }}" class="btn" style="background: #3498db; color: white;">
-                    <i class="fas fa-th-large me-1"></i>Back to Content Hub
-                </a>
             {% else %}
                 <a href="{{ url_for('routes1.login') }}" class="btn">Login to Post</a>
             {% endif %}
@@ -188,7 +185,7 @@
                 <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") if post.date_posted else 'N/A' }}</small>
             </div>
             <h2 style="font-size: 24px; margin-bottom: 10px;">
-                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: #ecf0f1; text-decoration: none;">{{ post.title }}</a>
+                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: #ffffff; text-decoration: none;">{{ post.title }}</a>
             </h2>
             <div class="post-meta">
                 {% if post.category %}
@@ -240,15 +237,52 @@
         {% endfor %}
 
         <!-- Pagination Controls -->
-        <div style="text-align: center; margin-top: 20px;">
-            {% if posts.has_prev %}
-                <a href="{{ url_for('blog.blogs', page=posts.prev_num, category=selected_category, language=selected_language, country=selected_country) }}" class="btn">Previous</a>
-            {% endif %}
-            <span>Page {{ posts.page }} of {{ posts.pages }}</span>
-            {% if posts.has_next %}
-                <a href="{{ url_for('blog.blogs', page=posts.next_num, category=selected_category, language=selected_language, country=selected_country) }}" class="btn">Next</a>
+        {% if posts.pages > 1 %}
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; backdrop-filter: blur(10px);">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+                {% if posts.has_prev %}
+                    <a href="{{ url_for('blog.blogs', page=posts.prev_num, category=selected_category, language=selected_language, country=selected_country) }}" 
+                       class="btn" 
+                       style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s;"
+                       onmouseover="this.style.background='#2980b9'" 
+                       onmouseout="this.style.background='#3498db'">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                {% else %}
+                    <span style="background: rgba(255, 255, 255, 0.1); color: #95a5a6; padding: 10px 20px; border-radius: 5px; cursor: not-allowed;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </span>
+                {% endif %}
+                
+                <span style="color: #ecf0f1; font-size: 16px; font-weight: bold; padding: 10px 20px;">
+                    Page {{ posts.page }} of {{ posts.pages }}
+                </span>
+                
+                {% if posts.has_next %}
+                    <a href="{{ url_for('blog.blogs', page=posts.next_num, category=selected_category, language=selected_language, country=selected_country) }}" 
+                       class="btn" 
+                       style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s;"
+                       onmouseover="this.style.background='#2980b9'" 
+                       onmouseout="this.style.background='#3498db'">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                {% else %}
+                    <span style="background: rgba(255, 255, 255, 0.1); color: #95a5a6; padding: 10px 20px; border-radius: 5px; cursor: not-allowed;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </span>
+                {% endif %}
+            </div>
+            {% if posts.total > 0 %}
+            <div style="margin-top: 10px; color: #bdc3c7; font-size: 14px;">
+                Showing {{ ((posts.page - 1) * posts.per_page) + 1 }} to {{ [posts.page * posts.per_page, posts.total] | min }} of {{ posts.total }} posts
+            </div>
             {% endif %}
         </div>
+        {% elif posts.total > 0 %}
+        <div style="text-align: center; margin-top: 30px; padding: 15px; color: #bdc3c7; font-size: 14px;">
+            Showing all {{ posts.total }} post{{ 's' if posts.total != 1 else '' }}
+        </div>
+        {% endif %}
     </div>
 
     <!-- JavaScript for Playing Audio -->

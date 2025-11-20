@@ -72,7 +72,8 @@
                         const songDiv = document.createElement("div");
                         songDiv.classList.add("song-item");
     
-                        const songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.mp3`;
+                        // Use path from backend if available, otherwise construct it
+                        const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.mp3`;
     
                         songDiv.innerHTML = `
                             <p><strong>${song.name}</strong> by ${song.artist}</p>

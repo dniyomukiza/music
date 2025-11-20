@@ -124,6 +124,39 @@ def upload_song():
 
 
 
+def get_song_path_for_artist(song, artist_name=None):
+    """Helper function to get the correct path for a song in artist profile"""
+    import os
+    import urllib.parse
+    
+    # Check if it's a Song model or Song_upload model
+    local_path = getattr(song, 'local_path', None)
+    song_name = getattr(song, 'name', None) or getattr(song, 'name_song', None)
+    song_artist = getattr(song, 'artist', None) or getattr(song, 'name_artist', None) or artist_name
+    
+    if local_path:
+        # Extract filename from local_path if it's a full path
+        if '/' in local_path or '\\' in local_path:
+            filename = os.path.basename(local_path)
+            if '/' in filename:
+                filename = filename.split('/')[-1]
+            if '\\' in filename:
+                filename = filename.split('\\')[-1]
+            return f"/static/afro/{filename}"
+        else:
+            # It's already a relative path or filename
+            if local_path.startswith('/'):
+                return local_path
+            elif local_path.startswith('static/'):
+                return f"/{local_path}"
+            else:
+                return f"/static/afro/{local_path}"
+    else:
+        # Fallback to constructed path
+        if song_artist and song_name:
+            return f"/static/afro/{urllib.parse.quote(song_artist)} - {urllib.parse.quote(song_name)}.mp3"
+        return None
+
 @music.route("/artist_profile")
 @login_required
 def artist_profile():
@@ -138,7 +171,14 @@ def artist_profile():
     # Get songs uploaded via Song_upload model (assuming artist_name is stored in Song_upload)
     uploaded_songs_upload = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
 
-    # Combine both song lists (you could also filter out duplicates based on some criteria, if needed)
+    # Add path attribute to each song object
+    for song in uploaded_songs:
+        song.song_path = get_song_path_for_artist(song, artist.artist_name)
+    
+    for song_upload in uploaded_songs_upload:
+        song_upload.song_path = get_song_path_for_artist(song_upload, artist.artist_name)
+
+    # Combine both song lists (no duplicates based on song ID)
     all_songs = uploaded_songs + uploaded_songs_upload
 
     return render_template("artists.html", user=current_user, artist=artist, songs=all_songs)

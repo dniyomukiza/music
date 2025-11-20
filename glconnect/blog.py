@@ -1,5 +1,7 @@
 import os
 import json
+import uuid
+from datetime import datetime, timezone, timedelta
 from .models import *
 from .forms import *
 from dotenv import load_dotenv
@@ -9,7 +11,7 @@ from flask import Blueprint,render_template,request,flash,redirect,url_for,send_
 from flask_login import current_user, login_required, logout_user
 from flask_ckeditor import CKEditor,upload_success, upload_fail
 import google.generativeai as genai
-from sqlalchemy import inspect
+from sqlalchemy import inspect, func
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,10 +33,10 @@ creditor = CKEditor()
 @blog.route("/blogpost",methods=['GET','POST'])
 @login_required
 def blogpost():
-    """Create a blog post - only bloggers can create stories"""
-    # Only bloggers can create stories
-    if current_user.role != 'blogger':
-        flash('Only users with blogger role can create stories. Please contact admin to change your role.', 'error')
+    """Create a blog post - bloggers and freelancers can create stories"""
+    # Only bloggers and freelancers can create stories
+    if current_user.role not in ['blogger', 'freelancer']:
+        flash('Only users with blogger or freelancer role can create stories. Please contact admin to change your role.', 'error')
         return redirect(url_for('blog.blogs'))
     
     #log_web_visit()
@@ -142,11 +144,13 @@ def blogs():
             def __init__(self, items, page, total, per_page):
                 self.items = items
                 self.page = page
-                self.pages = (total + per_page - 1) // per_page
+                self.pages = (total + per_page - 1) // per_page if total > 0 else 1
                 self.per_page = per_page
                 self.total = total
                 self.has_next = offset + per_page < total
                 self.has_prev = page > 1
+                self.prev_num = page - 1 if page > 1 else None
+                self.next_num = page + 1 if offset + per_page < total else None
         
         posts = Page([SimplePost(*post) for post in posts_data], p, total, 10)
     except Exception as e:
@@ -156,14 +160,16 @@ def blogs():
         class EmptyPage:
             items = []
             page = p
-            pages = 0
+            pages = 1
             per_page = 10
             total = 0
             has_next = False
             has_prev = False
+            prev_num = None
+            next_num = None
         posts = EmptyPage()
     
-    # Ensure metrics are initialized (for backward compatibility)
+    # Load actual metrics from database for all posts
     # Also check which posts the user has liked
     user_liked_posts = set()
     if current_user.is_authenticated:
@@ -174,11 +180,43 @@ def blogs():
             logger.error(f"Error fetching user likes: {e}")
             db.session.rollback()
     
+    # Get all post IDs to query metrics
+    post_ids = [post.id for post in posts.items]
+    
+    # Load actual likes_count from PostLike table
+    if post_ids:
+        try:
+            from sqlalchemy import func
+            likes_counts = db.session.query(
+                PostLike.post_id,
+                func.count(PostLike.id).label('count')
+            ).filter(PostLike.post_id.in_(post_ids)).group_by(PostLike.post_id).all()
+            likes_dict = {post_id: count for post_id, count in likes_counts}
+        except Exception as e:
+            logger.error(f"Error fetching likes counts: {e}")
+            db.session.rollback()
+            likes_dict = {}
+        
+        # Load actual impressions_count from PostView table
+        try:
+            impressions_counts = db.session.query(
+                PostView.post_id,
+                func.count(PostView.id).label('count')
+            ).filter(PostView.post_id.in_(post_ids)).group_by(PostView.post_id).all()
+            impressions_dict = {post_id: count for post_id, count in impressions_counts}
+        except Exception as e:
+            logger.error(f"Error fetching impressions counts: {e}")
+            db.session.rollback()
+            impressions_dict = {}
+    else:
+        likes_dict = {}
+        impressions_dict = {}
+    
     for post in posts.items:
-        if not hasattr(post, 'likes_count') or post.likes_count is None:
-            post.likes_count = 0
-        if not hasattr(post, 'impressions_count') or post.impressions_count is None:
-            post.impressions_count = 0
+        # Set actual likes_count from database
+        post.likes_count = likes_dict.get(post.id, 0)
+        # Set actual impressions_count from database
+        post.impressions_count = impressions_dict.get(post.id, 0)
         # Add user_liked attribute
         post.user_liked = post.id in user_liked_posts
     
@@ -220,6 +258,10 @@ def update(post_id):
      
      # Track impression/view
      track_post_view(post_id)
+     
+     # Reload the post object to get updated impressions_count from database
+     db.session.expire(post)  # Expire the object to force reload
+     db.session.refresh(post)  # Reload from database
      
      # Check if current user has liked this post
      user_has_liked = False
@@ -607,10 +649,15 @@ def track_post_view(post_id):
                 session_id=session_id
             )
             db.session.add(new_view)
+            db.session.flush()  # Flush to get the new view in the session before counting
             
-            # Update post impressions count
-            post.impressions_count = PostView.query.filter_by(post_id=post_id).count()
+            # Update post impressions count - count all views for this post
+            actual_count = db.session.query(func.count(PostView.id)).filter_by(post_id=post_id).scalar()
+            post.impressions_count = actual_count
+            
             db.session.commit()
+            
+            logger.info(f"Tracked view for post {post_id}: impressions_count = {actual_count}")
             
             # Emit real-time update via WebSocket if available
             try:
@@ -623,9 +670,18 @@ def track_post_view(post_id):
                     }, namespace='/', broadcast=True)
             except:
                 pass  # WebSocket not available, continue silently
+        else:
+            # Even if view already exists, refresh the count to ensure accuracy
+            actual_count = db.session.query(func.count(PostView.id)).filter_by(post_id=post_id).scalar()
+            if post.impressions_count != actual_count:
+                post.impressions_count = actual_count
+                db.session.commit()
+                logger.info(f"Updated impressions_count for post {post_id}: {actual_count}")
                 
     except Exception as e:
-        print(f"Error tracking post view: {e}")
+        logger.error(f"Error tracking post view: {e}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
 
 @blog.route("/post/<int:post_id>/like", methods=['POST'])

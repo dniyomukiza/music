@@ -74,6 +74,43 @@
         </div>
 
         <!-- Music Search -->
+        <!-- Artist Profile & Upload Section -->
+        {% if not has_artist_profile %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card music-card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Create an artist profile to upload and share your music. Your songs will be searchable by other users.</p>
+                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#createArtistModal">
+                            <i class="fas fa-user-plus me-1"></i>Create Artist Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card music-card border-success">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-microphone me-2"></i>Artist: {{ artist_profile.artist_name }}</h5>
+                        <div>
+                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-light me-2">
+                                <i class="fas fa-eye me-1"></i>View Profile
+                            </a>
+                            <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
+                                <i class="fas fa-upload me-1"></i>Upload Song
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card music-card">
@@ -140,9 +177,8 @@
         const userId = {{ current_user.user_id if current_user.is_authenticated else 'null' }};
 
         function createSongCard(song, includeActions = true) {
-            const encodedArtist = encodeURIComponent(song.artist || 'Unknown');
-            const encodedName = encodeURIComponent(song.name || 'track');
-            const songPath = `/static/afro/${encodedArtist} - ${encodedName}.mp3`;
+            // Use path from backend if available, otherwise construct it
+            const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`;
             const safeName = song.name ? song.name.replace(/'/g, "\\'") : 'Unknown';
 
             return `
@@ -236,9 +272,8 @@
                     if (Array.isArray(data) && data.length) {
                         let html = '';
                         data.forEach(song => {
-                            const encodedArtist = encodeURIComponent(song.artist || 'Unknown');
-                            const encodedName = encodeURIComponent(song.name || 'track');
-                            const songPath = `/static/afro/${encodedArtist} - ${encodedName}.mp3`;
+                            // Use path from backend if available, otherwise construct it
+                            const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`;
                             const safeName = song.name ? song.name.replace(/'/g, "\\'") : 'Unknown';
                             html += `
                                 <div class="card mb-3">
@@ -331,11 +366,160 @@
             });
         }
 
+        // Create Artist Profile
+        function createArtistProfile() {
+            const artistName = document.getElementById('artistNameInput').value.trim();
+            const bio = document.getElementById('artistBioInput').value.trim();
+            
+            if (!artistName) {
+                alert('Artist name is required.');
+                return;
+            }
+            
+            fetch('/book_platform/music/create-artist-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ artist_name: artistName, bio: bio })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.message || 'Error creating artist profile.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Unable to create artist profile.');
+            });
+        }
+
+        // Upload Song
+        function uploadSong() {
+            const form = document.getElementById('uploadSongForm');
+            const formData = new FormData(form);
+            
+            const submitBtn = document.getElementById('uploadSongBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+            
+            fetch('/book_platform/music/upload-song', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    form.reset();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadSongModal'));
+                    modal.hide();
+                    loadAvailableSongs();
+                } else {
+                    alert(data.message || 'Error uploading song.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Unable to upload song.');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadAvailableSongs();
             loadPlaylist();
         });
     </script>
+
+    <!-- Create Artist Profile Modal -->
+    <div class="modal fade" id="createArtistModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="artistNameInput" class="form-label">Artist Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="artistNameInput" placeholder="Enter your artist name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="artistBioInput" class="form-label">Bio (Optional)</label>
+                        <textarea class="form-control" id="artistBioInput" rows="3" placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="createArtistProfile()">
+                        <i class="fas fa-check me-1"></i>Create Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Song Modal -->
+    <div class="modal fade" id="uploadSongModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Upload Song</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadSongForm" onsubmit="event.preventDefault(); uploadSong();">
+                        <div class="mb-3">
+                            <label for="song_file" class="form-label">🎵 Song File (MP3) <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" id="song_file" name="song_file" accept=".mp3" required>
+                            <small class="form-text text-muted">Only MP3 files are allowed (max 50MB)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="song_name" class="form-label">🎶 Song Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="song_name" name="song_name" placeholder="Enter song title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cover_image" class="form-label">🖼️ Cover Image</label>
+                            <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/*">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="twitter" class="form-label">🐦 Twitter URL</label>
+                                <input type="url" class="form-control" id="twitter" name="twitter" placeholder="https://twitter.com/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="instagram" class="form-label">📸 Instagram URL</label>
+                                <input type="url" class="form-control" id="instagram" name="instagram" placeholder="https://instagram.com/...">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="spotify" class="form-label">🎧 Spotify URL</label>
+                                <input type="url" class="form-control" id="spotify" name="spotify" placeholder="https://open.spotify.com/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apple_music" class="form-label">🍏 Apple Music URL</label>
+                                <input type="url" class="form-control" id="apple_music" name="apple_music" placeholder="https://music.apple.com/...">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="uploadSongBtn" onclick="uploadSong()">
+                        <i class="fas fa-upload me-1"></i>Upload Song
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

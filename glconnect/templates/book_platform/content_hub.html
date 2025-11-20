@@ -246,6 +246,17 @@
                             <a href="{{ url_for('book_platform.music_dashboard') }}" class="btn btn-primary">
                                 <i class="fas fa-music me-2"></i>Open Music Dashboard
                             </a>
+                            {% if current_user.is_authenticated %}
+                            {% if not has_artist_profile %}
+                            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#createArtistModalContentHub">
+                                <i class="fas fa-user-plus me-1"></i>Create Artist Profile
+                            </button>
+                            {% else %}
+                            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#uploadSongModalContentHub">
+                                <i class="fas fa-upload me-1"></i>Upload Song
+                            </button>
+                            {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -306,27 +317,80 @@
                 
                 // If data contains song results (array), render them
                 if (Array.isArray(data) && data.length) {
-                    let html = '<div class="search-results-section"><h6 class="mb-3"><i class="fas fa-music me-2"></i>Music Results</h6>';
+                    // Group songs by artist
+                    const artistGroups = {};
                     data.forEach(song => {
-                        const songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.mp3`;
+                        const artist = song.artist || 'Unknown Artist';
+                        if (!artistGroups[artist]) {
+                            artistGroups[artist] = [];
+                        }
+                        artistGroups[artist].push(song);
+                    });
+                    
+                    let html = '<div class="search-results-section">';
+                    
+                    // Add play all button if multiple songs
+                    if (data.length > 1) {
                         html += `
-                            <div class="card mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-music me-2"></i>Music Results (${data.length} songs)</h6>
+                                <button class="btn btn-success btn-sm" onclick="playAllSongsSequentially([${data.map(s => s.id).join(',')}])">
+                                    <i class="fas fa-play me-1"></i>Play All Sequentially
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        html += '<h6 class="mb-3"><i class="fas fa-music me-2"></i>Music Results</h6>';
+                    }
+                    
+                    // Render songs grouped by artist
+                    Object.keys(artistGroups).forEach(artist => {
+                        const songs = artistGroups[artist];
+                        html += `
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong><i class="fas fa-user me-2"></i>${artist}</strong>
+                                    ${songs.length > 1 ? `<button class="btn btn-sm btn-success float-end" onclick="playAllSongsSequentially([${songs.map(s => s.id).join(',')}])">
+                                        <i class="fas fa-play me-1"></i>Play All
+                                    </button>` : ''}
+                                </div>
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong>${song.name}</strong> by ${song.artist}
-                                            <audio controls class="mt-2" style="width: 100%; max-width: 300px;">
+                        `;
+                        
+                        songs.forEach((song, index) => {
+                            const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.mp3`;
+                            const safeName = song.name ? song.name.replace(/'/g, "\\'") : 'Unknown';
+                            html += `
+                                <div class="mb-3 ${index < songs.length - 1 ? 'border-bottom pb-3' : ''}">
+                                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                                        <div style="flex: 1; min-width: 250px;">
+                                            <strong>${song.name}</strong>
+                                            <audio id="audio-${song.id}" controls class="mt-2" style="width: 100%; max-width: 400px;" 
+                                                   onplay="pauseAllOtherAudios(${song.id})">
                                                 <source src="${songPath}" type="audio/mpeg">
                                             </audio>
                                         </div>
-                                        ${userId ? `<button class="btn btn-sm btn-outline-primary" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">
-                                            <i class="fas fa-plus me-1"></i>Add to Playlist
-                                        </button>` : ''}
+                                        <div class="d-flex gap-2">
+                                            ${userId ? `
+                                            <button class="btn btn-sm btn-outline-primary" onclick="addToPlaylist(${song.id}, '${safeName}', ${userId})">
+                                                <i class="fas fa-plus me-1"></i>Add to Playlist
+                                            </button>
+                                            ` : ''}
+                                            <button class="btn btn-sm btn-outline-info" onclick="playSongById(${song.id})">
+                                                <i class="fas fa-play me-1"></i>Play
+                                            </button>
+                                        </div>
                                     </div>
+                                </div>
+                            `;
+                        });
+                        
+                        html += `
                                 </div>
                             </div>
                         `;
                     });
+                    
                     html += '</div>';
                     resultsContainer.innerHTML = html;
                     return;
@@ -391,6 +455,12 @@
         input.focus();
     }
     
+    // Store current playlist for sequential playback
+    let currentPlaylist = [];
+    let currentPlaylistIndex = 0;
+    let isPlayingSequentially = false;
+    let currentAudio = null;
+    
     // Add to playlist function
     function addToPlaylist(songId, songName, userId) {
         fetch('/playlist2/add_to_playlist', {
@@ -405,16 +475,126 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.message) {
-                alert('Added to playlist: ' + songName);
+            if (data.status === 'success' || data.message) {
+                alert(data.message || 'Added to playlist: ' + songName);
             } else {
-                alert('Error adding to playlist');
+                alert(data.message || 'Error adding to playlist');
             }
         })
         .catch(error => {
             console.error('Error:', error);
             alert('Error adding to playlist');
         });
+    }
+    
+    // Play a song by ID
+    function playSongById(songId) {
+        const audio = document.getElementById(`audio-${songId}`);
+        if (audio) {
+            pauseAllOtherAudios(songId);
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        }
+    }
+    
+    // Pause all other audio elements except the one playing
+    function pauseAllOtherAudios(currentId) {
+        document.querySelectorAll('audio').forEach(audio => {
+            if (audio.id !== `audio-${currentId}` && !audio.paused) {
+                audio.pause();
+            }
+        });
+    }
+    
+    // Play all songs sequentially
+    function playAllSongsSequentially(songIds) {
+        if (!songIds || songIds.length === 0) return;
+        
+        // Get all song data from the search results
+        const songs = [];
+        songIds.forEach(id => {
+            const audio = document.getElementById(`audio-${id}`);
+            if (audio) {
+                const source = audio.querySelector('source');
+                if (source) {
+                    songs.push({
+                        id: id,
+                        src: source.src
+                    });
+                }
+            }
+        });
+        
+        if (songs.length === 0) {
+            alert('No songs found to play');
+            return;
+        }
+        
+        currentPlaylist = songs;
+        currentPlaylistIndex = 0;
+        isPlayingSequentially = true;
+        
+        // Stop any currently playing audio
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        
+        playNextInSequence();
+    }
+    
+    // Play next song in sequence
+    function playNextInSequence() {
+        if (!isPlayingSequentially || currentPlaylistIndex >= currentPlaylist.length) {
+            isPlayingSequentially = false;
+            currentPlaylistIndex = 0;
+            return;
+        }
+        
+        const song = currentPlaylist[currentPlaylistIndex];
+        const audio = document.getElementById(`audio-${song.id}`);
+        
+        if (audio) {
+            pauseAllOtherAudios(song.id);
+            currentAudio = audio;
+            
+            // Play the audio
+            audio.play().catch(err => {
+                console.error('Error playing audio:', err);
+                // Skip to next if this one fails
+                currentPlaylistIndex++;
+                playNextInSequence();
+            });
+            
+            // When this song ends, play the next one
+            audio.onended = () => {
+                currentPlaylistIndex++;
+                playNextInSequence();
+            };
+            
+            // Handle errors
+            audio.onerror = () => {
+                console.error(`Error loading song ${song.id}`);
+                currentPlaylistIndex++;
+                playNextInSequence();
+            };
+        } else {
+            // Skip to next if audio element not found
+            currentPlaylistIndex++;
+            playNextInSequence();
+        }
+    }
+    
+    // Stop sequential playback
+    function stopSequentialPlayback() {
+        isPlayingSequentially = false;
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
     }
     
     // Enter key support
@@ -444,6 +624,156 @@
             color: #333 !important;
         }
     </style>
+
+    <!-- Create Artist Profile Modal -->
+    <div class="modal fade" id="createArtistModalContentHub" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="artistNameInputContentHub" class="form-label">Artist Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="artistNameInputContentHub" placeholder="Enter your artist name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="artistBioInputContentHub" class="form-label">Bio (Optional)</label>
+                        <textarea class="form-control" id="artistBioInputContentHub" rows="3" placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="createArtistProfileContentHub()">
+                        <i class="fas fa-check me-1"></i>Create Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Song Modal -->
+    <div class="modal fade" id="uploadSongModalContentHub" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Upload Song</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadSongFormContentHub" onsubmit="event.preventDefault(); uploadSongContentHub();">
+                        <div class="mb-3">
+                            <label for="song_file_content_hub" class="form-label">🎵 Song File (MP3) <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" id="song_file_content_hub" name="song_file" accept=".mp3" required>
+                            <small class="form-text text-muted">Only MP3 files are allowed (max 50MB)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="song_name_content_hub" class="form-label">🎶 Song Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="song_name_content_hub" name="song_name" placeholder="Enter song title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cover_image_content_hub" class="form-label">🖼️ Cover Image</label>
+                            <input type="file" class="form-control" id="cover_image_content_hub" name="cover_image" accept="image/*">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="twitter_content_hub" class="form-label">🐦 Twitter URL</label>
+                                <input type="url" class="form-control" id="twitter_content_hub" name="twitter" placeholder="https://twitter.com/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="instagram_content_hub" class="form-label">📸 Instagram URL</label>
+                                <input type="url" class="form-control" id="instagram_content_hub" name="instagram" placeholder="https://instagram.com/...">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="spotify_content_hub" class="form-label">🎧 Spotify URL</label>
+                                <input type="url" class="form-control" id="spotify_content_hub" name="spotify" placeholder="https://open.spotify.com/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apple_music_content_hub" class="form-label">🍏 Apple Music URL</label>
+                                <input type="url" class="form-control" id="apple_music_content_hub" name="apple_music" placeholder="https://music.apple.com/...">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="uploadSongBtnContentHub" onclick="uploadSongContentHub()">
+                        <i class="fas fa-upload me-1"></i>Upload Song
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Create Artist Profile from Content Hub
+    function createArtistProfileContentHub() {
+        const artistName = document.getElementById('artistNameInputContentHub').value.trim();
+        const bio = document.getElementById('artistBioInputContentHub').value.trim();
+        
+        if (!artistName) {
+            alert('Artist name is required.');
+            return;
+        }
+        
+        fetch('/book_platform/music/create-artist-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ artist_name: artistName, bio: bio })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || 'Error creating artist profile.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Unable to create artist profile.');
+        });
+    }
+
+    // Upload Song from Content Hub
+    function uploadSongContentHub() {
+        const form = document.getElementById('uploadSongFormContentHub');
+        const formData = new FormData(form);
+        
+        const submitBtn = document.getElementById('uploadSongBtnContentHub');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+        
+        fetch('/book_platform/music/upload-song', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('uploadSongModalContentHub'));
+                modal.hide();
+            } else {
+                alert(data.message || 'Error uploading song.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Unable to upload song.');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    }
+    </script>
 </body>
 </html>
 

@@ -7,6 +7,38 @@ from flask_cors import CORS
 
 
 art = Blueprint("art", __name__)
+def get_song_path(song, artist_name=None):
+    """Helper function to get the correct path for a song"""
+    import os
+    
+    # Check if it's a Song model or Song_upload model
+    local_path = getattr(song, 'local_path', None)
+    song_name = getattr(song, 'name', None) or getattr(song, 'name_song', None)
+    song_artist = getattr(song, 'artist', None) or getattr(song, 'name_artist', None) or artist_name
+    
+    if local_path:
+        # Extract filename from local_path if it's a full path
+        if '/' in local_path or '\\' in local_path:
+            filename = os.path.basename(local_path)
+            if '/' in filename:
+                filename = filename.split('/')[-1]
+            if '\\' in filename:
+                filename = filename.split('\\')[-1]
+            return f"/static/afro/{filename}"
+        else:
+            # It's already a relative path or filename
+            if local_path.startswith('/'):
+                return local_path
+            elif local_path.startswith('static/'):
+                return f"/{local_path}"
+            else:
+                return f"/static/afro/{local_path}"
+    else:
+        # Fallback to constructed path
+        if song_artist and song_name:
+            return f"/static/afro/{urllib.parse.quote(song_artist)} - {urllib.parse.quote(song_name)}.mp3"
+        return None
+
 @art.route('/artist/<int:artist_id>')
 def artist_profile(artist_id):
     artist = Artist.query.get_or_404(artist_id)
@@ -16,6 +48,13 @@ def artist_profile(artist_id):
 
     # Get songs uploaded via Song_upload model (where name_artist matches the artist_name)
     songs_from_upload_model = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
+
+    # Add path attribute to each song object
+    for song in songs_from_song_model:
+        song.song_path = get_song_path(song, artist.artist_name)
+    
+    for song_upload in songs_from_upload_model:
+        song_upload.song_path = get_song_path(song_upload, artist.artist_name)
 
     # Combine both song lists (no duplicates based on song ID)
     all_songs = songs_from_song_model + songs_from_upload_model
@@ -100,14 +139,35 @@ def get_playlist(user_id):
             else:
                 artist_name = "Unknown Artist"
 
-            # Construct the song path using the artist and song name
-            song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.mp3"
+            # Use local_path if available, otherwise construct path
+            if song.local_path:
+                # Extract filename from local_path if it's a full path
+                import os
+                if '/' in song.local_path or '\\' in song.local_path:
+                    filename = os.path.basename(song.local_path)
+                    # Remove any directory prefixes
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
+                    song_path = f"/static/afro/{filename}"
+                else:
+                    # It's already a relative path or filename
+                    if song.local_path.startswith('/'):
+                        song_path = song.local_path
+                    elif song.local_path.startswith('static/'):
+                        song_path = f"/{song.local_path}"
+                    else:
+                        song_path = f"/static/afro/{song.local_path}"
+            else:
+                # Fallback to constructed path
+                song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.mp3"
             
             songs.append({
                 'song_id': song.id,
                 'song_name': song.name,
                 'artist_name': artist_name,  # Add artist name to the response
-                'song_url': song_path  # Return the dynamically constructed song path
+                'song_url': song_path  # Return the path (using local_path if available)
             })
 
     if not songs:
