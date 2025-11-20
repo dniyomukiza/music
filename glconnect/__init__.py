@@ -59,6 +59,9 @@ def create_app():
     # Secret key for sessions
     app.secret_key = os.urandom(24)
 
+    # Add hasattr to Jinja2 globals for use in templates
+    app.jinja_env.globals['hasattr'] = hasattr
+
     # CKEditor configuration
     ckeditor = CKEditor() 
     app.config['CKEDITOR_SERVE_LOCAL'] = True
