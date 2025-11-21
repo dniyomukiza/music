@@ -177,9 +177,11 @@
         const userId = {{ current_user.user_id if current_user.is_authenticated else 'null' }};
 
         function createSongCard(song, includeActions = true) {
-            // Use path from backend if available, otherwise construct it
-            const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`;
-            const safeName = song.name ? song.name.replace(/'/g, "\\'") : 'Unknown';
+            // Use song file serving route for reliable file access, fallback to path if available
+            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+            const safeName = (song.name && song.name.trim()) ? song.name.replace(/'/g, "\\'") : 'Unknown';
+            const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
+            const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
 
             return `
                 <div class="col-12">
@@ -187,8 +189,8 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                 <div>
-                                    <h6 class="mb-1"><strong>${song.name || 'Untitled Track'}</strong></h6>
-                                    <p class="text-muted mb-2">by ${song.artist || 'Unknown Artist'}</p>
+                                    <h6 class="mb-1"><strong>${songName}</strong></h6>
+                                    <p class="text-muted mb-2">by ${artistName}</p>
                                     <audio controls class="song-audio">
                                         <source src="${songPath}" type="audio/mpeg">
                                     </audio>
@@ -272,16 +274,18 @@
                     if (Array.isArray(data) && data.length) {
                         let html = '';
                         data.forEach(song => {
-                            // Use path from backend if available, otherwise construct it
-                            const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`;
-                            const safeName = song.name ? song.name.replace(/'/g, "\\'") : 'Unknown';
+                            // Use song file serving route for reliable file access, fallback to path if available
+                            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+                            const safeName = (song.name && song.name.trim()) ? song.name.replace(/'/g, "\\'") : 'Unknown';
+                            const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
+                            const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
                             html += `
                                 <div class="card mb-3">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                             <div>
-                                                <h6 class="mb-1"><strong>${song.name || 'Untitled Track'}</strong></h6>
-                                                <p class="text-muted mb-2">by ${song.artist || 'Unknown Artist'}</p>
+                                                <h6 class="mb-1"><strong>${songName}</strong></h6>
+                                                <p class="text-muted mb-2">by ${artistName}</p>
                                                 <audio controls class="song-audio">
                                                     <source src="${songPath}" type="audio/mpeg">
                                                 </audio>

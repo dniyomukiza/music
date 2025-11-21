@@ -358,13 +358,16 @@
                         `;
                         
                         songs.forEach((song, index) => {
-                            const songPath = song.path || `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.mp3`;
-                            const safeName = song.name ? song.name.replace(/'/g, "\\'") : 'Unknown';
+                            // Use song file serving route for reliable file access, fallback to path if available
+                            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+                            const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
+                            const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
+                            const safeName = songName.replace(/'/g, "\\'");
                             html += `
                                 <div class="mb-3 ${index < songs.length - 1 ? 'border-bottom pb-3' : ''}">
                                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                                         <div style="flex: 1; min-width: 250px;">
-                                            <strong>${song.name}</strong>
+                                            <strong>${songName}</strong>${artistName !== 'Unknown Artist' ? ` <span class="text-muted">by ${artistName}</span>` : ''}
                                             <audio id="audio-${song.id}" controls class="mt-2" style="width: 100%; max-width: 400px;" 
                                                    onplay="pauseAllOtherAudios(${song.id})">
                                                 <source src="${songPath}" type="audio/mpeg">

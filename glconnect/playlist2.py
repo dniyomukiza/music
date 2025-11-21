@@ -38,7 +38,7 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
                 if artist_obj:
                     artist_name_display = artist_obj.artist_name
         
-        # Use local_path if available, otherwise construct path
+        # Use local_path if available, otherwise construct path (same logic as template routes)
         if song.local_path:
             # Extract filename from local_path if it's a full path
             if '/' in song.local_path or '\\' in song.local_path:
@@ -61,13 +61,17 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
         else:
             # Fallback to constructed path
             import urllib.parse
-            song_path = f"/static/afro/{urllib.parse.quote(artist_name_display)} - {urllib.parse.quote(song.name)}.mp3"
+            song_name_for_path = song.name if song.name else 'Untitled Track'
+            song_path = f"/static/afro/{urllib.parse.quote(artist_name_display)} - {urllib.parse.quote(song_name_for_path)}.mp3"
+        
+        # Ensure name is not empty or None
+        song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
         
         songs_data.append({
             'id': song.id,
-            'name': song.name,
+            'name': song_name,
             'artist': artist_name_display,
-            'path': song_path  # Include the path in the response
+            'path': song_path  # Include the path in the response (matches template route logic)
         })
     
     return songs_data
@@ -122,21 +126,37 @@ def playlist2():
                     if artist:
                         artist_name = artist.artist_name
             
-            # Use local_path if available
+            # Use local_path if available (same logic as template routes)
             if song.local_path:
                 import os
                 if '/' in song.local_path or '\\' in song.local_path:
                     filename = os.path.basename(song.local_path)
+                    # Remove any directory prefixes
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
                     song_path = f"/static/afro/{filename}"
                 else:
-                    song_path = song.local_path if song.local_path.startswith('/') else f"/static/afro/{song.local_path}"
+                    # It's already a relative path or filename
+                    if song.local_path.startswith('/'):
+                        song_path = song.local_path
+                    elif song.local_path.startswith('static/'):
+                        song_path = f"/{song.local_path}"
+                    else:
+                        song_path = f"/static/afro/{song.local_path}"
             else:
+                # Fallback to constructed path
                 import urllib.parse
-                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song.name)}.mp3"
+                song_name_for_path = song.name if song.name else 'Untitled Track'
+                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song_name_for_path)}.mp3"
+            
+            # Ensure name is not empty or None
+            song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
             
             songs_data.append({
                 'id': song.id,
-                'name': song.name,
+                'name': song_name,
                 'artist': artist_name,
                 'path': song_path
             })
@@ -187,21 +207,37 @@ def get_available_songs():
                     if artist:
                         artist_name = artist.artist_name
             
-            # Use local_path if available
+            # Use local_path if available (same logic as template routes)
             if song.local_path:
                 import os
                 if '/' in song.local_path or '\\' in song.local_path:
                     filename = os.path.basename(song.local_path)
+                    # Remove any directory prefixes
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
                     song_path = f"/static/afro/{filename}"
                 else:
-                    song_path = song.local_path if song.local_path.startswith('/') else f"/static/afro/{song.local_path}"
+                    # It's already a relative path or filename
+                    if song.local_path.startswith('/'):
+                        song_path = song.local_path
+                    elif song.local_path.startswith('static/'):
+                        song_path = f"/{song.local_path}"
+                    else:
+                        song_path = f"/static/afro/{song.local_path}"
             else:
+                # Fallback to constructed path
                 import urllib.parse
-                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song.name)}.mp3"
+                song_name_for_path = song.name if song.name else 'Untitled Track'
+                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song_name_for_path)}.mp3"
+            
+            # Ensure name is not empty or None
+            song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
             
             songs_data.append({
                 'id': song.id,
-                'name': song.name,
+                'name': song_name,
                 'artist': artist_name,
                 'path': song_path
             })
@@ -260,13 +296,40 @@ def get_user_playlist():
     for entry in playlist:
         song = Song.query.get(entry.song_id)
         if song:
+            # Get artist name - prefer artist field, fallback to artist_id lookup
+            artist_name = song.artist if song.artist else 'Unknown'
+            if not artist_name or artist_name == 'Unknown':
+                if song.artist_id:
+                    artist = Artist.query.get(song.artist_id)
+                    if artist:
+                        artist_name = artist.artist_name
+            
+            # Use local_path if available, otherwise construct path
+            if song.local_path:
+                import os
+                if '/' in song.local_path or '\\' in song.local_path:
+                    filename = os.path.basename(song.local_path)
+                    # Remove any directory prefixes
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
+                    song_path = f"/static/afro/{filename}"
+                else:
+                    song_path = song.local_path if song.local_path.startswith('/') else f"/static/afro/{song.local_path}"
+            else:
+                # Fallback to constructed path
+                import urllib.parse
+                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song.name)}.mp3"
+            
+            # Ensure name is not empty or None
+            song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
+            
             playlist_data.append({
                 'id': song.id,
-                'name': song.name,
-                'artist': song.artist,
-                'local_path': song.local_path,
-                'spotify_id': song.spotify_id,
-                'is_available_on_spotify': song.is_available_on_spotify
+                'name': song_name,
+                'artist': artist_name,
+                'path': song_path  # Include the path in the response
             })
     
     return playlist_data
