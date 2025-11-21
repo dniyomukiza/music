@@ -384,26 +384,81 @@ def serve_song_file(song_id):
     try:
         song = Song.query.get_or_404(song_id)
         
+        # Define possible directories to search (used in multiple places)
+        possible_dirs = [
+            'glconnect/static/afro',
+            'glconnect/static/song_uploads',
+            'static/afro',
+            'static/song_uploads',
+            '/usr/src/appdir/glconnect/static/afro',
+            '/usr/src/appdir/glconnect/static/song_uploads',
+            '/liqfolder/glconnect/static/afro',  # Handle the path format in database
+            os.path.join(os.getcwd(), 'glconnect', 'static', 'afro'),
+            os.path.join(os.getcwd(), 'glconnect', 'static', 'song_uploads'),
+        ]
+        
         # Try to find the file using local_path if available
         if song.local_path:
-            # If local_path is a full path, extract filename
+            # First, check if local_path is an absolute path that exists
+            if os.path.isabs(song.local_path) and os.path.exists(song.local_path):
+                return send_file(song.local_path, mimetype='audio/mpeg')
+            
+            # If it's an absolute path that doesn't exist, try to map it to current environment
+            # Handle paths like /liqfolder/glconnect/static/afro/filename.mp3
+            if os.path.isabs(song.local_path):
+                # Extract the relative part after the base directory
+                # e.g., /liqfolder/glconnect/static/afro/file.mp3 -> glconnect/static/afro/file.mp3
+                path_parts = song.local_path.strip('/').split('/')
+                # Find 'glconnect' in the path and reconstruct from there
+                if 'glconnect' in path_parts:
+                    glconnect_idx = path_parts.index('glconnect')
+                    relative_path = '/'.join(path_parts[glconnect_idx:])
+                    # Try to find the file using the relative path
+                    reconstructed_path = os.path.join(os.getcwd(), relative_path)
+                    if os.path.exists(reconstructed_path):
+                        return send_file(reconstructed_path, mimetype='audio/mpeg')
+                    # Also try without glconnect prefix
+                    if len(path_parts) > glconnect_idx + 1:
+                        relative_path_no_prefix = '/'.join(path_parts[glconnect_idx + 1:])
+                        reconstructed_path = os.path.join(os.getcwd(), 'glconnect', relative_path_no_prefix)
+                        if os.path.exists(reconstructed_path):
+                            return send_file(reconstructed_path, mimetype='audio/mpeg')
+            
+            # Extract filename from path (handles both absolute and relative paths)
             if '/' in song.local_path or '\\' in song.local_path:
                 filename = os.path.basename(song.local_path)
             else:
                 filename = song.local_path
             
-            # Try multiple possible locations
-            possible_dirs = [
-                'glconnect/static/afro',
-                'static/afro',
-                '/usr/src/appdir/glconnect/static/afro',
-                os.path.join(os.getcwd(), 'glconnect', 'static', 'afro'),
-            ]
+            # Also try the directory from the stored path if it's a relative path
+            if '/' in song.local_path and not os.path.isabs(song.local_path):
+                # Extract directory from relative path like "static/afro/filename.mp3"
+                path_parts = song.local_path.split('/')
+                if len(path_parts) > 1:
+                    # Reconstruct relative directory path
+                    relative_dir = '/'.join(path_parts[:-1])
+                    possible_dirs.insert(0, relative_dir)
+                    # Also try with glconnect prefix
+                    if not relative_dir.startswith('glconnect/'):
+                        possible_dirs.insert(0, f"glconnect/{relative_dir}")
             
             for directory in possible_dirs:
                 file_path = os.path.join(directory, filename)
                 if os.path.exists(file_path):
                     return send_file(file_path, mimetype='audio/mpeg')
+            
+            # If local_path contains a directory structure, try reconstructing it
+            if '/' in song.local_path and not os.path.isabs(song.local_path):
+                # Try to find the file by reconstructing the path relative to current working directory
+                reconstructed_path = os.path.join(os.getcwd(), song.local_path.lstrip('/'))
+                if os.path.exists(reconstructed_path):
+                    return send_file(reconstructed_path, mimetype='audio/mpeg')
+                
+                # Try with glconnect prefix
+                if not song.local_path.startswith('glconnect/'):
+                    reconstructed_path = os.path.join(os.getcwd(), 'glconnect', song.local_path.lstrip('/'))
+                    if os.path.exists(reconstructed_path):
+                        return send_file(reconstructed_path, mimetype='audio/mpeg')
         
         # Fallback: try constructed path
         artist_name = song.artist if song.artist else 'Unknown'
@@ -421,15 +476,20 @@ def serve_song_file(song_id):
         # If still not found, try searching for similar filenames
         for directory in possible_dirs:
             if os.path.exists(directory):
-                for file in os.listdir(directory):
-                    # Check if filename contains song name or artist name
-                    if (song.name.lower() in file.lower() or 
-                        (artist_name != 'Unknown' and artist_name.lower() in file.lower())):
-                        file_path = os.path.join(directory, file)
-                        if os.path.exists(file_path) and file.endswith('.mp3'):
-                            return send_file(file_path, mimetype='audio/mpeg')
+                try:
+                    for file in os.listdir(directory):
+                        # Check if filename contains song name or artist name
+                        if (song.name.lower() in file.lower() or 
+                            (artist_name != 'Unknown' and artist_name.lower() in file.lower())):
+                            file_path = os.path.join(directory, file)
+                            if os.path.exists(file_path) and file.endswith('.mp3'):
+                                return send_file(file_path, mimetype='audio/mpeg')
+                except (OSError, PermissionError):
+                    # Skip directories we can't read
+                    continue
         
-        return jsonify({"error": "Song file not found"}), 404
+        return jsonify({"error": f"Song file not found. local_path: {song.local_path}, filename: {filename if 'filename' in locals() else 'N/A'}"}), 404
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500

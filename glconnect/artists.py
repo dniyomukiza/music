@@ -142,6 +142,11 @@ def get_song_path_for_artist(song, artist_name=None):
                 filename = filename.split('/')[-1]
             if '\\' in filename:
                 filename = filename.split('\\')[-1]
+            # Check if file exists in song_uploads directory
+            song_uploads_path = os.path.join(UPLOAD_FOLDER, filename)
+            if os.path.exists(song_uploads_path):
+                return f"/static/song_uploads/{filename}"
+            # Fallback to afro directory
             return f"/static/afro/{filename}"
         else:
             # It's already a relative path or filename
@@ -150,10 +155,20 @@ def get_song_path_for_artist(song, artist_name=None):
             elif local_path.startswith('static/'):
                 return f"/{local_path}"
             else:
+                # Check if file exists in song_uploads directory
+                song_uploads_path = os.path.join(UPLOAD_FOLDER, local_path)
+                if os.path.exists(song_uploads_path):
+                    return f"/static/song_uploads/{local_path}"
+                # Fallback to afro directory
                 return f"/static/afro/{local_path}"
     else:
-        # Fallback to constructed path
+        # Fallback to constructed path - try song_uploads first
         if song_artist and song_name:
+            constructed_filename = f"{song_artist} - {song_name}.mp3"
+            song_uploads_path = os.path.join(UPLOAD_FOLDER, constructed_filename)
+            if os.path.exists(song_uploads_path):
+                return f"/static/song_uploads/{urllib.parse.quote(constructed_filename)}"
+            # Fallback to afro directory
             return f"/static/afro/{urllib.parse.quote(song_artist)} - {urllib.parse.quote(song_name)}.mp3"
         return None
 
