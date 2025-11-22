@@ -38,31 +38,10 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
                 if artist_obj:
                     artist_name_display = artist_obj.artist_name
         
-        # Use local_path if available, otherwise construct path (same logic as template routes)
-        if song.local_path:
-            # Extract filename from local_path if it's a full path
-            if '/' in song.local_path or '\\' in song.local_path:
-                # It's a full path, extract just the filename
-                filename = os.path.basename(song.local_path)
-                # Remove any directory prefixes like 'ytauto/', 'afro/', etc.
-                if '/' in filename:
-                    filename = filename.split('/')[-1]
-                if '\\' in filename:
-                    filename = filename.split('\\')[-1]
-                song_path = f"/static/afro/{filename}"
-            else:
-                # It's already a relative path or filename
-                if song.local_path.startswith('/'):
-                    song_path = song.local_path
-                elif song.local_path.startswith('static/'):
-                    song_path = f"/{song.local_path}"
-                else:
-                    song_path = f"/static/afro/{song.local_path}"
-        else:
-            # Fallback to constructed path
-            import urllib.parse
-            song_name_for_path = song.name if song.name else 'Untitled Track'
-            song_path = f"/static/afro/{urllib.parse.quote(artist_name_display)} - {urllib.parse.quote(song_name_for_path)}.mp3"
+        # Use the file serving route for reliable file access
+        # This route handles all path resolution logic from the database
+        from flask import url_for
+        song_path = url_for('playlist2.serve_song_file', song_id=song.id)
         
         # Ensure name is not empty or None
         song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
@@ -71,7 +50,7 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
             'id': song.id,
             'name': song_name,
             'artist': artist_name_display,
-            'path': song_path  # Include the path in the response (matches template route logic)
+            'path': song_path  # Use the file serving route
         })
     
     return songs_data
@@ -194,6 +173,7 @@ def playlist2():
 def get_available_songs():
     """Get list of available songs for display"""
     try:
+        from flask import url_for
         # Get a limited number of songs (e.g., 12 most recent or popular)
         songs = Song.query.order_by(Song.id.desc()).limit(12).all()
         
@@ -207,30 +187,9 @@ def get_available_songs():
                     if artist:
                         artist_name = artist.artist_name
             
-            # Use local_path if available (same logic as template routes)
-            if song.local_path:
-                import os
-                if '/' in song.local_path or '\\' in song.local_path:
-                    filename = os.path.basename(song.local_path)
-                    # Remove any directory prefixes
-                    if '/' in filename:
-                        filename = filename.split('/')[-1]
-                    if '\\' in filename:
-                        filename = filename.split('\\')[-1]
-                    song_path = f"/static/afro/{filename}"
-                else:
-                    # It's already a relative path or filename
-                    if song.local_path.startswith('/'):
-                        song_path = song.local_path
-                    elif song.local_path.startswith('static/'):
-                        song_path = f"/{song.local_path}"
-                    else:
-                        song_path = f"/static/afro/{song.local_path}"
-            else:
-                # Fallback to constructed path
-                import urllib.parse
-                song_name_for_path = song.name if song.name else 'Untitled Track'
-                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song_name_for_path)}.mp3"
+            # Use the file serving route for reliable file access
+            # This route handles all path resolution logic
+            song_path = url_for('playlist2.serve_song_file', song_id=song.id)
             
             # Ensure name is not empty or None
             song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
@@ -304,23 +263,10 @@ def get_user_playlist():
                     if artist:
                         artist_name = artist.artist_name
             
-            # Use local_path if available, otherwise construct path
-            if song.local_path:
-                import os
-                if '/' in song.local_path or '\\' in song.local_path:
-                    filename = os.path.basename(song.local_path)
-                    # Remove any directory prefixes
-                    if '/' in filename:
-                        filename = filename.split('/')[-1]
-                    if '\\' in filename:
-                        filename = filename.split('\\')[-1]
-                    song_path = f"/static/afro/{filename}"
-                else:
-                    song_path = song.local_path if song.local_path.startswith('/') else f"/static/afro/{song.local_path}"
-            else:
-                # Fallback to constructed path
-                import urllib.parse
-                song_path = f"/static/afro/{urllib.parse.quote(artist_name)} - {urllib.parse.quote(song.name)}.mp3"
+            # Use the file serving route for reliable file access
+            # This route handles all path resolution logic from the database
+            from flask import url_for
+            song_path = url_for('playlist2.serve_song_file', song_id=song.id)
             
             # Ensure name is not empty or None
             song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
@@ -329,7 +275,7 @@ def get_user_playlist():
                 'id': song.id,
                 'name': song_name,
                 'artist': artist_name,
-                'path': song_path  # Include the path in the response
+                'path': song_path  # Use the file serving route
             })
     
     return playlist_data
