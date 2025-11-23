@@ -14,7 +14,7 @@ CASCADE DELETE BEHAVIOR:
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, JSON, Enum
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, JSON, Enum, CheckConstraint
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 import uuid
@@ -342,11 +342,21 @@ class BookPurchase(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Foreign Keys
-    buyer_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=False)
+    # buyer_id is for users with BookPlatformUser profiles (authors/writers who also buy)
+    # buyer_user_id is for regular users who only need a user account to purchase
+    buyer_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id'), nullable=True)
+    buyer_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # Direct reference to users table
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
+    
+    # Ensure at least one buyer identifier is set
+    __table_args__ = (
+        CheckConstraint('(buyer_id IS NOT NULL) OR (buyer_user_id IS NOT NULL)', name='check_buyer_exists'),
+    )
     
     # Relationships
     sale = db.relationship('BookSale', backref='purchase', uselist=False)
+    # Note: buyer relationship is handled via buyer_id -> BookPlatformUser
+    # buyer_user_id directly references users.user_id (no relationship needed as it's a direct FK)
 
 # Book Sale Model
 class BookSale(db.Model):

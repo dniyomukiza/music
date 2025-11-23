@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Returns - {{ book.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.earnings') }}">
+                    <i class="fas fa-arrow-left"></i> Back to Earnings
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4"><i class="fas fa-chart-line me-2"></i>Investment Returns</h1>
+        
+        <!-- Book Info Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-book me-2"></i>{{ book.title }}</h3>
+            </div>
+            <div class="card-body">
+                {% if book.author %}
+                <p class="text-muted mb-0">
+                    <i class="fas fa-user me-1"></i>Author: {{ book.author.pen_name or (book.author.user.username if book.author.user else 'Unknown') }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Investment Summary -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Investment Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Initial Investment</small>
+                            <h4 class="mb-0">${{ "%.2f"|format(investment.amount) }}</h4>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Total Returns</small>
+                            <h4 class="mb-0 text-success">${{ "%.2f"|format(investment.total_returns) }}</h4>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">ROI</small>
+                            <h4 class="mb-0 text-primary">{{ "%.1f"|format(roi_percentage) }}%</h4>
+                        </div>
+                        <div>
+                            <small class="text-muted">Status</small>
+                            <div>
+                                <span class="badge bg-{% if investment.status.value == 'active' %}success{% else %}secondary{% endif %}">
+                                    {{ investment.status.value|title }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow mb-3">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Return Cap Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Maximum Possible Return</small>
+                            <h4 class="mb-0">${{ "%.2f"|format(max_possible_return) }}</h4>
+                            <small class="text-muted">({{ investment.return_multiplier }}x multiplier)</small>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Progress to Cap</small>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar {% if progress_to_cap >= 100 %}bg-danger{% elif progress_to_cap >= 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ progress_to_cap }}%"
+                                     aria-valuenow="{{ progress_to_cap }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ "%.1f"|format(progress_to_cap) }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <small class="text-muted">Remaining to Cap</small>
+                            <h5 class="mb-0">${{ "%.2f"|format(max_possible_return - investment.total_returns) }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payouts List -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Payout History</h3>
+            </div>
+            <div class="card-body">
+                {% if payouts %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Related Sale</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payout in payouts %}
+                            <tr>
+                                <td>
+                                    {{ payout.created_at.strftime('%Y-%m-%d %H:%M') if payout.created_at else 'N/A' }}
+                                </td>
+                                <td>
+                                    <strong class="text-success">${{ "%.2f"|format(payout.amount) }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if payout.status.value == 'completed' %}success{% elif payout.status.value == 'pending' %}warning{% else %}secondary{% endif %}">
+                                        {{ payout.status.value|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if payout.distribution and payout.distribution.source_sale_id %}
+                                        <a href="#sale-{{ payout.distribution.source_sale_id }}" class="text-primary">
+                                            Sale #{{ payout.distribution.source_sale_id }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {% if payout.distribution %}
+                                            Revenue share from book sale
+                                        {% else %}
+                                            Manual payout
+                                        {% endif %}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>No payouts yet. Returns will appear here as the book generates sales.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sales Data -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h3 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Book Sales</h3>
+            </div>
+            <div class="card-body">
+                {% if sales %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Sale ID</th>
+                                <th>Date</th>
+                                <th>Sale Amount</th>
+                                <th>Your Return</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in sales %}
+                            <tr id="sale-{{ sale.id }}">
+                                <td>#{{ sale.id }}</td>
+                                <td>
+                                    {{ sale.created_at.strftime('%Y-%m-%d %H:%M') if sale.created_at else 'N/A' }}
+                                </td>
+                                <td>
+                                    ${{ "%.2f"|format(sale.net_amount + sale.platform_fee) }}
+                                    <small class="text-muted d-block">
+                                        (Net: ${{ "%.2f"|format(sale.net_amount) }})
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if sale.id in payouts_by_sale %}
+                                        <strong class="text-success">
+                                            ${{ "%.2f"|format(payouts_by_sale[sale.id].amount) }}
+                                        </strong>
+                                    {% else %}
+                                        <span class="text-muted">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if sale.status.value == 'completed' %}success{% elif sale.status.value == 'pending' %}warning{% else %}secondary{% endif %}">
+                                        {{ sale.status.value|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>No sales recorded yet for this book.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="card shadow">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>How Returns Work</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Returns are calculated as a percentage of each book sale based on your investment share</li>
+                    <li>Returns accumulate until you reach the maximum return cap ({{ investment.return_multiplier }}x your investment)</li>
+                    <li>Payouts are processed automatically when sales occur</li>
+                    <li>You can track each payout and its corresponding sale in the tables above</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

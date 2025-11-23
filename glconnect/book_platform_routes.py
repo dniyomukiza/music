@@ -1917,76 +1917,104 @@ def purchase_book(book_id):
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
     ).get_or_404(book_id)
     
-    # Get user profile (Writer or BookPlatformUser) - if no profile, create a temporary one for purchase
-    user_profile, profile_type = get_user_profile()
-    if not user_profile:
-        # For users without profiles, create a temporary profile for purchase tracking
-        class TempUserProfile:
-            def __init__(self, user_id):
-                self.id = user_id  # Use user_id as the ID for purchase tracking
-                self.user_id = user_id
-        
-        user_profile = TempUserProfile(current_user.user_id)
-        profile_type = 'temp'
+    # Buyers only need a user account - NO profile required
+    buyer_user_id = current_user.user_id
     
-    # Can't buy your own book (only applies to users with Writer/BookPlatformUser profiles)
-    if profile_type in ['writer', 'book_platform'] and book.author_id == get_profile_id(user_profile, profile_type):
+    # Prevent self-purchase: Check if current user is the author
+    # Get author's user_id from book.author (BookPlatformUser) -> user relationship
+    if book.author and book.author.user_id == buyer_user_id:
         return jsonify({'error': 'You cannot purchase your own book'}), 400
     
-    # Check if already purchased
-    existing_purchase = BookPurchase.query.filter_by(
-        buyer_id=get_profile_id(user_profile, profile_type),
-        book_project_id=book_id,
-        status=TransactionStatus.COMPLETED
+    # Check if already purchased - use buyer_user_id (works for all users, with or without profiles)
+    # Also check buyer_id for backward compatibility with old purchases
+    bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+    buyer_id = bp_user.id if bp_user else None
+    
+    existing_purchase = BookPurchase.query.filter(
+        db.or_(
+            BookPurchase.buyer_user_id == buyer_user_id,
+            (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+        ),
+        BookPurchase.book_project_id == book_id,
+        BookPurchase.status == TransactionStatus.COMPLETED
     ).first()
     
     if existing_purchase:
         return jsonify({'error': 'You have already purchased this book'}), 400
     
-    # Create purchase record
-    purchase = BookPurchase(
-        buyer_id=get_profile_id(user_profile, profile_type),
-        book_project_id=book_id,
-        amount=book.price,
-        currency=book.currency,
-        status=TransactionStatus.PENDING
-    )
+    # Validate book has an author
+    if not book.author_id:
+        logger.error(f"Book {book_id} has no author_id - cannot create sale")
+        return jsonify({'error': 'Book has no author. Cannot process purchase.'}), 400
     
-    db.session.add(purchase)
-    db.session.commit()
-    
-    # TODO: Integrate with payment processor (Stripe, PayPal, etc.)
-    # For now, mark as completed
-    purchase.status = TransactionStatus.COMPLETED
-    purchase.purchased_at = datetime.now(timezone.utc)
-    
-    # Create sale record for author
-    royalty_percentage = 0.7  # 70% to author, 30% platform fee
-    royalty_amount = book.price * royalty_percentage
-    platform_fee = book.price - royalty_amount
-    
-    sale = BookSale(
-        seller_id=book.author_id,
-        book_project_id=book_id,
-        purchase_id=purchase.id,
-        royalty_amount=royalty_amount,
-        royalty_percentage=royalty_percentage,
-        platform_fee=platform_fee,
-        net_amount=royalty_amount,
-        currency=book.currency,
-        status=TransactionStatus.COMPLETED,
-        paid_at=datetime.now(timezone.utc)
-    )
-    
-    db.session.add(sale)
-    db.session.commit()
+    # Create purchase record - buyers don't need a profile, just a user account
+    # buyer_id is only set for backward compatibility if user has a BookPlatformUser profile
+    try:
+        purchase = BookPurchase(
+            buyer_id=buyer_id,  # Optional - only set if user has BookPlatformUser profile (backward compatibility)
+            buyer_user_id=buyer_user_id,  # Required - references users.user_id directly
+            book_project_id=book_id,
+            amount=book.price,
+            currency=book.currency,
+            status=TransactionStatus.PENDING
+        )
+        
+        db.session.add(purchase)
+        db.session.flush()  # Get the ID without committing yet
+        
+        # TODO: Integrate with payment processor (Stripe, PayPal, etc.)
+        # For now, mark as completed
+        purchase.status = TransactionStatus.COMPLETED
+        purchase.purchased_at = datetime.now(timezone.utc)
+        
+        # Create sale record for author
+        royalty_percentage = 0.7  # 70% to author, 30% platform fee
+        royalty_amount = book.price * royalty_percentage
+        platform_fee = book.price - royalty_amount
+        
+        sale = BookSale(
+            seller_id=book.author_id,
+            book_project_id=book_id,
+            purchase_id=purchase.id,
+            royalty_amount=royalty_amount,
+            royalty_percentage=royalty_percentage,
+            platform_fee=platform_fee,
+            net_amount=royalty_amount,
+            currency=book.currency,
+            status=TransactionStatus.COMPLETED,
+            paid_at=datetime.now(timezone.utc)
+        )
+        
+        db.session.add(sale)
+        db.session.commit()
+        
+        logger.info(f"Purchase {purchase.id} and Sale {sale.id} created successfully for book {book_id}, buyer {buyer_user_id}")
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating purchase/sale for book {book_id}: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Failed to process purchase: {str(e)}'}), 500
     
     # Trigger revenue distribution
     try:
         from glconnect.revenue_distribution_service import distribute_revenue
         distribution_result = distribute_revenue(sale, db)
         if not distribution_result.get('success'):
-            logger.warning(f"Revenue distribution failed for sale {sale.id}: {distribution_result.get('error')}")
+            error_msg = distribution_result.get('error', 'Unknown error')
+            logger.warning(f"Revenue distribution failed for sale {sale.id}: {error_msg}")
+            # Log additional diagnostic info
+            from glconnect.book_platform_models import InvestmentCampaign, BookInvestment
+            campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
+            if campaign:
+                logger.info(f"Campaign found: id={campaign.id}, status={campaign.status.value}, "
+                          f"current_funding={campaign.current_funding}, goal={campaign.funding_goal}")
+                investments = BookInvestment.query.filter_by(book_project_id=book_id).all()
+                logger.info(f"Total investments: {len(investments)}, "
+                          f"Active: {len([inv for inv in investments if inv.status.value in ['confirmed', 'active']])}")
+            else:
+                logger.info(f"No investment campaign found for book {book_id}")
+        else:
+            logger.info(f"Revenue distribution successful for sale {sale.id}: {distribution_result.get('summary', {})}")
     except Exception as e:
         logger.error(f"Error triggering revenue distribution for sale {sale.id}: {str(e)}", exc_info=True)
         # Don't fail the purchase if distribution fails - it can be retried later
@@ -2402,29 +2430,33 @@ def audio_generation_status(book_id):
 @book_bp.route('/books/<int:book_id>/download-digital')
 @login_required
 def download_digital_book(book_id):
-    """Download digital book file"""
+    """Download digital book file - no profile required, just user account"""
     book = BookProject.query.get_or_404(book_id)
+    user_id = current_user.user_id
     
-    # Check if user has purchased this book
-    user_profile, profile_type = get_user_profile()
-    if user_profile:
-        author_id = get_profile_id(user_profile, profile_type)
+    # Check if user is the author (by comparing user_id directly)
+    is_author = False
+    if book.author and book.author.user_id == user_id:
+        is_author = True
+    
+    if not is_author:
+        # Check if user has purchased the book - use buyer_user_id (no profile needed)
+        # Also check buyer_id for backward compatibility
+        bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
+        buyer_id = bp_user.id if bp_user else None
         
-        # Check if user is the author
-        if book.author_id == author_id:
-            # Author can always download
-            pass
-        else:
-            # Check if user has purchased the book
-            purchase = BookPurchase.query.filter_by(
-                buyer_id=author_id,
-                book_project_id=book_id,
-                status=TransactionStatus.COMPLETED
-            ).first()
-            
-            if not purchase:
-                flash("You must purchase this book to download it.", "error")
-                return redirect(url_for('book_platform.marketplace'))
+        purchase = BookPurchase.query.filter(
+            db.or_(
+                BookPurchase.buyer_user_id == user_id,
+                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+            ),
+            BookPurchase.book_project_id == book_id,
+            BookPurchase.status == TransactionStatus.COMPLETED
+        ).first()
+        
+        if not purchase:
+            flash("You must purchase this book to download it.", "error")
+            return redirect(url_for('book_platform.marketplace'))
     
     if not book.digital_file_path:
         flash("Digital file not available for this book.", "error")
@@ -2455,25 +2487,32 @@ def download_audio_book(book_id):
         return redirect(url_for('book_platform.marketplace'))
     
     # Check if user has purchased this book (same logic as digital download)
-    user_profile, profile_type = get_user_profile()
-    if user_profile:
-        author_id = get_profile_id(user_profile, profile_type)
+    # No profile required - just user account
+    user_id = current_user.user_id
+    
+    # Check if user is the author (by comparing user_id directly)
+    is_author = False
+    if book.author and book.author.user_id == user_id:
+        is_author = True
+    
+    if not is_author:
+        # Check if user has purchased the book - use buyer_user_id (no profile needed)
+        # Also check buyer_id for backward compatibility
+        bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
+        buyer_id = bp_user.id if bp_user else None
         
-        # Check if user is the author
-        if book.author_id == author_id:
-            # Author can always download
-            pass
-        else:
-            # Check if user has purchased the book
-            purchase = BookPurchase.query.filter_by(
-                buyer_id=author_id,
-                book_project_id=book_id,
-                status=TransactionStatus.COMPLETED
-            ).first()
-            
-            if not purchase:
-                flash("You must purchase this book to download it.", "error")
-                return redirect(url_for('book_platform.marketplace'))
+        purchase = BookPurchase.query.filter(
+            db.or_(
+                BookPurchase.buyer_user_id == user_id,
+                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+            ),
+            BookPurchase.book_project_id == book_id,
+            BookPurchase.status == TransactionStatus.COMPLETED
+        ).first()
+        
+        if not purchase:
+            flash("You must purchase this book to download it.", "error")
+            return redirect(url_for('book_platform.marketplace'))
     
     # Serve the audio file
     if not os.path.exists(book.audiobook_file_path):
@@ -3002,22 +3041,22 @@ def make_investment(campaign_id):
             # Update campaign funding
             campaign.current_funding += amount
             
-            # Check if goal reached
-            if campaign.current_funding >= campaign.funding_goal:
-                campaign.status = CampaignStatus.FUNDED
-                campaign.funded_at = datetime.now(timezone.utc)
-                # Set return start date (when book is published)
-                for inv in campaign.investments:
-                    inv.return_start_date = datetime.now(timezone.utc)
-                    inv.status = InvestmentStatus.ACTIVE
-            
-            db.session.commit()
-            
             # TODO: Integrate with payment processor (Stripe)
             # For now, mark as confirmed
             investment.payment_status = TransactionStatus.COMPLETED
             investment.status = InvestmentStatus.CONFIRMED
             investment.invested_at = datetime.now(timezone.utc)
+            
+            # Check if goal reached (after marking investment as confirmed)
+            if campaign.current_funding >= campaign.funding_goal:
+                campaign.status = CampaignStatus.FUNDED
+                campaign.funded_at = datetime.now(timezone.utc)
+                # Set return start date for all CONFIRMED investments (only confirmed ones should get returns)
+                for inv in campaign.investments:
+                    if inv.status == InvestmentStatus.CONFIRMED:
+                        inv.return_start_date = datetime.now(timezone.utc)
+                        inv.status = InvestmentStatus.ACTIVE
+            
             db.session.commit()
             
             flash('Investment successful! Thank you for supporting this book.', 'success')
@@ -3066,12 +3105,15 @@ def earnings_dashboard():
         earnings_data['reviewer_earnings_by_book'] = dict(earnings_by_book)
     
     # Investment returns - accessible to all users who have invested
-    # Non-author users can be investors, so check by user_id through BookPlatformUser
+    # Find investments by user_id through BookPlatformUser (investments are linked via investor_id = book_platform_users.id)
     from glconnect.book_platform_models import BookPlatformUser
     book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if book_platform_user:
         investor_id = book_platform_user.id
-        investments = BookInvestment.query.filter_by(investor_id=investor_id).all()
+        # Get all investments for this investor (regardless of status, but filter active ones for display)
+        all_investments = BookInvestment.query.filter_by(investor_id=investor_id).all()
+        # Only show investments that are confirmed or active (pending investments don't have returns yet)
+        investments = [inv for inv in all_investments if inv.status.value in ['confirmed', 'active']]
         earnings_data['investments'] = investments
         earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
         
@@ -3080,6 +3122,11 @@ def earnings_dashboard():
             investment.payouts_list = InvestmentPayout.query.filter_by(
                 investment_id=investment.id
             ).order_by(InvestmentPayout.created_at.desc()).limit(20).all()
+    else:
+        # User doesn't have a BookPlatformUser profile yet, but might have investments
+        # This shouldn't happen if they invested (investment requires profile), but check anyway
+        earnings_data['investments'] = []
+        earnings_data['total_investment_returns'] = 0.0
     
     # Author sales - only for users who are authors
     if user_profile:

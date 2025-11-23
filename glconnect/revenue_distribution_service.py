@@ -129,11 +129,19 @@ def distribute_revenue(book_sale, db):
         investor_total = 0.0
         campaign = book.investment_campaign
         
-        if campaign and campaign.status == CampaignStatus.FUNDED:
+        if not campaign:
+            logger.info(f"No investment campaign found for book {book.id} - skipping investor distributions")
+        elif campaign.status not in [CampaignStatus.FUNDED, CampaignStatus.ACTIVE]:
+            logger.info(f"Campaign {campaign.id} for book {book.id} is not FUNDED or ACTIVE (status: {campaign.status.value}) - skipping investor distributions")
+        else:
+            # Allow distributions for both FUNDED and ACTIVE campaigns
+            # Investors should get returns as soon as they invest and book sells, even if campaign isn't fully funded
             active_investments = [inv for inv in book.investments 
                                 if inv.status.value in ['confirmed', 'active']]
             
-            if active_investments:
+            if not active_investments:
+                logger.info(f"No active investments found for book {book.id} (campaign {campaign.id}) - skipping investor distributions")
+            else:
                 investor_pool = sale_amount * (INVESTOR_POOL_PERCENTAGE / 100)
                 total_investment_amount = sum(inv.amount for inv in active_investments)
                 
@@ -142,10 +150,22 @@ def distribute_revenue(book_sale, db):
                     investment_share = (investment.amount / total_investment_amount) if total_investment_amount > 0 else 0
                     investor_return = investor_pool * investment_share
                     
-                    # Apply return multiplier cap
+                    # Apply return multiplier cap - ensure returns increment until max is reached
                     max_return = investment.amount * investment.return_multiplier
-                    if investment.total_returns + investor_return > max_return:
-                        investor_return = max(0, max_return - investment.total_returns)
+                    current_returns = investment.total_returns
+                    
+                    # If investor has already reached max, skip distribution (share goes to author)
+                    if current_returns >= max_return:
+                        logger.info(f"Investor {investment.investor_id} (investment {investment.id}) has reached max return cap "
+                                  f"(${current_returns:.2f} / ${max_return:.2f}) - skipping distribution")
+                        continue
+                    
+                    # Cap the return if it would exceed the maximum
+                    if current_returns + investor_return > max_return:
+                        investor_return = max_return - current_returns
+                        logger.info(f"Investor {investment.investor_id} (investment {investment.id}) return capped: "
+                                  f"${investor_return:.2f} (would have been ${investor_pool * investment_share:.2f}, "
+                                  f"but max is ${max_return:.2f}, current is ${current_returns:.2f})")
                     
                     if investor_return > 0:
                         # Create distribution
@@ -172,9 +192,13 @@ def distribute_revenue(book_sale, db):
                         )
                         db.session.add(payout)
                         
-                        # Update investment returns
+                        # Update investment returns - this increments on every sale until max is reached
                         investment.total_returns += investor_return
                         investment.last_payout_date = datetime.now(timezone.utc)
+                        
+                        logger.info(f"Investor {investment.investor_id} (investment {investment.id}): "
+                                  f"Added ${investor_return:.2f}, Total returns now: ${investment.total_returns:.2f} / "
+                                  f"Max: ${max_return:.2f} ({(investment.total_returns / max_return * 100) if max_return > 0 else 0:.1f}%)")
                         
                         investor_total += investor_return
                         distributions.append(('investor', investor_return))
