@@ -639,7 +639,7 @@
         }
 
         function purchaseBook(bookId) {
-            if (confirm('Are you sure you want to purchase this book?')) {
+            if (confirm('Are you sure you want to purchase this book? You will be redirected to Stripe for payment.')) {
                 fetch(`/mybook/books/${bookId}/purchase`, {
                     method: 'POST',
                     headers: {
@@ -649,8 +649,23 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Book purchased successfully!');
-                        // In a real implementation, you might redirect to a download page
+                        // Store purchase info for success callback
+                        if (data.success_url) {
+                            localStorage.setItem('pendingPurchase', JSON.stringify({
+                                bookId: bookId,
+                                purchaseId: data.purchase_id,
+                                successUrl: data.success_url
+                            }));
+                        }
+                        
+                        // Redirect to Stripe payment link with success URL
+                        if (data.stripe_payment_link) {
+                            // Append success URL to Stripe link (if supported) or redirect after payment
+                            window.location.href = data.stripe_payment_link;
+                        } else {
+                            // Fallback: redirect to success page with instructions
+                            window.location.href = data.success_url + '?payment_completed=true';
+                        }
                     } else {
                         alert('Purchase failed: ' + (data.error || 'Unknown error'));
                     }
