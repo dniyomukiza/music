@@ -78,6 +78,7 @@
         {% if not has_artist_profile %}
         <div class="row mb-4">
             <div class="col-12">
+                {% if is_artist_account %}
                 <div class="card music-card border-warning">
                     <div class="card-header bg-warning text-dark">
                         <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
@@ -89,6 +90,19 @@
                         </button>
                     </div>
                 </div>
+                {% else %}
+                <div class="card music-card border-info">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Artist Account Required</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">To create an artist profile and upload music, you need an artist account. Please register with an artist account type or contact support to change your account type.</p>
+                        <a href="{{ url_for('routes1.register') }}" class="btn btn-info">
+                            <i class="fas fa-user-plus me-1"></i>Register as Artist
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% else %}
@@ -175,13 +189,44 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const userId = {{ current_user.user_id if current_user.is_authenticated else 'null' }};
+        
+        // Playlist continuous playback state
+        let playlistSongs = [];
+        let currentPlayingIndex = -1;
+        let currentPlayingAudio = null;
+        let isPlaylistPlaying = false;
 
         function createSongCard(song, includeActions = true) {
             // Use song file serving route for reliable file access, fallback to path if available
             const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
-            const safeName = (song.name && song.name.trim()) ? song.name.replace(/'/g, "\\'") : 'Unknown';
-            const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
-            const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
+            
+            // Clean and extract song name and artist
+            let rawSongName = (song.name && song.name.trim()) ? song.name.trim() : '';
+            let rawArtistName = (song.artist && song.artist.trim()) ? song.artist.trim() : '';
+            
+            // If song name contains "by [artist]" pattern, extract the actual song name
+            // Handle patterns like "by P.Square", "by Artist Name", etc.
+            const byPattern = /^\s*by\s+(.+)$/i;
+            if (byPattern.test(rawSongName)) {
+                // The song name field actually contains the artist name
+                // Swap them if artist field is empty or use the extracted artist
+                const extractedArtist = rawSongName.match(byPattern)[1].trim();
+                if (!rawArtistName || rawArtistName === 'Unknown' || rawArtistName === 'Unknown Artist') {
+                    rawArtistName = extractedArtist;
+                }
+                rawSongName = ''; // Clear it since it's not actually the song name
+            }
+            
+            // Also check if song name is empty but artist has the info (reverse case)
+            if (!rawSongName && rawArtistName && !rawArtistName.includes('Unknown')) {
+                // Check if we can extract from filename pattern "Artist - Song"
+                // This is handled by the backend, so we'll just use what we have
+            }
+            
+            // Final values
+            const songName = rawSongName || 'Untitled Track';
+            const artistName = rawArtistName || 'Unknown Artist';
+            const safeName = songName.replace(/'/g, "\\'");
 
             return `
                 <div class="col-12">
@@ -268,26 +313,59 @@
                 return;
             }
 
+            // Stop any currently playing audio
+            if (currentPlayingAudio) {
+                currentPlayingAudio.pause();
+                currentPlayingAudio = null;
+            }
+            isPlaylistPlaying = false;
+            currentPlayingIndex = -1;
+
             fetch('/playlist2/view_playlist')
                 .then(response => response.json())
                 .then(data => {
                     if (Array.isArray(data) && data.length) {
+                        // Store playlist data globally for continuous playback
+                        playlistSongs = data.map((song, index) => {
+                            // Clean and extract song name and artist
+                            let rawSongName = (song.name && song.name.trim()) ? song.name.trim() : '';
+                            let rawArtistName = (song.artist && song.artist.trim()) ? song.artist.trim() : '';
+                            
+                            // If song name contains "by [artist]" pattern, extract the actual song name
+                            const byPattern = /^\s*by\s+(.+)$/i;
+                            if (byPattern.test(rawSongName)) {
+                                const extractedArtist = rawSongName.match(byPattern)[1].trim();
+                                if (!rawArtistName || rawArtistName === 'Unknown' || rawArtistName === 'Unknown Artist') {
+                                    rawArtistName = extractedArtist;
+                                }
+                                rawSongName = '';
+                            }
+                            
+                            const songName = rawSongName || 'Untitled Track';
+                            const artistName = rawArtistName || 'Unknown Artist';
+                            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`);
+                            
+                            return {
+                                id: song.id,
+                                name: songName,
+                                artist: artistName,
+                                path: songPath,
+                                index: index
+                            };
+                        });
+                        
                         let html = '';
-                        data.forEach(song => {
-                            // Use song file serving route for reliable file access, fallback to path if available
-                            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
-                            const safeName = (song.name && song.name.trim()) ? song.name.replace(/'/g, "\\'") : 'Unknown';
-                            const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
-                            const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
+                        playlistSongs.forEach((song, index) => {
+                            const safeName = song.name.replace(/'/g, "\\'");
                             html += `
-                                <div class="card mb-3">
+                                <div class="card mb-3 playlist-song-card" data-song-index="${index}">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                             <div>
-                                                <h6 class="mb-1"><strong>${songName}</strong></h6>
-                                                <p class="text-muted mb-2">by ${artistName}</p>
-                                                <audio controls class="song-audio">
-                                                    <source src="${songPath}" type="audio/mpeg">
+                                                <h6 class="mb-1"><strong>${song.name}</strong></h6>
+                                                <p class="text-muted mb-2">by ${song.artist}</p>
+                                                <audio id="playlist-audio-${index}" controls class="song-audio playlist-audio" data-song-index="${index}">
+                                                    <source src="${song.path}" type="audio/mpeg">
                                                 </audio>
                                             </div>
                                             <button class="btn btn-outline-danger" onclick="removeFromPlaylist(${song.id}, this)">
@@ -299,7 +377,11 @@
                             `;
                         });
                         container.innerHTML = html;
+                        
+                        // Set up event listeners for continuous playback
+                        setupPlaylistPlayback();
                     } else {
+                        playlistSongs = [];
                         container.innerHTML = '<p class="text-muted text-center"><i class="fas fa-info-circle me-1"></i>Your playlist is empty. Add songs to get started.</p>';
                     }
                 })
@@ -307,6 +389,85 @@
                     console.error('Playlist error:', error);
                     container.innerHTML = '<p class="text-muted text-center">Unable to load playlist.</p>';
                 });
+        }
+        
+        function setupPlaylistPlayback() {
+            // Set up event listeners for all playlist audio elements
+            const audioElements = document.querySelectorAll('.playlist-audio');
+            
+            audioElements.forEach((audio) => {
+                const songIndex = parseInt(audio.getAttribute('data-song-index'));
+                if (isNaN(songIndex)) return;
+                
+                // When a song starts playing, pause all others
+                audio.addEventListener('play', function() {
+                    pauseAllOtherPlaylistAudios(songIndex);
+                    currentPlayingIndex = songIndex;
+                    currentPlayingAudio = audio;
+                    isPlaylistPlaying = true;
+                });
+                
+                // When a song is paused, update state (but don't auto-play next)
+                audio.addEventListener('pause', function() {
+                    if (currentPlayingIndex === songIndex) {
+                        // Only mark as not playing if this is the current song
+                        // This allows manual pause/resume
+                        isPlaylistPlaying = false;
+                    }
+                });
+                
+                // When a song ends naturally, play the next one
+                audio.addEventListener('ended', function() {
+                    // Only auto-play next if this was the current playing song and it ended naturally
+                    if (currentPlayingIndex === songIndex && isPlaylistPlaying) {
+                        playNextInPlaylist();
+                    }
+                });
+                
+                // Handle errors - skip to next song
+                audio.addEventListener('error', function() {
+                    console.error(`Error loading song at index ${songIndex}`);
+                    if (currentPlayingIndex === songIndex && isPlaylistPlaying) {
+                        // Skip to next song on error
+                        playNextInPlaylist();
+                    }
+                });
+            });
+        }
+        
+        function pauseAllOtherPlaylistAudios(currentIndex) {
+            document.querySelectorAll('.playlist-audio').forEach((audio, index) => {
+                if (index !== currentIndex && !audio.paused) {
+                    audio.pause();
+                }
+            });
+        }
+        
+        function playNextInPlaylist() {
+            if (currentPlayingIndex < 0 || currentPlayingIndex >= playlistSongs.length - 1) {
+                // Reached the end of playlist
+                isPlaylistPlaying = false;
+                currentPlayingIndex = -1;
+                currentPlayingAudio = null;
+                return;
+            }
+            
+            const nextIndex = currentPlayingIndex + 1;
+            const nextAudio = document.getElementById(`playlist-audio-${nextIndex}`);
+            
+            if (nextAudio) {
+                currentPlayingIndex = nextIndex;
+                currentPlayingAudio = nextAudio;
+                nextAudio.play().catch(err => {
+                    console.error('Error playing next song:', err);
+                    // Skip to next if this one fails
+                    playNextInPlaylist();
+                });
+            } else {
+                // Audio element not found, skip to next
+                currentPlayingIndex = nextIndex;
+                playNextInPlaylist();
+            }
         }
 
         function addSongToPlaylist(songId, songName, button) {
@@ -347,6 +508,21 @@
 
         function removeFromPlaylist(songId, button) {
             if (!confirm('Remove this song from your playlist?')) return;
+            
+            // If removing the currently playing song, stop playback
+            const songCard = button.closest('.playlist-song-card');
+            if (songCard) {
+                const songIndex = parseInt(songCard.getAttribute('data-song-index'));
+                if (songIndex === currentPlayingIndex) {
+                    if (currentPlayingAudio) {
+                        currentPlayingAudio.pause();
+                    }
+                    isPlaylistPlaying = false;
+                    currentPlayingIndex = -1;
+                    currentPlayingAudio = null;
+                }
+            }
+            
             button.disabled = true;
 
             fetch('/playlist2/remove_song', {

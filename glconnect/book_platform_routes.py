@@ -3510,16 +3510,28 @@ def music_dashboard():
     from glconnect.models import Artist
     # Check if user has an artist profile
     artist_profile = Artist.query.filter_by(user_id=current_user.user_id).first()
-    return render_template('book_platform/music_dashboard.html', has_artist_profile=artist_profile is not None, artist_profile=artist_profile)
+    # Check if user has 'artist' role
+    is_artist_account = hasattr(current_user, 'role') and current_user.role == 'artist'
+    return render_template('book_platform/music_dashboard.html', 
+                         has_artist_profile=artist_profile is not None, 
+                         artist_profile=artist_profile,
+                         is_artist_account=is_artist_account)
 
 @book_bp.route('/music/create-artist-profile', methods=['POST'])
 @login_required
 def create_artist_profile():
-    """Create an artist profile for the current user"""
+    """Create an artist profile for the current user - only for users with 'artist' role"""
     try:
         from glconnect.models import Artist
         import os
         from werkzeug.utils import secure_filename
+        
+        # Check if user has 'artist' role
+        if not hasattr(current_user, 'role') or current_user.role != 'artist':
+            return jsonify({
+                'success': False, 
+                'message': 'Only users with an artist account can create artist profiles. Please register with an artist account or contact support to change your account type.'
+            }), 403
         
         # Check if user already has an artist profile
         existing_artist = Artist.query.filter_by(user_id=current_user.user_id).first()
@@ -3583,10 +3595,17 @@ def sanitize_url_music(url):
 @book_bp.route('/music/upload-song', methods=['POST'])
 @login_required
 def upload_song_music_dashboard():
-    """Upload a song from the music dashboard"""
+    """Upload a song from the music dashboard - only for users with 'artist' role"""
     try:
         from glconnect.models import Artist, Song_upload
         import os
+        
+        # Check if user has 'artist' role
+        if not hasattr(current_user, 'role') or current_user.role != 'artist':
+            return jsonify({
+                'success': False, 
+                'message': 'Only users with an artist account can upload songs. Please register with an artist account or contact support to change your account type.'
+            }), 403
         
         # Check if user has an artist profile
         artist = Artist.query.filter_by(user_id=current_user.user_id).first()
