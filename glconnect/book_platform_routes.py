@@ -1955,14 +1955,30 @@ def purchase_book(book_id):
             logger.error(f"Failed to create BookPlatformUser for user: {str(e)}", exc_info=True)
             # Continue anyway - will use buyer_user_id if migration exists, or fallback will handle it
     
-    existing_purchase = BookPurchase.query.filter(
-        db.or_(
-            BookPurchase.buyer_user_id == buyer_user_id,
-            (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-        ),
-        BookPurchase.book_project_id == book_id,
-        BookPurchase.status == TransactionStatus.COMPLETED
-    ).first()
+    # Check if already purchased - handle case where buyer_user_id column may not exist
+    try:
+        existing_purchase = BookPurchase.query.filter(
+            db.or_(
+                BookPurchase.buyer_user_id == buyer_user_id,
+                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+            ),
+            BookPurchase.book_project_id == book_id,
+            BookPurchase.status == TransactionStatus.COMPLETED
+        ).first()
+    except Exception as query_error:
+        # If buyer_user_id column doesn't exist, fall back to buyer_id only
+        if 'buyer_user_id' in str(query_error).lower() or 'does not exist' in str(query_error).lower():
+            logger.warning("buyer_user_id column not found, using buyer_id only for query")
+            if buyer_id:
+                existing_purchase = BookPurchase.query.filter(
+                    BookPurchase.buyer_id == buyer_id,
+                    BookPurchase.book_project_id == book_id,
+                    BookPurchase.status == TransactionStatus.COMPLETED
+                ).first()
+            else:
+                existing_purchase = None
+        else:
+            raise  # Re-raise if it's a different error
     
     if existing_purchase:
         return jsonify({'error': 'You have already purchased this book'}), 400
@@ -1980,30 +1996,47 @@ def purchase_book(book_id):
         
         # Build purchase data - ensure at least one buyer identifier is set
         # Priority: Use buyer_id if available (works for authors and doesn't require migration)
-        if buyer_id:
-            # User has BookPlatformUser profile - use buyer_id (works without migration)
+        # Always ensure buyer_id exists to avoid migration dependency
+        if not buyer_id:
+            # No BookPlatformUser profile - must create one first
+            logger.warning(f"No buyer_id found for user {buyer_user_id}, creating minimal BookPlatformUser")
+            minimal_bp_user = BookPlatformUser(
+                user_id=buyer_user_id,
+                pen_name=current_user.username,
+                bio="Reader"
+            )
+            db.session.add(minimal_bp_user)
+            db.session.flush()
+            buyer_id = minimal_bp_user.id
+            logger.info(f"Created minimal BookPlatformUser {buyer_id} for purchase")
+        
+        # Use buyer_id (works without migration) - try to set buyer_user_id if column exists
+        try:
             purchase = BookPurchase(
                 buyer_id=buyer_id,
-                buyer_user_id=buyer_user_id,  # Also set for future compatibility
+                buyer_user_id=buyer_user_id,  # Try to set for future compatibility
                 book_project_id=book_id,
                 amount=book.price,
                 currency=book.currency,
                 status=TransactionStatus.PENDING
             )
-            logger.info(f"Using buyer_id={buyer_id} for purchase (user has BookPlatformUser profile)")
-        else:
-            # No BookPlatformUser profile - use buyer_user_id (requires migration)
-            # If migration hasn't been run and this fails, we'll catch it in the except block
-            purchase = BookPurchase(
-                buyer_user_id=buyer_user_id,
-                book_project_id=book_id,
-                amount=book.price,
-                currency=book.currency,
-                status=TransactionStatus.PENDING
-            )
-            logger.info(f"Using buyer_user_id={buyer_user_id} for purchase (no BookPlatformUser profile)")
+            logger.info(f"Using buyer_id={buyer_id} and buyer_user_id={buyer_user_id} for purchase")
+        except Exception as create_error:
+            # If buyer_user_id column doesn't exist, use buyer_id only
+            if 'buyer_user_id' in str(create_error).lower() or 'does not exist' in str(create_error).lower():
+                logger.warning("buyer_user_id column not found, using buyer_id only")
+                purchase = BookPurchase(
+                    buyer_id=buyer_id,
+                    book_project_id=book_id,
+                    amount=book.price,
+                    currency=book.currency,
+                    status=TransactionStatus.PENDING
+                )
+                logger.info(f"Using buyer_id={buyer_id} only for purchase (migration not run)")
+            else:
+                raise  # Re-raise if it's a different error
         
-        logger.info(f"Purchase object created: buyer_id={purchase.buyer_id}, buyer_user_id={purchase.buyer_user_id}, amount={purchase.amount}")
+        logger.info(f"Purchase object created: buyer_id={purchase.buyer_id}, amount={purchase.amount}")
         
         db.session.add(purchase)
         db.session.flush()  # Get the ID without committing yet
