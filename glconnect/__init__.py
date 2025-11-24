@@ -140,6 +140,39 @@ def create_app():
                 return redirect('/')
         return 'File upload is too large. Maximum file size is 50MB. Please compress or resize your image and try again.', 413
 
+    # Global 500 error handler - returns JSON for API routes
+    @app.errorhandler(500)
+    def handle_500_error(error):
+        """Handle 500 errors globally and return JSON for API routes"""
+        from flask import request, jsonify
+        import traceback
+        
+        error_traceback = traceback.format_exc()
+        
+        # Check if this is an API request (JSON expected)
+        is_api_request = (
+            request.is_json or 
+            '/purchase' in request.path or 
+            request.path.startswith('/mybook/books/') or
+            request.headers.get('Content-Type', '').startswith('application/json') or
+            request.headers.get('Accept', '').startswith('application/json') or
+            request.method == 'POST' and '/mybook/' in request.path
+        )
+        
+        if is_api_request:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"500 error in {request.path}: {str(error)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': 'Internal server error',
+                'details': str(error),
+                'traceback': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+            }), 500
+        
+        # For non-API routes, let Flask handle it normally (will show HTML error page)
+        raise error
+
     # Add logging for all requests at app level
     @app.before_request
     def log_request():

@@ -1909,157 +1909,269 @@ def suspend_reviewer(reviewer_id):
 @login_required
 def purchase_book(book_id):
     """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
-    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
-    from glconnect.book_platform_models import BookPlatformUser
-    
-    # Eager load author information to ensure fresh data from database
-    book = BookProject.query.options(
-        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-    ).get_or_404(book_id)
-    
-    # Buyers only need a user account - NO profile required
-    buyer_user_id = current_user.user_id
-    
-    # Prevent self-purchase: Check if current user is the author
-    # Get author's user_id from book.author (BookPlatformUser) -> user relationship
-    if book.author and book.author.user_id == buyer_user_id:
-        return jsonify({'error': 'You cannot purchase your own book'}), 400
-    
-    # Check if already purchased - use buyer_user_id (works for all users, with or without profiles)
-    # Also check buyer_id for backward compatibility with old purchases
-    # Authors have Writer profiles, but may not have BookPlatformUser profiles until they create a book
-    bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-    buyer_id = bp_user.id if bp_user else None
-    
-    # Ensure user has BookPlatformUser profile for purchase tracking
-    # All users (authors, regular users, etc.) need BookPlatformUser profile for purchases
-    if not buyer_id:
-        logger.info(f"User {buyer_user_id} has no BookPlatformUser profile. Creating one for purchase...")
+    # Wrap entire function in try-except to ensure JSON responses
+    try:
+        # Initialize variables that might be needed in error handling
+        buyer_user_id = current_user.user_id if current_user.is_authenticated else None
+        if not buyer_user_id:
+            return jsonify({'error': 'User not authenticated'}), 401
+        # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+        from glconnect.book_platform_models import BookPlatformUser
+        
+        # Eager load author information to ensure fresh data from database
+        book = BookProject.query.options(
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        ).get_or_404(book_id)
+        
+        # Buyers only need a user account - NO profile required
+        buyer_user_id = current_user.user_id
+        
+        # Prevent self-purchase: Check if current user is the author
+        # Get author's user_id from book.author (BookPlatformUser) -> user relationship
         try:
-            # Get Writer profile info if user is an author
-            from glconnect.models import Writer
-            writer = Writer.query.filter_by(user_id=buyer_user_id).first()
-            
-            bp_user = BookPlatformUser(
-                user_id=buyer_user_id,
-                pen_name=writer.writer_name if writer else current_user.username,
-                bio=writer.bio if writer else "Reader",
-                profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
-            )
-            db.session.add(bp_user)
-            db.session.commit()  # Commit immediately so we can use the ID
+            if book.author:
+                author_user_id = None
+                # Try to get user_id from book.author.user_id (direct field)
+                if hasattr(book.author, 'user_id'):
+                    author_user_id = book.author.user_id
+                # Fallback: try to get from book.author.user relationship
+                elif hasattr(book.author, 'user') and book.author.user:
+                    author_user_id = book.author.user.user_id
+                
+                if author_user_id and author_user_id == buyer_user_id:
+                    return jsonify({'error': 'You cannot purchase your own book'}), 400
+        except Exception as self_purchase_check_error:
+            logger.warning(f"Error checking self-purchase: {self_purchase_check_error}, continuing anyway")
+            # Continue with purchase if check fails (better to allow than block)
+        
+        # Check if buyer_user_id column exists - if yes, we don't need BookPlatformUser profile
+        # If no, we need to create one as a workaround
+        has_buyer_user_id_col = False
+        try:
+            from sqlalchemy import inspect as sql_inspect
+            inspector = sql_inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('book_purchases')]
+            has_buyer_user_id_col = 'buyer_user_id' in columns
+            logger.info(f"Column check: buyer_user_id exists = {has_buyer_user_id_col}")
+        except Exception as col_check_error:
+            logger.warning(f"Could not check for buyer_user_id column: {col_check_error}, assuming it doesn't exist")
+            has_buyer_user_id_col = False
+        
+        # Always get buyer_id as fallback (even if buyer_user_id column exists)
+        # This ensures we have a fallback if the column check was wrong or creation fails
+        buyer_id = None
+        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+        if bp_user:
             buyer_id = bp_user.id
-            logger.info(f"✅ Created BookPlatformUser {buyer_id} for user {buyer_user_id} (role: {getattr(current_user, 'role', 'N/A')})")
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Failed to create BookPlatformUser for user: {str(e)}", exc_info=True)
-            # Continue anyway - will use buyer_user_id if migration exists, or fallback will handle it
-    
-    # Check if already purchased - handle case where buyer_user_id column may not exist
-    try:
-        existing_purchase = BookPurchase.query.filter(
-            db.or_(
-                BookPurchase.buyer_user_id == buyer_user_id,
-                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-            ),
-            BookPurchase.book_project_id == book_id,
-            BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-    except Exception as query_error:
-        # If buyer_user_id column doesn't exist, fall back to buyer_id only
-        if 'buyer_user_id' in str(query_error).lower() or 'does not exist' in str(query_error).lower():
-            logger.warning("buyer_user_id column not found, using buyer_id only for query")
-            if buyer_id:
-                existing_purchase = BookPurchase.query.filter(
-                    BookPurchase.buyer_id == buyer_id,
-                    BookPurchase.book_project_id == book_id,
-                    BookPurchase.status == TransactionStatus.COMPLETED
-                ).first()
-            else:
-                existing_purchase = None
+            logger.info(f"Found existing BookPlatformUser {buyer_id} for user {buyer_user_id}")
+        elif not has_buyer_user_id_col:
+            # Migration not run - need BookPlatformUser profile as workaround
+            logger.info(f"buyer_user_id column not found - creating BookPlatformUser profile as workaround")
+            try:
+                # Get Writer profile info if user is an author
+                from glconnect.models import Writer
+                writer = Writer.query.filter_by(user_id=buyer_user_id).first()
+                
+                bp_user = BookPlatformUser(
+                    user_id=buyer_user_id,
+                    pen_name=writer.writer_name if writer else current_user.username,
+                    bio=writer.bio if writer else "Reader",
+                    profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
+                )
+                db.session.add(bp_user)
+                db.session.commit()
+                buyer_id = bp_user.id
+                logger.info(f"✅ Created BookPlatformUser {buyer_id} as workaround (migration not run)")
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Failed to create BookPlatformUser: {str(e)}", exc_info=True)
+                return jsonify({'error': f'Failed to process purchase: {str(e)}'}), 500
+        
+        if has_buyer_user_id_col:
+            logger.info(f"buyer_user_id column exists - will try using user_id directly (buyer_id={buyer_id} available as fallback)")
         else:
-            raise  # Re-raise if it's a different error
-    
-    if existing_purchase:
-        return jsonify({'error': 'You have already purchased this book'}), 400
-    
-    # Validate book has an author
-    if not book.author_id:
-        logger.error(f"Book {book_id} has no author_id - cannot create sale")
-        return jsonify({'error': 'Book has no author. Cannot process purchase.'}), 400
-    
-    # Create purchase record - buyers don't need a profile, just a user account
-    # For authors with BookPlatformUser profiles, use buyer_id (works without migration)
-    # For regular users, use buyer_user_id (requires migration)
-    try:
-        logger.info(f"Creating purchase for book {book_id}, buyer_user_id={buyer_user_id}, buyer_id={buyer_id}, user_role={getattr(current_user, 'role', 'N/A')}")
+            logger.info(f"buyer_user_id column not found - using buyer_id={buyer_id}")
         
-        # Build purchase data - ensure at least one buyer identifier is set
-        # Priority: Use buyer_id if available (works for authors and doesn't require migration)
-        # Always ensure buyer_id exists to avoid migration dependency
-        if not buyer_id:
-            # No BookPlatformUser profile - must create one first
-            logger.warning(f"No buyer_id found for user {buyer_user_id}, creating minimal BookPlatformUser")
-            minimal_bp_user = BookPlatformUser(
-                user_id=buyer_user_id,
-                pen_name=current_user.username,
-                bio="Reader"
-            )
-            db.session.add(minimal_bp_user)
-            db.session.flush()
-            buyer_id = minimal_bp_user.id
-            logger.info(f"Created minimal BookPlatformUser {buyer_id} for purchase")
+        # Check if already purchased - use raw SQL to avoid buyer_user_id column issues
+        existing_purchase = False
+        from sqlalchemy import text
         
-        # Use buyer_id (works without migration) - try to set buyer_user_id if column exists
+        # Always use raw SQL to check for existing purchases (avoids buyer_user_id column issue)
         try:
-            purchase = BookPurchase(
-                buyer_id=buyer_id,
-                buyer_user_id=buyer_user_id,  # Try to set for future compatibility
-                book_project_id=book_id,
-                amount=book.price,
-                currency=book.currency,
-                status=TransactionStatus.PENDING
-            )
-            logger.info(f"Using buyer_id={buyer_id} and buyer_user_id={buyer_user_id} for purchase")
-        except Exception as create_error:
-            # If buyer_user_id column doesn't exist, use buyer_id only
-            if 'buyer_user_id' in str(create_error).lower() or 'does not exist' in str(create_error).lower():
-                logger.warning("buyer_user_id column not found, using buyer_id only")
+            if buyer_id:
+                # Check by buyer_id
+                result = db.session.execute(
+                    text("""
+                        SELECT id FROM book_purchases 
+                        WHERE buyer_id = :buyer_id 
+                        AND book_project_id = :book_id 
+                        AND status = 'COMPLETED' 
+                        LIMIT 1
+                    """),
+                    {'buyer_id': buyer_id, 'book_id': book_id}
+                ).fetchone()
+                if result:
+                    existing_purchase = True
+                    logger.info(f"Found existing purchase by buyer_id={buyer_id}")
+        except Exception as e:
+            logger.warning(f"Error checking existing purchase by buyer_id: {e}")
+        
+        # Also check by buyer_user_id if column exists and we haven't found a purchase
+        if not existing_purchase and has_buyer_user_id_col:
+            try:
+                result = db.session.execute(
+                    text("""
+                        SELECT id FROM book_purchases 
+                        WHERE buyer_user_id = :buyer_user_id 
+                        AND book_project_id = :book_id 
+                        AND status = 'COMPLETED' 
+                        LIMIT 1
+                    """),
+                    {'buyer_user_id': buyer_user_id, 'book_id': book_id}
+                ).fetchone()
+                if result:
+                    existing_purchase = True
+                    logger.info(f"Found existing purchase by buyer_user_id={buyer_user_id}")
+            except Exception as e:
+                logger.warning(f"Error checking existing purchase by buyer_user_id: {e}")
+        
+        if existing_purchase:
+            return jsonify({'error': 'You have already purchased this book'}), 400
+        
+        # Validate book has an author
+        if not book.author_id:
+            logger.error(f"Book {book_id} has no author_id - cannot create sale")
+            return jsonify({'error': 'Book has no author. Cannot process purchase.'}), 400
+        
+        # Validate book has a price
+        if not book.price or book.price <= 0:
+            logger.error(f"Book {book_id} has no price or invalid price: {book.price}")
+            return jsonify({'error': 'This book is not available for purchase. Please contact the author.'}), 400
+        
+        # Ensure currency is set
+        if not book.currency:
+            book.currency = 'USD'
+        
+        # Create purchase record - try buyer_user_id first (simpler - user just needs account)
+        # If that fails, fall back to buyer_id (requires BookPlatformUser profile)
+        logger.info(f"=== STARTING PURCHASE for book {book_id} ===")
+        logger.info(f"buyer_user_id={buyer_user_id}, has_column={has_buyer_user_id_col}, buyer_id={buyer_id}")
+        
+        purchase = None
+        purchase_created = False
+        
+        # Try buyer_user_id first (if column check says it exists)
+        if has_buyer_user_id_col:
+            try:
                 purchase = BookPurchase(
-                    buyer_id=buyer_id,
+                    buyer_user_id=buyer_user_id,
                     book_project_id=book_id,
                     amount=book.price,
                     currency=book.currency,
                     status=TransactionStatus.PENDING
                 )
-                logger.info(f"Using buyer_id={buyer_id} only for purchase (migration not run)")
-            else:
-                raise  # Re-raise if it's a different error
+                db.session.add(purchase)
+                db.session.flush()
+                logger.info(f"✅ Created purchase with buyer_user_id={buyer_user_id}")
+                purchase_created = True
+            except Exception as create_error:
+                # Column check was wrong - column doesn't actually exist
+                if 'buyer_user_id' in str(create_error).lower() or 'does not exist' in str(create_error).lower():
+                    logger.warning(f"buyer_user_id column doesn't exist despite check, using buyer_id fallback")
+                    db.session.rollback()
+                    has_buyer_user_id_col = False
+                    # Need to create buyer_id
+                    if not buyer_id:
+                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                        if not bp_user:
+                            bp_user = BookPlatformUser(
+                                user_id=buyer_user_id,
+                                pen_name=current_user.username,
+                                bio="Reader"
+                            )
+                            db.session.add(bp_user)
+                            db.session.flush()
+                        buyer_id = bp_user.id
+                else:
+                    raise  # Re-raise if it's a different error
         
-        logger.info(f"Purchase object created: buyer_id={purchase.buyer_id}, amount={purchase.amount}")
+        # Fallback to buyer_id (either column doesn't exist or creation failed)
+        if not purchase_created:
+            # Column doesn't exist - use buyer_id as workaround (requires BookPlatformUser profile)
+            logger.info(f"buyer_user_id column not found, using buyer_id={buyer_id} as workaround")
+            from sqlalchemy import text
+            import uuid as uuid_lib
+            from datetime import datetime, timezone
+            
+            purchase_uuid = str(uuid_lib.uuid4())
+            result = db.session.execute(
+                text("""
+                    INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                    VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
+                    RETURNING id
+                """),
+                {
+                    'uuid': purchase_uuid,
+                    'amount': book.price,
+                    'currency': book.currency,
+                    'status': 'PENDING',
+                    'book_project_id': book_id,
+                    'buyer_id': buyer_id,
+                    'created_at': datetime.now(timezone.utc)
+                }
+            )
+            purchase_id = result.scalar()
+            # Create minimal object for URL generation (don't query back to avoid buyer_user_id column)
+            class PurchaseObj:
+                def __init__(self, purchase_id):
+                    self.id = purchase_id
+                    self.buyer_id = buyer_id
+                    self.amount = book.price
+                    self.status = TransactionStatus.PENDING
+            
+            purchase = PurchaseObj(purchase_id)
+            logger.info(f"Purchase created via raw SQL (workaround), ID={purchase.id}")
         
-        db.session.add(purchase)
-        db.session.flush()  # Get the ID without committing yet
-        
-        logger.info(f"Purchase flushed, ID={purchase.id}")
+        # Log purchase info (handle both ORM and minimal objects)
+        purchase_info = f"ID={purchase.id}, amount=${getattr(purchase, 'amount', book.price)}"
+        if hasattr(purchase, 'buyer_id'):
+            purchase_info += f", buyer_id={purchase.buyer_id}"
+        if hasattr(purchase, 'buyer_user_id'):
+            purchase_info += f", buyer_user_id={purchase.buyer_user_id}"
+        logger.info(f"Purchase object created: {purchase_info}")
         
         # Create purchase as PENDING - will be marked COMPLETED when payment is confirmed
         # via webhook or success callback
-        purchase.status = TransactionStatus.PENDING
-        purchase.transaction_id = None  # Will be set when payment confirmed
+        if has_buyer_user_id_col and purchase_created:
+            # Only update status if using ORM (not minimal object)
+            purchase.status = TransactionStatus.PENDING
+            purchase.transaction_id = None  # Will be set when payment confirmed
         
         # Commit the pending purchase so we have an ID for the success callback
-        db.session.commit()
+        try:
+            db.session.commit()
+            logger.info(f"✅ Purchase committed to database, ID={purchase.id}")
+        except Exception as commit_error:
+            logger.error(f"❌ Failed to commit purchase: {commit_error}", exc_info=True)
+            db.session.rollback()
+            raise
         
         # Generate success and cancel URLs
-        success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase.id, _external=True)
-        cancel_url = url_for('book_platform.marketplace', _external=True)
+        try:
+            success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase.id, _external=True)
+            cancel_url = url_for('book_platform.marketplace', _external=True)
+            logger.info(f"✅ URLs generated: success={success_url}, cancel={cancel_url}")
+        except Exception as url_error:
+            logger.error(f"❌ Failed to generate URLs: {url_error}", exc_info=True)
+            # Use fallback URLs
+            success_url = f"/mybook/purchase/success?book_id={book_id}&purchase_id={purchase.id}"
+            cancel_url = "/mybook/marketplace"
         
-        logger.info(f"Purchase {purchase.id} created (PENDING). Success URL: {success_url}")
+        logger.info(f"✅ Purchase {purchase.id} created (PENDING). Success URL: {success_url}")
         
         # Return purchase info with Stripe redirect URL
         # Frontend should redirect to Stripe with success_url as return URL
-        return jsonify({
+        response_data = {
             'success': True,
             'purchase_id': purchase.id,
             'status': 'pending',
@@ -2067,24 +2179,30 @@ def purchase_book(book_id):
             'success_url': success_url,
             'cancel_url': cancel_url,
             'stripe_payment_link': f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase.id}'
-        })
+        }
+        logger.info(f"✅ Returning success response: {response_data}")
+        return jsonify(response_data)
         
         
     except Exception as e:
         db.session.rollback()
         error_msg = str(e)
-        logger.error(f"❌ ERROR creating purchase/sale for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"❌ ERROR creating purchase for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
         
+        # Always return JSON, never HTML
         # Check if it's a database constraint error (missing column)
         if 'buyer_user_id' in error_msg.lower() or ('column' in error_msg.lower() and 'does not exist' in error_msg.lower()):
-            logger.warning("⚠️  buyer_user_id column may not exist. Creating minimal BookPlatformUser as fallback...")
+            logger.warning("⚠️  buyer_user_id column may not exist. Attempting fallback...")
             try:
                 # Fallback: Create minimal BookPlatformUser and use buyer_id
+                from glconnect.book_platform_models import BookPlatformUser
                 minimal_bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
                 if not minimal_bp_user:
                     minimal_bp_user = BookPlatformUser(
                         user_id=buyer_user_id,
-                        pen_name=current_user.username,
+                        pen_name=current_user.username if current_user.is_authenticated else "User",
                         bio="Reader"
                     )
                     db.session.add(minimal_bp_user)
@@ -2093,42 +2211,73 @@ def purchase_book(book_id):
                 else:
                     logger.info(f"Using existing BookPlatformUser {minimal_bp_user.id} for purchase")
                 
-                # Retry purchase with buyer_id only
-                purchase = BookPurchase(
-                    buyer_id=minimal_bp_user.id,
-                    book_project_id=book_id,
-                    amount=book.price,
-                    currency=book.currency,
-                    status=TransactionStatus.PENDING
-                )
-                db.session.add(purchase)
-                db.session.flush()
+                # Use raw SQL to create purchase (avoid buyer_user_id column)
+                from sqlalchemy import text
+                import uuid as uuid_lib
+                from datetime import datetime, timezone
                 
-                purchase.status = TransactionStatus.COMPLETED
-                purchase.purchased_at = datetime.now(timezone.utc)
+                purchase_uuid = str(uuid_lib.uuid4())
+                book = BookProject.query.get(book_id)
+                if not book:
+                    return jsonify({'error': 'Book not found'}), 404
                 
-                sale = BookSale(
-                    seller_id=book.author_id,
-                    book_project_id=book_id,
-                    purchase_id=purchase.id,
-                    royalty_amount=book.price * 0.7,
-                    royalty_percentage=0.7,
-                    platform_fee=book.price * 0.3,
-                    net_amount=book.price * 0.7,
-                    currency=book.currency,
-                    status=TransactionStatus.COMPLETED,
-                    paid_at=datetime.now(timezone.utc)
+                result = db.session.execute(
+                    text("""
+                        INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                        VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
+                        RETURNING id
+                    """),
+                    {
+                        'uuid': purchase_uuid,
+                        'amount': book.price,
+                        'currency': book.currency or 'USD',
+                        'status': 'PENDING',
+                        'book_project_id': book_id,
+                        'buyer_id': minimal_bp_user.id,
+                        'created_at': datetime.now(timezone.utc)
+                    }
                 )
-                db.session.add(sale)
+                purchase_id = result.scalar()
                 db.session.commit()
                 
-                logger.info(f"✅ SUCCESS (fallback): Purchase {purchase.id} and Sale {sale.id} created successfully")
-                # sale and purchase are now defined, continue to revenue distribution
+                # Generate URLs
+                success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase_id, _external=True)
+                cancel_url = url_for('book_platform.marketplace', _external=True)
+                
+                logger.info(f"✅ SUCCESS (fallback): Purchase {purchase_id} created via raw SQL")
+                return jsonify({
+                    'success': True,
+                    'purchase_id': purchase_id,
+                    'status': 'pending',
+                    'message': 'Purchase created. Redirecting to payment...',
+                    'success_url': success_url,
+                    'cancel_url': cancel_url,
+                    'stripe_payment_link': f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase_id}'
+                })
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
-                return jsonify({'error': f'Failed to process purchase: {str(fallback_error)}'}), 500
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to process purchase: {str(fallback_error)}',
+                    'details': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+                }), 500
         else:
-            return jsonify({'error': f'Failed to process purchase: {error_msg}'}), 500
+            # Return JSON error with details
+            return jsonify({
+                'success': False,
+                'error': f'Failed to process purchase: {error_msg}',
+                'details': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+            }), 500
+    except Exception as outer_error:
+        # Catch any exception that wasn't caught in inner try blocks
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"❌ UNHANDLED ERROR in purchase_book: {str(outer_error)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Failed to process purchase: {str(outer_error)}',
+            'details': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+        }), 500
     
     # Purchase is created as PENDING - sale and revenue distribution will happen in success callback
     # after payment is confirmed
@@ -2686,6 +2835,34 @@ def get_author_details(author_id):
         }), 500
 
 # Error handlers
+@book_bp.errorhandler(500)
+def handle_500_error(error):
+    """Handle 500 errors and return JSON for API routes"""
+    import traceback
+    error_traceback = traceback.format_exc()
+    
+    # Check if this is an API request (JSON expected)
+    # Check for purchase endpoint or if request expects JSON
+    is_api_request = (
+        request.is_json or 
+        '/purchase' in request.path or 
+        request.path.startswith('/mybook/books/') or
+        request.headers.get('Content-Type', '').startswith('application/json') or
+        request.headers.get('Accept', '').startswith('application/json')
+    )
+    
+    if is_api_request:
+        logger.error(f"500 error in {request.path}: {str(error)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error',
+            'details': str(error),
+            'traceback': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+        }), 500
+    
+    # For non-API routes, let Flask handle it normally
+    raise error
+
 @book_bp.errorhandler(404)
 def not_found(error):
     return render_template('book_platform/404.html'), 404

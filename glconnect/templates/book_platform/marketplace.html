@@ -646,7 +646,25 @@
                         'Content-Type': 'application/json',
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // Server returned HTML (error page) instead of JSON
+                        return response.text().then(text => {
+                            console.error('Server returned non-JSON response (status ' + response.status + '):', text.substring(0, 500));
+                            throw new Error('Server error ' + response.status + ': ' + response.statusText + '. Check console for details.');
+                        });
+                    }
+                    // Check if response is an error
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            console.error('Server returned error:', data);
+                            throw new Error(data.error || data.message || 'Server error: ' + response.status);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Store purchase info for success callback
@@ -672,7 +690,22 @@
                 })
                 .catch(error => {
                     console.error('Purchase error:', error);
-                    alert('Purchase failed. Please try again.');
+                    console.error('Error name:', error.name);
+                    console.error('Error message:', error.message);
+                    console.error('Error stack:', error.stack);
+                    
+                    let errorMsg = 'Purchase failed. ';
+                    if (error.message) {
+                        errorMsg += error.message;
+                    } else if (typeof error === 'string') {
+                        errorMsg += error;
+                    } else if (error.toString && typeof error.toString === 'function') {
+                        errorMsg += error.toString();
+                    } else {
+                        errorMsg += 'Please check the browser console (F12) for details.';
+                    }
+                    
+                    alert(errorMsg + '\n\nOpen browser console (F12) for more details.');
                 });
             }
         }
@@ -751,7 +784,25 @@
                         'Content-Type': 'application/json',
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // Server returned HTML (error page) instead of JSON
+                        return response.text().then(text => {
+                            console.error('Server returned non-JSON response (status ' + response.status + '):', text.substring(0, 500));
+                            throw new Error('Server error ' + response.status + ': ' + response.statusText + '. Check console for details.');
+                        });
+                    }
+                    // Check if response is an error
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            console.error('Server returned error:', data);
+                            throw new Error(data.error || data.message || 'Server error: ' + response.status);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         // Store purchase info for success callback
@@ -776,7 +827,22 @@
                 })
                 .catch(error => {
                     console.error('Purchase error:', error);
-                    alert('Purchase failed. Please try again.');
+                    console.error('Error name:', error.name);
+                    console.error('Error message:', error.message);
+                    console.error('Error stack:', error.stack);
+                    
+                    let errorMsg = 'Purchase failed. ';
+                    if (error.message) {
+                        errorMsg += error.message;
+                    } else if (typeof error === 'string') {
+                        errorMsg += error;
+                    } else if (error.toString && typeof error.toString === 'function') {
+                        errorMsg += error.toString();
+                    } else {
+                        errorMsg += 'Please check the browser console (F12) for details.';
+                    }
+                    
+                    alert(errorMsg + '\n\nOpen browser console (F12) for more details.');
                 });
             }
         }
