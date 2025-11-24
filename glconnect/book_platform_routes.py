@@ -2208,17 +2208,32 @@ def purchase_success():
             paid_at=datetime.now(timezone.utc)
         )
         db.session.add(sale)
+        db.session.flush()  # Get sale.id before committing
+        
+        # Update book statistics
+        book.total_sales = (book.total_sales or 0) + 1
+        book.total_revenue = (book.total_revenue or 0.0) + book.price
+        
         db.session.commit()
         
-        # Trigger revenue distribution
+        # CRITICAL: Trigger revenue distribution - this calculates investor returns
         try:
             from glconnect.revenue_distribution_service import distribute_revenue
-            distribute_revenue(sale, db)
+            result = distribute_revenue(sale, db)
+            if result and result.get('success'):
+                logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
+            else:
+                logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
+                # Don't fail the purchase, but log the error
         except Exception as e:
-            logger.error(f"Revenue distribution failed: {str(e)}", exc_info=True)
+            logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
+            # Mark sale for manual reconciliation
+            sale.distribution_completed = False
+            db.session.commit()
+            # Don't fail the purchase - it's recorded, just needs manual distribution
         
         flash('Purchase successful! Thank you for your purchase.', 'success')
-        logger.info(f"✅ Purchase {purchase.id} recorded from Stripe success callback for book {book_id}")
+        logger.info(f"✅ Purchase {purchase.id} recorded from Stripe success callback for book {book_id}, Sale {sale.id} created")
         return redirect(url_for('book_platform.view_book', book_id=book_id))
         
     except Exception as e:
@@ -2269,87 +2284,238 @@ def stripe_webhook():
         # Handle the event
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
-            # Extract book_id from metadata or client_reference_id
-            book_id = session.get('metadata', {}).get('book_id') or session.get('client_reference_id')
+            # Extract book_id from metadata
+            book_id = session.get('metadata', {}).get('book_id')
+            # Extract purchase_id from client_reference_id (set by backend)
+            purchase_id = session.get('client_reference_id')
             customer_email = session.get('customer_details', {}).get('email')
             payment_intent_id = session.get('payment_intent')
+            amount_total = session.get('amount_total', 0) / 100.0  # Stripe amounts are in cents
             
-            if book_id:
-                try:
-                    book_id = int(book_id)
-                    # Find user by email
-                    user = User.query.filter_by(email=customer_email).first() if customer_email else None
-                    
-                    if user:
-                        # Record purchase (similar to purchase_success route)
-                        from glconnect.book_platform_models import BookPlatformUser
-                        from glconnect.models import Writer
+            try:
+                # First, try to find existing PENDING purchase by purchase_id
+                purchase = None
+                if purchase_id:
+                    try:
+                        purchase_id_int = int(purchase_id)
+                        purchase = BookPurchase.query.get(purchase_id_int)
+                        if purchase and purchase.status == TransactionStatus.PENDING:
+                            logger.info(f"Found PENDING purchase {purchase_id} from webhook")
+                            book_id = purchase.book_project_id
+                    except (ValueError, TypeError):
+                        pass
+                
+                # If no purchase found, try to find by book_id and user email
+                if not purchase and book_id:
+                    try:
+                        book_id = int(book_id)
+                        user = User.query.filter_by(email=customer_email).first() if customer_email else None
                         
-                        buyer_user_id = user.user_id
-                        book = BookProject.query.get(book_id)
-                        
-                        if book and book.author and book.author.user_id != buyer_user_id:
+                        if user:
+                            buyer_user_id = user.user_id
                             bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
                             buyer_id = bp_user.id if bp_user else None
                             
-                            if not buyer_id:
-                                writer = Writer.query.filter_by(user_id=buyer_user_id).first()
-                                bp_user = BookPlatformUser(
-                                    user_id=buyer_user_id,
-                                    pen_name=writer.writer_name if writer else user.username,
-                                    bio=writer.bio if writer else "Reader",
-                                    profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
-                                )
-                                db.session.add(bp_user)
-                                db.session.commit()
-                                buyer_id = bp_user.id
-                            
-                            # Check if already recorded
-                            existing = BookPurchase.query.filter_by(
-                                book_project_id=book_id,
-                                transaction_id=payment_intent_id
+                            # Check for existing PENDING purchase
+                            purchase = BookPurchase.query.filter(
+                                db.or_(
+                                    BookPurchase.buyer_user_id == buyer_user_id,
+                                    (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                                ),
+                                BookPurchase.book_project_id == book_id,
+                                BookPurchase.status == TransactionStatus.PENDING
                             ).first()
                             
-                            if not existing:
-                                purchase = BookPurchase(
-                                    buyer_id=buyer_id,
-                                    buyer_user_id=buyer_user_id,
-                                    book_project_id=book_id,
-                                    amount=book.price,
-                                    currency=book.currency,
-                                    status=TransactionStatus.COMPLETED,
-                                    purchased_at=datetime.now(timezone.utc),
-                                    transaction_id=payment_intent_id,
-                                    payment_method='stripe'
-                                )
-                                db.session.add(purchase)
-                                db.session.flush()
-                                
-                                sale = BookSale(
-                                    seller_id=book.author_id,
-                                    book_project_id=book_id,
-                                    purchase_id=purchase.id,
-                                    royalty_amount=book.price * 0.7,
-                                    royalty_percentage=0.7,
-                                    platform_fee=book.price * 0.3,
-                                    net_amount=book.price * 0.7,
-                                    currency=book.currency,
-                                    status=TransactionStatus.COMPLETED,
-                                    paid_at=datetime.now(timezone.utc)
-                                )
-                                db.session.add(sale)
+                            if purchase:
+                                logger.info(f"Found PENDING purchase {purchase.id} for book {book_id} and user {buyer_user_id}")
+                    except (ValueError, TypeError):
+                        pass
+                
+                # If still no purchase, try to find by amount and email (fallback for missing book_id)
+                if not purchase and customer_email and amount_total:
+                    user = User.query.filter_by(email=customer_email).first()
+                    if user:
+                        buyer_user_id = user.user_id
+                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                        buyer_id = bp_user.id if bp_user else None
+                        
+                        # Find PENDING purchase matching amount (within $0.01 tolerance)
+                        purchase = BookPurchase.query.filter(
+                            db.or_(
+                                BookPurchase.buyer_user_id == buyer_user_id,
+                                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                            ),
+                            BookPurchase.status == TransactionStatus.PENDING,
+                            db.func.abs(BookPurchase.amount - amount_total) < 0.01
+                        ).order_by(BookPurchase.created_at.desc()).first()
+                        
+                        if purchase:
+                            logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
+                            book_id = purchase.book_project_id
+                
+                # If we found a purchase, complete it
+                if purchase:
+                    book = BookProject.query.get(purchase.book_project_id)
+                    if not book:
+                        logger.error(f"Book {purchase.book_project_id} not found for purchase {purchase.id}")
+                        return jsonify({'received': True})
+                    
+                    # Prevent self-purchase
+                    if book.author and book.author.user_id == purchase.buyer_user_id:
+                        logger.warning(f"Self-purchase attempt blocked for purchase {purchase.id}")
+                        return jsonify({'received': True})
+                    
+                    # Complete the purchase
+                    purchase.status = TransactionStatus.COMPLETED
+                    purchase.purchased_at = datetime.now(timezone.utc)
+                    purchase.transaction_id = payment_intent_id or purchase.transaction_id
+                    purchase.payment_method = 'stripe'
+                    db.session.flush()
+                    
+                    # Check if sale already exists
+                    existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
+                    if not existing_sale:
+                        # Create sale record
+                        royalty_percentage = 0.7
+                        royalty_amount = purchase.amount * royalty_percentage
+                        platform_fee = purchase.amount - royalty_amount
+                        
+                        sale = BookSale(
+                            seller_id=book.author_id,
+                            book_project_id=purchase.book_project_id,
+                            purchase_id=purchase.id,
+                            royalty_amount=royalty_amount,
+                            royalty_percentage=royalty_percentage,
+                            platform_fee=platform_fee,
+                            net_amount=royalty_amount,
+                            currency=purchase.currency,
+                            status=TransactionStatus.COMPLETED,
+                            paid_at=datetime.now(timezone.utc)
+                        )
+                        db.session.add(sale)
+                        db.session.flush()  # Get sale.id before committing
+                        
+                        # Update book statistics
+                        book.total_sales = (book.total_sales or 0) + 1
+                        book.total_revenue = (book.total_revenue or 0.0) + purchase.amount
+                        
+                        db.session.commit()
+                        
+                        # CRITICAL: Trigger revenue distribution - this calculates investor returns
+                        try:
+                            from glconnect.revenue_distribution_service import distribute_revenue
+                            result = distribute_revenue(sale, db)
+                            if result and result.get('success'):
+                                logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
+                            else:
+                                logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
+                                # Mark sale for manual reconciliation
+                                sale.distribution_completed = False
                                 db.session.commit()
+                        except Exception as e:
+                            logger.error(f"❌ Revenue distribution FAILED in webhook for sale {sale.id}: {str(e)}", exc_info=True)
+                            # Mark sale for manual reconciliation
+                            sale.distribution_completed = False
+                            db.session.commit()
+                            # Don't fail the purchase - it's recorded, just needs manual distribution
+                        
+                        logger.info(f"✅ Purchase {purchase.id} completed from Stripe webhook for book {purchase.book_project_id}, Sale {sale.id} created")
+                    else:
+                        # Sale already exists, but check if distribution was completed
+                        if not existing_sale.distribution_completed:
+                            logger.warning(f"⚠️  Sale {existing_sale.id} exists but distribution not completed. Attempting distribution...")
+                            try:
+                                from glconnect.revenue_distribution_service import distribute_revenue
+                                result = distribute_revenue(existing_sale, db)
+                                if result and result.get('success'):
+                                    logger.info(f"✅ Revenue distributed for existing sale {existing_sale.id}: {result}")
+                                else:
+                                    logger.error(f"⚠️  Revenue distribution failed for existing sale {existing_sale.id}: {result}")
+                            except Exception as e:
+                                logger.error(f"❌ Revenue distribution FAILED for existing sale {existing_sale.id}: {str(e)}", exc_info=True)
+                        db.session.commit()
+                        logger.info(f"✅ Purchase {purchase.id} already has sale record, marked as completed")
+                
+                # If no purchase found but we have book_id, create new purchase (fallback)
+                elif book_id:
+                    try:
+                        book_id = int(book_id)
+                        user = User.query.filter_by(email=customer_email).first() if customer_email else None
+                        
+                        if user:
+                            buyer_user_id = user.user_id
+                            book = BookProject.query.get(book_id)
+                            
+                            if book and book.author and book.author.user_id != buyer_user_id:
+                                from glconnect.book_platform_models import BookPlatformUser
+                                from glconnect.models import Writer
                                 
-                                # Trigger revenue distribution
-                                try:
-                                    from glconnect.revenue_distribution_service import distribute_revenue
-                                    distribute_revenue(sale, db)
-                                except Exception as e:
-                                    logger.error(f"Revenue distribution failed in webhook: {str(e)}")
+                                bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                                buyer_id = bp_user.id if bp_user else None
                                 
-                                logger.info(f"✅ Purchase {purchase.id} recorded from Stripe webhook for book {book_id}")
-                except Exception as e:
-                    logger.error(f"Error processing webhook purchase: {str(e)}", exc_info=True)
+                                if not buyer_id:
+                                    writer = Writer.query.filter_by(user_id=buyer_user_id).first()
+                                    bp_user = BookPlatformUser(
+                                        user_id=buyer_user_id,
+                                        pen_name=writer.writer_name if writer else user.username,
+                                        bio=writer.bio if writer else "Reader",
+                                        profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
+                                    )
+                                    db.session.add(bp_user)
+                                    db.session.commit()
+                                    buyer_id = bp_user.id
+                                
+                                # Check if already recorded
+                                existing = BookPurchase.query.filter(
+                                    BookPurchase.book_project_id == book_id,
+                                    BookPurchase.transaction_id == payment_intent_id
+                                ).first()
+                                
+                                if not existing:
+                                    purchase = BookPurchase(
+                                        buyer_id=buyer_id,
+                                        buyer_user_id=buyer_user_id,
+                                        book_project_id=book_id,
+                                        amount=book.price,
+                                        currency=book.currency,
+                                        status=TransactionStatus.COMPLETED,
+                                        purchased_at=datetime.now(timezone.utc),
+                                        transaction_id=payment_intent_id,
+                                        payment_method='stripe'
+                                    )
+                                    db.session.add(purchase)
+                                    db.session.flush()
+                                    
+                                    sale = BookSale(
+                                        seller_id=book.author_id,
+                                        book_project_id=book_id,
+                                        purchase_id=purchase.id,
+                                        royalty_amount=book.price * 0.7,
+                                        royalty_percentage=0.7,
+                                        platform_fee=book.price * 0.3,
+                                        net_amount=book.price * 0.7,
+                                        currency=book.currency,
+                                        status=TransactionStatus.COMPLETED,
+                                        paid_at=datetime.now(timezone.utc)
+                                    )
+                                    db.session.add(sale)
+                                    db.session.commit()
+                                    
+                                    # Trigger revenue distribution
+                                    try:
+                                        from glconnect.revenue_distribution_service import distribute_revenue
+                                        distribute_revenue(sale, db)
+                                    except Exception as e:
+                                        logger.error(f"Revenue distribution failed in webhook: {str(e)}")
+                                    
+                                    logger.info(f"✅ Purchase {purchase.id} created from Stripe webhook for book {book_id}")
+                    except Exception as e:
+                        logger.error(f"Error creating purchase from webhook: {str(e)}", exc_info=True)
+                else:
+                    logger.warning(f"⚠️  Stripe webhook received but couldn't find book_id or purchase_id. Email: {customer_email}, Amount: ${amount_total}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing webhook purchase: {str(e)}", exc_info=True)
         
         return jsonify({'received': True})
         
@@ -3636,6 +3802,57 @@ def book_sales_transparency(book_id):
                          user_earnings=user_earnings)
 
 # Reviewer Earnings by Book
+# Reconciliation endpoint to manually trigger revenue distribution
+@book_bp.route('/admin/reconcile-sales', methods=['POST'])
+@login_required
+def reconcile_sales():
+    """Manually trigger revenue distribution for sales that weren't distributed"""
+    # Check if user is admin (you may want to add proper admin check)
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        from glconnect.book_platform_models import BookSale
+        from glconnect.revenue_distribution_service import distribute_revenue
+        
+        # Find all sales that haven't been distributed
+        undistributed_sales = BookSale.query.filter_by(distribution_completed=False).all()
+        
+        results = {
+            'processed': 0,
+            'success': 0,
+            'failed': 0,
+            'errors': []
+        }
+        
+        for sale in undistributed_sales:
+            results['processed'] += 1
+            try:
+                result = distribute_revenue(sale, db)
+                if result and result.get('success'):
+                    results['success'] += 1
+                    logger.info(f"✅ Reconciled sale {sale.id}: {result}")
+                else:
+                    results['failed'] += 1
+                    error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                    results['errors'].append(f"Sale {sale.id}: {error_msg}")
+                    logger.error(f"❌ Failed to reconcile sale {sale.id}: {error_msg}")
+            except Exception as e:
+                results['failed'] += 1
+                error_msg = str(e)
+                results['errors'].append(f"Sale {sale.id}: {error_msg}")
+                logger.error(f"❌ Error reconciling sale {sale.id}: {error_msg}", exc_info=True)
+        
+        return jsonify({
+            'success': True,
+            'message': f"Processed {results['processed']} sales. {results['success']} succeeded, {results['failed']} failed.",
+            'results': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in reconcile_sales: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 @book_bp.route('/reviewers/my-earnings/<int:book_id>', methods=['GET'])
 @login_required
 def reviewer_earnings_by_book(book_id):

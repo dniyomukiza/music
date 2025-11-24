@@ -744,21 +744,40 @@
             const confirmMessage = `You're about to purchase this ${purchaseType}. You'll be redirected to Stripe for secure payment processing.`;
             
             if (confirm(confirmMessage)) {
-                // Store purchase info in localStorage for post-payment processing
-                const purchaseData = {
-                    bookId: bookId,
-                    audiobookPurchase: audiobookPurchase,
-                    timestamp: Date.now(),
-                    userId: '{{ current_user.user_id if current_user.is_authenticated else "anonymous" }}'
-                };
-                
-                localStorage.setItem('pendingPurchase', JSON.stringify(purchaseData));
-                
-                // Redirect to Stripe Payment Link
-                window.open('https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000', '_blank');
-                
-                // Show success message
-                showPurchaseNotification(bookId, audiobookPurchase);
+                // Call backend to create purchase record first
+                fetch(`/mybook/books/${bookId}/purchase`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store purchase info for success callback
+                        if (data.success_url) {
+                            localStorage.setItem('pendingPurchase', JSON.stringify({
+                                bookId: bookId,
+                                purchaseId: data.purchase_id,
+                                successUrl: data.success_url,
+                                audiobookPurchase: audiobookPurchase
+                            }));
+                        }
+                        
+                        // Redirect to Stripe payment link with purchase_id
+                        if (data.stripe_payment_link) {
+                            window.location.href = data.stripe_payment_link;
+                        } else {
+                            alert('Purchase link not available. Please try again.');
+                        }
+                    } else {
+                        alert('Purchase failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Purchase error:', error);
+                    alert('Purchase failed. Please try again.');
+                });
             }
         }
 
