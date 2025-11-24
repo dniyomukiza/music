@@ -384,6 +384,9 @@ def serve_song_file(song_id):
     """Serve song file by ID - handles file lookup and path resolution"""
     try:
         from flask import current_app
+        import logging
+        logger = logging.getLogger(__name__)
+        
         song = Song.query.get_or_404(song_id)
         
         # Get the Flask app root path for reliable path resolution
@@ -394,22 +397,23 @@ def serve_song_file(song_id):
         
         # Try to find glconnect directory relative to app root
         glconnect_static_afro = os.path.join(app_root, 'glconnect', 'static', 'afro')
-        glconnect_static_uploads = os.path.join(app_root, 'glconnect', 'static', 'song_uploads')
         
-        # Add all possible directory locations
+        # Also try with current working directory
+        cwd_glconnect_afro = os.path.join(os.getcwd(), 'glconnect', 'static', 'afro')
+        
+        # Add all possible directory locations - prioritize existing directories
         possible_dirs.extend([
             glconnect_static_afro,
-            glconnect_static_uploads,
+            cwd_glconnect_afro,
             os.path.join(app_root, 'static', 'afro'),
-            os.path.join(app_root, 'static', 'song_uploads'),
             os.path.join(os.getcwd(), 'glconnect', 'static', 'afro'),
-            os.path.join(os.getcwd(), 'glconnect', 'static', 'song_uploads'),
+        ])
+        
+        # Add relative paths as fallback
+        possible_dirs.extend([
             'glconnect/static/afro',
-            'glconnect/static/song_uploads',
             'static/afro',
-            'static/song_uploads',
             '/usr/src/appdir/glconnect/static/afro',
-            '/usr/src/appdir/glconnect/static/song_uploads',
             '/liqfolder/glconnect/static/afro',
         ])
         
@@ -422,6 +426,11 @@ def serve_song_file(song_id):
                 unique_dirs.append(d)
         possible_dirs = unique_dirs
         
+        # Filter to only existing directories for faster lookup
+        existing_dirs = [d for d in possible_dirs if os.path.exists(d) and os.path.isdir(d)]
+        if existing_dirs:
+            possible_dirs = existing_dirs + [d for d in possible_dirs if d not in existing_dirs]
+        
         # Initialize filename variable
         filename = None
         
@@ -429,7 +438,19 @@ def serve_song_file(song_id):
         if song.local_path:
             # First, check if local_path is an absolute path that exists
             if os.path.isabs(song.local_path) and os.path.exists(song.local_path):
+                logger.info(f"Found song file via absolute path: {song.local_path}")
                 return send_file(song.local_path, mimetype='audio/mpeg')
+            
+            # If local_path is just a filename (no slashes), try afro directory
+            if '/' not in song.local_path and '\\' not in song.local_path:
+                filename = song.local_path
+                # Try afro directory
+                for base_dir in [glconnect_static_afro, cwd_glconnect_afro]:
+                    if os.path.exists(base_dir):
+                        file_path = os.path.join(base_dir, filename)
+                        if os.path.exists(file_path) and os.path.isfile(file_path):
+                            logger.info(f"Found song file: {file_path}")
+                            return send_file(file_path, mimetype='audio/mpeg')
             
             # If it's an absolute path that doesn't exist, try to map it to current environment
             # Handle paths like /liqfolder/glconnect/static/afro/filename.mp3
@@ -502,49 +523,86 @@ def serve_song_file(song_id):
                         return send_file(reconstructed_path, mimetype='audio/mpeg')
         
         # Fallback: try constructed path
+        # Get artist name - handle "by [artist]" pattern in song name
+        import re
         artist_name = song.artist if song.artist else 'Unknown'
+        song_name_for_path = song.name if song.name else 'Untitled Track'
+        
+        # Check if song.name contains "by [artist]" pattern
+        by_pattern = re.compile(r'^\s*by\s+(.+)$', re.IGNORECASE)
+        if by_pattern.match(song_name_for_path):
+            # Extract artist from song name
+            extracted_artist = by_pattern.match(song_name_for_path).group(1).strip()
+            if not artist_name or artist_name == 'Unknown':
+                artist_name = extracted_artist
+            song_name_for_path = 'Untitled Track'  # Clear it since it's not actually the song name
+        
         if song.artist_id:
             artist_obj = Artist.query.get(song.artist_id)
             if artist_obj:
                 artist_name = artist_obj.artist_name
         
-        constructed_filename = f"{artist_name} - {song.name}.mp3"
-        for directory in possible_dirs:
-            if not directory:
-                continue
-            file_path = os.path.join(directory, constructed_filename) if os.path.isabs(directory) or os.path.sep in directory else os.path.join(app_root, directory, constructed_filename)
-            if os.path.exists(file_path) and os.path.isfile(file_path):
-                return send_file(file_path, mimetype='audio/mpeg')
+        # Try multiple constructed filename formats
+        constructed_filenames = [
+            f"{artist_name} - {song_name_for_path}.mp3",
+            f"{artist_name}-{song_name_for_path}.mp3",
+            f"{song_name_for_path} - {artist_name}.mp3",
+            f"{song_name_for_path}-{artist_name}.mp3",
+        ]
+        
+        # Also try with secure_filename format (used during upload)
+        from werkzeug.utils import secure_filename
+        secure_base = secure_filename(f"{artist_name} - {song_name_for_path}")
+        constructed_filenames.append(f"{secure_base}.mp3")
+        
+        for constructed_filename in constructed_filenames:
+            for directory in possible_dirs:
+                if not directory:
+                    continue
+                file_path = os.path.join(directory, constructed_filename) if os.path.isabs(directory) or os.path.sep in directory else os.path.join(app_root, directory, constructed_filename)
+                if os.path.exists(file_path) and os.path.isfile(file_path):
+                    logger.info(f"Found song file via constructed path: {file_path}")
+                    return send_file(file_path, mimetype='audio/mpeg')
         
         # If still not found, try searching for similar filenames (case-insensitive)
         song_name_lower = song.name.lower() if song.name else ''
         artist_name_lower = artist_name.lower() if artist_name != 'Unknown' else ''
         
+        # Also try searching by song ID in filename (some systems use IDs)
         for directory in possible_dirs:
             if not directory or not os.path.exists(directory):
                 continue
             try:
                 for file in os.listdir(directory):
                     file_lower = file.lower()
-                    # Check if filename contains song name or artist name (case-insensitive)
-                    if file.endswith('.mp3') and (
-                        (song_name_lower and song_name_lower in file_lower) or 
-                        (artist_name_lower and artist_name_lower in file_lower)
-                    ):
+                    # Check multiple matching strategies
+                    matches = False
+                    if file.endswith('.mp3'):
+                        # Strategy 1: Contains song name or artist name
+                        if (song_name_lower and song_name_lower in file_lower) or (artist_name_lower and artist_name_lower in file_lower):
+                            matches = True
+                        # Strategy 2: Contains song ID
+                        elif str(song_id) in file or f"_{song_id}." in file_lower or f"-{song_id}." in file_lower:
+                            matches = True
+                        # Strategy 3: If we have a filename from local_path, try exact match (case-insensitive)
+                        elif filename and file_lower == filename.lower():
+                            matches = True
+                    
+                    if matches:
                         file_path = os.path.join(directory, file)
                         if os.path.exists(file_path) and os.path.isfile(file_path):
+                            logger.info(f"Found song file via search: {file_path}")
                             return send_file(file_path, mimetype='audio/mpeg')
             except (OSError, PermissionError) as e:
                 # Skip directories we can't read
+                logger.warning(f"Cannot read directory {directory}: {e}")
                 continue
         
         # Last resort: Try using Flask's static file serving mechanism
         # Construct relative path from static folder
         static_relative_paths = [
             f"afro/{constructed_filename}",
-            f"afro/{filename}" if 'filename' in locals() else None,
-            f"song_uploads/{constructed_filename}",
-            f"song_uploads/{filename}" if 'filename' in locals() else None,
+            f"afro/{filename}" if 'filename' in locals() and filename else None,
         ]
         
         for static_path in static_relative_paths:
@@ -563,16 +621,41 @@ def serve_song_file(song_id):
             except Exception:
                 continue
         
+        # Last resort: Comprehensive directory scan - try to find ANY mp3 file that might match
+        # This is useful when filenames don't match exactly but files exist
+        for directory in existing_dirs if 'existing_dirs' in locals() else possible_dirs:
+            if not directory or not os.path.exists(directory):
+                continue
+            try:
+                for file in os.listdir(directory):
+                    if not file.endswith('.mp3'):
+                        continue
+                    file_lower = file.lower()
+                    file_path = os.path.join(directory, file)
+                    
+                    # Very loose matching - if any part of song name or artist appears in filename
+                    if song_name_for_path and song_name_for_path.lower() in file_lower:
+                        logger.info(f"Found song file via loose name match: {file_path}")
+                        return send_file(file_path, mimetype='audio/mpeg')
+                    if artist_name and artist_name.lower() != 'unknown' and artist_name.lower() in file_lower:
+                        logger.info(f"Found song file via loose artist match: {file_path}")
+                        return send_file(file_path, mimetype='audio/mpeg')
+            except (OSError, PermissionError) as e:
+                logger.warning(f"Cannot read directory {directory}: {e}")
+                continue
+        
         # Last resort: return a more detailed error message
         error_info = {
             "song_id": song_id,
             "song_name": song.name,
             "artist": artist_name,
             "local_path": song.local_path,
-            "constructed_filename": constructed_filename,
+            "constructed_filenames": constructed_filenames if 'constructed_filenames' in locals() else [f"{artist_name} - {song_name_for_path}.mp3"],
             "app_root": app_root,
-            "cwd": os.getcwd()
+            "cwd": os.getcwd(),
+            "searched_directories": [d for d in possible_dirs if os.path.exists(d)][:5]  # First 5 existing dirs
         }
+        logger.error(f"Song file not found for song_id={song_id}: {error_info}")
         return jsonify({"error": "Song file not found", "details": error_info}), 404
         
     except Exception as e:
