@@ -1911,18 +1911,22 @@ def purchase_book(book_id):
     """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
     # Wrap entire function in try-except to ensure JSON responses
     try:
+        # Get custom amount from request (optional - defaults to book price)
+        request_data = request.get_json() or {}
+        custom_amount = request_data.get('custom_amount')
+        
         # Initialize variables that might be needed in error handling
         buyer_user_id = current_user.user_id if current_user.is_authenticated else None
         if not buyer_user_id:
             return jsonify({'error': 'User not authenticated'}), 401
-        # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
-        from glconnect.book_platform_models import BookPlatformUser
-        
-        # Eager load author information to ensure fresh data from database
-        book = BookProject.query.options(
-            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-        ).get_or_404(book_id)
-        
+    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+    from glconnect.book_platform_models import BookPlatformUser
+    
+    # Eager load author information to ensure fresh data from database
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).get_or_404(book_id)
+    
         # Buyers only need a user account - NO profile required
         buyer_user_id = current_user.user_id
         
@@ -1939,7 +1943,7 @@ def purchase_book(book_id):
                     author_user_id = book.author.user.user_id
                 
                 if author_user_id and author_user_id == buyer_user_id:
-                    return jsonify({'error': 'You cannot purchase your own book'}), 400
+        return jsonify({'error': 'You cannot purchase your own book'}), 400
         except Exception as self_purchase_check_error:
             logger.warning(f"Error checking self-purchase: {self_purchase_check_error}, continuing anyway")
             # Continue with purchase if check fails (better to allow than block)
@@ -2048,6 +2052,20 @@ def purchase_book(book_id):
             logger.error(f"Book {book_id} has no price or invalid price: {book.price}")
             return jsonify({'error': 'This book is not available for purchase. Please contact the author.'}), 400
         
+        # Validate and set payment amount (custom amount must be >= book price)
+        if custom_amount is not None:
+            try:
+                custom_amount = float(custom_amount)
+                if custom_amount < book.price:
+                    return jsonify({'error': f'Payment amount must be at least ${book.price:.2f}'}), 400
+                payment_amount = custom_amount
+                logger.info(f"Using custom payment amount: ${payment_amount:.2f} (book price: ${book.price:.2f})")
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid payment amount'}), 400
+        else:
+            payment_amount = book.price
+            logger.info(f"Using book price: ${payment_amount:.2f}")
+        
         # Ensure currency is set
         if not book.currency:
             book.currency = 'USD'
@@ -2066,7 +2084,7 @@ def purchase_book(book_id):
                 purchase = BookPurchase(
                     buyer_user_id=buyer_user_id,
                     book_project_id=book_id,
-                    amount=book.price,
+                    amount=payment_amount,  # Use payment_amount (may be custom amount)
                     currency=book.currency,
                     status=TransactionStatus.PENDING
                 )
@@ -2112,7 +2130,7 @@ def purchase_book(book_id):
                 """),
                 {
                     'uuid': purchase_uuid,
-                    'amount': book.price,
+                    'amount': payment_amount,  # Use payment_amount (may be custom amount)
                     'currency': book.currency,
                     'status': 'PENDING',
                     'book_project_id': book_id,
@@ -2126,7 +2144,7 @@ def purchase_book(book_id):
                 def __init__(self, purchase_id):
                     self.id = purchase_id
                     self.buyer_id = buyer_id
-                    self.amount = book.price
+                    self.amount = payment_amount  # Use payment_amount (may be custom amount)
                     self.status = TransactionStatus.PENDING
             
             purchase = PurchaseObj(purchase_id)
@@ -2229,7 +2247,7 @@ def purchase_book(book_id):
                     """),
                     {
                         'uuid': purchase_uuid,
-                        'amount': book.price,
+                        'amount': payment_amount,  # Use payment_amount (may be custom amount)
                         'currency': book.currency or 'USD',
                         'status': 'PENDING',
                         'book_project_id': book_id,
@@ -2245,15 +2263,54 @@ def purchase_book(book_id):
                 cancel_url = url_for('book_platform.marketplace', _external=True)
                 
                 logger.info(f"✅ SUCCESS (fallback): Purchase {purchase_id} created via raw SQL")
-                return jsonify({
+                
+                # Create Stripe Checkout Session (same as above)
+                stripe_checkout_url = None
+                try:
+                    import stripe
+                    stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+                    if stripe_api_key:
+                        stripe.api_key = stripe_api_key
+                        checkout_session = stripe.checkout.Session.create(
+                            payment_method_types=['card'],
+                            line_items=[{
+                                'price_data': {
+                                    'currency': book.currency.lower(),
+                                    'product_data': {
+                                        'name': book.title,
+                                        'description': f'Purchase of "{book.title}" by {book.author.pen_name if book.author else "Unknown Author"}',
+                                    },
+                                    'unit_amount': int(payment_amount * 100),
+                                },
+                                'quantity': 1,
+                            }],
+                            mode='payment',
+                            success_url=success_url,
+                            cancel_url=cancel_url,
+                            client_reference_id=str(purchase_id),
+                            metadata={
+                                'book_id': str(book_id),
+                                'purchase_id': str(purchase_id),
+                                'amount': str(payment_amount),
+                            },
+                        )
+                        stripe_checkout_url = checkout_session.url
+                except Exception as e:
+                    logger.warning(f"Could not create Stripe Checkout Session: {e}")
+                
+                response = {
                     'success': True,
                     'purchase_id': purchase_id,
                     'status': 'pending',
                     'message': 'Purchase created. Redirecting to payment...',
                     'success_url': success_url,
                     'cancel_url': cancel_url,
-                    'stripe_payment_link': f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase_id}'
-                })
+                }
+                if stripe_checkout_url:
+                    response['stripe_checkout_url'] = stripe_checkout_url
+                else:
+                    response['stripe_payment_link'] = f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase_id}'
+                return jsonify(response)
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
                 return jsonify({
@@ -2312,9 +2369,9 @@ def purchase_success():
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-        
-        if existing_purchase:
+    ).first()
+    
+    if existing_purchase:
             flash('Purchase already recorded!', 'info')
             return redirect(url_for('book_platform.view_book', book_id=book_id))
         
@@ -2352,30 +2409,43 @@ def purchase_success():
                 db.session.commit()
                 buyer_id = bp_user.id
                 logger.info(f"Created BookPlatformUser {buyer_id} for purchase success callback")
-            
-            # Create purchase record
-            purchase = BookPurchase(
+    
+    # Create purchase record
+    # Note: In purchase_success callback, we use book.price as amount since we don't have custom amount here
+    # The webhook will update the amount if user paid more
+    purchase = BookPurchase(
                 buyer_id=buyer_id,
                 buyer_user_id=buyer_user_id,
-                book_project_id=book_id,
-                amount=book.price,
-                currency=book.currency,
-                status=TransactionStatus.PENDING
-            )
-            db.session.add(purchase)
+        book_project_id=book_id,
+        amount=book.price,  # Will be updated by webhook if user paid more
+        currency=book.currency,
+        status=TransactionStatus.PENDING
+    )
+    db.session.add(purchase)
             db.session.flush()
-        
+    
         # Complete the purchase
         book = BookProject.query.get_or_404(purchase.book_project_id)
-        purchase.status = TransactionStatus.COMPLETED
-        purchase.purchased_at = datetime.now(timezone.utc)
+    purchase.status = TransactionStatus.COMPLETED
+    purchase.purchased_at = datetime.now(timezone.utc)
         purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
         purchase.payment_method = 'stripe'
-        
+    
         # Create sale record
+        # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
+        base_price = book.price
+        extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding book price
+        
         royalty_percentage = 0.7
-        royalty_amount = book.price * royalty_percentage
-        platform_fee = book.price - royalty_amount
+        # Base price: 70% to author, 30% to platform
+        base_royalty = base_price * royalty_percentage
+        base_platform_fee = base_price - base_royalty
+        
+        # Extra amount: 100% to author, 0% to platform
+        royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+        platform_fee = base_platform_fee  # Platform only gets fee from base price
+        
+        logger.info(f"Revenue split for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase.amount:.2f}")
         
         sale = BookSale(
             seller_id=book.author_id,
@@ -2463,8 +2533,196 @@ def stripe_webhook():
             # No secret configured or stripe not available - parse JSON directly (development only)
             event = json.loads(payload)
         
+        # Set Stripe API key if available (for retrieving additional payment info if needed)
+        stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+        if stripe_api_key and stripe_available:
+            stripe.api_key = stripe_api_key
+        
+        # Helper function to complete a purchase
+        def complete_purchase(purchase, payment_intent_id=None, amount_total=None):
+            """Complete a purchase and create sale record"""
+            if not purchase or purchase.status != TransactionStatus.PENDING:
+                return False
+            
+            book = BookProject.query.get(purchase.book_project_id)
+            if not book:
+                logger.error(f"Book {purchase.book_project_id} not found for purchase {purchase.id}")
+                return False
+            
+            # Prevent self-purchase
+            if book.author and purchase.buyer_user_id and book.author.user_id == purchase.buyer_user_id:
+                logger.warning(f"Self-purchase attempt blocked for purchase {purchase.id}")
+                return False
+            
+            # Update purchase amount if actual amount paid differs (user paid more than book price)
+            if amount_total and amount_total > 0:
+                if abs(purchase.amount - amount_total) > 0.01:  # Allow $0.01 tolerance for rounding
+                    logger.info(f"Updating purchase amount from ${purchase.amount:.2f} to ${amount_total:.2f} (actual amount paid)")
+                    purchase.amount = amount_total
+            
+            # Complete the purchase
+            purchase.status = TransactionStatus.COMPLETED
+            purchase.purchased_at = datetime.now(timezone.utc)
+            if payment_intent_id:
+                purchase.transaction_id = payment_intent_id
+            purchase.payment_method = 'stripe'
+            db.session.flush()
+            
+            # Check if sale already exists
+            existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
+            if not existing_sale:
+                # Create sale record
+                # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
+                base_price = book.price
+                extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding book price
+                
+                royalty_percentage = 0.7
+                # Base price: 70% to author, 30% to platform
+                base_royalty = base_price * royalty_percentage
+                base_platform_fee = base_price - base_royalty
+                
+                # Extra amount: 100% to author, 0% to platform
+                royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+                platform_fee = base_platform_fee  # Platform only gets fee from base price
+                
+                logger.info(f"Revenue split for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase.amount:.2f}")
+                
+                sale = BookSale(
+                    seller_id=book.author_id,
+                    book_project_id=purchase.book_project_id,
+                    purchase_id=purchase.id,
+                    royalty_amount=royalty_amount,
+                    royalty_percentage=royalty_percentage,
+                    platform_fee=platform_fee,
+                    net_amount=royalty_amount,
+                    currency=purchase.currency,
+                    status=TransactionStatus.COMPLETED,
+                    paid_at=datetime.now(timezone.utc)
+                )
+    db.session.add(sale)
+                db.session.flush()
+                
+                        # Update book statistics (use actual amount paid)
+                        book.total_sales = (book.total_sales or 0) + 1
+                        book.total_revenue = (book.total_revenue or 0.0) + purchase.amount  # Includes any extra payment
+                
+    db.session.commit()
+    
+    # Trigger revenue distribution
+    try:
+        from glconnect.revenue_distribution_service import distribute_revenue
+                    result = distribute_revenue(sale, db)
+                    if result and result.get('success'):
+                        logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
+                    else:
+                        logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
+                        sale.distribution_completed = False
+                        db.session.commit()
+    except Exception as e:
+                    logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
+                    sale.distribution_completed = False
+                    db.session.commit()
+                
+                logger.info(f"✅ Purchase {purchase.id} completed, Sale {sale.id} created")
+            else:
+                # Sale already exists, check if distribution was completed
+                if not existing_sale.distribution_completed:
+                    logger.warning(f"⚠️  Sale {existing_sale.id} exists but distribution not completed. Attempting distribution...")
+                    try:
+                        from glconnect.revenue_distribution_service import distribute_revenue
+                        result = distribute_revenue(existing_sale, db)
+                        if result and result.get('success'):
+                            logger.info(f"✅ Revenue distributed for existing sale {existing_sale.id}: {result}")
+                        else:
+                            logger.error(f"⚠️  Revenue distribution failed for existing sale {existing_sale.id}: {result}")
+                    except Exception as e:
+                        logger.error(f"❌ Revenue distribution FAILED for existing sale {existing_sale.id}: {str(e)}", exc_info=True)
+                db.session.commit()
+                logger.info(f"✅ Purchase {purchase.id} already has sale record, marked as completed")
+            
+            return True
+        
         # Handle the event
-        if event['type'] == 'checkout.session.completed':
+        if event['type'] == 'payment_intent.succeeded':
+            # Handle payment_intent.succeeded event (for direct Payment Intents)
+            payment_intent = event['data']['object']
+            payment_intent_id = payment_intent.get('id')
+            amount_total = payment_intent.get('amount', 0) / 100.0  # Stripe amounts are in cents
+            customer_email = payment_intent.get('receipt_email') or payment_intent.get('charges', {}).get('data', [{}])[0].get('billing_details', {}).get('email')
+            metadata = payment_intent.get('metadata', {})
+            book_id = metadata.get('book_id')
+            purchase_id = metadata.get('purchase_id') or metadata.get('client_reference_id')
+            
+            logger.info(f"📥 Received payment_intent.succeeded webhook: payment_intent={payment_intent_id}, amount=${amount_total}, book_id={book_id}, purchase_id={purchase_id}")
+            
+            try:
+                purchase = None
+                
+                # First, try to find by purchase_id from metadata
+                if purchase_id:
+                    try:
+                        purchase_id_int = int(purchase_id)
+                        purchase = BookPurchase.query.get(purchase_id_int)
+                        if purchase and purchase.status == TransactionStatus.PENDING:
+                            logger.info(f"Found PENDING purchase {purchase_id} from payment_intent metadata")
+                    except (ValueError, TypeError):
+                        pass
+                
+                # If no purchase found, try to find by book_id and user email
+                if not purchase and book_id and customer_email:
+                    try:
+                        book_id = int(book_id)
+                        user = User.query.filter_by(email=customer_email).first()
+                        if user:
+                            buyer_user_id = user.user_id
+                            bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                            buyer_id = bp_user.id if bp_user else None
+                            
+                            purchase = BookPurchase.query.filter(
+                                db.or_(
+                                    BookPurchase.buyer_user_id == buyer_user_id,
+                                    (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                                ),
+                                BookPurchase.book_project_id == book_id,
+                                BookPurchase.status == TransactionStatus.PENDING
+                            ).first()
+                            
+                            if purchase:
+                                logger.info(f"Found PENDING purchase {purchase.id} for book {book_id} and user {buyer_user_id}")
+                    except (ValueError, TypeError):
+                        pass
+                
+                # If still no purchase, try to find by amount and email
+                if not purchase and customer_email and amount_total:
+                    user = User.query.filter_by(email=customer_email).first()
+                    if user:
+                        buyer_user_id = user.user_id
+                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                        buyer_id = bp_user.id if bp_user else None
+                        
+                        purchase = BookPurchase.query.filter(
+                            db.or_(
+                                BookPurchase.buyer_user_id == buyer_user_id,
+                                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                            ),
+                            BookPurchase.status == TransactionStatus.PENDING,
+                            db.func.abs(BookPurchase.amount - amount_total) < 0.01
+                        ).order_by(BookPurchase.created_at.desc()).first()
+                        
+                        if purchase:
+                            logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
+                
+                # Complete the purchase if found
+                if purchase:
+                    if complete_purchase(purchase, payment_intent_id, amount_total):
+                        logger.info(f"✅ Purchase {purchase.id} completed from payment_intent.succeeded webhook")
+                else:
+                    logger.warning(f"⚠️  payment_intent.succeeded received but couldn't find matching purchase. payment_intent={payment_intent_id}, amount=${amount_total}, email={customer_email}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing payment_intent.succeeded webhook: {str(e)}", exc_info=True)
+        
+        elif event['type'] == 'checkout.session.completed':
             session = event['data']['object']
             # Extract book_id from metadata
             book_id = session.get('metadata', {}).get('book_id')
@@ -2535,91 +2793,13 @@ def stripe_webhook():
                             logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
                             book_id = purchase.book_project_id
                 
-                # If we found a purchase, complete it
+                # Complete the purchase if found
                 if purchase:
-                    book = BookProject.query.get(purchase.book_project_id)
-                    if not book:
-                        logger.error(f"Book {purchase.book_project_id} not found for purchase {purchase.id}")
-                        return jsonify({'received': True})
-                    
-                    # Prevent self-purchase
-                    if book.author and book.author.user_id == purchase.buyer_user_id:
-                        logger.warning(f"Self-purchase attempt blocked for purchase {purchase.id}")
-                        return jsonify({'received': True})
-                    
-                    # Complete the purchase
-                    purchase.status = TransactionStatus.COMPLETED
-                    purchase.purchased_at = datetime.now(timezone.utc)
-                    purchase.transaction_id = payment_intent_id or purchase.transaction_id
-                    purchase.payment_method = 'stripe'
-                    db.session.flush()
-                    
-                    # Check if sale already exists
-                    existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
-                    if not existing_sale:
-                        # Create sale record
-                        royalty_percentage = 0.7
-                        royalty_amount = purchase.amount * royalty_percentage
-                        platform_fee = purchase.amount - royalty_amount
-                        
-                        sale = BookSale(
-                            seller_id=book.author_id,
-                            book_project_id=purchase.book_project_id,
-                            purchase_id=purchase.id,
-                            royalty_amount=royalty_amount,
-                            royalty_percentage=royalty_percentage,
-                            platform_fee=platform_fee,
-                            net_amount=royalty_amount,
-                            currency=purchase.currency,
-                            status=TransactionStatus.COMPLETED,
-                            paid_at=datetime.now(timezone.utc)
-                        )
-                        db.session.add(sale)
-                        db.session.flush()  # Get sale.id before committing
-                        
-                        # Update book statistics
-                        book.total_sales = (book.total_sales or 0) + 1
-                        book.total_revenue = (book.total_revenue or 0.0) + purchase.amount
-                        
-                        db.session.commit()
-                        
-                        # CRITICAL: Trigger revenue distribution - this calculates investor returns
-                        try:
-                            from glconnect.revenue_distribution_service import distribute_revenue
-                            result = distribute_revenue(sale, db)
-                            if result and result.get('success'):
-                                logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
-                            else:
-                                logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
-                                # Mark sale for manual reconciliation
-                                sale.distribution_completed = False
-                                db.session.commit()
-                        except Exception as e:
-                            logger.error(f"❌ Revenue distribution FAILED in webhook for sale {sale.id}: {str(e)}", exc_info=True)
-                            # Mark sale for manual reconciliation
-                            sale.distribution_completed = False
-                            db.session.commit()
-                            # Don't fail the purchase - it's recorded, just needs manual distribution
-                        
-                        logger.info(f"✅ Purchase {purchase.id} completed from Stripe webhook for book {purchase.book_project_id}, Sale {sale.id} created")
-                    else:
-                        # Sale already exists, but check if distribution was completed
-                        if not existing_sale.distribution_completed:
-                            logger.warning(f"⚠️  Sale {existing_sale.id} exists but distribution not completed. Attempting distribution...")
-                            try:
-                                from glconnect.revenue_distribution_service import distribute_revenue
-                                result = distribute_revenue(existing_sale, db)
-                                if result and result.get('success'):
-                                    logger.info(f"✅ Revenue distributed for existing sale {existing_sale.id}: {result}")
-                                else:
-                                    logger.error(f"⚠️  Revenue distribution failed for existing sale {existing_sale.id}: {result}")
-                            except Exception as e:
-                                logger.error(f"❌ Revenue distribution FAILED for existing sale {existing_sale.id}: {str(e)}", exc_info=True)
-                        db.session.commit()
-                        logger.info(f"✅ Purchase {purchase.id} already has sale record, marked as completed")
-                
+                    if complete_purchase(purchase, payment_intent_id, amount_total):
+                        logger.info(f"✅ Purchase {purchase.id} completed from checkout.session.completed webhook")
                 # If no purchase found but we have book_id, create new purchase (fallback)
                 elif book_id:
+                    logger.warning(f"⚠️  checkout.session.completed received but couldn't find matching purchase. book_id={book_id}, purchase_id={purchase_id}, amount=${amount_total}, email={customer_email}. Creating new purchase...")
                     try:
                         book_id = int(book_id)
                         user = User.query.filter_by(email=customer_email).first() if customer_email else None
@@ -2654,11 +2834,14 @@ def stripe_webhook():
                                 ).first()
                                 
                                 if not existing:
+                                    # Get actual amount paid from Stripe (may be more than book price)
+                                    actual_amount = amount_total if amount_total and amount_total > 0 else book.price
+                                    
                                     purchase = BookPurchase(
                                         buyer_id=buyer_id,
                                         buyer_user_id=buyer_user_id,
                                         book_project_id=book_id,
-                                        amount=book.price,
+                                        amount=actual_amount,  # Use actual amount paid
                                         currency=book.currency,
                                         status=TransactionStatus.COMPLETED,
                                         purchased_at=datetime.now(timezone.utc),
@@ -2668,14 +2851,26 @@ def stripe_webhook():
                                     db.session.add(purchase)
                                     db.session.flush()
                                     
+                                    # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
+                                    base_price = book.price
+                                    extra_amount = max(0, actual_amount - base_price)  # Amount exceeding book price
+                                    
+                                    # Base price: 70% to author, 30% to platform
+                                    base_royalty = base_price * 0.7
+                                    base_platform_fee = base_price * 0.3
+                                    
+                                    # Extra amount: 100% to author, 0% to platform
+                                    royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+                                    platform_fee = base_platform_fee  # Platform only gets fee from base price
+                                    
                                     sale = BookSale(
                                         seller_id=book.author_id,
                                         book_project_id=book_id,
                                         purchase_id=purchase.id,
-                                        royalty_amount=book.price * 0.7,
+                                        royalty_amount=royalty_amount,
                                         royalty_percentage=0.7,
-                                        platform_fee=book.price * 0.3,
-                                        net_amount=book.price * 0.7,
+                                        platform_fee=platform_fee,
+                                        net_amount=royalty_amount,
                                         currency=book.currency,
                                         status=TransactionStatus.COMPLETED,
                                         paid_at=datetime.now(timezone.utc)
@@ -3164,11 +3359,11 @@ def download_digital_book(book_id):
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-        
-        if not purchase:
-            flash("You must purchase this book to download it.", "error")
-            return redirect(url_for('book_platform.marketplace'))
+            ).first()
+            
+            if not purchase:
+                flash("You must purchase this book to download it.", "error")
+                return redirect(url_for('book_platform.marketplace'))
     
     if not book.digital_file_path:
         flash("Digital file not available for this book.", "error")
@@ -3220,11 +3415,11 @@ def download_audio_book(book_id):
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-        
-        if not purchase:
-            flash("You must purchase this book to download it.", "error")
-            return redirect(url_for('book_platform.marketplace'))
+            ).first()
+            
+            if not purchase:
+                flash("You must purchase this book to download it.", "error")
+                return redirect(url_for('book_platform.marketplace'))
     
     # Serve the audio file
     if not os.path.exists(book.audiobook_file_path):
@@ -3792,8 +3987,8 @@ def make_investment(campaign_id):
                 # Set return start date for all CONFIRMED investments (only confirmed ones should get returns)
                 for inv in campaign.investments:
                     if inv.status == InvestmentStatus.CONFIRMED:
-                        inv.return_start_date = datetime.now(timezone.utc)
-                        inv.status = InvestmentStatus.ACTIVE
+                    inv.return_start_date = datetime.now(timezone.utc)
+                    inv.status = InvestmentStatus.ACTIVE
             
             db.session.commit()
             

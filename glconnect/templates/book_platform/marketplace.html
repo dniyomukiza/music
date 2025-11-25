@@ -417,7 +417,7 @@
                                                     </button>
                                                     
                                                     {% if book.price and book.price > 0 %}
-                                                        <button class="btn btn-success btn-sm" onclick="buyWithStripeLink({{ book.id }}, false)">
+                                                        <button class="btn btn-success btn-sm" onclick="showPurchaseModal({{ book.id }}, {{ book.price }}, false)">
                                                             <i class="fas fa-shopping-cart me-1"></i>Buy for ${{ "%.2f"|format(book.price) }}
                                                         </button>
                                                     {% else %}
@@ -770,81 +770,126 @@
             }, 10000);
         }
 
-        // Stripe Payment Link Integration
-        function buyWithStripeLink(bookId, audiobookPurchase = false) {
-            // Show confirmation dialog
-            const purchaseType = audiobookPurchase ? 'audiobook' : 'book';
-            const confirmMessage = `You're about to purchase this ${purchaseType}. You'll be redirected to Stripe for secure payment processing.`;
+        // Show custom payment amount modal
+        let currentBookId = null;
+        let currentMinAmount = 0;
+        let currentAudiobookPurchase = false;
+
+        function showPurchaseModal(bookId, minAmount, audiobookPurchase = false) {
+            currentBookId = bookId;
+            currentMinAmount = minAmount;
+            currentAudiobookPurchase = audiobookPurchase;
             
-            if (confirm(confirmMessage)) {
-                // Call backend to create purchase record first
-                fetch(`/mybook/books/${bookId}/purchase`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    // Check if response is JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        // Server returned HTML (error page) instead of JSON
-                        return response.text().then(text => {
-                            console.error('Server returned non-JSON response (status ' + response.status + '):', text.substring(0, 500));
-                            throw new Error('Server error ' + response.status + ': ' + response.statusText + '. Check console for details.');
-                        });
-                    }
-                    // Check if response is an error
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            console.error('Server returned error:', data);
-                            throw new Error(data.error || data.message || 'Server error: ' + response.status);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Store purchase info for success callback
-                        if (data.success_url) {
-                            localStorage.setItem('pendingPurchase', JSON.stringify({
-                                bookId: bookId,
-                                purchaseId: data.purchase_id,
-                                successUrl: data.success_url,
-                                audiobookPurchase: audiobookPurchase
-                            }));
-                        }
-                        
-                        // Redirect to Stripe payment link with purchase_id
-                        if (data.stripe_payment_link) {
-                            window.location.href = data.stripe_payment_link;
-                        } else {
-                            alert('Purchase link not available. Please try again.');
-                        }
-                    } else {
-                        alert('Purchase failed: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Purchase error:', error);
-                    console.error('Error name:', error.name);
-                    console.error('Error message:', error.message);
-                    console.error('Error stack:', error.stack);
-                    
-                    let errorMsg = 'Purchase failed. ';
-                    if (error.message) {
-                        errorMsg += error.message;
-                    } else if (typeof error === 'string') {
-                        errorMsg += error;
-                    } else if (error.toString && typeof error.toString === 'function') {
-                        errorMsg += error.toString();
-                    } else {
-                        errorMsg += 'Please check the browser console (F12) for details.';
-                    }
-                    
-                    alert(errorMsg + '\n\nOpen browser console (F12) for more details.');
-                });
+            // Set minimum amount display
+            document.getElementById('minAmount').textContent = minAmount.toFixed(2);
+            
+            // Set input value to minimum amount
+            const amountInput = document.getElementById('customAmount');
+            amountInput.value = minAmount.toFixed(2);
+            amountInput.min = minAmount;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('customPaymentModal'));
+            modal.show();
+        }
+
+        // Handle confirm purchase button
+        document.getElementById('confirmPurchaseBtn').addEventListener('click', function() {
+            const amountInput = document.getElementById('customAmount');
+            const customAmount = parseFloat(amountInput.value);
+            
+            // Validate amount
+            if (isNaN(customAmount) || customAmount < currentMinAmount) {
+                alert(`Please enter an amount of at least $${currentMinAmount.toFixed(2)}`);
+                amountInput.focus();
+                return;
             }
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('customPaymentModal'));
+            modal.hide();
+            
+            // Proceed with purchase
+            buyWithStripeLink(currentBookId, customAmount, currentAudiobookPurchase);
+        });
+
+        // Stripe Payment Link Integration
+        function buyWithStripeLink(bookId, customAmount = null, audiobookPurchase = false) {
+            // Call backend to create purchase record with custom amount
+            const requestBody = {};
+            if (customAmount !== null) {
+                requestBody.custom_amount = customAmount;
+            }
+            
+            fetch(`/mybook/books/${bookId}/purchase`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => {
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // Server returned HTML (error page) instead of JSON
+                    return response.text().then(text => {
+                        console.error('Server returned non-JSON response (status ' + response.status + '):', text.substring(0, 500));
+                        throw new Error('Server error ' + response.status + ': ' + response.statusText + '. Check console for details.');
+                    });
+                }
+                // Check if response is an error
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        console.error('Server returned error:', data);
+                        throw new Error(data.error || data.message || 'Server error: ' + response.status);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Store purchase info for success callback
+                    if (data.success_url) {
+                        localStorage.setItem('pendingPurchase', JSON.stringify({
+                            bookId: bookId,
+                            purchaseId: data.purchase_id,
+                            successUrl: data.success_url,
+                            audiobookPurchase: audiobookPurchase
+                        }));
+                    }
+                    
+                    // Redirect to Stripe payment link or checkout session
+                    if (data.stripe_checkout_url) {
+                        window.location.href = data.stripe_checkout_url;
+                    } else if (data.stripe_payment_link) {
+                        window.location.href = data.stripe_payment_link;
+                    } else {
+                        alert('Purchase link not available. Please try again.');
+                    }
+                } else {
+                    alert('Purchase failed: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Purchase error:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                
+                let errorMsg = 'Purchase failed. ';
+                if (error.message) {
+                    errorMsg += error.message;
+                } else if (typeof error === 'string') {
+                    errorMsg += error;
+                } else if (error.toString && typeof error.toString === 'function') {
+                    errorMsg += error.toString();
+                } else {
+                    errorMsg += 'Please check the browser console (F12) for details.';
+                }
+                
+                alert(errorMsg + '\n\nOpen browser console (F12) for more details.');
+            });
         }
 
         function showPurchaseNotification(bookId, audiobookPurchase) {

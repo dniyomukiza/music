@@ -357,6 +357,71 @@ class BookPurchase(db.Model):
     sale = db.relationship('BookSale', backref='purchase', uselist=False)
     # Note: buyer relationship is handled via buyer_id -> BookPlatformUser
     # buyer_user_id directly references users.user_id (no relationship needed as it's a direct FK)
+    
+    # Relationship to User via buyer_user_id
+    buyer_user = db.relationship('User', foreign_keys=[buyer_user_id], backref='book_purchases', lazy=True)
+    
+    def get_buyer_name(self):
+        """Get buyer's name/username - works for both buyer_id and buyer_user_id"""
+        from glconnect.models import User  # Import here to avoid circular dependency
+        
+        # Try buyer_id first (BookPlatformUser - has pen_name)
+        if self.buyer_id:
+            buyer = BookPlatformUser.query.get(self.buyer_id)
+            if buyer:
+                # Prefer pen_name, fallback to username
+                if buyer.pen_name:
+                    return buyer.pen_name
+                if buyer.user:
+                    return buyer.user.username
+                return f"User {buyer.id}"
+        
+        # Fallback to buyer_user_id (User - has username, first_name, last_name)
+        if self.buyer_user_id:
+            user = User.query.get(self.buyer_user_id)
+            if user:
+                # Prefer full name if available, fallback to username
+                if user.first_name and user.last_name:
+                    return f"{user.first_name} {user.last_name}"
+                return user.username
+        
+        return "Unknown Buyer"
+    
+    def get_buyer_username(self):
+        """Get buyer's username - works for both buyer_id and buyer_user_id"""
+        from glconnect.models import User  # Import here to avoid circular dependency
+        
+        # Try buyer_id first (BookPlatformUser)
+        if self.buyer_id:
+            buyer = BookPlatformUser.query.get(self.buyer_id)
+            if buyer and buyer.user:
+                return buyer.user.username
+        
+        # Fallback to buyer_user_id (User)
+        if self.buyer_user_id:
+            user = User.query.get(self.buyer_user_id)
+            if user:
+                return user.username
+        
+        return "Unknown"
+    
+    def get_buyer_email(self):
+        """Get buyer's email - works for both buyer_id and buyer_user_id"""
+        from glconnect.models import User  # Import here to avoid circular dependency
+        
+        # Try buyer_id first (BookPlatformUser)
+        if self.buyer_id:
+            buyer = BookPlatformUser.query.get(self.buyer_id)
+            if buyer and buyer.user:
+                return buyer.user.email
+        
+        # Fallback to buyer_user_id (User)
+        if self.buyer_user_id:
+            user = User.query.get(self.buyer_user_id)
+            if user:
+                return user.email
+        
+        return None
 
 # Book Sale Model
 class BookSale(db.Model):

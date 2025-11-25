@@ -95,7 +95,7 @@
                                         {{ sale.status.value|title }}
                                     </span>
                                 </td>
-                                <td>{{ sale.purchase.buyer.username if sale.purchase and sale.purchase.buyer else 'N/A' }}</td>
+                                <td>{{ sale.purchase.get_buyer_name() if sale.purchase else 'N/A' }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
