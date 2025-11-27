@@ -161,8 +161,29 @@ def create_app():
         
         if is_api_request:
             import logging
+            import traceback
             logger = logging.getLogger(__name__)
-            logger.error(f"500 error in {request.path}: {str(error)}", exc_info=True)
+            error_traceback = traceback.format_exc()
+            error_msg = str(error)
+            
+            # Log full technical details for debugging (server-side only)
+            logger.error("=" * 80)
+            logger.error("❌ GLOBAL 500 ERROR - Full Technical Details (for debugging)")
+            logger.error("=" * 80)
+            logger.error(f"Request Context:")
+            logger.error(f"  - Path: {request.path}")
+            logger.error(f"  - Method: {request.method}")
+            logger.error(f"  - User: {request.remote_addr if request else 'N/A'}")
+            logger.error(f"  - Headers: {dict(request.headers) if request else 'N/A'}")
+            logger.error(f"Error Details:")
+            logger.error(f"  - Error Type: {type(error).__name__}")
+            logger.error(f"  - Error Message: {error_msg}")
+            logger.error(f"  - Full Traceback:")
+            logger.error(error_traceback)
+            logger.error("=" * 80)
+            # Also log with exc_info for stack trace in log handlers
+            logger.error(f"500 error in {request.path}: {error_msg}", exc_info=True)
+            
             # Return user-friendly error message without exposing technical details
             return jsonify({
                 'success': False,

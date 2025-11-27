@@ -2166,8 +2166,9 @@ def purchase_book(book_id):
                     }
                 )
             except Exception as cast_error:
-                # If cast fails, try without explicit cast (let PostgreSQL infer)
-                logger.warning(f"Enum cast failed, trying without cast: {cast_error}")
+                # If cast fails, rollback the failed transaction before retrying
+                db.session.rollback()
+                logger.warning(f"Enum cast failed, rolling back and trying without cast: {cast_error}")
                 try:
                     result = db.session.execute(
                         text("""
@@ -2188,7 +2189,8 @@ def purchase_book(book_id):
                         }
                     )
                 except Exception as no_cast_error:
-                    # If that also fails, try to find the actual enum type name
+                    # If that also fails, rollback and try to find the actual enum type name
+                    db.session.rollback()
                     logger.error(f"Both enum cast approaches failed. Cast error: {cast_error}, No-cast error: {no_cast_error}")
                     # Try to query the actual enum type name
                     try:
@@ -2314,10 +2316,19 @@ def purchase_book(book_id):
                 logger.info(f"BookSale already exists for purchase {purchase.id}")
         except Exception as sale_error:
             # Don't fail the purchase if sale creation fails - log and continue
-            logger.error(f"⚠️  Failed to create BookSale for purchase {purchase.id}: {sale_error}", exc_info=True)
-            # Log the full error for debugging
             import traceback
-            logger.error(f"⚠️  BookSale creation traceback:\n{traceback.format_exc()}")
+            sale_traceback = traceback.format_exc()
+            logger.error("=" * 80)
+            logger.error("⚠️  BOOKSALE CREATION ERROR - Full Technical Details (for debugging)")
+            logger.error("=" * 80)
+            logger.error(f"Purchase ID: {purchase.id}")
+            logger.error(f"Book ID: {book_id}")
+            logger.error(f"Error Type: {type(sale_error).__name__}")
+            logger.error(f"Error Message: {str(sale_error)}")
+            logger.error(f"Full Traceback:\n{sale_traceback}")
+            logger.error("=" * 80)
+            # Also log with exc_info for stack trace in log handlers
+            logger.error(f"Failed to create BookSale for purchase {purchase.id}: {sale_error}", exc_info=True)
         
         # Generate success and cancel URLs
         try:
@@ -2353,23 +2364,52 @@ def purchase_book(book_id):
         import traceback
         error_traceback = traceback.format_exc()
         # Log full error details for debugging (server-side only)
-        logger.error(f"❌ ERROR creating purchase for book {book_id}, buyer {buyer_user_id}")
-        logger.error(f"❌ Error type: {type(e).__name__}")
-        logger.error(f"❌ Error message: {error_msg}")
-        logger.error(f"❌ Full traceback:\n{error_traceback}", exc_info=True)
+        # This ensures developers can see technical details even though users see friendly messages
+        logger.error("=" * 80)
+        logger.error("❌ PURCHASE ERROR - Full Technical Details (for debugging)")
+        logger.error("=" * 80)
+        logger.error(f"Request Context:")
+        logger.error(f"  - Book ID: {book_id}")
+        logger.error(f"  - Buyer User ID: {buyer_user_id}")
+        logger.error(f"  - Request Path: {request.path if request else 'N/A'}")
+        logger.error(f"  - Request Method: {request.method if request else 'N/A'}")
+        logger.error(f"  - User: {current_user.username if current_user.is_authenticated else 'Anonymous'}")
+        logger.error(f"Error Details:")
+        logger.error(f"  - Error Type: {type(e).__name__}")
+        logger.error(f"  - Error Message: {error_msg}")
+        logger.error(f"  - Full Traceback:")
+        logger.error(error_traceback)
+        logger.error("=" * 80)
+        # Also log with exc_info for stack trace in log handlers
+        logger.error(f"Purchase failed for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
         
         # Convert technical errors to user-friendly messages
         user_friendly_error = "We encountered an issue processing your purchase. Please try again or contact support if the problem persists."
         
+        # Check if we're in debug/development mode - include more details for debugging
+        try:
+            from flask import current_app
+            is_debug = current_app.config.get('DEBUG', False) or current_app.config.get('FLASK_ENV') == 'development'
+        except:
+            is_debug = False
+        
         # Check for specific error types and provide better messages
         if 'psycopg2' in error_msg.lower() or 'database' in error_msg.lower() or 'sql' in error_msg.lower():
             user_friendly_error = "A database error occurred. Our team has been notified. Please try again in a moment."
+            if is_debug:
+                user_friendly_error += f" (Debug: {error_msg[:200]})"
         elif 'enum' in error_msg.lower() or 'transactionstatus' in error_msg.lower():
             user_friendly_error = "There was an issue with the purchase status. Please try again."
+            if is_debug:
+                user_friendly_error += f" (Debug: {error_msg[:200]})"
         elif 'not found' in error_msg.lower() or '404' in error_msg.lower():
             user_friendly_error = "The book you're trying to purchase could not be found."
         elif 'permission' in error_msg.lower() or 'unauthorized' in error_msg.lower():
             user_friendly_error = "You don't have permission to perform this action."
+        elif is_debug:
+            # In debug mode, include the actual error message
+            user_friendly_error = f"We encountered an issue: {error_msg[:300]}"
+        
         
         # Always return JSON, never HTML
         # Check if it's a database constraint error (missing column)
@@ -2424,8 +2464,9 @@ def purchase_book(book_id):
                         }
                     )
                 except Exception as cast_error:
-                    # If cast fails, try without explicit cast (let PostgreSQL infer)
-                    logger.warning(f"Enum cast failed, trying without cast: {cast_error}")
+                    # If cast fails, rollback the failed transaction before retrying
+                    db.session.rollback()
+                    logger.warning(f"Enum cast failed, rolling back and trying without cast: {cast_error}")
                     try:
                         result = db.session.execute(
                             text("""
@@ -2444,7 +2485,8 @@ def purchase_book(book_id):
                             }
                         )
                     except Exception as no_cast_error:
-                        # If that also fails, try to find the actual enum type name
+                        # If that also fails, rollback and try to find the actual enum type name
+                        db.session.rollback()
                         logger.error(f"Both enum cast approaches failed. Cast error: {cast_error}, No-cast error: {no_cast_error}")
                         # Try to query the actual enum type name
                         try:
@@ -2597,26 +2639,62 @@ def purchase_book(book_id):
                     'error': 'We encountered an issue processing your purchase. Please try again or contact support if the problem persists.'
                 }), 500
         else:
-            # Return JSON error with user-friendly message (no technical details)
-            return jsonify({
+            # Return JSON error with user-friendly message
+            # Include debug info if in debug mode
+            error_response = {
                 'success': False,
                 'error': user_friendly_error
-            }), 500
+            }
+            if is_debug:
+                error_response['debug_info'] = {
+                    'error_type': type(e).__name__,
+                    'error_message': error_msg[:500]  # First 500 chars of error
+                }
+            return jsonify(error_response), 500
     except Exception as outer_error:
         # Catch any exception that wasn't caught in inner try blocks
         import traceback
         error_traceback = traceback.format_exc()
-        logger.error(f"❌ UNHANDLED ERROR in purchase_book: {str(outer_error)}", exc_info=True)
+        error_msg = str(outer_error)
+        logger.error("=" * 80)
+        logger.error("❌ UNHANDLED PURCHASE ERROR - Full Technical Details (for debugging)")
+        logger.error("=" * 80)
+        logger.error(f"Request Context:")
+        logger.error(f"  - Book ID: {book_id if 'book_id' in locals() else 'Unknown'}")
+        logger.error(f"  - Buyer User ID: {buyer_user_id if 'buyer_user_id' in locals() else 'Unknown'}")
+        logger.error(f"  - Request Path: {request.path if request else 'N/A'}")
+        logger.error(f"  - Request Method: {request.method if request else 'N/A'}")
+        logger.error(f"Error Details:")
+        logger.error(f"  - Error Type: {type(outer_error).__name__}")
+        logger.error(f"  - Error Message: {error_msg}")
+        logger.error(f"  - Full Traceback:")
+        logger.error(error_traceback)
+        logger.error("=" * 80)
+        # Also log with exc_info for stack trace in log handlers
+        logger.error(f"Unhandled error in purchase_book: {error_msg}", exc_info=True)
+        
+        # Check if we're in debug mode
+        try:
+            is_debug = current_app.config.get('DEBUG', False) or current_app.config.get('FLASK_ENV') == 'development'
+        except:
+            is_debug = False
         
         # Convert to user-friendly message
         user_friendly_error = "We encountered an unexpected issue. Please try again or contact support if the problem persists."
-        if 'psycopg2' in str(outer_error).lower() or 'database' in str(outer_error).lower():
+        if 'psycopg2' in error_msg.lower() or 'database' in error_msg.lower():
             user_friendly_error = "A database error occurred. Our team has been notified. Please try again in a moment."
         
-        return jsonify({
+        error_response = {
             'success': False,
             'error': user_friendly_error
-        }), 500
+        }
+        if is_debug:
+            error_response['debug_info'] = {
+                'error_type': type(outer_error).__name__,
+                'error_message': error_msg[:500]
+            }
+        
+        return jsonify(error_response), 500
     
     # Purchase is created as PENDING - sale and revenue distribution will happen in success callback
     # after payment is confirmed
@@ -3382,7 +3460,27 @@ def handle_500_error(error):
     )
     
     if is_api_request:
-        logger.error(f"500 error in {request.path}: {str(error)}", exc_info=True)
+        import traceback
+        error_traceback = traceback.format_exc()
+        error_msg = str(error)
+        
+        # Log full technical details for debugging (server-side only)
+        logger.error("=" * 80)
+        logger.error("❌ BLUEPRINT 500 ERROR - Full Technical Details (for debugging)")
+        logger.error("=" * 80)
+        logger.error(f"Request Context:")
+        logger.error(f"  - Path: {request.path}")
+        logger.error(f"  - Method: {request.method}")
+        logger.error(f"  - User: {request.remote_addr if request else 'N/A'}")
+        logger.error(f"Error Details:")
+        logger.error(f"  - Error Type: {type(error).__name__}")
+        logger.error(f"  - Error Message: {error_msg}")
+        logger.error(f"  - Full Traceback:")
+        logger.error(error_traceback)
+        logger.error("=" * 80)
+        # Also log with exc_info for stack trace in log handlers
+        logger.error(f"500 error in {request.path}: {error_msg}", exc_info=True)
+        
         # Return user-friendly error message without exposing technical details
         return jsonify({
             'success': False,
