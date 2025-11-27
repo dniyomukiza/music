@@ -1919,14 +1919,15 @@ def purchase_book(book_id):
         buyer_user_id = current_user.user_id if current_user.is_authenticated else None
         if not buyer_user_id:
             return jsonify({'error': 'User not authenticated'}), 401
-    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
-    from glconnect.book_platform_models import BookPlatformUser
-    
-    # Eager load author information to ensure fresh data from database
-    book = BookProject.query.options(
-        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-    ).get_or_404(book_id)
-    
+        
+        # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
+        from glconnect.book_platform_models import BookPlatformUser
+        
+        # Eager load author information to ensure fresh data from database
+        book = BookProject.query.options(
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        ).get_or_404(book_id)
+        
         # Buyers only need a user account - NO profile required
         buyer_user_id = current_user.user_id
         
@@ -1943,7 +1944,7 @@ def purchase_book(book_id):
                     author_user_id = book.author.user.user_id
                 
                 if author_user_id and author_user_id == buyer_user_id:
-        return jsonify({'error': 'You cannot purchase your own book'}), 400
+                    return jsonify({'error': 'You cannot purchase your own book'}), 400
         except Exception as self_purchase_check_error:
             logger.warning(f"Error checking self-purchase: {self_purchase_check_error}, continuing anyway")
             # Continue with purchase if check fails (better to allow than block)
