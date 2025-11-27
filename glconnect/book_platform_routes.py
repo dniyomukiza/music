@@ -2089,6 +2089,8 @@ def purchase_book(book_id):
                     currency=book.currency,
                     status=TransactionStatus.PENDING
                 )
+                # Populate buyer information (username and full name)
+                purchase.populate_buyer_info()
                 db.session.add(purchase)
                 db.session.flush()
                 logger.info(f"✅ Created purchase with buyer_user_id={buyer_user_id}")
@@ -2122,11 +2124,26 @@ def purchase_book(book_id):
             import uuid as uuid_lib
             from datetime import datetime, timezone
             
+            # Get buyer info for the SQL insert
+            buyer_username = None
+            buyer_full_name = None
+            if buyer_id:
+                buyer = BookPlatformUser.query.get(buyer_id)
+                if buyer:
+                    if buyer.user:
+                        buyer_username = buyer.user.username
+                        if buyer.pen_name:
+                            buyer_full_name = buyer.pen_name
+                        elif buyer.user.first_name and buyer.user.last_name:
+                            buyer_full_name = f"{buyer.user.first_name} {buyer.user.last_name}"
+                        else:
+                            buyer_full_name = buyer.user.username
+            
             purchase_uuid = str(uuid_lib.uuid4())
             result = db.session.execute(
                 text("""
-                    INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                    VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
+                    INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
+                    VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
                     RETURNING id
                 """),
                 {
@@ -2136,6 +2153,8 @@ def purchase_book(book_id):
                     'status': 'PENDING',
                     'book_project_id': book_id,
                     'buyer_id': buyer_id,
+                    'buyer_username': buyer_username,
+                    'buyer_full_name': buyer_full_name,
                     'created_at': datetime.now(timezone.utc)
                 }
             )
@@ -2422,10 +2441,13 @@ def purchase_success():
             currency=book.currency,
             status=TransactionStatus.PENDING
         )
+        # Populate buyer information (username and full name)
+        purchase.populate_buyer_info()
         db.session.add(purchase)
         db.session.flush()
         
-        # Complete the purchase
+        # Complete the purchase - always mark as COMPLETED when success callback is reached
+        # This assumes that if user reached this page, payment was successful
         book = BookProject.query.get_or_404(purchase.book_project_id)
         purchase.status = TransactionStatus.COMPLETED
         purchase.purchased_at = datetime.now(timezone.utc)
@@ -2849,6 +2871,8 @@ def stripe_webhook():
                                         transaction_id=payment_intent_id,
                                         payment_method='stripe'
                                     )
+                                    # Populate buyer information (username and full name)
+                                    purchase.populate_buyer_info()
                                     db.session.add(purchase)
                                     db.session.flush()
                                     

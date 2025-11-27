@@ -348,6 +348,10 @@ class BookPurchase(db.Model):
     buyer_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # Direct reference to users table
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
     
+    # Buyer information (stored for easy access and historical record)
+    buyer_username = db.Column(db.String(80), nullable=True)  # Store username for quick access
+    buyer_full_name = db.Column(db.String(200), nullable=True)  # Store full name (first_name + last_name or pen_name)
+    
     # Ensure at least one buyer identifier is set
     __table_args__ = (
         CheckConstraint('(buyer_id IS NOT NULL) OR (buyer_user_id IS NOT NULL)', name='check_buyer_exists'),
@@ -362,7 +366,11 @@ class BookPurchase(db.Model):
     buyer_user = db.relationship('User', foreign_keys=[buyer_user_id], backref='book_purchases', lazy=True)
     
     def get_buyer_name(self):
-        """Get buyer's name/username - works for both buyer_id and buyer_user_id"""
+        """Get buyer's name/username - uses stored values if available, otherwise queries database"""
+        # Use stored value if available (faster, no database query needed)
+        if self.buyer_full_name:
+            return self.buyer_full_name
+        
         from glconnect.models import User  # Import here to avoid circular dependency
         
         # Try buyer_id first (BookPlatformUser - has pen_name)
@@ -388,7 +396,11 @@ class BookPurchase(db.Model):
         return "Unknown Buyer"
     
     def get_buyer_username(self):
-        """Get buyer's username - works for both buyer_id and buyer_user_id"""
+        """Get buyer's username - uses stored value if available, otherwise queries database"""
+        # Use stored value if available (faster, no database query needed)
+        if self.buyer_username:
+            return self.buyer_username
+        
         from glconnect.models import User  # Import here to avoid circular dependency
         
         # Try buyer_id first (BookPlatformUser)
@@ -422,6 +434,40 @@ class BookPurchase(db.Model):
                 return user.email
         
         return None
+    
+    def populate_buyer_info(self):
+        """Populate buyer_username and buyer_full_name from related User/BookPlatformUser records"""
+        from glconnect.models import User  # Import here to avoid circular dependency
+        
+        # Try buyer_id first (BookPlatformUser - has pen_name)
+        if self.buyer_id:
+            buyer = BookPlatformUser.query.get(self.buyer_id)
+            if buyer:
+                # Set username
+                if buyer.user:
+                    self.buyer_username = buyer.user.username
+                    # Set full name - prefer pen_name, fallback to first_name + last_name
+                    if buyer.pen_name:
+                        self.buyer_full_name = buyer.pen_name
+                    elif buyer.user.first_name and buyer.user.last_name:
+                        self.buyer_full_name = f"{buyer.user.first_name} {buyer.user.last_name}"
+                    else:
+                        self.buyer_full_name = buyer.user.username
+                else:
+                    # No user relationship, use buyer ID as fallback
+                    self.buyer_username = f"user_{self.buyer_id}"
+                    self.buyer_full_name = f"User {self.buyer_id}"
+        
+        # Fallback to buyer_user_id (User - has username, first_name, last_name)
+        elif self.buyer_user_id:
+            user = User.query.get(self.buyer_user_id)
+            if user:
+                self.buyer_username = user.username
+                # Prefer full name if available, fallback to username
+                if user.first_name and user.last_name:
+                    self.buyer_full_name = f"{user.first_name} {user.last_name}"
+                else:
+                    self.buyer_full_name = user.username
 
 # Book Sale Model
 class BookSale(db.Model):
