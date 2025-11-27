@@ -2143,7 +2143,7 @@ def purchase_book(book_id):
             result = db.session.execute(
                 text("""
                     INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
-                    VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
+                    VALUES (:uuid, :amount, :currency, CAST(:status AS transactionstatus), :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
                     RETURNING id
                 """),
                 {
@@ -2287,6 +2287,19 @@ def purchase_book(book_id):
         error_traceback = traceback.format_exc()
         logger.error(f"❌ ERROR creating purchase for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
         
+        # Convert technical errors to user-friendly messages
+        user_friendly_error = "We encountered an issue processing your purchase. Please try again or contact support if the problem persists."
+        
+        # Check for specific error types and provide better messages
+        if 'psycopg2' in error_msg.lower() or 'database' in error_msg.lower() or 'sql' in error_msg.lower():
+            user_friendly_error = "A database error occurred. Our team has been notified. Please try again in a moment."
+        elif 'enum' in error_msg.lower() or 'transactionstatus' in error_msg.lower():
+            user_friendly_error = "There was an issue with the purchase status. Please try again."
+        elif 'not found' in error_msg.lower() or '404' in error_msg.lower():
+            user_friendly_error = "The book you're trying to purchase could not be found."
+        elif 'permission' in error_msg.lower() or 'unauthorized' in error_msg.lower():
+            user_friendly_error = "You don't have permission to perform this action."
+        
         # Always return JSON, never HTML
         # Check if it's a database constraint error (missing column)
         if 'buyer_user_id' in error_msg.lower() or ('column' in error_msg.lower() and 'does not exist' in error_msg.lower()):
@@ -2320,7 +2333,7 @@ def purchase_book(book_id):
                 result = db.session.execute(
                     text("""
                         INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                        VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
+                        VALUES (:uuid, :amount, :currency, CAST(:status AS transactionstatus), :book_project_id, :buyer_id, :created_at)
                         RETURNING id
                     """),
                     {
@@ -2451,25 +2464,28 @@ def purchase_book(book_id):
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
                 return jsonify({
                     'success': False,
-                    'error': f'Failed to process purchase: {str(fallback_error)}',
-                    'details': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+                    'error': 'We encountered an issue processing your purchase. Please try again or contact support if the problem persists.'
                 }), 500
         else:
-            # Return JSON error with details
+            # Return JSON error with user-friendly message (no technical details)
             return jsonify({
                 'success': False,
-                'error': f'Failed to process purchase: {error_msg}',
-                'details': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+                'error': user_friendly_error
             }), 500
     except Exception as outer_error:
         # Catch any exception that wasn't caught in inner try blocks
         import traceback
         error_traceback = traceback.format_exc()
         logger.error(f"❌ UNHANDLED ERROR in purchase_book: {str(outer_error)}", exc_info=True)
+        
+        # Convert to user-friendly message
+        user_friendly_error = "We encountered an unexpected issue. Please try again or contact support if the problem persists."
+        if 'psycopg2' in str(outer_error).lower() or 'database' in str(outer_error).lower():
+            user_friendly_error = "A database error occurred. Our team has been notified. Please try again in a moment."
+        
         return jsonify({
             'success': False,
-            'error': f'Failed to process purchase: {str(outer_error)}',
-            'details': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+            'error': user_friendly_error
         }), 500
     
     # Purchase is created as PENDING - sale and revenue distribution will happen in success callback
@@ -3237,11 +3253,10 @@ def handle_500_error(error):
     
     if is_api_request:
         logger.error(f"500 error in {request.path}: {str(error)}", exc_info=True)
+        # Return user-friendly error message without exposing technical details
         return jsonify({
             'success': False,
-            'error': 'Internal server error',
-            'details': str(error),
-            'traceback': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+            'error': 'We encountered an unexpected error. Our team has been notified. Please try again in a moment.'
         }), 500
     
     # For non-API routes, let Flask handle it normally

@@ -163,11 +163,10 @@ def create_app():
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"500 error in {request.path}: {str(error)}", exc_info=True)
+            # Return user-friendly error message without exposing technical details
             return jsonify({
                 'success': False,
-                'error': 'Internal server error',
-                'details': str(error),
-                'traceback': error_traceback[-500:] if len(error_traceback) > 500 else error_traceback
+                'error': 'We encountered an unexpected error. Our team has been notified. Please try again in a moment.'
             }), 500
         
         # For non-API routes, let Flask handle it normally (will show HTML error page)

@@ -743,23 +743,22 @@
                     }
                 })
                 .catch(error => {
+                    // Log technical details to console for debugging (not shown to user)
                     console.error('Purchase error:', error);
                     console.error('Error name:', error.name);
                     console.error('Error message:', error.message);
                     console.error('Error stack:', error.stack);
                     
-                    let errorMsg = 'Purchase failed. ';
-                    if (error.message) {
-                        errorMsg += error.message;
-                    } else if (typeof error === 'string') {
-                        errorMsg += error;
-                    } else if (error.toString && typeof error.toString === 'function') {
-                        errorMsg += error.toString();
+                    // Show user-friendly error message
+                    let errorMsg = 'We encountered an issue processing your purchase. ';
+                    if (error.message && !error.message.includes('Server error') && !error.message.includes('traceback') && !error.message.includes('psycopg2') && !error.message.includes('database')) {
+                        // Only show message if it's user-friendly (not technical)
+                        errorMsg = error.message;
                     } else {
-                        errorMsg += 'Please check the browser console (F12) for details.';
+                        errorMsg += 'Please try again or contact support if the problem persists.';
                     }
                     
-                    alert(errorMsg + '\n\nOpen browser console (F12) for more details.');
+                    alert(errorMsg);
                 });
             }
         }
@@ -1032,23 +1031,22 @@
                 }
             })
             .catch(error => {
+                // Log technical details to console for debugging (not shown to user)
                 console.error('Purchase error:', error);
                 console.error('Error name:', error.name);
                 console.error('Error message:', error.message);
                 console.error('Error stack:', error.stack);
                 
-                let errorMsg = 'Purchase failed. ';
-                if (error.message) {
-                    errorMsg += error.message;
-                } else if (typeof error === 'string') {
-                    errorMsg += error;
-                } else if (error.toString && typeof error.toString === 'function') {
-                    errorMsg += error.toString();
+                // Show user-friendly error message
+                let errorMsg = 'We encountered an issue processing your purchase. ';
+                if (error.message && !error.message.includes('Server error') && !error.message.includes('traceback') && !error.message.includes('psycopg2') && !error.message.includes('database')) {
+                    // Only show message if it's user-friendly (not technical)
+                    errorMsg = error.message;
                 } else {
-                    errorMsg += 'Please check the browser console (F12) for details.';
+                    errorMsg += 'Please try again or contact support if the problem persists.';
                 }
                 
-                alert(errorMsg + '\n\nOpen browser console (F12) for more details.');
+                alert(errorMsg);
             });
         }
 
