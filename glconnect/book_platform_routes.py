@@ -2140,24 +2140,88 @@ def purchase_book(book_id):
                             buyer_full_name = buyer.user.username
             
             purchase_uuid = str(uuid_lib.uuid4())
-            result = db.session.execute(
-                text("""
-                    INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
-                    VALUES (:uuid, :amount, :currency, CAST(:status AS transactionstatus), :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
-                    RETURNING id
-                """),
-                {
-                    'uuid': purchase_uuid,
-                    'amount': payment_amount,  # Use payment_amount (may be custom amount)
-                    'currency': book.currency,
-                    'status': 'pending',
-                    'book_project_id': book_id,
-                    'buyer_id': buyer_id,
-                    'buyer_username': buyer_username,
-                    'buyer_full_name': buyer_full_name,
-                    'created_at': datetime.now(timezone.utc)
-                }
-            )
+            # Try to get the enum type name from the database, or use direct value
+            # First, try with explicit cast, if that fails, try without cast
+            from glconnect.book_platform_models import TransactionStatus
+            status_enum_value = TransactionStatus.PENDING.value  # Get 'pending' string value
+            
+            try:
+                # Try with explicit cast first
+                result = db.session.execute(
+                    text("""
+                        INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
+                        VALUES (:uuid, :amount, :currency, :status::transactionstatus, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
+                        RETURNING id
+                    """),
+                    {
+                        'uuid': purchase_uuid,
+                        'amount': payment_amount,
+                        'currency': book.currency,
+                        'status': status_enum_value,
+                        'book_project_id': book_id,
+                        'buyer_id': buyer_id,
+                        'buyer_username': buyer_username,
+                        'buyer_full_name': buyer_full_name,
+                        'created_at': datetime.now(timezone.utc)
+                    }
+                )
+            except Exception as cast_error:
+                # If cast fails, try without explicit cast (let PostgreSQL infer)
+                logger.warning(f"Enum cast failed, trying without cast: {cast_error}")
+                try:
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
+                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
+                            RETURNING id
+                        """),
+                        {
+                            'uuid': purchase_uuid,
+                            'amount': payment_amount,
+                            'currency': book.currency,
+                            'status': status_enum_value,
+                            'book_project_id': book_id,
+                            'buyer_id': buyer_id,
+                            'buyer_username': buyer_username,
+                            'buyer_full_name': buyer_full_name,
+                            'created_at': datetime.now(timezone.utc)
+                        }
+                    )
+                except Exception as no_cast_error:
+                    # If that also fails, try to find the actual enum type name
+                    logger.error(f"Both enum cast approaches failed. Cast error: {cast_error}, No-cast error: {no_cast_error}")
+                    # Try to query the actual enum type name
+                    try:
+                        enum_type_result = db.session.execute(
+                            text("SELECT typname FROM pg_type WHERE typtype = 'e' AND typname ILIKE '%transaction%' LIMIT 1")
+                        )
+                        enum_type_row = enum_type_result.fetchone()
+                        if enum_type_row:
+                            actual_enum_type = enum_type_row[0]
+                            logger.info(f"Found enum type: {actual_enum_type}, trying with that")
+                            result = db.session.execute(
+                                text(f"""
+                                    INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
+                                    VALUES (:uuid, :amount, :currency, :status::{actual_enum_type}, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
+                                    RETURNING id
+                                """),
+                                {
+                                    'uuid': purchase_uuid,
+                                    'amount': payment_amount,
+                                    'currency': book.currency,
+                                    'status': status_enum_value,
+                                    'book_project_id': book_id,
+                                    'buyer_id': buyer_id,
+                                    'buyer_username': buyer_username,
+                                    'buyer_full_name': buyer_full_name,
+                                    'created_at': datetime.now(timezone.utc)
+                                }
+                            )
+                        else:
+                            raise no_cast_error
+                    except Exception as enum_query_error:
+                        logger.error(f"Failed to query enum type: {enum_query_error}")
+                        raise no_cast_error
             purchase_id = result.scalar()
             # Create minimal object for URL generation (don't query back to avoid buyer_user_id column)
             class PurchaseObj:
@@ -2251,6 +2315,9 @@ def purchase_book(book_id):
         except Exception as sale_error:
             # Don't fail the purchase if sale creation fails - log and continue
             logger.error(f"⚠️  Failed to create BookSale for purchase {purchase.id}: {sale_error}", exc_info=True)
+            # Log the full error for debugging
+            import traceback
+            logger.error(f"⚠️  BookSale creation traceback:\n{traceback.format_exc()}")
         
         # Generate success and cancel URLs
         try:
@@ -2285,7 +2352,11 @@ def purchase_book(book_id):
         error_msg = str(e)
         import traceback
         error_traceback = traceback.format_exc()
-        logger.error(f"❌ ERROR creating purchase for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
+        # Log full error details for debugging (server-side only)
+        logger.error(f"❌ ERROR creating purchase for book {book_id}, buyer {buyer_user_id}")
+        logger.error(f"❌ Error type: {type(e).__name__}")
+        logger.error(f"❌ Error message: {error_msg}")
+        logger.error(f"❌ Full traceback:\n{error_traceback}", exc_info=True)
         
         # Convert technical errors to user-friendly messages
         user_friendly_error = "We encountered an issue processing your purchase. Please try again or contact support if the problem persists."
@@ -2330,22 +2401,81 @@ def purchase_book(book_id):
                 if not book:
                     return jsonify({'error': 'Book not found'}), 404
                 
-                result = db.session.execute(
-                    text("""
-                        INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                        VALUES (:uuid, :amount, :currency, CAST(:status AS transactionstatus), :book_project_id, :buyer_id, :created_at)
-                        RETURNING id
-                    """),
-                    {
-                        'uuid': purchase_uuid,
-                        'amount': payment_amount,  # Use payment_amount (may be custom amount)
-                        'currency': book.currency or 'USD',
-                        'status': 'pending',
-                        'book_project_id': book_id,
-                        'buyer_id': minimal_bp_user.id,
-                        'created_at': datetime.now(timezone.utc)
-                    }
-                )
+                # Use SQLAlchemy's enum handling - get the actual enum value
+                from glconnect.book_platform_models import TransactionStatus
+                status_enum_value = TransactionStatus.PENDING.value  # Get 'pending' string value
+                
+                try:
+                    # Try with explicit cast first
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                            VALUES (:uuid, :amount, :currency, :status::transactionstatus, :book_project_id, :buyer_id, :created_at)
+                            RETURNING id
+                        """),
+                        {
+                            'uuid': purchase_uuid,
+                            'amount': payment_amount,
+                            'currency': book.currency or 'USD',
+                            'status': status_enum_value,
+                            'book_project_id': book_id,
+                            'buyer_id': minimal_bp_user.id,
+                            'created_at': datetime.now(timezone.utc)
+                        }
+                    )
+                except Exception as cast_error:
+                    # If cast fails, try without explicit cast (let PostgreSQL infer)
+                    logger.warning(f"Enum cast failed, trying without cast: {cast_error}")
+                    try:
+                        result = db.session.execute(
+                            text("""
+                                INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                                VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
+                                RETURNING id
+                            """),
+                            {
+                                'uuid': purchase_uuid,
+                                'amount': payment_amount,
+                                'currency': book.currency or 'USD',
+                                'status': status_enum_value,
+                                'book_project_id': book_id,
+                                'buyer_id': minimal_bp_user.id,
+                                'created_at': datetime.now(timezone.utc)
+                            }
+                        )
+                    except Exception as no_cast_error:
+                        # If that also fails, try to find the actual enum type name
+                        logger.error(f"Both enum cast approaches failed. Cast error: {cast_error}, No-cast error: {no_cast_error}")
+                        # Try to query the actual enum type name
+                        try:
+                            enum_type_result = db.session.execute(
+                                text("SELECT typname FROM pg_type WHERE typtype = 'e' AND typname ILIKE '%transaction%' LIMIT 1")
+                            )
+                            enum_type_row = enum_type_result.fetchone()
+                            if enum_type_row:
+                                actual_enum_type = enum_type_row[0]
+                                logger.info(f"Found enum type: {actual_enum_type}, trying with that")
+                                result = db.session.execute(
+                                    text(f"""
+                                        INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                                        VALUES (:uuid, :amount, :currency, :status::{actual_enum_type}, :book_project_id, :buyer_id, :created_at)
+                                        RETURNING id
+                                    """),
+                                    {
+                                        'uuid': purchase_uuid,
+                                        'amount': payment_amount,
+                                        'currency': book.currency or 'USD',
+                                        'status': status_enum_value,
+                                        'book_project_id': book_id,
+                                        'buyer_id': minimal_bp_user.id,
+                                        'created_at': datetime.now(timezone.utc)
+                                    }
+                                )
+                            else:
+                                raise no_cast_error
+                        except Exception as enum_query_error:
+                            logger.error(f"Failed to query enum type: {enum_query_error}")
+                            raise no_cast_error
                 purchase_id = result.scalar()
                 db.session.commit()
                 
