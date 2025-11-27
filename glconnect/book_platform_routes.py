@@ -2370,9 +2370,9 @@ def purchase_success():
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-    ).first()
-    
-    if existing_purchase:
+        ).first()
+        
+        if existing_purchase:
             flash('Purchase already recorded!', 'info')
             return redirect(url_for('book_platform.view_book', book_id=book_id))
         
@@ -2410,25 +2410,25 @@ def purchase_success():
                 db.session.commit()
                 buyer_id = bp_user.id
                 logger.info(f"Created BookPlatformUser {buyer_id} for purchase success callback")
-    
-    # Create purchase record
-    # Note: In purchase_success callback, we use book.price as amount since we don't have custom amount here
-    # The webhook will update the amount if user paid more
-    purchase = BookPurchase(
-                buyer_id=buyer_id,
-                buyer_user_id=buyer_user_id,
-        book_project_id=book_id,
-        amount=book.price,  # Will be updated by webhook if user paid more
-        currency=book.currency,
-        status=TransactionStatus.PENDING
-    )
-    db.session.add(purchase)
-            db.session.flush()
-    
+        
+        # Create purchase record
+        # Note: In purchase_success callback, we use book.price as amount since we don't have custom amount here
+        # The webhook will update the amount if user paid more
+        purchase = BookPurchase(
+            buyer_id=buyer_id,
+            buyer_user_id=buyer_user_id,
+            book_project_id=book_id,
+            amount=book.price,  # Will be updated by webhook if user paid more
+            currency=book.currency,
+            status=TransactionStatus.PENDING
+        )
+        db.session.add(purchase)
+        db.session.flush()
+        
         # Complete the purchase
         book = BookProject.query.get_or_404(purchase.book_project_id)
-    purchase.status = TransactionStatus.COMPLETED
-    purchase.purchased_at = datetime.now(timezone.utc)
+        purchase.status = TransactionStatus.COMPLETED
+        purchase.purchased_at = datetime.now(timezone.utc)
         purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
         purchase.payment_method = 'stripe'
     
