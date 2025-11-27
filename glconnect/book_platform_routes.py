@@ -2071,133 +2071,65 @@ def purchase_book(book_id):
         if not book.currency:
             book.currency = 'USD'
         
-        # Create purchase record - try buyer_user_id first (simpler - user just needs account)
-        # If that fails, fall back to buyer_id (requires BookPlatformUser profile)
+        # SIMPLIFIED: Just use ORM - it handles enums automatically, no casting needed!
+        # buyer_user_id is optional (nullable), so we can just not set it if column doesn't exist
         logger.info(f"=== STARTING PURCHASE for book {book_id} ===")
-        logger.info(f"buyer_user_id={buyer_user_id}, has_column={has_buyer_user_id_col}, buyer_id={buyer_id}")
+        logger.info(f"buyer_user_id={buyer_user_id}, buyer_id={buyer_id}")
         
-        purchase = None
-        purchase_created = False
-        
-        # Try buyer_user_id first (if column check says it exists)
-        if has_buyer_user_id_col:
-            try:
-                purchase = BookPurchase(
-                    buyer_user_id=buyer_user_id,
-                    book_project_id=book_id,
-                    amount=payment_amount,  # Use payment_amount (may be custom amount)
-                    currency=book.currency,
-                    status=TransactionStatus.PENDING  # PENDING until payment confirmed
+        # Ensure we have buyer_id (create BookPlatformUser if needed)
+        if not buyer_id:
+            bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+            if not bp_user:
+                from glconnect.models import Writer
+                writer = Writer.query.filter_by(user_id=buyer_user_id).first()
+                bp_user = BookPlatformUser(
+                    user_id=buyer_user_id,
+                    pen_name=writer.writer_name if writer else current_user.username,
+                    bio=writer.bio if writer else "Reader",
+                    profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
                 )
-                # Populate buyer information (username and full name)
-                purchase.populate_buyer_info()
-                db.session.add(purchase)
-                db.session.flush()
-                logger.info(f"✅ Created purchase with buyer_user_id={buyer_user_id}")
-                purchase_created = True
-            except Exception as create_error:
-                # Column check was wrong - column doesn't actually exist
-                if 'buyer_user_id' in str(create_error).lower() or 'does not exist' in str(create_error).lower():
-                    logger.warning(f"buyer_user_id column doesn't exist despite check, using buyer_id fallback")
-                    db.session.rollback()
-                    has_buyer_user_id_col = False
-                    # Need to create buyer_id
-                    if not buyer_id:
-                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                        if not bp_user:
-                            bp_user = BookPlatformUser(
-                                user_id=buyer_user_id,
-                                pen_name=current_user.username,
-                                bio="Reader"
-                            )
-                            db.session.add(bp_user)
-                            db.session.flush()
-                        buyer_id = bp_user.id
-                else:
-                    raise  # Re-raise if it's a different error
-        
-        # Fallback to buyer_id (either column doesn't exist or creation failed)
-        if not purchase_created:
-            # Column doesn't exist - use buyer_id as workaround (requires BookPlatformUser profile)
-            logger.info(f"buyer_user_id column not found, using buyer_id={buyer_id} as workaround")
-            from sqlalchemy import text
-            import uuid as uuid_lib
-            from datetime import datetime, timezone
-            
-            # Get buyer info for the SQL insert
-            buyer_username = None
-            buyer_full_name = None
-            if buyer_id:
-                buyer = BookPlatformUser.query.get(buyer_id)
-                if buyer:
-                    if buyer.user:
-                        buyer_username = buyer.user.username
-                        if buyer.pen_name:
-                            buyer_full_name = buyer.pen_name
-                        elif buyer.user.first_name and buyer.user.last_name:
-                            buyer_full_name = f"{buyer.user.first_name} {buyer.user.last_name}"
-                        else:
-                            buyer_full_name = buyer.user.username
-            
-            purchase_uuid = str(uuid_lib.uuid4())
-            # Use the ORM approach instead of raw SQL to avoid enum casting issues
-            # Create a minimal purchase object using ORM which handles enums automatically
-            purchase_already_committed = False  # Track if purchase was committed via raw SQL
-            try:
-                # Try to create purchase using ORM (handles enum automatically)
-                purchase = BookPurchase(
-                    buyer_id=buyer_id,
-                    book_project_id=book_id,
-                    amount=payment_amount,
-                    currency=book.currency,
-                    status=TransactionStatus.PENDING,  # ORM handles enum conversion
-                    buyer_username=buyer_username,
-                    buyer_full_name=buyer_full_name
-                )
-                db.session.add(purchase)
-                db.session.flush()  # Get the ID without committing
-                purchase_id = purchase.id
-                # Keep the ORM purchase object - it's already created and has all attributes
-                logger.info(f"✅ Created purchase using ORM (enum handled automatically), ID={purchase_id}")
-            except Exception as orm_error:
-                # If ORM fails (e.g., buyer_user_id column issue), fall back to raw SQL
-                db.session.rollback()
-                logger.warning(f"ORM approach failed, falling back to raw SQL: {orm_error}")
-                # Use raw SQL with enum value - PostgreSQL should accept it
-                from glconnect.book_platform_models import TransactionStatus
-                result = db.session.execute(
-                    text("""
-                        INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
-                        VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
-                        RETURNING id
-                    """),
-                    {
-                        'uuid': purchase_uuid,
-                        'amount': payment_amount,
-                        'currency': book.currency,
-                        'status': TransactionStatus.PENDING.value,  # Use string value
-                        'book_project_id': book_id,
-                        'buyer_id': buyer_id,
-                        'buyer_username': buyer_username,
-                        'buyer_full_name': buyer_full_name,
-                        'created_at': datetime.now(timezone.utc)
-                    }
-                )
-                purchase_id = result.scalar()
-                # Commit the raw SQL insert immediately
+                db.session.add(bp_user)
                 db.session.commit()
-                # Create minimal object for URL generation (don't query back to avoid buyer_user_id column)
-                class PurchaseObj:
-                    def __init__(self, purchase_id):
-                        self.id = purchase_id
-                        self.buyer_id = buyer_id
-                        self.amount = payment_amount
-                        self.status = TransactionStatus.PENDING
-                purchase = PurchaseObj(purchase_id)
-                logger.info(f"✅ Created purchase using raw SQL fallback, ID={purchase_id}")
-                # Mark that we already committed (skip the commit later)
-                purchase_already_committed = True
-            # If ORM approach succeeded, purchase_already_committed remains False
+            buyer_id = bp_user.id
+        
+        # Get buyer info for storage
+        buyer_username = None
+        buyer_full_name = None
+        if buyer_id:
+            buyer = BookPlatformUser.query.get(buyer_id)
+            if buyer and buyer.user:
+                buyer_username = buyer.user.username
+                if buyer.pen_name:
+                    buyer_full_name = buyer.pen_name
+                elif buyer.user.first_name and buyer.user.last_name:
+                    buyer_full_name = f"{buyer.user.first_name} {buyer.user.last_name}"
+                else:
+                    buyer_full_name = buyer.user.username
+        
+        # SIMPLIFIED: Just use ORM - no enum casting, no raw SQL complexity!
+        # ORM automatically handles PostgreSQL enum types
+        purchase = BookPurchase(
+            buyer_id=buyer_id,
+            book_project_id=book_id,
+            amount=payment_amount,
+            currency=book.currency,
+            status=TransactionStatus.PENDING,  # ORM handles enum automatically - no casting!
+            buyer_username=buyer_username,
+            buyer_full_name=buyer_full_name
+        )
+        # Optionally set buyer_user_id if it exists (but don't fail if it doesn't)
+        # This is safe because the column is nullable
+        try:
+            if has_buyer_user_id_col:
+                purchase.buyer_user_id = buyer_user_id
+        except:
+            pass  # Column might not actually exist, ignore - buyer_id is sufficient
+        
+        purchase.populate_buyer_info()
+        db.session.add(purchase)
+        db.session.flush()  # Get the ID without committing
+        logger.info(f"✅ Created purchase using ORM (enum handled automatically), ID={purchase.id}")
+        purchase_already_committed = False
         
         # Log purchase info (handle both ORM and minimal objects)
         purchase_info = f"ID={purchase.id}, amount=${getattr(purchase, 'amount', book.price)}"
@@ -2207,11 +2139,8 @@ def purchase_book(book_id):
             purchase_info += f", buyer_user_id={purchase.buyer_user_id}"
         logger.info(f"Purchase object created: {purchase_info}")
         
-        # Create purchase as PENDING - will be marked COMPLETED when payment is confirmed
-        if has_buyer_user_id_col and purchase_created:
-            # Only update status if using ORM (not minimal object)
-            purchase.status = TransactionStatus.PENDING
-            purchase.transaction_id = None  # Will be set when payment confirmed
+        # Purchase is already created as PENDING - no need to update status
+        # (Status is set in BookPurchase constructor above)
         
         # Commit the pending purchase so we have an ID for the success callback
         # (Skip if already committed via raw SQL)
@@ -2423,28 +2352,11 @@ def purchase_book(book_id):
                     purchase_id = purchase.id
                     logger.info(f"✅ Created purchase using ORM (enum handled automatically), ID={purchase_id}")
                 except Exception as orm_error:
-                    # If ORM fails, fall back to raw SQL with enum value
+                    # If ORM fails, this is unexpected - log and re-raise
+                    # ORM should always work if buyer_id exists
                     db.session.rollback()
-                    logger.warning(f"ORM approach failed, falling back to raw SQL: {orm_error}")
-                    from glconnect.book_platform_models import TransactionStatus
-                    result = db.session.execute(
-                        text("""
-                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
-                            RETURNING id
-                        """),
-                        {
-                            'uuid': purchase_uuid,
-                            'amount': payment_amount,
-                            'currency': book.currency or 'USD',
-                            'status': TransactionStatus.PENDING.value,  # Use string value
-                            'book_project_id': book_id,
-                            'buyer_id': minimal_bp_user.id,
-                            'created_at': datetime.now(timezone.utc)
-                        }
-                    )
-                    purchase_id = result.scalar()
-                    logger.info(f"✅ Created purchase using raw SQL fallback, ID={purchase_id}")
+                    logger.error(f"❌ ORM purchase creation failed unexpectedly: {orm_error}", exc_info=True)
+                    raise  # Re-raise - this shouldn't happen if buyer_id is set correctly
                 db.session.commit()
                 
                 # Create BookSale and trigger revenue distribution immediately, regardless of purchase status
