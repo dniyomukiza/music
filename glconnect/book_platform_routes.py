@@ -2600,18 +2600,18 @@ def stripe_webhook():
                     status=TransactionStatus.COMPLETED,
                     paid_at=datetime.now(timezone.utc)
                 )
-    db.session.add(sale)
+                db.session.add(sale)
                 db.session.flush()
                 
-                        # Update book statistics (use actual amount paid)
-                        book.total_sales = (book.total_sales or 0) + 1
-                        book.total_revenue = (book.total_revenue or 0.0) + purchase.amount  # Includes any extra payment
+                # Update book statistics (use actual amount paid)
+                book.total_sales = (book.total_sales or 0) + 1
+                book.total_revenue = (book.total_revenue or 0.0) + purchase.amount  # Includes any extra payment
                 
-    db.session.commit()
-    
-    # Trigger revenue distribution
-    try:
-        from glconnect.revenue_distribution_service import distribute_revenue
+                db.session.commit()
+                
+                # Trigger revenue distribution
+                try:
+                    from glconnect.revenue_distribution_service import distribute_revenue
                     result = distribute_revenue(sale, db)
                     if result and result.get('success'):
                         logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
@@ -2619,7 +2619,7 @@ def stripe_webhook():
                         logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
                         sale.distribution_completed = False
                         db.session.commit()
-    except Exception as e:
+                except Exception as e:
                     logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
                     sale.distribution_completed = False
                     db.session.commit()
@@ -3360,11 +3360,11 @@ def download_digital_book(book_id):
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-            ).first()
-            
-            if not purchase:
-                flash("You must purchase this book to download it.", "error")
-                return redirect(url_for('book_platform.marketplace'))
+        ).first()
+        
+        if not purchase:
+            flash("You must purchase this book to download it.", "error")
+            return redirect(url_for('book_platform.marketplace'))
     
     if not book.digital_file_path:
         flash("Digital file not available for this book.", "error")
@@ -3416,11 +3416,11 @@ def download_audio_book(book_id):
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-            ).first()
-            
-            if not purchase:
-                flash("You must purchase this book to download it.", "error")
-                return redirect(url_for('book_platform.marketplace'))
+        ).first()
+        
+        if not purchase:
+            flash("You must purchase this book to download it.", "error")
+            return redirect(url_for('book_platform.marketplace'))
     
     # Serve the audio file
     if not os.path.exists(book.audiobook_file_path):
@@ -3988,8 +3988,8 @@ def make_investment(campaign_id):
                 # Set return start date for all CONFIRMED investments (only confirmed ones should get returns)
                 for inv in campaign.investments:
                     if inv.status == InvestmentStatus.CONFIRMED:
-                    inv.return_start_date = datetime.now(timezone.utc)
-                    inv.status = InvestmentStatus.ACTIVE
+                        inv.return_start_date = datetime.now(timezone.utc)
+                        inv.status = InvestmentStatus.ACTIVE
             
             db.session.commit()
             
