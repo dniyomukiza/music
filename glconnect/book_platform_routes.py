@@ -2087,7 +2087,7 @@ def purchase_book(book_id):
                     book_project_id=book_id,
                     amount=payment_amount,  # Use payment_amount (may be custom amount)
                     currency=book.currency,
-                    status=TransactionStatus.PENDING
+                    status=TransactionStatus.PENDING  # PENDING until payment confirmed
                 )
                 # Populate buyer information (username and full name)
                 purchase.populate_buyer_info()
@@ -2150,7 +2150,7 @@ def purchase_book(book_id):
                     'uuid': purchase_uuid,
                     'amount': payment_amount,  # Use payment_amount (may be custom amount)
                     'currency': book.currency,
-                    'status': 'PENDING',
+                    'status': 'pending',
                     'book_project_id': book_id,
                     'buyer_id': buyer_id,
                     'buyer_username': buyer_username,
@@ -2179,7 +2179,6 @@ def purchase_book(book_id):
         logger.info(f"Purchase object created: {purchase_info}")
         
         # Create purchase as PENDING - will be marked COMPLETED when payment is confirmed
-        # via webhook or success callback
         if has_buyer_user_id_col and purchase_created:
             # Only update status if using ORM (not minimal object)
             purchase.status = TransactionStatus.PENDING
@@ -2193,6 +2192,65 @@ def purchase_book(book_id):
             logger.error(f"❌ Failed to commit purchase: {commit_error}", exc_info=True)
             db.session.rollback()
             raise
+        
+        # Create BookSale and trigger revenue distribution immediately, regardless of purchase status
+        # This ensures sales and investment returns are tracked even for PENDING purchases
+        try:
+            from glconnect.book_platform_models import BookSale
+            
+            # Check if sale already exists
+            existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
+            
+            if not existing_sale:
+                # Calculate revenue split: base book price is split 70/30, extra amount goes 100% to author
+                base_price = book.price
+                purchase_amount = getattr(purchase, 'amount', book.price)
+                extra_amount = max(0, purchase_amount - base_price)  # Amount exceeding book price
+                
+                royalty_percentage = 0.7
+                # Base price: 70% to author, 30% to platform
+                base_royalty = base_price * royalty_percentage
+                base_platform_fee = base_price - base_royalty
+                
+                # Extra amount: 100% to author, 0% to platform
+                royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+                platform_fee = base_platform_fee  # Platform only gets fee from base price
+                
+                logger.info(f"Creating BookSale for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase_amount:.2f}")
+                
+                sale = BookSale(
+                    seller_id=book.author_id,
+                    book_project_id=book_id,
+                    purchase_id=purchase.id,
+                    royalty_amount=royalty_amount,
+                    royalty_percentage=royalty_percentage,
+                    platform_fee=platform_fee,
+                    net_amount=royalty_amount,
+                    currency=book.currency,
+                    status=TransactionStatus.PENDING,  # Sale status matches purchase status
+                    paid_at=None  # Will be set when purchase is completed
+                )
+                db.session.add(sale)
+                db.session.commit()
+                
+                # CRITICAL: Trigger revenue distribution - this calculates investor returns
+                # This runs even for PENDING purchases to track returns immediately
+                try:
+                    result = distribute_revenue(sale, db)
+                    if result and result.get('success'):
+                        logger.info(f"✅ Revenue distributed for sale {sale.id} (PENDING purchase): {result}")
+                    else:
+                        logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
+                except Exception as e:
+                    logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
+                    # Mark sale for manual reconciliation
+                    sale.distribution_completed = False
+                    db.session.commit()
+            else:
+                logger.info(f"BookSale already exists for purchase {purchase.id}")
+        except Exception as sale_error:
+            # Don't fail the purchase if sale creation fails - log and continue
+            logger.error(f"⚠️  Failed to create BookSale for purchase {purchase.id}: {sale_error}", exc_info=True)
         
         # Generate success and cancel URLs
         try:
@@ -2269,7 +2327,7 @@ def purchase_book(book_id):
                         'uuid': purchase_uuid,
                         'amount': payment_amount,  # Use payment_amount (may be custom amount)
                         'currency': book.currency or 'USD',
-                        'status': 'PENDING',
+                        'status': 'pending',
                         'book_project_id': book_id,
                         'buyer_id': minimal_bp_user.id,
                         'created_at': datetime.now(timezone.utc)
@@ -2277,6 +2335,64 @@ def purchase_book(book_id):
                 )
                 purchase_id = result.scalar()
                 db.session.commit()
+                
+                # Create BookSale and trigger revenue distribution immediately, regardless of purchase status
+                # This ensures sales and investment returns are tracked even for PENDING purchases
+                try:
+                    from glconnect.book_platform_models import BookSale
+                    
+                    # Check if sale already exists
+                    existing_sale = BookSale.query.filter_by(purchase_id=purchase_id).first()
+                    
+                    if not existing_sale:
+                        # Calculate revenue split: base book price is split 70/30, extra amount goes 100% to author
+                        base_price = book.price
+                        extra_amount = max(0, payment_amount - base_price)  # Amount exceeding book price
+                        
+                        royalty_percentage = 0.7
+                        # Base price: 70% to author, 30% to platform
+                        base_royalty = base_price * royalty_percentage
+                        base_platform_fee = base_price - base_royalty
+                        
+                        # Extra amount: 100% to author, 0% to platform
+                        royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+                        platform_fee = base_platform_fee  # Platform only gets fee from base price
+                        
+                        logger.info(f"Creating BookSale for purchase {purchase_id} (fallback): base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${payment_amount:.2f}")
+                        
+                        sale = BookSale(
+                            seller_id=book.author_id,
+                            book_project_id=book_id,
+                            purchase_id=purchase_id,
+                            royalty_amount=royalty_amount,
+                            royalty_percentage=royalty_percentage,
+                            platform_fee=platform_fee,
+                            net_amount=royalty_amount,
+                            currency=book.currency,
+                            status=TransactionStatus.PENDING,  # Sale status matches purchase status
+                            paid_at=None  # Will be set when purchase is completed
+                        )
+                        db.session.add(sale)
+                        db.session.commit()
+                        
+                        # CRITICAL: Trigger revenue distribution - this calculates investor returns
+                        # This runs even for PENDING purchases to track returns immediately
+                        try:
+                            result = distribute_revenue(sale, db)
+                            if result and result.get('success'):
+                                logger.info(f"✅ Revenue distributed for sale {sale.id} (PENDING purchase, fallback): {result}")
+                            else:
+                                logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
+                        except Exception as e:
+                            logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
+                            # Mark sale for manual reconciliation
+                            sale.distribution_completed = False
+                            db.session.commit()
+                    else:
+                        logger.info(f"BookSale already exists for purchase {purchase_id} (fallback)")
+                except Exception as sale_error:
+                    # Don't fail the purchase if sale creation fails - log and continue
+                    logger.error(f"⚠️  Failed to create BookSale for purchase {purchase_id} (fallback): {sale_error}", exc_info=True)
                 
                 # Generate URLs
                 success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase_id, _external=True)
@@ -2382,31 +2498,64 @@ def purchase_success():
         bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
         buyer_id = bp_user.id if bp_user else None
         
-        existing_purchase = BookPurchase.query.filter(
-            db.or_(
-                BookPurchase.buyer_user_id == buyer_user_id,
-                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-            ),
-            BookPurchase.book_project_id == book_id,
-            BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
+        # First, try to find purchase by purchase_id (from URL parameter)
+        purchase = None
+        if purchase_id:
+            purchase = BookPurchase.query.get(purchase_id)
+            if purchase and purchase.book_project_id != book_id:
+                purchase = None  # purchase_id doesn't match book_id
         
-        if existing_purchase:
-            flash('Purchase already recorded!', 'info')
-            return redirect(url_for('book_platform.view_book', book_id=book_id))
-        
-        # Find existing PENDING purchase (created before Stripe redirect)
-        purchase = BookPurchase.query.filter(
-            db.or_(
-                BookPurchase.buyer_user_id == buyer_user_id,
-                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-            ),
-            BookPurchase.book_project_id == book_id,
-            BookPurchase.status == TransactionStatus.PENDING
-        ).first()
-        
+        # If not found by purchase_id, look for existing COMPLETED purchase
         if not purchase:
-            # No pending purchase found - create new one (fallback)
+            existing_purchase = BookPurchase.query.filter(
+                db.or_(
+                    BookPurchase.buyer_user_id == buyer_user_id,
+                    (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                ),
+                BookPurchase.book_project_id == book_id,
+                BookPurchase.status == TransactionStatus.COMPLETED
+            ).first()
+            
+            if existing_purchase:
+                # Check if BookSale already exists - if not, create it
+                existing_sale = BookSale.query.filter_by(purchase_id=existing_purchase.id).first()
+                if not existing_sale:
+                    # Purchase is COMPLETED but no sale exists - create it now
+                    purchase = existing_purchase
+                else:
+                    flash('Purchase already recorded!', 'info')
+                    return redirect(url_for('book_platform.view_book', book_id=book_id))
+        
+        # If still not found, look for any purchase (COMPLETED or PENDING) for this book/user
+        if not purchase:
+            purchase = BookPurchase.query.filter(
+                db.or_(
+                    BookPurchase.buyer_user_id == buyer_user_id,
+                    (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                ),
+                BookPurchase.book_project_id == book_id
+            ).order_by(BookPurchase.created_at.desc()).first()
+        
+        # If purchase found, ensure it's COMPLETED and has BookSale
+        if purchase:
+            # Purchase exists - ensure it's COMPLETED
+            book = BookProject.query.get_or_404(purchase.book_project_id)
+            was_pending = purchase.status == TransactionStatus.PENDING
+            purchase.status = TransactionStatus.COMPLETED
+            purchase.purchased_at = purchase.purchased_at or datetime.now(timezone.utc)
+            purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
+            purchase.payment_method = purchase.payment_method or 'stripe'
+            
+            # If purchase was PENDING and is now COMPLETED, update the sale status
+            if was_pending:
+                existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
+                if existing_sale:
+                    existing_sale.status = TransactionStatus.COMPLETED
+                    existing_sale.paid_at = datetime.now(timezone.utc)
+                    db.session.commit()
+                    logger.info(f"✅ Updated sale {existing_sale.id} to COMPLETED for purchase {purchase.id}")
+        else:
+            # No purchase found - create new one (fallback)
             book = BookProject.query.get_or_404(book_id)
             
             # Prevent self-purchase
@@ -2429,82 +2578,97 @@ def purchase_success():
                 db.session.commit()
                 buyer_id = bp_user.id
                 logger.info(f"Created BookPlatformUser {buyer_id} for purchase success callback")
-        
-        # Create purchase record
-        # Note: In purchase_success callback, we use book.price as amount since we don't have custom amount here
-        # The webhook will update the amount if user paid more
-        purchase = BookPurchase(
-            buyer_id=buyer_id,
-            buyer_user_id=buyer_user_id,
-            book_project_id=book_id,
-            amount=book.price,  # Will be updated by webhook if user paid more
-            currency=book.currency,
-            status=TransactionStatus.PENDING
-        )
-        # Populate buyer information (username and full name)
-        purchase.populate_buyer_info()
-        db.session.add(purchase)
-        db.session.flush()
-        
-        # Complete the purchase - always mark as COMPLETED when success callback is reached
-        # This assumes that if user reached this page, payment was successful
-        book = BookProject.query.get_or_404(purchase.book_project_id)
-        purchase.status = TransactionStatus.COMPLETED
-        purchase.purchased_at = datetime.now(timezone.utc)
-        purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
-        purchase.payment_method = 'stripe'
+            
+            # Create purchase record
+            # Note: In purchase_success callback, we use book.price as amount since we don't have custom amount here
+            # The webhook will update the amount if user paid more
+            purchase = BookPurchase(
+                buyer_id=buyer_id,
+                buyer_user_id=buyer_user_id,
+                book_project_id=book_id,
+                amount=book.price,  # Will be updated by webhook if user paid more
+                currency=book.currency,
+                status=TransactionStatus.COMPLETED  # COMPLETED when success callback is reached
+            )
+            # Populate buyer information (username and full name)
+            purchase.populate_buyer_info()
+            db.session.add(purchase)
+            db.session.flush()
+            
+            # Complete the purchase - always mark as COMPLETED when success callback is reached
+            purchase.purchased_at = datetime.now(timezone.utc)
+            purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
+            purchase.payment_method = 'stripe'
     
-        # Create sale record
-        # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
-        base_price = book.price
-        extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding book price
+        # Check if sale already exists for this purchase
+        existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
         
-        royalty_percentage = 0.7
-        # Base price: 70% to author, 30% to platform
-        base_royalty = base_price * royalty_percentage
-        base_platform_fee = base_price - base_royalty
-        
-        # Extra amount: 100% to author, 0% to platform
-        royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
-        platform_fee = base_platform_fee  # Platform only gets fee from base price
-        
-        logger.info(f"Revenue split for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase.amount:.2f}")
-        
-        sale = BookSale(
-            seller_id=book.author_id,
-            book_project_id=book_id,
-            purchase_id=purchase.id,
-            royalty_amount=royalty_amount,
-            royalty_percentage=royalty_percentage,
-            platform_fee=platform_fee,
-            net_amount=royalty_amount,
-            currency=book.currency,
-            status=TransactionStatus.COMPLETED,
-            paid_at=datetime.now(timezone.utc)
-        )
-        db.session.add(sale)
-        db.session.flush()  # Get sale.id before committing
-        
-        # Update book statistics
-        book.total_sales = (book.total_sales or 0) + 1
-        book.total_revenue = (book.total_revenue or 0.0) + book.price
-        
-        db.session.commit()
-        
-        # CRITICAL: Trigger revenue distribution - this calculates investor returns
-        try:
-            from glconnect.revenue_distribution_service import distribute_revenue
-            result = distribute_revenue(sale, db)
-            if result and result.get('success'):
-                logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
-            else:
-                logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
-                # Don't fail the purchase, but log the error
-        except Exception as e:
-            logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
-            # Mark sale for manual reconciliation
-            sale.distribution_completed = False
+        if existing_sale:
+            # Sale already exists - ensure revenue distribution was completed
+            if not existing_sale.distribution_completed:
+                logger.warning(f"⚠️  Sale {existing_sale.id} exists but distribution not completed. Attempting distribution...")
+                try:
+                    from glconnect.revenue_distribution_service import distribute_revenue
+                    result = distribute_revenue(existing_sale, db)
+                    if result and result.get('success'):
+                        logger.info(f"✅ Revenue distributed for existing sale {existing_sale.id}: {result}")
+                    else:
+                        logger.error(f"⚠️  Revenue distribution failed for existing sale {existing_sale.id}: {result}")
+                except Exception as e:
+                    logger.error(f"❌ Revenue distribution FAILED for existing sale {existing_sale.id}: {str(e)}", exc_info=True)
+            sale = existing_sale
+        else:
+            # Create sale record
+            # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
+            base_price = book.price
+            extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding book price
+            
+            royalty_percentage = 0.7
+            # Base price: 70% to author, 30% to platform
+            base_royalty = base_price * royalty_percentage
+            base_platform_fee = base_price - base_royalty
+            
+            # Extra amount: 100% to author, 0% to platform
+            royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+            platform_fee = base_platform_fee  # Platform only gets fee from base price
+            
+            logger.info(f"Revenue split for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase.amount:.2f}")
+            
+            sale = BookSale(
+                seller_id=book.author_id,
+                book_project_id=book_id,
+                purchase_id=purchase.id,
+                royalty_amount=royalty_amount,
+                royalty_percentage=royalty_percentage,
+                platform_fee=platform_fee,
+                net_amount=royalty_amount,
+                currency=book.currency,
+                status=TransactionStatus.COMPLETED,
+                paid_at=datetime.now(timezone.utc)
+            )
+            db.session.add(sale)
+            db.session.flush()  # Get sale.id before committing
+            
+            # Update book statistics (only if this is a new sale)
+            book.total_sales = (book.total_sales or 0) + 1
+            book.total_revenue = (book.total_revenue or 0.0) + book.price
+            
             db.session.commit()
+            
+            # CRITICAL: Trigger revenue distribution - this calculates investor returns
+            try:
+                from glconnect.revenue_distribution_service import distribute_revenue
+                result = distribute_revenue(sale, db)
+                if result and result.get('success'):
+                    logger.info(f"✅ Revenue distributed for sale {sale.id}: {result}")
+                else:
+                    logger.error(f"⚠️  Revenue distribution returned error for sale {sale.id}: {result}")
+                    # Don't fail the purchase, but log the error
+            except Exception as e:
+                logger.error(f"❌ Revenue distribution FAILED for sale {sale.id}: {str(e)}", exc_info=True)
+                # Mark sale for manual reconciliation
+                sale.distribution_completed = False
+                db.session.commit()
             # Don't fail the purchase - it's recorded, just needs manual distribution
         
         flash('Purchase successful! Thank you for your purchase.', 'success')
