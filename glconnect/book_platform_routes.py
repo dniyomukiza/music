@@ -624,11 +624,19 @@ def edit_book(book_id, user_profile, profile_type):
     """Edit book details"""
     # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
     from glconnect.book_platform_models import BookPlatformUser
+    from sqlalchemy.orm import joinedload
     
     # Eager load author information to ensure fresh data from database
+    # This ensures book.author is a single object, not a collection
     book = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
     ).get_or_404(book_id)
+    
+    # Verify author relationship is loaded correctly
+    if not book.author:
+        logger.error(f"Book {book_id} has no author loaded - author_id={book.author_id}")
+        flash('Book author information could not be loaded.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Get the correct author ID based on profile type
     author_id = get_profile_id(user_profile, profile_type)
@@ -1704,6 +1712,10 @@ def publish_book(book_id):
     """Publish a book to marketplace"""
     book = BookProject.query.get_or_404(book_id)
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Check if book_user exists
+    if not book_user:
+        return jsonify({'error': 'Book platform user profile not found'}), 404
     
     # Only author can publish
     if book.author_id != book_user.id:

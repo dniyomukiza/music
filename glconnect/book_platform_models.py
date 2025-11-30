@@ -112,7 +112,8 @@ class BookPlatformUser(db.Model):
     
     # Relationships
     user = db.relationship('User', backref='book_platform_profile')
-    authored_books = db.relationship('BookProject', backref='author', lazy=True, foreign_keys='BookProject.author_id', cascade='all, delete-orphan')
+    # Note: author relationship is now explicitly defined on BookProject model to avoid backref conflicts
+    authored_books = db.relationship('BookProject', foreign_keys='BookProject.author_id', lazy=True, cascade='all, delete-orphan')
     collaborations = db.relationship('BookCollaboration', backref='collaborator', lazy=True)
     comments = db.relationship('BookComment', backref='commenter', lazy=True)
     purchases = db.relationship('BookPurchase', backref='buyer', lazy=True)
@@ -162,6 +163,8 @@ class BookProject(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='CASCADE'), nullable=False)
     
     # Relationships
+    # Explicitly define author relationship to ensure it's a single object, not a collection
+    author = db.relationship('BookPlatformUser', foreign_keys=[author_id], backref='authored_books', lazy=True)
     chapters = db.relationship('BookChapter', backref='book_project', lazy=True, cascade='all, delete-orphan')
     collaborations = db.relationship('BookCollaboration', backref='book_project', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('BookComment', backref='book_project', lazy=True, cascade='all, delete-orphan')
