@@ -129,6 +129,10 @@ def distribute_revenue(book_sale, db):
         investor_total = 0.0
         campaign = book.investment_campaign
         
+        # Handle case where investment_campaign might be a list (if relationship is misconfigured)
+        if isinstance(campaign, list):
+            campaign = campaign[0] if len(campaign) > 0 else None
+        
         if not campaign:
             logger.info(f"No investment campaign found for book {book.id} - skipping investor distributions")
         elif campaign.status not in [CampaignStatus.FUNDED, CampaignStatus.ACTIVE]:

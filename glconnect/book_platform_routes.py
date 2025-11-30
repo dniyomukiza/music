@@ -198,12 +198,21 @@ def check_investment_readiness(book):
         issues.append("Book must have a language selected")
     
     # Check if book has at least one chapter
-    chapter_count = len(book.chapters) if book.chapters else 0
+    try:
+        chapter_count = len(book.chapters) if book.chapters else 0
+    except Exception as e:
+        logging.error(f"Error accessing chapters for book {book.id}: {e}")
+        chapter_count = 0
+    
     if chapter_count == 0:
         issues.append("Book must have at least one chapter")
     
     # Ensure word count is up to date before checking
-    update_book_word_count(book)
+    try:
+        update_book_word_count(book)
+    except Exception as e:
+        logging.error(f"Error updating word count in check_investment_readiness for book {book.id}: {e}")
+        # Continue with existing word count
     
     # Check if book has some content (word count)
     if book.word_count < 1000:
@@ -567,9 +576,25 @@ def view_book(book_id, user_profile, profile_type):
     from glconnect.book_platform_models import BookPlatformUser
     
     # Eager load author information to ensure fresh data from database
-    book = BookProject.query.options(
-        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-    ).get_or_404(book_id)
+    # Use the explicit author relationship (not backref) to avoid collection issues
+    try:
+        book = BookProject.query.options(
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user),
+            joinedload(BookProject.chapters)  # Also eager load chapters to avoid lazy loading issues
+        ).get_or_404(book_id)
+        
+        # Refresh the book object to ensure we have the latest data
+        db.session.refresh(book)
+        
+        # Verify author is loaded correctly (should be a single object, not a collection)
+        if not book.author:
+            logger.error(f"Book {book_id} has no author loaded - author_id={book.author_id}")
+            flash('Book author information could not be loaded.', 'error')
+            return redirect(url_for('book_platform.books'))
+    except Exception as load_error:
+        logger.error(f"Error loading book {book_id}: {load_error}", exc_info=True)
+        flash('Error loading book information.', 'error')
+        return redirect(url_for('book_platform.books'))
     
     # Get the correct author_id
     author_id = get_profile_id(user_profile, profile_type)
@@ -604,19 +629,34 @@ def view_book(book_id, user_profile, profile_type):
     ).filter_by(book_project_id=book_id, is_active=True).all()
     
     # Ensure book word count is up to date
-    update_book_word_count(book)
-    db.session.commit()
+    try:
+        update_book_word_count(book)
+        db.session.commit()
+    except Exception as word_count_error:
+        logger.error(f"Error updating word count for book {book_id}: {word_count_error}", exc_info=True)
+        # Continue anyway - word count is not critical
     
-    # Check investment readiness
-    investment_readiness = check_investment_readiness(book)
+    # Check investment readiness (it will call update_book_word_count again, but that's okay)
+    try:
+        investment_readiness = check_investment_readiness(book)
+        # Ensure any changes from check_investment_readiness are committed
+        db.session.commit()
+    except Exception as readiness_error:
+        logger.error(f"Error checking investment readiness for book {book_id}: {readiness_error}", exc_info=True)
+        investment_readiness = None  # Set to None if check fails
     
-    return render_template('book_platform/view_book.html', 
-                         book=book, 
-                         chapters=chapters,
-                         collaborations=collaborations,
-                         is_author=is_author,
-                         is_collaborator=is_collaborator,
-                         investment_readiness=investment_readiness)
+    try:
+        return render_template('book_platform/view_book.html', 
+                             book=book, 
+                             chapters=chapters,
+                             collaborations=collaborations,
+                             is_author=is_author,
+                             is_collaborator=is_collaborator,
+                             investment_readiness=investment_readiness)
+    except Exception as template_error:
+        logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
+        flash('Error loading book view. Please try again.', 'error')
+        return redirect(url_for('book_platform.books'))
 
 @book_bp.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -661,6 +701,10 @@ def edit_book(book_id, user_profile, profile_type):
             else:
                 data = request.form.to_dict()
             
+            # Debug logging for publish checkbox
+            logger.debug(f"Edit book {book_id} - Form data keys: {list(data.keys())}")
+            logger.debug(f"Edit book {book_id} - is_published value: {data.get('is_published', 'NOT PRESENT')}")
+            
             # Update book fields
             book.title = data['title']
             book.description = data.get('description', '')
@@ -671,9 +715,42 @@ def edit_book(book_id, user_profile, profile_type):
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
             book.cover_image = data.get('cover_image', '')
-            book.is_published = data.get('is_published') == 'on' or data.get('is_published') == True
             book.allow_collaboration = data.get('allow_collaboration') == 'on' or data.get('allow_collaboration') == True
             book.updated_at = datetime.now(timezone.utc)
+            
+            # Handle publishing status - check if is_published checkbox is set
+            # Note: BookProject doesn't have is_published field, only status enum
+            # FormData sends checkboxes as "on" when checked, or omits them when unchecked
+            is_published_flag = (
+                data.get('is_published') == 'on' or 
+                data.get('is_published') == True or 
+                data.get('is_published') == 'true' or
+                'is_published' in data  # Checkbox is present in form data (even if value is empty string)
+            )
+            
+            logger.info(f"Edit book {book_id} - is_published_flag: {is_published_flag}, price: {book.price}")
+            
+            if is_published_flag:
+                # Validate that price is set before publishing (check both the updated price and existing price)
+                price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
+                if not price_value or price_value <= 0:
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Please set a price before publishing your book to the marketplace.'
+                    }), 400
+                
+                # If user wants to publish, set status to PUBLISHED
+                if book.status != BookStatus.PUBLISHED:
+                    book.status = BookStatus.PUBLISHED
+                    # Set published_at timestamp if not already set
+                    if not book.published_at:
+                        book.published_at = datetime.now(timezone.utc)
+                    logger.info(f"Book {book_id} published via edit form - Status set to PUBLISHED")
+            else:
+                # If is_published is unchecked, set status back to DRAFT
+                if book.status == BookStatus.PUBLISHED:
+                    book.status = BookStatus.DRAFT
+                    logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
             
             db.session.commit()
             
@@ -2433,7 +2510,19 @@ def purchase_book(book_id):
                     db.session.commit()
             else:
                 logger.info(f"✅ BookSale already exists for purchase {purchase.id} (ID: {existing_sale.id})")
-                logger.info(f"   Skipping creation - sale already in database")
+                logger.info(f"   Distribution completed: {existing_sale.distribution_completed}")
+                # If sale exists but distribution wasn't completed, trigger it now
+                if not existing_sale.distribution_completed:
+                    logger.warning(f"⚠️  Sale {existing_sale.id} exists but distribution not completed. Triggering distribution...")
+                    try:
+                        result = distribute_revenue(existing_sale, db)
+                        if result and result.get('success'):
+                            logger.info(f"✅ Revenue distributed for existing sale {existing_sale.id}: {result}")
+                            db.session.commit()
+                        else:
+                            logger.error(f"⚠️  Revenue distribution failed for existing sale {existing_sale.id}: {result}")
+                    except Exception as e:
+                        logger.error(f"❌ Revenue distribution FAILED for existing sale {existing_sale.id}: {str(e)}", exc_info=True)
                 logger.info("=" * 80)
         except Exception as sale_error:
             # Log the error with full details so we can fix the root cause
@@ -4670,8 +4759,63 @@ def make_investment(campaign_id):
 @book_bp.route('/earnings', methods=['GET'])
 @login_required
 def earnings_dashboard():
-    """View earnings for reviewers, investors, and authors"""
+    """View earnings for reviewers, investors, and authors - refreshes all data from database on load"""
     user_profile, profile_type = get_user_profile()
+    logger.info(f"Earnings dashboard - User {current_user.user_id}, profile_type: {profile_type}, user_profile: {user_profile}")
+    
+    # Process any pending revenue distributions before displaying earnings
+    # This ensures the dashboard always shows the latest data
+    try:
+        from glconnect.book_platform_models import BookSale, TransactionStatus
+        from glconnect.revenue_distribution_service import distribute_revenue
+        
+        # Find all sales that haven't been distributed yet
+        # Process in chronological order (oldest first) to ensure proper return cap calculations
+        undistributed_sales = BookSale.query.filter_by(
+            distribution_completed=False
+        ).order_by(BookSale.created_at.asc()).all()  # Oldest first
+        
+        if undistributed_sales:
+            logger.info(f"Found {len(undistributed_sales)} undistributed sales - processing in chronological order...")
+            success_count = 0
+            for sale in undistributed_sales:
+                try:
+                    # Refresh sale to get latest data
+                    db.session.refresh(sale)
+                    # Also refresh related investments to get latest total_returns before distribution
+                    from glconnect.book_platform_models import BookInvestment
+                    investments = BookInvestment.query.filter_by(book_project_id=sale.book_project_id).all()
+                    for inv in investments:
+                        db.session.refresh(inv)
+                    
+                    result = distribute_revenue(sale, db)
+                    if result and result.get('success'):
+                        success_count += 1
+                        summary = result.get('summary', {})
+                        logger.info(f"✅ Distributed revenue for sale {sale.id} (Book {sale.book_project_id}): {summary}")
+                    else:
+                        error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                        logger.warning(f"⚠️  Failed to distribute revenue for sale {sale.id}: {error_msg}")
+                except Exception as e:
+                    logger.error(f"❌ Error distributing revenue for sale {sale.id}: {e}", exc_info=True)
+            
+            # Commit all successful distributions
+            if success_count > 0:
+                db.session.commit()
+                logger.info(f"✅ Committed {success_count} revenue distributions")
+                
+                # Refresh all investments after distribution to ensure UI shows latest data
+                from glconnect.book_platform_models import BookInvestment
+                all_investments = BookInvestment.query.all()
+                for inv in all_investments:
+                    db.session.refresh(inv)
+                logger.info(f"✅ Refreshed {len(all_investments)} investments with latest returns")
+            else:
+                db.session.rollback()
+                logger.warning(f"⚠️  No distributions were successful, rolled back")
+    except Exception as e:
+        logger.error(f"Error processing pending distributions: {e}", exc_info=True)
+        db.session.rollback()
     
     earnings_data = {
         'reviewer_earnings': [],
@@ -4711,14 +4855,25 @@ def earnings_dashboard():
         all_investments = BookInvestment.query.filter_by(investor_id=investor_id).all()
         # Only show investments that are confirmed or active (pending investments don't have returns yet)
         investments = [inv for inv in all_investments if inv.status.value in ['confirmed', 'active']]
+        
+        # IMPORTANT: Refresh investments AFTER processing distributions to get latest returns
+        for investment in investments:
+            db.session.refresh(investment)
+        
         earnings_data['investments'] = investments
         earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
+        logger.info(f"Earnings dashboard - Total investment returns: ${earnings_data['total_investment_returns']:.2f} from {len(investments)} investments")
         
         # Get payout history for each investment
         for investment in investments:
-            investment.payouts_list = InvestmentPayout.query.filter_by(
+            payouts = InvestmentPayout.query.filter_by(
                 investment_id=investment.id
             ).order_by(InvestmentPayout.created_at.desc()).limit(20).all()
+            investment.payouts_list = payouts
+            # Verify total_returns matches sum of payouts (for debugging)
+            calculated_returns = sum(p.amount for p in payouts)
+            if abs(investment.total_returns - calculated_returns) > 0.01:
+                logger.warning(f"Investment {investment.id} total_returns (${investment.total_returns}) doesn't match sum of payouts (${calculated_returns})")
     else:
         # User doesn't have a BookPlatformUser profile yet, but might have investments
         # This shouldn't happen if they invested (investment requires profile), but check anyway
@@ -4726,13 +4881,72 @@ def earnings_dashboard():
         earnings_data['total_investment_returns'] = 0.0
     
     # Author sales - only for users who are authors
+    # Try multiple methods to find the user's sales
+    sales = []
+    author_id = None
+    
     if user_profile:
         author_id = get_profile_id(user_profile, profile_type)
-        sales = BookSale.query.filter_by(seller_id=author_id).order_by(
-            BookSale.created_at.desc()
-        ).limit(50).all()
+        logger.info(f"Earnings dashboard - User {current_user.user_id}, author_id from get_profile_id: {author_id}")
+        if author_id:
+            # Get all sales for this author (including pending, as they represent potential earnings)
+            sales = BookSale.query.filter_by(seller_id=author_id).order_by(
+                BookSale.created_at.desc()
+            ).limit(50).all()
+            
+            logger.info(f"Earnings dashboard - User {current_user.user_id}, author_id: {author_id}, found {len(sales)} sales")
+            if len(sales) > 0:
+                logger.info(f"   First sale: ID={sales[0].id}, net_amount=${sales[0].net_amount}, status={sales[0].status.value}")
+        else:
+            logger.warning(f"Earnings dashboard - Could not get author_id for user {current_user.user_id}, profile_type: {profile_type}")
+    
+    # Fallback: If no sales found via profile, try finding BookPlatformUser directly
+    if not sales or len(sales) == 0:
+        logger.info(f"Earnings dashboard - Trying fallback: Looking for BookPlatformUser for user_id={current_user.user_id}")
+        bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        if bp_user:
+            author_id = bp_user.id
+            sales = BookSale.query.filter_by(seller_id=author_id).order_by(
+                BookSale.created_at.desc()
+            ).limit(50).all()
+            logger.info(f"Earnings dashboard - Fallback found {len(sales)} sales for BookPlatformUser.id={author_id}")
+    
+    # Process sales if found
+    if sales and len(sales) > 0:
+        # Refresh all sales to get latest data from database
+        for sale in sales:
+            db.session.refresh(sale)
         earnings_data['author_sales'] = sales
+        # For testing: Include ALL sales (both completed and pending) in total revenue
+        # This allows testing earnings even when transactions are still pending
         earnings_data['total_author_revenue'] = sum(sale.net_amount for sale in sales)
+        completed_sales = [s for s in sales if s.status == TransactionStatus.COMPLETED]
+        earnings_data['completed_author_revenue'] = sum(sale.net_amount for sale in completed_sales)
+        earnings_data['pending_author_revenue'] = sum(sale.net_amount for sale in sales if sale.status != TransactionStatus.COMPLETED)
+        
+        # Group sales by book
+        # For testing: Include ALL sales in total (both completed and pending)
+        sales_by_book = defaultdict(lambda: {'sales': [], 'total': 0.0, 'completed_total': 0.0, 'pending_total': 0.0, 'book': None})
+        for sale in sales:
+            book_id = sale.book_project_id
+            sales_by_book[book_id]['sales'].append(sale)
+            # Include all sales in total for testing
+            sales_by_book[book_id]['total'] += sale.net_amount
+            # Also track separately for display
+            if sale.status == TransactionStatus.COMPLETED:
+                sales_by_book[book_id]['completed_total'] += sale.net_amount
+            else:
+                sales_by_book[book_id]['pending_total'] += sale.net_amount
+            if not sales_by_book[book_id]['book']:
+                sales_by_book[book_id]['book'] = sale.book_project
+        earnings_data['author_sales_by_book'] = dict(sales_by_book)
+    else:
+        earnings_data['author_sales'] = []
+        earnings_data['total_author_revenue'] = 0.0
+        earnings_data['completed_author_revenue'] = 0.0
+        earnings_data['pending_author_revenue'] = 0.0
+        earnings_data['author_sales_by_book'] = {}
+        logger.warning(f"Earnings dashboard - No sales found for user {current_user.user_id}")
         
         # Group sales by book
         sales_by_book = defaultdict(lambda: {'sales': [], 'total': 0.0, 'book': None})
@@ -4982,10 +5196,15 @@ def investor_returns_by_book(book_id):
         investor_id=investor_id
     ).first_or_404()
     
+    # Refresh investment to get latest total_returns
+    db.session.refresh(investment)
+    
     # Get all payouts for this investment
     payouts = InvestmentPayout.query.filter_by(
         investment_id=investment.id
     ).order_by(InvestmentPayout.created_at.desc()).all()
+    
+    logger.info(f"Investment returns page - Investment {investment.id}: status={investment.status.value}, total_returns=${investment.total_returns}, payouts={len(payouts)}")
     
     # Get sales data
     sales = BookSale.query.filter_by(

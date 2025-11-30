@@ -164,7 +164,8 @@ class BookProject(db.Model):
     
     # Relationships
     # Explicitly define author relationship to ensure it's a single object, not a collection
-    author = db.relationship('BookPlatformUser', foreign_keys=[author_id], backref='authored_books', lazy=True)
+    # Note: Don't use backref here since authored_books already exists on BookPlatformUser
+    author = db.relationship('BookPlatformUser', foreign_keys=[author_id], lazy=True)
     chapters = db.relationship('BookChapter', backref='book_project', lazy=True, cascade='all, delete-orphan')
     collaborations = db.relationship('BookCollaboration', backref='book_project', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('BookComment', backref='book_project', lazy=True, cascade='all, delete-orphan')
