@@ -2092,20 +2092,6 @@ def purchase_book(book_id):
                 db.session.commit()
             buyer_id = bp_user.id
         
-        # Get buyer info for storage
-        buyer_username = None
-        buyer_full_name = None
-        if buyer_id:
-            buyer = BookPlatformUser.query.get(buyer_id)
-            if buyer and buyer.user:
-                buyer_username = buyer.user.username
-                if buyer.pen_name:
-                    buyer_full_name = buyer.pen_name
-                elif buyer.user.first_name and buyer.user.last_name:
-                    buyer_full_name = f"{buyer.user.first_name} {buyer.user.last_name}"
-                else:
-                    buyer_full_name = buyer.user.username
-        
         # SIMPLIFIED: Just use ORM - no enum casting, no raw SQL complexity!
         # ORM automatically handles PostgreSQL enum types
         purchase = BookPurchase(
@@ -2113,23 +2099,111 @@ def purchase_book(book_id):
             book_project_id=book_id,
             amount=payment_amount,
             currency=book.currency,
-            status=TransactionStatus.PENDING,  # ORM handles enum automatically - no casting!
-            buyer_username=buyer_username,
-            buyer_full_name=buyer_full_name
+            status=TransactionStatus.PENDING  # ORM handles enum automatically - no casting!
         )
-        # Optionally set buyer_user_id if it exists (but don't fail if it doesn't)
-        # This is safe because the column is nullable
-        try:
-            if has_buyer_user_id_col:
-                purchase.buyer_user_id = buyer_user_id
-        except:
-            pass  # Column might not actually exist, ignore - buyer_id is sufficient
-        
-        purchase.populate_buyer_info()
+        # Add to session and try to flush
+        # If buyer_user_id column doesn't exist, SQLAlchemy will fail because it's in the model
+        # In that case, we'll use raw SQL to insert without that column
+        purchase_already_committed = False  # Track if purchase was committed via raw SQL
         db.session.add(purchase)
-        db.session.flush()  # Get the ID without committing
-        logger.info(f"✅ Created purchase using ORM (enum handled automatically), ID={purchase.id}")
-        purchase_already_committed = False
+        try:
+            db.session.flush()  # Flush to get the ID, but don't commit yet
+        except Exception as flush_error:
+            # Check if it's a missing buyer_user_id column error
+            if 'buyer_user_id' in str(flush_error).lower() and 'does not exist' in str(flush_error).lower():
+                logger.warning(f"buyer_user_id column doesn't exist, using raw SQL insert: {flush_error}")
+                db.session.rollback()
+                
+                # Use raw SQL to insert without buyer_user_id column
+                from sqlalchemy import text
+                import uuid as uuid_lib
+                from datetime import datetime, timezone
+                
+                purchase_uuid = str(uuid_lib.uuid4())
+                # Check which columns exist - buyer_username and buyer_full_name might not exist either
+                from sqlalchemy import inspect as sql_inspect
+                inspector = sql_inspect(db.engine)
+                columns = [col['name'] for col in inspector.get_columns('book_purchases')]
+                has_buyer_username_col = 'buyer_username' in columns
+                has_buyer_full_name_col = 'buyer_full_name' in columns
+                
+                # Build INSERT statement with only existing columns
+                if has_buyer_username_col and has_buyer_full_name_col:
+                    # All columns exist
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
+                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
+                            RETURNING id
+                        """),
+                        {
+                            'uuid': purchase_uuid,
+                            'amount': payment_amount,
+                            'currency': book.currency or 'USD',
+                            'status': 'PENDING',  # Database enum is uppercase
+                            'book_project_id': book_id,
+                            'buyer_id': buyer_id,
+                            'buyer_username': buyer_username,
+                            'buyer_full_name': buyer_full_name,
+                            'created_at': datetime.now(timezone.utc)
+                        }
+                    )
+                else:
+                    # buyer_username/buyer_full_name don't exist - use minimal INSERT
+                    # Database enum values are uppercase (PENDING, COMPLETED, etc.)
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                            VALUES (:uuid, :amount, :currency, :status::transactionstatus, :book_project_id, :buyer_id, :created_at)
+                            RETURNING id
+                        """),
+                        {
+                            'uuid': purchase_uuid,
+                            'amount': payment_amount,
+                            'currency': book.currency or 'USD',
+                            'status': 'PENDING',  # Database enum is uppercase
+                            'book_project_id': book_id,
+                            'buyer_id': buyer_id,
+                            'created_at': datetime.now(timezone.utc)
+                        }
+                    )
+                purchase_id = result.scalar()
+                # CRITICAL: Don't commit yet - commit purchase and BookSale together
+                # This ensures if BookSale creation fails, purchase is also rolled back
+                # The purchase is in the transaction but not committed yet
+                logger.info(f"✅ Purchase inserted via raw SQL (in transaction, not committed), ID={purchase_id}")
+                
+                # Create a minimal purchase object for the rest of the code
+                # Don't query back from DB as SQLAlchemy will try to SELECT all columns including buyer_user_id
+                class PurchaseObj:
+                    def __init__(self, purchase_id, buyer_id, amount, currency):
+                        self.id = purchase_id
+                        self.buyer_id = buyer_id
+                        self.amount = amount
+                        self.currency = currency
+                        self.status = TransactionStatus.PENDING
+                        self.buyer_username = buyer_username
+                        self.buyer_full_name = buyer_full_name
+                
+                purchase = PurchaseObj(purchase_id, buyer_id, payment_amount, book.currency or 'USD')
+                logger.info(f"✅ Purchase object created (ID={purchase.id}), will commit with BookSale")
+                purchase_already_committed = False  # Will commit purchase and sale together
+            else:
+                # Different error - re-raise it
+                raise
+        
+        # Populate buyer info AFTER adding to session (so relationships are available)
+        # This will set buyer_username and buyer_full_name from the database
+        # Only try if purchase is an ORM object (not PurchaseObj)
+        if hasattr(purchase, 'populate_buyer_info'):
+            try:
+                purchase.populate_buyer_info()
+            except Exception as populate_error:
+                # If populate_buyer_info fails, log but don't fail - buyer_id is sufficient
+                logger.warning(f"Could not populate buyer info: {populate_error}, continuing anyway")
+        
+        if not purchase_already_committed:
+            logger.info(f"✅ Created purchase using ORM (enum handled automatically), ID={purchase.id}")
         
         # Log purchase info (handle both ORM and minimal objects)
         purchase_info = f"ID={purchase.id}, amount=${getattr(purchase, 'amount', book.price)}"
@@ -2142,26 +2216,79 @@ def purchase_book(book_id):
         # Purchase is already created as PENDING - no need to update status
         # (Status is set in BookPurchase constructor above)
         
-        # Commit the pending purchase so we have an ID for the success callback
-        # (Skip if already committed via raw SQL)
-        if not purchase_already_committed:
-            try:
-                db.session.commit()
-                logger.info(f"✅ Purchase committed to database, ID={purchase.id}")
-            except Exception as commit_error:
-                logger.error(f"❌ Failed to commit purchase: {commit_error}", exc_info=True)
-                db.session.rollback()
-                raise
-        else:
-            logger.info(f"✅ Purchase already committed (raw SQL), ID={purchase.id}")
+        # Don't commit purchase yet - we'll commit it with BookSale
+        # This ensures both are in the same transaction (atomic operation)
+        # If BookSale creation fails, purchase will also be rolled back
+        logger.info(f"✅ Purchase ready (not yet committed), ID={purchase.id}")
+        logger.info(f"   Will commit purchase and BookSale together for atomicity")
         
         # Create BookSale and trigger revenue distribution immediately, regardless of purchase status
         # This ensures sales and investment returns are tracked even for PENDING purchases
+        logger.info("=" * 80)
+        logger.info("🔍🔍🔍 MAIN PATH: Starting BookSale creation process")
+        logger.info("=" * 80)
+        logger.info(f"Purchase ID: {purchase.id}")
+        logger.info(f"Purchase Type: {type(purchase).__name__}")
+        logger.info(f"Purchase Amount: ${getattr(purchase, 'amount', 'N/A')}")
+        logger.info(f"Book ID: {book_id}")
+        logger.info(f"Book Object: {book}")
+        logger.info(f"Book Author ID: {book.author_id if book else 'N/A'}")
+        logger.info(f"Book Price: ${book.price if book else 'N/A'}")
+        logger.info(f"Book Currency: {book.currency if book else 'N/A'}")
+        logger.info(f"Purchase Already Committed: {purchase_already_committed}")
+        
+        # CRITICAL: Verify purchase exists in transaction (not yet committed to DB)
+        # If purchase was created via raw SQL, it's in the transaction but not committed
+        # If purchase was created via ORM, it's in the session but not committed
+        # We need to check if it's visible in the current transaction
+        try:
+            from sqlalchemy import text
+            # First, flush the session to ensure purchase is in the transaction
+            if hasattr(purchase, '_sa_instance_state'):
+                logger.info(f"🔄 Flushing session to ensure purchase is in transaction...")
+                db.session.flush()
+                logger.info(f"✅ Session flushed")
+            
+            # Check if purchase is visible in current transaction
+            # For raw SQL inserts, they're already in the transaction
+            # For ORM inserts, flush makes them visible
+            purchase_check = db.session.execute(
+                text("SELECT id, amount, book_project_id FROM book_purchases WHERE id = :id"),
+                {'id': purchase.id}
+            ).fetchone()
+            if purchase_check:
+                logger.info(f"✅ Purchase {purchase.id} verified in transaction: amount=${purchase_check[1]}, book_id={purchase_check[2]}")
+                logger.info(f"   Purchase is ready for BookSale creation (not yet committed to DB)")
+            else:
+                logger.error(f"❌❌❌ Purchase {purchase.id} NOT FOUND in transaction!")
+                logger.error(f"   This means purchase was never created or is in a different session")
+                raise ValueError(f"Purchase {purchase.id} does not exist in transaction")
+        except Exception as verify_error:
+            logger.error(f"❌ Failed to verify purchase in transaction: {verify_error}", exc_info=True)
+            raise
+        
+        # CRITICAL: This try block MUST create BookSale or raise an error
+        # If it exits without creating BookSale, the verification step will catch it
         try:
             from glconnect.book_platform_models import BookSale
             
+            # Validate prerequisites
+            if not book:
+                raise ValueError(f"Book {book_id} not found")
+            if not book.author_id:
+                raise ValueError(f"Book {book_id} has no author_id - cannot create sale")
+            if not book.price or book.price <= 0:
+                raise ValueError(f"Book {book_id} has invalid price: {book.price}")
+            
+            logger.info(f"✅ Prerequisites validated: book exists, author_id={book.author_id}, price=${book.price}")
+            logger.info(f"🔍 About to check for existing sale or create new one...")
+            
             # Check if sale already exists
             existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
+            if existing_sale:
+                logger.info(f"Existing sale check: Found existing sale ID={existing_sale.id}")
+            else:
+                logger.info(f"Existing sale check: No existing sale found (will create new one)")
             
             if not existing_sale:
                 # Calculate revenue split: base book price is split 70/30, extra amount goes 100% to author
@@ -2178,8 +2305,16 @@ def purchase_book(book_id):
                 royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
                 platform_fee = base_platform_fee  # Platform only gets fee from base price
                 
-                logger.info(f"Creating BookSale for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase_amount:.2f}")
+                logger.info(f"📊 Calculating revenue split:")
+                logger.info(f"   Base price: ${base_price:.2f}")
+                logger.info(f"   Purchase amount: ${purchase_amount:.2f}")
+                logger.info(f"   Extra amount: ${extra_amount:.2f}")
+                logger.info(f"   Base royalty (70%): ${base_royalty:.2f}")
+                logger.info(f"   Base platform fee (30%): ${base_platform_fee:.2f}")
+                logger.info(f"   Total royalty: ${royalty_amount:.2f}")
+                logger.info(f"   Platform fee: ${platform_fee:.2f}")
                 
+                logger.info(f"🏗️  Creating BookSale object...")
                 sale = BookSale(
                     seller_id=book.author_id,
                     book_project_id=book_id,
@@ -2188,12 +2323,60 @@ def purchase_book(book_id):
                     royalty_percentage=royalty_percentage,
                     platform_fee=platform_fee,
                     net_amount=royalty_amount,
-                    currency=book.currency,
+                    currency=book.currency or 'USD',
                     status=TransactionStatus.PENDING,  # Sale status matches purchase status
                     paid_at=None  # Will be set when purchase is completed
                 )
+                logger.info(f"✅ BookSale object created (not yet in DB)")
+                logger.info(f"   seller_id={sale.seller_id}, purchase_id={sale.purchase_id}, royalty_amount=${sale.royalty_amount}")
+                
+                logger.info(f"➕ Adding BookSale to session...")
                 db.session.add(sale)
-                db.session.commit()
+                logger.info(f"✅ BookSale added to session")
+                
+                # Commit both purchase and sale together in the same transaction
+                # If purchase was created via ORM, flush it first
+                # If purchase was created via raw SQL, it's already in the transaction
+                logger.info(f"💾 Committing purchase and BookSale together (atomic operation)...")
+                
+                # Check if purchase is in ORM session (created via ORM) or raw SQL
+                purchase_in_session = hasattr(purchase, '_sa_instance_state')
+                logger.info(f"   Purchase in ORM session: {purchase_in_session}")
+                logger.info(f"   Purchase already committed flag: {purchase_already_committed}")
+                
+                if purchase_in_session and not purchase_already_committed:
+                    # Purchase was created via ORM - flush it first
+                    logger.info(f"🔄 Flushing purchase (ORM) to ensure it's in transaction...")
+                    db.session.flush()
+                    logger.info(f"✅ Purchase flushed")
+                elif not purchase_in_session:
+                    # Purchase was created via raw SQL - it's already in the transaction
+                    logger.info(f"ℹ️  Purchase created via raw SQL, already in transaction (no flush needed)")
+                
+                try:
+                    # Commit both purchase and sale together - atomic operation
+                    db.session.commit()
+                    logger.info(f"✅✅✅ BookSale {sale.id} SUCCESSFULLY created and committed for purchase {purchase.id}")
+                    logger.info(f"✅✅✅ Purchase {purchase.id} also committed in same transaction")
+                    logger.info("=" * 80)
+                except Exception as commit_error:
+                    logger.error("=" * 80)
+                    logger.error(f"❌❌❌ FAILED to commit BookSale - ROLLING BACK PURCHASE")
+                    logger.error("=" * 80)
+                    logger.error(f"Error Type: {type(commit_error).__name__}")
+                    logger.error(f"Error Message: {str(commit_error)}")
+                    logger.error(f"Purchase ID: {purchase.id}")
+                    logger.error(f"Book ID: {book_id}")
+                    logger.error(f"Author ID: {book.author_id}")
+                    logger.error(f"Purchase already committed: {purchase_already_committed}")
+                    logger.error(f"Sale object: seller_id={sale.seller_id}, purchase_id={sale.purchase_id}")
+                    import traceback
+                    logger.error(f"Full traceback:\n{traceback.format_exc()}")
+                    logger.error("=" * 80)
+                    logger.error(f"🔄 Rolling back transaction - purchase will NOT be committed")
+                    db.session.rollback()
+                    # Re-raise so the error is visible and purchase fails
+                    raise
                 
                 # CRITICAL: Trigger revenue distribution - this calculates investor returns
                 # This runs even for PENDING purchases to track returns immediately
@@ -2209,22 +2392,106 @@ def purchase_book(book_id):
                     sale.distribution_completed = False
                     db.session.commit()
             else:
-                logger.info(f"BookSale already exists for purchase {purchase.id}")
+                logger.info(f"✅ BookSale already exists for purchase {purchase.id} (ID: {existing_sale.id})")
+                logger.info(f"   Skipping creation - sale already in database")
+                logger.info("=" * 80)
         except Exception as sale_error:
-            # Don't fail the purchase if sale creation fails - log and continue
+            # Log the error with full details so we can fix the root cause
             import traceback
             sale_traceback = traceback.format_exc()
             logger.error("=" * 80)
-            logger.error("⚠️  BOOKSALE CREATION ERROR - Full Technical Details (for debugging)")
+            logger.error("❌❌❌ BOOKSALE CREATION FAILED - DETECTING ROOT CAUSE")
             logger.error("=" * 80)
             logger.error(f"Purchase ID: {purchase.id}")
+            logger.error(f"Purchase Type: {type(purchase).__name__}")
+            logger.error(f"Purchase Amount: ${getattr(purchase, 'amount', 'N/A')}")
+            logger.error(f"Purchase Status: {getattr(purchase, 'status', 'N/A')}")
             logger.error(f"Book ID: {book_id}")
+            logger.error(f"Book Object: {book}")
+            logger.error(f"Book Author ID: {book.author_id if book else 'N/A'}")
+            logger.error(f"Book Price: ${book.price if book else 'N/A'}")
+            logger.error(f"Book Currency: {book.currency if book else 'N/A'}")
+            logger.error(f"Purchase Already Committed: {purchase_already_committed}")
             logger.error(f"Error Type: {type(sale_error).__name__}")
             logger.error(f"Error Message: {str(sale_error)}")
             logger.error(f"Full Traceback:\n{sale_traceback}")
+            
+            # Additional diagnostics
+            try:
+                # Check if purchase exists in DB
+                purchase_check = db.session.execute(
+                    text("SELECT id FROM book_purchases WHERE id = :id"),
+                    {'id': purchase.id}
+                ).fetchone()
+                logger.error(f"Purchase exists in DB: {purchase_check is not None}")
+                
+                # Check if author exists
+                if book and book.author_id:
+                    author_check = db.session.execute(
+                        text("SELECT id FROM book_platform_users WHERE id = :id"),
+                        {'id': book.author_id}
+                    ).fetchone()
+                    logger.error(f"Author exists in DB: {author_check is not None}")
+            except Exception as diag_error:
+                logger.error(f"Diagnostic check failed: {diag_error}")
+            
             logger.error("=" * 80)
-            # Also log with exc_info for stack trace in log handlers
             logger.error(f"Failed to create BookSale for purchase {purchase.id}: {sale_error}", exc_info=True)
+            
+            # Re-raise the error so it's visible and the purchase fails
+            # This ensures we fix the root cause instead of silently failing
+            # Wrap it in a custom exception so we can identify it in the outer handler
+            class BookSaleCreationError(Exception):
+                pass
+            raise BookSaleCreationError(f"BookSale creation failed: {sale_error}") from sale_error
+        
+        # CRITICAL VERIFICATION: Verify BookSale was actually created
+        logger.info("=" * 80)
+        logger.info("🔍🔍🔍 VERIFICATION: Checking if BookSale was created...")
+        logger.info("=" * 80)
+        try:
+            # Try ORM query first
+            final_sale_check = BookSale.query.filter_by(purchase_id=purchase.id).first()
+            if not final_sale_check:
+                # Try raw SQL as fallback
+                logger.warning(f"⚠️  BookSale not found via ORM query, trying raw SQL...")
+                final_sale_check_raw = db.session.execute(
+                    text("SELECT id FROM book_sales WHERE purchase_id = :purchase_id"),
+                    {'purchase_id': purchase.id}
+                ).fetchone()
+                if final_sale_check_raw:
+                    logger.error("=" * 80)
+                    logger.error("❌❌❌ CRITICAL: BookSale exists in DB but not accessible via ORM!")
+                    logger.error("=" * 80)
+                    logger.error(f"Purchase ID: {purchase.id}")
+                    logger.error(f"BookSale ID (from raw SQL): {final_sale_check_raw[0]}")
+                    logger.error("This indicates a session/ORM issue")
+                    raise ValueError(f"BookSale exists in DB but ORM query failed - session issue")
+                else:
+                    logger.error("=" * 80)
+                    logger.error("❌❌❌ CRITICAL: BookSale creation code ran but no sale was created!")
+                    logger.error("=" * 80)
+                    logger.error(f"Purchase ID: {purchase.id} exists but BookSale does not")
+                    logger.error("This should never happen - BookSale creation must have failed silently")
+                    logger.error("=" * 80)
+                    # Force rollback and fail the purchase
+                    db.session.rollback()
+                    raise ValueError(f"BookSale was not created for purchase {purchase.id} despite code execution")
+            else:
+                logger.info(f"✅✅✅ VERIFIED: BookSale {final_sale_check.id} exists for purchase {purchase.id}")
+                logger.info(f"   Sale ID: {final_sale_check.id}")
+                logger.info(f"   Seller ID: {final_sale_check.seller_id}")
+                logger.info(f"   Royalty Amount: ${final_sale_check.royalty_amount}")
+                logger.info(f"   Status: {final_sale_check.status}")
+                logger.info("=" * 80)
+        except Exception as verify_error:
+            logger.error("=" * 80)
+            logger.error(f"❌❌❌ VERIFICATION FAILED: {verify_error}")
+            logger.error("=" * 80)
+            import traceback
+            logger.error(traceback.format_exc())
+            db.session.rollback()
+            raise
         
         # Generate success and cancel URLs
         try:
@@ -2259,10 +2526,16 @@ def purchase_book(book_id):
         error_msg = str(e)
         import traceback
         error_traceback = traceback.format_exc()
+        
+        # Check if this is a BookSale creation error
+        is_booksale_error = 'BookSaleCreationError' in str(type(e)) or 'BookSale' in error_msg
+        
         # Log full error details for debugging (server-side only)
-        # This ensures developers can see technical details even though users see friendly messages
         logger.error("=" * 80)
-        logger.error("❌ PURCHASE ERROR - Full Technical Details (for debugging)")
+        if is_booksale_error:
+            logger.error("❌❌❌ BOOKSALE CREATION ERROR - Purchase will fail")
+        else:
+            logger.error("❌ PURCHASE ERROR - Full Technical Details (for debugging)")
         logger.error("=" * 80)
         logger.error(f"Request Context:")
         logger.error(f"  - Book ID: {book_id}")
@@ -2337,27 +2610,84 @@ def purchase_book(book_id):
                 if not book:
                     return jsonify({'error': 'Book not found'}), 404
                 
-                # Use the ORM approach instead of raw SQL to avoid enum casting issues
-                try:
-                    # Try to create purchase using ORM (handles enum automatically)
-                    purchase = BookPurchase(
-                        buyer_id=minimal_bp_user.id,
-                        book_project_id=book_id,
-                        amount=payment_amount,
-                        currency=book.currency or 'USD',
-                        status=TransactionStatus.PENDING  # ORM handles enum conversion
+                # Check which columns exist
+                from sqlalchemy import inspect as sql_inspect
+                inspector = sql_inspect(db.engine)
+                columns = [col['name'] for col in inspector.get_columns('book_purchases')]
+                has_buyer_username_col = 'buyer_username' in columns
+                has_buyer_full_name_col = 'buyer_full_name' in columns
+                
+                # Get buyer info for the SQL insert (only if columns exist)
+                buyer_username = None
+                buyer_full_name = None
+                if (has_buyer_username_col or has_buyer_full_name_col) and minimal_bp_user:
+                    if minimal_bp_user.user:
+                        buyer_username = minimal_bp_user.user.username
+                        if minimal_bp_user.pen_name:
+                            buyer_full_name = minimal_bp_user.pen_name
+                        elif minimal_bp_user.user.first_name and minimal_bp_user.user.last_name:
+                            buyer_full_name = f"{minimal_bp_user.user.first_name} {minimal_bp_user.user.last_name}"
+                        else:
+                            buyer_full_name = minimal_bp_user.user.username
+                
+                # Use raw SQL to insert - only include columns that exist
+                if has_buyer_username_col and has_buyer_full_name_col:
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
+                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
+                            RETURNING id
+                        """),
+                        {
+                            'uuid': purchase_uuid,
+                            'amount': payment_amount,
+                            'currency': book.currency or 'USD',
+                            'status': 'PENDING',  # Database enum is uppercase
+                            'book_project_id': book_id,
+                            'buyer_id': minimal_bp_user.id,
+                            'buyer_username': buyer_username,
+                            'buyer_full_name': buyer_full_name,
+                            'created_at': datetime.now(timezone.utc)
+                        }
                     )
-                    db.session.add(purchase)
-                    db.session.flush()  # Get the ID without committing
-                    purchase_id = purchase.id
-                    logger.info(f"✅ Created purchase using ORM (enum handled automatically), ID={purchase_id}")
-                except Exception as orm_error:
-                    # If ORM fails, this is unexpected - log and re-raise
-                    # ORM should always work if buyer_id exists
-                    db.session.rollback()
-                    logger.error(f"❌ ORM purchase creation failed unexpectedly: {orm_error}", exc_info=True)
-                    raise  # Re-raise - this shouldn't happen if buyer_id is set correctly
-                db.session.commit()
+                else:
+                    # buyer_username/buyer_full_name don't exist - use minimal INSERT
+                    # Database enum values are uppercase (PENDING, COMPLETED, etc.)
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
+                            VALUES (:uuid, :amount, :currency, :status::transactionstatus, :book_project_id, :buyer_id, :created_at)
+                            RETURNING id
+                        """),
+                        {
+                            'uuid': purchase_uuid,
+                            'amount': payment_amount,
+                            'currency': book.currency or 'USD',
+                            'status': 'PENDING',  # Database enum is uppercase
+                            'book_project_id': book_id,
+                            'buyer_id': minimal_bp_user.id,
+                            'created_at': datetime.now(timezone.utc)
+                        }
+                    )
+                purchase_id = result.scalar()
+                # CRITICAL: Don't commit yet - commit purchase and BookSale together
+                # This ensures if BookSale creation fails, purchase is also rolled back
+                logger.info(f"✅ Purchase inserted via raw SQL (in transaction, not committed), ID={purchase_id}")
+                
+                # Create a minimal purchase object for the rest of the code
+                # Don't query back from DB as SQLAlchemy will try to SELECT all columns including buyer_user_id
+                class PurchaseObj:
+                    def __init__(self, purchase_id, buyer_id, amount, currency):
+                        self.id = purchase_id
+                        self.buyer_id = buyer_id
+                        self.amount = amount
+                        self.currency = currency
+                        self.status = TransactionStatus.PENDING
+                        self.buyer_username = buyer_username
+                        self.buyer_full_name = buyer_full_name
+                
+                purchase = PurchaseObj(purchase_id, minimal_bp_user.id, payment_amount, book.currency or 'USD')
+                logger.info(f"✅ Created purchase via raw SQL (no buyer_user_id column), ID={purchase_id}")
                 
                 # Create BookSale and trigger revenue distribution immediately, regardless of purchase status
                 # This ensures sales and investment returns are tracked even for PENDING purchases
@@ -2365,7 +2695,7 @@ def purchase_book(book_id):
                     from glconnect.book_platform_models import BookSale
                     
                     # Check if sale already exists
-                    existing_sale = BookSale.query.filter_by(purchase_id=purchase_id).first()
+                    existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
                     
                     if not existing_sale:
                         # Calculate revenue split: base book price is split 70/30, extra amount goes 100% to author
@@ -2381,12 +2711,12 @@ def purchase_book(book_id):
                         royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
                         platform_fee = base_platform_fee  # Platform only gets fee from base price
                         
-                        logger.info(f"Creating BookSale for purchase {purchase_id} (fallback): base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${payment_amount:.2f}")
+                        logger.info(f"Creating BookSale for purchase {purchase.id} (fallback): base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${payment_amount:.2f}")
                         
                         sale = BookSale(
                             seller_id=book.author_id,
                             book_project_id=book_id,
-                            purchase_id=purchase_id,
+                            purchase_id=purchase.id,
                             royalty_amount=royalty_amount,
                             royalty_percentage=royalty_percentage,
                             platform_fee=platform_fee,
@@ -2412,16 +2742,36 @@ def purchase_book(book_id):
                             sale.distribution_completed = False
                             db.session.commit()
                     else:
-                        logger.info(f"BookSale already exists for purchase {purchase_id} (fallback)")
+                        logger.info(f"BookSale already exists for purchase {purchase.id} (fallback)")
                 except Exception as sale_error:
-                    # Don't fail the purchase if sale creation fails - log and continue
-                    logger.error(f"⚠️  Failed to create BookSale for purchase {purchase_id} (fallback): {sale_error}", exc_info=True)
+                    # CRITICAL: Fail the purchase if BookSale creation fails
+                    # This ensures data consistency - no purchase without a sale
+                    logger.error("=" * 80)
+                    logger.error(f"❌❌❌ BOOKSALE CREATION FAILED (fallback path) - FAILING PURCHASE")
+                    logger.error("=" * 80)
+                    logger.error(f"Purchase ID: {purchase.id}")
+                    logger.error(f"Error: {sale_error}")
+                    logger.error("=" * 80)
+                    db.session.rollback()  # Rollback the purchase too
+                    raise  # Re-raise to fail the purchase
                 
                 # Generate URLs
-                success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase_id, _external=True)
+                success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase.id, _external=True)
                 cancel_url = url_for('book_platform.marketplace', _external=True)
                 
-                logger.info(f"✅ SUCCESS (fallback): Purchase {purchase_id} created via raw SQL")
+                logger.info(f"✅ SUCCESS (fallback): Purchase {purchase.id} created via raw SQL")
+                
+                # Return success response
+                response_data = {
+                    'success': True,
+                    'purchase_id': purchase.id,
+                    'status': 'pending',
+                    'message': 'Purchase created. Redirecting to payment...',
+                    'success_url': success_url,
+                    'cancel_url': cancel_url,
+                    'stripe_payment_link': f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase.id}'
+                }
+                return jsonify(response_data)
                 
                 # Create Stripe Checkout Session (same as above)
                 stripe_checkout_url = None
