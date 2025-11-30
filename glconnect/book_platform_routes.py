@@ -2120,6 +2120,25 @@ def purchase_book(book_id):
                 from datetime import datetime, timezone
                 
                 purchase_uuid = str(uuid_lib.uuid4())
+                
+                # Get buyer username and full name from the user
+                buyer_username = None
+                buyer_full_name = None
+                try:
+                    if current_user and current_user.is_authenticated:
+                        buyer_username = current_user.username
+                        buyer_full_name = getattr(current_user, 'full_name', None) or current_user.username
+                    # Also try to get from BookPlatformUser
+                    if buyer_id:
+                        bp_user = BookPlatformUser.query.get(buyer_id)
+                        if bp_user:
+                            if not buyer_username:
+                                buyer_username = bp_user.pen_name or (bp_user.user.username if bp_user.user else None)
+                            if not buyer_full_name:
+                                buyer_full_name = bp_user.pen_name or (bp_user.user.username if bp_user.user else None)
+                except Exception as name_error:
+                    logger.warning(f"Could not get buyer username/full name: {name_error}")
+                
                 # Check which columns exist - buyer_username and buyer_full_name might not exist either
                 from sqlalchemy import inspect as sql_inspect
                 inspector = sql_inspect(db.engine)
@@ -2143,25 +2162,27 @@ def purchase_book(book_id):
                             'status': 'PENDING',  # Database enum is uppercase
                             'book_project_id': book_id,
                             'buyer_id': buyer_id,
-                            'buyer_username': buyer_username,
-                            'buyer_full_name': buyer_full_name,
+                            'buyer_username': buyer_username or '',
+                            'buyer_full_name': buyer_full_name or '',
                             'created_at': datetime.now(timezone.utc)
                         }
                     )
                 else:
                     # buyer_username/buyer_full_name don't exist - use minimal INSERT
                     # Database enum values are uppercase (PENDING, COMPLETED, etc.)
+                    # PostgreSQL should accept the enum string value directly without casting
+                    # The column type is already transactionstatus enum, so 'PENDING' should work
                     result = db.session.execute(
                         text("""
                             INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                            VALUES (:uuid, :amount, :currency, :status::transactionstatus, :book_project_id, :buyer_id, :created_at)
+                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
                             RETURNING id
                         """),
                         {
                             'uuid': purchase_uuid,
                             'amount': payment_amount,
                             'currency': book.currency or 'USD',
-                            'status': 'PENDING',  # Database enum is uppercase
+                            'status': 'PENDING',  # Database enum is uppercase - PostgreSQL should accept this directly
                             'book_project_id': book_id,
                             'buyer_id': buyer_id,
                             'created_at': datetime.now(timezone.utc)
@@ -2173,19 +2194,26 @@ def purchase_book(book_id):
                 # The purchase is in the transaction but not committed yet
                 logger.info(f"✅ Purchase inserted via raw SQL (in transaction, not committed), ID={purchase_id}")
                 
+                # Ensure buyer_username and buyer_full_name are defined (they were set above)
+                # If they're still None, set defaults
+                if buyer_username is None:
+                    buyer_username = ''
+                if buyer_full_name is None:
+                    buyer_full_name = ''
+                
                 # Create a minimal purchase object for the rest of the code
                 # Don't query back from DB as SQLAlchemy will try to SELECT all columns including buyer_user_id
                 class PurchaseObj:
-                    def __init__(self, purchase_id, buyer_id, amount, currency):
+                    def __init__(self, purchase_id, buyer_id, amount, currency, username='', full_name=''):
                         self.id = purchase_id
                         self.buyer_id = buyer_id
                         self.amount = amount
                         self.currency = currency
                         self.status = TransactionStatus.PENDING
-                        self.buyer_username = buyer_username
-                        self.buyer_full_name = buyer_full_name
+                        self.buyer_username = username
+                        self.buyer_full_name = full_name
                 
-                purchase = PurchaseObj(purchase_id, buyer_id, payment_amount, book.currency or 'USD')
+                purchase = PurchaseObj(purchase_id, buyer_id, payment_amount, book.currency or 'USD', buyer_username, buyer_full_name)
                 logger.info(f"✅ Purchase object created (ID={purchase.id}), will commit with BookSale")
                 purchase_already_committed = False  # Will commit purchase and sale together
             else:
@@ -2553,6 +2581,7 @@ def purchase_book(book_id):
         logger.error(f"Purchase failed for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
         
         # Convert technical errors to user-friendly messages
+        # TEMPORARILY: Always include error details for debugging
         user_friendly_error = "We encountered an issue processing your purchase. Please try again or contact support if the problem persists."
         
         # Check if we're in debug/development mode - include more details for debugging
@@ -2561,6 +2590,9 @@ def purchase_book(book_id):
             is_debug = current_app.config.get('DEBUG', False) or current_app.config.get('FLASK_ENV') == 'development'
         except:
             is_debug = False
+        
+        # TEMPORARILY: Always show error details for debugging
+        is_debug = True  # Force debug mode to see actual errors
         
         # Check for specific error types and provide better messages
         if 'psycopg2' in error_msg.lower() or 'database' in error_msg.lower() or 'sql' in error_msg.lower():
@@ -2656,7 +2688,7 @@ def purchase_book(book_id):
                     result = db.session.execute(
                         text("""
                             INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                            VALUES (:uuid, :amount, :currency, :status::transactionstatus, :book_project_id, :buyer_id, :created_at)
+                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
                             RETURNING id
                         """),
                         {

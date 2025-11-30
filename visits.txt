@@ -11578,3 +11578,309 @@
     Device: Desktop
     User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
 --------------------------------------------------------------------------------
+[2025-11-30 02:08:07 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:22 UTC] GET /
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:22 UTC] GET /favicon.ico
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:24 UTC] GET /about
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:24 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:24 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:25 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:26 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:26 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:26 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:26 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:27 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:28 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:28 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:32 UTC] POST /mybook/books/3/purchase
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:42 UTC] POST /mybook/books/3/purchase
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:48 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:08:48 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:35 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:36 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:36 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:44 UTC] POST /mybook/books/3/purchase
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:50 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:51 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:51 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:09:56 UTC] POST /mybook/books/3/purchase
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:43 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:56 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:56 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:56 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:56 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:56 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:56 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:58 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:59 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:59 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:10:59 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:11:06 UTC] POST /mybook/books/3/purchase
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:12 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:26 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:26 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:26 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:26 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:26 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:26 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:27 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:28 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:29 UTC] GET /.well-known/appspecific/com.chrome.devtools.json
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:29 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:13:35 UTC] POST /mybook/books/3/purchase
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 02:17:40 UTC] GET /
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
