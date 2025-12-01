@@ -14296,3 +14296,2493 @@
     Device: Desktop
     User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
 --------------------------------------------------------------------------------
+[2025-11-30 04:28:59 UTC] GET /favicon.ico
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:06 UTC] GET /
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:06 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:07 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:07 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:07 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:10 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:11 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:11 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:11 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:21 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:21 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:21 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:21 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:31 UTC] GET /mybook/ink-studio
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:31 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:32 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:32 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:32 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:44 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:44 UTC] GET /prof/uprofile
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:45 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:45 UTC] GET /static/profile.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:45 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:54 UTC] GET /mybook/ink-studio
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:55 UTC] GET /mybook/
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:56 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:40:56 UTC] GET /static/book_platform.js
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:41:02 UTC] GET /mybook/content-hub
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:41:04 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:42:59 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:00 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:00 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:00 UTC] GET /playlist2/song/314/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:26 UTC] POST /playlist2/remove_song
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:28 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:48 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:43:48 UTC] GET /playlist2/song/24/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:02 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:13 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:22 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:24 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:31 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:51 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:51 UTC] GET /playlist2/song/54/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:54 UTC] GET /playlist2/song/54/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:44:54 UTC] GET /playlist2/song/54/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:45:04 UTC] POST /playlist2/add_to_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:45:05 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:46:11 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:46:13 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:46:22 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:46:23 UTC] GET /playlist2/song/62/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:46:23 UTC] GET /playlist2/song/51/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 22:46:24 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:10:08 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:10:09 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:10:10 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:18:23 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:18:24 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:18:24 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:18:30 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:18:36 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:21:41 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:21:42 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:21:42 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:21:49 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:21:54 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:26:51 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:26:53 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:26:53 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:26:59 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:27:06 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:27:07 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:27:07 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:27:17 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:27:19 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/song/281/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/song/271/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/song/236/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/song/249/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:49 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/285/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/227/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/254/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/248/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:28:50 UTC] GET /playlist2/song/219/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:28 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:28 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:28 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:28 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:28 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:43 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:44 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:45 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:45 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:33:59 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:00 UTC] GET /playlist2/song/271/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:00 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:00 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:00 UTC] GET /playlist2/song/249/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:00 UTC] GET /playlist2/song/281/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:00 UTC] GET /playlist2/song/236/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/249/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/281/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/236/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/285/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:01 UTC] GET /playlist2/song/227/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:02 UTC] GET /playlist2/song/254/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:02 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:02 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:02 UTC] GET /playlist2/song/248/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-11-30 23:34:02 UTC] GET /playlist2/song/219/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:32 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:34 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:34 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:40 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:43 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:50 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:51 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:51 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:51 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:05:51 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:53 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/281/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/249/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/236/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/271/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/285/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/227/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/254/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:54 UTC] GET /playlist2/song/248/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:06:55 UTC] GET /playlist2/song/219/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:14:35 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:11 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:12 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:12 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:18 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:19 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:19 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:19 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:19 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:20 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:20 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:20 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:20 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:29 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:36 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:36 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:36 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:36 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:36 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:37 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:37 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:37 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:37 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:15:50 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:23 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:26 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:26 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:37 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:38 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:38 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:38 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:21:38 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:22:26 UTC] POST /playlist2/add_to_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:22:27 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:22:28 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:22:29 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:22:31 UTC] POST /playlist2/remove_song
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:22:32 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:23:02 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:23:03 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:23:03 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:23:03 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:23:03 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:25:55 UTC] GET /playlist2/serve_song_file/336
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:25:55 UTC] GET /playlist2/serve_song_file/346
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:25:55 UTC] GET /playlist2/serve_song_file/348
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:25:56 UTC] GET /playlist2/serve_song_file/232
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:25:56 UTC] GET /playlist2/serve_song_file/252
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:25:57 UTC] GET /playlist2/serve_song_file/263
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:31:24 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:31:24 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:31:24 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:31:25 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:31:49 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:32:57 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:32:58 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:32:59 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:32:59 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:00 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:51 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:51 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:51 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:51 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:51 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:52 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:52 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:52 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:57 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:57 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:57 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:57 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:33:57 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:12 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:12 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:13 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:13 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:21 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:22 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:34:23 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:35:03 UTC] HEAD /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-12-01 05:35:16 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:35:16 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:35:17 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:35:17 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:35:40 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:37:29 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:38:32 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:38:33 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:39:43 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:39:54 UTC] HEAD /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: curl
+    Device: Desktop
+    User-Agent: curl/8.7.1
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:11 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:12 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:12 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:26 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:27 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:28 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:28 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:33 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:37 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:38 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:38 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:38 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:40:38 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:01 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:02 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:02 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:07 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:08 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:08 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:08 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:08 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:09 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:09 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:09 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:09 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:20 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:21 UTC] GET /playlist2/song/344/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:21 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:21 UTC] GET /playlist2/song/336/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:41:55 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:42:17 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:42:50 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:43:35 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:43:36 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:43:36 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:43:55 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:02 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:03 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:03 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:17 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:18 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:44:19 UTC] GET /playlist2/song/232/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:45:47 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:45:47 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:45:48 UTC] GET /playlist2/song/344/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:16 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:17 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:26 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:26 UTC] GET /playlist2/song/345/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:27 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:32 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:33 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:33 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Mozilla/5.0
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:34 UTC] GET /playlist2/song/345/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:46:35 UTC] GET /playlist2/song/345/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:47:40 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:47:41 UTC] GET /playlist2/song/252/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:47:41 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:49:45 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:49:46 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:49:46 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:49:46 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:49:46 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:50:00 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:50:00 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:50:01 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:50:01 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:50:08 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:50:30 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:10 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:10 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:10 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:28 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:32 UTC] POST /playlist2/add_to_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:32 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:33 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:33 UTC] POST /playlist2/add_to_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:34 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:35 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:38 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:38 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:38 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:42 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:42 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:42 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:53 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:53 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:53 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:56 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:56 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:57 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:52:58 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:09 UTC] GET /blog/logout
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:10 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:10 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:10 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:10 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:22 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:23 UTC] GET /prof/uprofile
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:23 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:23 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:23 UTC] GET /static/profile.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:28 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:28 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:32 UTC] GET /mybook/
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:34 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:34 UTC] GET /static/book_platform.js
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:37 UTC] GET /mybook/content-hub
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:40 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:46 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:47 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:47 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:48 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:48 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:53:49 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:54:17 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:54:17 UTC] GET /playlist2/song/348/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:54:18 UTC] GET /playlist2/song/263/file
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2025-12-01 05:54:24 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 05:54:25 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:39 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:40 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:41 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:41 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:41 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:51 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:52 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:53 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:53 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:54 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:00:54 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:01:06 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:13:43 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:13:43 UTC] GET /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:13:44 UTC] GET /static/home.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:13:44 UTC] GET /static/images/logo.jpg
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:13:44 UTC] GET /static/login.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:04 UTC] POST /routes1/login
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:05 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:06 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:06 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:07 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:07 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:07 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:07 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:21 UTC] GET /mybook/music
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:22 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:22 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:37 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:39 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:53 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:53 UTC] GET /playlist2/song/341/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:56 UTC] POST /playlist2/remove_song
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:57 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:14:58 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:01 UTC] GET /playlist2/playlist2
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:07 UTC] POST /playlist2/add_to_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:08 UTC] GET /playlist2/view_playlist
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:09 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:18 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:19 UTC] GET /playlist2/song/240/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:24 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:15:25 UTC] GET /playlist2/song/346/file
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:17:09 UTC] GET /mybook/content-hub
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:17:11 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:17:22 UTC] GET /mybook/
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:17:24 UTC] GET /static/book_platform.js
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------
+[2025-12-01 06:17:24 UTC] GET /static/book_platform.css
+    IP: 127.0.0.1
+    Browser: Chrome
+    Device: Desktop
+    User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/2.1.20 Chrome/138.0.7204.251 Electron/37.7.0 Safari/537.36
+--------------------------------------------------------------------------------

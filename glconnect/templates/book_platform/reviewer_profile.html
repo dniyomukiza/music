@@ -81,6 +81,13 @@
                             <i class="fas fa-external-link-alt"></i> View Portfolio
                         </a>
                         {% endif %}
+                        
+                        {% if is_author and author_books %}
+                        <hr>
+                        <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#inviteReviewerModal">
+                            <i class="fas fa-envelope me-2"></i>Invite to Review
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -150,7 +157,98 @@
         </div>
     </div>
 
+    <!-- Invite Reviewer Modal -->
+    {% if is_author and author_books %}
+    <div class="modal fade" id="inviteReviewerModal" tabindex="-1" aria-labelledby="inviteReviewerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inviteReviewerModalLabel">
+                        <i class="fas fa-envelope me-2"></i>Invite {{ reviewer.reviewer_name }} to Review
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="inviteReviewerForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="inviteBookSelect" class="form-label">Select Book *</label>
+                            <select class="form-select" id="inviteBookSelect" name="book_id" required>
+                                <option value="">Choose a book...</option>
+                                {% for book in author_books %}
+                                <option value="{{ book.id }}">{{ book.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="inviteMessage" class="form-label">Message (Optional)</label>
+                            <textarea class="form-control" id="inviteMessage" name="message" rows="4" 
+                                      placeholder="Add a personal message to your invitation..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Send Invitation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        {% if is_author and author_books %}
+        // Handle reviewer invite form submission
+        document.getElementById('inviteReviewerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                book_id: parseInt(formData.get('book_id')),
+                message: formData.get('message') || ''
+            };
+            
+            if (!data.book_id) {
+                alert('Please select a book');
+                return;
+            }
+            
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+            
+            try {
+                const response = await fetch('{{ url_for("book_platform.invite_reviewer", reviewer_id=reviewer.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message || 'Invitation sent successfully!');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('inviteReviewerModal'));
+                    modal.hide();
+                    this.reset();
+                } else {
+                    alert('Failed to send invitation: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to send invitation. Please try again.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
+        });
+        {% endif %}
+    </script>
 </body>
 </html>
 

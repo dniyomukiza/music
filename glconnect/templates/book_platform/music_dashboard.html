@@ -115,9 +115,15 @@
                             <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-light me-2">
                                 <i class="fas fa-eye me-1"></i>View Profile
                             </a>
+                            {% if is_artist_account %}
                             <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
                                 <i class="fas fa-upload me-1"></i>Upload Song
                             </button>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-info-circle me-1"></i>Artist Account Required
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -146,23 +152,24 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="musicSearchResults" class="mt-4" style="display: none;"></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="row g-4">
-            <!-- Available Songs -->
+            <!-- Search Results -->
             <div class="col-lg-7">
                 <div class="card music-card h-100">
                     <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fas fa-headphones me-2"></i>Available Songs</h5>
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search Results</h5>
                     </div>
                     <div class="card-body">
-                        <div id="availableSongsList" class="row g-3">
-                            <div class="col-12 text-center text-muted">
-                                <i class="fas fa-spinner fa-spin me-2"></i>Loading songs...
+                        <div id="searchResultsContainer" class="row g-3">
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="fas fa-search fa-3x mb-3 d-block"></i>
+                                <p>Search for an artist or song to get started</p>
+                                <small class="text-muted">Enter an artist name to see all their songs, or search for a specific song</small>
                             </div>
                         </div>
                     </div>
@@ -236,8 +243,9 @@
                                 <div>
                                     <h6 class="mb-1"><strong>${songName}</strong></h6>
                                     <p class="text-muted mb-2">by ${artistName}</p>
-                                    <audio controls class="song-audio">
+                                    <audio controls class="song-audio" preload="none" crossorigin="anonymous">
                                         <source src="${songPath}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
                                     </audio>
                                 </div>
                                 ${includeActions && userId ? `
@@ -254,16 +262,20 @@
 
         function searchMusic() {
             const query = document.getElementById('musicSearchInput').value.trim();
-            const resultsContainer = document.getElementById('musicSearchResults');
+            const resultsContainer = document.getElementById('searchResultsContainer');
 
             if (!query) {
-                resultsContainer.style.display = 'none';
-                resultsContainer.innerHTML = '';
+                resultsContainer.innerHTML = `
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+                        <p>Search for an artist or song to get started</p>
+                        <small class="text-muted">Enter an artist name to see all their songs, or search for a specific song</small>
+                    </div>
+                `;
                 return;
             }
 
-            resultsContainer.style.display = 'block';
-            resultsContainer.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-1"></i>Searching music...</div>';
+            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Searching...</div>';
 
             fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
@@ -274,37 +286,67 @@
                     }
 
                     if (Array.isArray(data) && data.length) {
-                        let html = '<h6 class="mb-3 text-primary"><i class="fas fa-music me-2"></i>Search Results</h6>';
-                        data.forEach(song => html += createSongCard(song));
+                        // Group songs by artist for better display
+                        const artistGroups = {};
+                        data.forEach(song => {
+                            const artist = song.artist || 'Unknown Artist';
+                            if (!artistGroups[artist]) {
+                                artistGroups[artist] = [];
+                            }
+                            artistGroups[artist].push(song);
+                        });
+                        
+                        let html = '';
+                        
+                        // If only one artist, show a header
+                        const artistNames = Object.keys(artistGroups);
+                        if (artistNames.length === 1) {
+                            html += `
+                                <div class="col-12 mb-3">
+                                    <div class="alert alert-info">
+                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistNames[0]}</strong></h6>
+                                        <small>Found ${data.length} song${data.length !== 1 ? 's' : ''}</small>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (artistNames.length > 1) {
+                            html += `
+                                <div class="col-12 mb-3">
+                                    <div class="alert alert-success">
+                                        <h6 class="mb-0"><i class="fas fa-music me-2"></i>Found ${data.length} song${data.length !== 1 ? 's' : ''} from ${artistNames.length} artist${artistNames.length !== 1 ? 's' : ''}</h6>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Display all songs with add to playlist buttons
+                        data.forEach(song => {
+                            html += createSongCard(song, true); // Always include actions (add to playlist)
+                        });
+                        
                         resultsContainer.innerHTML = html;
                     } else {
-                        resultsContainer.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-1"></i>No songs found. Try another search.</div>';
+                        resultsContainer.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
+                                <p class="text-muted">No songs found for "${query}"</p>
+                                <small class="text-muted">Try searching for a different artist or song name</small>
+                            </div>
+                        `;
                     }
                 })
                 .catch(error => {
                     console.error('Search error:', error);
-                    resultsContainer.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-1"></i>Error searching songs.</div>';
+                    resultsContainer.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Error searching songs. Please try again.
+                            </div>
+                        </div>
+                    `;
                 });
         }
 
-        function loadAvailableSongs() {
-            const list = document.getElementById('availableSongsList');
-            fetch('/playlist2/get_available_songs')
-                .then(response => response.json())
-                .then(data => {
-                    if (Array.isArray(data) && data.length) {
-                        let html = '';
-                        data.forEach(song => html += createSongCard(song));
-                        list.innerHTML = html;
-                    } else {
-                        list.innerHTML = '<div class="col-12 text-center text-muted"><p>No songs available right now.</p></div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading songs:', error);
-                    list.innerHTML = '<div class="col-12 text-center text-muted"><p>Unable to load songs.</p></div>';
-                });
-        }
 
         function loadPlaylist() {
             const container = document.getElementById('playlistContainer');
@@ -394,32 +436,37 @@
         function setupPlaylistPlayback() {
             // Set up event listeners for all playlist audio elements
             const audioElements = document.querySelectorAll('.playlist-audio');
+            console.log(`Setting up continuous playback for ${audioElements.length} songs`);
             
             audioElements.forEach((audio) => {
                 const songIndex = parseInt(audio.getAttribute('data-song-index'));
-                if (isNaN(songIndex)) return;
+                if (isNaN(songIndex)) {
+                    console.warn('Invalid song index for audio element');
+                    return;
+                }
                 
-                // When a song starts playing, pause all others
+                // When a song starts playing, pause all others and enable continuous playback
                 audio.addEventListener('play', function() {
                     pauseAllOtherPlaylistAudios(songIndex);
                     currentPlayingIndex = songIndex;
                     currentPlayingAudio = audio;
+                    // Always enable continuous playback when a song starts (including resume)
                     isPlaylistPlaying = true;
                 });
                 
-                // When a song is paused, update state (but don't auto-play next)
+                // When a song is paused by user, keep continuous playback enabled
+                // This allows resume to continue playing the next song automatically
                 audio.addEventListener('pause', function() {
-                    if (currentPlayingIndex === songIndex) {
-                        // Only mark as not playing if this is the current song
-                        // This allows manual pause/resume
-                        isPlaylistPlaying = false;
-                    }
+                    // Don't disable continuous playback on pause
+                    // User can pause/resume, and when current song ends, next will play
                 });
                 
-                // When a song ends naturally, play the next one
+                // When a song ends naturally, play the next one automatically
                 audio.addEventListener('ended', function() {
-                    // Only auto-play next if this was the current playing song and it ended naturally
-                    if (currentPlayingIndex === songIndex && isPlaylistPlaying) {
+                    // Always play next song when current song ends
+                    // This enables continuous playback regardless of pause/resume state
+                    if (currentPlayingIndex === songIndex) {
+                        console.log(`Song ${songIndex} ended, playing next...`);
                         playNextInPlaylist();
                     }
                 });
@@ -427,8 +474,9 @@
                 // Handle errors - skip to next song
                 audio.addEventListener('error', function() {
                     console.error(`Error loading song at index ${songIndex}`);
-                    if (currentPlayingIndex === songIndex && isPlaylistPlaying) {
-                        // Skip to next song on error
+                    if (currentPlayingIndex === songIndex) {
+                        // Skip to next song on error (always, not just when isPlaylistPlaying)
+                        console.log(`Skipping to next song due to error...`);
                         playNextInPlaylist();
                     }
                 });
@@ -458,7 +506,13 @@
             if (nextAudio) {
                 currentPlayingIndex = nextIndex;
                 currentPlayingAudio = nextAudio;
-                nextAudio.play().catch(err => {
+                // Ensure continuous playback is enabled
+                isPlaylistPlaying = true;
+                
+                // Automatically play the next song
+                nextAudio.play().then(() => {
+                    console.log(`Now playing: ${playlistSongs[nextIndex].artist} - ${playlistSongs[nextIndex].name}`);
+                }).catch(err => {
                     console.error('Error playing next song:', err);
                     // Skip to next if this one fails
                     playNextInPlaylist();
@@ -597,7 +651,7 @@
                     form.reset();
                     const modal = bootstrap.Modal.getInstance(document.getElementById('uploadSongModal'));
                     modal.hide();
-                    loadAvailableSongs();
+                    // Song uploaded successfully, user can search for it
                 } else {
                     alert(data.message || 'Error uploading song.');
                 }
@@ -613,7 +667,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadAvailableSongs();
             loadPlaylist();
         });
     </script>

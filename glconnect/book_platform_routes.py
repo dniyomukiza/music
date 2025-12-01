@@ -4287,7 +4287,126 @@ def reviewer_profile(reviewer_id):
     reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
     reviews = BookReview.query.filter_by(reviewer_id=reviewer_id, status=ReviewStatus.PUBLISHED).all()
     
-    return render_template('book_platform/reviewer_profile.html', reviewer=reviewer, reviews=reviews)
+    # Get author's books if user is logged in and is an author
+    author_books = []
+    is_author = False
+    if current_user.is_authenticated:
+        user_profile, profile_type = get_user_profile()
+        if user_profile:
+            author_id = get_profile_id(user_profile, profile_type)
+            author_books = BookProject.query.filter_by(author_id=author_id).all()
+            is_author = len(author_books) > 0
+    
+    return render_template('book_platform/reviewer_profile.html', 
+                         reviewer=reviewer, 
+                         reviews=reviews,
+                         author_books=author_books,
+                         is_author=is_author)
+
+# Helper function to send reviewer invitation email
+def send_reviewer_invitation_email(reviewer, book, inviter, message=None):
+    """Send reviewer invitation email via Mailtrap"""
+    sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
+    api_key = os.getenv("MAIL_TRAP")
+    
+    if not api_key:
+        logger.warning("MAIL_TRAP API key not set. Cannot send reviewer invitation email.")
+        return False
+    
+    # Get reviewer email from user account
+    if not reviewer.user or not reviewer.user.email:
+        logger.warning(f"Reviewer {reviewer.id} has no associated user email")
+        return False
+    
+    reviewer_email = reviewer.user.email
+    
+    # Generate book URL
+    book_url = url_for('book_platform.view_book', book_id=book.id, _external=True)
+    
+    # Get inviter name
+    inviter_name = inviter.pen_name or (inviter.user.username if hasattr(inviter, 'user') and inviter.user else "The Author")
+    
+    # Build email content
+    subject = f"Review Invitation: {book.title}"
+    
+    message_text = f"""Hello {reviewer.reviewer_name},
+
+{inviter_name} has invited you to review their book "{book.title}".
+
+"""
+    
+    if message:
+        message_text += f"Message from {inviter_name}:\n{message}\n\n"
+    
+    message_text += f"""Book Details:
+- Title: {book.title}
+- Description: {book.description[:200] if book.description else 'No description available'}...
+- View Book: {book_url}
+
+To accept this invitation and submit your review, please visit the book page using the link above.
+
+As an accredited reviewer, you'll earn revenue share on book sales based on your review agreement.
+
+Best regards,
+Ink Studio Team
+"""
+    
+    try:
+        mail = Mail(
+            sender=Address(email=sender, name="Ink Studio"),
+            to=[Address(email=reviewer_email)],
+            subject=subject,
+            text=message_text,
+            category="Reviewer Invitation"
+        )
+        client = MailtrapClient(token=api_key)
+        client.send(mail)
+        logger.info(f"Reviewer invitation email sent to {reviewer_email} for book {book.id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send reviewer invitation email: {str(e)}", exc_info=True)
+        return False
+
+@book_bp.route('/reviewers/<int:reviewer_id>/invite', methods=['POST'])
+@writer_or_book_platform_required
+def invite_reviewer(reviewer_id, user_profile, profile_type):
+    """Invite a reviewer to review a book"""
+    reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
+    
+    # Get the correct author ID based on profile type
+    author_id = get_profile_id(user_profile, profile_type)
+    
+    # Get the BookPlatformUser object for the inviter
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user:
+        return jsonify({'error': 'Ink Studio profile required'}), 403
+    
+    data = request.get_json()
+    book_id = data.get('book_id')
+    
+    if not book_id:
+        return jsonify({'error': 'Book ID is required'}), 400
+    
+    book = BookProject.query.get_or_404(book_id)
+    
+    # Only author can invite reviewers for their own books
+    if book.author_id != author_id:
+        return jsonify({'error': 'You can only invite reviewers for your own books'}), 403
+    
+    # Check if reviewer is accredited
+    if reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
+        return jsonify({'error': 'This reviewer is not currently accredited'}), 400
+    
+    # Send email invitation via Mailtrap
+    try:
+        message = data.get('message', '')
+        send_reviewer_invitation_email(reviewer, book, book_user, message)
+        logger.info(f"Reviewer invitation sent: Reviewer {reviewer_id} invited to review book {book_id} by author {author_id}")
+    except Exception as e:
+        logger.error(f"Failed to send reviewer invitation email: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to send invitation email'}), 500
+    
+    return jsonify({'success': True, 'message': f'Invitation sent to {reviewer.reviewer_name}'})
 
 # Request Review for Book
 @book_bp.route('/books/<int:book_id>/request-review', methods=['GET', 'POST'])
@@ -4331,6 +4450,11 @@ def submit_review(book_id):
     if not reviewer or reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
         flash('You must be an accredited reviewer to submit reviews.', 'error')
         return redirect(url_for('book_platform.register_reviewer'))
+    
+    # Prevent authors from reviewing their own books
+    if book.author and book.author.user_id == current_user.user_id:
+        flash('You cannot review your own book.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Check if already reviewed
     existing_review = BookReview.query.filter_by(
@@ -4643,10 +4767,13 @@ def make_investment(campaign_id):
     investor_user_id = current_user.user_id
     
     # Prevent self-investment: Check if current user is the author
+    # This check uses user_id to ensure authors cannot invest in their own books
     book = campaign.book_project
-    if book and book.author and book.author.user_id == investor_user_id:
-        flash('You cannot invest in your own book.', 'error')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    if book and book.author:
+        # Check both user_id and author_id to be thorough
+        if book.author.user_id == investor_user_id:
+            flash('You cannot invest in your own book.', 'error')
+            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Get or create BookPlatformUser profile for investment
     bp_user = BookPlatformUser.query.filter_by(user_id=investor_user_id).first()
@@ -4760,13 +4887,18 @@ def make_investment(campaign_id):
 @login_required
 def earnings_dashboard():
     """View earnings for reviewers, investors, and authors - refreshes all data from database on load"""
+    # Import all needed models at the top to avoid UnboundLocalError
+    from glconnect.book_platform_models import (
+        BookSale, TransactionStatus, BookInvestment, BookPlatformUser,
+        AccreditedReviewer, ReviewerEarning, InvestmentPayout, BookProject
+    )
+    
     user_profile, profile_type = get_user_profile()
     logger.info(f"Earnings dashboard - User {current_user.user_id}, profile_type: {profile_type}, user_profile: {user_profile}")
     
     # Process any pending revenue distributions before displaying earnings
     # This ensures the dashboard always shows the latest data
     try:
-        from glconnect.book_platform_models import BookSale, TransactionStatus
         from glconnect.revenue_distribution_service import distribute_revenue
         
         # Find all sales that haven't been distributed yet
@@ -4783,7 +4915,6 @@ def earnings_dashboard():
                     # Refresh sale to get latest data
                     db.session.refresh(sale)
                     # Also refresh related investments to get latest total_returns before distribution
-                    from glconnect.book_platform_models import BookInvestment
                     investments = BookInvestment.query.filter_by(book_project_id=sale.book_project_id).all()
                     for inv in investments:
                         db.session.refresh(inv)
@@ -4805,7 +4936,6 @@ def earnings_dashboard():
                 logger.info(f"✅ Committed {success_count} revenue distributions")
                 
                 # Refresh all investments after distribution to ensure UI shows latest data
-                from glconnect.book_platform_models import BookInvestment
                 all_investments = BookInvestment.query.all()
                 for inv in all_investments:
                     db.session.refresh(inv)
@@ -4847,7 +4977,6 @@ def earnings_dashboard():
     
     # Investment returns - accessible to all users who have invested
     # Find investments by user_id through BookPlatformUser (investments are linked via investor_id = book_platform_users.id)
-    from glconnect.book_platform_models import BookPlatformUser
     book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if book_platform_user:
         investor_id = book_platform_user.id
