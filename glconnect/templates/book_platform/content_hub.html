@@ -112,11 +112,8 @@
                                 </div>
                             </div>
                             <div class="col-md-4 text-end">
-                                <a href="{{ url_for('prof.edit_profile') }}" class="btn btn-light btn-sm me-2">
+                                <a href="{{ url_for('prof.edit_profile') }}" class="btn btn-light btn-sm">
                                     <i class="fas fa-edit me-1"></i>Edit Profile
-                                </a>
-                                <a href="{{ url_for('prof.profile') }}" class="btn btn-outline-light btn-sm">
-                                    <i class="fas fa-user-circle me-1"></i>View Full Profile
                                 </a>
                             </div>
                         </div>
@@ -173,6 +170,11 @@
                             <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-primary">
                                 <i class="fas fa-headphones me-2"></i>Browse Podcasts
                             </a>
+                            {% if current_user.role == 'podcaster' %}
+                            <a href="{{ url_for('book_platform.upload_podcast') }}" class="btn btn-success">
+                                <i class="fas fa-upload me-2"></i>Upload Podcast
+                            </a>
+                            {% endif %}
                             <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-headphones me-2"></i>Listen to News
                             </a>

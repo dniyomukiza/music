@@ -35,3 +35,58 @@ Slow query in get_available_languages: 0.123s
 127.0.0.1 - - [23/Nov/2025 21:15:28] "GET /mybook/marketplace HTTP/1.1" 200 -
 127.0.0.1 - - [23/Nov/2025 21:15:28] "GET /static/book_platform.css?v=5617 HTTP/1.1" 200 -
 127.0.0.1 - - [23/Nov/2025 21:16:54] "POST /mybook/books/3/purchase HTTP/1.1" 200 -
+2025-12-13 20:53:25,962 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:53:25,962 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:53:25,962 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:53:25,962 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:53:25,962 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:53:25,962 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:53:27,682 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-13 20:53:27,923 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-13 20:53:32,694 - __main__ - INFO - Starting Flask app in PRODUCTION mode
+2025-12-13 20:53:32,695 - __main__ - INFO - Reloader: DISABLED (prevents 502 errors)
+2025-12-13 20:53:32,695 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-13 20:53:32,695 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-13 20:53:32,695 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-13 20:53:45,500 - flask_wtf.csrf - INFO - The CSRF token is invalid.
+2025-12-13 20:54:36,377 - flask_wtf.csrf - INFO - The CSRF tokens do not match.
+2025-12-13 20:56:48,825 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:48,825 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:48,825 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:48,825 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:48,825 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:48,825 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:51,009 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-13 20:56:51,282 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-13 20:56:55,398 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-13 20:56:55,398 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-13 20:56:55,398 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-13 20:56:55,398 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-13 20:56:55,398 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-13 20:56:58,864 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:58,864 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:58,864 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:58,864 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:58,864 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:56:58,864 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 20:57:00,626 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-13 20:57:00,884 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-13 20:57:05,366 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-13 20:57:05,366 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-13 20:57:05,366 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-13 20:57:05,366 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-13 20:57:05,366 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-13 20:57:05,422 - werkzeug - WARNING -  * Debugger is active!
+2025-12-13 20:57:16,479 - glconnect.database_optimizer - WARNING - Slow query in get_marketplace_books: 0.183s
+2025-12-13 20:57:29,417 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Diamond Platnumz ft Khalil Harisson & Chley - Komasava.mp3
+2025-12-13 20:57:38,855 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/InnossB - Mpiaka.mp3
+2025-12-13 20:58:13,622 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/InnossB - Sete.mp3
+2025-12-13 20:58:16,886 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/InnossB ft Diamond - Yope.mp3
+2025-12-13 20:58:25,735 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Joeboy - Focus.mp3
+2025-12-13 20:58:41,489 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/CKay - MYSTERIOUS LOVE.mp3
+2025-12-13 20:58:56,454 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/CKay ft Blaqbonez - HALLELUJAH.mp3
+2025-12-13 20:59:46,908 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Sauti Sol - Say Yeah.mp3
+2025-12-13 21:00:01,347 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Diamond Platnumz ft Khalil Harisson & Chley - Komasava.mp3
+2025-12-13 21:00:52,322 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.348s
+2025-12-13 21:00:52,759 - engineio.server - ERROR - http://0.0.0.0:5000 is not an accepted origin. (further occurrences of this error will be logged with level INFO)
+2025-12-13 21:01:12,719 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.253s

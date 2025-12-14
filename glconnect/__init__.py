@@ -47,17 +47,37 @@ def create_app():
 
     CORS(app, origins=["https://glc.cool"], supports_credentials=True) # <-- ADD supports_credentials=True
 
+    # Detect if running in local development
+    is_local_dev = os.getenv('FLASK_ENV') == 'development' or not os.path.exists('/.dockerenv')
+    
     # Secure session cookie configuration
+    # For local development: use HTTP-compatible settings
+    # For production: use HTTPS-required settings
+    if is_local_dev:
+        app.config.update(
+            SESSION_COOKIE_SECURE=False,  # Allow cookies over HTTP in local dev
+            SESSION_COOKIE_SAMESITE='Lax',  # Works with HTTP
+            WTF_CSRF_ENABLED=True,  # Enable CSRF protection
+            WTF_CSRF_TIME_LIMIT=None,  # No time limit for CSRF tokens in dev
+        )
+    else:
+        app.config.update(
+            SESSION_COOKIE_SECURE=True,  # Require HTTPS in production
+            SESSION_COOKIE_SAMESITE='None',  # Cross-site cookies for production
+            WTF_CSRF_ENABLED=True,
+        )
+    
     app.config.update(
-        SESSION_COOKIE_SECURE=True,
-        SESSION_COOKIE_SAMESITE='None', # This is correct for cross-site cookies with credentials
         JWT_SECRET_KEY="abarayon",
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
     )
 
-    # Secret key for sessions
-    app.secret_key = os.urandom(24)
+    # Secret key for sessions (use fixed key for local dev to maintain sessions across restarts)
+    if is_local_dev:
+        app.secret_key = "local-dev-secret-key-change-in-production"  # Fixed key for local dev
+    else:
+        app.secret_key = os.urandom(24)  # Random key for production
 
     # Add hasattr to Jinja2 globals for use in templates
     app.jinja_env.globals['hasattr'] = hasattr

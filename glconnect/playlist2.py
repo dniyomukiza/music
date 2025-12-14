@@ -161,15 +161,28 @@ def check_song_file_exists(song):
         logger.error(f"Error checking if song file exists for song {song.id}: {e}")
         return False
 
-def get_all_songs_by_artist(artist_id=None, artist_name=None):
+def get_all_songs_by_artist(artist_id=None, artist_name=None, include_collaborations=False):
     """
     Get all songs by an artist from Song model (playlist-compatible songs).
     Note: Song_upload songs are not included as they can't be added to playlists directly.
     Returns a list of song dictionaries with id, name, and artist fields.
+    
+    Args:
+        artist_id: Artist ID to search for
+        artist_name: Artist name to search for
+        include_collaborations: If True, also include songs where artist appears in collaborations (ft, featuring, etc.)
     """
     songs_data = []
+    seen_song_ids = set()
+    seen_song_keys = set()
     
-    # Get songs from Song model
+    # Get the artist name if we have artist_id
+    if artist_id and not artist_name:
+        artist_obj = Artist.query.get(artist_id)
+        if artist_obj:
+            artist_name = artist_obj.artist_name
+    
+    # Get songs from Song model where artist_id matches
     if artist_id:
         songs_from_song_model = Song.query.filter_by(artist_id=artist_id).all()
     elif artist_name:
@@ -183,9 +196,27 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
     else:
         songs_from_song_model = []
     
+    # If include_collaborations is True, also search for songs where artist name appears in the artist field
+    if include_collaborations and artist_name:
+        # Search for songs where artist name appears anywhere in the artist field (for collaborations)
+        collaboration_songs = Song.query.filter(
+            db.func.lower(Song.artist).like(f'%{artist_name.lower()}%')
+        ).all()
+        
+        # Combine both lists, avoiding duplicates
+        all_songs = list(songs_from_song_model)
+        for collab_song in collaboration_songs:
+            if collab_song not in all_songs:
+                all_songs.append(collab_song)
+        songs_from_song_model = all_songs
+    
     # Process songs from Song model (only these can be added to playlists)
     import re
     for song in songs_from_song_model:
+        # Skip if we've already processed this song ID
+        if song.id in seen_song_ids:
+            continue
+        
         artist_name_display = song.artist if song.artist else 'Unknown'
         if not artist_name_display or artist_name_display == 'Unknown':
             if song.artist_id:
@@ -209,6 +240,11 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
         if not song_name:
             song_name = 'Untitled Track'
         
+        # Deduplicate by name+artist combination
+        song_key = f"{song_name.lower()}|{artist_name_display.lower()}"
+        if song_key in seen_song_keys:
+            continue
+        
         # Check if song file actually exists before including it
         if not check_song_file_exists(song):
             continue  # Skip songs without playable files
@@ -218,6 +254,8 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None):
         from flask import url_for
         song_path = url_for('playlist2.serve_song_file', song_id=song.id)
         
+        seen_song_ids.add(song.id)
+        seen_song_keys.add(song_key)
         songs_data.append({
             'id': song.id,
             'name': song_name,
@@ -234,13 +272,72 @@ def playlist2():
     if not query:
         return jsonify([])
 
+    # Track seen song IDs and name+artist combinations to prevent duplicates
+    seen_song_ids = set()
+    seen_song_keys = set()  # Track normalized name+artist combinations
+    all_songs_data = []
+
+    def add_song_if_unique(song_data):
+        """Helper to add song only if we haven't seen this song ID or name+artist combination before"""
+        song_id = song_data['id']
+        song_name = (song_data.get('name') or '').strip().lower()
+        artist_name = (song_data.get('artist') or '').strip().lower()
+        
+        # Create a unique key from normalized name and artist
+        song_key = f"{song_name}|{artist_name}"
+        
+        # Skip if we've seen this exact song ID OR this name+artist combination
+        if song_id in seen_song_ids or song_key in seen_song_keys:
+            return
+        
+        seen_song_ids.add(song_id)
+        seen_song_keys.add(song_key)
+        all_songs_data.append(song_data)
+
     # 1. Exact match for artist (case-insensitive) - return all songs by that artist
     artist = Artist.query.filter(db.func.lower(Artist.artist_name) == query).first()
     if artist:
-        songs_data = get_all_songs_by_artist(artist_id=artist.artist_id, artist_name=artist.artist_name)
+        songs_data = get_all_songs_by_artist(artist_id=artist.artist_id, artist_name=artist.artist_name, include_collaborations=True)
         if songs_data:
-            return jsonify(songs_data)
-        # If no songs found, still return empty array (don't redirect)
+            for song_data in songs_data:
+                add_song_if_unique(song_data)
+            if all_songs_data:
+                return jsonify(all_songs_data)
+        # If no songs found by artist_id, also search Song.artist field for this exact name
+        songs_by_name = Song.query.filter(db.func.lower(Song.artist) == query.lower()).all()
+        if songs_by_name:
+            import re
+            for song in songs_by_name:
+                artist_name = song.artist if song.artist else 'Unknown'
+                song_name = song.name.strip() if song.name and song.name.strip() else ''
+                
+                by_pattern = re.compile(r'^\s*by\s+(.+)$', re.IGNORECASE)
+                if by_pattern.match(song_name):
+                    extracted_artist = by_pattern.match(song_name).group(1).strip()
+                    if not artist_name or artist_name == 'Unknown':
+                        artist_name = extracted_artist
+                    song_name = ''
+                
+                if not song_name:
+                    song_name = 'Untitled Track'
+                
+                if not check_song_file_exists(song):
+                    continue
+                
+                from flask import url_for
+                song_path = url_for('playlist2.serve_song_file', song_id=song.id)
+                
+                song_data = {
+                    'id': song.id,
+                    'name': song_name,
+                    'artist': artist_name,
+                    'path': song_path
+                }
+                add_song_if_unique(song_data)
+            
+            if all_songs_data:
+                return jsonify(all_songs_data)
+        # If no songs found, continue to other search methods
 
     # 2. Search for songs matching the query (partial match for song name)
     songs = Song.query.filter(db.func.lower(Song.name).like(f'%{query}%')).limit(20).all()
@@ -265,11 +362,13 @@ def playlist2():
         if artist_id or artist_name:
             songs_data = get_all_songs_by_artist(artist_id=artist_id, artist_name=artist_name)
             if songs_data:
-                return jsonify(songs_data)
+                for song_data in songs_data:
+                    add_song_if_unique(song_data)
+                if all_songs_data:
+                    return jsonify(all_songs_data)
         
         # Fallback: return the songs we found (original behavior)
         import re
-        songs_data = []
         for song in songs:
             artist_name = song.artist if song.artist else 'Unknown'
             if not artist_name or artist_name == 'Unknown':
@@ -302,17 +401,39 @@ def playlist2():
             from flask import url_for
             song_path = url_for('playlist2.serve_song_file', song_id=song.id)
             
-            songs_data.append({
+            song_data = {
                 'id': song.id,
                 'name': song_name,
                 'artist': artist_name,
                 'path': song_path
-            })
-        return jsonify(songs_data)
+            }
+            add_song_if_unique(song_data)
+        
+        if all_songs_data:
+            return jsonify(all_songs_data)
     
-    # 3. Search Song.artist field directly FIRST (for collaborations like "Artist ft Diamond Platnumz")
+    # 3. Search Song.artist field directly (for collaborations like "Artist ft Diamond Platnumz")
     # This catches all songs where the artist field contains the query, even if not in Artist table
-    songs_by_artist_field = Song.query.filter(db.func.lower(Song.artist).like(f'%{query}%')).all()
+    # Also handle cases where query might have extra words - search for all words in query
+    query_words = query.split()
+    songs_by_artist_field = []
+    
+    # First try exact match
+    songs_exact = Song.query.filter(db.func.lower(Song.artist).like(f'%{query}%')).all()
+    songs_by_artist_field.extend(songs_exact)
+    
+    # If query has multiple words, also try matching songs that contain all words (in any order)
+    if len(query_words) > 1:
+        # Build a query that matches all words
+        conditions = [db.func.lower(Song.artist).like(f'%{word}%') for word in query_words if len(word) > 2]
+        if conditions:
+            songs_all_words = Song.query.filter(db.and_(*conditions)).all()
+            # Add songs that aren't already in the list
+            existing_ids = {s.id for s in songs_by_artist_field}
+            for song in songs_all_words:
+                if song.id not in existing_ids:
+                    songs_by_artist_field.append(song)
+    
     if songs_by_artist_field:
         # Group by artist to return all songs by matching artists
         artist_groups = {}
@@ -324,7 +445,6 @@ def playlist2():
         
         # Return all songs from all matching artists
         import re
-        songs_data = []
         for artist_name, artist_songs in artist_groups.items():
             for song in artist_songs:
                 # Clean song name
@@ -344,22 +464,62 @@ def playlist2():
                 from flask import url_for
                 song_path = url_for('playlist2.serve_song_file', song_id=song.id)
                 
-                songs_data.append({
+                song_data = {
                     'id': song.id,
                     'name': song_name,
                     'artist': artist_name,
                     'path': song_path
-                })
+                }
+                add_song_if_unique(song_data)
         
-        if songs_data:
-            return jsonify(songs_data)
+        if all_songs_data:
+            return jsonify(all_songs_data)
     
     # 3b. Partial match for artist name in Artist table (fallback if Song.artist search found nothing)
     artist_partial = Artist.query.filter(db.func.lower(Artist.artist_name).like(f'%{query}%')).first()
     if artist_partial:
-        songs_data = get_all_songs_by_artist(artist_id=artist_partial.artist_id, artist_name=artist_partial.artist_name)
+        # Get songs by this artist including collaborations
+        songs_data = get_all_songs_by_artist(artist_id=artist_partial.artist_id, artist_name=artist_partial.artist_name, include_collaborations=True)
         if songs_data:
-            return jsonify(songs_data)
+            for song_data in songs_data:
+                add_song_if_unique(song_data)
+            if all_songs_data:
+                return jsonify(all_songs_data)
+        
+        # Also search Song.artist field for this artist name (in case songs aren't linked by artist_id)
+        songs_by_artist_name = Song.query.filter(db.func.lower(Song.artist).like(f'%{artist_partial.artist_name.lower()}%')).all()
+        if songs_by_artist_name:
+            import re
+            for song in songs_by_artist_name:
+                artist_name = song.artist if song.artist else 'Unknown'
+                song_name = song.name.strip() if song.name and song.name.strip() else ''
+                
+                by_pattern = re.compile(r'^\s*by\s+(.+)$', re.IGNORECASE)
+                if by_pattern.match(song_name):
+                    extracted_artist = by_pattern.match(song_name).group(1).strip()
+                    if not artist_name or artist_name == 'Unknown':
+                        artist_name = extracted_artist
+                    song_name = ''
+                
+                if not song_name:
+                    song_name = 'Untitled Track'
+                
+                if not check_song_file_exists(song):
+                    continue
+                
+                from flask import url_for
+                song_path = url_for('playlist2.serve_song_file', song_id=song.id)
+                
+                song_data = {
+                    'id': song.id,
+                    'name': song_name,
+                    'artist': artist_name,
+                    'path': song_path
+                }
+                add_song_if_unique(song_data)
+            
+            if all_songs_data:
+                return jsonify(all_songs_data)
 
     # 4. Exact match for song name (if no partial matches)
     song = Song.query.filter(db.func.lower(Song.name) == query).first()
@@ -377,10 +537,90 @@ def playlist2():
         if artist_id or artist_name:
             songs_data = get_all_songs_by_artist(artist_id=artist_id, artist_name=artist_name)
             if songs_data:
-                return jsonify(songs_data)
+                for song_data in songs_data:
+                    add_song_if_unique(song_data)
+                if all_songs_data:
+                    return jsonify(all_songs_data)
+
+    # Return deduplicated results if we found any
+    if all_songs_data:
+        return jsonify(all_songs_data)
 
     # No match found
     return jsonify([])
+
+@play.route('/suggestions', methods=['GET'])
+def get_suggestions():
+    """Get autocomplete suggestions for artists and songs as user types"""
+    query = request.args.get('q', '').strip().lower()
+    if not query or len(query) < 2:  # Require at least 2 characters
+        return jsonify({'artists': [], 'songs': []})
+    
+    suggestions = {'artists': [], 'songs': []}
+    
+    # Get artist suggestions (limit to 5)
+    artists = Artist.query.filter(
+        db.func.lower(Artist.artist_name).like(f'%{query}%')
+    ).limit(5).all()
+    
+    for artist in artists:
+        suggestions['artists'].append({
+            'id': artist.artist_id,
+            'name': artist.artist_name,
+            'type': 'artist'
+        })
+    
+    # Get song suggestions (limit to 5)
+    songs = Song.query.filter(
+        db.or_(
+            db.func.lower(Song.name).like(f'%{query}%'),
+            db.func.lower(Song.artist).like(f'%{query}%')
+        )
+    ).limit(5).all()
+    
+    seen_song_keys = set()
+    for song in songs:
+        # Get artist name
+        artist_name = song.artist if song.artist else 'Unknown'
+        if not artist_name or artist_name == 'Unknown':
+            if song.artist_id:
+                artist_obj = Artist.query.get(song.artist_id)
+                if artist_obj:
+                    artist_name = artist_obj.artist_name
+        
+        # Clean song name
+        song_name = song.name.strip() if song.name and song.name.strip() else 'Untitled Track'
+        
+        # Deduplicate by name+artist
+        song_key = f"{song_name.lower()}|{artist_name.lower()}"
+        if song_key not in seen_song_keys:
+            seen_song_keys.add(song_key)
+            suggestions['songs'].append({
+                'id': song.id,
+                'name': song_name,
+                'artist': artist_name,
+                'type': 'song'
+            })
+    
+    return jsonify(suggestions)
+
+@play.route('/artist-songs', methods=['GET'])
+def get_artist_songs():
+    """Get all songs by an artist including collaborations"""
+    artist_id = request.args.get('artist_id', type=int)
+    artist_name = request.args.get('artist_name', '').strip()
+    
+    if not artist_id and not artist_name:
+        return jsonify([])
+    
+    # Get all songs including collaborations
+    songs_data = get_all_songs_by_artist(
+        artist_id=artist_id, 
+        artist_name=artist_name, 
+        include_collaborations=True
+    )
+    
+    return jsonify(songs_data)
 
 @play.route('/get_available_songs', methods=['GET'])
 def get_available_songs():

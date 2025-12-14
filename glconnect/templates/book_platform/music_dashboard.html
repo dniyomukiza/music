@@ -31,6 +31,79 @@
             color: #1f78c1;
             font-weight: 600;
         }
+        .song-title {
+            color: #000000 !important;
+        }
+        .autocomplete-container {
+            position: relative;
+        }
+        .card-body {
+            overflow: visible !important;
+        }
+        .card {
+            overflow: visible !important;
+        }
+        .row {
+            overflow: visible !important;
+        }
+        .autocomplete-suggestions {
+            position: fixed !important;
+            background: white !important;
+            border: 1px solid #ddd !important;
+            border-radius: 8px !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+            max-height: 500px;
+            overflow-y: auto;
+            z-index: 999999 !important; /* Increased z-index */
+            margin-top: 4px;
+            display: none !important;
+            visibility: hidden;
+            min-width: 400px;
+            /* Force new stacking context to avoid parent clipping */
+            transform: translateZ(0) !important;
+            will-change: transform;
+        }
+        .autocomplete-suggestions.show {
+            display: block !important;
+            visibility: visible !important;
+        }
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        .suggestion-item:hover {
+            background-color: #f8f9fa;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .suggestion-icon {
+            margin-right: 12px;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        .suggestion-content {
+            flex: 1;
+        }
+        .suggestion-name {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 2px;
+        }
+        .suggestion-artist {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .suggestion-type {
+            font-size: 0.75em;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -131,19 +204,21 @@
         </div>
         {% endif %}
 
-        <div class="row mb-4">
+        <div class="row mb-4" id="searchCardRow">
             <div class="col-12">
-                <div class="card music-card">
+                <div class="card music-card" id="searchMusicCard">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search Music</h5>
                         <span class="playlist-badge"><i class="fas fa-user me-1"></i>{{ current_user.username }}</span>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-lg-10">
-                                <div class="input-group input-group-lg">
-                                    <input type="text" id="musicSearchInput" class="form-control" placeholder="Search by song or artist name..." onkeydown="if(event.key === 'Enter') searchMusic()">
-                                    <button class="btn btn-primary" onclick="searchMusic()"><i class="fas fa-search me-1"></i>Search</button>
+                    <div class="card-body p-4" style="overflow: visible !important; position: relative;">
+                        <div class="row g-3 align-items-center" style="overflow: visible !important;">
+                            <div class="col-lg-10" style="position: relative; overflow: visible !important;">
+                                <div class="autocomplete-container" style="position: relative; z-index: 1;">
+                                    <div class="input-group input-group-lg">
+                                        <input type="text" id="musicSearchInput" class="form-control" placeholder="Search by song or artist name..." autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                                        <button class="btn btn-primary" onclick="searchMusic()"><i class="fas fa-search me-1"></i>Search</button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-lg-2 text-lg-end">
@@ -156,6 +231,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- Autocomplete suggestions container - moved outside card structure to avoid stacking context issues -->
+        <div id="autocompleteSuggestions" class="autocomplete-suggestions"></div>
 
         <div class="row g-4">
             <!-- Search Results -->
@@ -202,6 +280,402 @@
         let currentPlayingIndex = -1;
         let currentPlayingAudio = null;
         let isPlaylistPlaying = false;
+        
+        // Autocomplete state
+        let autocompleteTimeout = null;
+        let selectedSuggestionIndex = -1;
+        
+        // Handle search input for autocomplete
+        function handleSearchInput() {
+            const input = document.getElementById('musicSearchInput');
+            const query = input.value.trim();
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            
+            // Clear previous timeout
+            if (autocompleteTimeout) {
+                clearTimeout(autocompleteTimeout);
+                autocompleteTimeout = null;
+            }
+            
+            // Hide suggestions if query is empty
+            if (query.length === 0) {
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+                selectedSuggestionIndex = -1;
+                return;
+            }
+            
+            // Show suggestions immediately for 2+ characters, with debounce for API calls
+            if (query.length >= 2) {
+                // Debounce autocomplete requests (wait 200ms after user stops typing)
+                autocompleteTimeout = setTimeout(() => {
+                    if (input.value.trim() === query) { // Only fetch if query hasn't changed
+                        fetchSuggestions(query);
+                    }
+                }, 200);
+            } else {
+                // Hide if less than 2 characters
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+        
+        // Fetch autocomplete suggestions
+        function fetchSuggestions(query) {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            
+            console.log('fetchSuggestions called with query:', query);
+            
+            // Validate query
+            if (!query || query.length < 2) {
+                console.log('Query too short, hiding suggestions');
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Double-check that the input value hasn't changed (avoid race conditions)
+            if (input && input.value.trim() !== query) {
+                console.log('Query changed, ignoring response');
+                return; // Query changed, ignore this response
+            }
+            
+            // Show loading state
+            suggestionsContainer.innerHTML = '<div class="suggestion-item"><div class="suggestion-content"><div class="suggestion-name">Loading...</div></div></div>';
+            
+            // Position the container before showing it
+            positionSuggestionsContainer(suggestionsContainer, input);
+            
+            suggestionsContainer.style.display = 'block';
+            suggestionsContainer.style.visibility = 'visible';
+            suggestionsContainer.classList.add('show');
+            
+            console.log('Fetching suggestions from /playlist2/suggestions?q=' + encodeURIComponent(query));
+            
+            fetch(`/playlist2/suggestions?q=${encodeURIComponent(query)}`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Suggestions data received:', data);
+                    // Check again if query hasn't changed
+                    if (input && input.value.trim() === query) {
+                        displaySuggestions(data);
+                    } else {
+                        console.log('Query changed after fetch, not displaying');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching suggestions:', error);
+                    suggestionsContainer.classList.remove('show');
+                    suggestionsContainer.style.display = 'none';
+                });
+        }
+        
+        // Position suggestions container - extracted to reusable function
+        function positionSuggestionsContainer(suggestionsContainer, input) {
+            const searchCard = document.getElementById('searchMusicCard');
+            const searchResultsContainer = document.querySelector('.row.g-4 .col-lg-7');
+            
+            if (searchCard && searchResultsContainer) {
+                const cardRect = searchCard.getBoundingClientRect();
+                const resultsRect = searchResultsContainer.getBoundingClientRect();
+                
+                // Position right below the entire search card (including header and body)
+                // Align left edge with Search Results container
+                suggestionsContainer.style.top = (cardRect.bottom + window.scrollY + 4) + 'px';
+                suggestionsContainer.style.left = (resultsRect.left + window.scrollX) + 'px';
+                suggestionsContainer.style.width = resultsRect.width + 'px';
+                
+                console.log('Positioned suggestions - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left, 'Width:', suggestionsContainer.style.width);
+            } else if (searchCard) {
+                // Fallback: use search card position
+                const cardRect = searchCard.getBoundingClientRect();
+                suggestionsContainer.style.top = (cardRect.bottom + window.scrollY + 4) + 'px';
+                suggestionsContainer.style.left = (cardRect.left + window.scrollX) + 'px';
+                suggestionsContainer.style.width = Math.max(cardRect.width, 500) + 'px';
+                console.log('Positioned suggestions (fallback 1) - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+            } else {
+                // Last fallback: try class selector
+                const searchCardFallback = document.querySelector('.row.mb-4 .card.music-card');
+                if (searchCardFallback) {
+                    const cardRect = searchCardFallback.getBoundingClientRect();
+                    suggestionsContainer.style.top = (cardRect.bottom + window.scrollY + 4) + 'px';
+                    suggestionsContainer.style.left = (cardRect.left + window.scrollX) + 'px';
+                    suggestionsContainer.style.width = Math.max(cardRect.width, 500) + 'px';
+                    console.log('Positioned suggestions (fallback 2) - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+                } else {
+                    // Final fallback: position right below search input
+                    const inputRect = input.getBoundingClientRect();
+                    suggestionsContainer.style.top = (inputRect.bottom + window.scrollY + 4) + 'px';
+                    suggestionsContainer.style.left = (inputRect.left + window.scrollX) + 'px';
+                    suggestionsContainer.style.width = Math.max(inputRect.width, 500) + 'px';
+                    console.log('Positioned suggestions (fallback 3) - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+                }
+            }
+        }
+        
+        // Display autocomplete suggestions
+        function displaySuggestions(data) {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            
+            console.log('displaySuggestions called with data:', data);
+            
+            if (!suggestionsContainer || !input) {
+                console.error('Suggestions container or input not found');
+                return;
+            }
+            
+            const artists = data.artists || [];
+            const songs = data.songs || [];
+            
+            console.log('Artists:', artists.length, 'Songs:', songs.length);
+            
+            if (artists.length === 0 && songs.length === 0) {
+                console.log('No suggestions found, hiding container');
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Position the suggestions dropdown
+            positionSuggestionsContainer(suggestionsContainer, input);
+            
+            // Ensure container is visible and has highest z-index
+            suggestionsContainer.style.display = 'block';
+            suggestionsContainer.style.visibility = 'visible';
+            suggestionsContainer.style.zIndex = '999999'; // Increased z-index
+            suggestionsContainer.style.position = 'fixed'; // Ensure fixed positioning
+            suggestionsContainer.style.transform = 'translateZ(0)'; // Force new stacking context
+            suggestionsContainer.classList.add('show');
+            
+            console.log('Positioning suggestions. Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+            
+            let html = '';
+            
+            // Display artists first
+            if (artists.length > 0) {
+                artists.forEach((artist, index) => {
+                    const artistId = artist.id || '';
+                    const artistName = artist.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <div class="suggestion-item" data-type="artist" data-artist-id="${artistId}" data-artist-name="${artistName}" data-value="${artistName}" onclick="selectArtistSuggestion(${artistId}, '${artistName}')">
+                            <i class="fas fa-user suggestion-icon"></i>
+                            <div class="suggestion-content">
+                                <div class="suggestion-name">${artist.name}</div>
+                                <div class="suggestion-artist">Artist</div>
+                            </div>
+                            <span class="suggestion-type">Artist</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Display songs
+            if (songs.length > 0) {
+                songs.forEach((song, index) => {
+                    const songId = song.id || '';
+                    const songName = song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const songArtist = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <div class="suggestion-item" data-type="song" data-song-id="${songId}" data-song-name="${songName}" data-song-artist="${songArtist}" data-value="${songName} by ${songArtist}" onclick="selectSongSuggestion('${songName} by ${songArtist}')">
+                            <i class="fas fa-music suggestion-icon"></i>
+                            <div class="suggestion-content">
+                                <div class="suggestion-name">${song.name}</div>
+                                <div class="suggestion-artist">by ${song.artist}</div>
+                            </div>
+                            <span class="suggestion-type">Song</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            suggestionsContainer.innerHTML = html;
+            
+            // Ensure container is visible before adding show class
+            suggestionsContainer.style.display = 'block';
+            suggestionsContainer.style.visibility = 'visible';
+            suggestionsContainer.classList.add('show');
+            
+            // Double-check visibility
+            if (!suggestionsContainer.classList.contains('show')) {
+                suggestionsContainer.classList.add('show');
+            }
+            
+            console.log('Suggestions HTML set, container should be visible now. HTML length:', html.length);
+            console.log('Container classes:', suggestionsContainer.className);
+            console.log('Container style.display:', suggestionsContainer.style.display);
+            console.log('Container computed style:', window.getComputedStyle(suggestionsContainer).display);
+            console.log('Container position:', suggestionsContainer.style.top, suggestionsContainer.style.left);
+            
+            selectedSuggestionIndex = -1;
+            
+            // Debug: log to console
+            console.log('Suggestions displayed:', { artists: artists.length, songs: songs.length, top: suggestionsContainer.style.top });
+        }
+        
+        // Handle keyboard navigation in suggestions
+        function handleSearchKeydown(event) {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+            
+            if (!suggestionsContainer.classList.contains('show') || suggestions.length === 0) {
+                if (event.key === 'Enter') {
+                    searchMusic();
+                }
+                return;
+            }
+            
+            switch(event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+                    updateSuggestionSelection(suggestions);
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+                    updateSuggestionSelection(suggestions);
+                    break;
+                case 'Enter':
+                    event.preventDefault();
+                    if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.length) {
+                        const selected = suggestions[selectedSuggestionIndex];
+                        const type = selected.getAttribute('data-type');
+                        if (type === 'artist') {
+                            const artistId = selected.getAttribute('data-artist-id');
+                            const artistName = selected.getAttribute('data-artist-name');
+                            selectArtistSuggestion(parseInt(artistId), artistName);
+                        } else {
+                            const songValue = selected.getAttribute('data-value');
+                            selectSongSuggestion(songValue);
+                        }
+                    } else {
+                        searchMusic();
+                    }
+                    break;
+                case 'Escape':
+                    suggestionsContainer.classList.remove('show');
+                    suggestionsContainer.innerHTML = '';
+                    selectedSuggestionIndex = -1;
+                    break;
+            }
+        }
+        
+        // Update visual selection of suggestions
+        function updateSuggestionSelection(suggestions) {
+            suggestions.forEach((item, index) => {
+                if (index === selectedSuggestionIndex) {
+                    item.style.backgroundColor = '#e9ecef';
+                    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                } else {
+                    item.style.backgroundColor = '';
+                }
+            });
+        }
+        
+        // Select an artist suggestion - get all their songs including collaborations
+        function selectArtistSuggestion(artistId, artistName) {
+            const input = document.getElementById('musicSearchInput');
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            input.value = artistName;
+            suggestionsContainer.classList.remove('show');
+            suggestionsContainer.innerHTML = '';
+            selectedSuggestionIndex = -1;
+            
+            // Fetch all songs by this artist including collaborations
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Loading songs...</div>';
+            
+            const url = artistId 
+                ? `/playlist2/artist-songs?artist_id=${artistId}`
+                : `/playlist2/artist-songs?artist_name=${encodeURIComponent(artistName)}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length) {
+                        let html = `
+                            <div class="col-12 mb-3">
+                                <div class="alert alert-info">
+                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistName}</strong></h6>
+                                    <small>Found ${data.length} song${data.length !== 1 ? 's' : ''} (including collaborations)</small>
+                                </div>
+                            </div>
+                        `;
+                        
+                        data.forEach(song => {
+                            html += createSongCard(song, true);
+                        });
+                        
+                        resultsContainer.innerHTML = html;
+                    } else {
+                        resultsContainer.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
+                                <p class="text-muted">No songs found for "${artistName}"</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching artist songs:', error);
+                    resultsContainer.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Error loading songs. Please try again.
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+        
+        // Select a song suggestion - show it in search results so it can be added to playlist
+        function selectSongSuggestion(songValue) {
+            const input = document.getElementById('musicSearchInput');
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            input.value = songValue;
+            suggestionsContainer.classList.remove('show');
+            suggestionsContainer.innerHTML = '';
+            selectedSuggestionIndex = -1;
+            // Perform normal search for the song immediately (no delay, no button click needed)
+            searchMusic();
+        }
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(event) {
+            const container = document.querySelector('.autocomplete-container');
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            if (container && !container.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.innerHTML = '';
+                selectedSuggestionIndex = -1;
+            }
+        });
+        
+        // Update suggestions position on scroll
+        window.addEventListener('scroll', function() {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            if (suggestionsContainer && suggestionsContainer.classList.contains('show') && input) {
+                positionSuggestionsContainer(suggestionsContainer, input);
+            }
+        });
+        
+        // Update suggestions position on window resize
+        window.addEventListener('resize', function() {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            if (suggestionsContainer && suggestionsContainer.classList.contains('show') && input) {
+                positionSuggestionsContainer(suggestionsContainer, input);
+            }
+        });
 
         function createSongCard(song, includeActions = true) {
             // Use song file serving route for reliable file access, fallback to path if available
@@ -241,8 +715,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                 <div>
-                                    <h6 class="mb-1"><strong>${songName}</strong></h6>
-                                    <p class="text-muted mb-2">by ${artistName}</p>
+                                    <h6 class="mb-1 song-title"><strong>${songName} by ${artistName}</strong></h6>
                                     <audio controls class="song-audio" preload="none" crossorigin="anonymous">
                                         <source src="${songPath}" type="audio/mpeg">
                                         Your browser does not support the audio element.
@@ -404,8 +877,7 @@
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                             <div>
-                                                <h6 class="mb-1"><strong>${song.name}</strong></h6>
-                                                <p class="text-muted mb-2">by ${song.artist}</p>
+                                                <h6 class="mb-1 song-title"><strong>${song.name} by ${song.artist}</strong></h6>
                                                 <audio id="playlist-audio-${index}" controls class="song-audio playlist-audio" data-song-index="${index}">
                                                     <source src="${song.path}" type="audio/mpeg">
                                                 </audio>
