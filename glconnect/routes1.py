@@ -27,6 +27,39 @@ def load_user(user_id):
 @bp1.before_app_request
 def load_logged_in_user():
     g.user_id = session.get('user_id')
+
+def get_role_based_redirect(user):
+    """Helper function to get the appropriate redirect URL based on user role.
+    Used by both login and registration flows to ensure consistent redirects."""
+    from glconnect.models import Writer
+    from glconnect.book_platform_models import BookPlatformUser
+    
+    # Artist users → music dashboard
+    if user.role == "artist":
+        return redirect(url_for('book_platform.music_dashboard'))
+    
+    # Author users → writer/profile if no profile, else /mybook dashboard
+    elif user.role == "author":
+        writer = Writer.query.filter_by(user_id=user.user_id).first()
+        book_user = BookPlatformUser.query.filter_by(user_id=user.user_id).first()
+        
+        if not writer and not book_user:
+            return redirect('https://glc.cool/writer/profile')
+        else:
+            return redirect(url_for('book_platform.dashboard'))
+    
+    # Freelancer users → blogs
+    elif user.role == "freelancer":
+        return redirect(url_for('blog.blogs'))
+    
+    # Blogger users → blogs
+    elif user.role == "blogger":
+        return redirect(url_for('blog.blogs'))
+    
+    # All other users → content hub
+    else:
+        return redirect(url_for('book_platform.content_hub'))
+
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
@@ -144,9 +177,14 @@ def confirm_email(token):
     else:
         user.confirmed = True
         db.session.commit()
-        flash('Your email has been confirmed. You can now log in.', 'success')
-
-    return redirect(url_for('routes1.login'))  
+        flash('Your email has been confirmed. Welcome!', 'success')
+    
+    # Automatically log the user in after email confirmation
+    login_user(user)
+    session['user_id'] = user.user_id
+    
+    # Use the same role-based redirect as login
+    return get_role_based_redirect(user)  
 
 @bp1.route('/check_email')
 def check_email():
@@ -164,37 +202,13 @@ def login():
             session['user_id'] = user.user_id 
             flash('Login successful!', 'success')
             
-            # Check for next parameter to redirect after login
+            # Check for next parameter to redirect after login (but only if it's not Ink Studio)
             next_page = request.args.get('next')
-            if next_page and next_page.startswith('/'):
+            if next_page and next_page.startswith('/') and '/ink-studio' not in next_page:
                 return redirect(next_page)
             
-            # Default role-based redirects
-            if user.role=="blogger":
-                return redirect(url_for('blog.blogs'))
-            elif user.role=="artist":
-                return redirect(url_for('music.artist_profile'))
-            elif user.role=="author":
-                # Check if author needs to complete profile
-                from glconnect.models import Writer
-                writer = Writer.query.filter_by(user_id=user.user_id).first()
-                
-                # Check if profile needs completion (empty bio or default picture)
-                needs_completion = False
-                if writer:
-                    if not writer.bio or writer.bio.strip() == "":
-                        needs_completion = True
-                    if writer.profile_picture == "static/uploads/default_writer.jpg":
-                        needs_completion = True
-                
-                if needs_completion:
-                    flash('Welcome! Please complete your author profile to get started.', 'info')
-                    return redirect(url_for('writer.complete_profile'))
-                else:
-                    # Authors go directly to Ink Studio dashboard
-                    return redirect(url_for('book_platform.dashboard'))
-            else:
-                return redirect(url_for('prof.profile'))
+            # Use shared role-based redirect function
+            return get_role_based_redirect(user)
         else:
             flash('Invalid username or password', 'error')
     return render_template('login.html', title='Login', form=form)

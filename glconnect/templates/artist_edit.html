@@ -19,7 +19,7 @@
         <div class="form-group">
             <label for="profile_pic">Profile Picture:</label>
             {% if artist.profile_pic %}
-            <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" alt="Current profile pic" style="max-width: 120px; display:block; margin-bottom:10px;">
+            <img src="{{ url_for('static', filename=artist.profile_pic.replace('static/', '') if artist.profile_pic.startswith('static/') else artist.profile_pic) }}" alt="Current profile pic" style="max-width: 120px; display:block; margin-bottom:10px;">
             {% endif %}
             <input type="file" id="profile_pic" name="profile_pic" accept="image/*">
         </div>

@@ -78,11 +78,24 @@ def upload_song():
         flash(f"Artist {artist_name} not found.", "error")
         return redirect(url_for("music.upload_song"))
 
-    # Secure and unique file naming
-    base_filename = secure_filename(f"{artist_name} - {song_name}")
+    # Create filename with spaces and dashes (not underscores)
+    # Sanitize but preserve spaces and dashes
+    def sanitize_filename_preserve_spaces(text):
+        """Sanitize filename but preserve spaces and dashes"""
+        import re
+        # Keep alphanumeric, spaces, dashes, and dots
+        sanitized = re.sub(r'[^a-zA-Z0-9\s\-\.]', '', text)
+        # Remove multiple consecutive spaces
+        sanitized = re.sub(r'\s+', ' ', sanitized)
+        # Strip leading/trailing spaces and dashes
+        sanitized = sanitized.strip(' -')
+        return sanitized
+    
+    # Format: "Artist Name - Song Name.mp3" with spaces preserved
+    base_filename = f"{sanitize_filename_preserve_spaces(artist_name)} - {sanitize_filename_preserve_spaces(song_name)}"
     mp3_filename = f"{base_filename}.mp3"
     mp3_path = os.path.join(UPLOAD_FOLDER, mp3_filename)
-
+    
     counter = 1
     while os.path.exists(mp3_path):
         mp3_filename = f"{base_filename} ({counter}).mp3"
@@ -304,7 +317,7 @@ def artist_edit():
             filename = secure_filename(profile_pic.filename)
 
             # Define the folder where the profile picture will be stored
-            upload_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'song_uploads')
+            upload_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'uploads')
 
             # Ensure the directory exists before saving
             if not os.path.exists(upload_folder):
@@ -314,8 +327,8 @@ def artist_edit():
             filepath = os.path.join(upload_folder, filename)
             profile_pic.save(filepath)
 
-            # Save the relative path in the database (no need for full file path)
-            artist.profile_pic = filename
+            # Save the path as static/uploads/picname.jpg in database
+            artist.profile_pic = f"static/uploads/{filename}"
 
         # Commit changes to the database
         db.session.commit()

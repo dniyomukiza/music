@@ -308,27 +308,40 @@ def collaboration_required(f):
 # Ink Studio access route - handles redirects based on user type
 @book_bp.route('/ink-studio')
 def ink_studio_access():
-    """Ink Studio access point - role-aware redirects for authors."""
+    """Ink Studio access point - redirects to login if not authenticated, otherwise redirects based on role."""
+    # If not authenticated, redirect to login (which has register link)
     if not current_user.is_authenticated:
-        flash('Please log in to access Ink Studio', 'info')
-        return redirect(url_for('routes1.login'))
+        return redirect(url_for('routes1.login', next=url_for('book_platform.ink_studio_access')))
 
-    # Resolve existing profiles
+    # User is authenticated - redirect based on role
+    from glconnect.models import Writer
+    from glconnect.book_platform_models import BookPlatformUser
+    
     writer = Writer.query.filter_by(user_id=current_user.user_id).first()
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-
-    # Author-specific behavior: require setup if no profile yet
-    if getattr(current_user, 'role', None) == 'author':
-        if writer or book_user:
-            return redirect(url_for('book_platform.dashboard'))
-        flash('Please set up your author profile to access Ink Studio.', 'info')
-        return redirect(url_for('book_platform.setup_profile'))
-
-    # Non-authors: keep existing fallback behavior
-    if writer or book_user:
+    user_role = getattr(current_user, 'role', None)
+    
+    # Artist users → music dashboard
+    if user_role == 'artist':
+        return redirect(url_for('book_platform.music_dashboard'))
+    
+    # Author users → writer/profile if no profile, else /mybook dashboard
+    elif user_role == 'author':
+        if not writer and not book_user:
+            return redirect('https://glc.cool/writer/profile')
         return redirect(url_for('book_platform.dashboard'))
-    flash('You need a writer profile to access Ink Studio. Please create a writer profile first.', 'info')
-    return redirect(url_for('writer.writer_profile'))
+    
+    # Freelancer users → blogs
+    elif user_role == 'freelancer':
+        return redirect(url_for('blog.blogs'))
+    
+    # Blogger users → blogs
+    elif user_role == 'blogger':
+        return redirect(url_for('blog.blogs'))
+    
+    # All other users → content hub
+    else:
+        return redirect(url_for('book_platform.content_hub'))
 
 # Main dashboard route
 @book_bp.route('/')
@@ -396,10 +409,27 @@ def dashboard(user_profile, profile_type):
         ).order_by(BookNotification.created_at.desc()).limit(5).all()
     
     # Determine if user is an author
-    # Only users with Writer profiles OR BookPlatformUsers who have actually authored books are considered authors
-    # This prevents non-authors from accessing author-only features
+    # Only users with 'author' role OR users who have actually authored books (but not excluded roles) are considered authors
+    # Excluded roles should NEVER see author content, even if they have authored books
+    excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
     has_authored_books = len(authored_books) > 0
-    is_author = profile_type == 'writer' or (profile_type == 'book_platform' and has_authored_books)
+    
+    # User is considered an author only if:
+    # 1. They have role 'author' AND have a writer/book_platform profile, OR
+    # 2. They have actually authored books AND their role is NOT in excluded_roles
+    # This ensures 'other' role users NEVER see author content, even if they have a writer profile
+    if current_user.role in excluded_roles:
+        # Excluded roles are NEVER authors, regardless of profile or books
+        is_author = False
+    elif current_user.role == 'author' and (profile_type == 'writer' or profile_type == 'book_platform'):
+        # Users with 'author' role and writer/book_platform profile are authors
+        is_author = True
+    elif has_authored_books:
+        # If they have authored books and role is not excluded, they're an author
+        is_author = True
+    else:
+        # Default: not an author
+        is_author = False
     
     # Get additional data for authors
     investment_campaigns = []
@@ -5581,9 +5611,10 @@ def create_artist_profile():
         if existing_artist:
             return jsonify({'success': False, 'message': 'You already have an artist profile.'}), 400
         
-        data = request.get_json()
-        artist_name = data.get('artist_name', '').strip()
-        bio = data.get('bio', '').strip()
+        # Get form data (FormData instead of JSON)
+        artist_name = request.form.get('artist_name', '').strip()
+        bio = request.form.get('bio', '').strip()
+        profile_pic_file = request.files.get('profile_pic')
         
         if not artist_name:
             return jsonify({'success': False, 'message': 'Artist name is required.'}), 400
@@ -5593,12 +5624,48 @@ def create_artist_profile():
         if existing_name:
             return jsonify({'success': False, 'message': 'This artist name is already taken.'}), 400
         
+        # Handle profile picture upload (optional)
+        profile_pic_filename = "static/uploads/default.jpg"  # Default value
+        if profile_pic_file and profile_pic_file.filename != '':
+            # Validate file extension
+            if not allowed_image_file(profile_pic_file.filename):
+                return jsonify({
+                    'success': False, 
+                    'message': f'Invalid image format. Allowed formats: {", ".join(ALLOWED_IMAGE_EXTENSIONS)}'
+                }), 400
+            
+            # Validate file size
+            profile_pic_file.seek(0, os.SEEK_END)
+            file_size = profile_pic_file.tell()
+            profile_pic_file.seek(0)
+            if file_size > MAX_IMAGE_SIZE:
+                return jsonify({
+                    'success': False, 
+                    'message': f'Image file is too large. Maximum allowed size is {MAX_IMAGE_SIZE // (1024 * 1024)}MB.'
+                }), 400
+            
+            # Generate unique filename
+            filename = secure_filename(profile_pic_file.filename)
+            file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+            
+            # Define upload folder - save to static/uploads/ (matching database path format)
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            # Save the file
+            filepath = os.path.join(upload_folder, unique_filename)
+            profile_pic_file.save(filepath)
+            
+            # Store path as static/uploads/picname.jpg in database
+            profile_pic_filename = f"static/uploads/{unique_filename}"
+        
         # Create new artist profile
         new_artist = Artist(
             user_id=current_user.user_id,
             artist_name=artist_name,
             bio=bio or None,
-            profile_pic="default.jpg"
+            profile_pic=profile_pic_filename
         )
         
         db.session.add(new_artist)
@@ -5688,8 +5755,22 @@ def upload_song_music_dashboard():
         afro_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'afro')
         os.makedirs(afro_folder, exist_ok=True)
         
-        # Secure and unique file naming
-        base_filename = secure_filename(f"{artist.artist_name} - {song_name}")
+        # Create filename with spaces and dashes (not underscores)
+        # Sanitize but preserve spaces and dashes
+        def sanitize_filename_preserve_spaces(text):
+            """Sanitize filename but preserve spaces and dashes"""
+            # Remove or replace dangerous characters but keep spaces, dashes, and alphanumeric
+            import re
+            # Keep alphanumeric, spaces, dashes, and dots
+            sanitized = re.sub(r'[^a-zA-Z0-9\s\-\.]', '', text)
+            # Remove multiple consecutive spaces
+            sanitized = re.sub(r'\s+', ' ', sanitized)
+            # Strip leading/trailing spaces and dashes
+            sanitized = sanitized.strip(' -')
+            return sanitized
+        
+        # Format: "Artist Name - Song Name.mp3" with spaces preserved
+        base_filename = f"{sanitize_filename_preserve_spaces(artist.artist_name)} - {sanitize_filename_preserve_spaces(song_name)}"
         mp3_filename = f"{base_filename}.mp3"
         mp3_path = os.path.join(afro_folder, mp3_filename)
         
@@ -5712,22 +5793,26 @@ def upload_song_music_dashboard():
         else:
             cover_filename = "photo3.webp"
         
+        # Store full path in database: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
+        full_db_path = f"/liqfolder/glconnect/static/afro/{mp3_filename}"
+        
         # Save to Song model for searchability (this is what the search uses)
         from glconnect.models import Song
         new_song = Song(
             name=song_name,
             artist=artist.artist_name,
             artist_id=artist.artist_id,
-            local_path=mp3_filename,  # Just the filename, path is /static/afro/
+            local_path=full_db_path,  # Full path: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
             cover_image=cover_filename
         )
         db.session.add(new_song)
         
         # Also create Song_upload entry for compatibility
+        # Store full path (consistent with Song model)
         new_song_upload = Song_upload(
             name_song=song_name,
             name_artist=artist.artist_name,
-            local_path=f"/static/afro/{mp3_filename}",
+            local_path=full_db_path,  # Full path: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
             cover_image=cover_filename,
             twitter_link=twitter_link,
             instagram_link=instagram_link,

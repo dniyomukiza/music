@@ -10,7 +10,7 @@
     {% include 'messages.html' %}
     <div class="hero">
         {% if artist.profile_pic %}
-        <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" class="profile-pic" alt="Profile Picture">
+        <img src="{{ url_for('static', filename=artist.profile_pic.replace('static/', '') if artist.profile_pic.startswith('static/') else artist.profile_pic) }}" class="profile-pic" alt="Profile Picture">
         {% else %}
         <img src="{{ url_for('static', filename='images/profile.jpg') }}" class="profile-pic" alt="Default Profile">
         {% endif %}

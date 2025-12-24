@@ -90,3 +90,461 @@ Slow query in get_available_languages: 0.123s
 2025-12-13 21:00:52,322 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.348s
 2025-12-13 21:00:52,759 - engineio.server - ERROR - http://0.0.0.0:5000 is not an accepted origin. (further occurrences of this error will be logged with level INFO)
 2025-12-13 21:01:12,719 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.253s
+2025-12-13 21:15:33,366 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:15:33,366 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:15:33,366 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:15:33,366 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:15:33,366 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:15:33,366 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:15:35,176 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-13 21:15:35,495 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-13 21:15:39,879 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-13 21:15:39,879 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-13 21:15:39,879 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-13 21:15:39,879 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-13 21:15:39,879 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-13 21:15:39,910 - werkzeug - WARNING -  * Debugger is active!
+2025-12-13 21:16:08,690 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:16:08,690 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:16:08,690 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:16:08,690 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:16:08,690 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:16:08,690 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-13 21:16:10,497 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-13 21:16:10,806 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-13 21:16:15,145 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-13 21:16:15,146 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-13 21:16:15,146 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-13 21:16:15,146 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-13 21:16:15,146 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-13 21:16:15,180 - werkzeug - WARNING -  * Debugger is active!
+2025-12-17 20:54:24,528 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:24,528 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:24,529 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:24,529 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:24,529 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:24,529 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:30,482 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-17 20:54:30,935 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-17 20:54:35,113 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-17 20:54:35,113 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-17 20:54:35,113 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-17 20:54:35,113 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-17 20:54:35,113 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-17 20:54:38,543 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:38,543 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:38,543 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:38,543 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:38,543 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:38,543 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-17 20:54:40,469 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-17 20:54:40,734 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-17 20:54:45,090 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-17 20:54:45,091 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-17 20:54:45,091 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-17 20:54:45,091 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-17 20:54:45,092 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-17 20:54:45,143 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:30:54,810 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:30:54,810 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:30:54,810 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:30:54,810 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:30:54,810 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:30:54,810 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:30:57,832 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:30:58,165 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:31:02,922 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:31:02,922 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:31:02,922 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:31:02,922 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:31:02,922 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:31:06,258 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:31:06,258 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:31:06,258 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:31:06,258 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:31:06,259 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:31:06,259 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:31:08,084 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:31:08,334 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:31:12,826 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:31:12,826 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:31:12,826 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:31:12,826 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:31:12,826 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:31:12,874 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:31:50,701 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.304s
+2025-12-22 20:34:29,964 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.290s
+2025-12-22 20:36:05,082 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.274s
+2025-12-22 20:46:34,922 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:34,922 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:34,922 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:34,922 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:34,922 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:34,922 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:36,778 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:46:37,041 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:46:41,485 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:46:41,485 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:46:41,485 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:46:41,485 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:46:41,485 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:46:44,300 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:44,300 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:44,300 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:44,300 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:44,300 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:44,300 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:46:45,759 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:46:45,976 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:46:50,455 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:46:50,455 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:46:50,455 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:46:50,455 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:46:50,456 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:46:50,489 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:47:25,147 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.325s
+2025-12-22 20:47:45,740 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.296s
+2025-12-22 20:50:03,404 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:03,404 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:03,404 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:03,404 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:03,404 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:03,404 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:05,238 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:50:05,535 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:50:09,774 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:50:09,775 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:50:09,775 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:50:09,775 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:50:09,775 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:50:09,810 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:50:19,813 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:19,813 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:19,813 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:19,814 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:19,814 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:19,814 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:21,472 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:50:21,780 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:50:26,309 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:50:26,309 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:50:26,309 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:50:26,309 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:50:26,309 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:50:26,357 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:50:36,357 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:36,357 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:36,357 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:36,357 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:36,357 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:36,357 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:50:37,863 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:50:38,140 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:50:42,954 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:50:42,954 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:50:42,954 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:50:42,954 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:50:42,954 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:50:42,982 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:51:23,241 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:51:23,241 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:51:23,242 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:51:23,242 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:51:23,242 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:51:23,242 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-22 20:51:24,676 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-22 20:51:24,944 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-22 20:51:29,191 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-22 20:51:29,191 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-22 20:51:29,191 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-22 20:51:29,191 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-22 20:51:29,191 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-22 20:51:29,250 - werkzeug - WARNING -  * Debugger is active!
+2025-12-22 20:53:50,819 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.396s
+2025-12-22 20:54:57,310 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.311s
+2025-12-22 20:56:54,624 - glconnect.database_optimizer - WARNING - Slow query in get_marketplace_books: 0.160s
+2025-12-22 20:57:02,706 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Diamond Platnumz ft Khalil Harisson & Chley - Komasava.mp3
+2025-12-23 16:55:00,984 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:00,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:00,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:00,985 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:00,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:00,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:04,009 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 16:55:04,359 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 16:55:09,133 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 16:55:09,133 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 16:55:09,133 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 16:55:09,134 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 16:55:09,134 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 16:55:12,425 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:12,425 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:12,425 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:12,425 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:12,425 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:12,425 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:55:14,128 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 16:55:14,397 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 16:55:19,833 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 16:55:19,833 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 16:55:19,833 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 16:55:19,833 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 16:55:19,833 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 16:55:19,864 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 16:57:16,012 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:16,012 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:16,012 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:16,012 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:16,012 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:16,012 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:17,827 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 16:57:18,188 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 16:57:22,726 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 16:57:22,726 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 16:57:22,726 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 16:57:22,726 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 16:57:22,727 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 16:57:22,755 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 16:57:27,716 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:27,716 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:27,716 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:27,716 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:27,716 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:27,716 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:57:29,093 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 16:57:29,354 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 16:57:34,182 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 16:57:34,183 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 16:57:34,183 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 16:57:34,183 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 16:57:34,183 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 16:57:34,240 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 16:58:39,527 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:58:39,527 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:58:39,527 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:58:39,527 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:58:39,527 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:58:39,527 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 16:58:41,153 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 16:58:41,455 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 16:58:45,728 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 16:58:45,728 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 16:58:45,728 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 16:58:45,728 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 16:58:45,729 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 16:58:45,786 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:00:35,655 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.337s
+2025-12-23 17:02:42,805 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:02:42,806 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:02:42,806 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:02:42,806 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:02:42,807 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:02:42,807 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:02:44,638 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:02:44,904 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:02:49,777 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:02:49,777 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:02:49,778 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:02:49,778 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:02:49,778 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:02:49,801 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:03:04,952 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:03:04,952 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:03:04,952 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:03:04,952 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:03:04,952 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:03:04,953 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:03:06,377 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:03:06,603 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:03:11,655 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:03:11,656 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:03:11,656 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:03:11,656 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:03:11,656 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:03:11,719 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:04:46,988 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Diamond Platnumz ft Khalil Harisson & Chley - Komasava.mp3
+2025-12-23 17:04:47,642 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Diamond Platnumz ft Khalil Harisson & Chley - Komasava.mp3
+2025-12-23 17:07:25,813 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:07:25,813 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:07:25,813 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:07:25,813 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:07:25,813 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:07:25,813 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:07:27,833 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:07:28,172 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:07:34,374 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:07:34,374 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:07:34,374 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:07:34,375 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:07:34,375 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:07:34,454 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:10:17,910 - glconnect.playlist2 - INFO - Found song file via reconstructed path: /Applications/untitled folder/music-1/glconnect/static/afro/Diamond Platnumz ft Khalil Harisson & Chley - Komasava.mp3
+2025-12-23 17:21:47,816 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:21:47,816 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:21:47,816 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:21:47,816 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:21:47,816 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:21:47,816 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:21:49,566 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:21:49,867 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:21:54,460 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:21:54,461 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:21:54,461 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:21:54,461 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:21:54,461 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:21:54,518 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:24:21,381 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:21,381 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:21,381 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:21,381 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:21,381 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:21,381 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:23,114 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:24:23,406 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:24:28,545 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:24:28,546 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:24:28,546 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:24:28,547 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:24:28,548 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:24:28,598 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:24:36,646 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:36,646 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:36,646 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:36,646 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:36,646 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:36,646 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:24:38,374 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:24:38,624 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:24:43,292 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:24:43,292 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:24:43,292 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:24:43,292 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:24:43,293 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:24:43,323 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:25:26,341 - glconnect.playlist2 - INFO - Found song file: /Applications/untitled folder/music-1/glconnect/static/afro/Ishimwe_Lamy_-_Imana_ni_byose.mp3
+2025-12-23 17:27:51,984 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:27:51,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:27:51,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:27:51,985 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:27:51,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:27:51,985 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:27:53,693 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:27:53,977 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:27:58,925 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:27:58,925 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:27:58,925 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:27:58,925 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:27:58,925 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:27:58,954 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:28:07,456 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:07,457 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:07,457 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:07,457 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:07,457 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:07,457 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:08,870 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:28:09,086 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:28:13,799 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:28:13,800 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:28:13,800 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:28:13,800 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:28:13,800 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:28:13,852 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:28:18,567 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:18,567 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:18,567 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:18,567 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:18,567 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:18,567 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:20,103 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:28:20,333 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:28:25,344 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:28:25,344 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:28:25,344 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:28:25,344 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:28:25,344 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:28:25,374 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:28:48,831 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:48,831 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:48,832 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:48,832 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:48,832 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:48,832 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:28:50,758 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:28:51,020 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:28:55,345 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:28:55,345 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:28:55,346 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:28:55,346 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:28:55,346 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:28:55,377 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:29:08,554 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:08,555 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:08,555 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:08,555 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:08,555 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:08,555 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:10,236 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:29:10,497 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:29:14,899 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:29:14,899 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:29:14,899 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:29:14,899 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:29:14,899 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:29:14,933 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:29:23,044 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:23,044 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:23,044 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:23,044 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:23,044 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:23,044 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:24,812 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:29:25,085 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:29:29,843 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:29:29,843 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:29:29,843 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:29:29,844 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:29:29,844 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:29:29,875 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:29:37,796 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:37,797 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:37,798 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:37,798 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:37,798 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:37,798 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:29:39,395 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:29:39,644 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:29:44,091 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:29:44,091 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:29:44,091 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:29:44,091 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:29:44,091 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:29:44,127 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:59:29,017 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:29,017 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:29,017 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:29,017 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:29,017 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:29,017 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:30,906 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:59:31,172 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:59:35,645 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:59:35,645 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:59:35,646 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:59:35,646 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:59:35,646 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:59:35,675 - werkzeug - WARNING -  * Debugger is active!
+2025-12-23 17:59:48,165 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:48,166 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:48,166 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:48,166 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:48,166 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:48,166 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2025-12-23 17:59:49,586 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2025-12-23 17:59:49,804 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: File tts.json was not found.
+2025-12-23 17:59:54,259 - __main__ - INFO - Starting Flask app in DEBUG mode
+2025-12-23 17:59:54,260 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2025-12-23 17:59:54,260 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2025-12-23 17:59:54,260 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2025-12-23 17:59:54,260 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2025-12-23 17:59:54,316 - werkzeug - WARNING -  * Debugger is active!

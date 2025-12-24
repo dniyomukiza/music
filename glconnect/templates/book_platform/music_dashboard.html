@@ -601,11 +601,18 @@
                 .then(response => response.json())
                 .then(data => {
                     if (Array.isArray(data) && data.length) {
+                        // Get artist profile picture from first song (if available)
+                        const artistProfilePic = data[0]?.artist_profile_pic;
+                        const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
+                        
                         let html = `
                             <div class="col-12 mb-3">
-                                <div class="alert alert-info">
-                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistName}</strong></h6>
-                                    <small>Found ${data.length} song${data.length !== 1 ? 's' : ''} (including collaborations)</small>
+                                <div class="alert alert-info d-flex align-items-center gap-3">
+                                    ${imageUrl ? `<img src="${imageUrl}" alt="${artistName}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
+                                    <div>
+                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistName}</strong></h6>
+                                        <small>Found ${data.length} song${data.length !== 1 ? 's' : ''} (including collaborations)</small>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -714,9 +721,10 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                                <div>
-                                    <h6 class="mb-1 song-title"><strong>${songName} by ${artistName}</strong></h6>
-                                    <audio controls class="song-audio" preload="none" crossorigin="anonymous">
+                                <div style="flex: 1;">
+                                    <h6 class="mb-1 song-title"><strong>${songName}</strong></h6>
+                                    <p class="mb-2 text-muted small"><i class="fas fa-user me-1"></i>${artistName}</p>
+                                    <audio controls class="song-audio" preload="none" crossorigin="anonymous" style="width: 100%; max-width: 400px;">
                                         <source src="${songPath}" type="audio/mpeg">
                                         Your browser does not support the audio element.
                                     </audio>
@@ -771,14 +779,21 @@
                         
                         let html = '';
                         
-                        // If only one artist, show a header
+                        // If only one artist, show header with artist picture
                         const artistNames = Object.keys(artistGroups);
                         if (artistNames.length === 1) {
+                            // Get artist profile picture from first song (if available)
+                            const artistProfilePic = data[0]?.artist_profile_pic;
+                            const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
+                            
                             html += `
                                 <div class="col-12 mb-3">
-                                    <div class="alert alert-info">
-                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistNames[0]}</strong></h6>
-                                        <small>Found ${data.length} song${data.length !== 1 ? 's' : ''}</small>
+                                    <div class="alert alert-info d-flex align-items-center gap-3">
+                                        ${imageUrl ? `<img src="${imageUrl}" alt="${artistNames[0]}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
+                                        <div>
+                                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistNames[0]}</strong></h6>
+                                            <small>Found ${data.length} song${data.length !== 1 ? 's' : ''}</small>
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -793,6 +808,7 @@
                         }
                         
                         // Display all songs with add to playlist buttons
+                        // If multiple artists, show artist picture with each song
                         data.forEach(song => {
                             html += createSongCard(song, true); // Always include actions (add to playlist)
                         });
@@ -1076,16 +1092,44 @@
         function createArtistProfile() {
             const artistName = document.getElementById('artistNameInput').value.trim();
             const bio = document.getElementById('artistBioInput').value.trim();
+            const profilePicFile = document.getElementById('artistProfilePicInput').files[0];
             
             if (!artistName) {
                 alert('Artist name is required.');
                 return;
             }
             
-            fetch('/book_platform/music/create-artist-profile', {
+            // Validate profile picture if provided
+            if (profilePicFile) {
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'];
+                const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+                const fileExtension = profilePicFile.name.split('.').pop().toLowerCase();
+                
+                // Check file type
+                if (!allowedTypes.includes(profilePicFile.type) && !allowedExtensions.includes(fileExtension)) {
+                    alert('Invalid image format. Please upload a PNG, JPG, JPEG, GIF, WEBP, or SVG file.');
+                    return;
+                }
+                
+                // Check file size (10MB limit)
+                const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+                if (profilePicFile.size > MAX_SIZE) {
+                    alert('Image file is too large. Maximum allowed size is 10MB.');
+                    return;
+                }
+            }
+            
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('artist_name', artistName);
+            formData.append('bio', bio);
+            if (profilePicFile) {
+                formData.append('profile_pic', profilePicFile);
+            }
+            
+            fetch('/mybook/music/create-artist-profile', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ artist_name: artistName, bio: bio })
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
@@ -1101,6 +1145,24 @@
                 alert('Unable to create artist profile.');
             });
         }
+        
+        // Profile picture preview
+        document.getElementById('artistProfilePicInput')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('profilePicPreview');
+            const previewImg = document.getElementById('profilePicPreviewImg');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
 
         // Upload Song
         function uploadSong() {
@@ -1112,7 +1174,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
             
-            fetch('/book_platform/music/upload-song', {
+            fetch('/mybook/music/upload-song', {
                 method: 'POST',
                 body: formData
             })
@@ -1159,6 +1221,14 @@
                     <div class="mb-3">
                         <label for="artistBioInput" class="form-label">Bio (Optional)</label>
                         <textarea class="form-control" id="artistBioInput" rows="3" placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="artistProfilePicInput" class="form-label">Profile Picture (Optional)</label>
+                        <input type="file" class="form-control" id="artistProfilePicInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
+                        <small class="form-text text-muted">Allowed formats: PNG, JPG, JPEG, GIF, WEBP, SVG (Max 10MB)</small>
+                        <div id="profilePicPreview" class="mt-2" style="display: none;">
+                            <img id="profilePicPreviewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

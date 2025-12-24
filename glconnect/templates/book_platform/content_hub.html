@@ -435,6 +435,14 @@
                         <label for="artistBioInputContentHub" class="form-label">Bio (Optional)</label>
                         <textarea class="form-control" id="artistBioInputContentHub" rows="3" placeholder="Tell us about yourself..."></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label for="artistProfilePicInputContentHub" class="form-label">Profile Picture (Optional)</label>
+                        <input type="file" class="form-control" id="artistProfilePicInputContentHub" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
+                        <small class="form-text text-muted">Allowed formats: PNG, JPG, JPEG, GIF, WEBP, SVG (Max 10MB)</small>
+                        <div id="profilePicPreviewContentHub" class="mt-2" style="display: none;">
+                            <img id="profilePicPreviewImgContentHub" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -506,16 +514,44 @@
     function createArtistProfileContentHub() {
         const artistName = document.getElementById('artistNameInputContentHub').value.trim();
         const bio = document.getElementById('artistBioInputContentHub').value.trim();
+        const profilePicFile = document.getElementById('artistProfilePicInputContentHub').files[0];
         
         if (!artistName) {
             alert('Artist name is required.');
             return;
         }
         
-        fetch('/book_platform/music/create-artist-profile', {
+        // Validate profile picture if provided
+        if (profilePicFile) {
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'];
+            const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+            const fileExtension = profilePicFile.name.split('.').pop().toLowerCase();
+            
+            // Check file type
+            if (!allowedTypes.includes(profilePicFile.type) && !allowedExtensions.includes(fileExtension)) {
+                alert('Invalid image format. Please upload a PNG, JPG, JPEG, GIF, WEBP, or SVG file.');
+                return;
+            }
+            
+            // Check file size (10MB limit)
+            const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+            if (profilePicFile.size > MAX_SIZE) {
+                alert('Image file is too large. Maximum allowed size is 10MB.');
+                return;
+            }
+        }
+        
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('artist_name', artistName);
+        formData.append('bio', bio);
+        if (profilePicFile) {
+            formData.append('profile_pic', profilePicFile);
+        }
+        
+        fetch('/mybook/music/create-artist-profile', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ artist_name: artistName, bio: bio })
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
@@ -531,6 +567,24 @@
             alert('Unable to create artist profile.');
         });
     }
+    
+    // Profile picture preview for Content Hub
+    document.getElementById('artistProfilePicInputContentHub')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('profilePicPreviewContentHub');
+        const previewImg = document.getElementById('profilePicPreviewImgContentHub');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
 
     // Upload Song from Content Hub
     function uploadSongContentHub() {
@@ -542,7 +596,7 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
         
-        fetch('/book_platform/music/upload-song', {
+        fetch('/mybook/music/upload-song', {
             method: 'POST',
             body: formData
         })

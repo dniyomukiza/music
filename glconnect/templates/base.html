@@ -130,7 +130,11 @@
         <li><a href="{{ url_for('book_platform.ink_studio_access') }}">📚 For authors</a></li>
         <li><a href="/writer/profile">🧠 For researchers</a></li>
         <li><a href="/blog/blogs">✍️ Stories & News</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('book_platform.music_dashboard') }}">Music</a></li>
+        {% else %}
         <li><a href="/prof/uprofile">Others</a></li>
+        {% endif %}
       </ul>
     </div>
   </div>

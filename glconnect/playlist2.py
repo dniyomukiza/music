@@ -254,13 +254,32 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None, include_collaborat
         from flask import url_for
         song_path = url_for('playlist2.serve_song_file', song_id=song.id)
         
+        # Get artist profile picture if available
+        artist_profile_pic = None
+        if song.artist_id:
+            artist_obj = Artist.query.get(song.artist_id)
+            if artist_obj and artist_obj.profile_pic:
+                # Handle path format: static/uploads/picname.jpg or just picname.jpg
+                profile_pic_path = artist_obj.profile_pic
+                if profile_pic_path.startswith('static/'):
+                    artist_profile_pic = profile_pic_path.replace('static/', '')
+                else:
+                    artist_profile_pic = profile_pic_path
+        
+        # Get song cover image if available
+        song_cover_image = None
+        if song.cover_image:
+            song_cover_image = song.cover_image
+        
         seen_song_ids.add(song.id)
         seen_song_keys.add(song_key)
         songs_data.append({
             'id': song.id,
             'name': song_name,
             'artist': artist_name_display,
-            'path': song_path  # Use the file serving route
+            'path': song_path,  # Use the file serving route
+            'cover_image': song_cover_image,  # Song cover image
+            'artist_profile_pic': artist_profile_pic  # Artist profile picture
         })
     
     return songs_data
@@ -327,11 +346,27 @@ def playlist2():
                 from flask import url_for
                 song_path = url_for('playlist2.serve_song_file', song_id=song.id)
                 
+                # Get artist profile picture if available
+                artist_profile_pic = None
+                if song.artist_id:
+                    artist_obj = Artist.query.get(song.artist_id)
+                    if artist_obj and artist_obj.profile_pic:
+                        profile_pic_path = artist_obj.profile_pic
+                        if profile_pic_path.startswith('static/'):
+                            artist_profile_pic = profile_pic_path.replace('static/', '')
+                        else:
+                            artist_profile_pic = profile_pic_path
+                
+                # Get song cover image if available
+                song_cover_image = song.cover_image if song.cover_image else None
+                
                 song_data = {
                     'id': song.id,
                     'name': song_name,
                     'artist': artist_name,
-                    'path': song_path
+                    'path': song_path,
+                    'cover_image': song_cover_image,
+                    'artist_profile_pic': artist_profile_pic
                 }
                 add_song_if_unique(song_data)
             
@@ -401,11 +436,27 @@ def playlist2():
             from flask import url_for
             song_path = url_for('playlist2.serve_song_file', song_id=song.id)
             
+            # Get artist profile picture if available
+            artist_profile_pic = None
+            if song.artist_id:
+                artist_obj = Artist.query.get(song.artist_id)
+                if artist_obj and artist_obj.profile_pic:
+                    profile_pic_path = artist_obj.profile_pic
+                    if profile_pic_path.startswith('static/'):
+                        artist_profile_pic = profile_pic_path.replace('static/', '')
+                    else:
+                        artist_profile_pic = profile_pic_path
+            
+            # Get song cover image if available
+            song_cover_image = song.cover_image if song.cover_image else None
+            
             song_data = {
                 'id': song.id,
                 'name': song_name,
                 'artist': artist_name,
-                'path': song_path
+                'path': song_path,
+                'cover_image': song_cover_image,
+                'artist_profile_pic': artist_profile_pic
             }
             add_song_if_unique(song_data)
         
@@ -464,11 +515,27 @@ def playlist2():
                 from flask import url_for
                 song_path = url_for('playlist2.serve_song_file', song_id=song.id)
                 
+                # Get artist profile picture if available
+                artist_profile_pic = None
+                if song.artist_id:
+                    artist_obj = Artist.query.get(song.artist_id)
+                    if artist_obj and artist_obj.profile_pic:
+                        profile_pic_path = artist_obj.profile_pic
+                        if profile_pic_path.startswith('static/'):
+                            artist_profile_pic = profile_pic_path.replace('static/', '')
+                        else:
+                            artist_profile_pic = profile_pic_path
+                
+                # Get song cover image if available
+                song_cover_image = song.cover_image if song.cover_image else None
+                
                 song_data = {
                     'id': song.id,
                     'name': song_name,
                     'artist': artist_name,
-                    'path': song_path
+                    'path': song_path,
+                    'cover_image': song_cover_image,
+                    'artist_profile_pic': artist_profile_pic
                 }
                 add_song_if_unique(song_data)
         
@@ -510,11 +577,27 @@ def playlist2():
                 from flask import url_for
                 song_path = url_for('playlist2.serve_song_file', song_id=song.id)
                 
+                # Get artist profile picture if available
+                artist_profile_pic = None
+                if song.artist_id:
+                    artist_obj = Artist.query.get(song.artist_id)
+                    if artist_obj and artist_obj.profile_pic:
+                        profile_pic_path = artist_obj.profile_pic
+                        if profile_pic_path.startswith('static/'):
+                            artist_profile_pic = profile_pic_path.replace('static/', '')
+                        else:
+                            artist_profile_pic = profile_pic_path
+                
+                # Get song cover image if available
+                song_cover_image = song.cover_image if song.cover_image else None
+                
                 song_data = {
                     'id': song.id,
                     'name': song_name,
                     'artist': artist_name,
-                    'path': song_path
+                    'path': song_path,
+                    'cover_image': song_cover_image,
+                    'artist_profile_pic': artist_profile_pic
                 }
                 add_song_if_unique(song_data)
             
@@ -665,11 +748,27 @@ def get_available_songs():
             # This route handles all path resolution logic
             song_path = url_for('playlist2.serve_song_file', song_id=song.id)
             
+            # Get artist profile picture if available
+            artist_profile_pic = None
+            if song.artist_id:
+                artist_obj = Artist.query.get(song.artist_id)
+                if artist_obj and artist_obj.profile_pic:
+                    profile_pic_path = artist_obj.profile_pic
+                    if profile_pic_path.startswith('static/'):
+                        artist_profile_pic = profile_pic_path.replace('static/', '')
+                    else:
+                        artist_profile_pic = profile_pic_path
+            
+            # Get song cover image if available
+            song_cover_image = song.cover_image if song.cover_image else None
+            
             songs_data.append({
                 'id': song.id,
                 'name': song_name,
                 'artist': artist_name,
-                'path': song_path
+                'path': song_path,
+                'cover_image': song_cover_image,
+                'artist_profile_pic': artist_profile_pic
             })
         
         return jsonify(songs_data)
@@ -756,11 +855,27 @@ def get_user_playlist():
             from flask import url_for
             song_path = url_for('playlist2.serve_song_file', song_id=song.id)
             
+            # Get artist profile picture if available
+            artist_profile_pic = None
+            if song.artist_id:
+                artist_obj = Artist.query.get(song.artist_id)
+                if artist_obj and artist_obj.profile_pic:
+                    profile_pic_path = artist_obj.profile_pic
+                    if profile_pic_path.startswith('static/'):
+                        artist_profile_pic = profile_pic_path.replace('static/', '')
+                    else:
+                        artist_profile_pic = profile_pic_path
+            
+            # Get song cover image if available
+            song_cover_image = song.cover_image if song.cover_image else None
+            
             playlist_data.append({
                 'id': song.id,
                 'name': song_name,
                 'artist': artist_name,
-                'path': song_path  # Use the file serving route
+                'path': song_path,  # Use the file serving route
+                'cover_image': song_cover_image,
+                'artist_profile_pic': artist_profile_pic
             })
     
     return playlist_data
