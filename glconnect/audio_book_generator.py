@@ -294,7 +294,7 @@ class AudioBookGenerator:
             return 0
     
     def _ensure_client(self):
-        """Ensure TTS client is initialized, try to initialize if not"""
+        """Ensure TTS client is initialized, try to initialize if not (same as news_agent.py)"""
         if self.client:
             return True
         
@@ -309,36 +309,23 @@ class AudioBookGenerator:
             # Get TTS credentials path from environment variables
             tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
             logger.debug(f"Loading TTS credentials from: {tts_credentials_path}")
+            logger.debug(f"Credentials file exists: {os.path.exists(tts_credentials_path)}")
+            logger.debug(f"Current working directory: {os.getcwd()}")
             
-            # Try multiple possible locations
-            possible_paths = [
-                tts_credentials_path,
-                "tts.json",
-                os.path.join(os.getcwd(), "tts.json"),
-                os.path.join(os.getcwd(), "glconnect", "tts.json"),
-                os.path.join(os.path.dirname(__file__), "..", "tts.json"),
-                os.path.join(os.path.dirname(__file__), "tts.json")
-            ]
+            # Check if credentials file exists, if not try default path (same as news_agent.py)
+            if not os.path.exists(tts_credentials_path):
+                logger.debug(f"Credentials file not found at {tts_credentials_path}, trying default 'tts.json'")
+                tts_credentials_path = "tts.json"
+                logger.debug(f"Trying default path: {tts_credentials_path}")
+                logger.debug(f"Default credentials file exists: {os.path.exists(tts_credentials_path)}")
             
-            found_path = None
-            for path in possible_paths:
-                abs_path = os.path.abspath(path)
-                if os.path.exists(abs_path):
-                    found_path = abs_path
-                    logger.info(f"Found TTS credentials at: {found_path}")
-                    break
-            
-            if not found_path:
-                logger.error(f"TTS credentials file not found. Searched in: {possible_paths}")
-                logger.error("Please ensure tts.json exists in the project root or set GOOGLE_APPLICATION_CREDENTIALS environment variable")
-                return False
-            
-            tts_credentials_path = found_path
+            if not os.path.exists(tts_credentials_path):
+                raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
             
             # Load credentials from file
             credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
             self.client = texttospeech.TextToSpeechClient(credentials=credentials)
-            logger.info("TTS client initialized successfully with service account credentials")
+            logger.info("TTS client initialized successfully")
             return True
         except Exception as e:
             logger.error(f"Failed to initialize TTS client: {str(e)}", exc_info=True)
