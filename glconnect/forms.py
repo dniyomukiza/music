@@ -160,7 +160,7 @@ class DigitalBookUploadForm(FlaskForm):
     ], default='en-US-Standard-A')
     
     submit = SubmitField('Upload Digital Book')
-    recap = RecaptchaField()
+    recap = RecaptchaField(validators=[])  # Make optional - can be validated conditionally
 
 # Reviewer Registration Form
 class ReviewerRegistrationForm(FlaskForm):

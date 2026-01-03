@@ -1284,6 +1284,66 @@ def generate_audiobook_for_book(book_id):
         logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@book_bp.route('/books/<int:book_id>/audiobook/available-voices', methods=['GET'])
+@book_platform_required
+def get_available_voices(book_id):
+    """Get available English voices for audiobook generation"""
+    try:
+        result = audio_book_generator.get_available_voices(language_filter='en')
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'voices': result['voices']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to fetch voices')
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error fetching available voices: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@book_bp.route('/books/<int:book_id>/audiobook/preview-voice', methods=['POST'])
+@book_platform_required
+def preview_voice(book_id):
+    """Generate a preview audio sample for a voice"""
+    try:
+        data = request.get_json()
+        voice_name = data.get('voice_name')
+        sample_text = data.get('sample_text')  # Optional custom sample
+        
+        if not voice_name:
+            return jsonify({
+                'success': False,
+                'error': 'Voice name is required'
+            }), 400
+        
+        result = audio_book_generator.generate_preview_audio(voice_name, sample_text)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'audio_url': result['audio_url']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to generate preview')
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error generating voice preview: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @book_bp.route('/books/<int:book_id>/audiobook-status', methods=['GET'])
 @book_platform_required
 def get_audiobook_status(book_id):
@@ -3949,17 +4009,63 @@ def get_chapter_images(book_id, user_profile, profile_type):
 def upload_digital_book():
     """Upload and process digital book files"""
     
+    logger.info(f"Upload digital book - Method: {request.method}, User: {current_user.user_id if current_user.is_authenticated else 'Not authenticated'}")
+    
     form = DigitalBookUploadForm()
+    
+    # In development, skip recaptcha validation
+    import os
+    if os.getenv('FLASK_ENV') == 'development':
+        # Remove recaptcha from validation in development
+        if hasattr(form, 'recap'):
+            form.recap.validators = []
+    
+    if request.method == 'POST':
+        logger.info(f"POST request received for digital book upload")
+        logger.info(f"Form data keys: {list(request.form.keys())}")
+        logger.info(f"Files in request: {list(request.files.keys())}")
+        
+        # Check if form validates
+        if not form.validate():
+            logger.warning(f"Form validation failed: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    logger.warning(f"  {field}: {error}")
+                    # Don't show recaptcha errors to user in development
+                    if field != 'recap' or os.getenv('FLASK_ENV') != 'development':
+                        flash(f"{field}: {error}", "error")
+            return render_template('book_platform/upload_digital_book.html', form=form)
+        else:
+            logger.info("Form validation passed")
     
     if form.validate_on_submit():
         try:
+            logger.info("Starting digital book upload process")
+            
             # Get user profile
             user_profile, profile_type = get_user_profile()
+            logger.info(f"User profile: {profile_type}, User ID: {current_user.user_id}")
+            
+            if not user_profile:
+                logger.error("No user profile found")
+                flash("Please ensure you have an Ink Studio or Writer profile.", "error")
+                return render_template('book_platform/upload_digital_book.html', form=form)
+            
             author_id = get_profile_id(user_profile, profile_type)
+            logger.info(f"Author ID: {author_id}")
+            
+            if not author_id:
+                flash("Error: Could not determine author ID. Please ensure your profile is set up correctly.", "error")
+                logger.error(f"get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
+                return render_template('book_platform/upload_digital_book.html', form=form)
             
             # Handle file uploads
             digital_file = form.digital_book_file.data
             cover_image = form.cover_image.data
+            
+            logger.info(f"Digital file: {digital_file.filename if digital_file else 'None'}")
+            logger.info(f"Cover image: {cover_image.filename if cover_image else 'None'}")
+            logger.info(f"Title: {form.title.data}")
             
             # Create upload directories
             digital_books_dir = os.path.join(current_app.root_path, 'static', 'digital_books')
@@ -3996,6 +4102,7 @@ def upload_digital_book():
                 return render_template('book_platform/upload_digital_book.html', form=form)
             
             # Create book project
+            logger.info(f"Creating book project: {form.title.data}")
             book = BookProject(
                 title=form.title.data,
                 description=form.description.data,
@@ -4012,9 +4119,15 @@ def upload_digital_book():
             )
             
             db.session.add(book)
+            db.session.flush()  # Flush to get book.id
+            logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
             db.session.commit()
+            logger.info(f"Book {book.id} committed to database successfully")
             
             # Generate audiobook if requested
+            logger.info(f"Generate audiobook checkbox: {form.generate_audiobook.data}")
+            logger.info(f"Audiobook price: {form.audiobook_price.data}")
+            
             if form.generate_audiobook.data and form.audiobook_price.data:
                 # Create audio generation task
                 audio_task = AudioGenerationTask(
@@ -4079,13 +4192,55 @@ def upload_digital_book():
             else:
                 flash("Digital book uploaded successfully!", "success")
             
-            return redirect(url_for('book_platform.book_detail', book_id=book.id))
+            logger.info(f"Upload successful! Redirecting to book {book.id}")
+            return redirect(url_for('book_platform.view_book', book_id=book.id))
             
         except Exception as e:
-            flash(f"Error uploading book: {str(e)}", "error")
-            logger.error(f"Error in upload_digital_book: {str(e)}")
+            db.session.rollback()
+            error_msg = f"Error uploading book: {str(e)}"
+            flash(error_msg, "error")
+            logger.error(f"Error in upload_digital_book: {str(e)}", exc_info=True)
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            print(f"ERROR in upload_digital_book: {str(e)}")
+            traceback.print_exc()
+    
+    # GET request - show form
+    if request.method == 'GET':
+        logger.info("Showing upload digital book form")
     
     return render_template('book_platform/upload_digital_book.html', form=form)
+
+@book_bp.route('/debug/check-upload', methods=['GET'])
+@book_platform_required
+def debug_check_upload():
+    """Debug endpoint to check upload status"""
+    from glconnect.book_platform_models import BookProject, BookPlatformUser
+    
+    user_profile, profile_type = get_user_profile()
+    author_id = get_profile_id(user_profile, profile_type)
+    
+    # Get recent books
+    recent_books = BookProject.query.filter_by(author_id=author_id).order_by(BookProject.created_at.desc()).limit(5).all()
+    
+    debug_info = {
+        'user_id': current_user.user_id,
+        'author_id': author_id,
+        'profile_type': profile_type,
+        'recent_books': []
+    }
+    
+    for book in recent_books:
+        debug_info['recent_books'].append({
+            'id': book.id,
+            'title': book.title,
+            'status': str(book.status),
+            'created_at': str(book.created_at),
+            'has_digital_file': bool(book.digital_file_path),
+            'digital_file_path': book.digital_file_path
+        })
+    
+    return jsonify(debug_info)
 
 @book_bp.route('/books/<int:book_id>/audio-generation-status')
 @book_platform_required

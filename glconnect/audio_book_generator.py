@@ -27,14 +27,22 @@ class AudioBookGenerator:
         self.client = None
         self.max_chunk_size = 5000  # Characters per chunk to stay within TTS limits
         self.audio_dir = os.path.join(os.getcwd(), 'glconnect', 'static', 'audio', 'audiobooks')
+        self.preview_dir = os.path.join(os.getcwd(), 'glconnect', 'static', 'audio', 'previews')
         os.makedirs(self.audio_dir, exist_ok=True)
+        os.makedirs(self.preview_dir, exist_ok=True)
+        
+        # In-memory cache for voices
+        self._voices_cache = {
+            'data': None,
+            'timestamp': None,
+            'ttl': 86400  # 24 hours
+        }
         
         if TTS_AVAILABLE:
-            try:
-                self.client = texttospeech.TextToSpeechClient()
-            except Exception as e:
-                logger.error(f"Failed to initialize TTS client: {str(e)}")
-                self.client = None
+            # Don't initialize client at startup - use lazy initialization in _ensure_client()
+            # This allows server to start even if credentials file is missing
+            self.client = None
+            logger.info("TTS available - client will be initialized on first use")
     
     def generate_audiobook(self, text: str, book_id: int, voice_name: str = 'en-US-Standard-A') -> Dict[str, Any]:
         """
@@ -48,7 +56,7 @@ class AudioBookGenerator:
         Returns:
             Dictionary with generation results
         """
-        if not self.client:
+        if not self._ensure_client():
             return {
                 'success': False,
                 'error': 'TTS client not available. Please check Google Cloud credentials.',
@@ -284,6 +292,265 @@ class AudioBookGenerator:
         except Exception as e:
             logger.warning(f"Error getting audio duration: {str(e)}")
             return 0
+    
+    def _ensure_client(self):
+        """Ensure TTS client is initialized, try to initialize if not"""
+        if self.client:
+            return True
+        
+        if not TTS_AVAILABLE:
+            logger.error("TTS library not available. Please install google-cloud-texttospeech")
+            return False
+        
+        try:
+            # Initialize TTS client using service account credentials (same as news_agent.py)
+            from google.oauth2 import service_account
+            
+            # Get TTS credentials path from environment variables
+            tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+            logger.debug(f"Loading TTS credentials from: {tts_credentials_path}")
+            
+            # Try multiple possible locations
+            possible_paths = [
+                tts_credentials_path,
+                "tts.json",
+                os.path.join(os.getcwd(), "tts.json"),
+                os.path.join(os.getcwd(), "glconnect", "tts.json"),
+                os.path.join(os.path.dirname(__file__), "..", "tts.json"),
+                os.path.join(os.path.dirname(__file__), "tts.json")
+            ]
+            
+            found_path = None
+            for path in possible_paths:
+                abs_path = os.path.abspath(path)
+                if os.path.exists(abs_path):
+                    found_path = abs_path
+                    logger.info(f"Found TTS credentials at: {found_path}")
+                    break
+            
+            if not found_path:
+                logger.error(f"TTS credentials file not found. Searched in: {possible_paths}")
+                logger.error("Please ensure tts.json exists in the project root or set GOOGLE_APPLICATION_CREDENTIALS environment variable")
+                return False
+            
+            tts_credentials_path = found_path
+            
+            # Load credentials from file
+            credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
+            self.client = texttospeech.TextToSpeechClient(credentials=credentials)
+            logger.info("TTS client initialized successfully with service account credentials")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to initialize TTS client: {str(e)}", exc_info=True)
+            self.client = None
+            return False
+    
+    def get_available_voices(self, language_filter: str = 'en') -> Dict[str, Any]:
+        """
+        Get available English voices from Google TTS API with caching
+        
+        Args:
+            language_filter: Language code prefix to filter (default: 'en' for English)
+            
+        Returns:
+            Dictionary with grouped voices by type
+        """
+        if not self._ensure_client():
+            return {
+                'success': False,
+                'error': 'TTS client not available. Please ensure tts.json credentials file exists in the project root. The voice preview feature requires Google Cloud Text-to-Speech credentials.',
+                'voices': {}
+            }
+        
+        try:
+            # Check cache
+            current_time = time.time()
+            cache = self._voices_cache
+            
+            if cache['data'] and cache['timestamp']:
+                age = current_time - cache['timestamp']
+                if age < cache['ttl']:
+                    # Return cached data, but filter for requested language
+                    cached_voices = cache['data']
+                    filtered_voices = self._filter_voices_by_language(cached_voices, language_filter)
+                    return {
+                        'success': True,
+                        'voices': filtered_voices,
+                        'cached': True
+                    }
+            
+            # Fetch from API
+            response = self.client.list_voices()
+            
+            # Group voices by type and filter for English
+            voices_by_type = {
+                'Standard': [],
+                'WaveNet': [],
+                'Neural2': [],
+                'Studio': [],
+                'Chirp3': []
+            }
+            
+            for voice in response.voices:
+                # Check if voice supports English
+                if any(lang.startswith(language_filter) for lang in voice.language_codes):
+                    voice_name = voice.name
+                    voice_type = self._get_voice_type(voice_name)
+                    
+                    voice_info = {
+                        'name': voice_name,
+                        'gender': voice.ssml_gender.name if hasattr(voice.ssml_gender, 'name') else str(voice.ssml_gender),
+                        'language_codes': list(voice.language_codes),
+                        'sample_rate': voice.natural_sample_rate_hertz
+                    }
+                    
+                    if voice_type in voices_by_type:
+                        voices_by_type[voice_type].append(voice_info)
+                    else:
+                        voices_by_type['Standard'].append(voice_info)  # Default fallback
+            
+            # Update cache
+            self._voices_cache['data'] = voices_by_type
+            self._voices_cache['timestamp'] = current_time
+            
+            return {
+                'success': True,
+                'voices': voices_by_type,
+                'cached': False
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching voices: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'voices': {}
+            }
+    
+    def _get_voice_type(self, voice_name: str) -> str:
+        """Determine voice type from voice name (case-insensitive)"""
+        voice_lower = voice_name.lower()
+        if 'chirp' in voice_lower:
+            return 'Chirp3'
+        elif 'studio' in voice_lower:
+            return 'Studio'
+        elif 'neural2' in voice_lower:
+            return 'Neural2'
+        elif 'wavenet' in voice_lower:
+            return 'WaveNet'
+        else:
+            return 'Standard'
+    
+    def _filter_voices_by_language(self, voices_by_type: dict, language_filter: str) -> dict:
+        """Filter cached voices by language"""
+        filtered = {
+            'Standard': [],
+            'WaveNet': [],
+            'Neural2': [],
+            'Studio': [],
+            'Chirp3': []
+        }
+        
+        for voice_type, voices in voices_by_type.items():
+            for voice in voices:
+                if any(lang.startswith(language_filter) for lang in voice.get('language_codes', [])):
+                    filtered[voice_type].append(voice)
+        
+        return filtered
+    
+    def generate_preview_audio(self, voice_name: str, sample_text: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Generate a short preview audio sample for a voice
+        
+        Args:
+            voice_name: Name of the voice to preview
+            sample_text: Optional custom sample text (default uses standard sample)
+            
+        Returns:
+            Dictionary with preview audio file path or error
+        """
+        if not self._ensure_client():
+            return {
+                'success': False,
+                'error': 'TTS client not available. Please ensure tts.json credentials file exists in the project root. The voice preview feature requires Google Cloud Text-to-Speech credentials.',
+                'audio_url': None
+            }
+        
+        # Default sample text
+        if not sample_text:
+            sample_text = "This is a sample of how your audiobook will sound with this voice. Listen carefully to the tone, pace, and clarity."
+        
+        # Limit sample text length
+        if len(sample_text) > 500:
+            sample_text = sample_text[:500] + "..."
+        
+        try:
+            # Check if preview already exists
+            safe_voice_name = voice_name.replace('/', '_').replace('\\', '_')
+            preview_filename = f"preview_{safe_voice_name}_{hash(sample_text) % 10000}.mp3"
+            preview_path = os.path.join(self.preview_dir, preview_filename)
+            
+            if os.path.exists(preview_path):
+                # Return existing preview
+                relative_path = f"audio/previews/{preview_filename}"
+                return {
+                    'success': True,
+                    'audio_url': f"/static/{relative_path}",
+                    'cached': True
+                }
+            
+            # Extract language code from voice name (e.g., "en-US-Standard-A" -> "en-US")
+            parts = voice_name.split('-')
+            if len(parts) >= 2:
+                language_code = f"{parts[0]}-{parts[1]}"
+            else:
+                language_code = "en-US"  # Default fallback
+            
+            # Set up voice selection
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                name=voice_name
+            )
+            
+            # Set up audio config
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3,
+                speaking_rate=1.0,
+                pitch=0.0,
+                volume_gain_db=0.0
+            )
+            
+            # Create synthesis input
+            synthesis_input = texttospeech.SynthesisInput(text=sample_text)
+            
+            # Perform the synthesis
+            response = self.client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+            
+            # Save the preview file
+            with open(preview_path, 'wb') as out:
+                out.write(response.audio_content)
+            
+            relative_path = f"audio/previews/{preview_filename}"
+            
+            logger.info(f"Generated preview audio for voice {voice_name}")
+            
+            return {
+                'success': True,
+                'audio_url': f"/static/{relative_path}",
+                'cached': False
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating preview audio for voice {voice_name}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'audio_url': None
+            }
 
 # Global generator instance
 audio_book_generator = AudioBookGenerator()
