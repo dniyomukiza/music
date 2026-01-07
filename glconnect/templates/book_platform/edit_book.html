@@ -405,8 +405,13 @@
                                 <div class="col-md-8">
                                     <h6>Create Audiobook Version</h6>
                                     <p class="text-muted mb-3">
-                                        Generate an audiobook from your published chapters using AI voice synthesis.
-                                        This will create a professional-quality audio version of your book.
+                                        {% if book.digital_file_path %}
+                                            Generate an audiobook from your uploaded digital book using AI voice synthesis.
+                                            This will create a professional-quality audio version of your book.
+                                        {% else %}
+                                            Generate an audiobook from your published chapters using AI voice synthesis.
+                                            This will create a professional-quality audio version of your book.
+                                        {% endif %}
                                     </p>
                                     
                                     <div class="mb-3">
@@ -524,7 +529,12 @@
                             
                             <div class="alert alert-info mt-3">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Requirements:</strong> You need at least one published chapter to generate an audiobook. 
+                                <strong>Requirements:</strong> 
+                                {% if book.digital_file_path %}
+                                    Your uploaded digital book will be used to generate the audiobook.
+                                {% else %}
+                                    You need at least one published chapter to generate an audiobook.
+                                {% endif %}
                                 The process may take several minutes depending on your book's length.
                             </div>
                         {% endif %}

@@ -1193,27 +1193,50 @@ def generate_audiobook_for_book(book_id):
     voice_name = data.get('voice_name', 'en-US-Standard-A')
     
     try:
-        # Extract text from all published chapters
-        chapters = BookChapter.query.filter_by(
-            book_project_id=book_id,
-            is_published=True
-        ).order_by(BookChapter.chapter_number).all()
-        
-        if not chapters:
-            return jsonify({'error': 'No published chapters found. Publish at least one chapter before generating audiobook.'}), 400
-        
-        # Combine all chapter content
         full_text = ""
-        for chapter in chapters:
-            if chapter.content:
-                # Clean HTML content and extract text
-                import re
-                clean_content = re.sub(r'<[^>]+>', '', chapter.content)
-                clean_content = re.sub(r'\s+', ' ', clean_content).strip()
-                full_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n{clean_content}\n\n"
         
-        if not full_text.strip():
-            return jsonify({'error': 'No text content found in published chapters'}), 400
+        # Check if this is an uploaded digital book
+        if book.digital_file_path:
+            # Extract text from uploaded digital file
+            digital_file_path = os.path.join(current_app.root_path, 'static', book.digital_file_path)
+            
+            if not os.path.exists(digital_file_path):
+                return jsonify({'error': 'Digital book file not found. Please re-upload the book.'}), 400
+            
+            # Get file type from book model or infer from extension
+            file_type = book.digital_file_type or os.path.splitext(digital_file_path)[1].lstrip('.')
+            
+            # Extract text from digital file
+            extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
+            
+            if not extraction_result['success']:
+                return jsonify({'error': f'Failed to extract text from digital book: {extraction_result.get("error", "Unknown error")}'}), 400
+            
+            full_text = extraction_result.get('text', '')
+            
+            if not full_text.strip():
+                return jsonify({'error': 'No text content found in the uploaded digital book file.'}), 400
+        else:
+            # For books created in the platform, extract text from published chapters
+            chapters = BookChapter.query.filter_by(
+                book_project_id=book_id,
+                is_published=True
+            ).order_by(BookChapter.chapter_number).all()
+            
+            if not chapters:
+                return jsonify({'error': 'No published chapters found. Publish at least one chapter before generating audiobook.'}), 400
+            
+            # Combine all chapter content
+            for chapter in chapters:
+                if chapter.content:
+                    # Clean HTML content and extract text
+                    import re
+                    clean_content = re.sub(r'<[^>]+>', '', chapter.content)
+                    clean_content = re.sub(r'\s+', ' ', clean_content).strip()
+                    full_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n{clean_content}\n\n"
+            
+            if not full_text.strip():
+                return jsonify({'error': 'No text content found in published chapters'}), 400
         
         # Create audio generation task
         audio_task = AudioGenerationTask(
@@ -1284,6 +1307,31 @@ def generate_audiobook_for_book(book_id):
         logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@book_bp.route('/audiobook/available-voices', methods=['GET'])
+@book_platform_required
+def get_available_voices_upload():
+    """Get available English voices for audiobook generation (for upload page)"""
+    try:
+        result = audio_book_generator.get_available_voices(language_filter='en')
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'voices': result['voices']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to fetch voices')
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error fetching available voices: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @book_bp.route('/books/<int:book_id>/audiobook/available-voices', methods=['GET'])
 @book_platform_required
 def get_available_voices(book_id):
@@ -1304,6 +1352,41 @@ def get_available_voices(book_id):
             
     except Exception as e:
         logger.error(f"Error fetching available voices: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@book_bp.route('/audiobook/preview-voice', methods=['POST'])
+@book_platform_required
+def preview_voice_upload():
+    """Generate a preview audio sample for a voice (for upload page)"""
+    try:
+        data = request.get_json()
+        voice_name = data.get('voice_name')
+        sample_text = data.get('sample_text')  # Optional custom sample
+        
+        if not voice_name:
+            return jsonify({
+                'success': False,
+                'error': 'Voice name is required'
+            }), 400
+        
+        result = audio_book_generator.generate_preview_audio(voice_name, sample_text)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'audio_url': result['audio_url']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to generate preview')
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error generating voice preview: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

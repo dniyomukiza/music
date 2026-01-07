@@ -167,11 +167,29 @@ class AudioBookGenerator:
     def _generate_chunk_audio(self, text: str, book_id: int, chunk_index: int, voice_name: str) -> Dict[str, Any]:
         """Generate audio for a single text chunk"""
         try:
+            # Extract language code
+            parts = voice_name.split('-')
+            if len(parts) >= 2:
+                language_code = f"{parts[0]}-{parts[1]}"
+            else:
+                language_code = "en-US"  # Default fallback
+            
+            # Check if this is a Standard voice (requires model parameter)
+            is_standard_voice = 'standard' in voice_name.lower() and 'wavenet' not in voice_name.lower() and 'neural2' not in voice_name.lower() and 'studio' not in voice_name.lower() and 'chirp' not in voice_name.lower()
+            
             # Set up voice selection
-            voice = texttospeech.VoiceSelectionParams(
-                language_code=voice_name.split('-')[0] + '-' + voice_name.split('-')[1],
-                name=voice_name
-            )
+            if is_standard_voice:
+                # Standard voices require a model parameter
+                voice = texttospeech.VoiceSelectionParams(
+                    language_code=language_code,
+                    name=voice_name,
+                    model='standard'
+                )
+            else:
+                voice = texttospeech.VoiceSelectionParams(
+                    language_code=language_code,
+                    name=voice_name
+                )
             
             # Set up audio config
             audio_config = texttospeech.AudioConfig(
@@ -493,11 +511,22 @@ class AudioBookGenerator:
             else:
                 language_code = "en-US"  # Default fallback
             
+            # Check if this is a Standard voice (requires model parameter)
+            is_standard_voice = 'standard' in voice_name.lower() and 'wavenet' not in voice_name.lower() and 'neural2' not in voice_name.lower() and 'studio' not in voice_name.lower() and 'chirp' not in voice_name.lower()
+            
             # Set up voice selection
-            voice = texttospeech.VoiceSelectionParams(
-                language_code=language_code,
-                name=voice_name
-            )
+            if is_standard_voice:
+                # Standard voices require a model parameter
+                voice = texttospeech.VoiceSelectionParams(
+                    language_code=language_code,
+                    name=voice_name,
+                    model='standard'
+                )
+            else:
+                voice = texttospeech.VoiceSelectionParams(
+                    language_code=language_code,
+                    name=voice_name
+                )
             
             # Set up audio config
             audio_config = texttospeech.AudioConfig(
