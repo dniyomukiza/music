@@ -198,6 +198,7 @@
                                 <small class="text-muted">Checking this box will publish your book to the marketplace. Make sure you've set a price first.</small>
                             </div>
 
+                            {% if not book.digital_file_path %}
                             <div class="mb-3">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="allow_collaboration" name="allow_collaboration"
@@ -207,6 +208,7 @@
                                     </label>
                                 </div>
                             </div>
+                            {% endif %}
 
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                 <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
@@ -233,12 +235,14 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
+                            {% if not book.digital_file_path %}
                             <div class="col-md-3">
                                 <div class="text-center">
                                     <h6 class="text-muted">Chapters</h6>
                                     <h4 class="text-primary">{{ book.chapters|length }}</h4>
                                 </div>
                             </div>
+                            {% endif %}
                             <div class="col-md-3">
                                 <div class="text-center">
                                     <h6 class="text-muted">Word Count</h6>
@@ -253,15 +257,24 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="text-center">
-                                    <h6 class="text-muted">Created</h6>
+                                    <h6 class="text-muted">{% if book.digital_file_path %}Uploaded{% else %}Created{% endif %}</h6>
                                     <h4 class="text-warning">{{ book.created_at.strftime('%m/%d/%Y') if book.created_at else 'N/A' }}</h4>
                                 </div>
                             </div>
+                            {% if book.digital_file_path %}
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">File Type</h6>
+                                    <h4 class="text-primary">{{ book.digital_file_type.upper() if book.digital_file_type else 'N/A' }}</h4>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Chapter Management -->
+                <!-- Chapter Management (Only for books created in platform) -->
+                {% if not book.digital_file_path %}
                 <div class="card mt-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
@@ -357,6 +370,7 @@
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- Audiobook Generation -->
                 <div class="card mt-4">
@@ -371,6 +385,11 @@
                         {% endif %}
                     </div>
                     <div class="card-body">
+                        <!-- Status Display (for processing/failed) -->
+                        <div id="audiobookStatusDisplay" style="display: none;" class="mb-3">
+                            <div id="audiobookStatusContent"></div>
+                        </div>
+                        
                         {% if book.has_audiobook %}
                             <!-- Audiobook Already Generated -->
                             <div class="row">
@@ -431,17 +450,7 @@
                                         <!-- Voice Type Tabs -->
                                         <ul class="nav nav-tabs mb-3" id="voiceTypeTabs" role="tablist" style="border-bottom-color: #dee2e6;">
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-voices" type="button" role="tab" style="color: #000 !important;">
-                                                    All Voices
-                                                </button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="standard-tab" data-bs-toggle="tab" data-bs-target="#standard-voices" type="button" role="tab" style="color: #000 !important;">
-                                                    Standard
-                                                </button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="wavenet-tab" data-bs-toggle="tab" data-bs-target="#wavenet-voices" type="button" role="tab" style="color: #000 !important;">
+                                                <button class="nav-link active" id="wavenet-tab" data-bs-toggle="tab" data-bs-target="#wavenet-voices" type="button" role="tab" style="color: #000 !important;">
                                                     WaveNet
                                                 </button>
                                             </li>
@@ -474,16 +483,8 @@
                                         <div id="voiceSelectionContainer" style="display: none;">
                                             <!-- Tab Content -->
                                             <div class="tab-content" id="voiceTypeTabContent">
-                                                <!-- All Voices -->
-                                                <div class="tab-pane fade show active" id="all-voices" role="tabpanel">
-                                                    <div id="allVoicesList" class="row g-2"></div>
-                                                </div>
-                                                <!-- Standard Voices -->
-                                                <div class="tab-pane fade" id="standard-voices" role="tabpanel">
-                                                    <div id="standardVoicesList" class="row g-2"></div>
-                                                </div>
                                                 <!-- WaveNet Voices -->
-                                                <div class="tab-pane fade" id="wavenet-voices" role="tabpanel">
+                                                <div class="tab-pane fade show active" id="wavenet-voices" role="tabpanel">
                                                     <div id="wavenetVoicesList" class="row g-2"></div>
                                                 </div>
                                                 <!-- Neural2 Voices -->
@@ -592,7 +593,77 @@
             {% if not book.has_audiobook %}
             loadAvailableVoices();
             {% endif %}
+            
+            // Check audiobook generation status
+            checkAudiobookStatus();
+            
+            // Poll status every 5 seconds if processing
+            setInterval(checkAudiobookStatus, 5000);
         });
+        
+        // Check audiobook generation status
+        async function checkAudiobookStatus() {
+            try {
+                const response = await fetch('{{ url_for("book_platform.get_audiobook_status", book_id=book.id) }}');
+                const result = await response.json();
+                
+                const statusDisplay = document.getElementById('audiobookStatusDisplay');
+                const statusContent = document.getElementById('audiobookStatusContent');
+                
+                if (!statusDisplay || !statusContent) return;
+                
+                // Only show status if not completed and not none
+                if (result.status && result.status !== 'none' && result.status !== 'completed' && !result.has_audiobook) {
+                    statusDisplay.style.display = 'block';
+                    
+                    if (result.status === 'processing') {
+                        statusContent.innerHTML = `
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <strong><i class="fas fa-cog fa-spin me-2"></i>Audiobook Generation in Progress</strong>
+                                        <br>
+                                        <small>Progress: ${result.progress || 0}% - This may take several minutes depending on book length.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (result.status === 'pending') {
+                        statusContent.innerHTML = `
+                            <div class="alert alert-warning">
+                                <strong><i class="fas fa-clock me-2"></i>Audiobook Generation Queued</strong>
+                                <br>
+                                <small>Your audiobook is in the queue and will start processing shortly.</small>
+                            </div>
+                        `;
+                    } else if (result.status === 'failed') {
+                        statusContent.innerHTML = `
+                            <div class="alert alert-danger">
+                                <strong><i class="fas fa-exclamation-triangle me-2"></i>Audiobook Generation Failed</strong>
+                                <br>
+                                <small>Error: ${result.error_message || 'Unknown error occurred'}</small>
+                                <br>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="window.location.reload()">
+                                    <i class="fas fa-redo me-1"></i> Try Again
+                                </button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    statusDisplay.style.display = 'none';
+                    
+                    // If completed, reload page to show success
+                    if (result.has_audiobook && result.status === 'completed') {
+                        window.location.reload();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking audiobook status:', error);
+            }
+        }
         
         // Load available voices from API
         async function loadAvailableVoices() {
@@ -630,8 +701,6 @@
         // Render voices in their respective tabs
         function renderVoices() {
             const voiceTypes = {
-                'all': ['Standard', 'WaveNet', 'Neural2', 'Studio', 'Chirp3'],
-                'standard': ['Standard'],
                 'wavenet': ['WaveNet'],
                 'neural2': ['Neural2'],
                 'studio': ['Studio'],
@@ -640,7 +709,7 @@
             
             // Render for each tab
             Object.keys(voiceTypes).forEach(tabKey => {
-                const containerId = tabKey === 'all' ? 'allVoicesList' : `${tabKey}VoicesList`;
+                const containerId = `${tabKey}VoicesList`;
                 const container = document.getElementById(containerId);
                 if (!container) return;
                 
@@ -716,7 +785,7 @@
         
         // Preload sample previews for each voice category
         async function preloadSamplePreviews() {
-            const categories = ['Standard', 'WaveNet', 'Neural2', 'Studio', 'Chirp3'];
+            const categories = ['WaveNet', 'Neural2', 'Studio', 'Chirp3'];
             const sampleVoices = {};
             
             // Get first voice from each category

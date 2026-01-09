@@ -133,17 +133,7 @@
                                     <!-- Voice Type Tabs -->
                                     <ul class="nav nav-tabs mb-3" id="voiceTypeTabs" role="tablist" style="border-bottom-color: #dee2e6;">
                                         <li class="nav-item" role="presentation">
-                                            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-voices" type="button" role="tab" style="color: #000 !important;">
-                                                All Voices
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="standard-tab" data-bs-toggle="tab" data-bs-target="#standard-voices" type="button" role="tab" style="color: #000 !important;">
-                                                Standard
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="wavenet-tab" data-bs-toggle="tab" data-bs-target="#wavenet-voices" type="button" role="tab" style="color: #000 !important;">
+                                            <button class="nav-link active" id="wavenet-tab" data-bs-toggle="tab" data-bs-target="#wavenet-voices" type="button" role="tab" style="color: #000 !important;">
                                                 WaveNet
                                             </button>
                                         </li>
@@ -176,16 +166,8 @@
                                     <div id="voiceSelectionContainer" style="display: none;">
                                         <!-- Tab Content -->
                                         <div class="tab-content" id="voiceTypeTabContent">
-                                            <!-- All Voices -->
-                                            <div class="tab-pane fade show active" id="all-voices" role="tabpanel">
-                                                <div id="allVoicesList" class="row g-2"></div>
-                                            </div>
-                                            <!-- Standard Voices -->
-                                            <div class="tab-pane fade" id="standard-voices" role="tabpanel">
-                                                <div id="standardVoicesList" class="row g-2"></div>
-                                            </div>
                                             <!-- WaveNet Voices -->
-                                            <div class="tab-pane fade" id="wavenet-voices" role="tabpanel">
+                                            <div class="tab-pane fade show active" id="wavenet-voices" role="tabpanel">
                                                 <div id="wavenetVoicesList" class="row g-2"></div>
                                             </div>
                                             <!-- Neural2 Voices -->
@@ -312,8 +294,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Render voices in their respective tabs
     function renderVoices() {
         const voiceTypes = {
-            'all': ['Standard', 'WaveNet', 'Neural2', 'Studio', 'Chirp3'],
-            'standard': ['Standard'],
             'wavenet': ['WaveNet'],
             'neural2': ['Neural2'],
             'studio': ['Studio'],
@@ -322,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Render for each tab
         Object.keys(voiceTypes).forEach(tabKey => {
-            const containerId = tabKey === 'all' ? 'allVoicesList' : `${tabKey}VoicesList`;
+            const containerId = `${tabKey}VoicesList`;
             const container = document.getElementById(containerId);
             if (!container) return;
             
@@ -403,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Preload sample previews for each voice category
     async function preloadSamplePreviews() {
-        const categories = ['Standard', 'WaveNet', 'Neural2', 'Studio', 'Chirp3'];
+        const categories = ['WaveNet', 'Neural2', 'Studio', 'Chirp3'];
         const sampleVoices = {};
         
         // Get first voice from each category

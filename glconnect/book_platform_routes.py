@@ -4210,8 +4210,16 @@ def upload_digital_book():
             # Generate audiobook if requested
             logger.info(f"Generate audiobook checkbox: {form.generate_audiobook.data}")
             logger.info(f"Audiobook price: {form.audiobook_price.data}")
+            logger.info(f"Audiobook voice: {form.audiobook_voice.data}")
             
-            if form.generate_audiobook.data and form.audiobook_price.data:
+            if form.generate_audiobook.data:
+                # Get voice selection or use default
+                selected_voice = form.audiobook_voice.data or 'en-US-Standard-A'
+                audiobook_price = form.audiobook_price.data or 0.0
+                
+                if not selected_voice:
+                    flash("Please select a voice for your audiobook.", "error")
+                    return render_template('book_platform/upload_digital_book.html', form=form)
                 # Create audio generation task
                 audio_task = AudioGenerationTask(
                     book_project_id=book.id,
@@ -4232,17 +4240,17 @@ def upload_digital_book():
                         audio_result = audio_book_generator.generate_audiobook(
                             extraction_result['text'],
                             book.id,
-                            form.audiobook_voice.data
+                            selected_voice
                         )
                         
                         if audio_result['success']:
                             # Update book with audiobook info
                             book.has_audiobook = True
                             book.audiobook_file_path = audio_result['audio_file_path']
-                            book.audiobook_price = form.audiobook_price.data
+                            book.audiobook_price = audiobook_price
                             book.audiobook_duration = audio_result['duration']
                             book.audiobook_generated_at = datetime.now(timezone.utc)
-                            book.audiobook_voice = form.audiobook_voice.data
+                            book.audiobook_voice = selected_voice
                             
                             # Update task
                             audio_task.status = 'completed'
