@@ -4412,6 +4412,62 @@ def download_digital_book(book_id):
         download_name=f"{book.title}.{book.digital_file_type}"
     )
 
+@book_bp.route('/audiobook/<int:book_id>/file')
+@login_required
+def serve_audiobook_file(book_id):
+    """Serve the actual audiobook file with proper headers for streaming"""
+    book = BookProject.query.get_or_404(book_id)
+    
+    if not book.has_audiobook or not book.audiobook_file_path:
+        return "Audiobook not found", 404
+    
+    # Check if user is the author or has purchased the book
+    user_id = current_user.user_id
+    
+    is_author = False
+    if book.author and book.author.user_id == user_id:
+        is_author = True
+    
+    if not is_author:
+        bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
+        buyer_id = bp_user.id if bp_user else None
+        
+        purchase = BookPurchase.query.filter(
+            db.or_(
+                BookPurchase.buyer_user_id == user_id,
+                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+            ),
+            BookPurchase.book_project_id == book_id,
+            BookPurchase.status == TransactionStatus.COMPLETED
+        ).first()
+        
+        if not purchase:
+            return "Access denied", 403
+    
+    # Check if file exists
+    if not os.path.exists(book.audiobook_file_path):
+        return "Audiobook file not found", 404
+    
+    # Convert full path to relative path for serving
+    # audiobook_file_path is stored as full path, need to extract relative path
+    static_path = os.path.join(current_app.root_path, 'static')
+    if book.audiobook_file_path.startswith(static_path):
+        relative_path = os.path.relpath(book.audiobook_file_path, static_path)
+        return send_from_directory(
+            os.path.join(current_app.root_path, 'static'),
+            relative_path,
+            as_attachment=False,  # Stream, don't force download
+            mimetype='audio/mpeg'
+        )
+    else:
+        # If it's already a relative path or different format, try direct serve
+        return send_from_directory(
+            os.path.dirname(book.audiobook_file_path),
+            os.path.basename(book.audiobook_file_path),
+            as_attachment=False,
+            mimetype='audio/mpeg'
+        )
+
 @book_bp.route('/books/<int:book_id>/download-audio')
 @login_required
 def download_audio_book(book_id):
@@ -4455,12 +4511,23 @@ def download_audio_book(book_id):
         flash("Audiobook file not found.", "error")
         return redirect(url_for('book_platform.marketplace'))
     
-    return send_from_directory(
-        os.path.dirname(book.audiobook_file_path),
-        os.path.basename(book.audiobook_file_path),
-        as_attachment=True,
-        download_name=f"{book.title}_audiobook.mp3"
-    )
+    # Convert full path to relative path for serving
+    static_path = os.path.join(current_app.root_path, 'static')
+    if book.audiobook_file_path.startswith(static_path):
+        relative_path = os.path.relpath(book.audiobook_file_path, static_path)
+        return send_from_directory(
+            os.path.join(current_app.root_path, 'static'),
+            relative_path,
+            as_attachment=True,
+            download_name=f"{book.title}_audiobook.mp3"
+        )
+    else:
+        return send_from_directory(
+            os.path.dirname(book.audiobook_file_path),
+            os.path.basename(book.audiobook_file_path),
+            as_attachment=True,
+            download_name=f"{book.title}_audiobook.mp3"
+        )
 
 # ============================================================================
 # REVIEWER & INVESTMENT SYSTEM ROUTES

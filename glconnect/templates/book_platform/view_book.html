@@ -54,9 +54,15 @@
                             <i class="fas fa-language me-2"></i>{{ book.language|upper }}
                         </span>
                         {% endif %}
+                        {% if not book.digital_file_path %}
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-list me-2"></i>{{ chapters|length }} Chapters
                         </span>
+                        {% else %}
+                        <span class="badge bg-white text-dark fs-6">
+                            <i class="fas fa-file me-2"></i>{{ book.digital_file_type.upper() if book.digital_file_type else 'Digital Book' }}
+                        </span>
+                        {% endif %}
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-keyboard me-2"></i>{{ book.word_count or 0 }} Words
                         </span>
@@ -99,6 +105,7 @@
                     </div>
                     <div class="card-body">
                         <div class="book-stats-grid">
+                            {% if not book.digital_file_path %}
                             <div class="stat-card text-center">
                                 <div class="stat-icon bg-primary text-white rounded-circle mx-auto mb-2">
                                     <i class="fas fa-list"></i>
@@ -106,6 +113,15 @@
                                 <div class="stat-number h5 mb-0">{{ chapters|length }}</div>
                                 <div class="stat-label text-muted small">Chapters</div>
                             </div>
+                            {% else %}
+                            <div class="stat-card text-center">
+                                <div class="stat-icon bg-primary text-white rounded-circle mx-auto mb-2">
+                                    <i class="fas fa-file"></i>
+                                </div>
+                                <div class="stat-number h5 mb-0">{{ book.digital_file_type.upper() if book.digital_file_type else 'N/A' }}</div>
+                                <div class="stat-label text-muted small">File Type</div>
+                            </div>
+                            {% endif %}
                             <div class="stat-card text-center">
                                 <div class="stat-icon bg-success text-white rounded-circle mx-auto mb-2">
                                     <i class="fas fa-keyboard"></i>
@@ -120,6 +136,7 @@
                                 <div class="stat-number h5 mb-0">{{ book.created_at.strftime('%b %d') if book.created_at else 'N/A' }}</div>
                                 <div class="stat-label text-muted small">Created</div>
                             </div>
+                            {% if not book.digital_file_path %}
                             <div class="stat-card text-center">
                                 <div class="stat-icon bg-info text-white rounded-circle mx-auto mb-2">
                                     <i class="fas fa-eye"></i>
@@ -127,12 +144,13 @@
                                 <div class="stat-number h5 mb-0">{{ collaborations|length }}</div>
                                 <div class="stat-label text-muted small">Collaborators</div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
 
-                <!-- Investment Readiness Status -->
-                {% if is_author and investment_readiness %}
+                <!-- Investment Readiness Status (Only for books created in platform) -->
+                {% if is_author and investment_readiness and not book.digital_file_path %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <h5 class="card-title text-primary mb-0">
@@ -188,12 +206,23 @@
                     <div class="card-body">
                         <div class="d-grid gap-2">
                             {% if is_author|default(True) %}
+                            {% if not book.digital_file_path %}
                             <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit me-2"></i>Edit Book
                             </a>
                             <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-users me-2"></i>Collaborate
                             </a>
+                            {% else %}
+                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-2"></i>Edit Details
+                            </a>
+                            {% if book.digital_file_path %}
+                            <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-outline-info">
+                                <i class="fas fa-download me-2"></i>Download Book
+                            </a>
+                            {% endif %}
+                            {% endif %}
                             {% if book.status.value == 'draft' %}
                                 <button class="btn btn-success" onclick="publishBook()">
                                     <i class="fas fa-globe me-2"></i>Publish
@@ -204,9 +233,11 @@
                                 </button>
                             {% endif %}
                             {% elif is_collaborator|default(False) %}
+                            {% if not book.digital_file_path %}
                             <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-users me-2"></i>Collaborate
                             </a>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </div>
@@ -230,8 +261,8 @@
                     </div>
                 </div>
 
-                <!-- Collaborators -->
-                {% if collaborations %}
+                <!-- Collaborators (Only for books created in platform) -->
+                {% if collaborations and not book.digital_file_path %}
                     <div class="card mt-3">
                         <div class="card-header">
                             <h6><i class="fas fa-users"></i> Collaborators</h6>
@@ -256,12 +287,18 @@
                     <h2>{{ book.title }}</h2>
                     {% if is_author|default(True) %}
                     <div class="btn-group">
+                        {% if not book.digital_file_path %}
                         <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
                             <i class="fas fa-edit"></i> Edit Book
                         </a>
                         <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-secondary">
                             <i class="fas fa-users"></i> Collaborate
                         </a>
+                        {% else %}
+                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit Details
+                        </a>
+                        {% endif %}
                         {% if book.status.value == 'draft' %}
                             <button class="btn btn-success" onclick="publishBook()">
                                 <i class="fas fa-globe"></i> Publish
@@ -273,15 +310,18 @@
                         {% endif %}
                     </div>
                     {% elif is_collaborator|default(False) %}
+                    {% if not book.digital_file_path %}
                     <div class="btn-group">
                         <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-secondary">
                             <i class="fas fa-users"></i> Collaborate
                         </a>
                     </div>
                     {% endif %}
+                    {% endif %}
                 </div>
 
-                <!-- Chapters Section -->
+                <!-- Chapters Section (Only for books created in platform) -->
+                {% if not book.digital_file_path %}
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5><i class="fas fa-list"></i> Chapters</h5>
@@ -339,6 +379,94 @@
                         {% endif %}
                     </div>
                 </div>
+                
+                <!-- Audiobook Section (For platform-created books) -->
+                {% if book.has_audiobook %}
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-headphones"></i> Audiobook</h5>
+                        <span class="badge bg-success">
+                            <i class="fas fa-check"></i> Available
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Duration: {{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} minutes
+                                </p>
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-microphone me-1"></i>
+                                    Voice: {{ book.audiobook_voice or 'en-US-Standard-A' }}
+                                </p>
+                                <p class="text-muted mb-3">
+                                    <i class="fas fa-dollar-sign me-1"></i>
+                                    Price: ${{ "%.2f"|format(book.audiobook_price) if book.audiobook_price else "Free" }}
+                                </p>
+                                <h6><i class="fas fa-headphones me-2"></i>Preview Audiobook:</h6>
+                                <audio controls class="w-100" style="max-width: 100%;">
+                                    <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% else %}
+                <!-- Uploaded Book Info -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-file"></i> Digital Book</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>Book File</h6>
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-file me-1"></i>
+                                    File Type: <strong>{{ book.digital_file_type.upper() if book.digital_file_type else 'Unknown' }}</strong>
+                                </p>
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-keyboard me-1"></i>
+                                    Word Count: <strong>{{ book.word_count or 0 }}</strong> words
+                                </p>
+                                {% if book.digital_file_path %}
+                                <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-primary">
+                                    <i class="fas fa-download me-2"></i>Download Book File
+                                </a>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 text-end">
+                                {% if book.has_audiobook %}
+                                <div class="alert alert-success mb-3">
+                                    <i class="fas fa-headphones me-2"></i>
+                                    <strong>Audiobook Available</strong>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <small>Generate audiobook from Edit Details page</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if book.has_audiobook %}
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6><i class="fas fa-headphones me-2"></i>Preview Audiobook:</h6>
+                                <audio controls class="w-100" style="max-width: 100%;">
+                                    <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        </div>
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Quick Actions -->
                 <div class="row mt-4">
@@ -398,7 +526,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='book_platform.js') }}"></script>
+    {% if not book.digital_file_path %}
+    {# Only show AI Assistant for manually created books, not uploaded digital books #}
     <script src="{{ url_for('static', filename='ai_assistant.js') }}?v={{ range(1000, 9999) | random }}"></script>
+    {% endif %}
     <script>
         function publishBook() {
             if (confirm('Are you sure you want to publish this book? This will make it available in the marketplace.')) {

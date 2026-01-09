@@ -139,6 +139,7 @@
                                 </div>
                             </div>
                             
+                            {% if not book.digital_file_path %}
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -173,6 +174,20 @@
                                     </div>
                                 </div>
                             </div>
+                            {% else %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="price" class="form-label">Price (USD)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="price" name="price" 
+                                                   value="{{ book.price or '' }}" min="0" step="0.01" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
 
                             <div class="mb-3">
                                 <label for="tags" class="form-label">Tags</label>
@@ -407,10 +422,19 @@
                                         <i class="fas fa-dollar-sign me-1"></i>
                                         Price: ${{ "%.2f"|format(book.audiobook_price) if book.audiobook_price else "Free" }}
                                     </p>
-                                    <p class="text-muted mb-0">
+                                    <p class="text-muted mb-3">
                                         <i class="fas fa-calendar me-1"></i>
                                         Generated: {{ book.audiobook_generated_at.strftime('%B %d, %Y at %I:%M %p') if book.audiobook_generated_at else 'Unknown' }}
                                     </p>
+                                    
+                                    <!-- Embedded Audio Player -->
+                                    <div class="mb-3">
+                                        <label class="form-label"><i class="fas fa-headphones me-2"></i>Preview Audiobook:</label>
+                                        <audio controls class="w-100" style="max-width: 100%;">
+                                            <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>
                                 </div>
                                 <div class="col-md-4 text-end">
                                     <button class="btn btn-outline-danger btn-sm" onclick="regenerateAudiobook()">
