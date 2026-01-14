@@ -407,32 +407,6 @@
                         </div>
                     </div>
                     {% endif %}
-
-                    <!-- Author Actions (Authors Only) -->
-                    {% if is_author %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-sm border-0 h-100">
-                            <div class="card-body text-center">
-                                <div class="mb-3">
-                                    <i class="fas fa-book fa-3x text-warning"></i>
-                                </div>
-                                <h5 class="card-title">Books</h5>
-                                <p class="card-text text-muted small">Create and manage your books</p>
-                                <div class="d-grid gap-2">
-                                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-warning btn-sm">
-                                        <i class="fas fa-plus me-1"></i>Create Book
-                                    </a>
-                                    <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-success btn-sm">
-                                        <i class="fas fa-upload me-1"></i>Upload Existing Book
-                                    </a>
-                                    <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-warning btn-sm">
-                                        <i class="fas fa-book-open me-1"></i>My Books
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
 
                 {% if is_author %}

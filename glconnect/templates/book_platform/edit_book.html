@@ -25,6 +25,19 @@
     <div class="container mt-4 edit-book">
         <div class="row justify-content-center">
             <div class="col-lg-8">
+                {% if book.has_audiobook %}
+                <!-- Success Alert for Generated Audiobook -->
+                <div class="alert alert-success alert-dismissible fade show" role="alert" id="audiobookSuccessAlert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1"><i class="fas fa-headphones me-2"></i>Audiobook Generated Successfully!</h5>
+                            <p class="mb-0">Your audiobook is ready. Scroll down to the <strong>"Audiobook Generation"</strong> section to preview and manage it.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
                 <div class="card">
                     <div class="card-header">
                         <h4 class="mb-0">
@@ -388,7 +401,7 @@
                 {% endif %}
 
                 <!-- Audiobook Generation -->
-                <div class="card mt-4">
+                <div class="card mt-4" id="audiobook-section">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fas fa-headphones"></i> Audiobook Generation
@@ -623,6 +636,16 @@
             
             // Poll status every 5 seconds if processing
             setInterval(checkAudiobookStatus, 5000);
+            
+            // Scroll to audiobook section if hash is present
+            if (window.location.hash === '#audiobook-section') {
+                setTimeout(function() {
+                    const section = document.getElementById('audiobook-section');
+                    if (section) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 500);
+            }
         });
         
         // Check audiobook generation status
@@ -681,6 +704,8 @@
                     
                     // If completed, reload page to show success
                     if (result.has_audiobook && result.status === 'completed') {
+                        // Add hash to URL to scroll to audiobook section after reload
+                        window.location.hash = 'audiobook-section';
                         window.location.reload();
                     }
                 }

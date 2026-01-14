@@ -160,9 +160,31 @@ def count_words_from_html(html_content):
         return len(html_content.split())
 
 def update_book_word_count(book):
-    """Recalculate and update the book's total word count from all chapters"""
+    """Recalculate and update the book's total word count from all chapters.
+
+    IMPORTANT:
+    - For books created inside the platform (with chapters), the word count
+      comes from summing chapter contents.
+    - For uploaded digital books (with a digital file and no chapters),
+      the word count is taken from the digital file extraction process and
+      should NOT be overwritten here.
+    """
     try:
-        # Ensure all chapters have their word count calculated
+        # If this is an uploaded digital book (has a digital file path) and
+        # there are no platform chapters, keep the existing word_count.
+        # That value is set when the digital file is processed.
+        try:
+            has_digital_file = bool(getattr(book, "digital_file_path", None))
+            has_chapters = bool(getattr(book, "chapters", None))
+        except Exception:
+            has_digital_file = False
+            has_chapters = False
+
+        if has_digital_file and not has_chapters:
+            # Do not override the word count that came from the uploaded file
+            return book.word_count or 0
+
+        # Otherwise (platform-created books with chapters), recalculate from chapters
         total_words = 0
         for chapter in book.chapters:
             try:
@@ -177,6 +199,7 @@ def update_book_word_count(book):
                 logging.error(f"Error calculating word count for chapter {chapter.id}: {e}")
                 # Use existing word count if calculation fails
                 total_words += chapter.word_count or 0
+
         book.word_count = int(total_words)
         return book.word_count
     except Exception as e:
@@ -658,7 +681,28 @@ def view_book(book_id, user_profile, profile_type):
         joinedload(BookCollaboration.collaborator).joinedload(BookPlatformUser.user)
     ).filter_by(book_project_id=book_id, is_active=True).all()
     
-    # Ensure book word count is up to date
+    # For uploaded digital books, ensure word count is populated at least once
+    # from the uploaded file if it's still 0 or missing.
+    try:
+        if getattr(book, "digital_file_path", None) and (not book.word_count or book.word_count == 0):
+            from glconnect import digital_book_processor
+            import os
+            from flask import current_app
+
+            file_type = book.digital_file_type
+            # Reconstruct full path inside static folder (e.g. "digital_books/filename.pdf")
+            digital_rel_path = book.digital_file_path
+            digital_full_path = os.path.join(current_app.static_folder, digital_rel_path)
+
+            extraction_result = digital_book_processor.extract_text(digital_full_path, file_type)
+            if extraction_result.get("success") and extraction_result.get("word_count") is not None:
+                book.word_count = extraction_result["word_count"]
+                db.session.commit()
+    except Exception as extraction_error:
+        logger.error(f"Error backfilling word count from digital file for book {book_id}: {extraction_error}", exc_info=True)
+        # Continue anyway – we will still try to use chapter-based word count logic below.
+    
+    # Ensure book word count is up to date for platform-created books
     try:
         update_book_word_count(book)
         db.session.commit()
@@ -1246,50 +1290,54 @@ def generate_audiobook_for_book(book_id):
         db.session.add(audio_task)
         db.session.commit()
         
+        # Capture the real Flask app object for use in the background thread
+        app = current_app._get_current_object()
+
         # Start audio generation in background
         def generate_audio_background():
-            try:
-                # Update task status
-                audio_task.status = 'processing'
-                audio_task.progress = 10
-                db.session.commit()
-                
-                # Generate audiobook
-                audio_result = audio_book_generator.generate_audiobook(
-                    full_text,
-                    book.id,
-                    voice_name
-                )
-                
-                if audio_result['success']:
-                    # Update book with audiobook info
-                    book.has_audiobook = True
-                    book.audiobook_file_path = audio_result['audio_file_path']
-                    book.audiobook_price = audiobook_price
-                    book.audiobook_duration = audio_result['duration']
-                    book.audiobook_generated_at = datetime.now(timezone.utc)
-                    book.audiobook_voice = voice_name
-                    
-                    # Update task
-                    audio_task.status = 'completed'
-                    audio_task.progress = 100
-                    audio_task.completed_at = datetime.now(timezone.utc)
-                    
+            with app.app_context():
+                try:
+                    # Update task status
+                    audio_task.status = 'processing'
+                    audio_task.progress = 10
                     db.session.commit()
-                    logger.info(f"Audiobook generated successfully for book {book.id}")
                     
-                else:
-                    # Update task with error
+                    # Generate audiobook
+                    audio_result = audio_book_generator.generate_audiobook(
+                        full_text,
+                        book.id,
+                        voice_name
+                    )
+                    
+                    if audio_result['success']:
+                        # Update book with audiobook info
+                        book.has_audiobook = True
+                        book.audiobook_file_path = audio_result['audio_file_path']
+                        book.audiobook_price = audiobook_price
+                        book.audiobook_duration = audio_result['duration']
+                        book.audiobook_generated_at = datetime.now(timezone.utc)
+                        book.audiobook_voice = voice_name
+                        
+                        # Update task
+                        audio_task.status = 'completed'
+                        audio_task.progress = 100
+                        audio_task.completed_at = datetime.now(timezone.utc)
+                        
+                        db.session.commit()
+                        logger.info(f"Audiobook generated successfully for book {book.id}")
+                        
+                    else:
+                        # Update task with error
+                        audio_task.status = 'failed'
+                        audio_task.error_message = audio_result['error']
+                        db.session.commit()
+                        logger.error(f"Failed to generate audiobook for book {book.id}: {audio_result['error']}")
+                        
+                except Exception as e:
+                    logger.error(f"Error in background audiobook generation: {str(e)}")
                     audio_task.status = 'failed'
-                    audio_task.error_message = audio_result['error']
+                    audio_task.error_message = str(e)
                     db.session.commit()
-                    logger.error(f"Failed to generate audiobook for book {book.id}: {audio_result['error']}")
-                    
-            except Exception as e:
-                logger.error(f"Error in background audiobook generation: {str(e)}")
-                audio_task.status = 'failed'
-                audio_task.error_message = str(e)
-                db.session.commit()
         
         # Start background thread
         thread = threading.Thread(target=generate_audio_background)
