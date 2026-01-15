@@ -95,12 +95,24 @@ class DatabaseOptimizer:
     @staticmethod
     @query_performance_monitor
     def get_marketplace_books(limit=50, genre=None, language=None, search_term=None):
-        """Get marketplace books with optimized queries"""
+        """Get marketplace books with optimized queries
+        Shows books that are published either:
+        - Platform-created books: status == PUBLISHED
+        - Uploaded digital books: digital_book_published == True
+        - Books with audiobooks: audiobook_published == True
+        """
         from .book_platform_models import BookProject, BookStatus, BookPlatformUser
+        from sqlalchemy import or_
         
         query = BookProject.query.options(
             joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-        ).filter(BookProject.status == BookStatus.PUBLISHED)
+        ).filter(
+            or_(
+                BookProject.status == BookStatus.PUBLISHED,  # Platform-created books
+                BookProject.digital_book_published == True,  # Published digital books
+                BookProject.audiobook_published == True      # Published audiobooks
+            )
+        )
         
         if genre:
             query = query.filter(BookProject.genre == genre)
@@ -121,12 +133,17 @@ class DatabaseOptimizer:
     def get_available_languages():
         """Get all unique languages from published books with book counts"""
         from .book_platform_models import BookProject, BookStatus
+        from sqlalchemy import or_
         
         languages = BookProject.query.with_entities(
             BookProject.language,
             func.count(BookProject.id).label('count')
         ).filter(
-            BookProject.status == BookStatus.PUBLISHED,
+            or_(
+                BookProject.status == BookStatus.PUBLISHED,
+                BookProject.digital_book_published == True,
+                BookProject.audiobook_published == True
+            ),
             BookProject.language.isnot(None),
             BookProject.language != ''
         ).group_by(BookProject.language).order_by(BookProject.language).all()
@@ -138,12 +155,17 @@ class DatabaseOptimizer:
     def get_available_genres():
         """Get all unique genres from published books with book counts"""
         from .book_platform_models import BookProject, BookStatus
+        from sqlalchemy import or_
         
         genres = BookProject.query.with_entities(
             BookProject.genre,
             func.count(BookProject.id).label('count')
         ).filter(
-            BookProject.status == BookStatus.PUBLISHED,
+            or_(
+                BookProject.status == BookStatus.PUBLISHED,
+                BookProject.digital_book_published == True,
+                BookProject.audiobook_published == True
+            ),
             BookProject.genre.isnot(None),
             BookProject.genre != ''
         ).group_by(BookProject.genre).order_by(BookProject.genre).all()

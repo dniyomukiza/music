@@ -560,11 +560,18 @@ def books(user_profile, profile_type):
             return redirect(url_for('book_platform.dashboard'))
     
     # Query books with eager loading of author information
-    # Note: We don't eager load investment_campaign to avoid collection type issues
-    # It will be loaded lazily when accessed, and the relationship uses uselist=False
+    from glconnect.book_platform_models import InvestmentCampaign
     books = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
     ).filter_by(author_id=author_id).all()
+    
+    # Get investment campaigns for books that have them (to avoid relationship issues)
+    book_campaigns = {}
+    for book in books:
+        if book.has_investment_campaign:
+            campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
+            if campaign:
+                book_campaigns[book.id] = campaign
     
     # Calculate investment readiness for each book
     books_with_readiness = []
@@ -590,7 +597,9 @@ def books(user_profile, profile_type):
                 }
             })
     
-    return render_template('book_platform/books.html', books_with_readiness=books_with_readiness)
+    return render_template('book_platform/books.html', 
+                         books_with_readiness=books_with_readiness,
+                         book_campaigns=book_campaigns)
 
 @book_bp.route('/books/create', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -630,11 +639,17 @@ def view_book(book_id, user_profile, profile_type):
     
     # Eager load author information to ensure fresh data from database
     # Use the explicit author relationship (not backref) to avoid collection issues
+    campaign = None  # Initialize outside try block
     try:
+        from glconnect.book_platform_models import InvestmentCampaign
         book = BookProject.query.options(
             joinedload(BookProject.author).joinedload(BookPlatformUser.user),
             joinedload(BookProject.chapters)  # Also eager load chapters to avoid lazy loading issues
         ).get_or_404(book_id)
+        
+        # Get investment campaign directly to avoid relationship issues
+        if book.has_investment_campaign:
+            campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
         
         # Refresh the book object to ensure we have the latest data
         db.session.refresh(book)
@@ -726,7 +741,8 @@ def view_book(book_id, user_profile, profile_type):
                              collaborations=collaborations,
                              is_author=is_author,
                              is_collaborator=is_collaborator,
-                             investment_readiness=investment_readiness)
+                             investment_readiness=investment_readiness,
+                             investment_campaign=campaign)
     except Exception as template_error:
         logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
         flash('Error loading book view. Please try again.', 'error')
@@ -792,39 +808,78 @@ def edit_book(book_id, user_profile, profile_type):
             book.allow_collaboration = data.get('allow_collaboration') == 'on' or data.get('allow_collaboration') == True
             book.updated_at = datetime.now(timezone.utc)
             
-            # Handle publishing status - check if is_published checkbox is set
-            # Note: BookProject doesn't have is_published field, only status enum
-            # FormData sends checkboxes as "on" when checked, or omits them when unchecked
-            is_published_flag = (
-                data.get('is_published') == 'on' or 
-                data.get('is_published') == True or 
-                data.get('is_published') == 'true' or
-                'is_published' in data  # Checkbox is present in form data (even if value is empty string)
-            )
-            
-            logger.info(f"Edit book {book_id} - is_published_flag: {is_published_flag}, price: {book.price}")
-            
-            if is_published_flag:
-                # Validate that price is set before publishing (check both the updated price and existing price)
-                price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
-                if not price_value or price_value <= 0:
-                    return jsonify({
-                        'success': False, 
-                        'error': 'Please set a price before publishing your book to the marketplace.'
-                    }), 400
+            # Handle publishing status - separate for digital book and audiobook
+            if book.digital_file_path:
+                # For uploaded digital books, handle separate publishing
+                publish_digital = data.get('publish_digital_book') == 'on'
+                publish_audiobook = data.get('publish_audiobook') == 'on'
                 
-                # If user wants to publish, set status to PUBLISHED
-                if book.status != BookStatus.PUBLISHED:
-                    book.status = BookStatus.PUBLISHED
-                    # Set published_at timestamp if not already set
-                    if not book.published_at:
-                        book.published_at = datetime.now(timezone.utc)
-                    logger.info(f"Book {book_id} published via edit form - Status set to PUBLISHED")
+                # Handle digital book publishing
+                if publish_digital:
+                    price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
+                    if not price_value or price_value <= 0:
+                        return jsonify({
+                            'success': False, 
+                            'error': 'Please set a price before publishing your digital book to the marketplace.'
+                        }), 400
+                    if not book.digital_book_published:
+                        book.digital_book_published = True
+                        book.digital_book_published_at = datetime.now(timezone.utc)
+                        logger.info(f"Digital book {book_id} published via edit form")
+                else:
+                    if book.digital_book_published:
+                        book.digital_book_published = False
+                        logger.info(f"Digital book {book_id} unpublished via edit form")
+                
+                # Handle audiobook publishing
+                if publish_audiobook:
+                    if not book.has_audiobook:
+                        return jsonify({
+                            'success': False, 
+                            'error': 'Audiobook must be generated before it can be published.'
+                        }), 400
+                    audiobook_price_value = book.audiobook_price if book.audiobook_price else 0
+                    if not audiobook_price_value or audiobook_price_value < 0:
+                        return jsonify({
+                            'success': False, 
+                            'error': 'Please set an audiobook price before publishing it to the marketplace.'
+                        }), 400
+                    if not book.audiobook_published:
+                        book.audiobook_published = True
+                        book.audiobook_published_at = datetime.now(timezone.utc)
+                        logger.info(f"Audiobook {book_id} published via edit form")
+                else:
+                    if book.audiobook_published:
+                        book.audiobook_published = False
+                        logger.info(f"Audiobook {book_id} unpublished via edit form")
             else:
-                # If is_published is unchecked, set status back to DRAFT
-                if book.status == BookStatus.PUBLISHED:
-                    book.status = BookStatus.DRAFT
-                    logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
+                # For platform-created books, use the old status-based publishing
+                is_published_flag = (
+                    data.get('is_published') == 'on' or 
+                    data.get('is_published') == True or 
+                    data.get('is_published') == 'true' or
+                    'is_published' in data
+                )
+                
+                logger.info(f"Edit book {book_id} - is_published_flag: {is_published_flag}, price: {book.price}")
+                
+                if is_published_flag:
+                    price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
+                    if not price_value or price_value <= 0:
+                        return jsonify({
+                            'success': False, 
+                            'error': 'Please set a price before publishing your book to the marketplace.'
+                        }), 400
+                    
+                    if book.status != BookStatus.PUBLISHED:
+                        book.status = BookStatus.PUBLISHED
+                        if not book.published_at:
+                            book.published_at = datetime.now(timezone.utc)
+                        logger.info(f"Book {book_id} published via edit form - Status set to PUBLISHED")
+                else:
+                    if book.status == BookStatus.PUBLISHED:
+                        book.status = BookStatus.DRAFT
+                        logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
             
             db.session.commit()
             
@@ -1275,25 +1330,73 @@ def generate_audiobook_for_book(book_id):
                 return jsonify({'success': False, 'error': 'No text content found in the uploaded digital book file.'}), 400
         else:
             # For books created in the platform, extract text from published chapters
-            chapters = BookChapter.query.filter_by(
-                book_project_id=book_id,
-                is_published=True
-            ).order_by(BookChapter.chapter_number).all()
+            # First check if there are any chapters at all
+            all_chapters = BookChapter.query.filter_by(book_project_id=book_id).order_by(BookChapter.chapter_number).all()
             
+            if not all_chapters:
+                return jsonify({
+                    'success': False, 
+                    'error': 'No chapters found. Please create at least one chapter before generating an audiobook.'
+                }), 400
+            
+            # Check for published chapters first
+            chapters = [ch for ch in all_chapters if ch.is_published]
+            
+            # If no published chapters but book is published and chapters have content, use those chapters
             if not chapters:
-                return jsonify({'success': False, 'error': 'No published chapters found. Publish at least one chapter before generating audiobook.'}), 400
+                # Check if book is published and chapters have content
+                chapters_with_content = [ch for ch in all_chapters if (ch.content or ch.summary)]
+                
+                if book.status == BookStatus.PUBLISHED and chapters_with_content:
+                    # Use chapters with content if book is published (they're effectively published)
+                    logger.info(f"Book {book_id} is published but chapters not individually marked. Using chapters with content.")
+                    chapters = chapters_with_content
+                else:
+                    # Get list of unpublished chapters with content for better error message
+                    unpublished_with_content = [ch for ch in all_chapters if not ch.is_published and (ch.content or ch.summary)]
+                    unpublished_count = len(unpublished_with_content)
+                    total_unpublished = len([ch for ch in all_chapters if not ch.is_published])
+                    
+                    error_msg = f'No published chapters found. You have {len(all_chapters)} chapter(s) total, but none are published. '
+                    if unpublished_with_content:
+                        error_msg += f'You have {unpublished_count} unpublished chapter(s) with content. '
+                    error_msg += 'Please go to each chapter and check the "Publish this chapter" checkbox before generating an audiobook.'
+                    
+                    logger.warning(f"Book {book_id}: {len(all_chapters)} chapters found, {total_unpublished} unpublished, {len(chapters)} published")
+                    
+                    return jsonify({'success': False, 'error': error_msg}), 400
             
-            # Combine all chapter content
+            # Combine all chapter content (including summary if available)
             for chapter in chapters:
+                chapter_text = ""
+                
+                # Add chapter title and number
+                chapter_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n"
+                
+                # Add summary if available
+                if chapter.summary:
+                    import re
+                    clean_summary = re.sub(r'<[^>]+>', '', chapter.summary)
+                    clean_summary = re.sub(r'\s+', ' ', clean_summary).strip()
+                    if clean_summary:
+                        chapter_text += f"Summary: {clean_summary}\n\n"
+                
+                # Add content if available
                 if chapter.content:
-                    # Clean HTML content and extract text
                     import re
                     clean_content = re.sub(r'<[^>]+>', '', chapter.content)
                     clean_content = re.sub(r'\s+', ' ', clean_content).strip()
-                    full_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n{clean_content}\n\n"
+                    if clean_content:
+                        chapter_text += f"{clean_content}\n\n"
+                
+                if chapter_text.strip():
+                    full_text += chapter_text
             
             if not full_text.strip():
-                return jsonify({'success': False, 'error': 'No text content found in published chapters'}), 400
+                return jsonify({
+                    'success': False, 
+                    'error': 'Published chapters found but they contain no text content. Please add content to your chapters before generating an audiobook.'
+                }), 400
         
         # Create audio generation task
         audio_task = AudioGenerationTask(
@@ -1855,11 +1958,32 @@ def invite_collaborator(book_id, user_profile, profile_type):
     
     data = request.get_json()
     
+    # Normalize role value to match enum values (lowercase with underscore)
+    role_value = data['role'].lower().replace('-', '_').replace(' ', '_')
+    
+    # Map common variations to correct enum values
+    role_mapping = {
+        'co_author': 'co_author',
+        'coauthor': 'co_author',
+        'co-author': 'co_author',
+        'author': 'author',
+        'editor': 'editor',
+        'reviewer': 'reviewer',
+        'viewer': 'viewer'
+    }
+    
+    normalized_role = role_mapping.get(role_value, role_value)
+    
+    try:
+        collaboration_role = CollaborationRole(normalized_role)
+    except ValueError:
+        return jsonify({'error': f'Invalid collaboration role: {data["role"]}'}), 400
+    
     # Create collaboration
     collaboration = BookCollaboration(
         book_project_id=book_id,
         collaborator_id=book_user.id,  # Placeholder until invitation is accepted
-        role=CollaborationRole(data['role'])
+        role=collaboration_role
     )
     db.session.add(collaboration)
     db.session.flush()  # Get the ID
@@ -1869,7 +1993,7 @@ def invite_collaborator(book_id, user_profile, profile_type):
         collaboration_id=collaboration.id,
         invited_by_id=book_user.id,
         email=data['email'],
-        role=CollaborationRole(data['role']),
+        role=collaboration_role,
         message=data.get('message'),
         expires_at=datetime.now(timezone.utc) + timedelta(days=7)
     )

@@ -145,6 +145,8 @@ class BookProject(db.Model):
     digital_file_type = db.Column(db.String(50), nullable=True)  # PDF, EPUB, DOCX, etc.
     digital_file_size = db.Column(db.Integer, nullable=True)  # File size in bytes
     digital_file_uploaded_at = db.Column(db.DateTime, nullable=True)
+    digital_book_published = db.Column(db.Boolean, default=False)  # Whether digital book is published to marketplace
+    digital_book_published_at = db.Column(db.DateTime, nullable=True)  # When digital book was published
     
     # Audio Book Support
     has_audiobook = db.Column(db.Boolean, default=False)
@@ -153,6 +155,8 @@ class BookProject(db.Model):
     audiobook_duration = db.Column(db.Integer, nullable=True)  # Duration in seconds
     audiobook_generated_at = db.Column(db.DateTime, nullable=True)
     audiobook_voice = db.Column(db.String(100), nullable=True)  # TTS voice used
+    audiobook_published = db.Column(db.Boolean, default=False)  # Whether audiobook is published to marketplace
+    audiobook_published_at = db.Column(db.DateTime, nullable=True)  # When audiobook was published
     
     # Investment & Sales Tracking
     has_investment_campaign = db.Column(db.Boolean, default=False)

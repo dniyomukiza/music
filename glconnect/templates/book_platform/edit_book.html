@@ -223,6 +223,35 @@
                                        value="{{ book.cover_image or '' }}" placeholder="https://example.com/cover.jpg">
                             </div>
 
+                            {% if book.digital_file_path %}
+                            <!-- Publishing options for uploaded digital books -->
+                            <div class="mb-3">
+                                <h6 class="mb-3"><i class="fas fa-globe me-2"></i>Publishing Options</h6>
+                                
+                                {% if book.digital_file_path %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="publish_digital_book" name="publish_digital_book" value="on"
+                                           {% if book.digital_book_published %}checked{% endif %}>
+                                    <label class="form-check-label" for="publish_digital_book">
+                                        <strong>Publish Digital Book</strong> - Make digital book available in marketplace
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mb-3">Digital book will be available for purchase. Make sure you've set a price first.</small>
+                                {% endif %}
+                                
+                                {% if book.has_audiobook %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="publish_audiobook" name="publish_audiobook" value="on"
+                                           {% if book.audiobook_published %}checked{% endif %}>
+                                    <label class="form-check-label" for="publish_audiobook">
+                                        <strong>Publish Audiobook</strong> - Make audiobook available in marketplace
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block">Audiobook will be available for purchase. Make sure you've set an audiobook price first.</small>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <!-- Publishing option for platform-created books -->
                             <div class="mb-3">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="is_published" name="is_published" value="on"
@@ -233,6 +262,7 @@
                                 </div>
                                 <small class="text-muted">Checking this box will publish your book to the marketplace. Make sure you've set a price first.</small>
                             </div>
+                            {% endif %}
 
                             {% if not book.digital_file_path %}
                             <div class="mb-3">
@@ -469,7 +499,7 @@
                                 <h6>Create Audiobook Version</h6>
                                     <div class="alert alert-warning mb-3">
                                         <i class="fas fa-language me-2"></i>
-                                        <strong>Note:</strong> Audiobooks are currently only available in English. All Google TTS voices are English-only.
+                                        <strong>Note:</strong> Audiobooks are currently only available in English.
                                     </div>
                                     <p class="text-muted mb-3">
                                         {% if book.digital_file_path %}
@@ -639,6 +669,8 @@
         let availableVoices = {};
         let selectedVoice = null;
         let currentPreviewVoice = null;
+        let reloadTriggered = false; // Flag to prevent multiple reloads
+        let statusCheckInterval = null; // Store interval ID to clear it later
         
         // Load available voices on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -649,8 +681,10 @@
             // Check audiobook generation status
             checkAudiobookStatus();
             
-            // Poll status every 5 seconds if processing
-            setInterval(checkAudiobookStatus, 5000);
+            // Poll status every 5 seconds if processing (only if audiobook not already generated)
+            {% if not book.has_audiobook %}
+            statusCheckInterval = setInterval(checkAudiobookStatus, 5000);
+            {% endif %}
             
             // Scroll to audiobook section if hash is present
             if (window.location.hash === '#audiobook-section') {
@@ -717,11 +751,22 @@
                 } else {
                     statusDisplay.style.display = 'none';
                     
-                    // If completed, reload page to show success
-                    if (result.has_audiobook && result.status === 'completed') {
+                    // If completed, reload page to show success (only once)
+                    if (result.has_audiobook && result.status === 'completed' && !reloadTriggered) {
+                        reloadTriggered = true; // Prevent multiple reloads
+                        
+                        // Stop polling since we're done
+                        if (statusCheckInterval) {
+                            clearInterval(statusCheckInterval);
+                            statusCheckInterval = null;
+                        }
+                        
                         // Add hash to URL to scroll to audiobook section after reload
                         window.location.hash = 'audiobook-section';
-                        window.location.reload();
+                        // Small delay to ensure status is updated before reload
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
                     }
                 }
             } catch (error) {

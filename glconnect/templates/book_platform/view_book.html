@@ -164,12 +164,12 @@
                                 <strong>Ready for Investment!</strong>
                                 <p class="mb-0 small mt-2">Your book meets all requirements to create an investment campaign.</p>
                             </div>
-                            {% if not book.has_investment_campaign %}
+                            {% if not book.has_investment_campaign or not investment_campaign %}
                             <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-success w-100">
                                 <i class="fas fa-plus-circle me-2"></i>Create Investment Campaign
                             </a>
                             {% else %}
-                            <a href="{{ url_for('book_platform.investment_campaign', campaign_id=book.investment_campaign.id) }}" class="btn btn-primary w-100">
+                            <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100">
                                 <i class="fas fa-eye me-2"></i>View Campaign
                             </a>
                             {% endif %}
@@ -220,6 +220,11 @@
                             {% if book.digital_file_path %}
                             <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-outline-info">
                                 <i class="fas fa-download me-2"></i>Download Book
+                            </a>
+                            {% endif %}
+                            {% if book.has_audiobook %}
+                            <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-outline-success">
+                                <i class="fas fa-headphones me-2"></i>Download Audiobook
                             </a>
                             {% endif %}
                             {% endif %}
@@ -433,9 +438,16 @@
                                     Word Count: <strong>{{ book.word_count or 0 }}</strong> words
                                 </p>
                                 {% if book.digital_file_path %}
-                                <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-primary">
-                                    <i class="fas fa-download me-2"></i>Download Book File
-                                </a>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-primary">
+                                        <i class="fas fa-download me-2"></i>Download Book File
+                                    </a>
+                                    {% if book.has_audiobook %}
+                                    <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-success">
+                                        <i class="fas fa-headphones me-2"></i>Download Audiobook
+                                    </a>
+                                    {% endif %}
+                                </div>
                                 {% endif %}
                             </div>
                             <div class="col-md-4 text-end">
