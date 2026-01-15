@@ -1216,25 +1216,38 @@ def delete_book(book_id, user_profile, profile_type):
 @book_platform_required
 def generate_audiobook_for_book(book_id):
     """Generate audiobook from existing book content"""
-    book = BookProject.query.get_or_404(book_id)
+    book = BookProject.query.get(book_id)
+    if not book:
+        return jsonify({'success': False, 'error': 'Book not found'}), 404
     
     # Check if user has permission
+    if not current_user or not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user:
-        return jsonify({'error': 'Ink Studio profile required'}), 403
+        return jsonify({'success': False, 'error': 'Ink Studio profile required'}), 403
     
     # Check if user is the author of the book
     if book.author_id != book_user.id:
-        return jsonify({'error': 'You can only generate audiobooks for your own books'}), 403
+        return jsonify({'success': False, 'error': 'You can only generate audiobooks for your own books'}), 403
     
     # Check if book already has audiobook
     if book.has_audiobook:
-        return jsonify({'error': 'This book already has an audiobook version'}), 400
+        return jsonify({'success': False, 'error': 'This book already has an audiobook version'}), 400
     
     # Get request data
-    data = request.get_json()
+    try:
+        data = request.get_json() or {}
+    except Exception as e:
+        logger.error(f"Error parsing JSON request: {str(e)}")
+        return jsonify({'success': False, 'error': 'Invalid JSON in request'}), 400
+    
     audiobook_price = data.get('audiobook_price', 0.0)
     voice_name = data.get('voice_name', 'en-US-Standard-A')
+    
+    if not voice_name:
+        return jsonify({'success': False, 'error': 'Voice name is required'}), 400
     
     try:
         full_text = ""
@@ -1245,7 +1258,7 @@ def generate_audiobook_for_book(book_id):
             digital_file_path = os.path.join(current_app.root_path, 'static', book.digital_file_path)
             
             if not os.path.exists(digital_file_path):
-                return jsonify({'error': 'Digital book file not found. Please re-upload the book.'}), 400
+                return jsonify({'success': False, 'error': 'Digital book file not found. Please re-upload the book.'}), 400
             
             # Get file type from book model or infer from extension
             file_type = book.digital_file_type or os.path.splitext(digital_file_path)[1].lstrip('.')
@@ -1254,12 +1267,12 @@ def generate_audiobook_for_book(book_id):
             extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
             
             if not extraction_result['success']:
-                return jsonify({'error': f'Failed to extract text from digital book: {extraction_result.get("error", "Unknown error")}'}), 400
+                return jsonify({'success': False, 'error': f'Failed to extract text from digital book: {extraction_result.get("error", "Unknown error")}'}), 400
             
             full_text = extraction_result.get('text', '')
             
             if not full_text.strip():
-                return jsonify({'error': 'No text content found in the uploaded digital book file.'}), 400
+                return jsonify({'success': False, 'error': 'No text content found in the uploaded digital book file.'}), 400
         else:
             # For books created in the platform, extract text from published chapters
             chapters = BookChapter.query.filter_by(
@@ -1268,7 +1281,7 @@ def generate_audiobook_for_book(book_id):
             ).order_by(BookChapter.chapter_number).all()
             
             if not chapters:
-                return jsonify({'error': 'No published chapters found. Publish at least one chapter before generating audiobook.'}), 400
+                return jsonify({'success': False, 'error': 'No published chapters found. Publish at least one chapter before generating audiobook.'}), 400
             
             # Combine all chapter content
             for chapter in chapters:
@@ -1280,7 +1293,7 @@ def generate_audiobook_for_book(book_id):
                     full_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n{clean_content}\n\n"
             
             if not full_text.strip():
-                return jsonify({'error': 'No text content found in published chapters'}), 400
+                return jsonify({'success': False, 'error': 'No text content found in published chapters'}), 400
         
         # Create audio generation task
         audio_task = AudioGenerationTask(
@@ -1290,6 +1303,14 @@ def generate_audiobook_for_book(book_id):
         db.session.add(audio_task)
         db.session.commit()
         
+        # Store IDs and data for use in background thread (objects can't be passed between threads)
+        task_id = audio_task.id
+        book_id_for_thread = book.id
+        # Capture text and voice name explicitly for the closure
+        full_text_for_thread = full_text
+        voice_name_for_thread = voice_name
+        audiobook_price_for_thread = audiobook_price
+        
         # Capture the real Flask app object for use in the background thread
         app = current_app._get_current_object()
 
@@ -1297,26 +1318,34 @@ def generate_audiobook_for_book(book_id):
         def generate_audio_background():
             with app.app_context():
                 try:
+                    # Query fresh instances in the background thread's session
+                    audio_task = AudioGenerationTask.query.get(task_id)
+                    book = BookProject.query.get(book_id_for_thread)
+                    
+                    if not audio_task or not book:
+                        logger.error(f"Could not find audio task {task_id} or book {book_id_for_thread} in background thread")
+                        return
+                    
                     # Update task status
                     audio_task.status = 'processing'
                     audio_task.progress = 10
                     db.session.commit()
                     
-                    # Generate audiobook
+                    # Generate audiobook using captured variables
                     audio_result = audio_book_generator.generate_audiobook(
-                        full_text,
+                        full_text_for_thread,
                         book.id,
-                        voice_name
+                        voice_name_for_thread
                     )
                     
                     if audio_result['success']:
                         # Update book with audiobook info
                         book.has_audiobook = True
                         book.audiobook_file_path = audio_result['audio_file_path']
-                        book.audiobook_price = audiobook_price
+                        book.audiobook_price = audiobook_price_for_thread
                         book.audiobook_duration = audio_result['duration']
                         book.audiobook_generated_at = datetime.now(timezone.utc)
-                        book.audiobook_voice = voice_name
+                        book.audiobook_voice = voice_name_for_thread
                         
                         # Update task
                         audio_task.status = 'completed'
@@ -1334,10 +1363,18 @@ def generate_audiobook_for_book(book_id):
                         logger.error(f"Failed to generate audiobook for book {book.id}: {audio_result['error']}")
                         
                 except Exception as e:
-                    logger.error(f"Error in background audiobook generation: {str(e)}")
-                    audio_task.status = 'failed'
-                    audio_task.error_message = str(e)
-                    db.session.commit()
+                    import traceback
+                    error_trace = traceback.format_exc()
+                    logger.error(f"Error in background audiobook generation: {str(e)}\n{error_trace}")
+                    try:
+                        # Try to update task status, but don't fail if we can't
+                        audio_task = AudioGenerationTask.query.get(task_id)
+                        if audio_task:
+                            audio_task.status = 'failed'
+                            audio_task.error_message = str(e)
+                            db.session.commit()
+                    except Exception as inner_e:
+                        logger.error(f"Failed to update task status after error: {str(inner_e)}")
         
         # Start background thread
         thread = threading.Thread(target=generate_audio_background)
@@ -1352,8 +1389,13 @@ def generate_audiobook_for_book(book_id):
         
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}\n{error_trace}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to start audiobook generation: {str(e)}'
+        }), 500
 
 @book_bp.route('/audiobook/available-voices', methods=['GET'])
 @book_platform_required
@@ -4238,6 +4280,7 @@ def upload_digital_book():
                 title=form.title.data,
                 description=form.description.data,
                 genre=form.genre.data,
+                language='en',  # Default to English for uploaded books (audiobooks are English-only)
                 author_id=author_id,
                 word_count=extraction_result['word_count'],
                 price=form.digital_price.data,
