@@ -38,6 +38,7 @@ from glconnect.forms import DigitalBookUploadForm, ReviewerRegistrationForm, Boo
 from glconnect.digital_book_processor import digital_book_processor
 from glconnect.audio_book_generator import audio_book_generator
 from glconnect.revenue_distribution_service import distribute_revenue
+from glconnect.stripe_utils import init_stripe, get_webhook_secret
 import threading
 from werkzeug.utils import secure_filename
 
@@ -5303,19 +5304,10 @@ def make_investment(campaign_id):
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
     
+    # Campaign must be ACTIVE to accept investments
     if campaign.status != CampaignStatus.ACTIVE:
         flash('This campaign is not currently accepting investments.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
-    
-    # Check if campaign has expired
-    if campaign.end_date:
-        # Ensure end_date is timezone-aware for comparison
-        end_date = campaign.end_date
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=timezone.utc)
-        if end_date < datetime.now(timezone.utc):
-            flash('This campaign has expired.', 'error')
-            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # All users can invest - ensure they have a BookPlatformUser profile for investment tracking
     # Get or create BookPlatformUser profile for the investor
@@ -5324,9 +5316,15 @@ def make_investment(campaign_id):
     
     investor_user_id = current_user.user_id
     
+    book = campaign.book_project
+    
+    # Stop new investments once the book is published, even if goal is not yet reached
+    if book and book.status == BookStatus.PUBLISHED:
+        flash('This campaign is no longer accepting investments because the book is already published.', 'error')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    
     # Prevent self-investment: Check if current user is the author
     # This check uses user_id to ensure authors cannot invest in their own books
-    book = campaign.book_project
     if book and book.author:
         # Check both user_id and author_id to be thorough
         if book.author.user_id == investor_user_id:
@@ -5364,12 +5362,6 @@ def make_investment(campaign_id):
         flash('You cannot invest in your own book.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
-    # Check if already invested
-    existing_investment = BookInvestment.query.filter_by(
-        campaign_id=campaign_id,
-        investor_id=investor_id
-    ).first()
-    
     form = InvestmentForm()
     
     if form.validate_on_submit():
@@ -5393,7 +5385,7 @@ def make_investment(campaign_id):
             # Calculate investment percentage
             investment_percentage = (amount / campaign.funding_goal) * 100
             
-            # Create investment
+            # Create investment record in pending state; actual confirmation happens via Stripe webhook
             investment = BookInvestment(
                 campaign_id=campaign_id,
                 investor_id=investor_id,
@@ -5408,30 +5400,40 @@ def make_investment(campaign_id):
             )
             
             db.session.add(investment)
-            
-            # Update campaign funding
-            campaign.current_funding += amount
-            
-            # TODO: Integrate with payment processor (Stripe)
-            # For now, mark as confirmed
-            investment.payment_status = TransactionStatus.COMPLETED
-            investment.status = InvestmentStatus.CONFIRMED
-            investment.invested_at = datetime.now(timezone.utc)
-            
-            # Check if goal reached (after marking investment as confirmed)
-            if campaign.current_funding >= campaign.funding_goal:
-                campaign.status = CampaignStatus.FUNDED
-                campaign.funded_at = datetime.now(timezone.utc)
-                # Set return start date for all CONFIRMED investments (only confirmed ones should get returns)
-                for inv in campaign.investments:
-                    if inv.status == InvestmentStatus.CONFIRMED:
-                        inv.return_start_date = datetime.now(timezone.utc)
-                        inv.status = InvestmentStatus.ACTIVE
-            
             db.session.commit()
-            
-            flash('Investment successful! Thank you for supporting this book.', 'success')
-            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+
+            # Create Stripe Checkout Session
+            stripe = init_stripe()
+            domain_url = current_app.config.get("FRONTEND_BASE_URL") or request.url_root.rstrip("/")
+
+            checkout_session = stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=["card"],
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": "usd",
+                            "unit_amount": int(amount * 100),
+                            "product_data": {
+                                "name": f"Investment in '{book.title}'",
+                                "description": f"Campaign #{campaign.id} on Ink Studio",
+                            },
+                        },
+                        "quantity": 1,
+                    }
+                ],
+                metadata={
+                    "investment_id": str(investment.id),
+                    "campaign_id": str(campaign.id),
+                    "book_id": str(book.id),
+                    "investor_id": str(investor_id),
+                },
+                success_url=f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=success",
+                cancel_url=f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=cancelled",
+            )
+
+            # Redirect user to Stripe-hosted checkout
+            return redirect(checkout_session.url, code=303)
             
         except Exception as e:
             db.session.rollback()
@@ -5439,6 +5441,81 @@ def make_investment(campaign_id):
             flash(f'An error occurred: {str(e)}', 'error')
     
     return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+
+
+@book_bp.route("/stripe/webhook", methods=["POST"])
+def stripe_webhook():
+    """
+    Stripe webhook endpoint to confirm investment payments.
+    Marks investments as paid and updates campaign funding when
+    checkout.session.completed events arrive.
+    """
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+    webhook_secret = get_webhook_secret()
+
+    try:
+        stripe = init_stripe()
+        if webhook_secret:
+            event = stripe.Webhook.construct_event(
+                payload=payload, sig_header=sig_header, secret=webhook_secret
+            )
+        else:
+            # If no webhook secret is configured, trust the payload (not recommended for production)
+            event = stripe.Event.construct_from(
+                json.loads(payload.decode("utf-8")), stripe.api_key
+            )
+    except Exception as e:
+        logger.error(f"Stripe webhook error: {e}", exc_info=True)
+        return jsonify({"error": "Invalid payload"}), 400
+
+    event_type = event["type"]
+    data_object = event["data"]["object"]
+
+    if event_type == "checkout.session.completed":
+        metadata = data_object.get("metadata", {}) or {}
+        investment_id = metadata.get("investment_id")
+
+        if investment_id:
+            try:
+                investment = BookInvestment.query.get(int(investment_id))
+                if not investment:
+                    logger.error(f"Stripe webhook: Investment {investment_id} not found")
+                    return jsonify({"status": "ignored"}), 200
+
+                # Only process if still pending
+                if (
+                    investment.payment_status == TransactionStatus.PENDING
+                    and investment.status == InvestmentStatus.PENDING
+                ):
+                    campaign = investment.campaign
+                    book = investment.book_project
+
+                    investment.payment_status = TransactionStatus.COMPLETED
+                    investment.status = InvestmentStatus.CONFIRMED
+                    investment.invested_at = datetime.now(timezone.utc)
+
+                    # Update campaign funding on successful payment
+                    campaign.current_funding += investment.amount
+
+                    # If goal reached, mark campaign as FUNDED and activate confirmed investments
+                    if campaign.current_funding >= campaign.funding_goal:
+                        campaign.status = CampaignStatus.FUNDED
+                        campaign.funded_at = datetime.now(timezone.utc)
+                        for inv in campaign.investments:
+                            if inv.status == InvestmentStatus.CONFIRMED:
+                                inv.return_start_date = datetime.now(timezone.utc)
+                                inv.status = InvestmentStatus.ACTIVE
+
+                    db.session.commit()
+                    logger.info(f"Stripe webhook: Investment {investment.id} confirmed via Stripe")
+
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Stripe webhook processing error: {e}", exc_info=True)
+                return jsonify({"error": "Webhook processing failed"}), 500
+
+    return jsonify({"status": "ok"}), 200
 
 # Earnings Dashboard
 @book_bp.route('/earnings', methods=['GET'])

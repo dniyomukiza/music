@@ -421,5 +421,5 @@ Ink Studio database tables created successfully
 2026-01-14 21:56:01,303 - __main__ - INFO - Logging configured - logs will appear in console and server.log
 2026-01-14 21:56:01,303 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
 2026-01-14 21:56:01,341 - werkzeug - WARNING -  * Debugger is active!
-used in a production deployment. Consider switching to a production web server instead.
-2026-01-14 21:56:01,341 - werkzeug - WARNING -  * Debugger is active!
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

@@ -56,10 +56,12 @@
                                     <i class="fas fa-file-alt fa-3x mb-3"></i>
                                     <h5>No Content Yet</h5>
                                     <p>This chapter hasn't been written yet.</p>
-                                    <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}" 
-                                       class="btn btn-primary">
-                                        <i class="fas fa-edit"></i> Start Writing
-                                    </a>
+                                    {% if current_user.is_authenticated and (book.author and book.author.user_id == current_user.user_id or current_user.role == 'admin') %}
+                                        <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}" 
+                                           class="btn btn-primary">
+                                            <i class="fas fa-edit"></i> Start Writing
+                                        </a>
+                                    {% endif %}
                                 </div>
                             {% endif %}
                         </div>
@@ -139,29 +141,30 @@
                     </div>
                 </div>
 
-                <!-- Actions -->
+                <!-- Actions (only visible to the book's author or admins) -->
+                {% if current_user.is_authenticated and (book.author and book.author.user_id == current_user.user_id or current_user.role == 'admin') %}
                 <div class="card mt-3">
                     <div class="card-header">
                         <h5><i class="fas fa-tools"></i> Actions</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                   {% if chapter.is_published %}
-                       <button id="unpublishBtn" class="btn btn-warning" onclick="unpublishChapter()">
-                           <i class="fas fa-undo"></i> Unpublish Chapter
-                       </button>
-                       <div class="alert alert-info py-2 mb-0">
-                           <small><i class="fas fa-lock"></i> Published chapters are locked for editing</small>
-                       </div>
-                   {% else %}
-                       <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
-                          class="btn btn-primary">
-                           <i class="fas fa-edit"></i> Edit Chapter
-                       </a>
-                   {% endif %}
-                   <button class="btn btn-danger" onclick="confirmDeleteChapter()">
-                       <i class="fas fa-trash"></i> Delete Chapter
-                   </button>
+                            {% if chapter.is_published %}
+                                <button id="unpublishBtn" class="btn btn-warning" onclick="unpublishChapter()">
+                                    <i class="fas fa-undo"></i> Unpublish Chapter
+                                </button>
+                                <div class="alert alert-info py-2 mb-0">
+                                    <small><i class="fas fa-lock"></i> Published chapters are locked for editing</small>
+                                </div>
+                            {% else %}
+                                <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                                   class="btn btn-primary">
+                                    <i class="fas fa-edit"></i> Edit Chapter
+                                </a>
+                            {% endif %}
+                            <button class="btn btn-danger" onclick="confirmDeleteChapter()">
+                                <i class="fas fa-trash"></i> Delete Chapter
+                            </button>
                             <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" 
                                class="btn btn-outline-secondary">
                                 <i class="fas fa-list"></i> All Chapters
@@ -173,6 +176,26 @@
                         </div>
                     </div>
                 </div>
+                {% else %}
+                <!-- For non-authors/investors: only navigation, no destructive actions -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5><i class="fas fa-book-reader"></i> Navigation</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-list"></i> All Chapters
+                            </a>
+                            <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                               class="btn btn-outline-info">
+                                <i class="fas fa-book"></i> View Book
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Progress -->
                 {% if chapter.word_count_target %}
