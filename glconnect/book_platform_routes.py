@@ -3891,74 +3891,74 @@ def stripe_webhook():
                 amount_total = session.get('amount_total', 0) / 100.0  # Stripe amounts are in cents
                 
                 try:
-                # First, try to find existing PENDING purchase by purchase_id
-                purchase = None
-                if purchase_id:
-                    try:
-                        purchase_id_int = int(purchase_id)
-                        purchase = BookPurchase.query.get(purchase_id_int)
-                        if purchase and purchase.status == TransactionStatus.PENDING:
-                            logger.info(f"Found PENDING purchase {purchase_id} from webhook")
-                            book_id = purchase.book_project_id
-                    except (ValueError, TypeError):
-                        pass
-                
-                # If no purchase found, try to find by book_id and user email
-                if not purchase and book_id:
-                    try:
-                        book_id = int(book_id)
-                        user = User.query.filter_by(email=customer_email).first() if customer_email else None
-                        
+                    # First, try to find existing PENDING purchase by purchase_id
+                    purchase = None
+                    if purchase_id:
+                        try:
+                            purchase_id_int = int(purchase_id)
+                            purchase = BookPurchase.query.get(purchase_id_int)
+                            if purchase and purchase.status == TransactionStatus.PENDING:
+                                logger.info(f"Found PENDING purchase {purchase_id} from webhook")
+                                book_id = purchase.book_project_id
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    # If no purchase found, try to find by book_id and user email
+                    if not purchase and book_id:
+                        try:
+                            book_id = int(book_id)
+                            user = User.query.filter_by(email=customer_email).first() if customer_email else None
+                            
+                            if user:
+                                buyer_user_id = user.user_id
+                                bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                                buyer_id = bp_user.id if bp_user else None
+                                
+                                # Check for existing PENDING purchase
+                                purchase = BookPurchase.query.filter(
+                                    db.or_(
+                                        BookPurchase.buyer_user_id == buyer_user_id,
+                                        (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+                                    ),
+                                    BookPurchase.book_project_id == book_id,
+                                    BookPurchase.status == TransactionStatus.PENDING
+                                ).first()
+                                
+                                if purchase:
+                                    logger.info(f"Found PENDING purchase {purchase.id} for book {book_id} and user {buyer_user_id}")
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    # If still no purchase, try to find by amount and email (fallback for missing book_id)
+                    if not purchase and customer_email and amount_total:
+                        user = User.query.filter_by(email=customer_email).first()
                         if user:
                             buyer_user_id = user.user_id
                             bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
                             buyer_id = bp_user.id if bp_user else None
                             
-                            # Check for existing PENDING purchase
+                            # Find PENDING purchase matching amount (within $0.01 tolerance)
                             purchase = BookPurchase.query.filter(
                                 db.or_(
                                     BookPurchase.buyer_user_id == buyer_user_id,
                                     (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
                                 ),
-                                BookPurchase.book_project_id == book_id,
-                                BookPurchase.status == TransactionStatus.PENDING
-                            ).first()
+                                BookPurchase.status == TransactionStatus.PENDING,
+                                db.func.abs(BookPurchase.amount - amount_total) < 0.01
+                            ).order_by(BookPurchase.created_at.desc()).first()
                             
                             if purchase:
-                                logger.info(f"Found PENDING purchase {purchase.id} for book {book_id} and user {buyer_user_id}")
-                    except (ValueError, TypeError):
-                        pass
-                
-                # If still no purchase, try to find by amount and email (fallback for missing book_id)
-                if not purchase and customer_email and amount_total:
-                    user = User.query.filter_by(email=customer_email).first()
-                    if user:
-                        buyer_user_id = user.user_id
-                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                        buyer_id = bp_user.id if bp_user else None
-                        
-                        # Find PENDING purchase matching amount (within $0.01 tolerance)
-                        purchase = BookPurchase.query.filter(
-                            db.or_(
-                                BookPurchase.buyer_user_id == buyer_user_id,
-                                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-                            ),
-                            BookPurchase.status == TransactionStatus.PENDING,
-                            db.func.abs(BookPurchase.amount - amount_total) < 0.01
-                        ).order_by(BookPurchase.created_at.desc()).first()
-                        
-                        if purchase:
-                            logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
-                            book_id = purchase.book_project_id
-                
-                # Complete the purchase if found
-                if purchase:
-                    if complete_purchase(purchase, payment_intent_id, amount_total):
-                        logger.info(f"✅ Purchase {purchase.id} completed from checkout.session.completed webhook")
-                # If no purchase found but we have book_id, create new purchase (fallback)
-                elif book_id:
-                    logger.warning(f"⚠️  checkout.session.completed received but couldn't find matching purchase. book_id={book_id}, purchase_id={purchase_id}, amount=${amount_total}, email={customer_email}. Creating new purchase...")
-                    try:
+                                logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
+                                book_id = purchase.book_project_id
+                    
+                    # Complete the purchase if found
+                    if purchase:
+                        if complete_purchase(purchase, payment_intent_id, amount_total):
+                            logger.info(f"✅ Purchase {purchase.id} completed from checkout.session.completed webhook")
+                    # If no purchase found but we have book_id, create new purchase (fallback)
+                    elif book_id:
+                        logger.warning(f"⚠️  checkout.session.completed received but couldn't find matching purchase. book_id={book_id}, purchase_id={purchase_id}, amount=${amount_total}, email={customer_email}. Creating new purchase...")
+                        try:
                         book_id = int(book_id)
                         user = User.query.filter_by(email=customer_email).first() if customer_email else None
                         
@@ -4046,13 +4046,13 @@ def stripe_webhook():
                                         logger.error(f"Revenue distribution failed in webhook: {str(e)}")
                                     
                                     logger.info(f"✅ Purchase {purchase.id} created from Stripe webhook for book {book_id}")
-                    except Exception as e:
-                        logger.error(f"Error creating purchase from webhook: {str(e)}", exc_info=True)
-                else:
-                    logger.warning(f"⚠️  Stripe webhook received but couldn't find book_id or purchase_id. Email: {customer_email}, Amount: ${amount_total}")
-                    
-            except Exception as e:
-                logger.error(f"Error processing webhook purchase: {str(e)}", exc_info=True)
+                        except Exception as e:
+                            logger.error(f"Error creating purchase from webhook: {str(e)}", exc_info=True)
+                    else:
+                        logger.warning(f"⚠️  Stripe webhook received but couldn't find book_id or purchase_id. Email: {customer_email}, Amount: ${amount_total}")
+                        
+                except Exception as e:
+                    logger.error(f"Error processing webhook purchase: {str(e)}", exc_info=True)
         
         return jsonify({'received': True})
         
