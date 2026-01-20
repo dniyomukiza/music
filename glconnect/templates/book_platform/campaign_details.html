@@ -20,6 +20,18 @@
     </nav>
 
     <div class="container my-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{% if category == 'error' %}danger{% elif category == 'success' %}success{% elif category == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                        <strong>{{ message }}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
         <!-- Trust Indicators Banner -->
         <div class="alert alert-info mb-4">
             <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i>Before Investing, Check:</h5>

@@ -5188,6 +5188,8 @@ def investments():
     
     Investment campaigns are designed to get funding BEFORE publishing, so campaigns
     are visible as soon as they're created (ACTIVE status), even if the book is still in draft.
+    
+    IMPORTANT: Authors cannot see their own book campaigns here - they can only invest in other authors' books.
     """
     status_filter = request.args.get('status', 'active')
     search_query = request.args.get('q', '')
@@ -5196,6 +5198,15 @@ def investments():
     # Campaigns are visible based on their status (ACTIVE, FUNDED, DRAFT), not book status
     # This allows investors to fund books before they're published
     query = InvestmentCampaign.query.join(BookProject)
+    
+    # Exclude campaigns where the current user is the author
+    # Authors can only invest in books that are NOT their own
+    user_profile, profile_type = get_user_profile()
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        if author_id:
+            query = query.filter(BookProject.author_id != author_id)
+            logger.info(f"Investments page - Filtering out campaigns for user's own books (author_id: {author_id})")
     
     # Filter by campaign status
     if status_filter == 'active':
@@ -5362,13 +5373,17 @@ def make_investment(campaign_id):
     
     book = campaign.book_project
     
+    logger.info(f"Make investment attempt - User: {current_user.user_id}, Campaign: {campaign_id}, Status: {campaign.status.value}, Book Status: {book.status.value if book else 'None'}")
+    
     # Stop new investments if book is published OR goal has been reached
     if book and book.status == BookStatus.PUBLISHED:
+        logger.warning(f"Investment blocked - Book {book.id} is already published")
         flash('This campaign is no longer accepting investments because the book is already published.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Campaign must be ACTIVE to accept investments (FUNDED means goal reached, no more investments)
     if campaign.status != CampaignStatus.ACTIVE:
+        logger.warning(f"Investment blocked - Campaign {campaign_id} status is {campaign.status.value}, not ACTIVE")
         if campaign.status == CampaignStatus.FUNDED:
             flash('This campaign has reached its funding goal and is no longer accepting new investments.', 'error')
         else:
@@ -5387,6 +5402,7 @@ def make_investment(campaign_id):
     if book and book.author:
         # Check both user_id and author_id to be thorough
         if book.author.user_id == investor_user_id:
+            logger.warning(f"Investment blocked - User {investor_user_id} is the author of book {book.id}")
             flash('You cannot invest in your own book.', 'error')
             return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
@@ -5418,87 +5434,135 @@ def make_investment(campaign_id):
     
     # Double-check: Prevent investing in own book using investor_id
     if book and book.author_id == investor_id:
+        logger.warning(f"Investment blocked - Investor {investor_id} is the author_id of book {book.id}")
         flash('You cannot invest in your own book.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
+    # Handle both JSON (AJAX) and form submissions (like book purchase)
     form = InvestmentForm()
+    request_data = request.get_json() if request.is_json else None
+    amount = None
     
-    if form.validate_on_submit():
+    if request_data:
+        # JSON request (AJAX) - same pattern as book purchase
         try:
-            amount = form.amount.data
-            
-            # Validate amount
-            if amount < campaign.minimum_investment:
-                flash(f'Minimum investment is ${campaign.minimum_investment:.2f}', 'error')
-                return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
-            
-            if campaign.maximum_investment and amount > campaign.maximum_investment:
-                flash(f'Maximum investment is ${campaign.maximum_investment:.2f}', 'error')
-                return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
-            
-            # Check if goal would be exceeded
-            if campaign.current_funding + amount > campaign.funding_goal:
-                flash(f'Investment would exceed the funding goal. Maximum remaining: ${campaign.funding_goal - campaign.current_funding:.2f}', 'error')
-                return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
-            
-            # Calculate investment percentage
-            investment_percentage = (amount / campaign.funding_goal) * 100
-            
-            # Create investment record in pending state; actual confirmation happens via Stripe webhook
-            investment = BookInvestment(
-                campaign_id=campaign_id,
-                investor_id=investor_id,
-                book_project_id=campaign.book_project_id,
-                amount=amount,
-                currency='USD',
-                investment_percentage=investment_percentage,
-                revenue_share_percentage=campaign.revenue_share_percentage,
-                return_multiplier=campaign.return_multiplier_cap,
-                status=InvestmentStatus.PENDING,
-                payment_status=TransactionStatus.PENDING
-            )
-            
-            db.session.add(investment)
-            db.session.commit()
+            amount = float(request_data.get('amount', 0))
+            if amount <= 0:
+                return jsonify({'error': 'Invalid investment amount'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid investment amount'}), 400
+    else:
+        # Form submission - use form validation
+        form = InvestmentForm()
+        if not form.validate_on_submit():
+            return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+        amount = form.amount.data
+    
+    # Validate amount (same for both JSON and form)
+    if amount < campaign.minimum_investment:
+        error_msg = f'Minimum investment is ${campaign.minimum_investment:.2f}'
+        if request_data:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+        return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+    
+    if campaign.maximum_investment and amount > campaign.maximum_investment:
+        error_msg = f'Maximum investment is ${campaign.maximum_investment:.2f}'
+        if request_data:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+        return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+    
+    # Check if goal would be exceeded
+    if campaign.current_funding + amount > campaign.funding_goal:
+        max_remaining = campaign.funding_goal - campaign.current_funding
+        error_msg = f'Investment would exceed the funding goal. Maximum remaining: ${max_remaining:.2f}'
+        if request_data:
+            return jsonify({'error': error_msg}), 400
+        flash(error_msg, 'error')
+        return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+    
+    try:
+        # Calculate investment percentage
+        investment_percentage = (amount / campaign.funding_goal) * 100
+        
+        # Create investment record in pending state; actual confirmation happens via Stripe webhook
+        investment = BookInvestment(
+            campaign_id=campaign_id,
+            investor_id=investor_id,
+            book_project_id=campaign.book_project_id,
+            amount=amount,
+            currency='USD',
+            investment_percentage=investment_percentage,
+            revenue_share_percentage=campaign.revenue_share_percentage,
+            return_multiplier=campaign.return_multiplier_cap,
+            status=InvestmentStatus.PENDING,
+            payment_status=TransactionStatus.PENDING
+        )
+        
+        db.session.add(investment)
+        db.session.commit()
+        logger.info(f"Created investment {investment.id} for campaign {campaign_id}, amount: ${amount}")
 
-            # Create Stripe Checkout Session
-            stripe = init_stripe()
-            domain_url = current_app.config.get("FRONTEND_BASE_URL") or request.url_root.rstrip("/")
+        # Create Stripe Checkout Session (same pattern as book purchase)
+        stripe = init_stripe()
+        domain_url = current_app.config.get("FRONTEND_BASE_URL") or request.url_root.rstrip("/")
+        
+        success_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=success"
+        cancel_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=cancelled"
 
-            checkout_session = stripe.checkout.Session.create(
-                mode="payment",
-                payment_method_types=["card"],
-                line_items=[
-                    {
-                        "price_data": {
-                            "currency": "usd",
-                            "unit_amount": int(amount * 100),
-                            "product_data": {
-                                "name": f"Investment in '{book.title}'",
-                                "description": f"Campaign #{campaign.id} on Ink Studio",
-                            },
+        checkout_session = stripe.checkout.Session.create(
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(amount * 100),
+                        "product_data": {
+                            "name": f"Investment in '{book.title}'",
+                            "description": f"Campaign #{campaign.id} on Ink Studio",
                         },
-                        "quantity": 1,
-                    }
-                ],
-                metadata={
-                    "investment_id": str(investment.id),
-                    "campaign_id": str(campaign.id),
-                    "book_id": str(book.id),
-                    "investor_id": str(investor_id),
-                },
-                success_url=f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=success",
-                cancel_url=f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=cancelled",
-            )
+                    },
+                    "quantity": 1,
+                }
+            ],
+            metadata={
+                "investment_id": str(investment.id),
+                "campaign_id": str(campaign.id),
+                "book_id": str(book.id),
+                "investor_id": str(investor_id),
+            },
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
 
-            # Redirect user to Stripe-hosted checkout
+        # Return JSON response (same pattern as book purchase)
+        if request_data:
+            response = {
+                'success': True,
+                'investment_id': investment.id,
+                'status': 'pending',
+                'message': 'Investment created. Redirecting to payment...',
+                'success_url': success_url,
+                'cancel_url': cancel_url,
+                'stripe_checkout_url': checkout_session.url
+            }
+            return jsonify(response)
+        else:
+            # Form submission - redirect to Stripe (backward compatibility)
             return redirect(checkout_session.url, code=303)
             
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error making investment: {str(e)}", exc_info=True)
-            flash(f'An error occurred: {str(e)}', 'error')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error making investment: {str(e)}", exc_info=True)
+        error_msg = f'An error occurred: {str(e)}'
+        if request_data:
+            return jsonify({'error': error_msg}), 500
+        flash(error_msg, 'error')
     
+    # Render form for GET requests or form validation errors
+    form = InvestmentForm() if not request_data else None
     return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
 
 # Earnings Dashboard
@@ -5595,12 +5659,20 @@ def earnings_dashboard():
         earnings_data['reviewer_earnings_by_book'] = dict(earnings_by_book)
     
     # Investment returns - accessible to all users who have invested
+    # IMPORTANT: Authors can only invest in books that are NOT their own
     # Find investments by user_id through BookPlatformUser (investments are linked via investor_id = book_platform_users.id)
     book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if book_platform_user:
         investor_id = book_platform_user.id
-        # Get all investments for this investor (regardless of status, but filter active ones for display)
-        all_investments = BookInvestment.query.filter_by(investor_id=investor_id).all()
+        # Get all investments for this investor, but EXCLUDE investments in books where they are the author
+        # Join with BookProject to filter out self-investments
+        all_investments = BookInvestment.query.join(
+            BookProject, BookInvestment.book_project_id == BookProject.id
+        ).filter(
+            BookInvestment.investor_id == investor_id,
+            BookProject.author_id != investor_id  # Exclude investments in own books
+        ).all()
+        
         # Only show investments that are confirmed or active (pending investments don't have returns yet)
         investments = [inv for inv in all_investments if inv.status.value in ['confirmed', 'active']]
         
@@ -5610,7 +5682,7 @@ def earnings_dashboard():
         
         earnings_data['investments'] = investments
         earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
-        logger.info(f"Earnings dashboard - Total investment returns: ${earnings_data['total_investment_returns']:.2f} from {len(investments)} investments")
+        logger.info(f"Earnings dashboard - Total investment returns: ${earnings_data['total_investment_returns']:.2f} from {len(investments)} investments (excluding own books)")
         
         # Get payout history for each investment
         for investment in investments:

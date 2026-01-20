@@ -38,12 +38,24 @@
                             Remaining: ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }}
                         </div>
 
-                        <form method="POST">
+                        <!-- Flash Messages -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{% if category == 'error' %}danger{% elif category == 'success' %}success{% elif category == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                                        <strong>{{ message }}</strong>
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <form id="investmentForm" method="POST">
                             {{ form.hidden_tag() }}
                             
                             <div class="mb-3">
                                 {{ form.amount.label(class="form-label") }}
-                                {{ form.amount(class="form-control", type="number", step="0.01", min=campaign.minimum_investment) }}
+                                {{ form.amount(class="form-control", type="number", step="0.01", min=campaign.minimum_investment, id="investmentAmount", required) }}
                                 {% if form.amount.errors %}
                                     <div class="text-danger small">{{ form.amount.errors[0] }}</div>
                                 {% endif %}
@@ -57,9 +69,73 @@
                             </div>
 
                             <div class="d-grid">
-                                {{ form.submit(class="btn btn-primary btn-lg") }}
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                    <i class="fas fa-dollar-sign"></i> Proceed to Payment
+                                </button>
                             </div>
                         </form>
+
+                        <script>
+                            document.getElementById('investmentForm').addEventListener('submit', function(e) {
+                                e.preventDefault();
+                                
+                                const submitBtn = document.getElementById('submitBtn');
+                                const originalText = submitBtn.innerHTML;
+                                submitBtn.disabled = true;
+                                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                                
+                                const amount = document.getElementById('investmentAmount').value;
+                                
+                                // Send AJAX request (same pattern as book purchase)
+                                fetch('{{ url_for("book_platform.make_investment", campaign_id=campaign.id) }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        amount: parseFloat(amount)
+                                    })
+                                })
+                                .then(response => {
+                                    const contentType = response.headers.get('content-type');
+                                    if (!contentType || !contentType.includes('application/json')) {
+                                        return response.text().then(text => {
+                                            console.error('Server returned non-JSON response:', text.substring(0, 500));
+                                            throw new Error('Server error: ' + response.status);
+                                        });
+                                    }
+                                    if (!response.ok) {
+                                        return response.json().then(data => {
+                                            throw new Error(data.error || 'Server error: ' + response.status);
+                                        });
+                                    }
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    if (data.success && data.stripe_checkout_url) {
+                                        // Store investment info for success callback
+                                        localStorage.setItem('pendingInvestment', JSON.stringify({
+                                            investmentId: data.investment_id,
+                                            campaignId: {{ campaign.id }},
+                                            successUrl: data.success_url
+                                        }));
+                                        
+                                        // Redirect to Stripe Checkout (same as book purchase)
+                                        window.location.href = data.stripe_checkout_url;
+                                    } else {
+                                        alert('Investment failed: ' + (data.error || 'Unknown error'));
+                                        submitBtn.disabled = false;
+                                        submitBtn.innerHTML = originalText;
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Investment error:', error);
+                                    alert('Investment failed: ' + error.message);
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalText;
+                                });
+                            });
+                        </script>
                     </div>
                 </div>
             </div>
