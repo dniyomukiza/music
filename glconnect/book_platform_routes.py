@@ -3844,15 +3844,53 @@ def stripe_webhook():
         
         elif event['type'] == 'checkout.session.completed':
             session = event['data']['object']
-            # Extract book_id from metadata
-            book_id = session.get('metadata', {}).get('book_id')
-            # Extract purchase_id from client_reference_id (set by backend)
-            purchase_id = session.get('client_reference_id')
-            customer_email = session.get('customer_details', {}).get('email')
-            payment_intent_id = session.get('payment_intent')
-            amount_total = session.get('amount_total', 0) / 100.0  # Stripe amounts are in cents
+            metadata = session.get('metadata', {}) or {}
             
-            try:
+            # Check if this is an investment payment
+            investment_id = metadata.get('investment_id')
+            if investment_id:
+                # Handle investment payment
+                try:
+                    investment = BookInvestment.query.get(int(investment_id))
+                    if not investment:
+                        logger.error(f"Stripe webhook: Investment {investment_id} not found")
+                    elif (investment.payment_status == TransactionStatus.PENDING and 
+                          investment.status == InvestmentStatus.PENDING):
+                        campaign = investment.campaign
+                        book = investment.book_project
+                        
+                        investment.payment_status = TransactionStatus.COMPLETED
+                        investment.status = InvestmentStatus.CONFIRMED
+                        investment.invested_at = datetime.now(timezone.utc)
+                        
+                        # Update campaign funding on successful payment
+                        campaign.current_funding += investment.amount
+                        
+                        # If goal reached, mark campaign as FUNDED and activate confirmed investments
+                        if campaign.current_funding >= campaign.funding_goal:
+                            campaign.status = CampaignStatus.FUNDED
+                            campaign.funded_at = datetime.now(timezone.utc)
+                            for inv in campaign.investments:
+                                if inv.status == InvestmentStatus.CONFIRMED:
+                                    inv.return_start_date = datetime.now(timezone.utc)
+                                    inv.status = InvestmentStatus.ACTIVE
+                        
+                        db.session.commit()
+                        logger.info(f"Stripe webhook: Investment {investment.id} confirmed via Stripe")
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Stripe webhook investment processing error: {e}", exc_info=True)
+            else:
+                # Handle book purchase payment
+                # Extract book_id from metadata
+                book_id = metadata.get('book_id')
+                # Extract purchase_id from client_reference_id (set by backend)
+                purchase_id = session.get('client_reference_id')
+                customer_email = session.get('customer_details', {}).get('email')
+                payment_intent_id = session.get('payment_intent')
+                amount_total = session.get('amount_total', 0) / 100.0  # Stripe amounts are in cents
+                
+                try:
                 # First, try to find existing PENDING purchase by purchase_id
                 purchase = None
                 if purchase_id:
@@ -5441,81 +5479,6 @@ def make_investment(campaign_id):
             flash(f'An error occurred: {str(e)}', 'error')
     
     return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
-
-
-@book_bp.route("/stripe/webhook", methods=["POST"])
-def stripe_webhook():
-    """
-    Stripe webhook endpoint to confirm investment payments.
-    Marks investments as paid and updates campaign funding when
-    checkout.session.completed events arrive.
-    """
-    payload = request.data
-    sig_header = request.headers.get("Stripe-Signature")
-    webhook_secret = get_webhook_secret()
-
-    try:
-        stripe = init_stripe()
-        if webhook_secret:
-            event = stripe.Webhook.construct_event(
-                payload=payload, sig_header=sig_header, secret=webhook_secret
-            )
-        else:
-            # If no webhook secret is configured, trust the payload (not recommended for production)
-            event = stripe.Event.construct_from(
-                json.loads(payload.decode("utf-8")), stripe.api_key
-            )
-    except Exception as e:
-        logger.error(f"Stripe webhook error: {e}", exc_info=True)
-        return jsonify({"error": "Invalid payload"}), 400
-
-    event_type = event["type"]
-    data_object = event["data"]["object"]
-
-    if event_type == "checkout.session.completed":
-        metadata = data_object.get("metadata", {}) or {}
-        investment_id = metadata.get("investment_id")
-
-        if investment_id:
-            try:
-                investment = BookInvestment.query.get(int(investment_id))
-                if not investment:
-                    logger.error(f"Stripe webhook: Investment {investment_id} not found")
-                    return jsonify({"status": "ignored"}), 200
-
-                # Only process if still pending
-                if (
-                    investment.payment_status == TransactionStatus.PENDING
-                    and investment.status == InvestmentStatus.PENDING
-                ):
-                    campaign = investment.campaign
-                    book = investment.book_project
-
-                    investment.payment_status = TransactionStatus.COMPLETED
-                    investment.status = InvestmentStatus.CONFIRMED
-                    investment.invested_at = datetime.now(timezone.utc)
-
-                    # Update campaign funding on successful payment
-                    campaign.current_funding += investment.amount
-
-                    # If goal reached, mark campaign as FUNDED and activate confirmed investments
-                    if campaign.current_funding >= campaign.funding_goal:
-                        campaign.status = CampaignStatus.FUNDED
-                        campaign.funded_at = datetime.now(timezone.utc)
-                        for inv in campaign.investments:
-                            if inv.status == InvestmentStatus.CONFIRMED:
-                                inv.return_start_date = datetime.now(timezone.utc)
-                                inv.status = InvestmentStatus.ACTIVE
-
-                    db.session.commit()
-                    logger.info(f"Stripe webhook: Investment {investment.id} confirmed via Stripe")
-
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f"Stripe webhook processing error: {e}", exc_info=True)
-                return jsonify({"error": "Webhook processing failed"}), 500
-
-    return jsonify({"status": "ok"}), 200
 
 # Earnings Dashboard
 @book_bp.route('/earnings', methods=['GET'])
