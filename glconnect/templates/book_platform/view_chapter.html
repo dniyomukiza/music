@@ -15,9 +15,15 @@
                 <i class="fas fa-pen-fancy"></i> Ink Studio
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
-                    <i class="fas fa-arrow-left"></i> Back to Book
-                </a>
+                {% if current_user.is_authenticated and (book.author and book.author.user_id == current_user.user_id or current_user.role == 'admin') %}
+                    <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
+                        <i class="fas fa-arrow-left"></i> Back to Book
+                    </a>
+                {% else %}
+                    <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
+                        <i class="fas fa-arrow-left"></i> Back to Investments
+                    </a>
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -165,25 +171,6 @@
                             <button class="btn btn-danger" onclick="confirmDeleteChapter()">
                                 <i class="fas fa-trash"></i> Delete Chapter
                             </button>
-                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" 
-                               class="btn btn-outline-secondary">
-                                <i class="fas fa-list"></i> All Chapters
-                            </a>
-                            <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
-                               class="btn btn-outline-info">
-                                <i class="fas fa-book"></i> View Book
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <!-- For non-authors/investors: only navigation, no destructive actions -->
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <h5><i class="fas fa-book-reader"></i> Navigation</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
                             <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" 
                                class="btn btn-outline-secondary">
                                 <i class="fas fa-list"></i> All Chapters

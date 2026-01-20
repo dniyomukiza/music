@@ -481,7 +481,8 @@
                             </small>
                         </div>
 
-                        {% if campaign.status.value == 'active' %}
+                        {# Show Invest Now only if campaign is ACTIVE (not FUNDED, not published) #}
+                        {% if campaign.status.value == 'active' and book.status.value != 'published' %}
                             {% if is_author %}
                             <div class="alert alert-info mb-0">
                                 <small>
@@ -497,7 +498,13 @@
                             {% endif %}
                         {% else %}
                         <button class="btn btn-secondary btn-lg w-100" disabled>
-                            Campaign {{ campaign.status.value|title }}
+                            {% if campaign.status.value == 'funded' %}
+                                <i class="fas fa-check-circle me-1"></i> Funding Goal Reached
+                            {% elif book.status.value == 'published' %}
+                                <i class="fas fa-book me-1"></i> Book Published - No More Investments
+                            {% else %}
+                                Campaign {{ campaign.status.value|title }}
+                            {% endif %}
                         </button>
                         {% endif %}
                     </div>

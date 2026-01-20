@@ -2199,6 +2199,12 @@ def publish_book(book_id):
     book.status = BookStatus.PUBLISHED
     book.published_at = datetime.now(timezone.utc)
     
+    # Mark investment campaign as FUNDED when book is published (investments stop at publication)
+    if book.investment_campaign and book.investment_campaign.status == CampaignStatus.ACTIVE:
+        book.investment_campaign.status = CampaignStatus.FUNDED
+        if not book.investment_campaign.funded_at:
+            book.investment_campaign.funded_at = datetime.now(timezone.utc)
+    
     db.session.commit()
     
     return jsonify({'success': True})
@@ -3872,14 +3878,20 @@ def stripe_webhook():
                         # Update campaign funding on successful payment
                         campaign.current_funding += investment.amount
                         
-                        # If goal reached, mark campaign as FUNDED and activate confirmed investments
+                        # If goal reached, mark campaign as FUNDED (stops new investments)
                         if campaign.current_funding >= campaign.funding_goal:
                             campaign.status = CampaignStatus.FUNDED
                             campaign.funded_at = datetime.now(timezone.utc)
+                            # Activate all confirmed investments
                             for inv in campaign.investments:
                                 if inv.status == InvestmentStatus.CONFIRMED:
-                                    inv.return_start_date = datetime.now(timezone.utc)
+                                    if not inv.return_start_date:
+                                        inv.return_start_date = datetime.now(timezone.utc)
                                     inv.status = InvestmentStatus.ACTIVE
+                        else:
+                            # Activate this investment for returns even if goal not reached
+                            investment.return_start_date = datetime.now(timezone.utc)
+                            investment.status = InvestmentStatus.ACTIVE
                         
                         db.session.commit()
                         logger.info(f"Stripe webhook: Investment {investment.id} confirmed via Stripe")
@@ -5348,9 +5360,19 @@ def make_investment(campaign_id):
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
     
-    # Campaign must be ACTIVE to accept investments
+    book = campaign.book_project
+    
+    # Stop new investments if book is published OR goal has been reached
+    if book and book.status == BookStatus.PUBLISHED:
+        flash('This campaign is no longer accepting investments because the book is already published.', 'error')
+        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    
+    # Campaign must be ACTIVE to accept investments (FUNDED means goal reached, no more investments)
     if campaign.status != CampaignStatus.ACTIVE:
-        flash('This campaign is not currently accepting investments.', 'error')
+        if campaign.status == CampaignStatus.FUNDED:
+            flash('This campaign has reached its funding goal and is no longer accepting new investments.', 'error')
+        else:
+            flash('This campaign is not currently accepting investments.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # All users can invest - ensure they have a BookPlatformUser profile for investment tracking
@@ -5359,13 +5381,6 @@ def make_investment(campaign_id):
     from glconnect.models import Writer
     
     investor_user_id = current_user.user_id
-    
-    book = campaign.book_project
-    
-    # Stop new investments once the book is published, even if goal is not yet reached
-    if book and book.status == BookStatus.PUBLISHED:
-        flash('This campaign is no longer accepting investments because the book is already published.', 'error')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Prevent self-investment: Check if current user is the author
     # This check uses user_id to ensure authors cannot invest in their own books
