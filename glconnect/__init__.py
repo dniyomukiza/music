@@ -117,12 +117,24 @@ def create_app():
     def shutdown_session(exception=None):
         """Rollback database session on errors to prevent 'transaction aborted' errors"""
         try:
-            # Always rollback on exception to clear any failed transactions
+            # Always rollback on exception OR if there's any uncommitted transaction
+            # This prevents "transaction aborted" errors from persisting
             if exception:
                 try:
                     db.session.rollback()
                 except Exception:
                     pass  # Ignore rollback errors
+            else:
+                # Even without an exception, check if transaction needs cleanup
+                # Rollback any pending transaction to ensure clean state
+                try:
+                    # Check if session is in a bad state by attempting a rollback
+                    # This is safe - rollback on a clean transaction is a no-op
+                    db.session.rollback()
+                except Exception:
+                    # If rollback fails, the session is likely already in a bad state
+                    # Force remove it to clear the connection
+                    pass
         except Exception as e:
             # If anything fails, log it but continue
             print(f"Warning: Error during session teardown: {e}")
@@ -213,6 +225,22 @@ def create_app():
         # For non-API routes, let Flask handle it normally (will show HTML error page)
         raise error
 
+    # Add transaction cleanup before each request to prevent "transaction aborted" errors
+    @app.before_request
+    def cleanup_transaction():
+        """Clean up any aborted transactions before processing a new request"""
+        try:
+            # Rollback any pending/aborted transactions to ensure clean state
+            # This prevents "transaction aborted" errors from previous requests
+            db.session.rollback()
+        except Exception:
+            # If rollback fails, the session might be in a bad state
+            # Remove it to force a fresh connection
+            try:
+                db.session.remove()
+            except Exception:
+                pass  # Ignore errors during cleanup
+    
     # Add logging for all requests at app level
     @app.before_request
     def log_request():

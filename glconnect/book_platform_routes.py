@@ -2156,7 +2156,13 @@ def marketplace():
                              available_languages=available_languages,
                              search_term=search_term)
     except Exception as e:
-        print(f"Marketplace error: {str(e)}")
+        # Rollback any failed transaction to prevent "transaction aborted" errors
+        try:
+            db.session.rollback()
+        except Exception:
+            pass  # Ignore rollback errors
+        
+        logger.error(f"Marketplace error: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
         # Return empty list on error
