@@ -3959,93 +3959,93 @@ def stripe_webhook():
                     elif book_id:
                         logger.warning(f"⚠️  checkout.session.completed received but couldn't find matching purchase. book_id={book_id}, purchase_id={purchase_id}, amount=${amount_total}, email={customer_email}. Creating new purchase...")
                         try:
-                        book_id = int(book_id)
-                        user = User.query.filter_by(email=customer_email).first() if customer_email else None
-                        
-                        if user:
-                            buyer_user_id = user.user_id
-                            book = BookProject.query.get(book_id)
+                            book_id = int(book_id)
+                            user = User.query.filter_by(email=customer_email).first() if customer_email else None
                             
-                            if book and book.author and book.author.user_id != buyer_user_id:
-                                from glconnect.book_platform_models import BookPlatformUser
-                                from glconnect.models import Writer
+                            if user:
+                                buyer_user_id = user.user_id
+                                book = BookProject.query.get(book_id)
                                 
-                                bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                                buyer_id = bp_user.id if bp_user else None
-                                
-                                if not buyer_id:
-                                    writer = Writer.query.filter_by(user_id=buyer_user_id).first()
-                                    bp_user = BookPlatformUser(
-                                        user_id=buyer_user_id,
-                                        pen_name=writer.writer_name if writer else user.username,
-                                        bio=writer.bio if writer else "Reader",
-                                        profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
-                                    )
-                                    db.session.add(bp_user)
-                                    db.session.commit()
-                                    buyer_id = bp_user.id
-                                
-                                # Check if already recorded
-                                existing = BookPurchase.query.filter(
-                                    BookPurchase.book_project_id == book_id,
-                                    BookPurchase.transaction_id == payment_intent_id
-                                ).first()
-                                
-                                if not existing:
-                                    # Get actual amount paid from Stripe (may be more than book price)
-                                    actual_amount = amount_total if amount_total and amount_total > 0 else book.price
+                                if book and book.author and book.author.user_id != buyer_user_id:
+                                    from glconnect.book_platform_models import BookPlatformUser
+                                    from glconnect.models import Writer
                                     
-                                    purchase = BookPurchase(
-                                        buyer_id=buyer_id,
-                                        buyer_user_id=buyer_user_id,
-                                        book_project_id=book_id,
-                                        amount=actual_amount,  # Use actual amount paid
-                                        currency=book.currency,
-                                        status=TransactionStatus.COMPLETED,
-                                        purchased_at=datetime.now(timezone.utc),
-                                        transaction_id=payment_intent_id,
-                                        payment_method='stripe'
-                                    )
-                                    # Populate buyer information (username and full name)
-                                    purchase.populate_buyer_info()
-                                    db.session.add(purchase)
-                                    db.session.flush()
+                                    bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
+                                    buyer_id = bp_user.id if bp_user else None
                                     
-                                    # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
-                                    base_price = book.price
-                                    extra_amount = max(0, actual_amount - base_price)  # Amount exceeding book price
+                                    if not buyer_id:
+                                        writer = Writer.query.filter_by(user_id=buyer_user_id).first()
+                                        bp_user = BookPlatformUser(
+                                            user_id=buyer_user_id,
+                                            pen_name=writer.writer_name if writer else user.username,
+                                            bio=writer.bio if writer else "Reader",
+                                            profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
+                                        )
+                                        db.session.add(bp_user)
+                                        db.session.commit()
+                                        buyer_id = bp_user.id
                                     
-                                    # Base price: 70% to author, 30% to platform
-                                    base_royalty = base_price * 0.7
-                                    base_platform_fee = base_price * 0.3
+                                    # Check if already recorded
+                                    existing = BookPurchase.query.filter(
+                                        BookPurchase.book_project_id == book_id,
+                                        BookPurchase.transaction_id == payment_intent_id
+                                    ).first()
                                     
-                                    # Extra amount: 100% to author, 0% to platform
-                                    royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
-                                    platform_fee = base_platform_fee  # Platform only gets fee from base price
-                                    
-                                    sale = BookSale(
-                                        seller_id=book.author_id,
-                                        book_project_id=book_id,
-                                        purchase_id=purchase.id,
-                                        royalty_amount=royalty_amount,
-                                        royalty_percentage=0.7,
-                                        platform_fee=platform_fee,
-                                        net_amount=royalty_amount,
-                                        currency=book.currency,
-                                        status=TransactionStatus.COMPLETED,
-                                        paid_at=datetime.now(timezone.utc)
-                                    )
-                                    db.session.add(sale)
-                                    db.session.commit()
-                                    
-                                    # Trigger revenue distribution
-                                    try:
-                                        from glconnect.revenue_distribution_service import distribute_revenue
-                                        distribute_revenue(sale, db)
-                                    except Exception as e:
-                                        logger.error(f"Revenue distribution failed in webhook: {str(e)}")
-                                    
-                                    logger.info(f"✅ Purchase {purchase.id} created from Stripe webhook for book {book_id}")
+                                    if not existing:
+                                        # Get actual amount paid from Stripe (may be more than book price)
+                                        actual_amount = amount_total if amount_total and amount_total > 0 else book.price
+                                        
+                                        purchase = BookPurchase(
+                                            buyer_id=buyer_id,
+                                            buyer_user_id=buyer_user_id,
+                                            book_project_id=book_id,
+                                            amount=actual_amount,  # Use actual amount paid
+                                            currency=book.currency,
+                                            status=TransactionStatus.COMPLETED,
+                                            purchased_at=datetime.now(timezone.utc),
+                                            transaction_id=payment_intent_id,
+                                            payment_method='stripe'
+                                        )
+                                        # Populate buyer information (username and full name)
+                                        purchase.populate_buyer_info()
+                                        db.session.add(purchase)
+                                        db.session.flush()
+                                        
+                                        # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
+                                        base_price = book.price
+                                        extra_amount = max(0, actual_amount - base_price)  # Amount exceeding book price
+                                        
+                                        # Base price: 70% to author, 30% to platform
+                                        base_royalty = base_price * 0.7
+                                        base_platform_fee = base_price * 0.3
+                                        
+                                        # Extra amount: 100% to author, 0% to platform
+                                        royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
+                                        platform_fee = base_platform_fee  # Platform only gets fee from base price
+                                        
+                                        sale = BookSale(
+                                            seller_id=book.author_id,
+                                            book_project_id=book_id,
+                                            purchase_id=purchase.id,
+                                            royalty_amount=royalty_amount,
+                                            royalty_percentage=0.7,
+                                            platform_fee=platform_fee,
+                                            net_amount=royalty_amount,
+                                            currency=book.currency,
+                                            status=TransactionStatus.COMPLETED,
+                                            paid_at=datetime.now(timezone.utc)
+                                        )
+                                        db.session.add(sale)
+                                        db.session.commit()
+                                        
+                                        # Trigger revenue distribution
+                                        try:
+                                            from glconnect.revenue_distribution_service import distribute_revenue
+                                            distribute_revenue(sale, db)
+                                        except Exception as e:
+                                            logger.error(f"Revenue distribution failed in webhook: {str(e)}")
+                                        
+                                        logger.info(f"✅ Purchase {purchase.id} created from Stripe webhook for book {book_id}")
                         except Exception as e:
                             logger.error(f"Error creating purchase from webhook: {str(e)}", exc_info=True)
                     else:
