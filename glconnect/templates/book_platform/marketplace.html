@@ -38,10 +38,6 @@
                     <p class="lead mb-4">Discover amazing books from talented authors around the world</p>
                     <!-- Action Buttons -->
                     <div class="mb-4 d-flex flex-wrap gap-3">
-                        <a href="{{ url_for('book_platform.content_hub') }}" 
-                           class="btn btn-lg btn-light">
-                            <i class="fas fa-th-large me-2"></i>Content Hub
-                        </a>
                         <a href="{{ url_for('book_platform.investments') }}" 
                            class="btn btn-lg btn-success">
                             <i class="fas fa-chart-line me-2"></i>Browse Investments
@@ -69,35 +65,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Content Hub Section for Non-Authors -->
-    {% if not has_writer_profile %}
-    <div class="container">
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm border-0 bg-primary">
-                    <div class="card-body text-white p-4">
-                        <div class="row align-items-center">
-                            <div class="col-lg-8">
-                                <h3 class="mb-3">
-                                    <i class="fas fa-th-large me-2"></i>Content Hub
-                                </h3>
-                                <p class="lead mb-3">Access Stories, News, Podcasts, and Freelance Journalism content</p>
-                                <p class="mb-0">Read stories from journalists worldwide, listen to podcasts, and explore news content - all in one place!</p>
-                            </div>
-                            <div class="col-lg-4 text-center">
-                                <a href="{{ url_for('book_platform.content_hub') }}" 
-                                   class="btn btn-light btn-lg px-4">
-                                    <i class="fas fa-arrow-right me-2"></i>Go to Content Hub
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Category Section -->
     <div class="container">
