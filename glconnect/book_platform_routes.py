@@ -5510,11 +5510,14 @@ def make_investment(campaign_id):
         cancel_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=cancelled"
         
         stripe_checkout_url = None
+        stripe_error = None
         try:
             import stripe
             stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+            logger.info(f"Investment Stripe key check: stripe_api_key exists = {bool(stripe_api_key)}")
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
+                logger.info(f"Creating Stripe checkout session for investment {investment.id}, amount: ${amount}")
                 checkout_session = stripe.checkout.Session.create(
                     mode="payment",
                     payment_method_types=["card"],
@@ -5541,8 +5544,13 @@ def make_investment(campaign_id):
                     cancel_url=cancel_url,
                 )
                 stripe_checkout_url = checkout_session.url
+                logger.info(f"Successfully created Stripe checkout session: {stripe_checkout_url}")
+            else:
+                stripe_error = "Stripe API key not found in configuration"
+                logger.warning(f"Stripe API key not found in config for investment {investment.id}")
         except Exception as e:
-            logger.warning(f"Could not create Stripe Checkout Session: {e}")
+            stripe_error = str(e)
+            logger.error(f"Could not create Stripe Checkout Session for investment {investment.id}: {e}", exc_info=True)
         
         # Return JSON response (same pattern as book purchase)
         if request_data:
@@ -5557,10 +5565,15 @@ def make_investment(campaign_id):
             if stripe_checkout_url:
                 response['stripe_checkout_url'] = stripe_checkout_url
             else:
-                # Fallback if Stripe is not configured
-                error_msg = 'Stripe payment is not configured. Please contact support.'
-                logger.error(error_msg)
-                return jsonify({'error': error_msg}), 500
+                # Log warning but don't fail - same pattern as book purchase
+                error_message = stripe_error or "Stripe checkout session could not be created"
+                logger.warning(f"Stripe checkout URL not available for investment {investment.id}: {error_message}")
+                # Return error response with actual error details
+                return jsonify({
+                    'success': False,
+                    'error': f'Could not create payment link: {error_message}',
+                    'investment_id': investment.id
+                }), 500
             return jsonify(response)
         else:
             # Form submission - redirect to Stripe (backward compatibility)
