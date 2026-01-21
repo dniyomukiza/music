@@ -5565,15 +5565,10 @@ def make_investment(campaign_id):
             if stripe_checkout_url:
                 response['stripe_checkout_url'] = stripe_checkout_url
             else:
-                # Log warning but don't fail - same pattern as book purchase
-                error_message = stripe_error or "Stripe checkout session could not be created"
-                logger.warning(f"Stripe checkout URL not available for investment {investment.id}: {error_message}")
-                # Return error response with actual error details
-                return jsonify({
-                    'success': False,
-                    'error': f'Could not create payment link: {error_message}',
-                    'investment_id': investment.id
-                }), 500
+                # Fallback payment link (same pattern as book purchase - line 3354)
+                # Book purchase uses hardcoded payment link when Stripe checkout fails
+                logger.warning(f"Stripe checkout URL not available for investment {investment.id}, using fallback payment link")
+                response['stripe_payment_link'] = f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={investment.id}'
             return jsonify(response)
         else:
             # Form submission - redirect to Stripe (backward compatibility)

@@ -119,7 +119,7 @@
                                     return response.json();
                                 })
                                 .then(data => {
-                                    if (data.success && data.stripe_checkout_url) {
+                                    if (data.success) {
                                         // Store investment info for success callback
                                         localStorage.setItem('pendingInvestment', JSON.stringify({
                                             investmentId: data.investment_id,
@@ -127,8 +127,16 @@
                                             successUrl: data.success_url
                                         }));
                                         
-                                        // Redirect to Stripe Checkout (same as book purchase)
-                                        window.location.href = data.stripe_checkout_url;
+                                        // Redirect to Stripe payment link or checkout session (same as book purchase)
+                                        if (data.stripe_checkout_url) {
+                                            window.location.href = data.stripe_checkout_url;
+                                        } else if (data.stripe_payment_link) {
+                                            window.location.href = data.stripe_payment_link;
+                                        } else {
+                                            alert('Payment link not available. Please try again.');
+                                            submitBtn.disabled = false;
+                                            submitBtn.innerHTML = originalText;
+                                        }
                                     } else {
                                         alert('Investment failed: ' + (data.error || 'Unknown error'));
                                         submitBtn.disabled = false;
