@@ -62,10 +62,11 @@ def unauthorized(error):
     return redirect(url_for('routes1.login'))    
 
 @blog.route("/blogs",methods=['GET','POST'])
+@login_required
 def blogs():
     """
-    Public blog listing - accessible to everyone (no login required for viewing)
-    Part of Ink Studio's public digital space for freelance journalists and storytellers
+    Blog listing - requires login to access
+    Part of Ink Studio's digital space for freelance journalists and storytellers
     """
     from sqlalchemy import inspect
     
@@ -117,9 +118,11 @@ def blogs():
         query = query.order_by(Post.date_posted.desc())
         
         # Manual pagination (always use this to avoid Post.query issues)
+        # Show 6 blogs per page
+        per_page = 6
         total = query.count()
-        offset = (p - 1) * 10
-        posts_data = query.limit(10).offset(offset).all()
+        offset = (p - 1) * per_page
+        posts_data = query.limit(per_page).offset(offset).all()
         
         # Create SimplePost objects
         class SimplePost:
@@ -152,7 +155,7 @@ def blogs():
                 self.prev_num = page - 1 if page > 1 else None
                 self.next_num = page + 1 if offset + per_page < total else None
         
-        posts = Page([SimplePost(*post) for post in posts_data], p, total, 10)
+        posts = Page([SimplePost(*post) for post in posts_data], p, total, per_page)
     except Exception as e:
         logger.error(f"Error querying posts: {e}")
         db.session.rollback()
@@ -161,7 +164,7 @@ def blogs():
             items = []
             page = p
             pages = 1
-            per_page = 10
+            per_page = 6
             total = 0
             has_next = False
             has_prev = False

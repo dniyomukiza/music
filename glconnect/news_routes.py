@@ -7,6 +7,7 @@ import glob
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 from flask import Blueprint, render_template, request, jsonify
+from flask_login import login_required, current_user
 from .news_agent import generate_broadcast
 
 # Create blueprint for news routes
@@ -1935,6 +1936,7 @@ def run_generate_broadcast(task_id, topics):
         timeout_occurred.set()
 
 @news_bp.route('/')
+@login_required
 def index():
     from .forms import KeywordForm
     form = KeywordForm()
@@ -2896,6 +2898,7 @@ def task_status(task_id):
         })
 
 @news_bp.route('/analytics')
+@login_required
 def analytics():
     """Main analytics page showing dominant topics by category with LLM categorization."""
     from glconnect.models import db, SearchHistory, CategoryCount, TopicCount, DailySearchCount, CategoryTopic, CategorizationConfidence

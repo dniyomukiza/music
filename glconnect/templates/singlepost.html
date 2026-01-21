@@ -164,14 +164,8 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div>
-                        <button onclick="playAudio({{ post.id }})" class="btn play-btn">▶️ Play Audio</button>
-                    </div>
                 </div>
             </div>
-            
-            <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
 
             <!-- Translation Section -->
             <div class="translation-section">
@@ -213,13 +207,6 @@
     </div>
 
     <script>
-    function playAudio(postId) {
-        let audioElement = document.getElementById(`audio-${postId}`);
-        audioElement.src = `/blog/play-audio/${postId}`;
-        audioElement.style.display = "block";
-        audioElement.play();
-    }
-
     // Load available translations on page load
     window.addEventListener('DOMContentLoaded', function() {
         loadAvailableTranslations({{ post.id }});

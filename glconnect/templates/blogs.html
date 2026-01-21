@@ -236,11 +236,8 @@
                             id="share-btn-{{ post.id }}">
                         <i class="fas fa-share-alt" style="margin-right: 5px;"></i>Share
                     </button>
-                    <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
                 </div>
             </div>
-
-            <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
         </div>
         {% endfor %}
 
@@ -293,15 +290,8 @@
         {% endif %}
     </div>
 
-    <!-- JavaScript for Playing Audio -->
+    <!-- JavaScript -->
     <script>
-    function playAudio(postId) {
-        let audioElement = document.getElementById(`audio-${postId}`);
-        audioElement.src = `/blog/play-audio/${postId}`;
-        audioElement.style.display = "block";
-        audioElement.play();
-    }
-    
     // Copy post link to clipboard
     function copyPostLink(postId) {
         const postUrl = window.location.origin + '{{ url_for("blog.update", post_id=0) }}'.replace('0', postId);
