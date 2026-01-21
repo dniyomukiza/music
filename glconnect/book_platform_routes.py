@@ -5505,38 +5505,45 @@ def make_investment(campaign_id):
         logger.info(f"Created investment {investment.id} for campaign {campaign_id}, amount: ${amount}")
 
         # Create Stripe Checkout Session (same pattern as book purchase)
-        stripe = init_stripe()
         domain_url = current_app.config.get("FRONTEND_BASE_URL") or request.url_root.rstrip("/")
-        
         success_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=success"
         cancel_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=cancelled"
-
-        checkout_session = stripe.checkout.Session.create(
-            mode="payment",
-            payment_method_types=["card"],
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "usd",
-                        "unit_amount": int(amount * 100),
-                        "product_data": {
-                            "name": f"Investment in '{book.title}'",
-                            "description": f"Campaign #{campaign.id} on Ink Studio",
-                        },
+        
+        stripe_checkout_url = None
+        try:
+            import stripe
+            stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+            if stripe_api_key:
+                stripe.api_key = stripe_api_key
+                checkout_session = stripe.checkout.Session.create(
+                    mode="payment",
+                    payment_method_types=["card"],
+                    line_items=[
+                        {
+                            "price_data": {
+                                "currency": "usd",
+                                "unit_amount": int(amount * 100),
+                                "product_data": {
+                                    "name": f"Investment in '{book.title}'",
+                                    "description": f"Campaign #{campaign.id} on Ink Studio",
+                                },
+                            },
+                            "quantity": 1,
+                        }
+                    ],
+                    metadata={
+                        "investment_id": str(investment.id),
+                        "campaign_id": str(campaign.id),
+                        "book_id": str(book.id),
+                        "investor_id": str(investor_id),
                     },
-                    "quantity": 1,
-                }
-            ],
-            metadata={
-                "investment_id": str(investment.id),
-                "campaign_id": str(campaign.id),
-                "book_id": str(book.id),
-                "investor_id": str(investor_id),
-            },
-            success_url=success_url,
-            cancel_url=cancel_url,
-        )
-
+                    success_url=success_url,
+                    cancel_url=cancel_url,
+                )
+                stripe_checkout_url = checkout_session.url
+        except Exception as e:
+            logger.warning(f"Could not create Stripe Checkout Session: {e}")
+        
         # Return JSON response (same pattern as book purchase)
         if request_data:
             response = {
@@ -5546,12 +5553,22 @@ def make_investment(campaign_id):
                 'message': 'Investment created. Redirecting to payment...',
                 'success_url': success_url,
                 'cancel_url': cancel_url,
-                'stripe_checkout_url': checkout_session.url
             }
+            if stripe_checkout_url:
+                response['stripe_checkout_url'] = stripe_checkout_url
+            else:
+                # Fallback if Stripe is not configured
+                error_msg = 'Stripe payment is not configured. Please contact support.'
+                logger.error(error_msg)
+                return jsonify({'error': error_msg}), 500
             return jsonify(response)
         else:
             # Form submission - redirect to Stripe (backward compatibility)
-            return redirect(checkout_session.url, code=303)
+            if stripe_checkout_url:
+                return redirect(stripe_checkout_url, code=303)
+            else:
+                flash('Stripe payment is not configured. Please contact support.', 'error')
+                return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
             
     except Exception as e:
         db.session.rollback()
