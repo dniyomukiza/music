@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Careers - Join Our Mission | GLC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8f0e3;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: #f8f0e3;
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header a {
+            text-decoration: none;
+            color: #333;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .page-header h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .page-header p {
+            font-size: 1.2em;
+            color: #666;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .mission-intro {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            margin-bottom: 50px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .mission-intro h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .mission-intro p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .jobs-section {
+            margin-top: 50px;
+        }
+
+        .jobs-section h2 {
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #333;
+        }
+
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .job-card {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .job-card h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: color 0.3s ease;
+        }
+
+        .job-card h3:hover {
+            color: #555;
+        }
+
+        .job-card h3::after {
+            content: '+';
+            font-size: 1.5em;
+            font-weight: normal;
+            transition: transform 0.3s ease;
+        }
+
+        .job-card.expanded h3::after {
+            content: '−';
+            transform: rotate(0deg);
+        }
+
+        .job-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            padding: 0;
+        }
+
+        .job-card.expanded .job-details {
+            max-height: 2000px;
+            padding-top: 20px;
+        }
+
+        .job-details h4 {
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .job-details h4:first-child {
+            margin-top: 0;
+        }
+
+        .job-details ul {
+            list-style-position: inside;
+            margin-bottom: 20px;
+            padding-left: 0;
+        }
+
+        .job-details li {
+            margin-bottom: 10px;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .job-card .job-type {
+            display: inline-block;
+            background-color: #333;
+            color: #f8f0e3;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .job-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .apply-button {
+            display: inline-block;
+            background-color: #333;
+            color: #f8f0e3;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            border: 2px solid #333;
+        }
+
+        .apply-button:hover {
+            background-color: #555;
+            border-color: #555;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 40px;
+            color: #333;
+            text-decoration: none;
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #555;
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2em;
+            }
+
+            .jobs-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mission-intro {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="{{ url_for('routes.index') }}">← Back to Home</a>
+        <a href="{{ url_for('routes.index') }}">GLCONNECT</a>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Join Our Mission</h1>
+            <p>Help us build the ultimate platform for undiscovered talent</p>
+        </div>
+
+        <div class="mission-intro">
+            <h2>Our Mission</h2>
+            <p>Our mission is to uncover hidden potential and amplify unheard voices. We bridge the gap between creators and opportunity providing exposure and connection. GLConnect is where brand building meets meaningful content delivery.</p>
+            <p>We envision to be the ultimate platform where undiscovered talent thrives empowering independent creators to share their voices, ideas, and art with the world.</p>
+        </div>
+
+        <div class="jobs-section">
+            <h2>Open Positions</h2>
+            <div class="jobs-grid">
+                <div class="job-card">
+                    <h3>Co-founder CTO</h3>
+                    <span class="job-type">Leadership</span>
+                    <p style="margin-bottom: 20px;">Send us your resume.</p>
+                    <a href="mailto:info@ndotonic.com?subject=Application: Co-founder CTO" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="ai-engineer">
+                    <h3 onclick="toggleJobDetails(this)">AI Agent Engineer</h3>
+                    <span class="job-type">Engineering</span>
+                    <p>Join our team to build intelligent AI agents that help creators optimize their content, connect with audiences, and automate workflows. Experience with LLMs, agent frameworks, and content generation required.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Collaborate with team to define the requirements and design tailored AI-driven solutions that meet their specific needs.</li>
+                            <li>Develop and deliver customized product features and prototypes to demonstrate the value and functionality of our solutions.</li>
+                            <li>Act as a liaison between quality, security testers and the product development team, communicating feedback and helping to shape future product features.</li>
+                            <li>Create and maintain technical documentation</li>
+                        </ul>
+                        <h4>Requirements</h4>
+                        <ul>
+                            <li>Bachelor's degree in Computer Science, Engineering, or self taught with demo projects.</li>
+                            <li>Extreme sense of ownership, obsession for AI to ensure that you will thrive in our early stage environment</li>
+                            <li>Experience with programming languages such as Python, Javascript, or similar, and familiarity with APIs, databases and cloud platforms.</li>
+                            <li>Experience with CI/CD pipelines</li>
+                            <li>Version control with Git</li>
+                        </ul>
+                        <h4>Nice-to-haves</h4>
+                        <ul>
+                            <li>Stay current with AI multimodel tools</li>
+                            <li>Effective prompt engineering skills</li>
+                            <li>Certifications in cloud platforms such as AWS, Google Cloud, or Azure a plus</li>
+                        </ul>
+                    </div>
+                    <a href="mailto:info@ndotonic.com?subject=Application: AI Agent Engineer" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="qa-engineer">
+                    <h3 onclick="toggleJobDetails(this)">Quality Testing Engineer</h3>
+                    <span class="job-type">Quality Assurance</span>
+                    <p>Ensure our platform delivers exceptional user experiences. You'll design and execute test strategies, automate testing processes, and work closely with engineering teams to maintain high quality standards.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Understanding user requirements, scrutinizing product usability, and providing feedback.</li>
+                            <li>Develop and maintain accurate test cases and ensure compliance across all web and mobile platforms.</li>
+                            <li>Create detailed reports on the quality and functionality of software applications after thorough testing.</li>
+                            <li>Work alongside our developers and product leaders throughout the software development lifecycle, ensuring that quality standards are always achieved.</li>
+                        </ul>
+                        <h4>About You</h4>
+                        <ul>
+                            <li>Comfortable scripting in at least one or preferably multiple scripting languages and tools such as Bash, Python, JavaScript, Playwright etc.</li>
+                            <li>Understanding of Linux, macOS operating systems</li>
+                            <li>Experience working with databases including PostgreSQL, SQL, and MySQL.</li>
+                            <li>Version controlling with Git</li>
+                        </ul>
+                    </div>
+                    <a href="mailto:info@ndotonic.com?subject=Application: Quality Testing Engineer" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="penetration-tester">
+                    <h3 onclick="toggleJobDetails(this)">Penetration Tester</h3>
+                    <span class="job-type">Security</span>
+                    <p>Help us keep our platform secure for creators and users. You'll conduct security assessments, identify vulnerabilities, and work with engineering teams to implement robust security measures.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Perform controlled penetration testing on applications, cloud environments, and infrastructure, demonstrating potential vulnerabilities, documenting risks and remediation steps.</li>
+                            <li>Collaborate with Engineering to validate and fix vulnerabilities</li>
+                            <li>Develop automated scripts to support penetration testing</li>
+                            <li>Stay current on emerging threats</li>
+                        </ul>
+                        <h4>About You</h4>
+                        <ul>
+                            <li>Hands-on penetration testing experience or aspirations in cybersecurity-related roles.</li>
+                            <li>Strong understanding of security protocols</li>
+                            <li>Security certifications are a plus.</li>
+                            <li>Proficiency with penetration testing tools and related frameworks.</li>
+                            <li>Solid understanding of Linux and Unix operating systems and networking fundamentals.</li>
+                        </ul>
+                    </div>
+                    <a href="mailto:info@ndotonic.com?subject=Application: Penetration Tester" class="apply-button">Apply Now</a>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{{ url_for('routes.index') }}" class="back-link">← Return to Homepage</a>
+        </div>
+    </div>
+    <script>
+        function toggleJobDetails(element) {
+            const jobCard = element.closest('.job-card');
+            jobCard.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>

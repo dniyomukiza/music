@@ -26,6 +26,11 @@ def marketplace():
 def about():
     return render_template('about.html')
 
+@bp.route('/careers')
+def careers():
+    """Careers page with job openings."""
+    return render_template('careers.html')
+
 @bp.route('/health')
 def health():
     """Health check endpoint for monitoring."""
