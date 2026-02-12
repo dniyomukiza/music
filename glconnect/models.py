@@ -17,7 +17,25 @@ class Song(db.Model):
     is_available_on_spotify = db.Column(db.Boolean, default=False)
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
     cover_image = db.Column(db.String(200), nullable=True)
-    
+    # Admin approval for artist uploads: 'pending', 'approved', 'rejected'. Default 'approved' for pipeline/legacy.
+    approval_status = db.Column(db.String(20), default='approved', nullable=True)
+
+    def is_approved(self):
+        return self.approval_status in (None, 'approved')
+
+    def is_pending(self):
+        return self.approval_status == 'pending'
+
+
+class DownloadedSong(db.Model):
+    """Songs from the YouTube download pipeline only (admin-triggered). Not mixed with artist uploads."""
+    __tablename__ = 'downloaded_songs'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    artist = db.Column(db.String(100), nullable=True)
+    local_path = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
+
 
 class Post(db.Model):
     __tablename__ = 'post'
@@ -187,8 +205,10 @@ class Playlist(db.Model):
     __tablename__ = 'playlists'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    song_id = db.Column(db.Integer, db.ForeignKey('songs.id'), nullable=False)
+    song_id = db.Column(db.Integer, db.ForeignKey('songs.id'), nullable=True)
+    download_id = db.Column(db.Integer, db.ForeignKey('downloaded_songs.id'), nullable=True)
     added_on = db.Column(db.DateTime, default=db.func.now())
+    # One of song_id or download_id must be set
 
 class Artist(db.Model):
     __tablename__ = 'artists'
@@ -245,6 +265,7 @@ class Song_upload(db.Model):
     spotify_link = db.Column(db.String(255), nullable=True)
     apple_music_link = db.Column(db.String(255), nullable=True)
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
+    approval_status = db.Column(db.String(20), default='approved', nullable=True)  # pending, approved, rejected
     artist = db.relationship('Artist', backref='songs')
 
 class PictureGameItem(db.Model):

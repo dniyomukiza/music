@@ -2239,18 +2239,23 @@ def unpublish_book(book_id, user_profile, profile_type):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@book_bp.route('/admin/books')
+@book_bp.route('/admin')
 @login_required
-def admin_books():
-    """Admin panel to manage all books"""
-    # Check if user is admin
+def admin_hub():
+    """Single entry point for all admin tasks – redirects to the full admin panel."""
     if current_user.role != 'admin':
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('book_platform.marketplace'))
-    
-    # Use optimized database queries
+    return redirect(url_for('book_platform.admin_books'))
+
+@book_bp.route('/admin/books')
+@login_required
+def admin_books():
+    """Admin panel: one place for all approval and verification tasks (books, podcasts, songs, reviewers, word contributions, community dictionary, YouTube download)."""
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
     books = DatabaseOptimizer.get_admin_books_data()
-    
     return render_template('book_platform/admin_books.html', books=books)
 
 # Admin Reviewer Management Routes
@@ -6482,29 +6487,30 @@ def upload_song_music_dashboard():
         # Store full path in database: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
         full_db_path = f"/liqfolder/glconnect/static/afro/{mp3_filename}"
         
-        # Save to Song model for searchability (this is what the search uses)
+        # Save to Song model for searchability (admin must approve before it appears in search)
         from glconnect.models import Song
         new_song = Song(
             name=song_name,
             artist=artist.artist_name,
             artist_id=artist.artist_id,
             local_path=full_db_path,  # Full path: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
-            cover_image=cover_filename
+            cover_image=cover_filename,
+            approval_status='pending'
         )
         db.session.add(new_song)
         
         # Also create Song_upload entry for compatibility
-        # Store full path (consistent with Song model)
         new_song_upload = Song_upload(
             name_song=song_name,
             name_artist=artist.artist_name,
-            local_path=full_db_path,  # Full path: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
+            local_path=full_db_path,
             cover_image=cover_filename,
             twitter_link=twitter_link,
             instagram_link=instagram_link,
             spotify_link=spotify_link,
             apple_music_link=apple_music_link,
-            artist_id=artist.artist_id
+            artist_id=artist.artist_id,
+            approval_status='pending'
         )
         db.session.add(new_song_upload)
         
@@ -6512,7 +6518,7 @@ def upload_song_music_dashboard():
         
         return jsonify({
             'success': True,
-            'message': 'Song uploaded successfully! It will appear in search results.',
+            'message': 'Song uploaded successfully! It will be reviewed by an admin before appearing in search.',
             'song_id': new_song.id
         })
         
@@ -7044,6 +7050,173 @@ def admin_delete_podcast(podcast_id):
         db.session.rollback()
         logger.error(f"Error deleting podcast from database: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ----- Admin Song (Music) Approval -----
+@book_bp.route('/admin/songs')
+@login_required
+def admin_songs():
+    """Admin panel to review and approve/reject artist song uploads"""
+    from glconnect.models import Song
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    status_filter = request.args.get('status', 'pending')
+    if status_filter == 'pending':
+        pending_songs = Song.query.filter_by(approval_status='pending').order_by(Song.id.desc()).all()
+        all_songs = Song.query.filter(Song.approval_status != 'pending').order_by(Song.id.desc()).limit(50).all()
+    else:
+        pending_songs = Song.query.filter_by(approval_status='pending').order_by(Song.id.desc()).all()
+        all_songs = Song.query.order_by(Song.id.desc()).limit(100).all()
+    return render_template('book_platform/admin_songs.html',
+                         pending_songs=pending_songs,
+                         all_songs=all_songs,
+                         status_filter=status_filter)
+
+@book_bp.route('/admin/songs/<int:song_id>/approve', methods=['POST'])
+@login_required
+def admin_approve_song(song_id):
+    """Approve a song submission - makes it visible in search and playlists"""
+    from glconnect.models import Song, Song_upload
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    song = Song.query.get_or_404(song_id)
+    if song.approval_status != 'pending':
+        return jsonify({'success': False, 'error': 'Song is not pending approval'}), 400
+    song.approval_status = 'approved'
+    # Keep Song_upload in sync if exists (same artist/name)
+    su = Song_upload.query.filter_by(name_song=song.name, name_artist=song.artist).order_by(Song_upload.upload_id.desc()).first()
+    if su:
+        su.approval_status = 'approved'
+    db.session.commit()
+    logger.info(f"Song '{song.name}' by '{song.artist}' (ID {song_id}) approved by admin {current_user.username}")
+    return jsonify({'success': True, 'message': f'Song "{song.name}" approved successfully'})
+
+@book_bp.route('/admin/songs/<int:song_id>/reject', methods=['POST'])
+@login_required
+def admin_reject_song(song_id):
+    """Reject a song submission - hides from search/playlists"""
+    from glconnect.models import Song, Song_upload
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    song = Song.query.get_or_404(song_id)
+    if song.approval_status != 'pending':
+        return jsonify({'success': False, 'error': 'Song is not pending approval'}), 400
+    reason = request.get_json(silent=True) or {}
+    rejection_reason = reason.get('reason', '').strip()
+    song.approval_status = 'rejected'
+    su = Song_upload.query.filter_by(name_song=song.name, name_artist=song.artist).order_by(Song_upload.upload_id.desc()).first()
+    if su:
+        su.approval_status = 'rejected'
+    db.session.commit()
+    logger.info(f"Song '{song.name}' by '{song.artist}' (ID {song_id}) rejected by admin {current_user.username}. Reason: {rejection_reason}")
+    return jsonify({'success': True, 'message': 'Song rejected'})
+
+# ----- Admin YouTube / Music Download (admin only) -----
+# Shared status for admin UI progress (thread-safe)
+_music_download_status = {
+    'status': 'idle',   # idle | downloading | renaming | playlist | ingesting | completed | failed
+    'message': '',
+    'error': None,
+    'url': '',
+    'started_at': None,
+    'completed_at': None,
+}
+_music_download_lock = threading.Lock()
+
+def _set_music_download_status(status, message='', error=None, url=None, completed=False):
+    with _music_download_lock:
+        _music_download_status['status'] = status
+        _music_download_status['message'] = message
+        _music_download_status['error'] = error
+        if url is not None:
+            _music_download_status['url'] = url
+        if status == 'downloading':
+            _music_download_status['started_at'] = datetime.now(timezone.utc).isoformat()
+            _music_download_status['completed_at'] = None
+        if completed:
+            _music_download_status['completed_at'] = datetime.now(timezone.utc).isoformat()
+
+def _get_music_download_status():
+    with _music_download_lock:
+        return dict(_music_download_status)
+
+@book_bp.route('/admin/music')
+@login_required
+def admin_music():
+    """Admin-only page to paste a YouTube playlist/video URL and trigger song download pipeline"""
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    return render_template('book_platform/admin_music.html')
+
+@book_bp.route('/admin/music/status')
+@login_required
+def admin_music_status():
+    """Return current YouTube download workflow status for admin UI (polling)."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin privileges required'}), 403
+    return jsonify(_get_music_download_status())
+
+@book_bp.route('/admin/music/download', methods=['POST'])
+@login_required
+def admin_music_download():
+    """Start YouTube download in background (admin only). Uses yt-dlp → rename → M3U → ingest."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    data = request.get_json() or request.form
+    url = (data.get('url') or data.get('youtube_url') or '').strip()
+    if not url:
+        return jsonify({'success': False, 'error': 'YouTube URL is required'}), 400
+    if 'youtube.com' not in url and 'youtu.be' not in url:
+        return jsonify({'success': False, 'error': 'Please provide a valid YouTube playlist or video URL'}), 400
+
+    # Reset and set initial status so admin sees progress immediately
+    _set_music_download_status('downloading', 'Starting download…', url=url)
+
+    app = current_app._get_current_object()
+    def run_pipeline():
+        with app.app_context():
+            try:
+                from glconnect.pipeline import (
+                    AudioDownloader,
+                    MusicFileRenamer,
+                    create_or_append_m3u_playlist,
+                    PlaylistIngestion,
+                )
+                root = current_app.root_path
+                if os.path.basename(root) == 'glconnect':
+                    output_folder = os.path.join(root, 'static', 'ytauto')
+                else:
+                    output_folder = os.path.join(root, 'glconnect', 'static', 'ytauto')
+
+                _set_music_download_status('downloading', 'Downloading audio with yt-dlp (this may take several minutes)…', url=url)
+                downloader = AudioDownloader(playlist_url=url, output_folder=output_folder)
+                downloader.download_and_convert()
+
+                _set_music_download_status('renaming', 'Renaming files and cleaning filenames…', url=url)
+                renamer = MusicFileRenamer()
+                renamer.clean_music_names(output_folder)
+
+                _set_music_download_status('playlist', 'Creating M3U playlist…', url=url)
+                create_or_append_m3u_playlist(output_folder, 'ytauto.m3u')
+                glconnect_dir = os.path.dirname(os.path.dirname(output_folder))
+                m3u_path = os.path.join(glconnect_dir, 'ytauto.m3u')
+
+                _set_music_download_status('ingesting', 'Ingesting songs into database…', url=url)
+                if os.path.exists(m3u_path):
+                    PlaylistIngestion.ingest_songs_from_m3u(m3u_path)
+
+                _set_music_download_status('completed', 'Done. New songs have been added to the catalog.', url=url, completed=True)
+                logger.info("Admin YouTube download pipeline finished successfully")
+            except Exception as e:
+                logger.exception("Admin YouTube download pipeline failed: %s", e)
+                _set_music_download_status('failed', '', error=str(e), url=url, completed=True)
+    threading.Thread(target=run_pipeline, daemon=True).start()
+    return jsonify({
+        'success': True,
+        'message': 'Download started. Watch the progress below.',
+        'status': _get_music_download_status()
+    })
 
 @book_bp.route('/podcasts/<int:podcast_id>/play')
 @login_required

@@ -43,11 +43,16 @@ def get_song_path(song, artist_name=None):
 def artist_profile(artist_id):
     artist = Artist.query.get_or_404(artist_id)
 
-    # Get songs uploaded by the artist via Song model
-    songs_from_song_model = Song.query.filter_by(artist_id=artist_id).all()
+    # Get songs uploaded by the artist via Song model (only approved for public view)
+    from sqlalchemy import or_
+    songs_from_song_model = Song.query.filter_by(artist_id=artist_id).filter(
+        or_(Song.approval_status.is_(None), Song.approval_status == 'approved')
+    ).all()
 
-    # Get songs uploaded via Song_upload model (where name_artist matches the artist_name)
-    songs_from_upload_model = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
+    # Get songs uploaded via Song_upload model (only approved)
+    songs_from_upload_model = Song_upload.query.filter_by(name_artist=artist.artist_name).filter(
+        or_(Song_upload.approval_status.is_(None), Song_upload.approval_status == 'approved')
+    ).all()
 
     # Add path attribute to each song object
     for song in songs_from_song_model:
@@ -124,14 +129,14 @@ def save_playlist():
 
 @art.route('/get_playlist/<int:user_id>', methods=['GET'])
 def get_playlist(user_id):
-    # Retrieve the user's playlist entries
+    from flask import url_for
     playlist_entries = Playlist.query.filter_by(user_id=user_id).all()
-
-    # Get the song details for each playlist entry
     songs = []
     for entry in playlist_entries:
-        song = Song.query.get(entry.song_id)
-        if song:
+        if entry.song_id:
+            song = Song.query.get(entry.song_id)
+            if not song:
+                continue
             # Get the artist details using the artist_id from the song
             artist = Artist.query.get(song.artist_id)
             if artist:
@@ -166,9 +171,18 @@ def get_playlist(user_id):
             songs.append({
                 'song_id': song.id,
                 'song_name': song.name,
-                'artist_name': artist_name,  # Add artist name to the response
-                'song_url': song_path  # Return the path (using local_path if available)
+                'artist_name': artist_name,
+                'song_url': song_path
             })
+        elif entry.download_id:
+            d = DownloadedSong.query.get(entry.download_id)
+            if d:
+                songs.append({
+                    'song_id': None,
+                    'song_name': d.name or 'Untitled',
+                    'artist_name': d.artist or 'Unknown',
+                    'song_url': url_for('playlist2.serve_downloaded_song_file', download_id=d.id)
+                })
 
     if not songs:
         return jsonify({'message': 'No songs found in playlist'}), 404

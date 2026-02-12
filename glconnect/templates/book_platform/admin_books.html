@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Book Management | Ink Studio</title>
+    <title>Admin – All tasks | Ink Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
@@ -15,6 +15,9 @@
                 <i class="fas fa-pen-fancy"></i> Ink Studio - Admin Panel
             </a>
             <div class="navbar-nav ms-auto">
+                <a class="nav-link fw-bold" href="{{ url_for('book_platform.admin_books') }}">
+                    <i class="fas fa-th-large"></i> Admin hub
+                </a>
                 <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
                     <i class="fas fa-store"></i> Marketplace
                 </a>
@@ -39,9 +42,9 @@
                         </span>
                     </div>
                     <h1 class="display-4 fw-bold mb-3">
-                        <i class="fas fa-cogs me-3"></i>Admin Panel
+                        <i class="fas fa-cogs me-3"></i>Admin hub
                     </h1>
-                    <p class="lead mb-4">Manage all content in the Ink Studio platform: Books, Podcasts, Stories, and Blogs</p>
+                    <p class="lead mb-4">All tasks that need admin approval or verification: books, podcasts, songs, reviewers, word contributions, community dictionary, YouTube download.</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-book me-2"></i>{{ books|length }} Total Books
@@ -74,9 +77,9 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <h4 class="mb-0">
-                            <i class="fas fa-tasks me-2 text-primary"></i>Quick Access - Admin Management
+                            <i class="fas fa-tasks me-2 text-primary"></i>All admin tasks
                         </h4>
-                        <p class="text-muted mb-0 small">Navigate to different admin panels for managing platform content</p>
+                        <p class="text-muted mb-0 small">Approval and verification: pick a task below</p>
                     </div>
                     <div class="card-body">
                 <div class="row g-3">
@@ -117,6 +120,48 @@
                                 <p class="text-muted small mb-3">Review pending podcasts, approve or reject submissions from users</p>
                                 <a href="{{ url_for('book_platform.admin_podcasts') }}" class="btn btn-success btn-sm w-100">
                                     <i class="fas fa-check-circle me-1"></i>Review Podcasts
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Music / Song uploads (artist approval) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #6f42c1 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 me-3" style="background: #6f42c1 !important;">
+                                        <i class="fas fa-music fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Songs</h5>
+                                        <small class="text-muted">Approve artist uploads</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Approve or reject songs uploaded by artists before they appear in search</p>
+                                <a href="{{ url_for('book_platform.admin_songs') }}" class="btn btn-sm w-100" style="background: #6f42c1; color: white;">
+                                    <i class="fas fa-gavel me-1"></i>Review Songs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YouTube Download (admin only) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #dc3545 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-danger text-white rounded-circle p-3 me-3">
+                                        <i class="fab fa-youtube fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">YouTube Download</h5>
+                                        <small class="text-muted">Admin only</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Paste a YouTube playlist or video URL to download songs into the catalog</p>
+                                <a href="{{ url_for('book_platform.admin_music') }}" class="btn btn-danger btn-sm w-100">
+                                    <i class="fas fa-download me-1"></i>Download from YouTube
                                 </a>
                             </div>
                         </div>
@@ -180,6 +225,48 @@
                                 <p class="text-muted small mb-3">Manage accredited reviewers, approve applications, and monitor performance</p>
                                 <a href="{{ url_for('book_platform.admin_reviewers') }}" class="btn btn-sm w-100" style="background-color: #6f42c1; color: white; border-color: #6f42c1;">
                                     <i class="fas fa-user-shield me-1"></i>Manage Reviewers
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Word contributions (dictionary) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #20c997 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle p-3 me-3" style="background-color: #20c997; color: white;">
+                                        <i class="fas fa-spell-check fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Word contributions</h5>
+                                        <small class="text-muted">Approve / reject</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review and approve or reject word contributions to the community dictionary</p>
+                                <a href="{{ url_for('routes1.admin_contributions') }}" class="btn btn-sm w-100" style="background-color: #20c997; color: white;">
+                                    <i class="fas fa-gavel me-1"></i>Review contributions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Community dictionary (admin view) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #fd7e14 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle p-3 me-3" style="background-color: #fd7e14; color: white;">
+                                        <i class="fas fa-book-open fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Community dictionary</h5>
+                                        <small class="text-muted">Admin view</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">View and manage the community dictionary (approved words)</p>
+                                <a href="{{ url_for('routes1.community_dictionary') }}" class="btn btn-sm w-100" style="background-color: #fd7e14; color: white;">
+                                    <i class="fas fa-list me-1"></i>View dictionary
                                 </a>
                             </div>
                         </div>

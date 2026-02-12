@@ -1,9 +1,13 @@
 from flask import Blueprint, request, jsonify, send_from_directory, send_file, current_app
 from flask_login import current_user, login_required
-from glconnect.models import Song, Playlist, db, Artist, Song_upload
+from glconnect.models import Song, Playlist, db, Artist, Song_upload, DownloadedSong
 import os
 
 play = Blueprint('playlist2', __name__)
+
+# Only list songs that are approved (or legacy null); hide pending/rejected from search and playlists
+def _approved_songs_filter():
+    return db.or_(Song.approval_status.is_(None), Song.approval_status == 'approved')
 
 from flask import url_for
 
@@ -182,17 +186,17 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None, include_collaborat
         if artist_obj:
             artist_name = artist_obj.artist_name
     
-    # Get songs from Song model where artist_id matches
+    # Get songs from Song model where artist_id matches (only approved songs)
     if artist_id:
-        songs_from_song_model = Song.query.filter_by(artist_id=artist_id).all()
+        songs_from_song_model = Song.query.filter_by(artist_id=artist_id).filter(_approved_songs_filter()).all()
     elif artist_name:
         # Try to find artist by name first
         artist = Artist.query.filter(db.func.lower(Artist.artist_name) == artist_name.lower()).first()
         if artist:
-            songs_from_song_model = Song.query.filter_by(artist_id=artist.artist_id).all()
+            songs_from_song_model = Song.query.filter_by(artist_id=artist.artist_id).filter(_approved_songs_filter()).all()
         else:
             # Fallback: search by artist field in Song model
-            songs_from_song_model = Song.query.filter(db.func.lower(Song.artist) == artist_name.lower()).all()
+            songs_from_song_model = Song.query.filter(db.func.lower(Song.artist) == artist_name.lower()).filter(_approved_songs_filter()).all()
     else:
         songs_from_song_model = []
     
@@ -201,7 +205,7 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None, include_collaborat
         # Search for songs where artist name appears anywhere in the artist field (for collaborations)
         collaboration_songs = Song.query.filter(
             db.func.lower(Song.artist).like(f'%{artist_name.lower()}%')
-        ).all()
+        ).filter(_approved_songs_filter()).all()
         
         # Combine both lists, avoiding duplicates
         all_songs = list(songs_from_song_model)
@@ -275,13 +279,36 @@ def get_all_songs_by_artist(artist_id=None, artist_name=None, include_collaborat
         seen_song_keys.add(song_key)
         songs_data.append({
             'id': song.id,
+            'song_id': song.id,
+            'download_id': None,
             'name': song_name,
             'artist': artist_name_display,
-            'path': song_path,  # Use the file serving route
-            'cover_image': song_cover_image,  # Song cover image
-            'artist_profile_pic': artist_profile_pic  # Artist profile picture
+            'path': song_path,
+            'cover_image': song_cover_image,
+            'artist_profile_pic': artist_profile_pic
         })
-    
+    # Include YouTube-downloaded songs by same artist name (from downloaded_songs table)
+    if artist_name:
+        from flask import url_for
+        downloads = DownloadedSong.query.filter(db.func.lower(DownloadedSong.artist) == artist_name.lower()).all()
+        for d in downloads:
+            song_key = f"{(d.name or '').strip().lower()}|{(d.artist or '').strip().lower()}"
+            if song_key in seen_song_keys:
+                continue
+            seen_song_keys.add(song_key)
+            name = (d.name or '').strip() or 'Untitled Track'
+            artist = d.artist or 'Unknown'
+            path = url_for('playlist2.serve_downloaded_song_file', download_id=d.id)
+            songs_data.append({
+                'id': d.id,
+                'song_id': None,
+                'download_id': d.id,
+                'name': name,
+                'artist': artist,
+                'path': path,
+                'cover_image': None,
+                'artist_profile_pic': None
+            })
     return songs_data
 
 # In your route for fetching songs
@@ -301,17 +328,33 @@ def playlist2():
         song_id = song_data['id']
         song_name = (song_data.get('name') or '').strip().lower()
         artist_name = (song_data.get('artist') or '').strip().lower()
-        
-        # Create a unique key from normalized name and artist
         song_key = f"{song_name}|{artist_name}"
-        
-        # Skip if we've seen this exact song ID OR this name+artist combination
         if song_id in seen_song_ids or song_key in seen_song_keys:
             return
-        
         seen_song_ids.add(song_id)
         seen_song_keys.add(song_key)
         all_songs_data.append(song_data)
+
+    # Include YouTube-downloaded songs matching the query (from downloaded_songs table)
+    _downloads = DownloadedSong.query.filter(
+        db.or_(
+            db.func.lower(DownloadedSong.name).like(f'%{query}%'),
+            db.func.lower(DownloadedSong.artist).like(f'%{query}%')
+        )
+    ).limit(20).all()
+    for d in _downloads:
+        name = (d.name or '').strip() or 'Untitled Track'
+        artist = d.artist or 'Unknown'
+        add_song_if_unique({
+            'id': 2000000 + d.id,
+            'song_id': None,
+            'download_id': d.id,
+            'name': name,
+            'artist': artist,
+            'path': url_for('playlist2.serve_downloaded_song_file', download_id=d.id),
+            'cover_image': None,
+            'artist_profile_pic': None
+        })
 
     # 1. Exact match for artist (case-insensitive) - return all songs by that artist
     artist = Artist.query.filter(db.func.lower(Artist.artist_name) == query).first()
@@ -323,7 +366,7 @@ def playlist2():
             if all_songs_data:
                 return jsonify(all_songs_data)
         # If no songs found by artist_id, also search Song.artist field for this exact name
-        songs_by_name = Song.query.filter(db.func.lower(Song.artist) == query.lower()).all()
+        songs_by_name = Song.query.filter(db.func.lower(Song.artist) == query.lower()).filter(_approved_songs_filter()).all()
         if songs_by_name:
             import re
             for song in songs_by_name:
@@ -362,6 +405,8 @@ def playlist2():
                 
                 song_data = {
                     'id': song.id,
+                    'song_id': song.id,
+                    'download_id': None,
                     'name': song_name,
                     'artist': artist_name,
                     'path': song_path,
@@ -375,7 +420,7 @@ def playlist2():
         # If no songs found, continue to other search methods
 
     # 2. Search for songs matching the query (partial match for song name)
-    songs = Song.query.filter(db.func.lower(Song.name).like(f'%{query}%')).limit(20).all()
+    songs = Song.query.filter(db.func.lower(Song.name).like(f'%{query}%')).filter(_approved_songs_filter()).limit(20).all()
     
     if songs:
         # If we found songs, get the artist from the first song and return ALL songs by that artist
@@ -452,6 +497,8 @@ def playlist2():
             
             song_data = {
                 'id': song.id,
+                'song_id': song.id,
+                'download_id': None,
                 'name': song_name,
                 'artist': artist_name,
                 'path': song_path,
@@ -470,7 +517,7 @@ def playlist2():
     songs_by_artist_field = []
     
     # First try exact match
-    songs_exact = Song.query.filter(db.func.lower(Song.artist).like(f'%{query}%')).all()
+    songs_exact = Song.query.filter(db.func.lower(Song.artist).like(f'%{query}%')).filter(_approved_songs_filter()).all()
     songs_by_artist_field.extend(songs_exact)
     
     # If query has multiple words, also try matching songs that contain all words (in any order)
@@ -478,7 +525,7 @@ def playlist2():
         # Build a query that matches all words
         conditions = [db.func.lower(Song.artist).like(f'%{word}%') for word in query_words if len(word) > 2]
         if conditions:
-            songs_all_words = Song.query.filter(db.and_(*conditions)).all()
+            songs_all_words = Song.query.filter(db.and_(*conditions)).filter(_approved_songs_filter()).all()
             # Add songs that aren't already in the list
             existing_ids = {s.id for s in songs_by_artist_field}
             for song in songs_all_words:
@@ -531,6 +578,8 @@ def playlist2():
                 
                 song_data = {
                     'id': song.id,
+                    'song_id': song.id,
+                    'download_id': None,
                     'name': song_name,
                     'artist': artist_name,
                     'path': song_path,
@@ -554,7 +603,7 @@ def playlist2():
                 return jsonify(all_songs_data)
         
         # Also search Song.artist field for this artist name (in case songs aren't linked by artist_id)
-        songs_by_artist_name = Song.query.filter(db.func.lower(Song.artist).like(f'%{artist_partial.artist_name.lower()}%')).all()
+        songs_by_artist_name = Song.query.filter(db.func.lower(Song.artist).like(f'%{artist_partial.artist_name.lower()}%')).filter(_approved_songs_filter()).all()
         if songs_by_artist_name:
             import re
             for song in songs_by_artist_name:
@@ -593,6 +642,8 @@ def playlist2():
                 
                 song_data = {
                     'id': song.id,
+                    'song_id': song.id,
+                    'download_id': None,
                     'name': song_name,
                     'artist': artist_name,
                     'path': song_path,
@@ -605,7 +656,7 @@ def playlist2():
                 return jsonify(all_songs_data)
 
     # 4. Exact match for song name (if no partial matches)
-    song = Song.query.filter(db.func.lower(Song.name) == query).first()
+    song = Song.query.filter(db.func.lower(Song.name) == query).filter(_approved_songs_filter()).first()
     if song:
         artist_id = song.artist_id
         artist_name = song.artist
@@ -653,13 +704,13 @@ def get_suggestions():
             'type': 'artist'
         })
     
-    # Get song suggestions (limit to 5)
+    # Get song suggestions (limit to 5) - only approved songs
     songs = Song.query.filter(
         db.or_(
             db.func.lower(Song.name).like(f'%{query}%'),
             db.func.lower(Song.artist).like(f'%{query}%')
         )
-    ).limit(5).all()
+    ).filter(_approved_songs_filter()).limit(5).all()
     
     seen_song_keys = set()
     for song in songs:
@@ -680,11 +731,31 @@ def get_suggestions():
             seen_song_keys.add(song_key)
             suggestions['songs'].append({
                 'id': song.id,
+                'song_id': song.id,
+                'download_id': None,
                 'name': song_name,
                 'artist': artist_name,
                 'type': 'song'
             })
-    
+    for d in DownloadedSong.query.filter(
+        db.or_(
+            db.func.lower(DownloadedSong.name).like(f'%{query}%'),
+            db.func.lower(DownloadedSong.artist).like(f'%{query}%')
+        )
+    ).limit(5).all():
+        name = (d.name or '').strip() or 'Untitled Track'
+        artist = (d.artist or 'Unknown').strip()
+        song_key = f"{name.lower()}|{artist.lower()}"
+        if song_key not in seen_song_keys:
+            seen_song_keys.add(song_key)
+            suggestions['songs'].append({
+                'id': d.id,
+                'song_id': None,
+                'download_id': d.id,
+                'name': name,
+                'artist': artist,
+                'type': 'song'
+            })
     return jsonify(suggestions)
 
 @play.route('/artist-songs', methods=['GET'])
@@ -707,70 +778,62 @@ def get_artist_songs():
 
 @play.route('/get_available_songs', methods=['GET'])
 def get_available_songs():
-    """Get list of available songs for display"""
+    """Get list of available songs for display (artist uploads + downloaded songs)."""
     try:
         from flask import url_for
         import re
-        # Get a limited number of songs (e.g., 12 most recent or popular)
-        songs = Song.query.order_by(Song.id.desc()).limit(12).all()
-        
+        songs = Song.query.filter(_approved_songs_filter()).order_by(Song.id.desc()).limit(12).all()
+        downloads = DownloadedSong.query.order_by(DownloadedSong.id.desc()).limit(12).all()
         songs_data = []
+        by_key = {}
+        def add_song_item(song_id, download_id, name, artist, path, cover_image=None, artist_profile_pic=None):
+            key = f"{name}|{artist}".lower()
+            if key in by_key:
+                return
+            by_key[key] = True
+            songs_data.append({
+                'id': song_id or download_id,
+                'song_id': song_id,
+                'download_id': download_id,
+                'name': name,
+                'artist': artist,
+                'path': path,
+                'cover_image': cover_image,
+                'artist_profile_pic': artist_profile_pic
+            })
         for song in songs:
-            # Get artist name - prefer artist field, fallback to artist_id lookup
             artist_name = song.artist if song.artist else 'Unknown'
             if not artist_name or artist_name == 'Unknown':
                 if song.artist_id:
                     artist = Artist.query.get(song.artist_id)
                     if artist:
                         artist_name = artist.artist_name
-            
-            # Clean song name - handle cases where song.name contains "by [artist]" pattern
             song_name = song.name.strip() if song.name and song.name.strip() else ''
-            
-            # Check if song name contains "by [artist]" pattern (e.g., "by P.Square")
             by_pattern = re.compile(r'^\s*by\s+(.+)$', re.IGNORECASE)
             if by_pattern.match(song_name):
-                # Extract artist from song name if artist field is empty
                 extracted_artist = by_pattern.match(song_name).group(1).strip()
                 if not artist_name or artist_name == 'Unknown':
                     artist_name = extracted_artist
-                song_name = ''  # Clear it since it's not actually the song name
-            
-            # Final song name
+                song_name = ''
             if not song_name:
                 song_name = 'Untitled Track'
-            
-            # Check if song file actually exists before including it
             if not check_song_file_exists(song):
-                continue  # Skip songs without playable files
-            
-            # Use the file serving route for reliable file access
-            # This route handles all path resolution logic
+                continue
             song_path = url_for('playlist2.serve_song_file', song_id=song.id)
-            
-            # Get artist profile picture if available
             artist_profile_pic = None
             if song.artist_id:
                 artist_obj = Artist.query.get(song.artist_id)
                 if artist_obj and artist_obj.profile_pic:
                     profile_pic_path = artist_obj.profile_pic
-                    if profile_pic_path.startswith('static/'):
-                        artist_profile_pic = profile_pic_path.replace('static/', '')
-                    else:
-                        artist_profile_pic = profile_pic_path
-            
-            # Get song cover image if available
-            song_cover_image = song.cover_image if song.cover_image else None
-            
-            songs_data.append({
-                'id': song.id,
-                'name': song_name,
-                'artist': artist_name,
-                'path': song_path,
-                'cover_image': song_cover_image,
-                'artist_profile_pic': artist_profile_pic
-            })
-        
+                    artist_profile_pic = profile_pic_path.replace('static/', '') if profile_pic_path.startswith('static/') else profile_pic_path
+            add_song_item(song.id, None, song_name, artist_name, song_path, song.cover_image, artist_profile_pic)
+        for d in downloads:
+            name = (d.name or '').strip() or 'Untitled Track'
+            artist = d.artist or 'Unknown'
+            path = url_for('playlist2.serve_downloaded_song_file', download_id=d.id)
+            add_song_item(None, d.id, name, artist, path)
+        songs_data.sort(key=lambda x: -(x['song_id'] or x['download_id'] or 0))
+        songs_data = songs_data[:12]
         return jsonify(songs_data)
     except Exception as e:
         print(f"Error fetching available songs: {e}")
@@ -786,25 +849,32 @@ def add_to_playlist():
     print("User Object?", current_user)
     data = request.get_json()
     song_id = data.get('song_id')
+    download_id = data.get('download_id')
 
-    if not song_id:
-        return jsonify({"status": "error", "message": "Invalid song ID"}), 400
-
-    song = Song.query.get(song_id)
-    if not song:
-        return jsonify({"status": "error", "message": "Song not found"}), 404
-
-    # Check if the song is already in the user's playlist
-    existing_entry = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
-    if existing_entry:
-        return jsonify({"status": "success", "message": "Song is already in your playlist."})
-    
-    # Add song to user's playlist
-    new_playlist_entry = Playlist(user_id=current_user.user_id, song_id=song.id)
-    db.session.add(new_playlist_entry)
-    db.session.commit()
-
-    return jsonify({"status": "success", "message": f"'{song.name}' added to your playlist!"})
+    if song_id:
+        song = Song.query.get(song_id)
+        if not song:
+            return jsonify({"status": "error", "message": "Song not found"}), 404
+        if not song.is_approved():
+            return jsonify({"status": "error", "message": "This song is not available for playlists yet."}), 403
+        existing = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
+        if existing:
+            return jsonify({"status": "success", "message": "Song is already in your playlist."})
+        db.session.add(Playlist(user_id=current_user.user_id, song_id=song.id, download_id=None))
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"'{song.name}' added to your playlist!"})
+    elif download_id:
+        download = DownloadedSong.query.get(download_id)
+        if not download:
+            return jsonify({"status": "error", "message": "Download not found"}), 404
+        existing = Playlist.query.filter_by(user_id=current_user.user_id, download_id=download_id).first()
+        if existing:
+            return jsonify({"status": "success", "message": "Song is already in your playlist."})
+        db.session.add(Playlist(user_id=current_user.user_id, song_id=None, download_id=download.id))
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"'{download.name}' added to your playlist!"})
+    else:
+        return jsonify({"status": "error", "message": "Provide song_id or download_id"}), 400
 
 
 # Define the function to get the user playlist
@@ -823,9 +893,14 @@ def get_user_playlist():
     # Prepare a list of songs from the user's playlist
     import re
     playlist_data = []
+    from flask import url_for
     for entry in playlist:
-        song = Song.query.get(entry.song_id)
-        if song:
+        if not entry.song_id and not entry.download_id:
+            continue
+        if entry.song_id:
+            song = Song.query.get(entry.song_id)
+            if not song:
+                continue
             # Get artist name - prefer artist field, fallback to artist_id lookup
             artist_name = song.artist if song.artist else 'Unknown'
             if not artist_name or artist_name == 'Unknown':
@@ -871,13 +946,30 @@ def get_user_playlist():
             
             playlist_data.append({
                 'id': song.id,
+                'song_id': song.id,
+                'download_id': None,
                 'name': song_name,
                 'artist': artist_name,
-                'path': song_path,  # Use the file serving route
+                'path': song_path,
                 'cover_image': song_cover_image,
                 'artist_profile_pic': artist_profile_pic
             })
-    
+        elif entry.download_id:
+            d = DownloadedSong.query.get(entry.download_id)
+            if d:
+                name = (d.name or '').strip() or 'Untitled Track'
+                artist = d.artist or 'Unknown'
+                path = url_for('playlist2.serve_downloaded_song_file', download_id=d.id)
+                playlist_data.append({
+                    'id': d.id,
+                    'song_id': None,
+                    'download_id': d.id,
+                    'name': name,
+                    'artist': artist,
+                    'path': path,
+                    'cover_image': None,
+                    'artist_profile_pic': None
+                })
     return playlist_data
 
 
@@ -905,24 +997,26 @@ def delete_playlist():
 def remove_song():
     data = request.get_json()
     song_id = data.get('song_id')
+    download_id = data.get('download_id')
 
-    if not song_id:
-        return jsonify({"status": "error", "message": "Invalid song ID"}), 400
+    if song_id is not None:
+        playlist_entry = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
+        if not playlist_entry:
+            return jsonify({"status": "error", "message": "Song not found in your playlist."}), 404
+        song = Song.query.get(song_id)
+        name = song.name if song else "Song"
+    elif download_id is not None:
+        playlist_entry = Playlist.query.filter_by(user_id=current_user.user_id, download_id=download_id).first()
+        if not playlist_entry:
+            return jsonify({"status": "error", "message": "Song not found in your playlist."}), 404
+        d = DownloadedSong.query.get(download_id)
+        name = d.name if d else "Song"
+    else:
+        return jsonify({"status": "error", "message": "Provide song_id or download_id"}), 400
 
-    song = Song.query.get(song_id)
-    if not song:
-        return jsonify({"status": "error", "message": "Song not found"}), 404
-
-    # Check if the song is in the user's playlist
-    playlist_entry = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
-    if not playlist_entry:
-        return jsonify({"status": "error", "message": "Song not found in your playlist."}), 404
-
-    # Remove the song from the playlist
     db.session.delete(playlist_entry)
     db.session.commit()
-
-    return jsonify({"status": "success", "message": f"'{song.name}' removed from your playlist!"})
+    return jsonify({"status": "success", "message": f"'{name}' removed from your playlist!"})
 
 @play.route('/song/<int:song_id>/file')
 def serve_song_file(song_id):
@@ -1222,6 +1316,37 @@ def serve_song_file(song_id):
         logger.error(f"Song file not found for song_id={song_id}: {error_info}")
         return jsonify({"error": "Song file not found", "details": error_info}), 404
         
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@play.route('/download/<int:download_id>/file')
+def serve_downloaded_song_file(download_id):
+    """Serve a YouTube-downloaded song file by download_id (from downloaded_songs table)."""
+    try:
+        import logging
+        logger = logging.getLogger(__name__)
+        download = DownloadedSong.query.get_or_404(download_id)
+        app_root = current_app.root_path if hasattr(current_app, 'root_path') else os.getcwd()
+        project_root = os.path.dirname(app_root) if os.path.basename(app_root) == 'glconnect' else app_root
+        if not download.local_path:
+            return jsonify({"error": "No file path for this download"}), 404
+        path = download.local_path.strip('/').split('/')
+        if 'glconnect' in path:
+            idx = path.index('glconnect')
+            rel = '/'.join(path[idx:])
+            for base in (project_root, os.getcwd()):
+                full = os.path.join(base, rel)
+                if os.path.exists(full) and os.path.isfile(full):
+                    return send_file(full, mimetype='audio/mpeg')
+        glconnect_ytauto = os.path.join(project_root, 'glconnect', 'static', 'ytauto')
+        if os.path.isdir(glconnect_ytauto):
+            fn = os.path.basename(download.local_path)
+            full = os.path.join(glconnect_ytauto, fn)
+            if os.path.exists(full) and os.path.isfile(full):
+                return send_file(full, mimetype='audio/mpeg')
+        return jsonify({"error": "Downloaded song file not found"}), 404
     except Exception as e:
         import traceback
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500

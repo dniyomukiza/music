@@ -3,7 +3,10 @@ import json
 from flask import Flask
 from subprocess import run
 from dotenv import load_dotenv
-from models import db, Song
+try:
+    from glconnect.models import db, Song, DownloadedSong
+except ImportError:
+    from models import db, Song, DownloadedSong
 
 # Load configuration from environment variables
 config = {
@@ -123,7 +126,8 @@ class PlaylistIngestion:
 
     @staticmethod
     def ingest_songs_from_m3u(file_path):
-        with app.app_context():  
+        """Ingest YouTube-downloaded tracks into downloaded_songs table only (not songs)."""
+        with app.app_context():
             with open(file_path, 'r') as m3u_file:
                 added_count = 0
                 skipped_count = 0
@@ -131,43 +135,36 @@ class PlaylistIngestion:
                     line = line.strip()
                     if line:
                         artist, song_name = PlaylistIngestion.extract_name_artist(line)
-                        
-                        # Check if song already exists
-                        existing_song = Song.query.filter_by(
-                            artist=artist, 
+                        if artist is None and song_name is None:
+                            continue
+                        existing = DownloadedSong.query.filter_by(
+                            artist=artist,
                             name=song_name
                         ).first()
-                        
-                        if existing_song:
-                            print(f"Skipped duplicate: {artist} - {song_name}")
+                        if existing:
+                            print(f"Skipped duplicate download: {artist} - {song_name}")
                             skipped_count += 1
                         else:
-                            song = Song(name=song_name, artist=artist, local_path=line)
-                            db.session.add(song)
-                            print(f"Added new song: {artist} - {song_name}")
+                            row = DownloadedSong(name=song_name, artist=artist, local_path=line)
+                            db.session.add(row)
+                            print(f"Added download: {artist} - {song_name}")
                             added_count += 1
-                
                 db.session.commit()
-                print(f"Songs ingestion complete: {added_count} added, {skipped_count} skipped.")
+                print(f"Download ingestion complete: {added_count} added, {skipped_count} skipped.")
 
     @staticmethod
     def save_song_to_db(artist, song_name, local_path):
-        with app.app_context(): 
-            # Check if song already exists
-            existing_song = Song.query.filter_by(
-                artist=artist, 
-                name=song_name
-            ).first()
-            
-            if existing_song:
+        """Save one YouTube-downloaded track to downloaded_songs table."""
+        with app.app_context():
+            existing = DownloadedSong.query.filter_by(artist=artist, name=song_name).first()
+            if existing:
                 print(f"Skipped duplicate: {artist} - {song_name}")
                 return False
-            else:
-                song = Song(name=song_name, artist=artist, local_path=local_path)
-                db.session.add(song)
-                db.session.commit()
-                print(f"Added new song: {artist} - {song_name}")
-                return True
+            row = DownloadedSong(name=song_name, artist=artist, local_path=local_path)
+            db.session.add(row)
+            db.session.commit()
+            print(f"Added download: {artist} - {song_name}")
+            return True
 
 
 def create_or_append_m3u_playlist(output_folder, m3u_filename):
@@ -204,28 +201,3 @@ def create_or_append_m3u_playlist(output_folder, m3u_filename):
             print(f"Added {liqfolder_path} to playlist.")
 
     print(f"Clean playlist created: {m3u_path}")
-
-if __name__ == "__main__":
-    with app.app_context():
-        # Download and convert audio first
-        playlist_url = "https://www.youtube.com/playlist?list=PLUV4eAulCcw8WbCLJpTagkz3mDx-ChzDr"
-        print("Testing with playlist:", playlist_url)
-        if playlist_url:
-            downloader = AudioDownloader(playlist_url=playlist_url, output_folder=output_folder)
-            downloader.download_and_convert()
-
-        # Clean filenames (remove brackets, parentheses, special characters)
-        print("\n=== Cleaning filenames ===")
-        renamer = MusicFileRenamer()
-        renamer.clean_music_names(output_folder)
-
-        # Create clean M3U playlist
-        print("\n=== Creating M3U playlist ===")
-        create_or_append_m3u_playlist(output_folder, "ytauto.m3u")
-
-        # Ingest only clean songs to database (with duplicate checking)
-        print("\n=== Ingesting songs to database ===")
-        m3u_file_path = '/Users/nididier/Documents/music-1/glconnect/ytauto.m3u'
-        PlaylistIngestion.ingest_songs_from_m3u(m3u_file_path)
-
-
