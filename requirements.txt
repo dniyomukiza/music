@@ -44,6 +44,9 @@ PyPDF2==3.0.1
 requests==2.32.3
 lxml==5.3.0
 
+# YouTube / media download (admin music pipeline)
+yt-dlp>=2024.1.0
+
 # Email
 mailtrap==2.1.0
 

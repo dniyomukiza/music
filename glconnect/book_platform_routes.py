@@ -2239,7 +2239,7 @@ def unpublish_book(book_id, user_profile, profile_type):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@book_bp.route('/admin')
+@book_bp.route('/admin', strict_slashes=False)
 @login_required
 def admin_hub():
     """Single entry point for all admin tasks – redirects to the full admin panel."""
@@ -7169,6 +7169,14 @@ def admin_music_download():
         return jsonify({'success': False, 'error': 'YouTube URL is required'}), 400
     if 'youtube.com' not in url and 'youtu.be' not in url:
         return jsonify({'success': False, 'error': 'Please provide a valid YouTube playlist or video URL'}), 400
+
+    # yt-dlp must be installed (e.g. pip install yt-dlp or brew install yt-dlp)
+    import shutil
+    if not shutil.which('yt-dlp'):
+        return jsonify({
+            'success': False,
+            'error': 'yt-dlp is not installed. Install it to enable YouTube downloads (e.g. pip install yt-dlp, or brew install yt-dlp on macOS).'
+        }), 400
 
     # Reset and set initial status so admin sees progress immediately
     _set_music_download_status('downloading', 'Starting download…', url=url)

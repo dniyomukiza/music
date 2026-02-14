@@ -169,7 +169,7 @@ class BookProject(db.Model):
     # Relationships
     # Explicitly define author relationship to ensure it's a single object, not a collection
     # Note: Don't use backref here since authored_books already exists on BookPlatformUser
-    author = db.relationship('BookPlatformUser', foreign_keys=[author_id], lazy=True)
+    author = db.relationship('BookPlatformUser', foreign_keys=[author_id], lazy=True, overlaps="authored_books")
     chapters = db.relationship('BookChapter', backref='book_project', lazy=True, cascade='all, delete-orphan')
     collaborations = db.relationship('BookCollaboration', backref='book_project', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('BookComment', backref='book_project', lazy=True, cascade='all, delete-orphan')
@@ -264,7 +264,7 @@ class BookComment(db.Model):
     
     # Relationships
     replies = db.relationship('BookComment', backref=db.backref('parent_comment', remote_side=[id]), lazy=True)
-    resolved_by = db.relationship('BookPlatformUser', foreign_keys=[commenter_id], backref='resolved_comments', overlaps="commenter,comments")
+    resolved_by = db.relationship('BookPlatformUser', foreign_keys=[commenter_id], backref=db.backref('resolved_comments', overlaps="commenter,comments"))
 
 # Book Version Model (for version control)
 class BookVersion(db.Model):

@@ -36,11 +36,16 @@ class AudioDownloader:
     def download_audio(self):
         if not self.playlist_url:
             raise ValueError("No playlist URL provided for downloading.")
-        
+        import shutil
+        ytdlp_path = shutil.which("yt-dlp")
+        if not ytdlp_path:
+            raise FileNotFoundError(
+                "yt-dlp is not installed or not in PATH. Install it (e.g. pip install yt-dlp or brew install yt-dlp) and try again."
+            )
         self.prepare_output_folder()
         print(f"Downloading to folder: {self.output_folder}")
         command = [
-            "yt-dlp",
+            ytdlp_path,
             "-x", 
             "--audio-format", "mp3",  
             "--audio-quality", "0",
