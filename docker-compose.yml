@@ -40,6 +40,8 @@ services:
       - RECAPTCHAPRIV=6LfdZjgrAAAAAI2jKpHvpDeXAKK0IuhMMXjul-RK
       - GEMINI_API_KEY=AIzaSyAN9PhRQkawgarggs44LB0TlX3DH5HxeyI
       - MAIL_TRAP=226e20189690a95934a747828428dc79
+      # YouTube download: set to path of cookies file inside container to fix "Sign in to confirm you're not a bot"
+      - YTDLP_COOKIES_FILE=/usr/src/appdir/ytdlp_cookies.txt
 
   nginx:
       build:
