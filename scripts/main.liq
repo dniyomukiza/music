@@ -10,7 +10,7 @@ gosp3 = playlist("/liqfolder/gosp3.m3u")
 satmix = playlist("/liqfolder/satmix.m3u")
 # === Time-based switching between day and night playlists ===
 radio = switch([
-  ({ 0w }, gosp3),
+  ({ 0w }, night), #gosp3
   ({ 6w }, satmix),
   ({ 7w }, satmix),
   ({ 6h-22h }, day),    # Day: mixes.m3u

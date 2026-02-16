@@ -7185,17 +7185,18 @@ def admin_music_download():
     def run_pipeline():
         with app.app_context():
             try:
+                from glconnect import pipeline as pipeline_mod
                 from glconnect.pipeline import (
                     AudioDownloader,
                     MusicFileRenamer,
                     create_or_append_m3u_playlist,
                     PlaylistIngestion,
                 )
-                root = current_app.root_path
-                if os.path.basename(root) == 'glconnect':
-                    output_folder = os.path.join(root, 'static', 'ytauto')
-                else:
-                    output_folder = os.path.join(root, 'glconnect', 'static', 'ytauto')
+                # Use path relative to glconnect package so Docker host mount is correct
+                glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
+                output_folder = os.path.join(glconnect_dir, 'static', 'ytauto')
+                output_folder = os.path.normpath(output_folder)
+                logger.info("YouTube download output_folder: %s", output_folder)
 
                 _set_music_download_status('downloading', 'Downloading audio with yt-dlp (this may take several minutes)…', url=url)
                 downloader = AudioDownloader(playlist_url=url, output_folder=output_folder)

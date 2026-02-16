@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask
+from flask import Flask, has_app_context
 from subprocess import run
 from dotenv import load_dotenv
 try:
@@ -71,35 +71,26 @@ class MusicFileRenamer:
         if not os.path.exists(directory):
             print(f"Directory {directory} does not exist yet. Skipping rename step.")
             return
-        
-        os.chdir(directory)
+        directory = os.path.abspath(directory)
         for filename in os.listdir(directory):
             try:
+                src = os.path.join(directory, filename)
+                if not os.path.isfile(src):
+                    continue
                 base_name, extension = os.path.splitext(filename)
-                
-                # Remove brackets and their content (e.g., [Official Video], [Audio])
                 import re
                 base_name = re.sub(r'\[.*?\]', '', base_name)
-                
-                # Remove parentheses and their content (e.g., (Official Video), (feat. Artist))
                 base_name = re.sub(r'\(.*?\)', '', base_name)
-                
-                # Remove special characters but keep spaces and hyphens
                 base_name = re.sub(r'[^\w\s\-&]', '', base_name)
-                
-                # Clean up multiple spaces and trim
                 base_name = re.sub(r'\s+', ' ', base_name).strip()
-                
-                # Handle the artist - song format
                 parts = base_name.split(" - ")
                 if len(parts) == 2:
                     artist = parts[0].strip()
                     song = parts[1].strip()
                     new_filename = f"{artist} - {song}{extension}"
-                    
-                    # Only rename if the filename actually changed
                     if new_filename != filename:
-                        os.rename(filename, new_filename)
+                        dst = os.path.join(directory, new_filename)
+                        os.rename(src, dst)
                         print(f"Renamed: {filename} -> {new_filename}")
                     else:
                         print(f"No changes needed: {filename}")
@@ -130,32 +121,41 @@ class PlaylistIngestion:
         return artist, song_name
 
     @staticmethod
+    def _do_ingest(m3u_path):
+        """Inner ingestion: expects to run inside an active Flask app context (main app when called from route)."""
+        with open(m3u_path, 'r') as m3u_file:
+            added_count = 0
+            skipped_count = 0
+            for line in m3u_file:
+                line = line.strip()
+                if line:
+                    artist, song_name = PlaylistIngestion.extract_name_artist(line)
+                    if artist is None and song_name is None:
+                        continue
+                    existing = DownloadedSong.query.filter_by(
+                        artist=artist,
+                        name=song_name
+                    ).first()
+                    if existing:
+                        print(f"Skipped duplicate download: {artist} - {song_name}")
+                        skipped_count += 1
+                    else:
+                        row = DownloadedSong(name=song_name, artist=artist, local_path=line)
+                        db.session.add(row)
+                        print(f"Added download: {artist} - {song_name}")
+                        added_count += 1
+            db.session.commit()
+            print(f"Download ingestion complete: {added_count} added, {skipped_count} skipped.")
+
+    @staticmethod
     def ingest_songs_from_m3u(file_path):
         """Ingest YouTube-downloaded tracks into downloaded_songs table only (not songs)."""
-        with app.app_context():
-            with open(file_path, 'r') as m3u_file:
-                added_count = 0
-                skipped_count = 0
-                for line in m3u_file:
-                    line = line.strip()
-                    if line:
-                        artist, song_name = PlaylistIngestion.extract_name_artist(line)
-                        if artist is None and song_name is None:
-                            continue
-                        existing = DownloadedSong.query.filter_by(
-                            artist=artist,
-                            name=song_name
-                        ).first()
-                        if existing:
-                            print(f"Skipped duplicate download: {artist} - {song_name}")
-                            skipped_count += 1
-                        else:
-                            row = DownloadedSong(name=song_name, artist=artist, local_path=line)
-                            db.session.add(row)
-                            print(f"Added download: {artist} - {song_name}")
-                            added_count += 1
-                db.session.commit()
-                print(f"Download ingestion complete: {added_count} added, {skipped_count} skipped.")
+        if has_app_context():
+            # Called from route: use current app's DB so rows go to the same database.
+            PlaylistIngestion._do_ingest(file_path)
+        else:
+            with app.app_context():
+                PlaylistIngestion._do_ingest(file_path)
 
     @staticmethod
     def save_song_to_db(artist, song_name, local_path):
@@ -172,37 +172,58 @@ class PlaylistIngestion:
             return True
 
 
+def _parse_artist_title(filename):
+    """Return (artist, song_name) from filename like 'Artist - Song.mp3'. Normalize for dedupe."""
+    name = os.path.basename(filename).replace(".mp3", "").strip()
+    if " - " in name:
+        artist, song_name = name.split(" - ", 1)
+        return (artist.strip() or None, song_name.strip())
+    return (None, name or None)
+
+
 def create_or_append_m3u_playlist(output_folder, m3u_filename):
     print(f"Preparing clean .m3u playlist in {output_folder}...")
-    # Create M3U file in glconnect folder (parent directory of glconnect/static/ytauto)
-    glconnect_dir = os.path.dirname(os.path.dirname(output_folder))  # Go up from ytauto to glconnect
+    glconnect_dir = os.path.dirname(os.path.dirname(output_folder))
     m3u_path = os.path.join(glconnect_dir, m3u_filename)
     print(f"M3U file will be created at: {m3u_path}")
-    
+
     if not os.path.exists(output_folder):
         print(f"Output folder does not exist: {output_folder}")
         return
-    
-    # Get only clean MP3 files (no brackets or parentheses)
-    mp3_files = [filename for filename in os.listdir(output_folder) if filename.endswith(".mp3")]
-    clean_files = []
-    
-    for filename in mp3_files:
-        # Check if filename contains brackets or parentheses
-        if '[' not in filename and ']' not in filename and '(' not in filename and ')' not in filename:
-            clean_files.append(filename)
-        else:
-            print(f"Skipping file with brackets/parentheses: {filename}")
-    
-    print(f"Found {len(clean_files)} clean MP3 files in {output_folder}")
-    clean_files.sort(key=lambda filename: filename.split(" - ")[-1].lower())
-    
-    # Always create a fresh playlist (overwrite mode)
-    with open(m3u_path, 'w') as m3u_file:
-        for filename in clean_files:
-            # Generate liqfolder-style path
+
+    mp3_files = [f for f in os.listdir(output_folder) if f.endswith(".mp3")]
+    clean_files = [
+        f for f in mp3_files
+        if "[" not in f and "]" not in f and "(" not in f and ")" not in f
+    ]
+    for f in mp3_files:
+        if f not in clean_files:
+            print(f"Skipping file with brackets/parentheses: {f}")
+
+    # One entry per (artist, title): first occurrence kept, rest are duplicates
+    seen_key = {}  # (artist, song_name) -> filename
+    for filename in sorted(clean_files, key=lambda x: x.split(" - ")[-1].lower()):
+        artist, song_name = _parse_artist_title(filename)
+        key = (artist or "", song_name or "")
+        if key not in seen_key:
+            seen_key[key] = filename
+
+    unique_filenames = list(seen_key.values())
+    unique_filenames.sort(key=lambda x: x.split(" - ")[-1].lower())
+    print(f"Found {len(clean_files)} MP3 files, {len(unique_filenames)} unique (no duplicates in M3U).")
+
+    # Remove duplicate files from folder (keep one per artist+title)
+    for filename in clean_files:
+        if filename not in unique_filenames:
+            path = os.path.join(output_folder, filename)
+            try:
+                os.remove(path)
+                print(f"Removed duplicate file: {filename}")
+            except OSError as e:
+                print(f"Could not remove duplicate {filename}: {e}")
+
+    with open(m3u_path, "w") as m3u_file:
+        for filename in unique_filenames:
             liqfolder_path = f"/liqfolder/glconnect/static/ytauto/{filename}"
             m3u_file.write(liqfolder_path + "\n")
-            print(f"Added {liqfolder_path} to playlist.")
-
-    print(f"Clean playlist created: {m3u_path}")
+    print(f"Clean playlist created (no duplicates): {m3u_path}")
