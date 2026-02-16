@@ -13,11 +13,12 @@ ENV MALLOC_TRIM_THRESHOLD_=131072
 ENV MALLOC_TOP_PAD_=131072
 ENV MALLOC_MMAP_MAX_=65536
 
-# Install system dependencies first (for better caching)
+# Install system dependencies: ffmpeg for audio, node for yt-dlp JS runtime (YouTube)
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     ffmpeg \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better Docker layer caching

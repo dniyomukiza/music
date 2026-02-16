@@ -46,13 +46,20 @@ class AudioDownloader:
         print(f"Downloading to folder: {self.output_folder}")
         command = [
             ytdlp_path,
-            "-x", 
-            "--audio-format", "mp3",  
+            "-x",
+            "--audio-format", "mp3",
             "--audio-quality", "0",
-            "--yes-playlist", 
+            "--yes-playlist",
+            # Prefer Android client to reduce "Sign in to confirm you're not a bot" on servers
+            "--extractor-args", "youtube:player_client=android,web",
             "-o", os.path.join(self.output_folder, "%(title)s.%(ext)s"),
             self.playlist_url,
         ]
+        # Optional: cookies file for YouTube (export from browser; see yt-dlp wiki)
+        cookies_file = os.environ.get("YTDLP_COOKIES_FILE")
+        if cookies_file and os.path.isfile(cookies_file):
+            command.insert(-1, cookies_file)
+            command.insert(-1, "--cookies")
         print(f"Running command: {' '.join(command)}")
         result = run(command, capture_output=True, text=True)
         if result.returncode != 0:
