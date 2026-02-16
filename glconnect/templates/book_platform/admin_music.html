@@ -55,6 +55,28 @@
                 <strong>Workflow progress</strong>
             </div>
             <div class="card-body" id="progressBody">
+                <div id="stepsList" class="mb-3" style="display: none;">
+                    <div class="step-item mb-2" data-step="download">
+                        <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
+                        <span class="step-label">Download audio (yt-dlp)</span>
+                        <span class="step-detail text-muted small ms-3"></span>
+                    </div>
+                    <div class="step-item mb-2" data-step="rename">
+                        <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
+                        <span class="step-label">Rename files</span>
+                        <span class="step-detail text-muted small ms-3"></span>
+                    </div>
+                    <div class="step-item mb-2" data-step="m3u">
+                        <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
+                        <span class="step-label">Write M3U playlist</span>
+                        <span class="step-detail text-muted small ms-3"></span>
+                    </div>
+                    <div class="step-item mb-2" data-step="ingest">
+                        <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
+                        <span class="step-label">Save to database</span>
+                        <span class="step-detail text-muted small ms-3"></span>
+                    </div>
+                </div>
                 <div id="progressContent">
                     <p class="text-muted mb-0" id="progressText">No download in progress.</p>
                 </div>
@@ -73,8 +95,11 @@
     <script>
         var pollInterval = null;
 
+        var stepOrder = ['download', 'rename', 'm3u', 'ingest'];
+
         function renderStatus(s) {
             var status = s.status || 'idle';
+            var step = s.step || null;
             var message = s.message || '';
             var error = s.error || '';
             var url = s.url || '';
@@ -84,32 +109,63 @@
             var progressText = document.getElementById('progressText');
             var progressMeta = document.getElementById('progressMeta');
             var progressError = document.getElementById('progressError');
+            var stepsList = document.getElementById('stepsList');
 
             if (status === 'idle') {
+                stepsList.style.display = 'none';
                 progressText.textContent = 'No download in progress.';
                 progressText.className = 'text-muted mb-0';
+                progressText.style.display = 'block';
                 progressMeta.textContent = '';
                 progressError.style.display = 'none';
                 progressError.textContent = '';
                 return;
             }
 
-            var labels = {
-                downloading: { icon: 'fa-download', label: 'Downloading', class: 'text-primary' },
-                renaming:    { icon: 'fa-i-cursor', label: 'Renaming files', class: 'text-primary' },
-                playlist:    { icon: 'fa-list', label: 'Creating playlist', class: 'text-primary' },
-                ingesting:   { icon: 'fa-database', label: 'Ingesting to database', class: 'text-primary' },
-                completed:   { icon: 'fa-check-circle', label: 'Completed', class: 'text-success' },
-                failed:      { icon: 'fa-exclamation-circle', label: 'Failed', class: 'text-danger' }
-            };
-            var info = labels[status] || { icon: 'fa-circle', label: status, class: 'text-secondary' };
-            progressText.innerHTML = '<i class="fas ' + info.icon + ' me-2"></i><span class="' + info.class + '">' + info.label + '</span>' + (message ? ': ' + message : '');
-            progressText.className = 'mb-0';
+            stepsList.style.display = 'block';
+            progressText.style.display = 'none';
+
+            var currentIndex = step ? stepOrder.indexOf(step) : -1;
+            if (currentIndex < 0 && status === 'downloading') currentIndex = 0;
+            if (currentIndex < 0 && status === 'renaming') currentIndex = 1;
+            if (currentIndex < 0 && status === 'playlist') currentIndex = 2;
+            if (currentIndex < 0 && status === 'ingesting') currentIndex = 3;
+
+            stepOrder.forEach(function(sid, i) {
+                var el = stepsList.querySelector('[data-step="' + sid + '"]');
+                if (!el) return;
+                var icon = el.querySelector('.step-icon');
+                var detail = el.querySelector('.step-detail');
+                icon.className = 'step-icon me-2';
+                detail.textContent = '';
+
+                if (status === 'failed' && step === sid) {
+                    icon.classList.add('text-danger');
+                    icon.innerHTML = '<i class="fas fa-times-circle"></i>';
+                    el.classList.add('text-danger');
+                    detail.textContent = message || 'Failed';
+                } else if (status === 'completed' || i < currentIndex) {
+                    icon.classList.add('text-success');
+                    icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                    el.classList.remove('text-danger', 'text-primary');
+                    if (i === currentIndex && message) detail.textContent = message;
+                } else if (i === currentIndex) {
+                    icon.classList.add('text-primary');
+                    icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    el.classList.remove('text-danger');
+                    detail.textContent = message || '…';
+                } else {
+                    icon.classList.add('text-muted');
+                    icon.innerHTML = '<i class="fas fa-circle fa-xs"></i>';
+                    el.classList.remove('text-danger', 'text-primary');
+                }
+            });
 
             var meta = [];
             if (url) meta.push('URL: ' + (url.length > 60 ? url.slice(0, 60) + '…' : url));
             if (started) meta.push('Started: ' + started.slice(0, 19).replace('T', ' '));
             if (completed) meta.push('Finished: ' + completed.slice(0, 19).replace('T', ' '));
+            if (status === 'completed' && message) meta.push(message);
             progressMeta.textContent = meta.join(' · ') || '';
             progressMeta.style.display = meta.length ? 'block' : 'none';
 

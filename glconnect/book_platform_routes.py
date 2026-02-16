@@ -7115,6 +7115,7 @@ def admin_reject_song(song_id):
 # Shared status for admin UI progress (thread-safe)
 _music_download_status = {
     'status': 'idle',   # idle | downloading | renaming | playlist | ingesting | completed | failed
+    'step': None,       # download | rename | m3u | ingest (current or failed step)
     'message': '',
     'error': None,
     'url': '',
@@ -7123,11 +7124,13 @@ _music_download_status = {
 }
 _music_download_lock = threading.Lock()
 
-def _set_music_download_status(status, message='', error=None, url=None, completed=False):
+def _set_music_download_status(status, message='', error=None, url=None, completed=False, step=None):
     with _music_download_lock:
         _music_download_status['status'] = status
         _music_download_status['message'] = message
         _music_download_status['error'] = error
+        if step is not None:
+            _music_download_status['step'] = step
         if url is not None:
             _music_download_status['url'] = url
         if status == 'downloading':
@@ -7179,11 +7182,12 @@ def admin_music_download():
         }), 400
 
     # Reset and set initial status so admin sees progress immediately
-    _set_music_download_status('downloading', 'Starting download…', url=url)
+    _set_music_download_status('downloading', 'Starting…', url=url, step='download')
 
     app = current_app._get_current_object()
     def run_pipeline():
         with app.app_context():
+            current_step = 'download'
             try:
                 from glconnect import pipeline as pipeline_mod
                 from glconnect.pipeline import (
@@ -7192,34 +7196,51 @@ def admin_music_download():
                     create_or_append_m3u_playlist,
                     PlaylistIngestion,
                 )
-                # Use path relative to glconnect package so Docker host mount is correct
                 glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
                 output_folder = os.path.join(glconnect_dir, 'static', 'ytauto')
                 output_folder = os.path.normpath(output_folder)
                 logger.info("YouTube download output_folder: %s", output_folder)
 
-                _set_music_download_status('downloading', 'Downloading audio with yt-dlp (this may take several minutes)…', url=url)
+                # Step 1: Download
+                current_step = 'download'
+                _set_music_download_status('downloading', 'Downloading audio with yt-dlp (may take several minutes)…', url=url, step=current_step)
                 downloader = AudioDownloader(playlist_url=url, output_folder=output_folder)
                 downloader.download_and_convert()
+                _set_music_download_status('downloading', 'Download finished.', url=url, step=current_step)
 
-                _set_music_download_status('renaming', 'Renaming files and cleaning filenames…', url=url)
+                # Step 2: Rename
+                current_step = 'rename'
+                _set_music_download_status('renaming', 'Renaming files and cleaning filenames…', url=url, step=current_step)
                 renamer = MusicFileRenamer()
                 renamer.clean_music_names(output_folder)
+                _set_music_download_status('renaming', 'Renaming finished.', url=url, step=current_step)
 
-                _set_music_download_status('playlist', 'Creating M3U playlist…', url=url)
+                # Step 3: M3U
+                current_step = 'm3u'
+                _set_music_download_status('playlist', 'Writing to M3U file…', url=url, step=current_step)
                 create_or_append_m3u_playlist(output_folder, 'ytauto.m3u')
                 glconnect_dir = os.path.dirname(os.path.dirname(output_folder))
                 m3u_path = os.path.join(glconnect_dir, 'ytauto.m3u')
+                _set_music_download_status('playlist', 'M3U file written.', url=url, step=current_step)
 
-                _set_music_download_status('ingesting', 'Ingesting songs into database…', url=url)
+                # Step 4: Database
+                current_step = 'ingest'
+                _set_music_download_status('ingesting', 'Saving to database…', url=url, step=current_step)
+                added = 0
                 if os.path.exists(m3u_path):
-                    PlaylistIngestion.ingest_songs_from_m3u(m3u_path)
+                    added, _ = PlaylistIngestion.ingest_songs_from_m3u(m3u_path)
+                _set_music_download_status('ingesting', f'Saved to database. {added} new song(s) added.' if added > 0 else 'Saved to database (no new songs; all duplicates or empty M3U).', url=url, step=current_step)
 
-                _set_music_download_status('completed', 'Done. New songs have been added to the catalog.', url=url, completed=True)
-                logger.info("Admin YouTube download pipeline finished successfully")
+                if added > 0:
+                    _set_music_download_status('completed', f'Done. {added} new song(s) added to the catalog.', url=url, completed=True, step=None)
+                    logger.info("Admin YouTube download pipeline finished: %s new songs added", added)
+                else:
+                    _set_music_download_status('completed', 'Completed but no new songs were added (all duplicates or M3U empty).', url=url, completed=True, step=None)
+                    logger.warning("Admin YouTube download pipeline: 0 new songs added")
             except Exception as e:
-                logger.exception("Admin YouTube download pipeline failed: %s", e)
-                _set_music_download_status('failed', '', error=str(e), url=url, completed=True)
+                logger.exception("Admin YouTube download pipeline failed at step %s: %s", current_step, e)
+                step_label = {'download': 'Download', 'rename': 'Renaming files', 'm3u': 'Writing M3U file', 'ingest': 'Saving to database'}.get(current_step, current_step)
+                _set_music_download_status('failed', f'{step_label} failed.', error=str(e), url=url, completed=True, step=current_step)
     threading.Thread(target=run_pipeline, daemon=True).start()
     return jsonify({
         'success': True,

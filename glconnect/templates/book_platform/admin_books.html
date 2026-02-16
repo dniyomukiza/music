@@ -44,7 +44,7 @@
                     <h1 class="display-4 fw-bold mb-3">
                         <i class="fas fa-cogs me-3"></i>Admin hub
                     </h1>
-                    <p class="lead mb-4">All tasks that need admin approval or verification: books, podcasts, songs, reviewers, word contributions, community dictionary, YouTube download.</p>
+                    <p class="lead mb-4">All tasks that need admin approval or verification: books, podcasts, songs, reviewers, word contributions, community dictionary, YouTube download, radio streams.</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-book me-2"></i>{{ books|length }} Total Books
@@ -267,6 +267,27 @@
                                 <p class="text-muted small mb-3">View and manage the community dictionary (approved words)</p>
                                 <a href="{{ url_for('routes1.community_dictionary') }}" class="btn btn-sm w-100" style="background-color: #fd7e14; color: white;">
                                     <i class="fas fa-list me-1"></i>View dictionary
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Radio streams (Icecast status) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #0d6efd !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle p-3 me-3 bg-primary text-white">
+                                        <i class="fas fa-broadcast-tower fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Radio streams</h5>
+                                        <small class="text-muted">Icecast status</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">View Icecast stream status, mount points, and listeners</p>
+                                <a href="https://glc.cool/admin/" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-external-link-alt me-1"></i>Open Radio streams
                                 </a>
                             </div>
                         </div>

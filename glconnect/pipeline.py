@@ -54,13 +54,14 @@ class AudioDownloader:
             self.playlist_url,
         ]
         print(f"Running command: {' '.join(command)}")
-        result = run(command)
-        if result.returncode == 0:
-            print(f"Download completed successfully!")
-            print(f"Files saved to: {self.output_folder}")
-        else:
-            print(f"An error occurred during the download process.")
-            print(f"Return code: {result.returncode}")
+        result = run(command, capture_output=True, text=True)
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "").strip() or f"Exit code {result.returncode}"
+            raise RuntimeError(f"yt-dlp failed: {err}")
+        mp3s = [f for f in os.listdir(self.output_folder) if f.endswith(".mp3")]
+        if not mp3s:
+            raise RuntimeError("yt-dlp finished but no MP3 files were saved. Check the URL and that the video/playlist is available.")
+        print(f"Download completed successfully! {len(mp3s)} file(s) saved to: {self.output_folder}")
 
     def download_and_convert(self):
         self.download_audio()
@@ -122,7 +123,7 @@ class PlaylistIngestion:
 
     @staticmethod
     def _do_ingest(m3u_path):
-        """Inner ingestion: expects to run inside an active Flask app context (main app when called from route)."""
+        """Inner ingestion: expects to run inside an active Flask app context. Returns (added_count, skipped_count)."""
         with open(m3u_path, 'r') as m3u_file:
             added_count = 0
             skipped_count = 0
@@ -146,16 +147,16 @@ class PlaylistIngestion:
                         added_count += 1
             db.session.commit()
             print(f"Download ingestion complete: {added_count} added, {skipped_count} skipped.")
+            return added_count, skipped_count
+        return 0, 0
 
     @staticmethod
     def ingest_songs_from_m3u(file_path):
-        """Ingest YouTube-downloaded tracks into downloaded_songs table only (not songs)."""
+        """Ingest YouTube-downloaded tracks into downloaded_songs table only (not songs). Returns (added_count, skipped_count)."""
         if has_app_context():
-            # Called from route: use current app's DB so rows go to the same database.
-            PlaylistIngestion._do_ingest(file_path)
-        else:
-            with app.app_context():
-                PlaylistIngestion._do_ingest(file_path)
+            return PlaylistIngestion._do_ingest(file_path)
+        with app.app_context():
+            return PlaylistIngestion._do_ingest(file_path)
 
     @staticmethod
     def save_song_to_db(artist, song_name, local_path):
