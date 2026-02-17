@@ -242,3 +242,88 @@ def create_or_append_m3u_playlist(output_folder, m3u_filename):
             liqfolder_path = f"/liqfolder/glconnect/static/ytauto/{filename}"
             m3u_file.write(liqfolder_path + "\n")
     print(f"Clean playlist created (no duplicates): {m3u_path}")
+
+
+def _sanitize_filename(s):
+    """Replace path/FS-unsafe chars for use in filenames."""
+    if not s:
+        return ""
+    for c in '\\/:*?"<>|':
+        s = s.replace(c, " ")
+    return " ".join(s.split()).strip()[:200]
+
+
+def sync_from_downloaded_songs():
+    """
+    After manual cleanup of downloaded_songs (name, artist), rename files on disk to
+    '{name} by {artist}.mp3', update local_path in DB, and overwrite the M3U with DB paths.
+    Only processes rows where synced_at IS NULL (this run's new songs); then writes full M3U from all rows.
+    Must run inside Flask app context. Returns (renamed_count, m3u_updated).
+    """
+    from datetime import datetime, timezone
+    glconnect_dir = os.path.dirname(os.path.abspath(__file__))
+    output_folder = os.path.join(glconnect_dir, "static", "ytauto")
+    m3u_path = os.path.join(glconnect_dir, "ytauto.m3u")
+    prefix_liq = "/liqfolder/glconnect/static/ytauto/"
+
+    # Only process rows not yet synced (this round = only new songs since last sync)
+    unsynced = DownloadedSong.query.filter(
+        DownloadedSong.local_path.isnot(None),
+        DownloadedSong.local_path != "",
+        DownloadedSong.synced_at.is_(None),
+    ).order_by(DownloadedSong.id).all()
+    renamed_count = 0
+    now = datetime.now(timezone.utc)
+    for row in unsynced:
+        name = (row.name or "").strip()
+        artist = (row.artist or "").strip()
+        if not name and not artist:
+            continue
+        current_path = (row.local_path or "").strip()
+        if not current_path.startswith(prefix_liq):
+            # Support paths that only have the filename part
+            current_filename = os.path.basename(current_path) if "/" in current_path or "\\" in current_path else current_path
+        else:
+            current_filename = current_path[len(prefix_liq):].lstrip("/")
+        current_file = os.path.join(output_folder, current_filename)
+        if not os.path.isfile(current_file):
+            print(f"Skip (file not found): {current_file}")
+            continue
+        part_name = _sanitize_filename(name) or "Unknown"
+        part_artist = _sanitize_filename(artist) or "Unknown"
+        new_filename = f"{part_name} by {part_artist}.mp3"
+        new_file = os.path.join(output_folder, new_filename)
+        new_local_path = f"{prefix_liq}{new_filename}"
+        if os.path.normpath(current_file) == os.path.normpath(new_file):
+            row.local_path = new_local_path
+            row.synced_at = now
+            db.session.add(row)
+            continue
+        if os.path.exists(new_file) and os.path.normpath(new_file) != os.path.normpath(current_file):
+            print(f"Skip (target exists): {new_filename}")
+            row.synced_at = now
+            db.session.add(row)
+            continue
+        try:
+            os.rename(current_file, new_file)
+            row.local_path = new_local_path
+            row.synced_at = now
+            db.session.add(row)
+            renamed_count += 1
+            print(f"Renamed: {current_filename} -> {new_filename}")
+        except OSError as e:
+            print(f"Error renaming {current_filename}: {e}")
+    db.session.commit()
+
+    # Write full M3U from all rows (so playlist stays complete; only this round's files were renamed)
+    all_rows = DownloadedSong.query.filter(
+        DownloadedSong.local_path.isnot(None),
+        DownloadedSong.local_path != "",
+    ).order_by(DownloadedSong.id).all()
+    with open(m3u_path, "w") as m3u_file:
+        for row in all_rows:
+            path = (row.local_path or "").strip()
+            if path:
+                m3u_file.write(path + "\n")
+    print(f"M3U overwritten from DB: {m3u_path}")
+    return renamed_count, True

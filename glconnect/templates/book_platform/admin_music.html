@@ -82,6 +82,12 @@
                 </div>
                 <div class="mt-2 small text-muted" id="progressMeta"></div>
                 <div class="mt-2 text-danger" id="progressError" style="display: none;"></div>
+                <div class="mt-2" id="syncFromDbWrap" style="display: none;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="syncFromDbBtn" title="Rename files to &#39;name by artist&#39; from DB and overwrite M3U">
+                        <i class="fas fa-sync-alt me-1"></i>Sync files &amp; M3U from DB
+                    </button>
+                    <span class="ms-2 small text-muted" id="syncFromDbResult"></span>
+                </div>
             </div>
         </div>
 
@@ -176,6 +182,9 @@
                 progressError.style.display = 'none';
                 progressError.textContent = '';
             }
+
+            var syncWrap = document.getElementById('syncFromDbWrap');
+            if (syncWrap) syncWrap.style.display = (status === 'completed') ? 'block' : 'none';
         }
 
         function fetchStatus() {
@@ -244,6 +253,30 @@
                 }
             })
             .catch(function() { renderStatus({ status: 'idle' }); });
+
+        document.getElementById('syncFromDbBtn').addEventListener('click', function() {
+            var btn = this;
+            var resultEl = document.getElementById('syncFromDbResult');
+            btn.disabled = true;
+            resultEl.textContent = 'Syncing…';
+            resultEl.className = 'ms-2 small text-muted';
+            fetch('/mybook/admin/music/sync-from-db', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        resultEl.textContent = data.message || 'Done.';
+                        resultEl.className = 'ms-2 small text-success';
+                    } else {
+                        resultEl.textContent = data.error || 'Failed';
+                        resultEl.className = 'ms-2 small text-danger';
+                    }
+                })
+                .catch(function() {
+                    resultEl.textContent = 'Request failed';
+                    resultEl.className = 'ms-2 small text-danger';
+                })
+                .finally(function() { btn.disabled = false; });
+        });
     </script>
 </body>
 </html>

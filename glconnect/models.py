@@ -35,6 +35,7 @@ class DownloadedSong(db.Model):
     artist = db.Column(db.String(100), nullable=True)
     local_path = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
+    synced_at = db.Column(db.DateTime, nullable=True)  # when file was renamed / path synced from DB (NULL = not yet synced)
 
 
 class Post(db.Model):

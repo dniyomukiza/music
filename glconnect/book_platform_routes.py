@@ -7249,6 +7249,27 @@ def admin_music_download():
         'status': _get_music_download_status()
     })
 
+
+@book_bp.route('/admin/music/sync-from-db', methods=['POST'])
+@login_required
+def admin_music_sync_from_db():
+    """After manual cleanup of downloaded_songs: rename files to 'name by artist', update DB paths, overwrite M3U."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    try:
+        from glconnect.pipeline import sync_from_downloaded_songs
+        renamed, m3u_updated = sync_from_downloaded_songs()
+        return jsonify({
+            'success': True,
+            'message': f'Synced: {renamed} file(s) renamed, M3U updated from database.',
+            'renamed': renamed,
+            'm3u_updated': m3u_updated,
+        })
+    except Exception as e:
+        logger.exception("Admin music sync-from-db failed: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @book_bp.route('/podcasts/<int:podcast_id>/play')
 @login_required
 def play_podcast(podcast_id):
