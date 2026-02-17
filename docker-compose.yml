@@ -42,7 +42,7 @@ services:
       - RECAPTCHAPRIV=6LfdZjgrAAAAAI2jKpHvpDeXAKK0IuhMMXjul-RK
       - GEMINI_API_KEY=AIzaSyAN9PhRQkawgarggs44LB0TlX3DH5HxeyI
       - MAIL_TRAP=226e20189690a95934a747828428dc79
-      # YouTube download: cookies file (in project root or use /ytdlp_cookies_mount/ytdlp_cookies.txt if you mounted ~/music)
+      # YouTube download: path inside container (project root is /usr/src/appdir via volume .:/usr/src/appdir)
       - YTDLP_COOKIES_FILE=/usr/src/appdir/ytdlp_cookies.txt
 
   nginx:

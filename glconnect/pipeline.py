@@ -44,28 +44,26 @@ class AudioDownloader:
             )
         self.prepare_output_folder()
         print(f"Downloading to folder: {self.output_folder}")
+        # Build options so URL is the only positional arg (avoid yt-dlp confusing cookies path with URL)
         command = [
             ytdlp_path,
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", "0",
             "--yes-playlist",
-            # Prefer Android client to reduce "Sign in to confirm you're not a bot" on servers
             "--extractor-args", "youtube:player_client=android,web",
             "-o", os.path.join(self.output_folder, "%(title)s.%(ext)s"),
-            self.playlist_url,
         ]
-        # Optional: cookies file for YouTube (export from browser; see yt-dlp wiki)
+        # YTDLP_COOKIES_FILE is set in container env (e.g. /usr/src/appdir/ytdlp_cookies.txt); used as-is
         cookies_file = os.environ.get("YTDLP_COOKIES_FILE")
-        if cookies_file:
-            if os.path.isfile(cookies_file):
-                command.insert(-1, cookies_file)
-                command.insert(-1, "--cookies")
-                print(f"Using cookies file: {cookies_file}")
-            else:
-                print(f"YTDLP_COOKIES_FILE is set but file not found: {cookies_file} (download may fail with 'Sign in to confirm you're not a bot')")
+        if cookies_file and os.path.isfile(cookies_file):
+            command.extend(["--cookies", cookies_file])
+            print(f"Using cookies file: {cookies_file}")
+        elif cookies_file:
+            print(f"YTDLP_COOKIES_FILE is set but file not found: {cookies_file} (download may fail with 'Sign in to confirm you're not a bot')")
         else:
             print("No YTDLP_COOKIES_FILE set; if YouTube blocks with 'bot' error, add cookies (see docs/YTDLP_COOKIES.md)")
+        command.append(self.playlist_url)
         print(f"Running command: {' '.join(command)}")
         result = run(command, capture_output=True, text=True)
         if result.returncode != 0:

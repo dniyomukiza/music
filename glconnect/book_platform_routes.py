@@ -7196,6 +7196,7 @@ def admin_music_download():
                     create_or_append_m3u_playlist,
                     PlaylistIngestion,
                 )
+                # Paths are resolved at runtime in the running process (in Docker: container paths under /usr/src/appdir)
                 glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
                 output_folder = os.path.join(glconnect_dir, 'static', 'ytauto')
                 output_folder = os.path.normpath(output_folder)
