@@ -24,5 +24,6 @@ docker-image-backups/
 tts.json
 glconfig.json
 ytdlp_cookies.txt
+ytdlp_cookies.txt.bak
 
 # Media files - both audio and pictures are now tracked for remote server
