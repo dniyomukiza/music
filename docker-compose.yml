@@ -8,6 +8,8 @@ services:
       - icecast2
     volumes:
       - .:/usr/src/appdir
+      # If cookies file is in ~/music on host instead of project root, uncomment and set your home path:
+      # - /home/YOUR_USER/music:/ytdlp_cookies_mount:ro
     networks:
       - app_network
     command: >
@@ -40,7 +42,7 @@ services:
       - RECAPTCHAPRIV=6LfdZjgrAAAAAI2jKpHvpDeXAKK0IuhMMXjul-RK
       - GEMINI_API_KEY=AIzaSyAN9PhRQkawgarggs44LB0TlX3DH5HxeyI
       - MAIL_TRAP=226e20189690a95934a747828428dc79
-      # YouTube download: set to path of cookies file inside container to fix "Sign in to confirm you're not a bot"
+      # YouTube download: cookies file (in project root or use /ytdlp_cookies_mount/ytdlp_cookies.txt if you mounted ~/music)
       - YTDLP_COOKIES_FILE=/usr/src/appdir/ytdlp_cookies.txt
 
   nginx:

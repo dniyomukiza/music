@@ -57,9 +57,15 @@ class AudioDownloader:
         ]
         # Optional: cookies file for YouTube (export from browser; see yt-dlp wiki)
         cookies_file = os.environ.get("YTDLP_COOKIES_FILE")
-        if cookies_file and os.path.isfile(cookies_file):
-            command.insert(-1, cookies_file)
-            command.insert(-1, "--cookies")
+        if cookies_file:
+            if os.path.isfile(cookies_file):
+                command.insert(-1, cookies_file)
+                command.insert(-1, "--cookies")
+                print(f"Using cookies file: {cookies_file}")
+            else:
+                print(f"YTDLP_COOKIES_FILE is set but file not found: {cookies_file} (download may fail with 'Sign in to confirm you're not a bot')")
+        else:
+            print("No YTDLP_COOKIES_FILE set; if YouTube blocks with 'bot' error, add cookies (see docs/YTDLP_COOKIES.md)")
         print(f"Running command: {' '.join(command)}")
         result = run(command, capture_output=True, text=True)
         if result.returncode != 0:
