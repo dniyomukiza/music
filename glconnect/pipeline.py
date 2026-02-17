@@ -52,6 +52,9 @@ class AudioDownloader:
             "--audio-quality", "0",
             "--yes-playlist",
             "--extractor-args", "youtube:player_client=android,web",
+            # JS runtime for YouTube signature/n challenge solving (EJS); Node is in app image
+            "--js-runtimes", "node",
+            "--remote-components", "ejs:github",
             "-o", os.path.join(self.output_folder, "%(title)s.%(ext)s"),
         ]
         # YTDLP_COOKIES_FILE is set in container env (e.g. /usr/src/appdir/ytdlp_cookies.txt); used as-is
