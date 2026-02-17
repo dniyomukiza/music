@@ -1,0 +1,36 @@
+# Deploy to server on push to enhancements (current production branch)
+# Lean pipeline: pull, build only app, compose up. Add Secrets → SSH_PRIVATE_KEY in GitHub.
+
+name: Deploy to server
+
+on:
+  push:
+    branches: [enhancements]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 167.172.224.239
+          username: nididier
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/nididier/music
+
+            echo "--- Pulling latest code ---"
+            git fetch origin
+            git reset --hard origin/enhancements
+
+            echo "--- Building app image (only myapp; nginx/fastapi unchanged) ---"
+            docker compose build app
+
+            echo "--- Starting containers ---"
+            docker compose up -d
+
+            echo "Deploy finished."
+      - name: Done
+        run: echo "Deploy finished."

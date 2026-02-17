@@ -1,0 +1,140 @@
+# CI/CD Pipeline – Step-by-Step
+
+This doc describes how a deploy pipeline would work for this app: **push from local → remote pulls, rebuilds Docker, and restarts** without you SSHing in to deploy.
+
+---
+
+## 1. Overview
+
+| Step | Where | What happens |
+|------|--------|--------------|
+| 1 | Your Mac | You code, commit, and `git push origin enhancements` |
+| 2 | GitHub | Receives the push and runs the workflow (e.g. GitHub Actions) |
+| 3 | Workflow | Optionally runs tests/lint, then runs the deploy job |
+| 4 | Deploy job | SSHs into your server and runs: `git pull` (from `enhancements`) → `docker compose build` → `docker compose up -d` |
+| 5 | Server | App runs from the new code; no manual SSH needed for deploy |
+
+**Paths:**
+- **Local (development):** project directory is **music-1** (e.g. `.../music-1` on your Mac).
+- **Server (Linux):** app lives at **~/music** (e.g. `/home/nididier/music`). The pipeline runs `git pull` and `docker compose` there.
+
+**Note:** The pipeline is set up for the **enhancements** branch (your current production branch). If you later use `main` again, change the workflow trigger and the `git reset` branch in `.github/workflows/deploy.yml`.
+
+---
+
+## 2. Step-by-Step Flow
+
+### Step 1 – You push (local)
+
+- You work in **music-1** on your Mac (e.g. `/Applications/untitled folder/music-1`).
+- You commit and push:
+  ```bash
+  git add .
+  git commit -m "Your message"
+  git push origin enhancements
+  ```
+
+### Step 2 – GitHub runs the workflow
+
+- Trigger: push to **enhancements** (your current production branch).
+- The workflow file is `.github/workflows/deploy.yml`.
+- GitHub Actions starts a runner and runs the jobs defined there.
+
+### Step 3 – Workflow: optional CI (tests/lint)
+
+- If you add tests or lint:
+  - Job checks out the repo, installs deps, runs tests/lint.
+  - If this job fails, the pipeline can stop and **not** deploy (recommended).
+
+### Step 4 – Workflow: deploy job (CD)
+
+- The deploy job:
+  1. Checks out the repo (so it has the latest code; optional if you only need SSH).
+  2. Sets up SSH (using a secret: private key, and known_hosts for the server).
+  3. SSHs into the server (e.g. `nididier@167.172.224.239`).
+  4. Runs on the server:
+     ```bash
+     cd /home/nididier/music
+     git fetch origin && git reset --hard origin/enhancements
+     docker compose build app
+     docker compose up -d
+     ```
+- Replace `app` with the service name(s) you want to rebuild (e.g. `app nginx` if nginx is built from this repo).
+
+### Step 5 – Server state after deploy
+
+- Repo on server is up to date with **enhancements**.
+- `myapp:latest` (and any other built images) are rebuilt from the new code.
+- Containers are recreated with `docker compose up -d`.
+- You do **not** need to SSH to run these commands; the pipeline does it.
+
+---
+
+## 3. What you need to set up
+
+1. **GitHub repo** – Code pushed to `main` (or your production branch).
+2. **Workflow file** – `.github/workflows/deploy.yml` (example is in this repo).
+3. **Secrets in GitHub** (Settings → Secrets and variables → Actions):
+   - `SSH_PRIVATE_KEY` – Private key that can SSH into the server as `nididier`. (Edit the workflow file if your host/username differ.)
+4. **Server** – Same as now:
+   - Git clone at **~/music** (e.g. `/home/nididier/music`) — this is where you pull and run Docker.
+   - Docker and Docker Compose installed.
+   - The SSH key’s public half in `~/.ssh/authorized_keys` for the deploy user.
+
+---
+
+## 4. Order of commands on the server (what the pipeline runs)
+
+The pipeline uses a **lean** sequence so only what changed gets rebuilt:
+
+```text
+1. cd ~/music
+2. git fetch origin && git reset --hard origin/enhancements
+3. docker compose build app
+4. docker compose up -d
+```
+
+- **Step 2:** Update code from the **enhancements** branch.
+- **Step 3:** Rebuild only the **app** image (Flask). Nginx and FastAPI images are left as-is, so deploys are faster.
+- **Step 4:** Compose recreates only the app container (because its image changed); other services keep running.
+
+**When to do more:**
+- **You changed nginx or FastAPI code:** SSH in and run `docker compose build nginx` (or `fastapi`) then `docker compose up -d`, or add a second workflow that builds all images (e.g. on a different branch or manual trigger).
+- **Disk full / clean slate:** Run manually on the server: `docker compose down`, `docker system prune -a -f`, then pull and build the images you need and `docker compose up -d`.
+- **Udev / udev issues:** Run the udev cleanup commands manually when needed; they require sudo and are not part of the automated pipeline.
+
+---
+
+## 5. When you still use SSH
+
+- **Deploy:** No SSH needed; the pipeline does it.
+- **Logs:** `ssh ... 'cd ~/music && docker compose logs -f app'`
+- **Debug / one-off:** Restart a service, edit config, inspect DB, etc.
+
+---
+
+## 6. File that defines the pipeline
+
+- The pipeline behaviour is defined in:
+  - **`.github/workflows/deploy.yml`**
+- That file contains the exact steps above: trigger on push → (optional test job) → deploy job that SSHs and runs the commands in section 4.
+
+---
+
+## 7. Summary
+
+| Question | Answer |
+|----------|--------|
+| What runs the pipeline? | GitHub Actions (when you push to **enhancements**). |
+| What does the pipeline do on the server? | `cd` to app dir → `git pull` (or fetch/reset) → `docker compose build app` → `docker compose up -d`. |
+| Do I need to SSH to deploy? | No. Only for logs and manual fixes. |
+| Where is the workflow defined? | `.github/workflows/deploy.yml`. |
+
+---
+
+## 8. Customizing
+
+- **Branch:** The workflow uses **enhancements**. To use `main` or another branch, change `branches: [enhancements]` and the `git reset --hard origin/...` line in the workflow.
+- **Server path:** The workflow uses `cd /home/nididier/music` (i.e. **~/music** on the server). If your app lives elsewhere, edit the `script` in the deploy step.
+- **Services to build:** The example builds only `app`. To rebuild nginx too: `docker compose build app nginx`.
+- **Secrets:** Add `SSH_PRIVATE_KEY` in GitHub (Settings → Secrets and variables → Actions). Edit the workflow file to change host, username, or app path.
