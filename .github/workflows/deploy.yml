@@ -1,5 +1,5 @@
 # Deploy to server on push to enhancements (current production branch)
-# Lean pipeline: pull, build only app, compose up. Add Secrets → SSH_PRIVATE_KEY in GitHub.
+# Full build: pull, build all images (app, nginx, fastapi), compose up. Add Secrets → SSH_PRIVATE_KEY in GitHub.
 
 name: Deploy to server
 
@@ -17,6 +17,7 @@ jobs:
           host: 167.172.224.239
           username: nididier
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
           script: |
             set -e
             cd /home/nididier/music
@@ -25,8 +26,8 @@ jobs:
             git fetch origin
             git reset --hard origin/enhancements
 
-            echo "--- Building app image (only myapp; nginx/fastapi unchanged) ---"
-            docker compose build app
+            echo "--- Building all images (app, nginx, fastapi) ---"
+            docker compose build
 
             echo "--- Starting containers ---"
             docker compose up -d

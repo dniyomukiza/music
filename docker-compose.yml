@@ -10,8 +10,6 @@ services:
       - .:/usr/src/appdir
       # If cookies file is in ~/music on host instead of project root, uncomment and set your home path:
       # - /home/YOUR_USER/music:/ytdlp_cookies_mount:ro
-    networks:
-      - app_network
     command: >
      sh -c "python run.py"
     mem_limit: 4g  # Increased for news generation and TTS processing
@@ -27,6 +25,9 @@ services:
     ports:
       - "5000:5000"
       - "8001:8001"
+    networks:
+      app_network:
+        aliases: [myapp]
     environment:
       - PYTHONUNBUFFERED=1
       - FLASK_APP=run.py

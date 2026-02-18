@@ -105,6 +105,41 @@ The pipeline uses a **lean** sequence so only what changed gets rebuilt:
 
 ---
 
+## 4b. Manual full deploy on server (your sequence)
+
+If you run a full clean deploy by hand:
+
+```text
+1. cd /home/nididier/music
+2. docker compose down
+3. docker system prune -a -f
+4. sudo find /run/udev/data -type f -delete    # errors ignored
+5. sudo systemctl start systemd-udevd           # errors ignored
+6. git fetch origin && git reset --hard origin/enhancements
+7. docker build -t myapp:latest .
+8. docker build -t fastapi:latest -f Dockerfile.uvi .
+9. docker build -t custom-nginx -f Dockerfile.nginx .   # optional; compose will build nginx if needed
+10. docker compose up -d
+11. (optional) Wait for app to be ready — see below (avoids 502).
+```
+
+**Why you can get 502 after step 10:**  
+`depends_on: app` only waits for the **app container** to start. Flask inside the app container takes longer to open port 5000 (DB init, TTS, etc.; the app has `start_period: 60s`). Nginx can receive requests and proxy to `myapp:5000` before the app is listening → connection refused → **502 Bad Gateway**.
+
+**Fix: wait for the app before trusting the site**
+
+After `docker compose up -d`, run (on the server):
+
+```bash
+until curl -sf http://localhost:5000/health; do echo "waiting for app..."; sleep 5; done; echo "App is up."
+```
+
+Or wait ~60–90 seconds before hitting the site. Once the app is up, 502 from “not ready yet” should stop.
+
+**Also ensure:** The repo has the latest `docker-compose.yml` (step 6) so the **app** service has `networks: app_network: aliases: [myapp]`. Without that, nginx cannot resolve `myapp` and will 502.
+
+---
+
 ## 5. When you still use SSH
 
 - **Deploy:** No SSH needed; the pipeline does it.
