@@ -478,15 +478,16 @@ def sync_from_downloaded_songs():
                 m3u_file.write(path + "\n")
     print(f"M3U overwritten from DB: {os.path.abspath(m3u_path)}")
 
-    # Keep only files with " by " in the name (Name.mp3 by Artist); remove anything without " by "
+    # Remove only files that (1) lack " by " and (2) are not referenced in DB (don't touch existing catalog)
+    db_basenames = {os.path.basename((r.local_path or "").strip()) for r in all_rows if (r.local_path or "").strip()}
     for fn in os.listdir(output_folder):
         if not fn.endswith(".mp3"):
             continue
-        if " by " not in fn:
+        if " by " not in fn and fn not in db_basenames:
             path = os.path.join(output_folder, fn)
             try:
                 os.remove(path)
-                print(f"Removed (no ' by '): {fn}")
+                print(f"Removed (no ' by ', not in DB): {fn}")
             except OSError as e:
                 print(f"Could not remove {fn}: {e}")
 
