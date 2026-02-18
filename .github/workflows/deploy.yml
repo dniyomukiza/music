@@ -29,8 +29,26 @@ jobs:
             echo "--- Building all images (app, nginx, fastapi) ---"
             docker compose build
 
+            echo "--- Verifying all images built ---"
+            docker compose images
+            docker image inspect myapp:latest --format 'myapp:latest OK' || (echo "ERROR: myapp:latest not found"; exit 1)
+            echo "All images built successfully."
+
             echo "--- Starting containers ---"
             docker compose up -d
+
+            echo "--- Waiting for app to be ready (avoids 502) ---"
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              if curl -sf http://localhost:5000/health >/dev/null; then echo "App is up."; break; fi
+              echo "waiting... ($i/12)"
+              sleep 10
+            done
+
+            echo "--- Checking nginx can reach app (full path) ---"
+            for i in 1 2 3 4 5; do
+              if curl -sf http://localhost/health >/dev/null 2>&1 || curl -skf https://localhost/health >/dev/null 2>&1; then echo "Nginx -> app OK."; break; fi
+              echo "nginx->app wait... ($i/5)"; sleep 5
+            done
 
             echo "Deploy finished."
       - name: Done
