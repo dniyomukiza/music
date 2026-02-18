@@ -2,8 +2,8 @@ log.stdout := true
 
 # === Playlists and fallback setup ===
 default = single("/liqfolder/jinglemix.ogg")      # Fallback track
-day = playlist("/liqfolder/ytauto.m3u")   #mixes          # Day playlist (6h–22h)
-night = playlist("/liqfolder/glconnect/mixes.m3u")   # Night playlist (22h–6h)
+day = playlist("/liqfolder/ytauto.m3u")   # Day: downloads (ytauto, at project root)
+night = playlist("/liqfolder/mixes.m3u")   # Night playlist (22h–6h, project root)
 jingles = playlist("/liqfolder/jingles.m3u")      # Jingles playlist
 clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
 gosp3 = playlist("/liqfolder/gosp3.m3u")
@@ -13,8 +13,8 @@ radio = switch([
   ({ 0w }, gosp3),
   ({ 6w }, satmix),
   ({ 7w }, satmix),
-  ({ 6h-22h }, day),    # Day: mixes.m3u
-  ({ 22h-6h }, night),  # Night: ytauto.m3u
+  ({ 6h-22h }, day),    # Day: ytauto.m3u (downloads)
+  ({ 22h-6h }, night),  # Night: mixes.m3u
   ({ true }, night)  
 ])
 radio = fallback([radio, default])  # Fallback to default if playlists fail

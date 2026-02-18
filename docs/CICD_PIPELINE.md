@@ -80,28 +80,44 @@ This doc describes how a deploy pipeline would work for this app: **push from lo
    - Git clone at **~/music** (e.g. `/home/nididier/music`) — this is where you pull and run Docker.
    - Docker and Docker Compose installed.
    - The SSH key’s public half in `~/.ssh/authorized_keys` for the deploy user.
+   - **Passwordless sudo for udev** (so the pipeline can run udev cleanup): on the server, run once: `sudo bash scripts/setup-passwordless-sudo-udev.sh` (from inside `~/music` after pull). This creates `/etc/sudoers.d/nididier-deploy-udev` so the deploy user can run the two udev commands without a password.
 
 ---
 
 ## 4. Order of commands on the server (what the pipeline runs)
 
-The pipeline uses a **lean** sequence so only what changed gets rebuilt:
+The pipeline matches the manual full-deploy order (so app runs the same as when you deploy by hand):
 
 ```text
 1. cd ~/music
 2. git fetch origin && git reset --hard origin/enhancements
-3. docker compose build app
-4. docker compose up -d
+3. docker compose down
+4. udev cleanup (sudo find /run/udev/data ..., systemctl start systemd-udevd; errors ignored)
+5. docker system prune -a -f
+6. docker compose build
+7. docker compose up -d
+8. (wait for app and nginx→app)
 ```
 
 - **Step 2:** Update code from the **enhancements** branch.
-- **Step 3:** Rebuild only the **app** image (Flask). Nginx and FastAPI images are left as-is, so deploys are faster.
-- **Step 4:** Compose recreates only the app container (because its image changed); other services keep running.
+- **Steps 3–5:** Clean slate (down, udev, prune), like manual deploy.
+- **Step 6:** Rebuild all images (app, nginx, fastapi).
+- **Step 7:** Start all containers.
+- **Udev (step 4):** The pipeline runs the udev commands without a password. **One-time setup on the server:** run `sudo bash scripts/setup-passwordless-sudo-udev.sh` (from the repo) to allow the deploy user to run those two sudo commands without a password. See `scripts/setup-passwordless-sudo-udev.sh`.
 
 **When to do more:**
 - **You changed nginx or FastAPI code:** SSH in and run `docker compose build nginx` (or `fastapi`) then `docker compose up -d`, or add a second workflow that builds all images (e.g. on a different branch or manual trigger).
 - **Disk full / clean slate:** Run manually on the server: `docker compose down`, `docker system prune -a -f`, then pull and build the images you need and `docker compose up -d`.
-- **Udev / udev issues:** Run the udev cleanup commands manually when needed; they require sudo and are not part of the automated pipeline.
+- **Udev:** The pipeline runs udev cleanup automatically. If you see sudo errors in the deploy log, run the one-time setup on the server: `sudo bash scripts/setup-passwordless-sudo-udev.sh`.
+
+---
+
+## 4a. Avoiding conflicts between local and server
+
+- **Single source of truth:** The server is always reset to `origin/enhancements` on each deploy (`git reset --hard origin/enhancements`). So the code that runs on the server is exactly what’s in the repo for that branch. Any edits made directly on the server are overwritten by the next deploy.
+- **Work only from local (and push):** Do all code changes locally, commit, and push. Don’t rely on uncommitted or server-only changes; they will be lost on the next deploy.
+- **Pull before you push:** On your Mac, run `git pull origin enhancements` (or pull and merge) before pushing, so you don’t push an outdated branch and overwrite others’ work.
+- **What the pipeline checks:** After reset, the workflow runs `git status --short` and prints the deployed commit (`git log -1 --oneline`). In the Actions log you can confirm the tree is clean and which commit was deployed, so build and server stay in sync.
 
 ---
 

@@ -240,7 +240,8 @@ def _parse_artist_title(filename):
 def create_or_append_m3u_playlist(output_folder, m3u_filename):
     print(f"Preparing clean .m3u playlist in {output_folder}...")
     glconnect_dir = os.path.dirname(os.path.dirname(output_folder))
-    m3u_path = os.path.join(glconnect_dir, m3u_filename)
+    project_root = os.path.dirname(glconnect_dir)
+    m3u_path = os.path.join(project_root, m3u_filename)
     print(f"M3U file will be created at: {m3u_path}")
 
     if not os.path.exists(output_folder):
@@ -385,8 +386,9 @@ def sync_from_downloaded_songs():
     """
     from datetime import datetime, timezone
     glconnect_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(glconnect_dir)
     output_folder = os.path.join(glconnect_dir, "static", "ytauto")
-    m3u_path = os.path.join(glconnect_dir, "ytauto.m3u")
+    m3u_path = os.path.join(project_root, "ytauto.m3u")
     prefix_liq = "/liqfolder/glconnect/static/ytauto/"
 
     # Only process rows not yet synced (this round = only new songs since last sync)
@@ -474,5 +476,18 @@ def sync_from_downloaded_songs():
             path = (row.local_path or "").strip()
             if path:
                 m3u_file.write(path + "\n")
-    print(f"M3U overwritten from DB: {m3u_path}")
+    print(f"M3U overwritten from DB: {os.path.abspath(m3u_path)}")
+
+    # Keep only files with " by " in the name (Name.mp3 by Artist); remove anything without " by "
+    for fn in os.listdir(output_folder):
+        if not fn.endswith(".mp3"):
+            continue
+        if " by " not in fn:
+            path = os.path.join(output_folder, fn)
+            try:
+                os.remove(path)
+                print(f"Removed (no ' by '): {fn}")
+            except OSError as e:
+                print(f"Could not remove {fn}: {e}")
+
     return renamed_count, True
