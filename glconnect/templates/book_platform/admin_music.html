@@ -66,11 +66,6 @@
                         <span class="step-label">Rename files</span>
                         <span class="step-detail text-muted small ms-3"></span>
                     </div>
-                    <div class="step-item mb-2" data-step="m3u">
-                        <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
-                        <span class="step-label">Write M3U playlist</span>
-                        <span class="step-detail text-muted small ms-3"></span>
-                    </div>
                     <div class="step-item mb-2" data-step="ingest">
                         <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
                         <span class="step-label">Save to database</span>
@@ -83,8 +78,8 @@
                 <div class="mt-2 small text-muted" id="progressMeta"></div>
                 <div class="mt-2 text-danger" id="progressError" style="display: none;"></div>
                 <div class="mt-2" id="syncFromDbWrap" style="display: none;">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="syncFromDbBtn" title="Rename files to &#39;name by artist&#39; from DB and overwrite M3U">
-                        <i class="fas fa-sync-alt me-1"></i>Sync files &amp; M3U from DB
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="syncFromDbBtn" title="After cleaning names in DB: rename files to &#39;name by artist&#39;, then write M3U from DB paths">
+                        <i class="fas fa-broom me-1"></i>Clean
                     </button>
                     <span class="ms-2 small text-muted" id="syncFromDbResult"></span>
                 </div>
@@ -101,7 +96,7 @@
     <script>
         var pollInterval = null;
 
-        var stepOrder = ['download', 'rename', 'm3u', 'ingest'];
+        var stepOrder = ['download', 'rename', 'ingest'];
 
         function renderStatus(s) {
             var status = s.status || 'idle';
@@ -134,8 +129,7 @@
             var currentIndex = step ? stepOrder.indexOf(step) : -1;
             if (currentIndex < 0 && status === 'downloading') currentIndex = 0;
             if (currentIndex < 0 && status === 'renaming') currentIndex = 1;
-            if (currentIndex < 0 && status === 'playlist') currentIndex = 2;
-            if (currentIndex < 0 && status === 'ingesting') currentIndex = 3;
+            if (currentIndex < 0 && status === 'ingesting') currentIndex = 2;
 
             stepOrder.forEach(function(sid, i) {
                 var el = stepsList.querySelector('[data-step="' + sid + '"]');

@@ -7193,7 +7193,6 @@ def admin_music_download():
                 from glconnect.pipeline import (
                     AudioDownloader,
                     MusicFileRenamer,
-                    create_or_append_m3u_playlist,
                     PlaylistIngestion,
                 )
                 # Paths are resolved at runtime in the running process (in Docker: container paths under /usr/src/appdir)
@@ -7216,21 +7215,11 @@ def admin_music_download():
                 renamer.clean_music_names(output_folder)
                 _set_music_download_status('renaming', 'Renaming finished.', url=url, step=current_step)
 
-                # Step 3: M3U
-                current_step = 'm3u'
-                _set_music_download_status('playlist', 'Writing to M3U file…', url=url, step=current_step)
-                create_or_append_m3u_playlist(output_folder, 'ytauto.m3u')
-                glconnect_dir = os.path.dirname(os.path.dirname(output_folder))
-                m3u_path = os.path.join(glconnect_dir, 'ytauto.m3u')
-                _set_music_download_status('playlist', 'M3U file written.', url=url, step=current_step)
-
-                # Step 4: Database
+                # Step 3: Save to database only (no M3U yet; M3U is written when you click Clean after editing DB)
                 current_step = 'ingest'
                 _set_music_download_status('ingesting', 'Saving to database…', url=url, step=current_step)
-                added = 0
-                if os.path.exists(m3u_path):
-                    added, _ = PlaylistIngestion.ingest_songs_from_m3u(m3u_path)
-                _set_music_download_status('ingesting', f'Saved to database. {added} new song(s) added.' if added > 0 else 'Saved to database (no new songs; all duplicates or empty M3U).', url=url, step=current_step)
+                added, _ = PlaylistIngestion.ingest_songs_from_folder(output_folder)
+                _set_music_download_status('ingesting', f'Saved to database. {added} new song(s) added.' if added > 0 else 'Saved to database (no new songs; all duplicates or empty folder).', url=url, step=current_step)
 
                 if added > 0:
                     _set_music_download_status('completed', f'Done. {added} new song(s) added to the catalog.', url=url, completed=True, step=None)
@@ -7240,7 +7229,7 @@ def admin_music_download():
                     logger.warning("Admin YouTube download pipeline: 0 new songs added")
             except Exception as e:
                 logger.exception("Admin YouTube download pipeline failed at step %s: %s", current_step, e)
-                step_label = {'download': 'Download', 'rename': 'Renaming files', 'm3u': 'Writing M3U file', 'ingest': 'Saving to database'}.get(current_step, current_step)
+                step_label = {'download': 'Download', 'rename': 'Renaming files', 'ingest': 'Saving to database'}.get(current_step, current_step)
                 _set_music_download_status('failed', f'{step_label} failed.', error=str(e), url=url, completed=True, step=current_step)
     threading.Thread(target=run_pipeline, daemon=True).start()
     return jsonify({

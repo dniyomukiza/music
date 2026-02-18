@@ -173,6 +173,47 @@ class PlaylistIngestion:
             return PlaylistIngestion._do_ingest(file_path)
 
     @staticmethod
+    def ingest_songs_from_folder(output_folder):
+        """
+        Ingest by reading the folder directly: each file gets a row with local_path = exact filename.
+        So when you later click Clean, we know exactly which file to rename (no matching by name/artist).
+        Does NOT write the M3U file; M3U is written only when you click Clean.
+        Returns (added_count, skipped_count).
+        """
+        if not has_app_context():
+            with app.app_context():
+                return PlaylistIngestion._do_ingest_from_folder(output_folder)
+        return PlaylistIngestion._do_ingest_from_folder(output_folder)
+
+    @staticmethod
+    def _do_ingest_from_folder(output_folder):
+        """Inner: scan folder, insert rows with exact local_path. Must run in app context."""
+        prefix_liq = "/liqfolder/glconnect/static/ytauto/"
+        if not os.path.isdir(output_folder):
+            print(f"Output folder does not exist: {output_folder}")
+            return 0, 0
+        mp3_files = [f for f in os.listdir(output_folder) if f.endswith(".mp3")]
+        added_count = 0
+        skipped_count = 0
+        for filename in sorted(mp3_files, key=lambda x: x.lower()):
+            artist, song_name = _parse_artist_title(filename)
+            key_artist = (artist or "").strip() or None
+            key_name = (song_name or "").strip() or "Unknown"
+            existing = DownloadedSong.query.filter_by(artist=key_artist, name=key_name).first()
+            if existing:
+                print(f"Skipped duplicate: {artist} - {song_name}")
+                skipped_count += 1
+                continue
+            local_path = prefix_liq + filename
+            row = DownloadedSong(name=key_name, artist=key_artist, local_path=local_path)
+            db.session.add(row)
+            print(f"Added: {artist} - {song_name} -> {filename}")
+            added_count += 1
+        db.session.commit()
+        print(f"Folder ingestion complete: {added_count} added, {skipped_count} skipped. M3U not written (run Clean after editing DB).")
+        return added_count, skipped_count
+
+    @staticmethod
     def save_song_to_db(artist, song_name, local_path):
         """Save one YouTube-downloaded track to downloaded_songs table."""
         with app.app_context():
@@ -253,11 +294,93 @@ def _sanitize_filename(s):
     return " ".join(s.split()).strip()[:200]
 
 
+def _normalize_for_match(s):
+    """Normalize string for fuzzy matching (lowercase, collapse spaces, drop ft/feat)."""
+    if not s:
+        return ""
+    s = s.lower().strip()
+    for x in ("ft.", "ft ", "feat.", "feat "):
+        s = s.replace(x, " ")
+    return " ".join(s.split())
+
+
+def _parse_filename_as_artist_title(filename):
+    """Return (artist, title) from 'Artist - Title.mp3' or 'Title by Artist.mp3', else (None, None)."""
+    base = filename.replace(".mp3", "").strip()
+    if " by " in base:
+        parts = base.split(" by ", 1)
+        return (parts[1].strip(), parts[0].strip())  # (artist, title)
+    if " - " in base:
+        parts = base.split(" - ", 1)
+        return (parts[0].strip(), parts[1].strip())  # (artist, title)
+    return (None, None)
+
+
+def _find_matching_file(output_folder, artist, name, exclude_filenames):
+    """
+    Find an .mp3 in output_folder whose parsed (artist, title) matches the given artist/name.
+    Title: exact match (normalized) OR cleaned name is a prefix of file title (e.g. DB "Wake Up"
+    matches file "Wake Upsms" so we find it after you edited name and local_path).
+    Artist: exact or one contains the other. Exclude filenames already claimed. Returns filename or None.
+    """
+    if not os.path.isdir(output_folder):
+        return None
+    anorm = _normalize_for_match(artist)
+    nnorm = _normalize_for_match(name)
+    if not nnorm:
+        return None
+    for fn in os.listdir(output_folder):
+        if not fn.endswith(".mp3") or fn in exclude_filenames:
+            continue
+        a, n = _parse_filename_as_artist_title(fn)
+        if n is None:
+            continue
+        nfile = _normalize_for_match(n)
+        # Title: exact match, or cleaned name is prefix of file title (e.g. "Wake Up" -> "Wake Upsms")
+        if nfile != nnorm and not (nnorm and nfile.startswith(nnorm)):
+            continue
+        # Artist: exact or one contains the other
+        if not anorm:
+            return fn
+        if a is None:
+            continue
+        anorm_file = _normalize_for_match(a)
+        if anorm_file == anorm or anorm in anorm_file or anorm_file in anorm:
+            return fn
+    return None
+
+
+def _get_new_round_files_by_mtime(output_folder, n, exclude_basenames):
+    """
+    Return n files that are the "new round" (most recently modified), excluding those in exclude_basenames.
+    Order: by mtime ascending so index 0 = oldest in batch = first downloaded.
+    """
+    if not os.path.isdir(output_folder) or n <= 0:
+        return []
+    candidates = []
+    for fn in os.listdir(output_folder):
+        if not fn.endswith(".mp3") or fn in exclude_basenames:
+            continue
+        path = os.path.join(output_folder, fn)
+        try:
+            mtime = os.path.getmtime(path)
+            candidates.append((fn, mtime))
+        except OSError:
+            continue
+    if len(candidates) < n:
+        return []
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    batch = candidates[:n]
+    batch.sort(key=lambda x: x[1])
+    return [fn for fn, _ in batch]
+
+
 def sync_from_downloaded_songs():
     """
     After manual cleanup of downloaded_songs (name, artist), rename files on disk to
     '{name} by {artist}.mp3', update local_path in DB, and overwrite the M3U with DB paths.
-    Only processes rows where synced_at IS NULL (this run's new songs); then writes full M3U from all rows.
+    Only processes rows where synced_at IS NULL (this round's new songs). Matching: (1) file at local_path,
+    (2) by name/artist hint, (3) by position in round (k-th row = k-th "new" file by mtime, first = first downloaded).
     Must run inside Flask app context. Returns (renamed_count, m3u_updated).
     """
     from datetime import datetime, timezone
@@ -274,7 +397,14 @@ def sync_from_downloaded_songs():
     ).order_by(DownloadedSong.id).all()
     renamed_count = 0
     now = datetime.now(timezone.utc)
-    for row in unsynced:
+    used_filenames = set()
+    synced_paths = set()
+    for r in DownloadedSong.query.filter(DownloadedSong.synced_at.isnot(None)).filter(DownloadedSong.local_path.isnot(None)):
+        p = (r.local_path or "").strip()
+        if p:
+            synced_paths.add(os.path.basename(p))
+    round_files_by_position = _get_new_round_files_by_mtime(output_folder, len(unsynced), synced_paths) if unsynced else []
+    for idx, row in enumerate(unsynced):
         name = (row.name or "").strip()
         artist = (row.artist or "").strip()
         if not name and not artist:
@@ -287,11 +417,30 @@ def sync_from_downloaded_songs():
             current_filename = current_path[len(prefix_liq):].lstrip("/")
         current_file = os.path.join(output_folder, current_filename)
         if not os.path.isfile(current_file):
-            print(f"Skip (file not found): {current_file}")
-            continue
-        part_name = _sanitize_filename(name) or "Unknown"
+            # Fallback: find a file on disk that matches (artist, name) after you cleaned DB
+            current_filename = _find_matching_file(output_folder, artist, name, used_filenames)
+            if current_filename:
+                current_file = os.path.join(output_folder, current_filename)
+                used_filenames.add(current_filename)
+                print(f"Matched (file not at DB path): {current_filename}")
+            else:
+                if idx < len(round_files_by_position):
+                    current_filename = round_files_by_position[idx]
+                    if current_filename not in used_filenames:
+                        current_file = os.path.join(output_folder, current_filename)
+                        used_filenames.add(current_filename)
+                        print(f"Matched (position in round): {current_filename}")
+                    else:
+                        print(f"Skip (file not found): {current_file}")
+                        continue
+                else:
+                    print(f"Skip (file not found): {current_file}")
+                    continue
+        used_filenames.add(current_filename)
+        part_name = (_sanitize_filename(name) or "Unknown").replace(".mp3", "").strip() or "Unknown"
         part_artist = _sanitize_filename(artist) or "Unknown"
-        new_filename = f"{part_name} by {part_artist}.mp3"
+        # name = song name, artist = artist name; "by" precedes artist
+        new_filename = f"{part_name}.mp3 by {part_artist}"
         new_file = os.path.join(output_folder, new_filename)
         new_local_path = f"{prefix_liq}{new_filename}"
         if os.path.normpath(current_file) == os.path.normpath(new_file):
