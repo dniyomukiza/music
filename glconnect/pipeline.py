@@ -379,9 +379,12 @@ def _get_new_round_files_by_mtime(output_folder, n, exclude_basenames):
 def sync_from_downloaded_songs():
     """
     After manual cleanup of downloaded_songs (name, artist), rename files on disk to
-    '{name} by {artist}.mp3', update local_path in DB, and overwrite the M3U with DB paths.
-    Only processes rows where synced_at IS NULL (this round's new songs). Matching: (1) file at local_path,
-    (2) by name/artist hint, (3) by position in round (k-th row = k-th "new" file by mtime, first = first downloaded).
+    '{name}.mp3 by {artist}', update local_path in DB, and overwrite the M3U with DB paths.
+    Only the NEW BATCH is touched: rows where synced_at IS NULL (this round's new songs).
+    Existing songs (already synced) are never renamed or modified. M3U is rewritten from ALL rows
+    (existing + new), so existing entries remain. Remove step only deletes files that lack " by "
+    and are not referenced in any row's local_path (original or normalized). Matching for new batch:
+    (1) file at local_path, (2) name/artist hint, (3) position in round.
     Must run inside Flask app context. Returns (renamed_count, m3u_updated).
     """
     from datetime import datetime, timezone
@@ -473,13 +476,21 @@ def sync_from_downloaded_songs():
     ).order_by(DownloadedSong.id).all()
     with open(m3u_path, "w") as m3u_file:
         for row in all_rows:
-            path = (row.local_path or "").strip()
+            path = (row.local_path or "").strip().replace(" - ", " by ")
             if path:
                 m3u_file.write(path + "\n")
     print(f"M3U overwritten from DB: {os.path.abspath(m3u_path)}")
 
     # Remove only files that (1) lack " by " and (2) are not referenced in DB (don't touch existing catalog)
-    db_basenames = {os.path.basename((r.local_path or "").strip()) for r in all_rows if (r.local_path or "").strip()}
+    def _normalize_path(p):
+        return (p or "").strip().replace(" - ", " by ")
+    db_basenames = set()
+    for r in all_rows:
+        raw = (r.local_path or "").strip()
+        if not raw:
+            continue
+        db_basenames.add(os.path.basename(raw))
+        db_basenames.add(os.path.basename(_normalize_path(raw)))
     for fn in os.listdir(output_folder):
         if not fn.endswith(".mp3"):
             continue
