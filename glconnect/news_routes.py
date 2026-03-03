@@ -1936,7 +1936,6 @@ def run_generate_broadcast(task_id, topics):
         timeout_occurred.set()
 
 @news_bp.route('/')
-@login_required
 def index():
     from .forms import KeywordForm
     form = KeywordForm()

@@ -230,6 +230,27 @@
                         </div>
                     </div>
 
+                    <!-- Investor Payout Requests -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #198754 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-money-check-alt fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Payout Requests</h5>
+                                        <small class="text-muted">Investor withdrawals</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Process investor payout requests after bank transfer</p>
+                                <a href="{{ url_for('book_platform.admin_payout_requests') }}" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-money-bill-wave me-1"></i>Manage Payouts
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Word contributions (dictionary) -->
                     <div class="col-md-6 col-lg-3">
                         <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #20c997 !important;">

@@ -623,14 +623,17 @@
                         <div class="list-group">
                             {% for review in review_requests[:5] %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <div>
                                         <h6 class="mb-1">{{ review.book_project.title }}</h6>
-                                        <p class="mb-0 text-muted small">Review submitted by {{ review.reviewer.reviewer_name }}</p>
+                                        <p class="mb-0 text-muted small">Review submitted by {{ review.reviewer.reviewer_name }}{% if review.agreed_fee %} · Agreed fee: ${{ "%.2f"|format(review.agreed_fee) }}{% endif %}</p>
                                     </div>
-                                    <a href="{{ url_for('book_platform.view_book', book_id=review.book_project_id) }}" class="btn btn-sm btn-primary">
-                                        View Review
-                                    </a>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ url_for('book_platform.view_book', book_id=review.book_project_id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        <button type="button" class="btn btn-sm btn-success btn-publish-review" data-publish-url="{{ url_for('book_platform.publish_review', book_id=review.book_project_id, review_id=review.id) }}">
+                                            Publish review
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             {% endfor %}
@@ -877,6 +880,21 @@
                 });
             }
         }
+
+        document.querySelectorAll('.btn-publish-review').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var url = this.getAttribute('data-publish-url');
+                if (!url) return;
+                if (!confirm('Publish this review? It will be visible and the reviewer will earn any agreed fee (pending your payment).')) return;
+                fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) { alert(data.message || 'Review published.'); location.reload(); }
+                        else { alert(data.error || 'Failed to publish'); }
+                    })
+                    .catch(function(e) { alert('Error: ' + (e.message || 'Could not publish')); });
+            });
+        });
     </script>
 </body>
 </html>

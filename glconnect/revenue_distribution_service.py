@@ -23,9 +23,11 @@ INVESTOR_POOL_PERCENTAGE = 25.0  # 25% pool for investors
 def distribute_revenue(book_sale, db):
     """
     Distribute revenue from a book sale to all parties.
+    Earnings (reviewers, investors, author, platform) are computed from every
+    BookSale regardless of sale_format: digital copy, audiobook, or bundle.
     
     Args:
-        book_sale: BookSale object
+        book_sale: BookSale object (sale_format: 'digital', 'audiobook', or 'bundle')
         db: SQLAlchemy database session
     
     Returns:

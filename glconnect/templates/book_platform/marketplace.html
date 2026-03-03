@@ -395,7 +395,7 @@
                                                     
                                                     {% if book.has_audiobook %}
                                                         {% if book.audiobook_price and book.audiobook_price > 0 %}
-                                                            <button class="btn btn-warning btn-sm" onclick="buyWithStripeLink({{ book.id }}, true)">
+                                                            <button class="btn btn-warning btn-sm" onclick="buyWithStripeLink({{ book.id }}, null, true)">
                                                                 <i class="fas fa-headphones me-1"></i>Buy Audiobook
                                                             </button>
                                                         {% else %}
@@ -742,22 +742,8 @@
             const confirmMessage = `You're about to purchase both the digital book and audiobook at a 20% discount. You'll be redirected to Stripe for secure payment processing.`;
             
             if (confirm(confirmMessage)) {
-                // Store bundle purchase info
-                const purchaseData = {
-                    bookId: bookId,
-                    audiobookPurchase: false, // This will be handled as a bundle
-                    bundlePurchase: true,
-                    timestamp: Date.now(),
-                    userId: '{{ current_user.user_id if current_user.is_authenticated else "anonymous" }}'
-                };
-                
-                localStorage.setItem('pendingPurchase', JSON.stringify(purchaseData));
-                
-                // Redirect to Stripe Payment Link (you might want a different link for bundles)
-                window.open('https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000', '_blank');
-                
-                // Show success message
-                showBundleNotification(bookId);
+                // Use backend purchase flow (same as digital/audiobook) - creates proper bundle purchase
+                buyWithStripeLink(bookId, null, false, true);
             }
         }
 
@@ -937,12 +923,13 @@
         });
 
         // Stripe Payment Link Integration
-        function buyWithStripeLink(bookId, customAmount = null, audiobookPurchase = false) {
-            // Call backend to create purchase record with custom amount
+        function buyWithStripeLink(bookId, customAmount = null, audiobookPurchase = false, bundlePurchase = false) {
+            // Call backend to create purchase record with custom amount and format
             const requestBody = {};
             if (customAmount !== null) {
                 requestBody.custom_amount = customAmount;
             }
+            requestBody.purchase_type = bundlePurchase ? 'bundle' : (audiobookPurchase ? 'audiobook' : 'digital');
             
             fetch(`/mybook/books/${bookId}/purchase`, {
                 method: 'POST',

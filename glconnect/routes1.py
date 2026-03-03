@@ -219,7 +219,6 @@ def playlist():
     return render_template('playlist.html')
 
 @bp1.route('/words', methods=['GET', 'POST'])
-@login_required
 def findwords():
     word = None
 

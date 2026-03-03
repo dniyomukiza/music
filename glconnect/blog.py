@@ -62,7 +62,6 @@ def unauthorized(error):
     return redirect(url_for('routes1.login'))    
 
 @blog.route("/blogs",methods=['GET','POST'])
-@login_required
 def blogs():
     """
     Blog listing - requires login to access

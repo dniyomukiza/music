@@ -29,8 +29,8 @@ from glconnect.book_platform_models import (
     ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
     AudioGenerationTask, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
-    RevenueDistribution, ReviewerEarning, InvestmentPayout, RefundRequest, ReviewerStatus, ReviewerLevel,
-    ReviewStatus, InvestmentStatus, CampaignStatus, DistributionType
+    RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
+    ReviewStatus, ReviewRequest, ReviewRequestStatus, InvestmentStatus, CampaignStatus, DistributionType
 )
 
 # Import additional modules
@@ -209,7 +209,8 @@ def update_book_word_count(book):
         return book.word_count or 0
 
 def check_investment_readiness(book):
-    """Check if a book is ready for investment and return readiness status"""
+    """Check if a book is ready for investment and return readiness status.
+    Campaigns apply only to books created on the platform (with chapters), not to uploaded digital books."""
     issues = []
     
     if not book.title or len(book.title.strip()) < 3:
@@ -221,14 +222,18 @@ def check_investment_readiness(book):
     if not book.language:
         issues.append("Book must have a language selected")
     
-    # Check if book has at least one chapter
+    # Campaigns only for platform-created books (with chapters), not uploaded digital books
     try:
+        has_digital_file = bool(getattr(book, "digital_file_path", None))
         chapter_count = len(book.chapters) if book.chapters else 0
     except Exception as e:
         logging.error(f"Error accessing chapters for book {book.id}: {e}")
+        has_digital_file = False
         chapter_count = 0
     
-    if chapter_count == 0:
+    if has_digital_file and chapter_count == 0:
+        issues.append("Investment campaigns are only available for books created on the platform (with chapters), not for uploaded digital books.")
+    elif chapter_count == 0:
         issues.append("Book must have at least one chapter")
     
     # Ensure word count is up to date before checking
@@ -1929,9 +1934,11 @@ def collaborate(book_id, user_profile, profile_type):
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     collaborations = BookCollaboration.query.filter_by(book_project_id=book_id, is_active=True).all()
-    invitations = CollaborationInvitation.query.filter_by(
-        collaboration_id=BookCollaboration.query.filter_by(book_project_id=book_id).first().id
-    ).all() if collaborations else []
+    # Pending invitations: any invitation for this book whose collaboration belongs to this book
+    invitations = CollaborationInvitation.query.join(BookCollaboration).filter(
+        BookCollaboration.book_project_id == book_id,
+        CollaborationInvitation.status == InvitationStatus.PENDING
+    ).all()
     
     return render_template('book_platform/collaborate.html', 
                          book=book, 
@@ -2405,9 +2412,12 @@ def purchase_book(book_id):
     """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
     # Wrap entire function in try-except to ensure JSON responses
     try:
-        # Get custom amount from request (optional - defaults to book price)
+        # Get custom amount and purchase type from request
         request_data = request.get_json() or {}
         custom_amount = request_data.get('custom_amount')
+        purchase_type = (request_data.get('purchase_type') or 'digital').lower()
+        if purchase_type not in ('digital', 'audiobook', 'bundle'):
+            purchase_type = 'digital'
         
         # Initialize variables that might be needed in error handling
         buyer_user_id = current_user.user_id if current_user.is_authenticated else None
@@ -2491,51 +2501,81 @@ def purchase_book(book_id):
         else:
             logger.info(f"buyer_user_id column not found - using buyer_id={buyer_id}")
         
-        # Check if already purchased - use raw SQL to avoid buyer_user_id column issues
+        # Validate purchase type and set price
+        if purchase_type == 'audiobook':
+            if not book.has_audiobook or not book.audiobook_published:
+                return jsonify({'error': 'This book does not have an audiobook available for purchase.'}), 400
+            if not book.audiobook_price or book.audiobook_price <= 0:
+                return jsonify({'error': 'Audiobook price is not set. Please contact the author.'}), 400
+            base_price = book.audiobook_price
+        elif purchase_type == 'bundle':
+            if not book.has_audiobook or not book.audiobook_published:
+                return jsonify({'error': 'Bundle requires an audiobook. This book does not have one available.'}), 400
+            if not book.audiobook_price or book.audiobook_price <= 0:
+                return jsonify({'error': 'Audiobook price is not set. Cannot create bundle.'}), 400
+            base_price = (book.price + book.audiobook_price) * 0.8  # 20% bundle discount
+        else:
+            base_price = book.price
+        
+        # Check if already purchased THIS FORMAT - user can own digital + audiobook separately
         existing_purchase = False
         from sqlalchemy import text
         
-        # Always use raw SQL to check for existing purchases (avoids buyer_user_id column issue)
         try:
-            if buyer_id:
-                # Check by buyer_id
-                result = db.session.execute(
-                    text("""
-                        SELECT id FROM book_purchases 
-                        WHERE buyer_id = :buyer_id 
-                        AND book_project_id = :book_id 
-                        AND status = 'COMPLETED' 
-                        LIMIT 1
-                    """),
-                    {'buyer_id': buyer_id, 'book_id': book_id}
-                ).fetchone()
-                if result:
-                    existing_purchase = True
-                    logger.info(f"Found existing purchase by buyer_id={buyer_id}")
+            # Query completed purchases for this user+book
+            q = text("""
+                SELECT id, COALESCE(purchase_format, 'digital') as fmt FROM book_purchases 
+                WHERE book_project_id = :book_id AND status = 'COMPLETED'
+                AND (buyer_id = :buyer_id OR (buyer_user_id = :buyer_user_id AND :buyer_user_id IS NOT NULL))
+            """)
+            rows = db.session.execute(q, {
+                'book_id': book_id, 'buyer_id': buyer_id or 0,
+                'buyer_user_id': buyer_user_id if has_buyer_user_id_col else None
+            }).fetchall()
+            formats = [r.fmt for r in rows] if rows else []
+            if not formats and buyer_id:
+                q2 = text("""
+                    SELECT COALESCE(purchase_format, 'digital') as fmt FROM book_purchases 
+                    WHERE buyer_id = :buyer_id AND book_project_id = :book_id AND status = 'COMPLETED'
+                """)
+                rows2 = db.session.execute(q2, {'buyer_id': buyer_id, 'book_id': book_id}).fetchall()
+                formats = [r.fmt for r in rows2] if rows2 else []
+            if not formats and has_buyer_user_id_col:
+                q3 = text("""
+                    SELECT COALESCE(purchase_format, 'digital') as fmt FROM book_purchases 
+                    WHERE buyer_user_id = :uid AND book_project_id = :book_id AND status = 'COMPLETED'
+                """)
+                rows3 = db.session.execute(q3, {'uid': buyer_user_id, 'book_id': book_id}).fetchall()
+                formats = [r.fmt for r in rows3] if rows3 else []
+            
+            has_digital = 'digital' in formats or 'bundle' in formats
+            has_audiobook = 'audiobook' in formats or 'bundle' in formats
+            if purchase_type == 'digital':
+                existing_purchase = has_digital
+            elif purchase_type == 'audiobook':
+                existing_purchase = has_audiobook
+            else:
+                existing_purchase = 'bundle' in formats or (has_digital and has_audiobook)
         except Exception as e:
-            logger.warning(f"Error checking existing purchase by buyer_id: {e}")
-        
-        # Also check by buyer_user_id if column exists and we haven't found a purchase
-        if not existing_purchase and has_buyer_user_id_col:
+            logger.warning(f"Error checking existing purchase by format: {e}")
+            # Fallback: if purchase_format column missing, any completed purchase blocks (assume all are digital)
             try:
-                result = db.session.execute(
-                    text("""
-                        SELECT id FROM book_purchases 
-                        WHERE buyer_user_id = :buyer_user_id 
-                        AND book_project_id = :book_id 
-                        AND status = 'COMPLETED' 
-                        LIMIT 1
-                    """),
-                    {'buyer_user_id': buyer_user_id, 'book_id': book_id}
-                ).fetchone()
-                if result:
-                    existing_purchase = True
-                    logger.info(f"Found existing purchase by buyer_user_id={buyer_user_id}")
-            except Exception as e:
-                logger.warning(f"Error checking existing purchase by buyer_user_id: {e}")
+                r = db.session.execute(text("""
+                    SELECT 1 FROM book_purchases WHERE book_project_id = :bid AND status = 'COMPLETED'
+                    AND (buyer_id = :bid2 OR buyer_user_id = :uid)
+                    LIMIT 1
+                """), {'bid': book_id, 'bid2': buyer_id or 0, 'uid': buyer_user_id}).fetchone()
+                existing_purchase = r is not None
+            except Exception:
+                pass
         
         if existing_purchase:
-            return jsonify({'error': 'You have already purchased this book'}), 400
+            fmt_msg = {'digital': 'digital copy', 'audiobook': 'audiobook', 'bundle': 'bundle'}[purchase_type]
+            return jsonify({'error': f'You have already purchased this {fmt_msg}.'}), 400
+        
+        # Validate book has a price for the selected format
+        if not base_price or base_price <= 0:
+            return jsonify({'error': f'This {purchase_type} is not available for purchase. Please contact the author.'}), 400
         
         # Validate book has an author
         if not book.author_id:
@@ -2547,19 +2587,19 @@ def purchase_book(book_id):
             logger.error(f"Book {book_id} has no price or invalid price: {book.price}")
             return jsonify({'error': 'This book is not available for purchase. Please contact the author.'}), 400
         
-        # Validate and set payment amount (custom amount must be >= book price)
+        # Validate and set payment amount (custom amount must be >= base price for this format)
         if custom_amount is not None:
             try:
                 custom_amount = float(custom_amount)
-                if custom_amount < book.price:
-                    return jsonify({'error': f'Payment amount must be at least ${book.price:.2f}'}), 400
+                if custom_amount < base_price:
+                    return jsonify({'error': f'Payment amount must be at least ${base_price:.2f}'}), 400
                 payment_amount = custom_amount
-                logger.info(f"Using custom payment amount: ${payment_amount:.2f} (book price: ${book.price:.2f})")
+                logger.info(f"Using custom payment amount: ${payment_amount:.2f} (base: ${base_price:.2f} for {purchase_type})")
             except (ValueError, TypeError):
                 return jsonify({'error': 'Invalid payment amount'}), 400
         else:
-            payment_amount = book.price
-            logger.info(f"Using book price: ${payment_amount:.2f}")
+            payment_amount = base_price
+            logger.info(f"Using base price for {purchase_type}: ${payment_amount:.2f}")
         
         # Ensure currency is set
         if not book.currency:
@@ -2593,7 +2633,8 @@ def purchase_book(book_id):
             book_project_id=book_id,
             amount=payment_amount,
             currency=book.currency,
-            status=TransactionStatus.PENDING  # ORM handles enum automatically - no casting!
+            status=TransactionStatus.PENDING,  # ORM handles enum automatically - no casting!
+            purchase_format=purchase_type
         )
         # Add to session and try to flush
         # If buyer_user_id column doesn't exist, SQLAlchemy will fail because it's in the model
@@ -2633,54 +2674,53 @@ def purchase_book(book_id):
                 except Exception as name_error:
                     logger.warning(f"Could not get buyer username/full name: {name_error}")
                 
-                # Check which columns exist - buyer_username and buyer_full_name might not exist either
+                # Check which columns exist - buyer_username, buyer_full_name, purchase_format might not exist
                 from sqlalchemy import inspect as sql_inspect
                 inspector = sql_inspect(db.engine)
                 columns = [col['name'] for col in inspector.get_columns('book_purchases')]
                 has_buyer_username_col = 'buyer_username' in columns
                 has_buyer_full_name_col = 'buyer_full_name' in columns
+                has_purchase_format_col = 'purchase_format' in columns
                 
                 # Build INSERT statement with only existing columns
+                base_params = {
+                    'uuid': purchase_uuid, 'amount': payment_amount, 'currency': book.currency or 'USD',
+                    'status': 'PENDING', 'book_project_id': book_id, 'buyer_id': buyer_id,
+                    'created_at': datetime.now(timezone.utc)
+                }
                 if has_buyer_username_col and has_buyer_full_name_col:
-                    # All columns exist
+                    base_params['buyer_username'] = buyer_username or ''
+                    base_params['buyer_full_name'] = buyer_full_name or ''
+                if has_purchase_format_col:
+                    base_params['purchase_format'] = purchase_type
+                
+                if has_buyer_username_col and has_buyer_full_name_col and has_purchase_format_col:
+                    result = db.session.execute(
+                        text("""
+                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, purchase_format, created_at)
+                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :purchase_format, :created_at)
+                            RETURNING id
+                        """),
+                        base_params
+                    )
+                elif has_buyer_username_col and has_buyer_full_name_col:
                     result = db.session.execute(
                         text("""
                             INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, buyer_username, buyer_full_name, created_at)
                             VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :buyer_username, :buyer_full_name, :created_at)
                             RETURNING id
                         """),
-                        {
-                            'uuid': purchase_uuid,
-                            'amount': payment_amount,
-                            'currency': book.currency or 'USD',
-                            'status': 'PENDING',  # Database enum is uppercase
-                            'book_project_id': book_id,
-                            'buyer_id': buyer_id,
-                            'buyer_username': buyer_username or '',
-                            'buyer_full_name': buyer_full_name or '',
-                            'created_at': datetime.now(timezone.utc)
-                        }
+                        base_params
                     )
                 else:
-                    # buyer_username/buyer_full_name don't exist - use minimal INSERT
-                    # Database enum values are uppercase (PENDING, COMPLETED, etc.)
-                    # PostgreSQL should accept the enum string value directly without casting
-                    # The column type is already transactionstatus enum, so 'PENDING' should work
+                    insert_cols = "uuid, amount, currency, status, book_project_id, buyer_id, created_at"
+                    insert_vals = ":uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at"
+                    if has_purchase_format_col:
+                        insert_cols += ", purchase_format"
+                        insert_vals += ", :purchase_format"
                     result = db.session.execute(
-                        text("""
-                            INSERT INTO book_purchases (uuid, amount, currency, status, book_project_id, buyer_id, created_at)
-                            VALUES (:uuid, :amount, :currency, :status, :book_project_id, :buyer_id, :created_at)
-                            RETURNING id
-                        """),
-                        {
-                            'uuid': purchase_uuid,
-                            'amount': payment_amount,
-                            'currency': book.currency or 'USD',
-                            'status': 'PENDING',  # Database enum is uppercase - PostgreSQL should accept this directly
-                            'book_project_id': book_id,
-                            'buyer_id': buyer_id,
-                            'created_at': datetime.now(timezone.utc)
-                        }
+                        text(f"INSERT INTO book_purchases ({insert_cols}) VALUES ({insert_vals}) RETURNING id"),
+                        base_params
                     )
                 purchase_id = result.scalar()
                 # CRITICAL: Don't commit yet - commit purchase and BookSale together
@@ -2698,16 +2738,17 @@ def purchase_book(book_id):
                 # Create a minimal purchase object for the rest of the code
                 # Don't query back from DB as SQLAlchemy will try to SELECT all columns including buyer_user_id
                 class PurchaseObj:
-                    def __init__(self, purchase_id, buyer_id, amount, currency, username='', full_name=''):
+                    def __init__(self, purchase_id, buyer_id, amount, currency, username='', full_name='', purchase_format='digital'):
                         self.id = purchase_id
                         self.buyer_id = buyer_id
                         self.amount = amount
                         self.currency = currency
                         self.status = TransactionStatus.PENDING
+                        self.purchase_format = purchase_format
                         self.buyer_username = username
                         self.buyer_full_name = full_name
                 
-                purchase = PurchaseObj(purchase_id, buyer_id, payment_amount, book.currency or 'USD', buyer_username, buyer_full_name)
+                purchase = PurchaseObj(purchase_id, buyer_id, payment_amount, book.currency or 'USD', buyer_username, buyer_full_name, purchase_type)
                 logger.info(f"✅ Purchase object created (ID={purchase.id}), will commit with BookSale")
                 purchase_already_committed = False  # Will commit purchase and sale together
             else:
@@ -2813,10 +2854,16 @@ def purchase_book(book_id):
                 logger.info(f"Existing sale check: No existing sale found (will create new one)")
             
             if not existing_sale:
-                # Calculate revenue split: base book price is split 70/30, extra amount goes 100% to author
-                base_price = book.price
-                purchase_amount = getattr(purchase, 'amount', book.price)
-                extra_amount = max(0, purchase_amount - base_price)  # Amount exceeding book price
+                # Calculate revenue split: base price depends on format; extra amount goes 100% to author
+                sale_format = getattr(purchase, 'purchase_format', None) or purchase_type
+                if sale_format == 'audiobook':
+                    base_price = book.audiobook_price or book.price
+                elif sale_format == 'bundle':
+                    base_price = (book.price + (book.audiobook_price or 0)) * 0.8
+                else:
+                    base_price = book.price
+                purchase_amount = getattr(purchase, 'amount', base_price)
+                extra_amount = max(0, purchase_amount - base_price)  # Amount exceeding base price
                 
                 royalty_percentage = 0.7
                 # Base price: 70% to author, 30% to platform
@@ -2847,7 +2894,8 @@ def purchase_book(book_id):
                     net_amount=royalty_amount,
                     currency=book.currency or 'USD',
                     status=TransactionStatus.PENDING,  # Sale status matches purchase status
-                    paid_at=None  # Will be set when purchase is completed
+                    paid_at=None,  # Will be set when purchase is completed
+                    sale_format=sale_format  # digital, audiobook, or bundle - investors earn from all
                 )
                 logger.info(f"✅ BookSale object created (not yet in DB)")
                 logger.info(f"   seller_id={sale.seller_id}, purchase_id={sale.purchase_id}, royalty_amount=${sale.royalty_amount}")
@@ -3040,8 +3088,41 @@ def purchase_book(book_id):
         
         logger.info(f"✅ Purchase {purchase.id} created (PENDING). Success URL: {success_url}")
         
-        # Return purchase info with Stripe redirect URL
-        # Frontend should redirect to Stripe with success_url as return URL
+        # Create Stripe Checkout Session and return redirect URL
+        stripe_checkout_url = None
+        try:
+            import stripe
+            stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+            if stripe_api_key:
+                stripe.api_key = stripe_api_key
+                domain_url = current_app.config.get('FRONTEND_BASE_URL') or request.url_root.rstrip('/')
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price_data': {
+                            'currency': (book.currency or 'USD').lower(),
+                            'product_data': {
+                                'name': book.title,
+                                'description': f'Purchase of "{book.title}"' + (f' ({purchase_type})' if purchase_type != 'digital' else ''),
+                            },
+                            'unit_amount': int(payment_amount * 100),
+                        },
+                        'quantity': 1,
+                    }],
+                    mode='payment',
+                    success_url=success_url,
+                    cancel_url=cancel_url,
+                    client_reference_id=str(purchase.id),
+                    metadata={
+                        'book_id': str(book_id),
+                        'purchase_id': str(purchase.id),
+                        'purchase_type': purchase_type,
+                    },
+                )
+                stripe_checkout_url = checkout_session.url
+        except Exception as stripe_err:
+            logger.warning(f"Could not create Stripe Checkout Session: {stripe_err}")
+        
         response_data = {
             'success': True,
             'purchase_id': purchase.id,
@@ -3049,8 +3130,14 @@ def purchase_book(book_id):
             'message': 'Purchase created. Redirecting to payment...',
             'success_url': success_url,
             'cancel_url': cancel_url,
-            'stripe_payment_link': f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase.id}'
         }
+        if stripe_checkout_url:
+            response_data['stripe_checkout_url'] = stripe_checkout_url
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Payment processing is not configured. Please set STRIPE_SECRET_KEY and try again.'
+            }), 503
         logger.info(f"✅ Returning success response: {response_data}")
         return jsonify(response_data)
         
@@ -3236,20 +3323,21 @@ def purchase_book(book_id):
                     existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
                     
                     if not existing_sale:
-                        # Calculate revenue split: base book price is split 70/30, extra amount goes 100% to author
-                        base_price = book.price
-                        extra_amount = max(0, payment_amount - base_price)  # Amount exceeding book price
-                        
+                        sale_format = getattr(purchase, 'purchase_format', None) or purchase_type
+                        if sale_format == 'audiobook':
+                            base_price = book.audiobook_price or book.price
+                        elif sale_format == 'bundle':
+                            base_price = (book.price + (book.audiobook_price or 0)) * 0.8
+                        else:
+                            base_price = book.price
+                        extra_amount = max(0, payment_amount - base_price)
                         royalty_percentage = 0.7
-                        # Base price: 70% to author, 30% to platform
                         base_royalty = base_price * royalty_percentage
                         base_platform_fee = base_price - base_royalty
+                        royalty_amount = base_royalty + extra_amount
+                        platform_fee = base_platform_fee
                         
-                        # Extra amount: 100% to author, 0% to platform
-                        royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
-                        platform_fee = base_platform_fee  # Platform only gets fee from base price
-                        
-                        logger.info(f"Creating BookSale for purchase {purchase.id} (fallback): base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${payment_amount:.2f}")
+                        logger.info(f"Creating BookSale for purchase {purchase.id} (fallback, {sale_format}): base=${base_price:.2f}, total=${payment_amount:.2f}")
                         
                         sale = BookSale(
                             seller_id=book.author_id,
@@ -3260,8 +3348,9 @@ def purchase_book(book_id):
                             platform_fee=platform_fee,
                             net_amount=royalty_amount,
                             currency=book.currency,
-                            status=TransactionStatus.PENDING,  # Sale status matches purchase status
-                            paid_at=None  # Will be set when purchase is completed
+                            status=TransactionStatus.PENDING,
+                            paid_at=None,
+                            sale_format=sale_format
                         )
                         db.session.add(sale)
                         db.session.commit()
@@ -3299,19 +3388,7 @@ def purchase_book(book_id):
                 
                 logger.info(f"✅ SUCCESS (fallback): Purchase {purchase.id} created via raw SQL")
                 
-                # Return success response
-                response_data = {
-                    'success': True,
-                    'purchase_id': purchase.id,
-                    'status': 'pending',
-                    'message': 'Purchase created. Redirecting to payment...',
-                    'success_url': success_url,
-                    'cancel_url': cancel_url,
-                    'stripe_payment_link': f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase.id}'
-                }
-                return jsonify(response_data)
-                
-                # Create Stripe Checkout Session (same as above)
+                # Create Stripe Checkout for fallback path
                 stripe_checkout_url = None
                 try:
                     import stripe
@@ -3322,11 +3399,8 @@ def purchase_book(book_id):
                             payment_method_types=['card'],
                             line_items=[{
                                 'price_data': {
-                                    'currency': book.currency.lower(),
-                                    'product_data': {
-                                        'name': book.title,
-                                        'description': f'Purchase of "{book.title}" by {book.author.pen_name if book.author else "Unknown Author"}',
-                                    },
+                                    'currency': (book.currency or 'USD').lower(),
+                                    'product_data': {'name': book.title, 'description': f'Purchase of "{book.title}"'},
                                     'unit_amount': int(payment_amount * 100),
                                 },
                                 'quantity': 1,
@@ -3334,30 +3408,25 @@ def purchase_book(book_id):
                             mode='payment',
                             success_url=success_url,
                             cancel_url=cancel_url,
-                            client_reference_id=str(purchase_id),
-                            metadata={
-                                'book_id': str(book_id),
-                                'purchase_id': str(purchase_id),
-                                'amount': str(payment_amount),
-                            },
+                            client_reference_id=str(purchase.id),
+                            metadata={'book_id': str(book_id), 'purchase_id': str(purchase.id), 'purchase_type': purchase_type},
                         )
                         stripe_checkout_url = checkout_session.url
                 except Exception as e:
-                    logger.warning(f"Could not create Stripe Checkout Session: {e}")
+                    logger.warning(f"Fallback Stripe checkout failed: {e}")
                 
-                response = {
+                response_data = {
                     'success': True,
-                    'purchase_id': purchase_id,
+                    'purchase_id': purchase.id,
                     'status': 'pending',
                     'message': 'Purchase created. Redirecting to payment...',
                     'success_url': success_url,
                     'cancel_url': cancel_url,
                 }
                 if stripe_checkout_url:
-                    response['stripe_checkout_url'] = stripe_checkout_url
-                else:
-                    response['stripe_payment_link'] = f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={purchase_id}'
-                return jsonify(response)
+                    response_data['stripe_checkout_url'] = stripe_checkout_url
+                    return jsonify(response_data)
+                return jsonify({'success': False, 'error': 'Payment processing is not configured.'}), 503
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
                 return jsonify({
@@ -3568,21 +3637,22 @@ def purchase_success():
                     logger.error(f"❌ Revenue distribution FAILED for existing sale {existing_sale.id}: {str(e)}", exc_info=True)
             sale = existing_sale
         else:
-            # Create sale record
-            # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
-            base_price = book.price
-            extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding book price
-            
+            # Create sale record - use purchase_format for correct sale type
+            sale_format = getattr(purchase, 'purchase_format', None) or 'digital'
+            if sale_format == 'audiobook':
+                base_price = book.audiobook_price or book.price
+            elif sale_format == 'bundle':
+                base_price = (book.price + (book.audiobook_price or 0)) * 0.8
+            else:
+                base_price = book.price
+            extra_amount = max(0, purchase.amount - base_price)
             royalty_percentage = 0.7
-            # Base price: 70% to author, 30% to platform
             base_royalty = base_price * royalty_percentage
             base_platform_fee = base_price - base_royalty
+            royalty_amount = base_royalty + extra_amount
+            platform_fee = base_platform_fee
             
-            # Extra amount: 100% to author, 0% to platform
-            royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
-            platform_fee = base_platform_fee  # Platform only gets fee from base price
-            
-            logger.info(f"Revenue split for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase.amount:.2f}")
+            logger.info(f"Revenue split for purchase {purchase.id} ({sale_format}): base=${base_price:.2f}, total=${purchase.amount:.2f}")
             
             sale = BookSale(
                 seller_id=book.author_id,
@@ -3594,7 +3664,8 @@ def purchase_success():
                 net_amount=royalty_amount,
                 currency=book.currency,
                 status=TransactionStatus.COMPLETED,
-                paid_at=datetime.now(timezone.utc)
+                paid_at=datetime.now(timezone.utc),
+                sale_format=sale_format  # digital, audiobook, or bundle
             )
             db.session.add(sale)
             db.session.flush()  # Get sale.id before committing
@@ -3708,21 +3779,23 @@ def stripe_webhook():
             # Check if sale already exists
             existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
             if not existing_sale:
-                # Create sale record
-                # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
-                base_price = book.price
-                extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding book price
+                # Create sale record - use purchase_format for correct sale type and base price
+                sale_format = getattr(purchase, 'purchase_format', None) or 'digital'
+                if sale_format == 'audiobook':
+                    base_price = book.audiobook_price or book.price
+                elif sale_format == 'bundle':
+                    base_price = (book.price + (book.audiobook_price or 0)) * 0.8
+                else:
+                    base_price = book.price
+                extra_amount = max(0, purchase.amount - base_price)  # Amount exceeding base price
                 
                 royalty_percentage = 0.7
-                # Base price: 70% to author, 30% to platform
                 base_royalty = base_price * royalty_percentage
                 base_platform_fee = base_price - base_royalty
-                
-                # Extra amount: 100% to author, 0% to platform
                 royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
-                platform_fee = base_platform_fee  # Platform only gets fee from base price
+                platform_fee = base_platform_fee
                 
-                logger.info(f"Revenue split for purchase {purchase.id}: base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f} (100% to author), total=${purchase.amount:.2f}")
+                logger.info(f"Revenue split for purchase {purchase.id} ({sale_format}): base=${base_price:.2f} (royalty=${base_royalty:.2f}, fee=${base_platform_fee:.2f}), extra=${extra_amount:.2f}, total=${purchase.amount:.2f}")
                 
                 sale = BookSale(
                     seller_id=book.author_id,
@@ -3734,7 +3807,8 @@ def stripe_webhook():
                     net_amount=royalty_amount,
                     currency=purchase.currency,
                     status=TransactionStatus.COMPLETED,
-                    paid_at=datetime.now(timezone.utc)
+                    paid_at=datetime.now(timezone.utc),
+                    sale_format=sale_format  # digital, audiobook, or bundle - investors earn from all
                 )
                 db.session.add(sale)
                 db.session.flush()
@@ -4027,7 +4101,8 @@ def stripe_webhook():
                                             status=TransactionStatus.COMPLETED,
                                             purchased_at=datetime.now(timezone.utc),
                                             transaction_id=payment_intent_id,
-                                            payment_method='stripe'
+                                            payment_method='stripe',
+                                            purchase_format='digital'  # Webhook fallback - no format in metadata
                                         )
                                         # Populate buyer information (username and full name)
                                         purchase.populate_buyer_info()
@@ -4056,7 +4131,8 @@ def stripe_webhook():
                                             net_amount=royalty_amount,
                                             currency=book.currency,
                                             status=TransactionStatus.COMPLETED,
-                                            paid_at=datetime.now(timezone.utc)
+                                            paid_at=datetime.now(timezone.utc),
+                                            sale_format='digital'  # Earnings account for digital copy sales
                                         )
                                         db.session.add(sale)
                                         db.session.commit()
@@ -4653,21 +4729,21 @@ def download_digital_book(book_id):
         is_author = True
     
     if not is_author:
-        # Check if user has purchased the book - use buyer_user_id (no profile needed)
-        # Also check buyer_id for backward compatibility
+        # Check if user has purchased digital or bundle (grants digital access)
         bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
         buyer_id = bp_user.id if bp_user else None
-        
-        purchase = BookPurchase.query.filter(
+        purchases = BookPurchase.query.filter(
             db.or_(
                 BookPurchase.buyer_user_id == user_id,
                 (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-        
-        if not purchase:
+        ).all()
+        has_digital_access = any(
+            getattr(p, 'purchase_format', 'digital') in ('digital', 'bundle') for p in purchases
+        )
+        if not has_digital_access:
             flash("You must purchase this book to download it.", "error")
             return redirect(url_for('book_platform.marketplace'))
     
@@ -4706,19 +4782,21 @@ def serve_audiobook_file(book_id):
         is_author = True
     
     if not is_author:
+        # Check if user has purchased audiobook or bundle (grants audiobook access)
         bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
         buyer_id = bp_user.id if bp_user else None
-        
-        purchase = BookPurchase.query.filter(
+        purchases = BookPurchase.query.filter(
             db.or_(
                 BookPurchase.buyer_user_id == user_id,
                 (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-        
-        if not purchase:
+        ).all()
+        has_audiobook_access = any(
+            getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+        )
+        if not has_audiobook_access:
             return "Access denied", 403
     
     # Check if file exists
@@ -4765,22 +4843,22 @@ def download_audio_book(book_id):
         is_author = True
     
     if not is_author:
-        # Check if user has purchased the book - use buyer_user_id (no profile needed)
-        # Also check buyer_id for backward compatibility
+        # Check if user has purchased audiobook or bundle (grants audiobook download access)
         bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
         buyer_id = bp_user.id if bp_user else None
-        
-        purchase = BookPurchase.query.filter(
+        purchases = BookPurchase.query.filter(
             db.or_(
                 BookPurchase.buyer_user_id == user_id,
                 (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
             ),
             BookPurchase.book_project_id == book_id,
             BookPurchase.status == TransactionStatus.COMPLETED
-        ).first()
-        
-        if not purchase:
-            flash("You must purchase this book to download it.", "error")
+        ).all()
+        has_audiobook_access = any(
+            getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+        )
+        if not has_audiobook_access:
+            flash("You must purchase the audiobook to download it.", "error")
             return redirect(url_for('book_platform.marketplace'))
     
     # Serve the audio file
@@ -5042,11 +5120,45 @@ def request_review(book_id, user_profile, profile_type):
     
     if request.method == 'POST':
         reviewer_id = request.form.get('reviewer_id')
+        agreed_fee = request.form.get('agreed_fee')
         if reviewer_id:
             reviewer = AccreditedReviewer.query.get(reviewer_id)
             if reviewer and reviewer.accreditation_status == ReviewerStatus.ACCREDITED:
-                # Create a review request (could be a notification or separate model)
-                flash(f'Review request sent to {reviewer.reviewer_name}. They will be notified.', 'success')
+                book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+                if not book_user:
+                    flash('Ink Studio profile required.', 'error')
+                    return redirect(url_for('book_platform.view_book', book_id=book_id))
+                # Avoid duplicate pending request
+                existing = ReviewRequest.query.filter_by(
+                    book_project_id=book_id,
+                    reviewer_id=reviewer.id,
+                    requested_by_id=book_user.id
+                ).filter(ReviewRequest.status.in_([
+                    ReviewRequestStatus.PENDING, ReviewRequestStatus.ACCEPTED, ReviewRequestStatus.IN_PROGRESS
+                ])).first()
+                if existing:
+                    flash(f'You already have a pending review request with {reviewer.reviewer_name}.', 'info')
+                    return redirect(url_for('book_platform.view_book', book_id=book_id))
+                try:
+                    fee = float(agreed_fee) if agreed_fee and str(agreed_fee).strip() else None
+                    if fee is not None and fee < 0:
+                        fee = None
+                except (ValueError, TypeError):
+                    fee = None
+                req = ReviewRequest(
+                    book_project_id=book_id,
+                    reviewer_id=reviewer.id,
+                    requested_by_id=book_user.id,
+                    agreed_fee=fee,
+                    status=ReviewRequestStatus.PENDING
+                )
+                db.session.add(req)
+                db.session.commit()
+                try:
+                    send_reviewer_invitation_email(reviewer, book, book_user, message=f'Review request for "{book.title}".' + (f' Agreed fee: ${fee:.2f}' if fee else ''))
+                except Exception:
+                    pass
+                flash(f'Review request sent to {reviewer.reviewer_name}. They will be notified.' + (f' Agreed fee: ${fee:.2f}' if fee else ''), 'success')
                 return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Get available reviewers
@@ -5090,6 +5202,16 @@ def submit_review(book_id):
     
     if form.validate_on_submit():
         try:
+            # Link to review request if author sent one with agreed fee
+            review_request = ReviewRequest.query.filter_by(
+                book_project_id=book_id,
+                reviewer_id=reviewer.id
+            ).filter(ReviewRequest.status.in_([ReviewRequestStatus.PENDING, ReviewRequestStatus.ACCEPTED])).first()
+            agreed_fee = review_request.agreed_fee if review_request else None
+            review_request_id = review_request.id if review_request else None
+            if review_request:
+                review_request.status = ReviewRequestStatus.IN_PROGRESS
+            
             review = BookReview(
                 book_project_id=book_id,
                 reviewer_id=reviewer.id,
@@ -5100,7 +5222,9 @@ def submit_review(book_id):
                 minimum_sales_threshold=form.minimum_sales_threshold.data or 0,
                 is_public=form.is_public.data,
                 status=ReviewStatus.SUBMITTED,
-                submitted_at=datetime.now(timezone.utc)
+                submitted_at=datetime.now(timezone.utc),
+                agreed_fee=agreed_fee,
+                review_request_id=review_request_id
             )
             
             db.session.add(review)
@@ -5119,6 +5243,74 @@ def submit_review(book_id):
             flash(f'An error occurred: {str(e)}', 'error')
     
     return render_template('book_platform/submit_review.html', form=form, book=book)
+
+
+# Author publishes a submitted review (and records task completion / fixed-fee earning)
+@book_bp.route('/books/<int:book_id>/reviews/<int:review_id>/publish', methods=['POST'])
+@writer_or_book_platform_required
+def publish_review(book_id, review_id, user_profile, profile_type):
+    """Author approves and publishes a submitted review; if agreed_fee set, creates task earning for reviewer."""
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        return jsonify({'success': False, 'error': 'Only the author can publish reviews'}), 403
+    
+    review = BookReview.query.filter_by(id=review_id, book_project_id=book_id).first_or_404()
+    if review.status != ReviewStatus.SUBMITTED:
+        return jsonify({'success': False, 'error': 'Review is not in submitted state'}), 400
+    
+    review.status = ReviewStatus.PUBLISHED
+    review.published_at = datetime.now(timezone.utc)
+    
+    if review.review_request_id:
+        req = ReviewRequest.query.get(review.review_request_id)
+        if req:
+            req.status = ReviewRequestStatus.COMPLETED
+            req.completed_at = datetime.now(timezone.utc)
+    
+    if review.agreed_fee and review.agreed_fee > 0:
+        existing = ReviewerEarning.query.filter_by(review_id=review.id, is_guarantee_payment=False).first()
+        if not existing:
+            earning = ReviewerEarning(
+                reviewer_id=review.reviewer_id,
+                review_id=review.id,
+                amount=review.agreed_fee,
+                currency=book.currency or 'USD',
+                status=TransactionStatus.PENDING,
+                notes='Fixed fee for completed review (author-paid task)'
+            )
+            db.session.add(earning)
+            review.reviewer.total_earnings = (review.reviewer.total_earnings or 0) + review.agreed_fee
+    
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Review published.' + (f' Reviewer task fee: ${review.agreed_fee:.2f} (pending payout).' if review.agreed_fee else '')})
+
+
+# Author marks fixed-fee task as paid (e.g. after external transfer or platform payout)
+@book_bp.route('/books/<int:book_id>/reviews/<int:review_id>/pay-task', methods=['POST'])
+@writer_or_book_platform_required
+def pay_review_task(book_id, review_id, user_profile, profile_type):
+    """Author marks the agreed fixed fee as paid for this review."""
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        return jsonify({'success': False, 'error': 'Only the author can mark task as paid'}), 403
+    
+    review = BookReview.query.filter_by(id=review_id, book_project_id=book_id).first_or_404()
+    if not review.agreed_fee or review.agreed_fee <= 0:
+        return jsonify({'success': False, 'error': 'No agreed fee for this review'}), 400
+    if review.author_paid_at:
+        return jsonify({'success': False, 'error': 'Task already marked as paid'}), 400
+    
+    review.author_paid_at = datetime.now(timezone.utc)
+    for earning in ReviewerEarning.query.filter_by(review_id=review.id, is_guarantee_payment=False).all():
+        if earning.amount == review.agreed_fee:
+            earning.status = TransactionStatus.COMPLETED
+            earning.paid_at = datetime.now(timezone.utc)
+            break
+    db.session.commit()
+    return jsonify({'success': True, 'message': f'Marked ${review.agreed_fee:.2f} as paid to reviewer.'})
+
 
 # Investment Campaign Creation
 @book_bp.route('/books/<int:book_id>/create-campaign', methods=['GET', 'POST'])
@@ -5569,12 +5761,11 @@ def make_investment(campaign_id):
             }
             if stripe_checkout_url:
                 response['stripe_checkout_url'] = stripe_checkout_url
+                return jsonify(response)
             else:
-                # Fallback payment link (same pattern as book purchase - line 3354)
-                # Book purchase uses hardcoded payment link when Stripe checkout fails
-                logger.warning(f"Stripe checkout URL not available for investment {investment.id}, using fallback payment link")
-                response['stripe_payment_link'] = f'https://buy.stripe.com/test_dRm28sbYUbCi9ypaSn48000?client_reference_id={investment.id}'
-            return jsonify(response)
+                error_msg = stripe_error or 'Stripe payment is not configured. Please set STRIPE_SECRET_KEY in your environment.'
+                logger.warning(f"Stripe checkout URL not available for investment {investment.id}: {error_msg}")
+                return jsonify({'success': False, 'error': error_msg}), 503
         else:
             # Form submission - redirect to Stripe (backward compatibility)
             if stripe_checkout_url:
@@ -5714,15 +5905,19 @@ def earnings_dashboard():
         earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
         logger.info(f"Earnings dashboard - Total investment returns: ${earnings_data['total_investment_returns']:.2f} from {len(investments)} investments (excluding own books)")
         
-        # Get payout history for each investment
+        # Get payout history and available balance for each investment
         for investment in investments:
             payouts = InvestmentPayout.query.filter_by(
                 investment_id=investment.id
             ).order_by(InvestmentPayout.created_at.desc()).limit(20).all()
             investment.payouts_list = payouts
+            investment.available_balance = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
+            investment.pending_payout_requests = PayoutRequest.query.filter_by(
+                investment_id=investment.id, status='PENDING'
+            ).all()
             # Verify total_returns matches sum of payouts (for debugging)
             calculated_returns = sum(p.amount for p in payouts)
-            if abs(investment.total_returns - calculated_returns) > 0.01:
+            if abs((investment.total_returns or 0) - calculated_returns) > 0.01:
                 logger.warning(f"Investment {investment.id} total_returns (${investment.total_returns}) doesn't match sum of payouts (${calculated_returns})")
     else:
         # User doesn't have a BookPlatformUser profile yet, but might have investments
@@ -5809,6 +6004,135 @@ def earnings_dashboard():
         earnings_data['author_sales_by_book'] = dict(sales_by_book)
     
     return render_template('book_platform/earnings.html', earnings_data=earnings_data)
+
+
+# Minimum amount to request payout (USD)
+PAYOUT_MINIMUM_AMOUNT = 25.0
+
+
+@book_bp.route('/earnings/request-payout', methods=['POST'])
+@login_required
+def request_payout():
+    """Investor requests payout of available earnings"""
+    data = request.get_json() or {}
+    investment_id = data.get('investment_id')
+    amount = data.get('amount')
+    
+    if not investment_id or amount is None:
+        return jsonify({'error': 'Missing investment_id or amount'}), 400
+    
+    try:
+        investment_id = int(investment_id)
+        amount = float(amount)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid investment_id or amount'}), 400
+    
+    if amount < PAYOUT_MINIMUM_AMOUNT:
+        return jsonify({'error': f'Minimum payout amount is ${PAYOUT_MINIMUM_AMOUNT:.2f}'}), 400
+    
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not bp_user:
+        return jsonify({'error': 'Investor profile not found'}), 403
+    
+    investment = BookInvestment.query.filter_by(
+        id=investment_id, investor_id=bp_user.id
+    ).first()
+    if not investment:
+        return jsonify({'error': 'Investment not found or you do not own it'}), 404
+    
+    available = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
+    if amount > available:
+        return jsonify({'error': f'Amount exceeds available balance (${available:.2f})'}), 400
+    
+    # Check for existing pending request
+    pending = PayoutRequest.query.filter_by(
+        investment_id=investment_id, status='PENDING'
+    ).first()
+    if pending:
+        return jsonify({'error': 'You already have a pending payout request for this investment'}), 400
+    
+    payout_request = PayoutRequest(
+        investment_id=investment_id,
+        amount=amount,
+        currency=investment.currency or 'USD',
+        status='PENDING'
+    )
+    db.session.add(payout_request)
+    db.session.commit()
+    
+    logger.info(f"Payout request {payout_request.id} created: investment={investment_id}, amount=${amount}")
+    return jsonify({
+        'success': True,
+        'message': f'Payout request of ${amount:.2f} submitted. Admin will process it shortly.',
+        'payout_request_id': payout_request.id
+    })
+
+
+@book_bp.route('/admin/payout-requests')
+@login_required
+def admin_payout_requests():
+    """Admin view of pending payout requests"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    pending = PayoutRequest.query.filter_by(status='PENDING').order_by(
+        PayoutRequest.requested_at.asc()
+    ).all()
+    paid = PayoutRequest.query.filter_by(status='PAID').order_by(
+        PayoutRequest.paid_at.desc()
+    ).limit(50).all()
+    
+    return render_template('book_platform/admin_payout_requests.html',
+        pending=pending, paid=paid
+    )
+
+
+@book_bp.route('/admin/payout-requests/<int:request_id>/mark-paid', methods=['POST'])
+@login_required
+def admin_mark_payout_paid(request_id):
+    """Admin marks a payout request as paid (after bank transfer)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    payout_request = PayoutRequest.query.get_or_404(request_id)
+    if payout_request.status != 'PENDING':
+        return jsonify({'error': 'Payout request is not pending'}), 400
+    
+    investment = payout_request.investment
+    available = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
+    if payout_request.amount > available:
+        return jsonify({'error': f'Amount (${payout_request.amount:.2f}) exceeds available balance (${available:.2f})'}), 400
+    
+    payout_request.status = 'PAID'
+    payout_request.paid_at = datetime.now(timezone.utc)
+    payout_request.admin_notes = (request.get_json() or {}).get('admin_notes', '')
+    
+    investment.paid_out_amount = (getattr(investment, 'paid_out_amount', 0) or 0) + payout_request.amount
+    db.session.commit()
+    
+    logger.info(f"Payout request {payout_request.id} marked paid by admin {current_user.username}")
+    flash(f'Payout of ${payout_request.amount:.2f} marked as paid.', 'success')
+    return redirect(url_for('book_platform.admin_payout_requests'))
+
+
+@book_bp.route('/admin/payout-requests/<int:request_id>/cancel', methods=['POST'])
+@login_required
+def admin_cancel_payout_request(request_id):
+    """Admin cancels a payout request"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    payout_request = PayoutRequest.query.get_or_404(request_id)
+    if payout_request.status != 'PENDING':
+        return jsonify({'error': 'Payout request is not pending'}), 400
+    
+    payout_request.status = 'CANCELLED'
+    db.session.commit()
+    
+    flash('Payout request cancelled.', 'info')
+    return redirect(url_for('book_platform.admin_payout_requests'))
+
 
 # Book Sales Transparency Page
 @book_bp.route('/books/<int:book_id>/sales-transparency', methods=['GET'])
@@ -6268,14 +6592,15 @@ def blogs_redirect():
     return redirect(url_for('blog.blogs'))
 
 @book_bp.route('/music')
-@login_required
 def music_dashboard():
     """Standalone music dashboard for searching songs and managing playlists"""
     from glconnect.models import Artist
-    # Check if user has an artist profile
-    artist_profile = Artist.query.filter_by(user_id=current_user.user_id).first()
-    # Check if user has 'artist' role
-    is_artist_account = hasattr(current_user, 'role') and current_user.role == 'artist'
+    # Check if user has an artist profile (only when logged in)
+    artist_profile = None
+    is_artist_account = False
+    if current_user.is_authenticated:
+        artist_profile = Artist.query.filter_by(user_id=current_user.user_id).first()
+        is_artist_account = hasattr(current_user, 'role') and current_user.role == 'artist'
     return render_template('book_platform/music_dashboard.html', 
                          has_artist_profile=artist_profile is not None, 
                          artist_profile=artist_profile,

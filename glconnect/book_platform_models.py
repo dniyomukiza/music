@@ -72,6 +72,14 @@ class ReviewStatus(PyEnum):
     PUBLISHED = "published"
     REJECTED = "rejected"
 
+
+class ReviewRequestStatus(PyEnum):
+    PENDING = "pending"      # Author sent request; reviewer has not accepted
+    ACCEPTED = "accepted"    # Reviewer accepted; review not yet submitted
+    IN_PROGRESS = "in_progress"  # Reviewer submitted; awaiting author approval
+    COMPLETED = "completed"  # Author published review; task done
+    CANCELLED = "cancelled"
+
 class InvestmentStatus(PyEnum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
@@ -356,6 +364,9 @@ class BookPurchase(db.Model):
     buyer_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # Direct reference to users table
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
     
+    # Purchase format: digital (ebook), audiobook, bundle - determines sale_format and access
+    purchase_format = db.Column(db.String(20), default='digital', nullable=True)
+    
     # Buyer information (stored for easy access and historical record)
     buyer_username = db.Column(db.String(80), nullable=True)  # Store username for quick access
     buyer_full_name = db.Column(db.String(200), nullable=True)  # Store full name (first_name + last_name or pen_name)
@@ -491,6 +502,9 @@ class BookSale(db.Model):
     paid_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
+    # Sale format: 'digital' (ebook/digital copy), 'audiobook', 'bundle'. Used so earnings account for digital and audio.
+    sale_format = db.Column(db.String(20), default='digital', nullable=True)
+    
     # Revenue Distribution Tracking
     distributed_to_reviewers = db.Column(db.Float, default=0.0)
     distributed_to_investors = db.Column(db.Float, default=0.0)
@@ -611,6 +625,32 @@ class AccreditedReviewer(db.Model):
     reviews = db.relationship('BookReview', backref='reviewer', lazy=True)
     earnings = db.relationship('ReviewerEarning', backref='reviewer', lazy=True)
 
+
+# Review Request Model (author requests a reviewer; optional fixed fee per task)
+class ReviewRequest(db.Model):
+    __tablename__ = 'review_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('accredited_reviewers.id', ondelete='CASCADE'), nullable=False)
+    requested_by_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='CASCADE'), nullable=False)
+    
+    agreed_fee = db.Column(db.Float, nullable=True)  # Optional fixed fee author will pay on completion
+    agreed_revenue_share = db.Column(db.Float, nullable=True)  # Optional % of sales (if author and reviewer agree)
+    
+    status = db.Column(db.Enum(ReviewRequestStatus), default=ReviewRequestStatus.PENDING)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    accepted_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    book_project = db.relationship('BookProject', backref='review_requests')
+    reviewer = db.relationship('AccreditedReviewer', backref='review_requests')
+    requested_by = db.relationship('BookPlatformUser', backref='sent_review_requests')
+    review = db.relationship('BookReview', backref=db.backref('review_request', lazy=True), uselist=False, foreign_keys='BookReview.review_request_id')
+
+
 # Book Review Model
 class BookReview(db.Model):
     __tablename__ = 'book_reviews'
@@ -634,9 +674,14 @@ class BookReview(db.Model):
     revenue_share_percentage = db.Column(db.Float, nullable=False)  # e.g., 2.5% of sales
     minimum_sales_threshold = db.Column(db.Integer, default=0)  # Minimum sales before earning
     
+    # Author-paid task (freelancer style): fixed fee per completed review, paid when author publishes
+    agreed_fee = db.Column(db.Float, nullable=True)  # Optional fixed amount author pays on completion
+    author_paid_at = db.Column(db.DateTime, nullable=True)  # When author paid the fixed fee (if any)
+    
     # Foreign Keys
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False)
     reviewer_id = db.Column(db.Integer, db.ForeignKey('accredited_reviewers.id', ondelete='CASCADE'), nullable=False)
+    review_request_id = db.Column(db.Integer, db.ForeignKey('review_requests.id', ondelete='SET NULL'), nullable=True)
     
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -714,6 +759,7 @@ class BookInvestment(db.Model):
     
     # Returns Tracking
     total_returns = db.Column(db.Float, default=0.0)
+    paid_out_amount = db.Column(db.Float, default=0.0)  # Amount already paid to investor; available = total_returns - paid_out_amount
     last_payout_date = db.Column(db.DateTime, nullable=True)
     
     # Refund tracking
@@ -804,6 +850,28 @@ class InvestmentPayout(db.Model):
     
     # Relationships
     distribution = db.relationship('RevenueDistribution', backref='investment_payouts')
+
+# Payout Request Model (investor requests withdrawal of earnings)
+class PayoutRequest(db.Model):
+    __tablename__ = 'payout_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    investment_id = db.Column(db.Integer, db.ForeignKey('book_investments.id', ondelete='CASCADE'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    status = db.Column(db.String(20), default='PENDING')  # PENDING, PAID, CANCELLED
+    
+    requested_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = db.Column(db.DateTime, nullable=True)
+    admin_notes = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    investment = db.relationship('BookInvestment', backref='payout_requests')
+
 
 # Refund Request Model
 class RefundRequest(db.Model):

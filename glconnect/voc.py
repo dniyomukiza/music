@@ -36,6 +36,12 @@ def get_db() -> Generator[Session, None, None]:
 app = FastAPI()
 
 
+@app.get("/health")
+def health():
+    """Health check for Docker and load balancers."""
+    return {"status": "healthy", "service": "fastapi"}
+
+
 # The dictionary containing your word data
 words_data = {
     "kwaba": {
