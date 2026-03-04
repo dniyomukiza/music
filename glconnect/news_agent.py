@@ -106,23 +106,21 @@ def get_memory_usage():
         print(f"DEBUG: Memory check failed: {e}")
         return 0
 
-# Load Google API key from environment variables
+# Load Google API key from environment variables (no exit at import - allows app to start)
 google_api_key = os.getenv("GOOGLE_API_KEY")
 if not google_api_key:
-    print("Error: GOOGLE_API_KEY not found in glconfig.json")
-    exit(1)
+    print("WARNING: GOOGLE_API_KEY not set. News generation and TTS will fail until added to .env or glconfig.json.")
 
 # Get TTS credentials path from environment variables
 tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 print(f"DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: {tts_credentials_path}")
 print(f"DEBUG: Using TTS credentials path: {tts_credentials_path}")
 
-# Configure Google AI SDK
+# Configure Google AI SDK only if key is present
 import google.generativeai as genai
-genai.configure(api_key=google_api_key)
-
-# Set Google API key as environment variable for ADK agents
-os.environ['GOOGLE_API_KEY'] = google_api_key
+if google_api_key:
+    genai.configure(api_key=google_api_key)
+    os.environ['GOOGLE_API_KEY'] = google_api_key
 
 # TTS credentials will be loaded when needed
 

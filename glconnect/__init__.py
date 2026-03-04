@@ -12,28 +12,70 @@ from flask_ckeditor import CKEditor
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Diagnostic: capture env state BEFORE load_dotenv (to see if Docker injected vars)
+_env_before = bool(os.getenv("GOOGLE_API_KEY"))
 
-# Load configuration from environment variables (more reliable than file mounting)
-config = {
-    "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
-    "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
-    "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
-    "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
-    "DB_URL": os.getenv("DB_URL"),
-    "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
-    "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
-}
-print("DEBUG: Using environment variables for configuration")
+# Load .env from explicit paths (Docker CWD=/usr/src/appdir; local=project root)
+# load_dotenv() with no args uses CWD - in Docker that's correct; but be explicit for reliability
+_env_paths = [
+    os.path.join(os.path.dirname(__file__), "..", ".env"),  # glconnect/../.env
+    ".env",
+    "/usr/src/appdir/.env",  # Docker WORKDIR
+]
+for _p in _env_paths:
+    if os.path.isfile(_p):
+        load_dotenv(_p)
+        break
+else:
+    load_dotenv()  # fallback: CWD and parents
 
-# Debug: Check if Google credentials are loaded
-# Get Google API key from glconfig.json
+# Load configuration: env vars first, then fallback to glconfig.json if present
+def _load_config():
+    cfg = {
+        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+        "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
+        "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
+        "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
+        "DB_URL": os.getenv("DB_URL"),
+        "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
+        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
+    }
+    # Fallback: load from glconfig.json if env vars are empty (e.g. server with mounted config)
+    for path in ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]:
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    file_cfg = json.load(f)
+                if not cfg.get("GOOGLE_API_KEY") and file_cfg.get("GOOGLE_API_KEY"):
+                    cfg["GOOGLE_API_KEY"] = file_cfg["GOOGLE_API_KEY"]
+                if not cfg.get("GEMINI_API_KEY") and file_cfg.get("GEMINI_API_KEY"):
+                    cfg["GEMINI_API_KEY"] = file_cfg["GEMINI_API_KEY"]
+                break
+            except Exception:
+                pass
+    return cfg
+
+config = _load_config()
+
+# Startup diagnostic: trace why keys might be missing
+_cwd = os.getcwd()
+_env_after = bool(os.getenv("GOOGLE_API_KEY"))
+print(f"DEBUG: CWD={_cwd}")
+print(f"DEBUG: .env in CWD: {os.path.isfile(os.path.join(_cwd, '.env'))}")
+print(f"DEBUG: GOOGLE_API_KEY before load_dotenv: {'set' if _env_before else 'NOT SET (Docker did not inject)'}")
+print(f"DEBUG: GOOGLE_API_KEY after load_dotenv: {'set' if _env_after else 'NOT SET'}")
+
+# Push config into os.environ so modules that use os.getenv() get the values
+if config.get("GOOGLE_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = config["GOOGLE_API_KEY"]
+if config.get("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY"):
+    os.environ["GEMINI_API_KEY"] = config["GEMINI_API_KEY"]
+
 google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")
-print(f"GOOGLE_API_KEY from glconfig.json: {google_api_key}")
-print(f"GEMINI_API_KEY from .env: {gemini_api_key[:20]}..." if gemini_api_key else "GEMINI_API_KEY: Not found")
-print(f"GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)")
+print(f"GOOGLE_API_KEY: {'(set)' if google_api_key else '(not set)'}")
+print(f"GEMINI_API_KEY: {gemini_api_key[:20] + '...' if gemini_api_key else '(not set)'}")
+print(f"GOOGLE_APPLICATION_CREDENTIALS: {config.get('GOOGLE_APPLICATION_CREDENTIALS', 'tts.json')}")
 
 # Initialize extensions
 mail = Mail()

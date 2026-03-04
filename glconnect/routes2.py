@@ -6,17 +6,18 @@ from glconnect.search import SongSearcher
 from google.cloud import texttospeech
 import google.generativeai as genai
 
-# Load Google API key from environment variables
-google_api_key = os.getenv("GOOGLE_API_KEY")
+# Load Google API key from environment variables (lazy - no exit at import)
+def _get_google_api_key():
+    return os.getenv("GOOGLE_API_KEY")
+
+def _ensure_genai_configured():
+    """Configure Gemini only when needed; raises if key missing."""
+    key = _get_google_api_key()
+    if not key:
+        raise ValueError("GOOGLE_API_KEY not set. Add it to .env or glconfig.json.")
+    genai.configure(api_key=key)
+
 bp2 = Blueprint('routes2', __name__)
-
-# Check for API key
-if not google_api_key:
-    print("API key not found. Please set the 'GOOGLE_API_KEY' in glconfig.json.")
-    exit(1)
-
-# Configure Gemini
-genai.configure(api_key=google_api_key)
 
 # Get TTS credentials path from environment variables
 tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
@@ -27,6 +28,7 @@ client = None
 def generate_news_with_gemini(topic: str) -> str:
     """Generate news content using Gemini API for a single topic."""
     try:
+        _ensure_genai_configured()
         # Configure model with memory-efficient settings
         generation_config = genai.types.GenerationConfig(
             max_output_tokens=1024,  # Limit output length
