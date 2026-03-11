@@ -145,9 +145,12 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
-        'pool_reset_on_return': 'commit',  # Reset connections on return
+        'pool_pre_ping': True,       # Verify connection is alive before use (handles stale connections)
+        'pool_recycle': 60,          # Recycle connections every 60s (cloud DBs close idle sooner than 300s)
+        'pool_size': 3,             # Fewer connections = fewer stale ones after idle
+        'max_overflow': 2,           # Allow brief bursts
+        'pool_reset_on_return': 'commit',
+        'connect_args': {'connect_timeout': 10},  # Don't hang when creating new connections
     }
     app.config["JWT_SECRET_KEY"] = "abarayon"
 
