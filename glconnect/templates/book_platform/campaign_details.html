@@ -32,22 +32,26 @@
             {% endif %}
         {% endwith %}
         
-        <!-- Trust Indicators Banner -->
-        <div class="alert alert-info mb-4">
-            <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i>Before Investing, Check:</h5>
+        <!-- Platform Ethos: Patient Capital -->
+        <div class="alert alert-primary mb-4 border-0">
+            <h5 class="mb-2"><i class="fas fa-heart me-2"></i>Turning Social Alignment into Financial Reality</h5>
+            <p class="mb-3 small">
+                This is a platform for <strong>patient investors</strong>. You may lose, break even, or profit—what matters is advancing impactful work and helping authors bring their vision to life. Invest because you believe in the project, not for guaranteed returns.
+            </p>
+            <h6 class="mb-2">Before Investing, Check:</h6>
             <div class="row">
                 <div class="col-md-6">
-                    <ul class="mb-0">
-                        <li><strong>Author Credibility</strong> - Review author profile and track record</li>
-                        <li><strong>Book Quality</strong> - Check word count, chapters, and reviews</li>
-                        <li><strong>Accredited Reviews</strong> - Professional reviewer ratings</li>
+                    <ul class="mb-0 small">
+                        <li><strong>Author Credibility</strong> - Profile and track record</li>
+                        <li><strong>Book Quality</strong> - Word count, chapters, reviews</li>
+                        <li><strong>Accredited Reviews</strong> - Professional ratings</li>
                     </ul>
                 </div>
                 <div class="col-md-6">
-                    <ul class="mb-0">
-                        <li><strong>Investment Terms</strong> - Revenue share and return caps</li>
-                        <li><strong>Book Completion</strong> - Progress and publication timeline</li>
-                        <li><strong>Social Proof</strong> - Other investors and funding progress</li>
+                    <ul class="mb-0 small">
+                        <li><strong>Investment Terms</strong> - Revenue share and caps</li>
+                        <li><strong>Book Completion</strong> - Progress and timeline</li>
+                        <li><strong>Impact</strong> - Does this work deserve your support?</li>
                     </ul>
                 </div>
             </div>
@@ -483,13 +487,19 @@
                         </div>
                         {% endif %}
 
-                        <!-- Risk Indicators -->
-                        <div class="alert alert-warning mt-3">
+                        <!-- Patient Investor: Outcomes Vary -->
+                        <div class="alert alert-secondary mt-3">
                             <small>
-                                <strong><i class="fas fa-info-circle me-1"></i>Investment Risk:</strong><br>
-                                • Returns depend on book sales performance<br>
-                                • No guaranteed returns<br>
-                                • Maximum return capped at {{ campaign.return_multiplier_cap }}x
+                                <strong><i class="fas fa-seedling me-1"></i>Patient Investor:</strong><br>
+                                • Books may not sell—you could lose your investment<br>
+                                • You may break even or make a profit<br>
+                                • What matters: supporting authors and impactful work, regardless of outcome
+                            </small>
+                        </div>
+                        <!-- Fund Release Safeguard -->
+                        <div class="alert alert-info mt-2">
+                            <small>
+                                <strong><i class="fas fa-shield-alt me-1"></i>Your funds are protected:</strong> Author receives 50% when they complete a full first draft (25,000+ words), 50% when published. Reduces ghost-author risk.
                             </small>
                         </div>
 

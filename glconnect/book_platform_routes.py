@@ -8,7 +8,7 @@ This module contains all routes for Ink Studio including:
 - User management
 """
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, current_app, send_from_directory, send_file, abort
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session, current_app, send_from_directory, send_file, abort, Response
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
@@ -28,8 +28,9 @@ from glconnect.book_platform_models import (
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
     ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
-    AudioGenerationTask, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
-    RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
+    AudioGenerationTask, AudiobookChapter, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
+    AuthorCampaignPayoutRequest,
+    RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, ReviewerPayoutRequest, AuthorSalesPayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
     ReviewStatus, ReviewRequest, ReviewRequestStatus, InvestmentStatus, CampaignStatus, DistributionType
 )
 
@@ -39,6 +40,7 @@ from glconnect.digital_book_processor import digital_book_processor
 from glconnect.audio_book_generator import audio_book_generator
 from glconnect.revenue_distribution_service import distribute_revenue
 from glconnect.stripe_utils import init_stripe, get_webhook_secret
+from glconnect.book_utils import is_book_published
 import threading
 from werkzeug.utils import secure_filename
 
@@ -883,7 +885,7 @@ def edit_book(book_id, user_profile, profile_type):
                             book.published_at = datetime.now(timezone.utc)
                         logger.info(f"Book {book_id} published via edit form - Status set to PUBLISHED")
                 else:
-                    if book.status == BookStatus.PUBLISHED:
+                    if is_book_published(book):
                         book.status = BookStatus.DRAFT
                         logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
             
@@ -1195,18 +1197,13 @@ def delete_book(book_id, user_profile, profile_type):
         if not book:
             return jsonify({'error': 'Book not found'}), 404
 
-        # Get the correct author ID based on profile type
-        author_id = get_profile_id(user_profile, profile_type)
-        
-        # Debug logging and error handling
-        if author_id is None:
-            print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
-            return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
-
-        # Check if user is the author of the book
-        if book.author_id != author_id:
-            print(f"Permission denied: book.author_id={book.author_id}, user author_id={author_id}, user_id={current_user.user_id}")
-            return jsonify({'error': 'You can only delete your own books'}), 403
+        # Admins can delete any book; others must be the author
+        if current_user.role != 'admin':
+            author_id = get_profile_id(user_profile, profile_type)
+            if author_id is None:
+                return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
+            if book.author_id != author_id:
+                return jsonify({'error': 'You can only delete your own books'}), 403
 
         # Clean up related data in proper order to avoid foreign key constraints
         
@@ -1353,7 +1350,7 @@ def generate_audiobook_for_book(book_id):
                 # Check if book is published and chapters have content
                 chapters_with_content = [ch for ch in all_chapters if (ch.content or ch.summary)]
                 
-                if book.status == BookStatus.PUBLISHED and chapters_with_content:
+                if is_book_published(book) and chapters_with_content:
                     # Use chapters with content if book is published (they're effectively published)
                     logger.info(f"Book {book_id} is published but chapters not individually marked. Using chapters with content.")
                     chapters = chapters_with_content
@@ -1372,30 +1369,30 @@ def generate_audiobook_for_book(book_id):
                     
                     return jsonify({'success': False, 'error': error_msg}), 400
             
-            # Combine all chapter content (including summary if available)
+            # Build per-chapter data for chapter-based audiobook (listeners can pick any chapter)
+            chapters_for_audio = []
             for chapter in chapters:
                 chapter_text = ""
-                
-                # Add chapter title and number
                 chapter_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n"
-                
-                # Add summary if available
                 if chapter.summary:
                     import re
                     clean_summary = re.sub(r'<[^>]+>', '', chapter.summary)
                     clean_summary = re.sub(r'\s+', ' ', clean_summary).strip()
                     if clean_summary:
                         chapter_text += f"Summary: {clean_summary}\n\n"
-                
-                # Add content if available
                 if chapter.content:
                     import re
                     clean_content = re.sub(r'<[^>]+>', '', chapter.content)
                     clean_content = re.sub(r'\s+', ' ', clean_content).strip()
                     if clean_content:
                         chapter_text += f"{clean_content}\n\n"
-                
                 if chapter_text.strip():
+                    chapters_for_audio.append({
+                        'title': f"Chapter {chapter.chapter_number}: {chapter.title}",
+                        'text': chapter_text,
+                        'chapter_number': chapter.chapter_number,
+                        'book_chapter_id': chapter.id
+                    })
                     full_text += chapter_text
             
             if not full_text.strip():
@@ -1415,19 +1412,17 @@ def generate_audiobook_for_book(book_id):
         # Store IDs and data for use in background thread (objects can't be passed between threads)
         task_id = audio_task.id
         book_id_for_thread = book.id
-        # Capture text and voice name explicitly for the closure
         full_text_for_thread = full_text
         voice_name_for_thread = voice_name
         audiobook_price_for_thread = audiobook_price
+        # For platform chapters: per-chapter audio so listeners can pick any chapter
+        chapters_for_audio_thread = chapters_for_audio if not book.digital_file_path else []
         
-        # Capture the real Flask app object for use in the background thread
         app = current_app._get_current_object()
 
-        # Start audio generation in background
         def generate_audio_background():
             with app.app_context():
                 try:
-                    # Query fresh instances in the background thread's session
                     audio_task = AudioGenerationTask.query.get(task_id)
                     book = BookProject.query.get(book_id_for_thread)
                     
@@ -1435,28 +1430,50 @@ def generate_audiobook_for_book(book_id):
                         logger.error(f"Could not find audio task {task_id} or book {book_id_for_thread} in background thread")
                         return
                     
-                    # Update task status
                     audio_task.status = 'processing'
                     audio_task.progress = 10
                     db.session.commit()
                     
-                    # Generate audiobook using captured variables
-                    audio_result = audio_book_generator.generate_audiobook(
-                        full_text_for_thread,
-                        book.id,
-                        voice_name_for_thread
-                    )
+                    # Platform chapters: generate per-chapter audio (listeners pick any chapter)
+                    # Uploaded books: single combined file
+                    if chapters_for_audio_thread:
+                        audio_result = audio_book_generator.generate_audiobook_by_chapters(
+                            chapters_for_audio_thread,
+                            book.id,
+                            voice_name_for_thread
+                        )
+                    else:
+                        audio_result = audio_book_generator.generate_audiobook(
+                            full_text_for_thread,
+                            book.id,
+                            voice_name_for_thread
+                        )
                     
                     if audio_result['success']:
-                        # Update book with audiobook info
                         book.has_audiobook = True
-                        book.audiobook_file_path = audio_result['audio_file_path']
                         book.audiobook_price = audiobook_price_for_thread
-                        book.audiobook_duration = audio_result['duration']
                         book.audiobook_generated_at = datetime.now(timezone.utc)
                         book.audiobook_voice = voice_name_for_thread
                         
-                        # Update task
+                        if chapters_for_audio_thread and audio_result.get('chapter_results'):
+                            # Store per-chapter audio; keep first chapter path for backward compat
+                            ch_results = audio_result['chapter_results']
+                            book.audiobook_duration = audio_result.get('duration', 0)
+                            book.audiobook_file_path = ch_results[0]['audio_file_path'] if ch_results else None
+                            for ch in ch_results:
+                                ac = AudiobookChapter(
+                                    book_project_id=book.id,
+                                    chapter_number=ch['chapter_number'],
+                                    title=ch['title'],
+                                    audio_file_path=ch['audio_file_path'],
+                                    duration_seconds=ch.get('duration', 0),
+                                    book_chapter_id=ch.get('book_chapter_id')
+                                )
+                                db.session.add(ac)
+                        else:
+                            book.audiobook_file_path = audio_result['audio_file_path']
+                            book.audiobook_duration = audio_result.get('duration', 0)
+                        
                         audio_task.status = 'completed'
                         audio_task.progress = 100
                         audio_task.completed_at = datetime.now(timezone.utc)
@@ -2264,6 +2281,61 @@ def admin_books():
         return redirect(url_for('book_platform.marketplace'))
     books = DatabaseOptimizer.get_admin_books_data()
     return render_template('book_platform/admin_books.html', books=books)
+
+
+@book_bp.route('/admin/books/delete-test-books', methods=['POST'])
+@login_required
+def admin_delete_test_books():
+    """Admin: delete all books with 'test' in the title (removes test data from platform)"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    test_books = BookProject.query.filter(BookProject.title.ilike('%test%')).all()
+    
+    deleted = []
+    for book in test_books:
+        book_id = book.id
+        title = book.title
+        try:
+            campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
+            if campaign:
+                investments = BookInvestment.query.filter_by(campaign_id=campaign.id).all()
+                investment_ids = [inv.id for inv in investments]
+                if investment_ids:
+                    InvestmentPayout.query.filter(InvestmentPayout.investment_id.in_(investment_ids)).delete(synchronize_session=False)
+                inv_ids = [inv.id for inv in investments]
+                RefundRequest.query.filter(RefundRequest.investment_id.in_(inv_ids)).delete(synchronize_session=False)
+                BookInvestment.query.filter_by(campaign_id=campaign.id).delete()
+                AuthorCampaignPayoutRequest.query.filter_by(campaign_id=campaign.id).delete()
+                db.session.delete(campaign)
+            BookSale.query.filter_by(book_project_id=book_id).delete()
+            BookPurchase.query.filter_by(book_project_id=book_id).delete()
+            AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
+            RealtimeSession.query.filter_by(book_project_id=book_id).delete()
+            BookComment.query.filter_by(book_project_id=book_id).delete()
+            collab_ids_subq = db.session.query(BookCollaboration.id).filter_by(book_project_id=book_id).subquery()
+            CollaborationInvitation.query.filter(CollaborationInvitation.collaboration_id.in_(collab_ids_subq)).delete(synchronize_session=False)
+            BookCollaboration.query.filter_by(book_project_id=book_id).delete()
+            BookAnalytics.query.filter_by(book_project_id=book_id).delete()
+            BookNotification.query.filter_by(book_project_id=book_id).delete()
+            BookReview.query.filter_by(book_project_id=book_id).delete()
+            ReviewRequest.query.filter_by(book_project_id=book_id).delete()
+            BookChapter.query.filter_by(book_project_id=book_id).delete()
+            AudiobookChapter.query.filter_by(book_project_id=book_id).delete()
+            db.session.delete(book)
+            deleted.append(title)
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error deleting test book {book_id}: {e}", exc_info=True)
+            return jsonify({'error': f'Failed to delete "{title}": {str(e)}'}), 500
+    
+    db.session.commit()
+    if deleted:
+        flash(f'Deleted {len(deleted)} test book(s): {", ".join(deleted)}', 'success')
+    else:
+        flash('No test books found to delete.', 'info')
+    return redirect(url_for('book_platform.admin_books'))
+
 
 # Admin Reviewer Management Routes
 @book_bp.route('/admin/reviewers')
@@ -3953,7 +4025,10 @@ def stripe_webhook():
                         investment.payment_status = TransactionStatus.COMPLETED
                         investment.status = InvestmentStatus.CONFIRMED
                         investment.invested_at = datetime.now(timezone.utc)
-                        
+                        # Store payment intent for investor refunds (before first draft only)
+                        payment_intent_id = session.get('payment_intent')
+                        if payment_intent_id:
+                            investment.stripe_payment_intent_id = payment_intent_id
                         # Update campaign funding on successful payment
                         campaign.current_funding += investment.amount
                         
@@ -4823,6 +4898,78 @@ def serve_audiobook_file(book_id):
             mimetype='audio/mpeg'
         )
 
+
+def _user_has_audiobook_access(book, user_id):
+    """Check if user (author or purchaser) has audiobook access."""
+    if book.author and book.author.user_id == user_id:
+        return True
+    bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
+    buyer_id = bp_user.id if bp_user else None
+    purchases = BookPurchase.query.filter(
+        db.or_(
+            BookPurchase.buyer_user_id == user_id,
+            (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
+        ),
+        BookPurchase.book_project_id == book.id,
+        BookPurchase.status == TransactionStatus.COMPLETED
+    ).all()
+    return any(
+        getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+    )
+
+
+@book_bp.route('/audiobook/<int:book_id>/chapter/<int:chapter_id>/file')
+@login_required
+def serve_audiobook_chapter_file(book_id, chapter_id):
+    """Serve a single audiobook chapter audio file."""
+    book = BookProject.query.get_or_404(book_id)
+    chapter = AudiobookChapter.query.filter_by(id=chapter_id, book_project_id=book_id).first_or_404()
+    
+    if not book.has_audiobook:
+        return "Audiobook not found", 404
+    
+    if not _user_has_audiobook_access(book, current_user.user_id):
+        return "Access denied", 403
+    
+    if not os.path.exists(chapter.audio_file_path):
+        return "Chapter audio not found", 404
+    
+    static_path = os.path.join(current_app.root_path, 'static')
+    if chapter.audio_file_path.startswith(static_path):
+        relative_path = os.path.relpath(chapter.audio_file_path, static_path)
+        return send_from_directory(
+            os.path.join(current_app.root_path, 'static'),
+            relative_path,
+            as_attachment=False,
+            mimetype='audio/mpeg'
+        )
+    return send_from_directory(
+        os.path.dirname(chapter.audio_file_path),
+        os.path.basename(chapter.audio_file_path),
+        as_attachment=False,
+        mimetype='audio/mpeg'
+    )
+
+
+@book_bp.route('/audiobook/<int:book_id>/player')
+@login_required
+def audiobook_player(book_id):
+    """Audiobook player page with chapter list - listeners can pick and play any chapter."""
+    book = BookProject.query.get_or_404(book_id)
+    
+    if not book.has_audiobook:
+        flash("Audiobook not available for this book.", "error")
+        return redirect(url_for('book_platform.marketplace'))
+    
+    if not _user_has_audiobook_access(book, current_user.user_id):
+        flash("You must purchase the audiobook to listen.", "error")
+        return redirect(url_for('book_platform.marketplace'))
+    
+    chapters = AudiobookChapter.query.filter_by(book_project_id=book_id).order_by(AudiobookChapter.chapter_number).all()
+    
+    return render_template('book_platform/audiobook_player.html', book=book, chapters=chapters)
+
+
 @book_bp.route('/books/<int:book_id>/download-audio')
 @login_required
 def download_audio_book(book_id):
@@ -4977,6 +5124,33 @@ def reviewers():
                          status_filter=status_filter,
                          genre_filter=genre_filter,
                          search_query=search_query)
+
+# Books seeking review - visible to accredited reviewers (pending requests addressed to them)
+@book_bp.route('/reviewers/books-seeking-review', methods=['GET'])
+@login_required
+def books_seeking_review():
+    """Reviewers see books with pending review requests addressed to them"""
+    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    if not reviewer:
+        flash('Reviewer profile required to view this page.', 'info')
+        return redirect(url_for('book_platform.reviewers'))
+    if reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
+        flash('You must be an accredited reviewer to view review requests.', 'warning')
+        return redirect(url_for('book_platform.reviewers'))
+    
+    pending_requests = ReviewRequest.query.filter_by(
+        reviewer_id=reviewer.id,
+        status=ReviewRequestStatus.PENDING
+    ).options(
+        joinedload(ReviewRequest.book_project).joinedload(BookProject.author),
+        joinedload(ReviewRequest.requested_by)
+    ).order_by(ReviewRequest.created_at.desc()).all()
+    
+    return render_template('book_platform/books_seeking_review.html',
+        pending_requests=pending_requests,
+        reviewer=reviewer
+    )
+
 
 # Reviewer Profile
 @book_bp.route('/reviewers/<int:reviewer_id>', methods=['GET'])
@@ -5316,12 +5490,17 @@ def pay_review_task(book_id, review_id, user_profile, profile_type):
 @book_bp.route('/books/<int:book_id>/create-campaign', methods=['GET', 'POST'])
 @writer_or_book_platform_required
 def create_investment_campaign(book_id, user_profile, profile_type):
-    """Author creates an investment campaign for their book"""
+    """Author creates an investment campaign for their book. Uploaded books are never allowed campaigns."""
     book = BookProject.query.get_or_404(book_id)
     author_id = get_profile_id(user_profile, profile_type)
     
     if book.author_id != author_id:
         flash('You can only create campaigns for your own books.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    # Uploaded books (PDF/EPUB/DOCX) can never have campaigns—only selling digital/audio
+    if book.digital_file_path:
+        flash('Investment campaigns are not available for uploaded books. Uploaded books can only be sold (digital/audio) in the marketplace.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Check if campaign already exists
@@ -5573,7 +5752,7 @@ def make_investment(campaign_id):
     logger.info(f"Make investment attempt - User: {current_user.user_id}, Campaign: {campaign_id}, Status: {campaign.status.value}, Book Status: {book.status.value if book else 'None'}")
     
     # Stop new investments if book is published OR goal has been reached
-    if book and book.status == BookStatus.PUBLISHED:
+    if book and is_book_published(book):
         logger.warning(f"Investment blocked - Book {book.id} is already published")
         flash('This campaign is no longer accepting investments because the book is already published.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
@@ -5867,6 +6046,15 @@ def earnings_dashboard():
             reviewer_id=reviewer.id
         ).order_by(ReviewerEarning.created_at.desc()).limit(50).all()
         earnings_data['total_reviewer_earnings'] = reviewer.total_earnings
+        # Available = sum of PENDING earnings (for payout request)
+        earnings_data['reviewer_available_balance'] = sum(
+            e.amount for e in ReviewerEarning.query.filter_by(
+                reviewer_id=reviewer.id, status=TransactionStatus.PENDING
+            ).all()
+        )
+        earnings_data['reviewer_pending_payout_requests'] = ReviewerPayoutRequest.query.filter_by(
+            reviewer_id=reviewer.id, status='PENDING'
+        ).all()
         
         # Group earnings by book
         from collections import defaultdict
@@ -5962,23 +6150,28 @@ def earnings_dashboard():
         for sale in sales:
             db.session.refresh(sale)
         earnings_data['author_sales'] = sales
-        # For testing: Include ALL sales (both completed and pending) in total revenue
-        # This allows testing earnings even when transactions are still pending
-        earnings_data['total_author_revenue'] = sum(sale.net_amount for sale in sales)
         completed_sales = [s for s in sales if s.status == TransactionStatus.COMPLETED]
+        earnings_data['total_author_revenue'] = sum(sale.net_amount for sale in completed_sales)
         earnings_data['completed_author_revenue'] = sum(sale.net_amount for sale in completed_sales)
         earnings_data['pending_author_revenue'] = sum(sale.net_amount for sale in sales if sale.status != TransactionStatus.COMPLETED)
+        # Author payout: available = total - paid out
+        author_paid_out = sum(
+            r.amount for r in AuthorSalesPayoutRequest.query.filter_by(
+                author_id=author_id, status='PAID'
+            ).all()
+        )
+        earnings_data['author_available_balance'] = max(0, earnings_data['total_author_revenue'] - author_paid_out)
+        earnings_data['author_pending_payout_requests'] = AuthorSalesPayoutRequest.query.filter_by(
+            author_id=author_id, status='PENDING'
+        ).all()
         
-        # Group sales by book
-        # For testing: Include ALL sales in total (both completed and pending)
+        # Group sales by book (completed only for revenue totals)
         sales_by_book = defaultdict(lambda: {'sales': [], 'total': 0.0, 'completed_total': 0.0, 'pending_total': 0.0, 'book': None})
         for sale in sales:
             book_id = sale.book_project_id
             sales_by_book[book_id]['sales'].append(sale)
-            # Include all sales in total for testing
-            sales_by_book[book_id]['total'] += sale.net_amount
-            # Also track separately for display
             if sale.status == TransactionStatus.COMPLETED:
+                sales_by_book[book_id]['total'] += sale.net_amount
                 sales_by_book[book_id]['completed_total'] += sale.net_amount
             else:
                 sales_by_book[book_id]['pending_total'] += sale.net_amount
@@ -5991,6 +6184,8 @@ def earnings_dashboard():
         earnings_data['completed_author_revenue'] = 0.0
         earnings_data['pending_author_revenue'] = 0.0
         earnings_data['author_sales_by_book'] = {}
+        earnings_data['author_available_balance'] = 0.0
+        earnings_data['author_pending_payout_requests'] = []
         logger.warning(f"Earnings dashboard - No sales found for user {current_user.user_id}")
         
         # Group sales by book
@@ -6003,11 +6198,11 @@ def earnings_dashboard():
                 sales_by_book[book_id]['book'] = sale.book_project
         earnings_data['author_sales_by_book'] = dict(sales_by_book)
     
-    return render_template('book_platform/earnings.html', earnings_data=earnings_data)
+    return render_template('book_platform/earnings.html', earnings_data=earnings_data, payout_minimum=PAYOUT_MINIMUM_AMOUNT)
 
 
-# Minimum amount to request payout (USD)
-PAYOUT_MINIMUM_AMOUNT = 25.0
+# Minimum amount to request payout (USD) - investors must reach this balance to cash out to bank
+PAYOUT_MINIMUM_AMOUNT = 50.0
 
 
 @book_bp.route('/earnings/request-payout', methods=['POST'])
@@ -6065,6 +6260,119 @@ def request_payout():
         'success': True,
         'message': f'Payout request of ${amount:.2f} submitted. Admin will process it shortly.',
         'payout_request_id': payout_request.id
+    })
+
+
+@book_bp.route('/earnings/request-reviewer-payout', methods=['POST'])
+@login_required
+def request_reviewer_payout():
+    """Reviewer requests payout of available earnings (min $50, mirrors investor flow)"""
+    data = request.get_json() or {}
+    amount = data.get('amount')
+    
+    if amount is None:
+        return jsonify({'error': 'Missing amount'}), 400
+    
+    try:
+        amount = float(amount)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid amount'}), 400
+    
+    if amount < PAYOUT_MINIMUM_AMOUNT:
+        return jsonify({'error': f'Minimum payout amount is ${PAYOUT_MINIMUM_AMOUNT:.2f}'}), 400
+    
+    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
+    if not reviewer:
+        return jsonify({'error': 'Reviewer profile not found'}), 403
+    
+    available = sum(
+        e.amount for e in ReviewerEarning.query.filter_by(
+            reviewer_id=reviewer.id, status=TransactionStatus.PENDING
+        ).all()
+    )
+    if amount > available:
+        return jsonify({'error': f'Amount exceeds available balance (${available:.2f})'}), 400
+    
+    pending = ReviewerPayoutRequest.query.filter_by(
+        reviewer_id=reviewer.id, status='PENDING'
+    ).first()
+    if pending:
+        return jsonify({'error': 'You already have a pending payout request'}), 400
+    
+    req = ReviewerPayoutRequest(
+        reviewer_id=reviewer.id,
+        amount=amount,
+        currency='USD',
+        status='PENDING'
+    )
+    db.session.add(req)
+    db.session.commit()
+    
+    logger.info(f"Reviewer payout request {req.id} created: reviewer={reviewer.id}, amount=${amount}")
+    return jsonify({
+        'success': True,
+        'message': f'Payout request of ${amount:.2f} submitted. Admin will process it shortly.',
+        'payout_request_id': req.id
+    })
+
+
+@book_bp.route('/earnings/request-author-sales-payout', methods=['POST'])
+@login_required
+def request_author_sales_payout():
+    """Author requests payout of sales earnings (min $50, mirrors investor flow)"""
+    data = request.get_json() or {}
+    amount = data.get('amount')
+    
+    if amount is None:
+        return jsonify({'error': 'Missing amount'}), 400
+    
+    try:
+        amount = float(amount)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid amount'}), 400
+    
+    if amount < PAYOUT_MINIMUM_AMOUNT:
+        return jsonify({'error': f'Minimum payout amount is ${PAYOUT_MINIMUM_AMOUNT:.2f}'}), 400
+    
+    user_profile, profile_type = get_user_profile()
+    author_id = get_profile_id(user_profile, profile_type)
+    if not author_id:
+        return jsonify({'error': 'Author profile not found'}), 403
+    
+    # Available = total revenue - paid out
+    author_paid_out = sum(
+        r.amount for r in AuthorSalesPayoutRequest.query.filter_by(
+            author_id=author_id, status='PAID'
+        ).all()
+    )
+    total_revenue = sum(
+        s.net_amount for s in BookSale.query.filter_by(seller_id=author_id).all()
+    )
+    available = max(0, total_revenue - author_paid_out)
+    
+    if amount > available:
+        return jsonify({'error': f'Amount exceeds available balance (${available:.2f})'}), 400
+    
+    pending = AuthorSalesPayoutRequest.query.filter_by(
+        author_id=author_id, status='PENDING'
+    ).first()
+    if pending:
+        return jsonify({'error': 'You already have a pending payout request'}), 400
+    
+    req = AuthorSalesPayoutRequest(
+        author_id=author_id,
+        amount=amount,
+        currency='USD',
+        status='PENDING'
+    )
+    db.session.add(req)
+    db.session.commit()
+    
+    logger.info(f"Author sales payout request {req.id} created: author={author_id}, amount=${amount}")
+    return jsonify({
+        'success': True,
+        'message': f'Payout request of ${amount:.2f} submitted. Admin will process it shortly.',
+        'payout_request_id': req.id
     })
 
 
@@ -6132,6 +6440,247 @@ def admin_cancel_payout_request(request_id):
     
     flash('Payout request cancelled.', 'info')
     return redirect(url_for('book_platform.admin_payout_requests'))
+
+
+# Author Campaign Fund Release (50% first draft, 50% publication - investor safeguard)
+@book_bp.route('/admin/author-payout-requests')
+@login_required
+def admin_author_payout_requests():
+    """Admin view of author campaign fund release requests"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    pending = AuthorCampaignPayoutRequest.query.filter_by(status='pending').order_by(
+        AuthorCampaignPayoutRequest.requested_at.asc()
+    ).all()
+    approved = AuthorCampaignPayoutRequest.query.filter(
+        AuthorCampaignPayoutRequest.status.in_(['approved', 'paid'])
+    ).order_by(AuthorCampaignPayoutRequest.approved_at.desc()).limit(50).all()
+    
+    return render_template('book_platform/admin_author_payout_requests.html',
+        pending=pending, approved=approved
+    )
+
+
+@book_bp.route('/admin/author-payout-requests/<int:request_id>/approve', methods=['POST'])
+@login_required
+def admin_approve_author_payout(request_id):
+    """Admin approves author campaign fund release - marks as paid (manual bank transfer)"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    req = AuthorCampaignPayoutRequest.query.get_or_404(request_id)
+    if req.status != 'pending':
+        flash('Request is not pending.', 'error')
+        return redirect(url_for('book_platform.admin_author_payout_requests'))
+    
+    campaign = req.campaign
+    book = campaign.book_project
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    req.status = 'paid'
+    req.approved_at = datetime.now(timezone.utc)
+    req.approved_by_id = bp_user.id if bp_user else None
+    req.paid_at = datetime.now(timezone.utc)
+    req.admin_notes = (request.form.get('admin_notes') or request.get_json(silent=True) or {}).get('admin_notes', '')
+    
+    if req.milestone == 'first_draft':
+        campaign.author_first_draft_released = True
+        campaign.author_first_draft_released_at = datetime.now(timezone.utc)
+        campaign.author_first_draft_amount = req.amount
+    else:
+        campaign.author_publication_released = True
+        campaign.author_publication_released_at = datetime.now(timezone.utc)
+        campaign.author_publication_amount = req.amount
+    
+    db.session.commit()
+    
+    logger.info(f"Author payout request {req.id} approved: campaign={campaign.id}, milestone={req.milestone}, amount=${req.amount:.2f}")
+    flash(f'Author fund release of ${req.amount:.2f} ({req.milestone}) marked as paid. Process bank transfer to author.', 'success')
+    return redirect(url_for('book_platform.admin_author_payout_requests'))
+
+
+@book_bp.route('/admin/author-payout-requests/<int:request_id>/reject', methods=['POST'])
+@login_required
+def admin_reject_author_payout(request_id):
+    """Admin rejects author campaign fund release"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    req = AuthorCampaignPayoutRequest.query.get_or_404(request_id)
+    if req.status != 'pending':
+        flash('Request is not pending.', 'error')
+        return redirect(url_for('book_platform.admin_author_payout_requests'))
+    
+    req.status = 'rejected'
+    req.rejection_reason = request.form.get('rejection_reason') or (request.get_json(silent=True) or {}).get('rejection_reason', '')
+    req.approved_at = datetime.now(timezone.utc)
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    req.approved_by_id = bp_user.id if bp_user else None
+    
+    db.session.commit()
+    
+    flash('Author payout request rejected.', 'info')
+    return redirect(url_for('book_platform.admin_author_payout_requests'))
+
+
+# Reviewer Payout Requests (min $50, admin approval)
+@book_bp.route('/admin/reviewer-payout-requests')
+@login_required
+def admin_reviewer_payout_requests():
+    """Admin view of reviewer payout requests"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    pending = ReviewerPayoutRequest.query.filter_by(status='PENDING').options(
+        joinedload(ReviewerPayoutRequest.reviewer).joinedload(AccreditedReviewer.user)
+    ).order_by(ReviewerPayoutRequest.requested_at.asc()).all()
+    
+    paid = ReviewerPayoutRequest.query.filter_by(status='PAID').options(
+        joinedload(ReviewerPayoutRequest.reviewer).joinedload(AccreditedReviewer.user)
+    ).order_by(ReviewerPayoutRequest.paid_at.desc()).limit(50).all()
+    
+    return render_template('book_platform/admin_reviewer_payout_requests.html',
+        pending=pending, paid=paid
+    )
+
+
+@book_bp.route('/admin/reviewer-payout-requests/<int:request_id>/mark-paid', methods=['POST'])
+@login_required
+def admin_mark_reviewer_payout_paid(request_id):
+    """Admin marks reviewer payout as paid - marks underlying ReviewerEarnings as COMPLETED"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+    
+    req = ReviewerPayoutRequest.query.get_or_404(request_id)
+    if req.status != 'PENDING':
+        flash('Request is not pending.', 'error')
+        return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+    
+    reviewer = req.reviewer
+    available = sum(
+        e.amount for e in ReviewerEarning.query.filter_by(
+            reviewer_id=reviewer.id, status=TransactionStatus.PENDING
+        ).all()
+    )
+    if req.amount > available:
+        flash(f'Amount (${req.amount:.2f}) exceeds available (${available:.2f}).', 'error')
+        return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+    
+    # Mark oldest PENDING earnings as COMPLETED until we've covered the amount
+    remaining = req.amount
+    earnings = ReviewerEarning.query.filter_by(
+        reviewer_id=reviewer.id, status=TransactionStatus.PENDING
+    ).order_by(ReviewerEarning.created_at.asc()).all()
+    
+    for earning in earnings:
+        if remaining <= 0:
+            break
+        earning.status = TransactionStatus.COMPLETED
+        earning.paid_at = datetime.now(timezone.utc)
+        remaining -= earning.amount
+    # Note: may overpay slightly if last earning exceeds remaining (no partial payouts)
+    
+    req.status = 'PAID'
+    req.paid_at = datetime.now(timezone.utc)
+    req.admin_notes = (request.form.get('admin_notes') or (request.get_json(silent=True) or {}).get('admin_notes', ''))
+    
+    db.session.commit()
+    
+    logger.info(f"Reviewer payout request {req.id} marked paid: reviewer={reviewer.id}, amount=${req.amount:.2f}")
+    flash(f'Reviewer payout of ${req.amount:.2f} marked as paid.', 'success')
+    return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+
+
+@book_bp.route('/admin/reviewer-payout-requests/<int:request_id>/cancel', methods=['POST'])
+@login_required
+def admin_cancel_reviewer_payout_request(request_id):
+    """Admin cancels reviewer payout request"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+    
+    req = ReviewerPayoutRequest.query.get_or_404(request_id)
+    if req.status != 'PENDING':
+        flash('Request is not pending.', 'error')
+        return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+    
+    req.status = 'CANCELLED'
+    db.session.commit()
+    
+    flash('Reviewer payout request cancelled.', 'info')
+    return redirect(url_for('book_platform.admin_reviewer_payout_requests'))
+
+
+# Author Sales Payout Requests (earnings from book sales - min $50)
+@book_bp.route('/admin/author-sales-payout-requests')
+@login_required
+def admin_author_sales_payout_requests():
+    """Admin view of author sales payout requests"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    pending = AuthorSalesPayoutRequest.query.filter_by(status='PENDING').options(
+        joinedload(AuthorSalesPayoutRequest.author).joinedload(BookPlatformUser.user)
+    ).order_by(AuthorSalesPayoutRequest.requested_at.asc()).all()
+    
+    paid = AuthorSalesPayoutRequest.query.filter_by(status='PAID').options(
+        joinedload(AuthorSalesPayoutRequest.author).joinedload(BookPlatformUser.user)
+    ).order_by(AuthorSalesPayoutRequest.paid_at.desc()).limit(50).all()
+    
+    return render_template('book_platform/admin_author_sales_payout_requests.html',
+        pending=pending, paid=paid
+    )
+
+
+@book_bp.route('/admin/author-sales-payout-requests/<int:request_id>/mark-paid', methods=['POST'])
+@login_required
+def admin_mark_author_sales_payout_paid(request_id):
+    """Admin marks author sales payout as paid"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
+    
+    req = AuthorSalesPayoutRequest.query.get_or_404(request_id)
+    if req.status != 'PENDING':
+        flash('Request is not pending.', 'error')
+        return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
+    
+    req.status = 'PAID'
+    req.paid_at = datetime.now(timezone.utc)
+    req.admin_notes = (request.form.get('admin_notes') or (request.get_json(silent=True) or {}).get('admin_notes', ''))
+    
+    db.session.commit()
+    
+    logger.info(f"Author sales payout request {req.id} marked paid: author={req.author_id}, amount=${req.amount:.2f}")
+    flash(f'Author sales payout of ${req.amount:.2f} marked as paid.', 'success')
+    return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
+
+
+@book_bp.route('/admin/author-sales-payout-requests/<int:request_id>/cancel', methods=['POST'])
+@login_required
+def admin_cancel_author_sales_payout_request(request_id):
+    """Admin cancels author sales payout request"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
+    
+    req = AuthorSalesPayoutRequest.query.get_or_404(request_id)
+    if req.status != 'PENDING':
+        flash('Request is not pending.', 'error')
+        return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
+    
+    req.status = 'CANCELLED'
+    db.session.commit()
+    
+    flash('Author sales payout request cancelled.', 'info')
+    return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
 
 
 # Book Sales Transparency Page
@@ -6426,16 +6975,161 @@ def book_accountability_status(book_id):
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Get accountability status
-    from glconnect.accountability_service import get_accountability_status
+    from glconnect.accountability_service import get_accountability_status, can_request_first_draft_release, can_request_publication_release, FIRST_DRAFT_MIN_WORDS
     status_result = get_accountability_status(book_id, db)
     
     if not status_result.get('success'):
         flash('Error loading accountability status.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
+    # Campaign fund release status (50% first draft, 50% publication - safeguard for investors)
+    campaign = book.investment_campaign
+    fund_release = {}
+    if campaign and campaign.status == CampaignStatus.FUNDED:
+        can_first, msg_first = can_request_first_draft_release(book, campaign, db)
+        can_pub, msg_pub = can_request_publication_release(book, campaign, db)
+        first_amount = (campaign.current_funding * 0.5) if not campaign.author_first_draft_released else 0
+        pub_amount = (campaign.current_funding * 0.5) if campaign.author_first_draft_released and not campaign.author_publication_released else 0
+        fund_release = {
+            'total_funding': campaign.current_funding,
+            'first_draft_released': campaign.author_first_draft_released,
+            'first_draft_amount': campaign.author_first_draft_amount,
+            'publication_released': campaign.author_publication_released,
+            'publication_amount': campaign.author_publication_amount,
+            'can_request_first_draft': can_first,
+            'first_draft_message': msg_first,
+            'can_request_publication': can_pub,
+            'publication_message': msg_pub,
+            'first_draft_amount_pending': first_amount,
+            'publication_amount_pending': pub_amount,
+            'first_draft_min_words': FIRST_DRAFT_MIN_WORDS
+        }
+    
     return render_template('book_platform/accountability_status.html',
                          book=book,
-                         status=status_result.get('status'))
+                         status=status_result.get('status'),
+                         fund_release=fund_release)
+
+@book_bp.route('/books/<int:book_id>/campaign/request-fund-release', methods=['POST'])
+@login_required
+def request_campaign_fund_release(book_id):
+    """Author requests release of campaign funds (first draft 50% or publication 50%)"""
+    book = BookProject.query.get_or_404(book_id)
+    campaign = book.investment_campaign
+    
+    user_profile, profile_type = get_user_profile()
+    if not user_profile:
+        flash('You need a profile to request fund release.', 'error')
+        return redirect(url_for('book_platform.setup_profile'))
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        flash('Only the author can request campaign fund release.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    
+    if not campaign or campaign.status != CampaignStatus.FUNDED:
+        flash('No funded campaign for this book.', 'error')
+        return redirect(url_for('book_platform.book_accountability_status', book_id=book_id))
+    
+    milestone = request.form.get('milestone')
+    if not milestone and request.is_json:
+        milestone = (request.get_json(silent=True) or {}).get('milestone')
+    if milestone not in ('first_draft', 'publication'):
+        flash('Invalid milestone.', 'error')
+        return redirect(url_for('book_platform.book_accountability_status', book_id=book_id))
+    
+    from glconnect.accountability_service import can_request_first_draft_release, can_request_publication_release, FIRST_DRAFT_RELEASE_PERCENT, PUBLICATION_RELEASE_PERCENT
+    from glconnect.book_platform_models import AuthorCampaignPayoutRequest
+    
+    if milestone == 'first_draft':
+        can_req, msg = can_request_first_draft_release(book, campaign, db)
+        amount = campaign.current_funding * (FIRST_DRAFT_RELEASE_PERCENT / 100)
+    else:
+        can_req, msg = can_request_publication_release(book, campaign, db)
+        amount = campaign.current_funding * (PUBLICATION_RELEASE_PERCENT / 100)
+    
+    if not can_req:
+        flash(msg or 'Cannot request this release.', 'error')
+        return redirect(url_for('book_platform.book_accountability_status', book_id=book_id))
+    
+    req = AuthorCampaignPayoutRequest(
+        campaign_id=campaign.id,
+        milestone=milestone,
+        amount=amount,
+        currency=campaign.book_project.currency or 'USD',
+        status='pending'
+    )
+    db.session.add(req)
+    db.session.commit()
+    
+    flash(f'Request for ${amount:.2f} ({milestone.replace("_", " ")} release) submitted. Admin will review shortly.', 'success')
+    return redirect(url_for('book_platform.book_accountability_status', book_id=book_id))
+
+
+# Investor refund request (only before first draft is out)
+@book_bp.route('/investments/<int:investment_id>/request-refund', methods=['POST'])
+@login_required
+def request_investment_refund(investment_id):
+    """Investor requests refund - only allowed before first draft is completed (25k+ words)"""
+    from glconnect.book_platform_models import BookInvestment, RefundRequest, TransactionStatus
+    from glconnect.accountability_service import FIRST_DRAFT_MIN_WORDS
+    
+    investment = BookInvestment.query.options(
+        joinedload(BookInvestment.book_project),
+        joinedload(BookInvestment.campaign)
+    ).get_or_404(investment_id)
+    
+    user_profile, profile_type = get_user_profile()
+    if not user_profile:
+        return jsonify({'error': 'Profile required'}), 403
+    
+    investor_id = get_profile_id(user_profile, profile_type)
+    if investment.investor_id != investor_id:
+        return jsonify({'error': 'Not your investment'}), 403
+    
+    if investment.status == InvestmentStatus.REFUNDED:
+        return jsonify({'error': 'Investment already refunded'}), 400
+    
+    # Check for existing pending refund
+    pending = RefundRequest.query.filter_by(
+        investment_id=investment_id,
+        status=TransactionStatus.PENDING
+    ).first()
+    if pending:
+        return jsonify({'error': 'Refund request already pending'}), 400
+    
+    book = investment.book_project
+    campaign = investment.campaign
+    if not campaign or campaign.status != CampaignStatus.FUNDED:
+        return jsonify({'error': 'No funded campaign'}), 400
+    
+    # First draft = 25k+ words - refund only allowed before that
+    try:
+        update_book_word_count(book)
+    except Exception:
+        pass
+    word_count = book.word_count or 0
+    if word_count >= FIRST_DRAFT_MIN_WORDS:
+        return jsonify({'error': f'First draft is complete ({word_count:,} words). Refunds only available before first draft.'}), 400
+    
+    refund = RefundRequest(
+        investment_id=investment_id,
+        amount=investment.amount,
+        currency=investment.currency or 'USD',
+        reason='Investor requested refund (before first draft)',
+        status=TransactionStatus.PENDING
+    )
+    db.session.add(refund)
+    db.session.commit()
+    
+    logger.info(f"Investor refund request {refund.id} for investment {investment_id}")
+    if request.is_json or request.content_type == 'application/json':
+        return jsonify({
+            'success': True,
+            'message': f'Refund request of ${investment.amount:.2f} submitted. Admin will process it shortly.'
+        })
+    flash(f'Refund request of ${investment.amount:.2f} submitted. Admin will process it shortly.', 'success')
+    return redirect(url_for('book_platform.investment_refund_status', investment_id=investment_id))
+
 
 @book_bp.route('/investments/<int:investment_id>/refund-status', methods=['GET'])
 @login_required
@@ -6443,9 +7137,11 @@ def investment_refund_status(investment_id):
     """View refund status for an investment"""
     from glconnect.book_platform_models import BookInvestment, RefundRequest
     
-    investment = BookInvestment.query.get_or_404(investment_id)
+    investment = BookInvestment.query.options(
+        joinedload(BookInvestment.book_project),
+        joinedload(BookInvestment.campaign)
+    ).get_or_404(investment_id)
     
-    # Check if user is the investor
     user_profile, profile_type = get_user_profile()
     if not user_profile:
         flash('You need a profile to view this page.', 'error')
@@ -6456,14 +7152,111 @@ def investment_refund_status(investment_id):
         flash('You can only view your own investment refunds.', 'error')
         return redirect(url_for('book_platform.investments'))
     
-    # Get refund requests
-    refunds = RefundRequest.query.filter_by(
-        investment_id=investment_id
-    ).order_by(RefundRequest.created_at.desc()).all()
+    # Check if refund allowed (before first draft, no pending refund)
+    from glconnect.accountability_service import FIRST_DRAFT_MIN_WORDS
+    try:
+        from glconnect.book_platform_routes import update_book_word_count
+        update_book_word_count(investment.book_project)
+    except Exception:
+        pass
+    word_count = (investment.book_project.word_count or 0)
+    has_pending = any(r.status == TransactionStatus.PENDING for r in refunds)
+    can_request_refund = (
+        word_count < FIRST_DRAFT_MIN_WORDS
+        and investment.status.value != 'refunded'
+        and not has_pending
+    )
+    
+    refunds = RefundRequest.query.filter_by(investment_id=investment_id).order_by(
+        RefundRequest.created_at.desc()
+    ).all()
     
     return render_template('book_platform/investment_refund_status.html',
                          investment=investment,
-                         refunds=refunds)
+                         refunds=refunds,
+                         can_request_refund=can_request_refund,
+                         first_draft_min_words=FIRST_DRAFT_MIN_WORDS)
+
+
+# Admin Refund Requests - process investor refunds via Stripe (before first draft only)
+@book_bp.route('/admin/refund-requests')
+@login_required
+def admin_refund_requests():
+    """Admin view of pending investor refund requests"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    
+    from glconnect.book_platform_models import BookInvestment, TransactionStatus
+    
+    pending = RefundRequest.query.filter_by(status=TransactionStatus.PENDING).options(
+        joinedload(RefundRequest.investment).joinedload(BookInvestment.investor),
+        joinedload(RefundRequest.investment).joinedload(BookInvestment.book_project)
+    ).order_by(RefundRequest.requested_at.asc()).all()
+    
+    completed = RefundRequest.query.filter_by(status=TransactionStatus.COMPLETED).options(
+        joinedload(RefundRequest.investment).joinedload(BookInvestment.investor),
+        joinedload(RefundRequest.investment).joinedload(BookInvestment.book_project)
+    ).order_by(RefundRequest.processed_at.desc()).limit(50).all()
+    
+    return render_template('book_platform/admin_refund_requests.html',
+        pending=pending, completed=completed
+    )
+
+
+@book_bp.route('/admin/refund-requests/<int:refund_id>/process', methods=['POST'])
+@login_required
+def admin_process_refund(refund_id):
+    """Admin processes investor refund via Stripe"""
+    if current_user.role != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect(url_for('book_platform.admin_refund_requests'))
+    
+    refund = RefundRequest.query.options(joinedload(RefundRequest.investment)).get_or_404(refund_id)
+    
+    if refund.status != TransactionStatus.PENDING:
+        flash(f'Refund already processed.', 'warning')
+        return redirect(url_for('book_platform.admin_refund_requests'))
+    
+    investment = refund.investment
+    payment_intent_id = getattr(investment, 'stripe_payment_intent_id', None)
+    
+    if payment_intent_id:
+        try:
+            init_stripe()
+            import stripe
+            amount_cents = int(round(refund.amount * 100))
+            stripe_refund = stripe.Refund.create(
+                payment_intent=payment_intent_id,
+                amount=amount_cents,
+                reason='requested_by_customer',
+                metadata={'refund_request_id': str(refund.id), 'investment_id': str(investment.id)}
+            )
+            refund.refund_transaction_id = stripe_refund.id
+            refund.status = TransactionStatus.COMPLETED
+            refund.processed_at = datetime.now(timezone.utc)
+            refund.payment_method = 'stripe'
+            investment.status = InvestmentStatus.REFUNDED
+            investment.refunded_at = datetime.now(timezone.utc)
+            db.session.commit()
+            logger.info(f"Stripe refund processed: refund_request={refund.id}")
+            flash(f'Refund of ${refund.amount:.2f} processed via Stripe.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Stripe refund failed: {e}", exc_info=True)
+            flash(f'Stripe refund failed: {str(e)}. Process manually.', 'error')
+    else:
+        refund.status = TransactionStatus.COMPLETED
+        refund.processed_at = datetime.now(timezone.utc)
+        refund.payment_method = 'manual'
+        refund.refund_transaction_id = f'manual-{refund.id}-{datetime.now(timezone.utc).strftime("%Y%m%d%H%M")}'
+        investment.status = InvestmentStatus.REFUNDED
+        investment.refunded_at = datetime.now(timezone.utc)
+        db.session.commit()
+        flash(f'Refund of ${refund.amount:.2f} marked as processed (manual - no Stripe payment intent).', 'warning')
+    
+    return redirect(url_for('book_platform.admin_refund_requests'))
+
 
 # ============================================================================
 # UNIFIED CONTENT HUB - BLOGS, NEWS, FREELANCING
@@ -7674,17 +8467,44 @@ def serve_podcast_file(podcast_id):
         if not mimetype:
             mimetype = 'audio/mpeg' if podcast.file_type == 'audio' else 'video/mp4'
     
-    # Set headers for streaming (not download)
+    # iOS Safari requires Range request support for media streaming - without it,
+    # video/audio may fail to play or have no sound on mobile
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get('Range', None)
+    
+    if range_header:
+        # Parse Range header (format: bytes=start-end or bytes=-suffix for last N bytes)
+        range_match = re.search(r'bytes=(\d*)-(\d*)', range_header)
+        if range_match:
+            start_str, end_str = range_match.groups()
+            if start_str:
+                start = int(start_str)
+                end = int(end_str) if end_str else file_size - 1
+            else:
+                # Suffix range: bytes=-500 means last 500 bytes
+                suffix = int(end_str) if end_str else 0
+                start = max(0, file_size - suffix)
+                end = file_size - 1
+            end = min(end, file_size - 1)
+            if start >= file_size or start > end:
+                return Response(status=416)  # Range Not Satisfiable
+            chunk_size = end - start + 1
+            with open(file_path, 'rb') as f:
+                f.seek(start)
+                chunk = f.read(chunk_size)
+            response = Response(chunk, status=206, mimetype=mimetype)
+            response.headers['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Content-Length'] = str(chunk_size)
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            return response
+    
+    # No Range header: send full file
     response = send_file(file_path, mimetype=mimetype, as_attachment=False)
-    response.headers['Content-Type'] = mimetype
     response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
-    response.headers['Accept-Ranges'] = 'bytes'  # Enable range requests for seeking
+    response.headers['Accept-Ranges'] = 'bytes'
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    
-    # For video files, ensure proper streaming
-    if podcast.file_type == 'video':
-        response.headers['Content-Length'] = str(os.path.getsize(file_path))
-    
     return response
 
 @book_bp.route('/podcasts/library')

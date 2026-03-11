@@ -45,10 +45,15 @@
                         <i class="fas fa-cogs me-3"></i>Admin hub
                     </h1>
                     <p class="lead mb-4">All tasks that need admin approval or verification: books, podcasts, songs, reviewers, word contributions, community dictionary, YouTube download, radio streams.</p>
-                    <div class="d-flex gap-3 flex-wrap">
+                    <div class="d-flex gap-3 flex-wrap align-items-center">
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-book me-2"></i>{{ books|length }} Total Books
                         </span>
+                        <form method="POST" action="{{ url_for('book_platform.admin_delete_test_books') }}" class="d-inline" onsubmit="return confirm('Delete all books with \"test\" in the title? This cannot be undone.');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-trash me-1"></i>Delete Test Books
+                            </button>
+                        </form>
                         <span class="badge bg-white text-dark fs-6">
                             <i class="fas fa-globe me-2"></i>{{ books|selectattr('status.value', 'equalto', 'published')|list|length }} Published
                         </span>
@@ -244,8 +249,20 @@
                                     </div>
                                 </div>
                                 <p class="text-muted small mb-3">Process investor payout requests after bank transfer</p>
-                                <a href="{{ url_for('book_platform.admin_payout_requests') }}" class="btn btn-success btn-sm w-100">
-                                    <i class="fas fa-money-bill-wave me-1"></i>Manage Payouts
+                                <a href="{{ url_for('book_platform.admin_payout_requests') }}" class="btn btn-success btn-sm w-100 mb-2">
+                                    <i class="fas fa-money-bill-wave me-1"></i>Investor Payouts
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_refund_requests') }}" class="btn btn-outline-warning btn-sm w-100 mb-2">
+                                    <i class="fas fa-undo me-1"></i>Investor Refunds
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_reviewer_payout_requests') }}" class="btn btn-outline-info btn-sm w-100 mb-2">
+                                    <i class="fas fa-star me-1"></i>Reviewer Payouts
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_author_sales_payout_requests') }}" class="btn btn-outline-secondary btn-sm w-100 mb-2">
+                                    <i class="fas fa-book-open me-1"></i>Author Sales Payouts
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_author_payout_requests') }}" class="btn btn-outline-success btn-sm w-100">
+                                    <i class="fas fa-lock-open me-1"></i>Author Fund Releases
                                 </a>
                             </div>
                         </div>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book.title }} - Audiobook | GLC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+    <style>
+        .player-container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        .chapter-list { max-height: 50vh; overflow-y: auto; }
+        .chapter-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .chapter-item:hover { background: rgba(13, 110, 253, 0.08); }
+        .chapter-item.playing {
+            background: rgba(13, 110, 253, 0.12);
+            border-left-color: #0d6efd;
+        }
+        .chapter-item .duration { font-size: 0.85rem; color: #6c757d; }
+        .audio-player { width: 100%; height: 54px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    {% include 'messages.html' %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Marketplace
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="player-container">
+        <div class="text-center mb-4">
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="fas fa-headphones text-warning me-2"></i>{{ book.title }}
+            </h1>
+            <p class="text-muted mb-0">Audiobook — Listen to any chapter</p>
+        </div>
+
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-body p-4">
+                <audio id="audioPlayer" class="audio-player" controls preload="metadata">
+                    {% if chapters %}
+                    <source src="{{ url_for('book_platform.serve_audiobook_chapter_file', book_id=book.id, chapter_id=chapters[0].id) }}" type="audio/mpeg">
+                    {% else %}
+                    <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+                    {% endif %}
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        </div>
+
+        {% if chapters %}
+        <div class="card shadow border-0">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Chapters</h5>
+                <small class="text-muted">Click any chapter to listen</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="chapter-list">
+                    {% for ch in chapters %}
+                    <div class="chapter-item d-flex justify-content-between align-items-center"
+                         data-chapter-id="{{ ch.id }}"
+                         data-src="{{ url_for('book_platform.serve_audiobook_chapter_file', book_id=book.id, chapter_id=ch.id) }}">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-play-circle text-primary me-3 fa-lg"></i>
+                            <div>
+                                <strong>{{ ch.title }}</strong>
+                                <div class="duration">
+                                    {% if ch.duration_seconds %}
+                                    {{ (ch.duration_seconds // 60) }}:{{ "%02d"|format(ch.duration_seconds % 60) }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Full audiobook — use the player above. Total duration: {{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} minutes.
+        </div>
+        {% endif %}
+
+        <div class="mt-4 text-center">
+            <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-download me-1"></i>Download Audiobook
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            const player = document.getElementById('audioPlayer');
+            const items = document.querySelectorAll('.chapter-item');
+            items.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    const src = item.dataset.src;
+                    if (src) {
+                        player.querySelector('source').src = src;
+                        player.load();
+                        player.play();
+                        items.forEach(i => i.classList.remove('playing'));
+                        item.classList.add('playing');
+                    }
+                });
+            });
+            if (items.length) items[0].classList.add('playing');
+        })();
+    </script>
+</body>
+</html>

@@ -713,7 +713,10 @@
                                 <i class="fas fa-check-circle me-2"></i>
                                 <strong>You are an Accredited Reviewer!</strong>
                                 <p class="mb-0 mt-2">You can now submit reviews and earn from book sales.</p>
-                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-sm btn-success mt-2">
+                                <a href="{{ url_for('book_platform.books_seeking_review') }}" class="btn btn-sm btn-success mt-2 me-2">
+                                    <i class="fas fa-search me-1"></i>Books Seeking Your Review
+                                </a>
+                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-sm btn-outline-success mt-2">
                                     Browse Review Opportunities
                                 </a>
                             </div>

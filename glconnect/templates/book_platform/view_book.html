@@ -213,6 +213,11 @@
                             <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-users me-2"></i>Collaborate
                             </a>
+                            {% if investment_campaign and investment_campaign.status.value == 'funded' %}
+                            <a href="{{ url_for('book_platform.book_accountability_status', book_id=book.id) }}" class="btn btn-outline-info">
+                                <i class="fas fa-lock-open me-2"></i>Campaign Funds & Accountability
+                            </a>
+                            {% endif %}
                             {% else %}
                             <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit me-2"></i>Edit Details

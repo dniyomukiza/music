@@ -6,151 +6,109 @@
     <title>Refund Status - Investment #{{ investment.id }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio
+            </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
-                    <i class="fas fa-arrow-left"></i> Back to Investments
+                    <i class="fas fa-chart-line"></i> Investments
+                </a>
+                <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
+                    <i class="fas fa-dollar-sign"></i> Earnings
                 </a>
             </div>
         </div>
     </nav>
 
     <div class="container my-5">
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h1 class="display-5 fw-bold">
-                    <i class="fas fa-money-bill-wave me-2"></i>Refund Status
-                </h1>
-                <p class="lead text-muted">Track your investment refund requests</p>
+        <h1 class="mb-4"><i class="fas fa-money-bill-wave me-2"></i>Refund Status</h1>
+        <p class="lead text-muted">Refunds are available only before the first draft is completed ({{ "{:,}".format(first_draft_min_words) }}+ words). Marketplace purchases are final.</p>
+
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5>Investment in {{ investment.book_project.title if investment.book_project else 'Unknown Book' }}</h5>
+                <p class="mb-0">
+                    <strong>Amount:</strong> ${{ "%.2f"|format(investment.amount) }} {{ investment.currency }}
+                    <span class="badge bg-{% if investment.status.value == 'active' %}success{% elif investment.status.value == 'refunded' %}danger{% else %}secondary{% endif %} fs-6 ms-2">
+                        {{ investment.status.value|title }}
+                    </span>
+                </p>
             </div>
         </div>
 
-        <!-- Investment Details -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Investment Details</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <p><strong>Investment Amount:</strong></p>
-                                <h4 class="text-primary">${{ "%.2f"|format(investment.amount) }} {{ investment.currency }}</h4>
-                            </div>
-                            <div class="col-md-4">
-                                <p><strong>Investment Date:</strong></p>
-                                <p>{{ investment.created_at.strftime('%B %d, %Y') if investment.created_at else 'N/A' }}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <p><strong>Status:</strong></p>
-                                <span class="badge bg-{% if investment.status.value == 'active' %}success{% elif investment.status.value == 'refunded' %}danger{% else %}secondary{% endif %} fs-6">
-                                    {{ investment.status.value|title }}
+        {% if can_request_refund %}
+        <div class="card shadow mb-4 border-success">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-undo me-2"></i>Request Refund</h5>
+                <p class="text-muted">First draft is not yet complete. You may request a full refund.</p>
+                <form method="POST" action="{{ url_for('book_platform.request_investment_refund', investment_id=investment.id) }}" onsubmit="return confirm('Request refund of ${{ "%.2f"|format(investment.amount) }}? Admin will process it shortly.');">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-paper-plane me-1"></i>Request Refund
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Refund Requests</h5>
+            </div>
+            <div class="card-body">
+                {% if refunds %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Processed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for refund in refunds %}
+                        <tr>
+                            <td>{{ refund.requested_at.strftime('%B %d, %Y %I:%M %p') if refund.requested_at else 'N/A' }}</td>
+                            <td><strong>${{ "%.2f"|format(refund.amount) }} {{ refund.currency }}</strong></td>
+                            <td>{{ refund.reason }}</td>
+                            <td>
+                                <span class="badge bg-{% if refund.status.value == 'completed' %}success{% elif refund.status.value == 'pending' %}warning{% else %}secondary{% endif %}">
+                                    {{ refund.status.value|title }}
                                 </span>
-                            </div>
-                        </div>
-                        {% if investment.book_project %}
-                        <hr>
-                        <p><strong>Book:</strong> {{ investment.book_project.title }}</p>
-                        {% endif %}
-                    </div>
-                </div>
+                            </td>
+                            <td>
+                                {% if refund.processed_at %}
+                                {{ refund.processed_at.strftime('%B %d, %Y') }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">No refund requests for this investment.</p>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Refund Requests -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Refund Requests</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if refunds %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Request Date</th>
-                                        <th>Amount</th>
-                                        <th>Reason</th>
-                                        <th>Status</th>
-                                        <th>Processed Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for refund in refunds %}
-                                    <tr>
-                                        <td>{{ refund.requested_at.strftime('%B %d, %Y %I:%M %p') if refund.requested_at else 'N/A' }}</td>
-                                        <td><strong>${{ "%.2f"|format(refund.amount) }} {{ refund.currency }}</strong></td>
-                                        <td>{{ refund.reason }}</td>
-                                        <td>
-                                            <span class="badge bg-{% if refund.status == 'completed' %}success{% elif refund.status == 'pending' %}warning{% elif refund.status == 'rejected' %}danger{% else %}secondary{% endif %}">
-                                                {{ refund.status|title }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if refund.processed_at %}
-                                            {{ refund.processed_at.strftime('%B %d, %Y') }}
-                                            {% else %}
-                                            <span class="text-muted">Pending</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No refund requests found for this investment.
-                            {% if investment.status.value != 'refunded' %}
-                            <p class="mb-0 mt-2">If the author fails to complete or publish the book within the deadline, refunds will be automatically processed.</p>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Refund Information -->
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>About Refunds</h5>
-                    </div>
-                    <div class="card-body">
-                        <h6>When are refunds issued?</h6>
-                        <ul>
-                            <li>If the author fails to complete the book within 180 days (6 months) after funding</li>
-                            <li>If the author completes the book but fails to publish it within 30 days</li>
-                            <li>If the campaign is cancelled by the author or platform</li>
-                        </ul>
-                        <h6 class="mt-3">Refund Process</h6>
-                        <ol>
-                            <li>Refund request is automatically created when deadlines are missed</li>
-                            <li>Request is reviewed and processed by the platform</li>
-                            <li>Funds are returned to your original payment method</li>
-                            <li>You will receive a confirmation email once processed</li>
-                        </ol>
-                        <div class="alert alert-warning mt-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Note:</strong> Refund processing may take 5-10 business days depending on your payment method.
-                        </div>
-                    </div>
-                </div>
+        <div class="card shadow mt-4">
+            <div class="card-body">
+                <h5 class="mb-2"><i class="fas fa-info-circle me-2"></i>Refund Policy</h5>
+                <ul class="mb-0">
+                    <li><strong>Investors:</strong> Refunds available anytime before first draft ({{ "{:,}".format(first_draft_min_words) }}+ words) is completed.</li>
+                    <li><strong>Marketplace buyers:</strong> All sales are final. Digital and audio content is delivered immediately.</li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

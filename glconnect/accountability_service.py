@@ -15,6 +15,11 @@ MAX_PUBLICATION_DAYS = 30  # 30 days to publish after completion
 REVIEWER_GUARANTEE_PERCENTAGE = 50.0  # 50% of agreed revenue share guaranteed
 AUTOMATIC_REFUND_DAYS = 210  # 210 days (7 months) = funding + completion + publication
 
+# Campaign fund release - safeguard for investors (author gets 50% at first draft, 50% at publication)
+FIRST_DRAFT_RELEASE_PERCENT = 50.0
+PUBLICATION_RELEASE_PERCENT = 50.0
+FIRST_DRAFT_MIN_WORDS = 25000  # Full first draft = at least 25,000 words
+
 
 def check_author_accountability(book_id, db):
     """
@@ -41,39 +46,34 @@ def check_author_accountability(book_id, db):
         actions_taken = []
         warnings = []
         
+        from glconnect.book_utils import is_book_published
+        
         # Check investment campaign status
         campaign = book.investment_campaign
         if campaign and campaign.status == CampaignStatus.FUNDED:
             days_since_funding = (datetime.now(timezone.utc) - campaign.funded_at).days if campaign.funded_at else 0
             
-            # Check if book is completed
-            is_completed = book.status == BookStatus.PUBLISHED
-            is_draft = book.status == BookStatus.DRAFT
+            # Check if book is completed (platform: status; uploaded: digital_book_published/audiobook_published)
+            is_completed = is_book_published(book)
+            is_draft = not is_completed
             
-            # Check completion deadline
+            # Check completion deadline - first draft not out, so investors can get refunds
             if not is_completed and days_since_funding > MAX_BOOK_COMPLETION_DAYS:
                 warnings.append(f"Book not completed after {days_since_funding} days (deadline: {MAX_BOOK_COMPLETION_DAYS} days)")
-                
-                # Trigger refund process for investors
                 refund_result = process_investor_refunds(book_id, db, reason="Book not completed within deadline")
                 if refund_result.get('success'):
-                    actions_taken.append(f"Initiated refunds for {refund_result.get('refunded_count', 0)} investors")
+                    actions_taken.append(f"Created refund requests for {refund_result.get('refunded_count', 0)} investors")
             
-            # Check publication deadline (if book is completed but not published)
+            # Check publication deadline (first draft done but not published - no refunds, sales final)
             elif is_draft and days_since_funding > (MAX_BOOK_COMPLETION_DAYS + MAX_PUBLICATION_DAYS):
                 warnings.append(f"Book completed but not published after {days_since_funding} days")
-                
-                # Trigger refund process
-                refund_result = process_investor_refunds(book_id, db, reason="Book not published within deadline")
-                if refund_result.get('success'):
-                    actions_taken.append(f"Initiated refunds for {refund_result.get('refunded_count', 0)} investors")
         
         # Check reviewer payments
         reviews = [r for r in book.accredited_reviews if r.status == ReviewStatus.PUBLISHED]
         if reviews:
             # Check if reviewers should be paid even if book isn't selling
             for review in reviews:
-                if not book.status == BookStatus.PUBLISHED:
+                if not is_book_published(book):
                     # Book not published - check if reviewer should get guaranteed payment
                     guarantee_result = process_reviewer_guarantee(review.id, db)
                     if guarantee_result.get('success'):
@@ -94,15 +94,8 @@ def check_author_accountability(book_id, db):
 
 def process_investor_refunds(book_id, db, reason="Author failed to complete book"):
     """
-    Process refunds for all investors when author fails to deliver.
-    
-    Args:
-        book_id: Book project ID
-        db: Database session
-        reason: Reason for refund
-    
-    Returns:
-        dict: Refund processing result
+    Create refund requests for investors when author fails to deliver first draft.
+    Only applies before first draft (25k+ words) - investors can get refunds.
     """
     try:
         from glconnect.book_platform_models import (
@@ -124,57 +117,31 @@ def process_investor_refunds(book_id, db, reason="Author failed to complete book
         ).all()
         
         refunded_count = 0
-        refunds_created = []
-        
         for investment in investments:
-            # Check if already refunded
             existing_refund = RefundRequest.query.filter_by(
                 investment_id=investment.id,
-                status=TransactionStatus.COMPLETED
+                status=TransactionStatus.PENDING
             ).first()
-            
             if existing_refund:
                 continue
             
-            # Create refund request
             refund = RefundRequest(
                 investment_id=investment.id,
                 amount=investment.amount,
                 currency=investment.currency,
                 reason=reason,
-                status=TransactionStatus.PENDING,
-                requested_at=datetime.now(timezone.utc)
+                status=TransactionStatus.PENDING
             )
             db.session.add(refund)
-            refunds_created.append(refund)
-            
-            # Update investment status
-            investment.status = InvestmentStatus.REFUNDED
-            investment.refunded_at = datetime.now(timezone.utc)
-            
             refunded_count += 1
         
-        # Update campaign status
-        campaign.status = CampaignStatus.CANCELLED
-        campaign.cancelled_at = datetime.now(timezone.utc)
-        campaign.cancellation_reason = reason
-        
         db.session.commit()
-        
-        logger.info(f"Processed {refunded_count} refund requests for book {book_id}")
-        
-        # TODO: Integrate with payment processor to actually process refunds
-        # For now, refunds are marked as pending and need manual processing
-        
-        return {
-            'success': True,
-            'refunded_count': refunded_count,
-            'refunds': refunds_created
-        }
+        logger.info(f"Created {refunded_count} refund requests for book {book_id}")
+        return {'success': True, 'refunded_count': refunded_count}
         
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error processing investor refunds for book {book_id}: {str(e)}", exc_info=True)
+        logger.error(f"Error creating investor refunds for book {book_id}: {str(e)}", exc_info=True)
         return {'success': False, 'error': str(e)}
 
 
@@ -207,7 +174,8 @@ def process_reviewer_guarantee(review_id, db):
             return {'success': False, 'error': 'Review not published'}
         
         book = review.book_project
-        if book.status == BookStatus.PUBLISHED:
+        from glconnect.book_utils import is_book_published
+        if is_book_published(book):
             return {'success': False, 'error': 'Book is published, no guarantee needed'}
         
         # Check if guarantee already paid
@@ -288,6 +256,69 @@ def check_all_books_accountability(db):
     except Exception as e:
         logger.error(f"Error checking accountability for all books: {str(e)}", exc_info=True)
         return {'success': False, 'error': str(e)}
+
+
+def can_request_first_draft_release(book, campaign, db):
+    """
+    Check if author can request first-draft fund release (50% of campaign funds).
+    Requires: full first draft = at least FIRST_DRAFT_MIN_WORDS and chapters with content.
+    """
+    from glconnect.book_platform_models import CampaignStatus
+    if not campaign or campaign.status != CampaignStatus.FUNDED:
+        return False, "Campaign not funded"
+    if campaign.author_first_draft_released:
+        return False, "First draft release already granted"
+    if campaign.current_funding <= 0:
+        return False, "No campaign funds"
+    
+    # Platform-created books: need chapters + word count
+    try:
+        from glconnect.book_platform_routes import update_book_word_count
+        update_book_word_count(book)
+    except Exception:
+        pass
+    
+    word_count = book.word_count or 0
+    if word_count < FIRST_DRAFT_MIN_WORDS:
+        return False, f"Full first draft requires at least {FIRST_DRAFT_MIN_WORDS:,} words (you have {word_count:,})"
+    
+    # Check for pending request
+    from glconnect.book_platform_models import AuthorCampaignPayoutRequest
+    pending = AuthorCampaignPayoutRequest.query.filter_by(
+        campaign_id=campaign.id, milestone='first_draft', status='pending'
+    ).first()
+    if pending:
+        return False, "You already have a pending first draft release request"
+    
+    return True, None
+
+
+def can_request_publication_release(book, campaign, db):
+    """
+    Check if author can request publication fund release (remaining 50%).
+    Requires: book published to marketplace.
+    """
+    from glconnect.book_platform_models import CampaignStatus, BookStatus
+    if not campaign or campaign.status != CampaignStatus.FUNDED:
+        return False, "Campaign not funded"
+    if not campaign.author_first_draft_released:
+        return False, "First draft release must be granted before publication release"
+    if campaign.author_publication_released:
+        return False, "Publication release already granted"
+    if campaign.current_funding <= 0:
+        return False, "No campaign funds"
+    
+    if book.status != BookStatus.PUBLISHED:
+        return False, "Book must be published to marketplace first"
+    
+    from glconnect.book_platform_models import AuthorCampaignPayoutRequest
+    pending = AuthorCampaignPayoutRequest.query.filter_by(
+        campaign_id=campaign.id, milestone='publication', status='pending'
+    ).first()
+    if pending:
+        return False, "You already have a pending publication release request"
+    
+    return True, None
 
 
 def get_accountability_status(book_id, db):

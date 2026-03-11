@@ -183,6 +183,7 @@ class BookProject(db.Model):
     comments = db.relationship('BookComment', backref='book_project', lazy=True, cascade='all, delete-orphan')
     versions = db.relationship('BookVersion', backref='book_project', lazy=True, cascade='all, delete-orphan')
     sales = db.relationship('BookSale', backref='book_project', lazy=True)
+    # audiobook_chapters defined on AudiobookChapter.book_project
 
 # Book Chapter Model
 class BookChapter(db.Model):
@@ -206,6 +207,24 @@ class BookChapter(db.Model):
     # Relationships
     comments = db.relationship('BookComment', backref='chapter', lazy=True, cascade='all, delete-orphan')
     versions = db.relationship('ChapterVersion', backref='chapter', lazy=True, cascade='all, delete-orphan')
+
+
+# Audiobook Chapter Model - per-chapter audio for listeners to pick and play
+class AudiobookChapter(db.Model):
+    __tablename__ = 'audiobook_chapters'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False)
+    chapter_number = db.Column(db.Integer, nullable=False)  # 1-based order
+    title = db.Column(db.String(300), nullable=False)
+    audio_file_path = db.Column(db.String(500), nullable=False)
+    duration_seconds = db.Column(db.Integer, default=0)  # Duration in seconds
+    book_chapter_id = db.Column(db.Integer, db.ForeignKey('book_chapters.id', ondelete='SET NULL'), nullable=True)  # Link to source chapter if any
+    
+    # Relationships
+    book_project = db.relationship('BookProject', backref='audiobook_chapters')
+    book_chapter = db.relationship('BookChapter', backref='audiobook_chapter')
+
 
 # Book Collaboration Model
 class BookCollaboration(db.Model):
@@ -721,6 +740,14 @@ class InvestmentCampaign(db.Model):
     cancelled_at = db.Column(db.DateTime, nullable=True)
     cancellation_reason = db.Column(db.Text, nullable=True)
     
+    # Milestone-based fund release (safeguard for investors - author gets 50% at first draft, 50% at publication)
+    author_first_draft_released = db.Column(db.Boolean, default=False)
+    author_first_draft_released_at = db.Column(db.DateTime, nullable=True)
+    author_first_draft_amount = db.Column(db.Float, nullable=True)  # 50% of current_funding when released
+    author_publication_released = db.Column(db.Boolean, default=False)
+    author_publication_released_at = db.Column(db.DateTime, nullable=True)
+    author_publication_amount = db.Column(db.Float, nullable=True)  # Remaining 50% when released
+    
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
@@ -764,6 +791,9 @@ class BookInvestment(db.Model):
     
     # Refund tracking
     refunded_at = db.Column(db.DateTime, nullable=True)
+    
+    # Stripe payment intent (for refunds - stored when checkout completes)
+    stripe_payment_intent_id = db.Column(db.String(100), nullable=True)
     
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -873,6 +903,50 @@ class PayoutRequest(db.Model):
     investment = db.relationship('BookInvestment', backref='payout_requests')
 
 
+# Reviewer Payout Request (min $50, admin approval - mirrors investor payouts)
+class ReviewerPayoutRequest(db.Model):
+    __tablename__ = 'reviewer_payout_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('accredited_reviewers.id', ondelete='CASCADE'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    status = db.Column(db.String(20), default='PENDING')  # PENDING, PAID, CANCELLED
+    
+    requested_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = db.Column(db.DateTime, nullable=True)
+    admin_notes = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    reviewer = db.relationship('AccreditedReviewer', backref='payout_requests')
+
+
+# Author Sales Payout Request (earnings from book sales - min $50, admin approval)
+class AuthorSalesPayoutRequest(db.Model):
+    __tablename__ = 'author_sales_payout_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    author_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='CASCADE'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    status = db.Column(db.String(20), default='PENDING')  # PENDING, PAID, CANCELLED
+    
+    requested_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = db.Column(db.DateTime, nullable=True)
+    admin_notes = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    author = db.relationship('BookPlatformUser', backref='sales_payout_requests')
+
+
 # Refund Request Model
 class RefundRequest(db.Model):
     __tablename__ = 'refund_requests'
@@ -902,4 +976,28 @@ class RefundRequest(db.Model):
     
     # Relationships
     investment = db.relationship('BookInvestment', backref='refund_requests')
+
+
+# Author Campaign Payout Request - milestone-based release (first draft 50%, publication 50%)
+class AuthorCampaignPayoutRequest(db.Model):
+    __tablename__ = 'author_campaign_payout_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    
+    campaign_id = db.Column(db.Integer, db.ForeignKey('investment_campaigns.id', ondelete='CASCADE'), nullable=False)
+    milestone = db.Column(db.String(30), nullable=False)  # 'first_draft' | 'publication'
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='USD')
+    
+    status = db.Column(db.String(20), default='pending')  # pending, approved, paid, rejected
+    requested_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    approved_at = db.Column(db.DateTime, nullable=True)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey('book_platform_users.id', ondelete='SET NULL'), nullable=True)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    admin_notes = db.Column(db.Text, nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)
+    
+    campaign = db.relationship('InvestmentCampaign', backref='author_payout_requests')
+    approved_by = db.relationship('BookPlatformUser', foreign_keys=[approved_by_id])
 

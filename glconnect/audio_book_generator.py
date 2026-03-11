@@ -44,6 +44,94 @@ class AudioBookGenerator:
             self.client = None
             logger.info("TTS available - client will be initialized on first use")
     
+    def generate_audiobook_by_chapters(self, chapters: list, book_id: int, voice_name: str = 'en-US-Standard-A') -> Dict[str, Any]:
+        """
+        Generate audiobook with one audio file per chapter. Listeners can pick and play any chapter.
+        
+        Args:
+            chapters: List of dicts with 'title', 'text', 'chapter_number', optionally 'book_chapter_id'
+            book_id: Book project ID
+            voice_name: TTS voice to use
+            
+        Returns:
+            Dictionary with success, chapter_results (list of {title, audio_file_path, duration}), total_duration
+        """
+        if not self._ensure_client():
+            return {
+                'success': False,
+                'error': 'TTS client not available. Please check Google Cloud credentials.',
+                'chapter_results': [],
+                'duration': 0
+            }
+        
+        if not chapters:
+            return {
+                'success': False,
+                'error': 'No chapters to convert to audio',
+                'chapter_results': [],
+                'duration': 0
+            }
+        
+        chapter_results = []
+        total_duration = 0
+        
+        for i, ch in enumerate(chapters):
+            title = ch.get('title', f'Chapter {i+1}')
+            text = ch.get('text', '').strip()
+            chapter_number = ch.get('chapter_number', i + 1)
+            
+            if not text:
+                logger.warning(f"Skipping empty chapter {chapter_number}: {title}")
+                continue
+            
+            # Split long chapter text into TTS chunks
+            chunks = self._split_text_into_chunks(text)
+            audio_files = []
+            ch_duration = 0
+            
+            for j, chunk in enumerate(chunks):
+                logger.info(f"Generating audio for chapter {chapter_number} chunk {j+1}/{len(chunks)}")
+                result = self._generate_chunk_audio(chunk, book_id, f"ch{chapter_number}_{j}", voice_name)
+                if result['success']:
+                    audio_files.append(result['audio_file'])
+                    ch_duration += result.get('duration', 0)
+                else:
+                    self._cleanup_chunk_files(audio_files)
+                    return {
+                        'success': False,
+                        'error': f"Failed chapter {chapter_number}: {result['error']}",
+                        'chapter_results': chapter_results,
+                        'duration': total_duration
+                    }
+            
+            # Combine chunk files for this chapter into one chapter file
+            if audio_files:
+                chapter_path = self._combine_audio_files(audio_files, book_id, suffix=f"_chapter_{chapter_number}")
+                self._cleanup_chunk_files(audio_files)
+                if chapter_path:
+                    actual_duration = self.get_audio_duration(chapter_path) or ch_duration
+                    chapter_results.append({
+                        'title': title,
+                        'chapter_number': chapter_number,
+                        'audio_file_path': chapter_path,
+                        'duration': actual_duration,
+                        'book_chapter_id': ch.get('book_chapter_id')
+                    })
+                    total_duration += actual_duration
+                else:
+                    return {
+                        'success': False,
+                        'error': f"Failed to combine audio for chapter {chapter_number}",
+                        'chapter_results': chapter_results,
+                        'duration': total_duration
+                    }
+        
+        return {
+            'success': True,
+            'chapter_results': chapter_results,
+            'duration': total_duration
+        }
+    
     def generate_audiobook(self, text: str, book_id: int, voice_name: str = 'en-US-Standard-A') -> Dict[str, Any]:
         """
         Generate audio book from text
@@ -164,7 +252,7 @@ class AudioBookGenerator:
         
         return chunks
     
-    def _generate_chunk_audio(self, text: str, book_id: int, chunk_index: int, voice_name: str) -> Dict[str, Any]:
+    def _generate_chunk_audio(self, text: str, book_id: int, chunk_index, voice_name: str) -> Dict[str, Any]:
         """Generate audio for a single text chunk"""
         try:
             # Extract language code
@@ -235,13 +323,13 @@ class AudioBookGenerator:
                 'duration': 0
             }
     
-    def _combine_audio_files(self, audio_files: list, book_id: int) -> Optional[str]:
-        """Combine multiple audio files into a single audiobook"""
+    def _combine_audio_files(self, audio_files: list, book_id: int, suffix: str = '') -> Optional[str]:
+        """Combine multiple audio files into a single audiobook or chapter file"""
         try:
             import subprocess
             
-            # Create final output path
-            final_filename = f"audiobook_{book_id}_{int(time.time())}.mp3"
+            # Create final output path (suffix used for per-chapter files, e.g. _chapter_1)
+            final_filename = f"audiobook_{book_id}_{int(time.time())}{suffix}.mp3"
             final_path = os.path.join(self.audio_dir, final_filename)
             
             # Use FFmpeg to combine files (similar to news broadcast combination)
