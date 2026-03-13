@@ -26,7 +26,6 @@ services:
  
     ports:
       - "5000:5000"
-      - "8001:8001"
     networks:
       app_network:
         aliases: [myapp]
@@ -52,6 +51,8 @@ services:
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
       - SECRET_KEY=${SECRET_KEY}
       - YTDLP_COOKIES_FILE=${YTDLP_COOKIES_FILE:-/usr/src/appdir/ytdlp_cookiesfull.txt}
+      - ENABLE_BOOK_VOICE_AGENT=${ENABLE_BOOK_VOICE_AGENT:-true}
+      - VOICE_AGENT_URL=${VOICE_AGENT_URL:-https://glc.cool/voice-agent/}
 
   nginx:
       build:
@@ -149,7 +150,32 @@ services:
       retries: 3
       start_period: 40s
 
- 
+  voice_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.voice_agent
+    container_name: voice_agent
+    env_file:
+      - .env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./voice_agent:/app
+    networks:
+      - app_network
+    mem_limit: 512M
+    mem_reservation: 256M
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    environment:
+      - DB_URL=${DB_URL:-${DATABASE_URL}}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
 
 networks:
   app_network:

@@ -2169,6 +2169,10 @@ def marketplace():
         # Check if user has writer profile for conditional UI elements
         has_writer_profile = Writer.query.filter_by(user_id=current_user.user_id).first() is not None
         
+        # Voice agent (feature flag for easy revert)
+        enable_voice_agent = os.getenv("ENABLE_BOOK_VOICE_AGENT", "false").lower() in ("true", "1", "yes")
+        voice_agent_url = os.getenv("VOICE_AGENT_URL", "http://localhost:8001")
+
         return render_template('book_platform/marketplace.html', 
                              books=books, 
                              has_writer_profile=has_writer_profile,
@@ -2178,7 +2182,9 @@ def marketplace():
                              selected_language=language,
                              available_genres=available_genres,
                              available_languages=available_languages,
-                             search_term=search_term)
+                             search_term=search_term,
+                             enable_voice_agent=enable_voice_agent,
+                             voice_agent_url=voice_agent_url)
     except Exception as e:
         # Rollback any failed transaction to prevent "transaction aborted" errors
         try:
@@ -2190,6 +2196,8 @@ def marketplace():
         import traceback
         traceback.print_exc()
         # Return empty list on error
+        enable_voice_agent = os.getenv("ENABLE_BOOK_VOICE_AGENT", "false").lower() in ("true", "1", "yes")
+        voice_agent_url = os.getenv("VOICE_AGENT_URL", "http://localhost:8001")
         return render_template('book_platform/marketplace.html', 
                              books=[], 
                              has_writer_profile=False,
@@ -2199,7 +2207,9 @@ def marketplace():
                              selected_language=None,
                              available_genres=[],
                              available_languages=[],
-                             search_term=None)
+                             search_term=None,
+                             enable_voice_agent=enable_voice_agent,
+                             voice_agent_url=voice_agent_url)
 
 @book_bp.route('/books/<int:book_id>/publish', methods=['POST'])
 @book_platform_required

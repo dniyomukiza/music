@@ -47,6 +47,12 @@
                            class="btn btn-lg btn-warning">
                             <i class="fas fa-dollar-sign me-2"></i>My Earnings
                         </a>
+                        {% if enable_voice_agent %}
+                        <a href="{{ voice_agent_url }}" target="_blank" rel="noopener"
+                           class="btn btn-lg btn-info">
+                            <i class="fas fa-microphone me-2"></i>Voice Assistant
+                        </a>
+                        {% endif %}
                     </div>
                     <div class="d-flex gap-3">
                         <span class="badge bg-white text-dark fs-6">
