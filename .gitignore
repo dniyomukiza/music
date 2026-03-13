@@ -28,8 +28,4 @@ ytdlp_cookies.txt
 ytdlp_cookies.txt.bak
 ytdlp_cookiesfull.txt
 
-voice_agent/.venv/
-voice_agent/venv/
-
-# Voice agent - now committed for Docker deployment (see docs/BOOK_VOICE_AGENT_REVERT.md to remove)
 # Media files - both audio and pictures are now tracked for remote server

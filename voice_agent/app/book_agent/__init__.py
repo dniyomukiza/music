@@ -1,1 +1,0 @@
-"""Book platform voice agent."""

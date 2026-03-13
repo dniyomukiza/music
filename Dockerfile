@@ -38,10 +38,10 @@ RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /usr/src/appdir
 USER appuser
 
-# Expose the app ports for both Flask and FastAPI
-EXPOSE 5000 8001
+# Expose the app port
+EXPOSE 5000
 
-# Run Flask on port 5000 and FastAPI on port 8001 in background
+# Run Flask on port 5000
 CMD ["sh", "-c", "gunicorn -b 0.0.0.0:5000 run:app"]
 
 
