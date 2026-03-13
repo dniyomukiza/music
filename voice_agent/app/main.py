@@ -6,6 +6,7 @@ WebSocket at /ws/{user_id}/{session_id} for bidirectional streaming.
 import asyncio
 import base64
 import json
+import os
 import logging
 import warnings
 from pathlib import Path
@@ -29,6 +30,19 @@ for p in [
     if p.exists():
         load_dotenv(p)
         break
+
+# Fallback: load from glconfig.json (production mount at /etc/glconfig.json, same as main app)
+for cfg_path in [Path("/etc/glconfig.json"), Path("glconfig.json"), Path(__file__).parent.parent.parent / "glconfig.json"]:
+    if cfg_path.exists() and cfg_path.stat().st_size > 0:
+        try:
+            cfg = json.loads(cfg_path.read_text())
+            if cfg.get("GOOGLE_API_KEY") and not os.environ.get("GOOGLE_API_KEY"):
+                os.environ["GOOGLE_API_KEY"] = cfg["GOOGLE_API_KEY"]
+            if cfg.get("GEMINI_API_KEY") and not os.environ.get("GEMINI_API_KEY"):
+                os.environ["GEMINI_API_KEY"] = cfg["GEMINI_API_KEY"]
+            break
+        except Exception:
+            pass
 
 # Import agent after loading environment variables
 from app.book_agent.agent import agent

@@ -10,7 +10,8 @@ services:
       - icecast2
     volumes:
       - .:/usr/src/appdir
-      # If cookies file is in ~/music on host instead of project root, uncomment and set your home path:
+      - /etc/glconfig.json:/etc/glconfig.json:ro
+      # If cookies file in ~/music on host instead of project root, uncomment and set your home path:
       # - /home/YOUR_USER/music:/ytdlp_cookies_mount:ro
     command: >
      sh -c "python run.py"
@@ -161,6 +162,7 @@ services:
       - "8001:8001"
     volumes:
       - ./voice_agent:/app
+      - /etc/glconfig.json:/etc/glconfig.json:ro
     networks:
       - app_network
     mem_limit: 512M

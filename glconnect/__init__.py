@@ -29,30 +29,35 @@ for _p in _env_paths:
 else:
     load_dotenv()  # fallback: CWD and parents
 
-# Load configuration: env vars first, then fallback to glconfig.json if present
+# Load configuration: glconfig.json first for API keys (prod mount), then fallback to .env
 def _load_config():
     cfg = {
-        "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
+        "GOOGLE_API_KEY": None,
+        "GEMINI_API_KEY": None,
         "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
-        "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
         "DB_URL": os.getenv("DB_URL"),
         "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
         "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
     }
-    # Fallback: load from glconfig.json if env vars are empty (e.g. server with mounted config)
+    # Prefer glconfig.json for API keys (production mount at /etc/glconfig.json)
     for path in ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]:
-        if os.path.exists(path):
+        if os.path.exists(path) and os.path.getsize(path) > 0:
             try:
                 with open(path) as f:
                     file_cfg = json.load(f)
-                if not cfg.get("GOOGLE_API_KEY") and file_cfg.get("GOOGLE_API_KEY"):
+                if file_cfg.get("GOOGLE_API_KEY"):
                     cfg["GOOGLE_API_KEY"] = file_cfg["GOOGLE_API_KEY"]
-                if not cfg.get("GEMINI_API_KEY") and file_cfg.get("GEMINI_API_KEY"):
+                if file_cfg.get("GEMINI_API_KEY"):
                     cfg["GEMINI_API_KEY"] = file_cfg["GEMINI_API_KEY"]
                 break
             except Exception:
                 pass
+    # Fallback to .env for API keys only if glconfig.json did not provide them
+    if not cfg.get("GOOGLE_API_KEY"):
+        cfg["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+    if not cfg.get("GEMINI_API_KEY"):
+        cfg["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY")
     return cfg
 
 config = _load_config()
