@@ -503,3 +503,89 @@ def sync_from_downloaded_songs():
                 print(f"Could not remove {fn}: {e}")
 
     return renamed_count, True
+
+
+def sync_from_disk():
+    """
+    Fix discrepancies: use actual files on disk as source of truth.
+    - Parses each .mp3 filename to extract name and artist
+    - Updates downloaded_songs rows to match (local_path, name, artist)
+    - Rewrites ytauto.m3u from actual files only (no orphan paths)
+    Run inside Flask app context. Returns (updated_count, m3u_updated).
+    """
+    from datetime import datetime, timezone
+    glconnect_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(glconnect_dir)
+    output_folder = os.path.join(glconnect_dir, "static", "ytauto")
+    m3u_path = os.path.join(project_root, "ytauto.m3u")
+    prefix_liq = "/liqfolder/glconnect/static/ytauto/"
+
+    if not os.path.isdir(output_folder):
+        return 0, False
+
+    # Collect all .mp3 files
+    files_on_disk = sorted([f for f in os.listdir(output_folder) if f.lower().endswith(".mp3")])
+    now = datetime.now(timezone.utc)
+    updated_count = 0
+    used_row_ids = set()
+
+    for filename in files_on_disk:
+        artist, title = _parse_filename_as_artist_title(filename)
+        if title is None:
+            continue
+        name = title
+        artist_str = artist or "Unknown"
+        local_path = f"{prefix_liq}{filename}"
+
+        # Find matching DB row: by basename in local_path, or by name+artist
+        row = None
+        for r in DownloadedSong.query.filter(
+            DownloadedSong.local_path.isnot(None),
+            DownloadedSong.local_path != "",
+        ).all():
+            if r.id in used_row_ids:
+                continue
+            bn = os.path.basename((r.local_path or "").strip())
+            if bn == filename:
+                row = r
+                break
+        if not row:
+            anorm = _normalize_for_match(artist_str)
+            nnorm = _normalize_for_match(name)
+            for r in DownloadedSong.query.all():
+                if r.id in used_row_ids:
+                    continue
+                r_anorm = _normalize_for_match(r.artist or "")
+                r_nnorm = _normalize_for_match(r.name or "")
+                if nnorm and r_nnorm and (nnorm == r_nnorm or nnorm in r_nnorm or r_nnorm in nnorm):
+                    if not anorm or not r_anorm or anorm == r_anorm or anorm in r_anorm or r_anorm in anorm:
+                        row = r
+                        break
+
+        if row:
+            used_row_ids.add(row.id)
+            changed = False
+            if (row.local_path or "").strip() != local_path:
+                row.local_path = local_path
+                changed = True
+            if (row.name or "").strip() != name:
+                row.name = name
+                changed = True
+            if (row.artist or "").strip() != artist_str:
+                row.artist = artist_str
+                changed = True
+            row.synced_at = now
+            if changed:
+                updated_count += 1
+                print(f"Updated: {row.id} -> {filename} (name={name}, artist={artist_str})")
+            db.session.add(row)
+
+    db.session.commit()
+
+    # Write M3U from actual files only (no DB orphans)
+    with open(m3u_path, "w") as m3u_file:
+        for filename in files_on_disk:
+            m3u_file.write(f"{prefix_liq}{filename}\n")
+    print(f"M3U rewritten from disk: {len(files_on_disk)} entries -> {os.path.abspath(m3u_path)}")
+
+    return updated_count, True

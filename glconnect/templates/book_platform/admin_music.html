@@ -48,13 +48,17 @@
             </div>
         </div>
 
-        <!-- Clean: always available (not part of workflow) -->
+        <!-- Clean / Fix from disk: always available (not part of workflow) -->
         <div class="card shadow-sm mt-4">
             <div class="card-body py-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="syncFromDbBtn" title="After cleaning names in DB: rename files to &#39;name by artist&#39;, then write M3U from DB paths">
                     <i class="fas fa-broom me-1"></i>Clean
                 </button>
+                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="syncFromDiskBtn" title="Fix discrepancies: use actual files on disk as source of truth. Updates DB and M3U to match.">
+                    <i class="fas fa-hdd me-1"></i>Fix from disk
+                </button>
                 <span class="ms-2 small text-muted" id="syncFromDbResult"></span>
+                <span class="ms-2 small text-muted" id="syncFromDiskResult"></span>
             </div>
         </div>
 
@@ -256,6 +260,30 @@
             resultEl.textContent = 'Syncing…';
             resultEl.className = 'ms-2 small text-muted';
             fetch('/mybook/admin/music/sync-from-db', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        resultEl.textContent = data.message || 'Done.';
+                        resultEl.className = 'ms-2 small text-success';
+                    } else {
+                        resultEl.textContent = data.error || 'Failed';
+                        resultEl.className = 'ms-2 small text-danger';
+                    }
+                })
+                .catch(function() {
+                    resultEl.textContent = 'Request failed';
+                    resultEl.className = 'ms-2 small text-danger';
+                })
+                .finally(function() { btn.disabled = false; });
+        });
+
+        document.getElementById('syncFromDiskBtn').addEventListener('click', function() {
+            var btn = this;
+            var resultEl = document.getElementById('syncFromDiskResult');
+            btn.disabled = true;
+            resultEl.textContent = 'Fixing from disk…';
+            resultEl.className = 'ms-2 small text-muted';
+            fetch('/mybook/admin/music/sync-from-disk', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success) {

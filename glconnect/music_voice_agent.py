@@ -1,28 +1,12 @@
 """
 Music Voice Agent - Gemini-powered voice assistant for the music dashboard.
 Users can ask questions about songs/artists and perform actions: play, download, add to playlist.
-Config: GOOGLE_API_KEY or GEMINI_API_KEY (env, .env, or glconfig.json) - same as news_agent, blog.
+Config: GOOGLE_API_KEY or GEMINI_API_KEY via os.getenv (same as news_agent, blog, routes2).
 """
 
 import os
 import json
 from typing import List, Dict, Any, Optional
-
-# Config: same pattern as __init__.py
-def _get_api_key():
-    key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not key:
-        for path in ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]:
-            if os.path.exists(path):
-                try:
-                    with open(path) as f:
-                        cfg = json.load(f)
-                    key = cfg.get("GOOGLE_API_KEY") or cfg.get("GEMINI_API_KEY")
-                    if key:
-                        break
-                except Exception:
-                    pass
-    return key
 
 
 SYSTEM_INSTRUCTION = """You are a helpful music assistant for the Ink Studio music dashboard. You help users:
@@ -204,7 +188,7 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
     """
     Process one user message with Gemini and tools. Returns response text and any actions for the client.
     """
-    api_key = _get_api_key()
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
         return {
             "success": False,

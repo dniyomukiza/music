@@ -234,23 +234,11 @@
                         </div>
                         <!-- Voice Agent -->
                         <div class="mt-3 pt-3 border-top border-light">
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <button type="button" class="btn btn-outline-info" id="voiceAgentToggle" onclick="toggleVoiceAgent()">
-                                    <i class="fas fa-microphone me-1"></i>Voice Assistant
-                                </button>
-                                <div id="voiceAgentPanel" class="d-none flex-grow-1">
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" id="voiceAgentInput" class="form-control" placeholder="Ask about songs, or say 'play X', 'add X to playlist', 'download X'…" onkeydown="if(event.key==='Enter')sendVoiceAgentMessage()">
-                                        <button class="btn btn-info" onclick="sendVoiceAgentMessage()" id="voiceAgentSendBtn">
-                                            <i class="fas fa-paper-plane me-1"></i>Send
-                                        </button>
-                                        <button class="btn btn-outline-secondary" onclick="startVoiceRecognition()" id="voiceAgentMicBtn" title="Speak">
-                                            <i class="fas fa-microphone"></i>
-                                        </button>
-                                    </div>
-                                    <div id="voiceAgentResponse" class="mt-2 small text-muted" style="max-height: 120px; overflow-y: auto;"></div>
-                                </div>
-                            </div>
+                            <button type="button" class="btn btn-outline-info" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
+                                <i class="fas fa-microphone me-1"></i>Voice Assistant
+                            </button>
+                            <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
+                            <div id="voiceAgentResponse" class="mt-2 small text-muted" style="max-height: 120px; overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
@@ -1086,17 +1074,13 @@
         }
 
         // Voice Agent
-        function toggleVoiceAgent() {
-            const panel = document.getElementById('voiceAgentPanel');
-            panel.classList.toggle('d-none');
-        }
         function sendVoiceAgentMessage() {
             const input = document.getElementById('voiceAgentInput');
             const msg = (input.value || '').trim();
             if (!msg) return;
             const respEl = document.getElementById('voiceAgentResponse');
-            const sendBtn = document.getElementById('voiceAgentSendBtn');
-            sendBtn.disabled = true;
+            const btn = document.getElementById('voiceAgentBtn');
+            btn.disabled = true;
             respEl.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Thinking...';
             fetch('{{ url_for("book_platform.music_voice_agent") }}', {
                 method: 'POST',
@@ -1114,7 +1098,7 @@
             .catch(err => {
                 respEl.innerHTML = '<span class="text-danger">Error: ' + (err.message || 'Request failed') + '</span>';
             })
-            .finally(() => { sendBtn.disabled = false; });
+            .finally(() => { btn.disabled = false; });
         }
         function executeVoiceAction(a) {
             if (a.type === 'play' && a.url) {
@@ -1140,21 +1124,21 @@
             rec.interimResults = false;
             rec.lang = 'en-US';
             const input = document.getElementById('voiceAgentInput');
-            const micBtn = document.getElementById('voiceAgentMicBtn');
-            micBtn.innerHTML = '<i class="fas fa-stop"></i>';
-            micBtn.onclick = () => rec.stop();
+            const btn = document.getElementById('voiceAgentBtn');
+            btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening…';
+            btn.onclick = () => rec.stop();
             rec.onresult = (e) => {
                 const t = e.results[0][0].transcript;
                 input.value = t;
                 sendVoiceAgentMessage();
             };
             rec.onend = () => {
-                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-                micBtn.onclick = () => startVoiceRecognition();
+                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                btn.onclick = () => startVoiceRecognition();
             };
             rec.onerror = () => {
-                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-                micBtn.onclick = () => startVoiceRecognition();
+                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                btn.onclick = () => startVoiceRecognition();
             };
             rec.start();
         }

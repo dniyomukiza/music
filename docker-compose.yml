@@ -10,6 +10,7 @@ services:
       - icecast2
     volumes:
       - .:/usr/src/appdir
+      - /etc/glconfig.json:/etc/glconfig.json:ro
       # If cookies file in ~/music on host instead of project root, uncomment and set your home path:
       # - /home/YOUR_USER/music:/ytdlp_cookies_mount:ro
     command: >
