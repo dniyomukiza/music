@@ -1073,7 +1073,22 @@
             });
         }
 
-        // Voice Agent
+        // Voice Agent - live agent: click once, conversation continues until user clicks Stop
+        let voiceAgentActive = false;
+        let voiceAgentUserStopped = false;
+        let voiceAgentRec = null;
+
+        function speakResponse(text, onEnd) {
+            const t = (text || '').trim().replace(/\n/g, ' ');
+            if (!t) { if (onEnd) onEnd(); return; }
+            if (!('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
+            const u = new SpeechSynthesisUtterance(t);
+            u.lang = 'en-US';
+            u.rate = 0.95;
+            if (onEnd) u.onend = onEnd;
+            window.speechSynthesis.speak(u);
+        }
+
         function sendVoiceAgentMessage() {
             const input = document.getElementById('voiceAgentInput');
             const msg = (input.value || '').trim();
@@ -1089,14 +1104,26 @@
             })
             .then(r => r.json())
             .then(data => {
-                respEl.innerHTML = (data.text || '').replace(/\n/g, '<br>') || 'Done.';
+                const text = data.text || '';
+                respEl.innerHTML = text.replace(/\n/g, '<br>') || 'Done.';
                 if (data.actions && data.actions.length) {
                     data.actions.forEach(a => executeVoiceAction(a));
                 }
                 input.value = '';
+                const continueListening = () => {
+                    if (voiceAgentActive && !voiceAgentUserStopped) startVoiceRecognition();
+                };
+                if (text.trim()) {
+                    speakResponse(text, continueListening);
+                } else {
+                    continueListening();
+                }
             })
             .catch(err => {
                 respEl.innerHTML = '<span class="text-danger">Error: ' + (err.message || 'Request failed') + '</span>';
+                speakResponse('Sorry, something went wrong.', () => {
+                    if (voiceAgentActive && !voiceAgentUserStopped) startVoiceRecognition();
+                });
             })
             .finally(() => { btn.disabled = false; });
         }
@@ -1118,27 +1145,43 @@
                 alert('Voice recognition is not supported in your browser.');
                 return;
             }
+            voiceAgentUserStopped = false;
+            if (!voiceAgentActive) {
+                voiceAgentActive = true;
+            }
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const rec = new SpeechRecognition();
+            voiceAgentRec = rec;
             rec.continuous = false;
             rec.interimResults = false;
             rec.lang = 'en-US';
             const input = document.getElementById('voiceAgentInput');
             const btn = document.getElementById('voiceAgentBtn');
-            btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening…';
-            btn.onclick = () => rec.stop();
+            btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening… (click to end)';
+            btn.onclick = () => {
+                voiceAgentUserStopped = true;
+                voiceAgentActive = false;
+                if (voiceAgentRec) voiceAgentRec.stop();
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
+            };
             rec.onresult = (e) => {
                 const t = e.results[0][0].transcript;
                 input.value = t;
                 sendVoiceAgentMessage();
             };
             rec.onend = () => {
-                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
-                btn.onclick = () => startVoiceRecognition();
+                if (voiceAgentUserStopped || !voiceAgentActive) {
+                    btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                    btn.onclick = () => startVoiceRecognition();
+                }
             };
-            rec.onerror = () => {
-                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
-                btn.onclick = () => startVoiceRecognition();
+            rec.onerror = (e) => {
+                if (voiceAgentUserStopped || !voiceAgentActive) {
+                    btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                    btn.onclick = () => startVoiceRecognition();
+                } else if (voiceAgentActive) {
+                    startVoiceRecognition();
+                }
             };
             rec.start();
         }
