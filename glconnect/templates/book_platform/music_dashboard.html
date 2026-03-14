@@ -232,6 +232,26 @@
                                 </button>
                             </div>
                         </div>
+                        <!-- Voice Agent -->
+                        <div class="mt-3 pt-3 border-top border-light">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-info" id="voiceAgentToggle" onclick="toggleVoiceAgent()">
+                                    <i class="fas fa-microphone me-1"></i>Voice Assistant
+                                </button>
+                                <div id="voiceAgentPanel" class="d-none flex-grow-1">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="voiceAgentInput" class="form-control" placeholder="Ask about songs, or say 'play X', 'add X to playlist', 'download X'…" onkeydown="if(event.key==='Enter')sendVoiceAgentMessage()">
+                                        <button class="btn btn-info" onclick="sendVoiceAgentMessage()" id="voiceAgentSendBtn">
+                                            <i class="fas fa-paper-plane me-1"></i>Send
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="startVoiceRecognition()" id="voiceAgentMicBtn" title="Speak">
+                                            <i class="fas fa-microphone"></i>
+                                        </button>
+                                    </div>
+                                    <div id="voiceAgentResponse" class="mt-2 small text-muted" style="max-height: 120px; overflow-y: auto;"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -690,8 +710,8 @@
         });
 
         function createSongCard(song, includeActions = true) {
-            // Use song file serving route for reliable file access, fallback to path if available
-            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+            // Use path from API (handles both artist songs and downloads); fallback for song_id only
+            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
             
             // Clean and extract song name and artist
             let rawSongName = (song.name && song.name.trim()) ? song.name.trim() : '';
@@ -735,7 +755,7 @@
                                     </audio>
                                 </div>
                                 ${includeActions && userId ? `
-                                <button class="btn btn-primary" onclick="addSongToPlaylist(${song.id}, '${safeName}', this)">
+                                <button class="btn btn-primary" onclick="addSongToPlaylist(${song.song_id != null ? song.song_id : 'null'}, ${song.download_id != null ? song.download_id : 'null'}, '${safeName}', this)">
                                     <i class="fas fa-plus me-1"></i>Add to Playlist
                                 </button>
                                 ` : ''}
@@ -879,10 +899,12 @@
                             
                             const songName = rawSongName || 'Untitled Track';
                             const artistName = rawArtistName || 'Unknown Artist';
-                            const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`);
+                            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`);
                             
                             return {
                                 id: song.id,
+                                song_id: song.song_id,
+                                download_id: song.download_id,
                                 name: songName,
                                 artist: artistName,
                                 path: songPath,
@@ -893,6 +915,8 @@
                         let html = '';
                         playlistSongs.forEach((song, index) => {
                             const safeName = song.name.replace(/'/g, "\\'");
+                            const songIdArg = song.song_id != null ? song.song_id : 'null';
+                            const downloadIdArg = song.download_id != null ? song.download_id : 'null';
                             html += `
                                 <div class="card mb-3 playlist-song-card" data-song-index="${index}">
                                     <div class="card-body">
@@ -903,7 +927,7 @@
                                                     <source src="${song.path}" type="audio/mpeg">
                                                 </audio>
                                             </div>
-                                            <button class="btn btn-outline-danger" onclick="removeFromPlaylist(${song.id}, this)">
+                                            <button class="btn btn-outline-danger" onclick="removeFromPlaylist(${songIdArg}, ${downloadIdArg}, this)">
                                                 <i class="fas fa-trash me-1"></i>Remove
                                             </button>
                                         </div>
@@ -1017,9 +1041,13 @@
             }
         }
 
-        function addSongToPlaylist(songId, songName, button) {
+        function addSongToPlaylist(songId, downloadId, songName, button) {
             if (!userId) {
                 alert('Please log in to manage your playlist.');
+                return;
+            }
+            if ((!songId && !downloadId) || (songId && downloadId)) {
+                console.error('Provide exactly one of song_id or download_id');
                 return;
             }
 
@@ -1027,10 +1055,14 @@
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Adding...';
 
+            const body = { user_id: userId };
+            if (songId) body.song_id = songId;
+            if (downloadId) body.download_id = downloadId;
+
             fetch('/playlist2/add_to_playlist', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ song_id: songId, user_id: userId })
+                body: JSON.stringify(body)
             })
             .then(response => response.json())
             .then(data => {
@@ -1053,8 +1085,83 @@
             });
         }
 
-        function removeFromPlaylist(songId, button) {
+        // Voice Agent
+        function toggleVoiceAgent() {
+            const panel = document.getElementById('voiceAgentPanel');
+            panel.classList.toggle('d-none');
+        }
+        function sendVoiceAgentMessage() {
+            const input = document.getElementById('voiceAgentInput');
+            const msg = (input.value || '').trim();
+            if (!msg) return;
+            const respEl = document.getElementById('voiceAgentResponse');
+            const sendBtn = document.getElementById('voiceAgentSendBtn');
+            sendBtn.disabled = true;
+            respEl.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Thinking...';
+            fetch('{{ url_for("book_platform.music_voice_agent") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg })
+            })
+            .then(r => r.json())
+            .then(data => {
+                respEl.innerHTML = (data.text || '').replace(/\n/g, '<br>') || 'Done.';
+                if (data.actions && data.actions.length) {
+                    data.actions.forEach(a => executeVoiceAction(a));
+                }
+                input.value = '';
+            })
+            .catch(err => {
+                respEl.innerHTML = '<span class="text-danger">Error: ' + (err.message || 'Request failed') + '</span>';
+            })
+            .finally(() => { sendBtn.disabled = false; });
+        }
+        function executeVoiceAction(a) {
+            if (a.type === 'play' && a.url) {
+                const audio = new Audio(a.url);
+                audio.play().catch(e => console.warn('Play failed:', e));
+            } else if (a.type === 'add_to_playlist') {
+                loadPlaylist();
+            } else if (a.type === 'download' && a.url) {
+                const aEl = document.createElement('a');
+                aEl.href = a.url;
+                aEl.download = (a.filename || 'song.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
+                aEl.click();
+            }
+        }
+        function startVoiceRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Voice recognition is not supported in your browser.');
+                return;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const rec = new SpeechRecognition();
+            rec.continuous = false;
+            rec.interimResults = false;
+            rec.lang = 'en-US';
+            const input = document.getElementById('voiceAgentInput');
+            const micBtn = document.getElementById('voiceAgentMicBtn');
+            micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+            micBtn.onclick = () => rec.stop();
+            rec.onresult = (e) => {
+                const t = e.results[0][0].transcript;
+                input.value = t;
+                sendVoiceAgentMessage();
+            };
+            rec.onend = () => {
+                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                micBtn.onclick = () => startVoiceRecognition();
+            };
+            rec.onerror = () => {
+                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                micBtn.onclick = () => startVoiceRecognition();
+            };
+            rec.start();
+        }
+
+        function removeFromPlaylist(songId, downloadId, button) {
             if (!confirm('Remove this song from your playlist?')) return;
+            if ((!songId && !downloadId) || (songId && downloadId)) return;
             
             // If removing the currently playing song, stop playback
             const songCard = button.closest('.playlist-song-card');
@@ -1071,11 +1178,14 @@
             }
             
             button.disabled = true;
+            const body = {};
+            if (songId) body.song_id = songId;
+            if (downloadId) body.download_id = downloadId;
 
             fetch('/playlist2/remove_song', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ song_id: songId })
+                body: JSON.stringify(body)
             })
             .then(response => response.json())
             .then(data => {

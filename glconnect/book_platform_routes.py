@@ -7384,6 +7384,29 @@ def blogs_redirect():
     """Redirect to all blogs - no filtering"""
     return redirect(url_for('blog.blogs'))
 
+@book_bp.route('/music/voice-agent', methods=['POST'])
+def music_voice_agent():
+    """Voice agent for music: answer questions about songs/artists, play, add to playlist, download."""
+    from glconnect.music_voice_agent import run_agent_turn
+    data = request.get_json() or {}
+    message = (data.get("message") or "").strip()
+    if not message:
+        return jsonify({"success": False, "error": "Message required", "text": "", "actions": []}), 400
+    user_id = current_user.user_id if current_user.is_authenticated else None
+    base_url = request.url_root.rstrip("/") if request.url_root else ""
+    try:
+        result = run_agent_turn(message, user_id=user_id, base_url=base_url)
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "text": "Sorry, something went wrong. Please try again.",
+            "actions": []
+        }), 500
+
+
 @book_bp.route('/music')
 def music_dashboard():
     """Standalone music dashboard for searching songs and managing playlists"""
