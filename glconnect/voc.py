@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
 import os
 from dotenv import load_dotenv
 from glconnect.models import WordsData,db
@@ -40,6 +40,14 @@ app = FastAPI()
 def health():
     """Health check for Docker and load balancers."""
     return {"status": "healthy", "service": "fastapi"}
+
+
+# Music Live WebSocket (Gemini Live API - bidi-demo architecture)
+@app.websocket("/ws/music/{user_id}/{session_id}")
+async def music_live_websocket(websocket: WebSocket, user_id: str, session_id: str):
+    """WebSocket for music voice assistant with native audio."""
+    from glconnect.music_live_ws import handle_music_live_websocket
+    await handle_music_live_websocket(websocket, user_id, session_id)
 
 
 # The dictionary containing your word data

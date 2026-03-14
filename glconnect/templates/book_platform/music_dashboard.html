@@ -1073,10 +1073,17 @@
             });
         }
 
-        // Voice Agent - live agent: click once, conversation continues until user clicks Stop
+        // Voice Agent - bidi-demo: try Gemini Live (native audio) first, fallback to HTTP + browser TTS
         let voiceAgentActive = false;
         let voiceAgentUserStopped = false;
         let voiceAgentRec = null;
+        let voiceLiveWs = null;
+        let voiceLiveMode = false;
+        let voiceLiveTried = false;
+        let voiceLivePlayerNode = null;
+        let voiceLiveMicStream = null;
+        const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
+        const VOICE_WS_SESSION = 'music-' + Math.random().toString(36).substring(7);
 
         function speakResponse(text, onEnd) {
             const t = (text || '').trim().replace(/\n/g, ' ');
@@ -1140,15 +1147,100 @@
                 aEl.click();
             }
         }
-        function startVoiceRecognition() {
+        async function tryStartVoiceLive() {
+            const btn = document.getElementById('voiceAgentBtn');
+            const respEl = document.getElementById('voiceAgentResponse');
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + VOICE_WS_SESSION;
+            try {
+                voiceLiveWs = new WebSocket(wsUrl);
+                await new Promise((resolve, reject) => {
+                    const t = setTimeout(() => reject(new Error('timeout')), 5000);
+                    voiceLiveWs.onopen = () => { clearTimeout(t); resolve(); };
+                    voiceLiveWs.onerror = () => { clearTimeout(t); reject(new Error('WebSocket error')); };
+                });
+                const recorderCtx = new AudioContext({ sampleRate: 16000 });
+                await recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}');
+                voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
+                const playerCtx = new AudioContext({ sampleRate: 24000 });
+                await playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}');
+                voiceLivePlayerNode = new AudioWorkletNode(playerCtx, 'pcm-player-processor');
+                voiceLivePlayerNode.connect(playerCtx.destination);
+                voiceLiveMode = true;
+                voiceLiveTried = true;
+                voiceAgentUserStopped = false;
+                voiceAgentActive = true;
+                btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening… (click to end)';
+                btn.onclick = () => {
+                    voiceAgentUserStopped = true;
+                    voiceAgentActive = false;
+                    if (voiceLivePlayerNode) voiceLivePlayerNode.port.postMessage({ command: 'endOfAudio' });
+                    if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
+                    if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) voiceLiveWs.close();
+                    btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                    btn.onclick = () => startVoiceRecognition();
+                };
+                voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
+                const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
+                const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
+                source.connect(recNode);
+                recNode.port.onmessage = (e) => {
+                    const float32 = e.data;
+                    const pcm16 = new Int16Array(float32.length);
+                    for (let i = 0; i < float32.length; i++) pcm16[i] = float32[i] * 0x7fff;
+                    if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN && voiceAgentActive) voiceLiveWs.send(pcm16.buffer);
+                };
+                voiceLiveWs.onmessage = (ev) => {
+                    try {
+                        const evt = JSON.parse(ev.data);
+                        if (evt.content && evt.content.parts) {
+                            for (const p of evt.content.parts) {
+                                if (p.inlineData && p.inlineData.data && voiceLivePlayerNode) {
+                                    const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
+                                    voiceLivePlayerNode.port.postMessage(buf);
+                                }
+                                if (p.text) respEl.innerHTML = (respEl.innerHTML || '') + (p.text || '').replace(/\n/g, '<br>');
+                            }
+                        }
+                        if (evt.outputTranscription && evt.outputTranscription.text) respEl.innerHTML = (evt.outputTranscription.text || '').replace(/\n/g, '<br>');
+                        if (evt.content && evt.content.parts) {
+                            for (const p of evt.content.parts) {
+                                if (p.text && p.text.includes('"action"')) {
+                                    try {
+                                        const idx = p.text.indexOf('{"');
+                                        if (idx >= 0) {
+                                            let depth = 0, end = -1;
+                                            for (let i = idx; i < p.text.length; i++) {
+                                                if (p.text[i] === '{') depth++;
+                                                else if (p.text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+                                            }
+                                            if (end >= 0) {
+                                                const o = JSON.parse(p.text.substring(idx, end + 1));
+                                                if (o && o.action) executeVoiceAction(o.action);
+                                            }
+                                        }
+                                    } catch (_) {}
+                                }
+                            }
+                        }
+                    } catch (_) {}
+                };
+                respEl.innerHTML = '<span class="text-success">Live mode – speak now</span>';
+            } catch (e) {
+                voiceLiveTried = true;
+                voiceLiveMode = false;
+                if (voiceLiveWs) try { voiceLiveWs.close(); } catch (_) {}
+                startVoiceRecognitionHttp();
+            }
+        }
+
+        function startVoiceRecognitionHttp() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 alert('Voice recognition is not supported in your browser.');
                 return;
             }
             voiceAgentUserStopped = false;
-            if (!voiceAgentActive) {
-                voiceAgentActive = true;
-            }
+            if (!voiceAgentActive) voiceAgentActive = true;
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const rec = new SpeechRecognition();
             voiceAgentRec = rec;
@@ -1165,8 +1257,7 @@
                 if (window.speechSynthesis) window.speechSynthesis.cancel();
             };
             rec.onresult = (e) => {
-                const t = e.results[0][0].transcript;
-                input.value = t;
+                input.value = e.results[0][0].transcript;
                 sendVoiceAgentMessage();
             };
             rec.onend = () => {
@@ -1175,15 +1266,24 @@
                     btn.onclick = () => startVoiceRecognition();
                 }
             };
-            rec.onerror = (e) => {
+            rec.onerror = () => {
                 if (voiceAgentUserStopped || !voiceAgentActive) {
                     btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
                     btn.onclick = () => startVoiceRecognition();
-                } else if (voiceAgentActive) {
-                    startVoiceRecognition();
-                }
+                } else if (voiceAgentActive) startVoiceRecognition();
             };
             rec.start();
+        }
+
+        function startVoiceRecognition() {
+            if (voiceLiveTried && voiceLiveMode && voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+            if (!voiceLiveTried) {
+                tryStartVoiceLive();
+                return;
+            }
+            startVoiceRecognitionHttp();
         }
 
         function removeFromPlaylist(songId, downloadId, button) {
