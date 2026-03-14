@@ -9,15 +9,27 @@ import json
 from typing import List, Dict, Any, Optional
 
 
-SYSTEM_INSTRUCTION = """You are a helpful music assistant for the Ink Studio music dashboard. You help users:
-1. Search for songs and artists in the catalog (artist-uploaded songs and YouTube-downloaded songs)
-2. Play songs (you will trigger playback when the user asks)
-3. Add songs to their playlist
-4. Download songs (get the file URL)
+SYSTEM_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the UI buttons, but via voice commands.
 
-When the user asks about a song or artist, use search_songs first to find matches. Then you can offer to play, add to playlist, or download.
+You have full access to the music database:
+- Artist-uploaded songs (Song table) and YouTube-downloaded songs (DownloadedSong table)
+- User playlists (Playlist table) for logged-in users
 
-Be conversational and friendly. When you find songs, briefly describe them. When performing an action (play, add, download), confirm what you did."""
+Your tools (use them to fulfill requests):
+1. search_songs(query) - Find songs/artists in the catalog. Always use this first when the user mentions a song or artist.
+2. play_song(song_id or download_id) - Start playback. Use song_id for artist uploads, download_id for YouTube downloads.
+3. add_song_to_playlist(song_id or download_id) - Add to user's playlist. Requires login.
+4. download_song(song_id or download_id) - Get download link for the user to save the file.
+5. list_my_playlist() - List songs in the user's playlist (requires login).
+
+Voice command examples you should understand:
+- "Play Rockabye" / "Play Rockabye by Clean Bandit" → search_songs then play_song
+- "Add X to my playlist" → search_songs then add_song_to_playlist
+- "Download X" / "I want to download X" → search_songs then download_song
+- "What's in my playlist?" / "List my playlist" → list_my_playlist
+- "Find songs by [artist]" / "Search for [song]" → search_songs
+
+When you find songs via search_songs, use the song_id or download_id from the results for play/add/download. Be conversational and confirm actions clearly."""
 
 
 def get_tools_for_gemini():
@@ -70,6 +82,11 @@ def get_tools_for_gemini():
                     "download_id": {"type": "integer", "description": "Download ID (YouTube downloads)"}
                 }
             }
+        ),
+        content_types.FunctionDeclaration(
+            name="list_my_playlist",
+            description="List all songs in the user's playlist. Use when the user asks 'what's in my playlist', 'list my playlist', 'show my playlist', etc. Requires user to be logged in.",
+            parameters={"type": "object", "properties": {}}
         ),
     ]
 
@@ -293,6 +310,30 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
                 actions.append({"type": "add_to_playlist", "song_id": None, "download_id": download_id})
                 return json.dumps({"success": True, "message": f"'{d.name}' added to your playlist!"})
             return json.dumps({"success": False, "message": "Provide song_id or download_id"})
+
+        if name == "list_my_playlist":
+            if not user_id:
+                return json.dumps({"success": False, "message": "Please log in to view your playlist."})
+            from glconnect.models import Playlist, Song, Artist, DownloadedSong
+            playlist = Playlist.query.filter_by(user_id=user_id).all()
+            if not playlist:
+                return json.dumps({"success": True, "count": 0, "songs": [], "message": "Your playlist is empty."})
+            out = []
+            for entry in playlist:
+                if entry.song_id:
+                    song = Song.query.get(entry.song_id)
+                    if song:
+                        artist_name = song.artist or "Unknown"
+                        if song.artist_id:
+                            a = Artist.query.get(song.artist_id)
+                            if a:
+                                artist_name = a.artist_name
+                        out.append({"name": (song.name or "").strip() or "Untitled", "artist": artist_name, "song_id": song.id, "download_id": None})
+                elif entry.download_id:
+                    d = DownloadedSong.query.get(entry.download_id)
+                    if d:
+                        out.append({"name": (d.name or "").strip() or "Untitled", "artist": d.artist or "Unknown", "song_id": None, "download_id": d.id})
+            return json.dumps({"success": True, "count": len(out), "songs": out})
 
         if name == "download_song":
             song_id = args.get("song_id")
