@@ -41,7 +41,7 @@ PyPDF2==3.0.1
 # Note: textract removed due to dependency conflicts - DOC files will use python-docx fallback
 
 # Web scraping and HTTP
-requests==2.32.3
+requests>=2.32.4,<3.0.0
 lxml==5.3.0
 
 # YouTube / media download (admin music pipeline; [default] adds EJS for signature/challenge solving)
