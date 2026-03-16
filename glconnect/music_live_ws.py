@@ -163,9 +163,11 @@ async def handle_music_live_websocket(
             live_request_queue=live_request_queue,
             run_config=run_config,
         ):
-            for action in _extract_actions_from_event(event):
-                logger.info("Sending music_action to client: %s", action.get("type"))
-                await websocket.send_text(json.dumps({"type": "music_action", "action": action}))
+            actions = _extract_actions_from_event(event)
+            if actions:
+                for action in actions:
+                    logger.info("Sending music_action to client: %s (song_id=%s, download_id=%s)", action.get("type"), action.get("song_id"), action.get("download_id"))
+                    await websocket.send_text(json.dumps({"type": "music_action", "action": action}))
             event_json = event.model_dump_json(exclude_none=True, by_alias=True)
             await websocket.send_text(event_json)
 
