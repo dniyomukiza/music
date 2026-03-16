@@ -234,9 +234,19 @@
                         </div>
                         <!-- Voice Agent -->
                         <div class="mt-3 pt-3 border-top border-light">
-                            <button type="button" class="btn btn-outline-info" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
-                                <i class="fas fa-microphone me-1"></i>Voice Assistant
-                            </button>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-info" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
+                                    <i class="fas fa-microphone me-1"></i>Voice Assistant
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showVoiceTranscript()" title="View conversation transcript">
+                                    <i class="fas fa-file-alt me-1"></i>Transcript
+                                </button>
+                                <div class="d-flex align-items-center gap-1 small">
+                                    <i class="fas fa-volume-down text-muted"></i>
+                                    <input type="range" id="voiceVolumeSlider" class="form-range" min="0.01" max="1" step="0.01" value="0.15" style="width:80px" title="Agent volume">
+                                    <span id="voiceVolumeLabel" class="text-muted">15%</span>
+                                </div>
+                            </div>
                             <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
                             <div id="voiceAgentResponse" class="mt-2 small text-muted" style="max-height: 120px; overflow-y: auto;"></div>
                         </div>
@@ -1085,16 +1095,50 @@
         const VOICE_WS_SESSION = 'music-' + Math.random().toString(36).substring(7);
 
         let voiceTranscriptLog = [];
+        let voiceVolumeGain = 0.15;
+        let voiceLiveGainNode = null;
+        function getVoiceVolume() { return voiceVolumeGain; }
+        function showTapToPlayFallback(url, label) {
+            const respEl = document.getElementById('voiceAgentResponse');
+            respEl.querySelectorAll('.voice-tap-to-play').forEach(b => b.remove());
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-success btn-sm mt-1 voice-tap-to-play';
+            btn.innerHTML = '<i class="fas fa-play me-1"></i>Tap to play: ' + (label || 'Song');
+            btn.onclick = () => {
+                const a = new Audio(url);
+                a.volume = voiceVolumeGain;
+                a.play().catch(() => {});
+                btn.remove();
+            };
+            respEl.appendChild(btn);
+        }
         function executeVoiceAction(a) {
             if (a.type === 'play' && a.url) {
-                const audio = new Audio(a.url);
-                audio.play().catch(e => console.warn('Play failed:', e));
+                const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
+                const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
+                let audioEl = null;
+                document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
+                    const s = el.querySelector('source');
+                    if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || pathPart && s.src.includes(pathPart))) audioEl = el;
+                });
+                if (audioEl) {
+                    audioEl.volume = voiceVolumeGain;
+                    audioEl.play().catch(e => {
+                        console.warn('Play failed (playlist):', e);
+                        showTapToPlayFallback(playUrl, a.name || 'Song');
+                    });
+                } else {
+                    const audio = new Audio(playUrl);
+                    audio.volume = voiceVolumeGain;
+                    audio.play().catch(e => {
+                        console.warn('Play failed:', e);
+                        showTapToPlayFallback(playUrl, a.name || 'Song');
+                    });
+                }
             } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
                 loadPlaylist();
             } else if (a.type === 'show_transcript') {
-                const respEl = document.getElementById('voiceAgentResponse');
-                const html = voiceTranscriptLog.length ? voiceTranscriptLog.map(e => `<div class="mb-1"><strong>${e.role}:</strong> ${e.text}</div>`).join('') : '<span class="text-muted">No transcript yet.</span>';
-                respEl.innerHTML = '<div class="small" style="max-height:200px;overflow-y:auto;">' + html + '</div>';
+                showVoiceTranscript();
             } else if (a.type === 'download' && a.url) {
                 const aEl = document.createElement('a');
                 aEl.href = a.url;
@@ -1120,7 +1164,10 @@
                 const playerCtx = new AudioContext({ sampleRate: 24000 });
                 await playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}');
                 voiceLivePlayerNode = new AudioWorkletNode(playerCtx, 'pcm-player-processor');
-                voiceLivePlayerNode.connect(playerCtx.destination);
+                voiceLiveGainNode = playerCtx.createGain();
+                voiceLiveGainNode.gain.value = voiceVolumeGain;
+                voiceLivePlayerNode.connect(voiceLiveGainNode);
+                voiceLiveGainNode.connect(playerCtx.destination);
                 voiceLiveMode = true;
                 voiceLiveTried = true;
                 voiceAgentUserStopped = false;
@@ -1136,6 +1183,7 @@
                     btn.onclick = () => startVoiceRecognition();
                 };
                 voiceTranscriptLog = [];
+                if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
                 voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
                 const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
                 const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
@@ -1165,7 +1213,10 @@
                                         const d = JSON.parse(res);
                                         if (d && d.action) action = d.action;
                                     } catch (_) {}
-                                }
+                                } else if (typeof r === 'string') try {
+                                    const d = JSON.parse(r);
+                                    if (d && d.action) action = d.action;
+                                } catch (_) {}
                                 if (action) { executeVoiceAction(action); return true; }
                             }
                             if (p.text && p.text.includes('"action"')) {
@@ -1398,8 +1449,37 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             loadPlaylist();
+            const volSlider = document.getElementById('voiceVolumeSlider');
+            const volLabel = document.getElementById('voiceVolumeLabel');
+            if (volSlider && volLabel) {
+                volSlider.addEventListener('input', function() {
+                    voiceVolumeGain = parseFloat(this.value);
+                    volLabel.textContent = Math.round(voiceVolumeGain * 100) + '%';
+                    if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
+                });
+            }
         });
+        function showVoiceTranscript() {
+            const html = voiceTranscriptLog.length ? voiceTranscriptLog.map(e => `<div class="mb-2"><strong>${e.role}:</strong> ${e.text}</div>`).join('') : '<p class="text-muted mb-0">No transcript yet. Start a voice conversation first.</p>';
+            document.getElementById('voiceTranscriptModalBody').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('voiceTranscriptModal')).show();
+        }
     </script>
+
+    <!-- Voice Transcript Modal -->
+    <div class="modal fade" id="voiceTranscriptModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i>Conversation Transcript</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="voiceTranscriptModalBody" style="max-height: 70vh; overflow-y: auto;">
+                    <p class="text-muted mb-0">No transcript yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Create Artist Profile Modal -->
     <div class="modal fade" id="createArtistModal" tabindex="-1">

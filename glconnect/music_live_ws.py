@@ -105,27 +105,53 @@ async def handle_music_live_websocket(
         try:
             for fr in (event.get_function_responses() or []):
                 resp = getattr(fr, "response", None)
+                if resp is None:
+                    continue
+                action = None
                 if isinstance(resp, dict):
                     if "action" in resp:
-                        actions.append(resp["action"])
+                        action = resp["action"]
                     elif "result" in resp:
                         r = resp["result"]
                         if isinstance(r, dict) and "action" in r:
-                            actions.append(r["action"])
+                            action = r["action"]
                         elif isinstance(r, str):
                             try:
                                 data = json.loads(r)
                                 if isinstance(data, dict) and "action" in data:
-                                    actions.append(data["action"])
+                                    action = data["action"]
                             except json.JSONDecodeError:
                                 pass
-                elif isinstance(resp, str):
+                if action is None and isinstance(resp, str):
                     try:
                         data = json.loads(resp)
                         if isinstance(data, dict) and "action" in data:
-                            actions.append(data["action"])
+                            action = data["action"]
                     except json.JSONDecodeError:
                         pass
+                if action:
+                    actions.append(action)
+            # Fallback: traverse event content.parts if get_function_responses is empty
+            if not actions and hasattr(event, "content") and event.content:
+                parts = getattr(event.content, "parts", None) or []
+                for p in parts:
+                    fr = getattr(p, "function_response", None)
+                    if not fr:
+                        continue
+                    resp = getattr(fr, "response", None)
+                    if isinstance(resp, dict) and "action" in resp:
+                        actions.append(resp["action"])
+                        break
+                    if isinstance(resp, dict) and "result" in resp:
+                        r = resp["result"]
+                        if isinstance(r, str):
+                            try:
+                                d = json.loads(r)
+                                if isinstance(d, dict) and "action" in d:
+                                    actions.append(d["action"])
+                                    break
+                            except json.JSONDecodeError:
+                                pass
         except Exception:
             pass
         return actions
