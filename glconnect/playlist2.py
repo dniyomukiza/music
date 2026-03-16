@@ -983,7 +983,7 @@ def remove_song():
 
 @play.route('/song/<int:song_id>/file')
 def serve_song_file(song_id):
-    """Serve song file by ID - handles file lookup and path resolution"""
+    """Serve song file by ID (Song table / artist uploads). Files live in glconnect/static/afro/."""
     try:
         from flask import current_app, request
         import logging
@@ -1017,11 +1017,14 @@ def serve_song_file(song_id):
             os.path.join(os.getcwd(), 'glconnect', 'static', 'afro'),
         ])
         
-        # Add relative paths as fallback
+        # Add relative paths as fallback (Docker: /usr/src/appdir; artist uploads: song_uploads)
         possible_dirs.extend([
             'glconnect/static/afro',
+            'glconnect/static/song_uploads',
             'static/afro',
+            'static/song_uploads',
             '/usr/src/appdir/glconnect/static/afro',
+            '/usr/src/appdir/glconnect/static/song_uploads',
             '/liqfolder/glconnect/static/afro',
         ])
         
@@ -1049,6 +1052,14 @@ def serve_song_file(song_id):
                 logger.info(f"Found song file via absolute path: {song.local_path}")
                 return send_file(song.local_path, mimetype='audio/mpeg')
             
+            # Relative path like glconnect/static/afro/X.mp3 (used by upload; works in Docker)
+            if not os.path.isabs(song.local_path) and song.local_path.startswith('glconnect/'):
+                for base in (project_root, os.getcwd(), '/usr/src/appdir'):
+                    full = os.path.join(base, song.local_path)
+                    if os.path.exists(full) and os.path.isfile(full):
+                        logger.info(f"Found song file via relative path: {full}")
+                        return send_file(full, mimetype='audio/mpeg')
+            
             # If local_path is just a filename (no slashes), try afro directory
             if '/' not in song.local_path and '\\' not in song.local_path:
                 filename = song.local_path
@@ -1061,7 +1072,7 @@ def serve_song_file(song_id):
                             return send_file(file_path, mimetype='audio/mpeg')
             
             # If it's an absolute path that doesn't exist, try to map it to current environment
-            # Handle paths like /liqfolder/glconnect/static/afro/filename.mp3
+            # Handle paths like /liqfolder/glconnect/static/afro/filename.mp3 (legacy) or /usr/src/appdir/...
             if os.path.isabs(song.local_path):
                 # Extract the relative part after the base directory
                 path_parts = song.local_path.strip('/').split('/')
@@ -1069,29 +1080,23 @@ def serve_song_file(song_id):
                 if 'glconnect' in path_parts:
                     glconnect_idx = path_parts.index('glconnect')
                     relative_path = '/'.join(path_parts[glconnect_idx:])
-                    # Try with project_root (not app_root, which might be in glconnect/)
-                    reconstructed_path = os.path.join(project_root, relative_path)
-                    if os.path.exists(reconstructed_path) and os.path.isfile(reconstructed_path):
-                        logger.info(f"Found song file via reconstructed path: {reconstructed_path}")
-                        return send_file(reconstructed_path, mimetype='audio/mpeg')
-                    # Try with cwd
-                    reconstructed_path = os.path.join(os.getcwd(), relative_path)
-                    if os.path.exists(reconstructed_path) and os.path.isfile(reconstructed_path):
-                        logger.info(f"Found song file via reconstructed path: {reconstructed_path}")
-                        return send_file(reconstructed_path, mimetype='audio/mpeg')
+                    # Try project_root, cwd, and Docker WORKDIR
+                    for base in (project_root, os.getcwd(), '/usr/src/appdir'):
+                        if base:
+                            reconstructed_path = os.path.join(base, relative_path)
+                            if os.path.exists(reconstructed_path) and os.path.isfile(reconstructed_path):
+                                logger.info(f"Found song file via reconstructed path: {reconstructed_path}")
+                                return send_file(reconstructed_path, mimetype='audio/mpeg')
                 elif 'static' in path_parts:
                     static_idx = path_parts.index('static')
                     relative_path = '/'.join(path_parts[static_idx:])
-                    # Try with glconnect prefix using project_root
-                    reconstructed_path = os.path.join(project_root, 'glconnect', relative_path)
-                    if os.path.exists(reconstructed_path) and os.path.isfile(reconstructed_path):
-                        logger.info(f"Found song file via reconstructed path: {reconstructed_path}")
-                        return send_file(reconstructed_path, mimetype='audio/mpeg')
-                    # Try without glconnect prefix
-                    reconstructed_path = os.path.join(project_root, relative_path)
-                    if os.path.exists(reconstructed_path) and os.path.isfile(reconstructed_path):
-                        logger.info(f"Found song file via reconstructed path: {reconstructed_path}")
-                        return send_file(reconstructed_path, mimetype='audio/mpeg')
+                    for base in (project_root, os.getcwd(), '/usr/src/appdir'):
+                        if base:
+                            for prefix in ('glconnect/', ''):
+                                p = os.path.join(base, prefix, relative_path) if prefix else os.path.join(base, relative_path)
+                                if os.path.exists(p) and os.path.isfile(p):
+                                    logger.info(f"Found song file via reconstructed path: {p}")
+                                    return send_file(p, mimetype='audio/mpeg')
                 
                 # If reconstruction failed, extract just the filename and search in possible_dirs
                 filename = os.path.basename(song.local_path)
@@ -1286,7 +1291,7 @@ def serve_song_file(song_id):
 
 @play.route('/download/<int:download_id>/file')
 def serve_downloaded_song_file(download_id):
-    """Serve a YouTube-downloaded song file by download_id (from downloaded_songs table)."""
+    """Serve a YouTube-downloaded song file by download_id. Files live in glconnect/static/ytauto/."""
     try:
         import logging
         logger = logging.getLogger(__name__)
@@ -1295,20 +1300,39 @@ def serve_downloaded_song_file(download_id):
         project_root = os.path.dirname(app_root) if os.path.basename(app_root) == 'glconnect' else app_root
         if not download.local_path:
             return jsonify({"error": "No file path for this download"}), 404
+
+        fn = os.path.basename(download.local_path)
+        # ytauto dir: glconnect/static/ytauto (downloads) vs afro (artist uploads)
+        ytauto_bases = [
+            os.path.join(project_root, 'glconnect', 'static', 'ytauto'),
+            os.path.join(os.getcwd(), 'glconnect', 'static', 'ytauto'),
+            '/usr/src/appdir/glconnect/static/ytauto',
+        ]
+        for base in ytauto_bases:
+            if base:
+                full = os.path.join(base, fn)
+                if os.path.exists(full) and os.path.isfile(full):
+                    return send_file(full, mimetype='audio/mpeg')
+
+        # Reconstruct from local_path (e.g. /liqfolder/glconnect/static/ytauto/X.mp3)
         path = download.local_path.strip('/').split('/')
         if 'glconnect' in path:
             idx = path.index('glconnect')
             rel = '/'.join(path[idx:])
-            for base in (project_root, os.getcwd()):
-                full = os.path.join(base, rel)
-                if os.path.exists(full) and os.path.isfile(full):
-                    return send_file(full, mimetype='audio/mpeg')
-        glconnect_ytauto = os.path.join(project_root, 'glconnect', 'static', 'ytauto')
-        if os.path.isdir(glconnect_ytauto):
-            fn = os.path.basename(download.local_path)
-            full = os.path.join(glconnect_ytauto, fn)
-            if os.path.exists(full) and os.path.isfile(full):
-                return send_file(full, mimetype='audio/mpeg')
+            for base in (project_root, os.getcwd(), '/usr/src/appdir'):
+                if base:
+                    full = os.path.join(base, rel)
+                    if os.path.exists(full) and os.path.isfile(full):
+                        return send_file(full, mimetype='audio/mpeg')
+
+        # Relative path like glconnect/static/ytauto/X.mp3
+        if not os.path.isabs(download.local_path) and 'ytauto' in download.local_path:
+            for base in (project_root, os.getcwd(), '/usr/src/appdir'):
+                if base:
+                    full = os.path.join(base, download.local_path)
+                    if os.path.exists(full) and os.path.isfile(full):
+                        return send_file(full, mimetype='audio/mpeg')
+
         return jsonify({"error": "Downloaded song file not found"}), 404
     except Exception as e:
         import traceback

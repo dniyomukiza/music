@@ -1153,10 +1153,8 @@
                                     const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
                                     voiceLivePlayerNode.port.postMessage(buf);
                                 }
-                                if (p.text) respEl.innerHTML = (respEl.innerHTML || '') + (p.text || '').replace(/\n/g, '<br>');
                             }
                         }
-                        if (evt.outputTranscription && evt.outputTranscription.text) respEl.innerHTML = (evt.outputTranscription.text || '').replace(/\n/g, '<br>');
                         if (evt.content && evt.content.parts) {
                             for (const p of evt.content.parts) {
                                 if (p.text && p.text.includes('"action"')) {

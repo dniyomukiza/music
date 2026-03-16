@@ -7625,8 +7625,8 @@ def upload_song_music_dashboard():
         else:
             cover_filename = "photo3.webp"
         
-        # Store full path in database: /liqfolder/glconnect/static/afro/Artist Name - Song Name.mp3
-        full_db_path = f"/liqfolder/glconnect/static/afro/{mp3_filename}"
+        # Store path that serve_song_file can resolve: relative to project (works in Docker /usr/src/appdir)
+        full_db_path = f"glconnect/static/afro/{mp3_filename}"
         
         # Save to Song model for searchability (admin must approve before it appears in search)
         from glconnect.models import Song
