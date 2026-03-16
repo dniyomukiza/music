@@ -916,12 +916,12 @@
                             const songIdArg = song.song_id != null ? song.song_id : 'null';
                             const downloadIdArg = song.download_id != null ? song.download_id : 'null';
                             html += `
-                                <div class="card mb-3 playlist-song-card" data-song-index="${index}">
+                                <div class="card mb-3 playlist-song-card" data-song-index="${index}" data-song-id="${song.song_id != null ? song.song_id : ''}" data-download-id="${song.download_id != null ? song.download_id : ''}">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                             <div>
                                                 <h6 class="mb-1 song-title"><strong>${song.name} by ${song.artist}</strong></h6>
-                                                <audio id="playlist-audio-${index}" controls class="song-audio playlist-audio" data-song-index="${index}">
+                                                <audio id="playlist-audio-${index}" controls class="song-audio playlist-audio" data-song-index="${index}" data-song-id="${song.song_id != null ? song.song_id : ''}" data-download-id="${song.download_id != null ? song.download_id : ''}">
                                                     <source src="${song.path}" type="audio/mpeg">
                                                 </audio>
                                             </div>
@@ -1096,6 +1096,40 @@
 
         let voiceTranscriptLog = [];
         let voiceVolumeGain = 0.15;
+        function isInternalReasoning(t) {
+            const s = (t || '').trim();
+            return /^\*\*[^*]+\*\*/.test(s) || /^I've (determined|registered|zeroed in)/i.test(s);
+        }
+        function addAgentTranscript(t) {
+            const text = (t || '').trim().replace(/\n/g, ' ');
+            if (!text || isInternalReasoning(text)) return;
+            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
+            if (last && last.role === 'Agent') {
+                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
+                    last.text = text;
+                    return;
+                }
+                if (last.text.startsWith(text) || last.text === text) return;
+            }
+            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
+                voiceTranscriptLog.push({ role: 'Agent', text: text });
+            }
+        }
+        function addUserTranscript(t) {
+            const text = (t || '').trim().replace(/\n/g, ' ');
+            if (!text) return;
+            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
+            if (last && last.role === 'You') {
+                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
+                    last.text = text;
+                    return;
+                }
+                if (last.text.startsWith(text) || last.text === text) return;
+            }
+            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
+                voiceTranscriptLog.push({ role: 'You', text: text });
+            }
+        }
         let voiceLiveGainNode = null;
         function getVoiceVolume() { return voiceVolumeGain; }
         function showTapToPlayFallback(url, label) {
@@ -1117,10 +1151,17 @@
                 const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
                 const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
                 let audioEl = null;
-                document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
-                    const s = el.querySelector('source');
-                    if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || pathPart && s.src.includes(pathPart))) audioEl = el;
-                });
+                if (a.song_id != null || a.download_id != null) {
+                    const sel = a.song_id != null ? `[data-song-id="${a.song_id}"]` : `[data-download-id="${a.download_id}"]`;
+                    const card = document.querySelector('.playlist-song-card' + sel);
+                    if (card) audioEl = card.querySelector('.playlist-audio');
+                }
+                if (!audioEl) {
+                    document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
+                        const s = el.querySelector('source');
+                        if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || (pathPart && s.src.includes(pathPart)))) audioEl = el;
+                    });
+                }
                 if (audioEl) {
                     audioEl.volume = voiceVolumeGain;
                     audioEl.play().catch(e => {
@@ -1186,6 +1227,23 @@
                 voiceTranscriptLog = [];
                 if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
                 voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
+                voiceLiveWs.onclose = () => {
+                    if (!voiceAgentUserStopped && voiceAgentActive) {
+                        voiceAgentActive = false;
+                        voiceLiveMode = false;
+                        if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
+                        const b = document.getElementById('voiceAgentBtn');
+                        const r = document.getElementById('voiceAgentResponse');
+                        if (b) { b.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant'; b.onclick = () => startVoiceRecognition(); }
+                        if (r) r.innerHTML = '<span class="text-warning">Connection closed. Click to reconnect.</span>';
+                    }
+                };
+                voiceLiveWs.onerror = () => {
+                    if (!voiceAgentUserStopped && voiceAgentActive) {
+                        const r = document.getElementById('voiceAgentResponse');
+                        if (r) r.innerHTML = '<span class="text-warning">Connection error. Click Voice Assistant to reconnect.</span>';
+                    }
+                };
                 const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
                 const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
                 source.connect(recNode);
@@ -1250,22 +1308,16 @@
                                     const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
                                     voiceLivePlayerNode.port.postMessage(buf);
                                 }
-                                if (p.text && p.text.trim()) {
-                                    const t = p.text.trim().replace(/\n/g, ' ');
-                                    if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length-1].text !== t) voiceTranscriptLog.push({role: 'Agent', text: t});
-                                }
+                                if (p.text && p.text.trim()) addAgentTranscript(p.text);
                             }
                         }
                         const outT = evt.outputTranscription || evt.output_transcription;
-                        if (outT && outT.text && outT.text.trim()) {
-                            const t = outT.text.trim().replace(/\n/g, ' ');
-                            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length-1].text !== t) voiceTranscriptLog.push({role: 'Agent', text: t});
-                        }
+                        if (outT && outT.text && outT.text.trim()) addAgentTranscript(outT.text);
                         const inT = evt.inputTranscription || evt.input_transcription;
-                        if (inT && inT.text && inT.text.trim()) voiceTranscriptLog.push({role: 'You', text: inT.text.trim().replace(/\n/g, ' ')});
+                        if (inT && inT.text && inT.text.trim()) addUserTranscript(inT.text);
                         if (evt.content && evt.content.role === 'user') {
                             for (const p of (evt.content.parts || [])) {
-                                if (p.text && p.text.trim()) voiceTranscriptLog.push({role: 'You', text: p.text.trim().replace(/\n/g, ' ')});
+                                if (p.text && p.text.trim()) addUserTranscript(p.text);
                             }
                         }
                     } catch (_) {}

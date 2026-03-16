@@ -171,7 +171,7 @@ def play_song(song_id: Optional[int] = None, download_id: Optional[int] = None) 
                 return json.dumps({
                     "success": True,
                     "message": f"Playing {song.name or 'track'} by {song.artist or 'Unknown'}",
-                    "action": {"type": "play", "url": url, "name": song.name or "Track", "artist": song.artist or "Unknown"},
+                    "action": {"type": "play", "url": url, "name": song.name or "Track", "artist": song.artist or "Unknown", "song_id": song_id, "download_id": None},
                 })
         finally:
             session.close()
@@ -184,7 +184,7 @@ def play_song(song_id: Optional[int] = None, download_id: Optional[int] = None) 
                 return json.dumps({
                     "success": True,
                     "message": f"Playing {d.name or 'track'} by {d.artist or 'Unknown'}",
-                    "action": {"type": "play", "url": url, "name": d.name or "Track", "artist": d.artist or "Unknown"},
+                    "action": {"type": "play", "url": url, "name": d.name or "Track", "artist": d.artist or "Unknown", "song_id": None, "download_id": download_id},
                 })
         finally:
             session.close()
