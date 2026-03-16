@@ -1084,12 +1084,17 @@
         const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
         const VOICE_WS_SESSION = 'music-' + Math.random().toString(36).substring(7);
 
+        let voiceTranscriptLog = [];
         function executeVoiceAction(a) {
             if (a.type === 'play' && a.url) {
                 const audio = new Audio(a.url);
                 audio.play().catch(e => console.warn('Play failed:', e));
             } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
                 loadPlaylist();
+            } else if (a.type === 'show_transcript') {
+                const respEl = document.getElementById('voiceAgentResponse');
+                const html = voiceTranscriptLog.length ? voiceTranscriptLog.map(e => `<div class="mb-1"><strong>${e.role}:</strong> ${e.text}</div>`).join('') : '<span class="text-muted">No transcript yet.</span>';
+                respEl.innerHTML = '<div class="small" style="max-height:200px;overflow-y:auto;">' + html + '</div>';
             } else if (a.type === 'download' && a.url) {
                 const aEl = document.createElement('a');
                 aEl.href = a.url;
@@ -1130,6 +1135,7 @@
                     btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
                     btn.onclick = () => startVoiceRecognition();
                 };
+                voiceTranscriptLog = [];
                 voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
                 const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
                 const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
@@ -1140,39 +1146,74 @@
                     for (let i = 0; i < float32.length; i++) pcm16[i] = float32[i] * 0x7fff;
                     if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN && voiceAgentActive) voiceLiveWs.send(pcm16.buffer);
                 };
+                function tryExecuteActionFromEvent(evt) {
+                    if (evt.type === 'music_action' && evt.action) {
+                        executeVoiceAction(evt.action);
+                        return true;
+                    }
+                    if (evt.content && evt.content.parts) {
+                        for (const p of evt.content.parts) {
+                            const fr = p.functionResponse || p.function_response;
+                            if (fr) {
+                                const r = fr.response || fr;
+                                let action = null;
+                                if (r && typeof r === 'object' && r.action) action = r.action;
+                                else if (r && typeof r === 'object' && r.result) {
+                                    const res = r.result;
+                                    if (typeof res === 'object' && res && res.action) action = res.action;
+                                    else if (typeof res === 'string') try {
+                                        const d = JSON.parse(res);
+                                        if (d && d.action) action = d.action;
+                                    } catch (_) {}
+                                }
+                                if (action) { executeVoiceAction(action); return true; }
+                            }
+                            if (p.text && p.text.includes('"action"')) {
+                                try {
+                                    const idx = p.text.indexOf('{"');
+                                    if (idx >= 0) {
+                                        let depth = 0, end = -1;
+                                        for (let i = idx; i < p.text.length; i++) {
+                                            if (p.text[i] === '{') depth++;
+                                            else if (p.text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+                                        }
+                                        if (end >= 0) {
+                                            const o = JSON.parse(p.text.substring(idx, end + 1));
+                                            if (o && o.action) { executeVoiceAction(o.action); return true; }
+                                        }
+                                    }
+                                } catch (_) {}
+                            }
+                        }
+                    }
+                    return false;
+                }
                 voiceLiveWs.onmessage = (ev) => {
                     try {
                         const evt = JSON.parse(ev.data);
-                        if (evt.type === 'music_action' && evt.action) {
-                            executeVoiceAction(evt.action);
-                            return;
-                        }
+                        tryExecuteActionFromEvent(evt);
                         if (evt.content && evt.content.parts) {
                             for (const p of evt.content.parts) {
                                 if (p.inlineData && p.inlineData.data && voiceLivePlayerNode) {
                                     const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
                                     voiceLivePlayerNode.port.postMessage(buf);
                                 }
+                                if (p.text && p.text.trim()) {
+                                    const t = p.text.trim().replace(/\n/g, ' ');
+                                    if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length-1].text !== t) voiceTranscriptLog.push({role: 'Agent', text: t});
+                                }
                             }
                         }
-                        if (evt.content && evt.content.parts) {
-                            for (const p of evt.content.parts) {
-                                if (p.text && p.text.includes('"action"')) {
-                                    try {
-                                        const idx = p.text.indexOf('{"');
-                                        if (idx >= 0) {
-                                            let depth = 0, end = -1;
-                                            for (let i = idx; i < p.text.length; i++) {
-                                                if (p.text[i] === '{') depth++;
-                                                else if (p.text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
-                                            }
-                                            if (end >= 0) {
-                                                const o = JSON.parse(p.text.substring(idx, end + 1));
-                                                if (o && o.action) executeVoiceAction(o.action);
-                                            }
-                                        }
-                                    } catch (_) {}
-                                }
+                        const outT = evt.outputTranscription || evt.output_transcription;
+                        if (outT && outT.text && outT.text.trim()) {
+                            const t = outT.text.trim().replace(/\n/g, ' ');
+                            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length-1].text !== t) voiceTranscriptLog.push({role: 'Agent', text: t});
+                        }
+                        const inT = evt.inputTranscription || evt.input_transcription;
+                        if (inT && inT.text && inT.text.trim()) voiceTranscriptLog.push({role: 'You', text: inT.text.trim().replace(/\n/g, ' ')});
+                        if (evt.content && evt.content.role === 'user') {
+                            for (const p of (evt.content.parts || [])) {
+                                if (p.text && p.text.trim()) voiceTranscriptLog.push({role: 'You', text: p.text.trim().replace(/\n/g, ' ')});
                             }
                         }
                     } catch (_) {}

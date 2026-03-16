@@ -100,7 +100,7 @@ async def handle_music_live_websocket(
                     pass
 
     def _extract_actions_from_event(event):
-        """Extract play/add_to_playlist/download actions from tool results for client execution."""
+        """Extract play/add_to_playlist/download/show_transcript actions from tool results for client execution."""
         actions = []
         try:
             for fr in (event.get_function_responses() or []):
@@ -138,6 +138,7 @@ async def handle_music_live_websocket(
             run_config=run_config,
         ):
             for action in _extract_actions_from_event(event):
+                logger.info("Sending music_action to client: %s", action.get("type"))
                 await websocket.send_text(json.dumps({"type": "music_action", "action": action}))
             event_json = event.model_dump_json(exclude_none=True, by_alias=True)
             await websocket.send_text(event_json)

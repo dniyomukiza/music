@@ -278,8 +278,9 @@ def remove_song_from_playlist(song_id: Optional[int] = None, download_id: Option
 
 def list_my_playlist() -> str:
     """
-    List all songs in the user's playlist.
-    Use when the user asks 'what's in my playlist', 'list my playlist', 'show my playlist', etc.
+    List all songs in the user's playlist. Returns songs with song_id (artist uploads) or download_id (YouTube).
+    Use when the user asks 'what's in my playlist' or when they want to play a song from the playlist.
+    To play a song from this list, call play_song(song_id=X) or play_song(download_id=Y) with the ID from the result.
     Requires the user to be logged in.
     """
     ctx = _ctx()
@@ -315,6 +316,18 @@ def list_my_playlist() -> str:
         session.close()
 
 
+def request_transcript() -> str:
+    """
+    Call this when the user asks for a transcript of the conversation, e.g. 'give me the transcript',
+    'show our conversation', 'what did we say', 'transcript please'. Triggers the client to display it.
+    """
+    return json.dumps({
+        "success": True,
+        "message": "Here's the transcript.",
+        "action": {"type": "show_transcript"},
+    })
+
+
 MUSIC_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the manual UI: search, play, add to playlist, remove from playlist, download, list playlist. Same logic as the buttons—just via voice.
 
 You have full access to the music database:
@@ -328,14 +341,16 @@ Your tools (use them to fulfill requests):
 4. remove_song_from_playlist(song_id or download_id) - Remove a song from the user's playlist. Use list_my_playlist first to get IDs. Requires login.
 5. download_song(song_id or download_id) - Get download link for the user to save the file.
 6. list_my_playlist() - List songs in the user's playlist (requires login).
+7. request_transcript() - When the user asks for a transcript of the conversation (e.g. "give me the transcript", "show our conversation", "what did we say"), call this to display it.
 
-Playing songs (critical—same as manual click-to-play):
-- To play a song by name/artist: call search_songs first, then play_song with song_id or download_id from the results.
-- To play a song from the playlist: call list_my_playlist first, then play_song with song_id or download_id of the desired song.
-- Always call play_song when the user wants to listen—it triggers actual playback.
+Playing songs (CRITICAL—playback only happens when you call the tool):
+- You MUST call play_song(song_id=X) or play_song(download_id=Y) to trigger playback. Saying "playing" or "playing now" without calling the tool does NOTHING—the user will hear you but no song will play.
+- To play by name: call search_songs first, then play_song with song_id or download_id from the results.
+- To play from playlist: call list_my_playlist first, get the song_id or download_id of the song (e.g. first song = songs[0].song_id or songs[0].download_id), then call play_song with that exact ID.
+- Never say "playing your song now" or similar without having just called play_song—the tool is the only way to start playback.
 
-Voice examples: "Play Laho", "Play Rockabye by Shallipopi", "Play the first song in my playlist", "Add X to my playlist", "Remove X from my playlist".
-Be conversational and confirm actions clearly."""
+Voice examples: "Play Laho", "Play the first song in my playlist", "Add X to my playlist", "Give me the transcript of our conversation".
+When the user asks for a transcript, conversation summary, or "what did we say", call request_transcript()—you CAN do this. Be conversational and confirm actions clearly."""
 
 
 # Create agent - must be done after tools are defined
@@ -344,6 +359,6 @@ from google.adk.agents import Agent
 music_agent = Agent(
     name="music_agent",
     model=os.getenv("MUSIC_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
-    tools=[search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist],
+    tools=[search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist, request_transcript],
     instruction=MUSIC_INSTRUCTION,
 )
