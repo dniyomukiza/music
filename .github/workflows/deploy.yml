@@ -63,6 +63,12 @@ jobs:
               echo "nginx->app wait... ($i/5)"; sleep 5
             done
 
+            echo "--- Checking FastAPI (Gemini Live WebSocket) ---"
+            for i in 1 2 3 4 5; do
+              if curl -sf http://localhost:8002/health >/dev/null; then echo "FastAPI OK."; break; fi
+              echo "FastAPI wait... ($i/5)"; sleep 5
+            done
+
             echo "Deploy finished."
       - name: Done
         run: echo "Deploy finished."

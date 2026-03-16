@@ -60,6 +60,7 @@ services:
       container_name: nginx_service
       depends_on:
         - app
+        - fastapi
       volumes:
         - ./nginx.conf:/etc/nginx/conf.d/default.conf 
         - /etc/letsencrypt/live/www.glc.cool:/etc/letsencrypt/live/www.glc.cool:ro
@@ -132,6 +133,8 @@ services:
       context: .
       dockerfile: Dockerfile.uvi
     container_name: fastapi
+    env_file:
+      - .env
     ports:
       - "8002:8002"
     volumes:
@@ -139,6 +142,10 @@ services:
       - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
+    environment:
+      - DB_URL=${DB_URL:-${DATABASE_URL}}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     mem_limit: 256M
     mem_reservation: 128M
     restart: unless-stopped

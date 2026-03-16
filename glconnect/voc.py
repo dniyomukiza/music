@@ -15,10 +15,23 @@ from sqlalchemy.orm import declarative_base
 # Load environment variables
 load_dotenv()
 
-db_url = os.getenv("DB_URL")
+db_url = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
+if not db_url:
+    for path in ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]:
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    cfg = json.load(f)
+                db_url = cfg.get("DB_URL") or cfg.get("DATABASE_URL")
+                if db_url:
+                    break
+            except Exception:
+                pass
+if not db_url:
+    raise ValueError("DB_URL or DATABASE_URL must be set (env or glconfig.json)")
 
 # Set up the database engine and session
-engine = create_engine(db_url)  # Using the environment DB_URL
+engine = create_engine(db_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
