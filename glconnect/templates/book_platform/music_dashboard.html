@@ -1092,7 +1092,7 @@
         let voiceLivePlayerNode = null;
         let voiceLiveMicStream = null;
         const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
-        const VOICE_WS_SESSION = 'music-' + Math.random().toString(36).substring(7);
+        let voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
 
         let voiceTranscriptLog = [];
         let voiceVolumeGain = 0.15;
@@ -1150,7 +1150,7 @@
             const btn = document.getElementById('voiceAgentBtn');
             const respEl = document.getElementById('voiceAgentResponse');
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + VOICE_WS_SESSION;
+            const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
             try {
                 voiceLiveWs = new WebSocket(wsUrl);
                 await new Promise((resolve, reject) => {
@@ -1179,6 +1179,7 @@
                     if (voiceLivePlayerNode) voiceLivePlayerNode.port.postMessage({ command: 'endOfAudio' });
                     if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
                     if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) voiceLiveWs.close();
+                    voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
                     btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
                     btn.onclick = () => startVoiceRecognition();
                 };
