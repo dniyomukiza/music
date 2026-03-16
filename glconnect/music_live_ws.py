@@ -99,6 +99,37 @@ async def handle_music_live_websocket(
                 except json.JSONDecodeError:
                     pass
 
+    def _extract_actions_from_event(event):
+        """Extract play/add_to_playlist/download actions from tool results for client execution."""
+        actions = []
+        try:
+            for fr in (event.get_function_responses() or []):
+                resp = getattr(fr, "response", None)
+                if isinstance(resp, dict):
+                    if "action" in resp:
+                        actions.append(resp["action"])
+                    elif "result" in resp:
+                        r = resp["result"]
+                        if isinstance(r, dict) and "action" in r:
+                            actions.append(r["action"])
+                        elif isinstance(r, str):
+                            try:
+                                data = json.loads(r)
+                                if isinstance(data, dict) and "action" in data:
+                                    actions.append(data["action"])
+                            except json.JSONDecodeError:
+                                pass
+                elif isinstance(resp, str):
+                    try:
+                        data = json.loads(resp)
+                        if isinstance(data, dict) and "action" in data:
+                            actions.append(data["action"])
+                    except json.JSONDecodeError:
+                        pass
+        except Exception:
+            pass
+        return actions
+
     async def downstream_task():
         async for event in runner.run_live(
             user_id=user_id,
@@ -106,6 +137,8 @@ async def handle_music_live_websocket(
             live_request_queue=live_request_queue,
             run_config=run_config,
         ):
+            for action in _extract_actions_from_event(event):
+                await websocket.send_text(json.dumps({"type": "music_action", "action": action}))
             event_json = event.model_dump_json(exclude_none=True, by_alias=True)
             await websocket.send_text(event_json)
 

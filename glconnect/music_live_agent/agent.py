@@ -23,13 +23,17 @@ def set_music_live_context(user_id: Optional[int], base_url: str):
 
 
 def _url_song(song_id: int) -> str:
+    """Match playlist2 route: /playlist2/song/<song_id>/file"""
     base = _ctx().get("base_url", "").rstrip("/")
-    return f"{base}/playlist2/serve_song_file/{song_id}" if base else f"/playlist2/serve_song_file/{song_id}"
+    path = f"/playlist2/song/{song_id}/file"
+    return f"{base}{path}" if base else path
 
 
 def _url_download(download_id: int) -> str:
+    """Match playlist2 route: /playlist2/download/<download_id>/file"""
     base = _ctx().get("base_url", "").rstrip("/")
-    return f"{base}/playlist2/serve_downloaded_song_file/{download_id}" if base else f"/playlist2/serve_downloaded_song_file/{download_id}"
+    path = f"/playlist2/download/{download_id}/file"
+    return f"{base}{path}" if base else path
 
 
 def _approved_filter():
@@ -189,7 +193,7 @@ def play_song(song_id: Optional[int] = None, download_id: Optional[int] = None) 
 
 def add_song_to_playlist(song_id: Optional[int] = None, download_id: Optional[int] = None) -> str:
     """
-    Add a song to the user's playlist. Use song_id for artist uploads, download_id for YouTube downloads.
+    Add a song to the user's playlist. Same logic as manual add. Use song_id for artist uploads, download_id for YouTube downloads.
     Requires the user to be logged in.
     """
     ctx = _ctx()
@@ -198,33 +202,14 @@ def add_song_to_playlist(song_id: Optional[int] = None, download_id: Optional[in
         return json.dumps({"success": False, "message": "Please log in to add songs to your playlist."})
 
     from glconnect.voc import SessionLocal
-    from glconnect.models import Song, DownloadedSong, Playlist
+    from glconnect.playlist_logic import add_to_playlist_impl
 
     session = SessionLocal()
     try:
-        if song_id:
-            song = session.query(Song).get(song_id)
-            if not song:
-                return json.dumps({"success": False, "message": "Song not found"})
-            if not song.is_approved():
-                return json.dumps({"success": False, "message": "This song is not available for playlists."})
-            existing = session.query(Playlist).filter_by(user_id=user_id, song_id=song_id).first()
-            if existing:
-                return json.dumps({"success": True, "message": f"'{song.name}' is already in your playlist."})
-            session.add(Playlist(user_id=user_id, song_id=song.id, download_id=None))
-            session.commit()
-            return json.dumps({"success": True, "message": f"'{song.name}' added to your playlist!", "action": {"type": "add_to_playlist"}})
-        if download_id:
-            d = session.query(DownloadedSong).get(download_id)
-            if not d:
-                return json.dumps({"success": False, "message": "Song not found"})
-            existing = session.query(Playlist).filter_by(user_id=user_id, download_id=download_id).first()
-            if existing:
-                return json.dumps({"success": True, "message": f"'{d.name}' is already in your playlist."})
-            session.add(Playlist(user_id=user_id, song_id=None, download_id=d.id))
-            session.commit()
-            return json.dumps({"success": True, "message": f"'{d.name}' added to your playlist!", "action": {"type": "add_to_playlist"}})
-        return json.dumps({"success": False, "message": "Provide song_id or download_id"})
+        success, message, err_code = add_to_playlist_impl(session, user_id, song_id, download_id)
+        if success:
+            return json.dumps({"success": True, "message": message, "action": {"type": "add_to_playlist"}})
+        return json.dumps({"success": False, "message": message})
     finally:
         session.close()
 
@@ -268,6 +253,29 @@ def download_song(song_id: Optional[int] = None, download_id: Optional[int] = No
     return json.dumps({"success": False, "message": "Song not found"})
 
 
+def remove_song_from_playlist(song_id: Optional[int] = None, download_id: Optional[int] = None) -> str:
+    """
+    Remove a song from the user's playlist. Same logic as manual remove. Use list_my_playlist first to get song_id or download_id.
+    Requires the user to be logged in.
+    """
+    ctx = _ctx()
+    user_id = ctx.get("user_id")
+    if not user_id:
+        return json.dumps({"success": False, "message": "Please log in to remove songs from your playlist."})
+
+    from glconnect.voc import SessionLocal
+    from glconnect.playlist_logic import remove_from_playlist_impl
+
+    session = SessionLocal()
+    try:
+        success, message, err_code = remove_from_playlist_impl(session, user_id, song_id, download_id)
+        if success:
+            return json.dumps({"success": True, "message": message, "action": {"type": "remove_from_playlist"}})
+        return json.dumps({"success": False, "message": message})
+    finally:
+        session.close()
+
+
 def list_my_playlist() -> str:
     """
     List all songs in the user's playlist.
@@ -307,7 +315,7 @@ def list_my_playlist() -> str:
         session.close()
 
 
-MUSIC_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the UI buttons, but via voice commands.
+MUSIC_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the manual UI: search, play, add to playlist, remove from playlist, download, list playlist. Same logic as the buttons—just via voice.
 
 You have full access to the music database:
 - Artist-uploaded songs (Song table) and YouTube-downloaded songs (DownloadedSong table)
@@ -315,13 +323,18 @@ You have full access to the music database:
 
 Your tools (use them to fulfill requests):
 1. search_songs(query) - Find songs/artists in the catalog. Always use this first when the user mentions a song or artist.
-2. play_song(song_id or download_id) - Start playback. Use song_id for artist uploads, download_id for YouTube downloads.
+2. play_song(song_id or download_id) - Start playback. You MUST call this to actually play audio. Use song_id for artist uploads, download_id for YouTube downloads.
 3. add_song_to_playlist(song_id or download_id) - Add to user's playlist. Requires login.
-4. download_song(song_id or download_id) - Get download link for the user to save the file.
-5. list_my_playlist() - List songs in the user's playlist (requires login).
+4. remove_song_from_playlist(song_id or download_id) - Remove a song from the user's playlist. Use list_my_playlist first to get IDs. Requires login.
+5. download_song(song_id or download_id) - Get download link for the user to save the file.
+6. list_my_playlist() - List songs in the user's playlist (requires login).
 
-Voice command examples: "Play Rockabye", "Add X to my playlist", "Download X", "What's in my playlist?"
-When you find songs via search_songs, use the song_id or download_id from the results for play/add/download.
+Playing songs (critical—same as manual click-to-play):
+- To play a song by name/artist: call search_songs first, then play_song with song_id or download_id from the results.
+- To play a song from the playlist: call list_my_playlist first, then play_song with song_id or download_id of the desired song.
+- Always call play_song when the user wants to listen—it triggers actual playback.
+
+Voice examples: "Play Laho", "Play Rockabye by Shallipopi", "Play the first song in my playlist", "Add X to my playlist", "Remove X from my playlist".
 Be conversational and confirm actions clearly."""
 
 
@@ -331,6 +344,6 @@ from google.adk.agents import Agent
 music_agent = Agent(
     name="music_agent",
     model=os.getenv("MUSIC_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
-    tools=[search_songs, play_song, add_song_to_playlist, download_song, list_my_playlist],
+    tools=[search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist],
     instruction=MUSIC_INSTRUCTION,
 )

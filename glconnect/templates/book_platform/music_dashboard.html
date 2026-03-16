@@ -1088,7 +1088,7 @@
             if (a.type === 'play' && a.url) {
                 const audio = new Audio(a.url);
                 audio.play().catch(e => console.warn('Play failed:', e));
-            } else if (a.type === 'add_to_playlist') {
+            } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
                 loadPlaylist();
             } else if (a.type === 'download' && a.url) {
                 const aEl = document.createElement('a');
@@ -1143,6 +1143,10 @@
                 voiceLiveWs.onmessage = (ev) => {
                     try {
                         const evt = JSON.parse(ev.data);
+                        if (evt.type === 'music_action' && evt.action) {
+                            executeVoiceAction(evt.action);
+                            return;
+                        }
                         if (evt.content && evt.content.parts) {
                             for (const p of evt.content.parts) {
                                 if (p.inlineData && p.inlineData.data && voiceLivePlayerNode) {

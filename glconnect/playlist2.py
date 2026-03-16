@@ -844,37 +844,14 @@ def get_available_songs():
 @play.route('/add_to_playlist', methods=['POST'])
 @login_required
 def add_to_playlist():
-    print("Authenticated?", current_user.is_authenticated)
-    print("User ID?", getattr(current_user, 'user_id', 'NO user_id'))
-    print("User Object?", current_user)
+    from glconnect.playlist_logic import add_to_playlist_impl
     data = request.get_json()
     song_id = data.get('song_id')
     download_id = data.get('download_id')
-
-    if song_id:
-        song = Song.query.get(song_id)
-        if not song:
-            return jsonify({"status": "error", "message": "Song not found"}), 404
-        if not song.is_approved():
-            return jsonify({"status": "error", "message": "This song is not available for playlists yet."}), 403
-        existing = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
-        if existing:
-            return jsonify({"status": "success", "message": "Song is already in your playlist."})
-        db.session.add(Playlist(user_id=current_user.user_id, song_id=song.id, download_id=None))
-        db.session.commit()
-        return jsonify({"status": "success", "message": f"'{song.name}' added to your playlist!"})
-    elif download_id:
-        download = DownloadedSong.query.get(download_id)
-        if not download:
-            return jsonify({"status": "error", "message": "Download not found"}), 404
-        existing = Playlist.query.filter_by(user_id=current_user.user_id, download_id=download_id).first()
-        if existing:
-            return jsonify({"status": "success", "message": "Song is already in your playlist."})
-        db.session.add(Playlist(user_id=current_user.user_id, song_id=None, download_id=download.id))
-        db.session.commit()
-        return jsonify({"status": "success", "message": f"'{download.name}' added to your playlist!"})
-    else:
-        return jsonify({"status": "error", "message": "Provide song_id or download_id"}), 400
+    success, message, err_code = add_to_playlist_impl(db.session, current_user.user_id, song_id, download_id)
+    if err_code:
+        return jsonify({"status": "error", "message": message}), err_code
+    return jsonify({"status": "success", "message": message})
 
 
 # Define the function to get the user playlist
@@ -995,28 +972,14 @@ def delete_playlist():
 @play.route('/remove_song', methods=['POST'])
 @login_required
 def remove_song():
+    from glconnect.playlist_logic import remove_from_playlist_impl
     data = request.get_json()
     song_id = data.get('song_id')
     download_id = data.get('download_id')
-
-    if song_id is not None:
-        playlist_entry = Playlist.query.filter_by(user_id=current_user.user_id, song_id=song_id).first()
-        if not playlist_entry:
-            return jsonify({"status": "error", "message": "Song not found in your playlist."}), 404
-        song = Song.query.get(song_id)
-        name = song.name if song else "Song"
-    elif download_id is not None:
-        playlist_entry = Playlist.query.filter_by(user_id=current_user.user_id, download_id=download_id).first()
-        if not playlist_entry:
-            return jsonify({"status": "error", "message": "Song not found in your playlist."}), 404
-        d = DownloadedSong.query.get(download_id)
-        name = d.name if d else "Song"
-    else:
-        return jsonify({"status": "error", "message": "Provide song_id or download_id"}), 400
-
-    db.session.delete(playlist_entry)
-    db.session.commit()
-    return jsonify({"status": "success", "message": f"'{name}' removed from your playlist!"})
+    success, message, err_code = remove_from_playlist_impl(db.session, current_user.user_id, song_id, download_id)
+    if err_code:
+        return jsonify({"status": "error", "message": message}), err_code
+    return jsonify({"status": "success", "message": message})
 
 @play.route('/song/<int:song_id>/file')
 def serve_song_file(song_id):
