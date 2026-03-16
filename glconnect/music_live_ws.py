@@ -56,13 +56,14 @@ async def handle_music_live_websocket(
     model_name = getattr(agent, "model", "") if agent else ""
     is_native_audio = "native-audio" in str(model_name).lower()
 
+    # Session resumption is only supported on Vertex AI backend; must be None for Google AI (Gemini API)
     if is_native_audio:
         run_config = RunConfig(
             streaming_mode=StreamingMode.BIDI,
             response_modalities=["AUDIO"],
             input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),
-            session_resumption=types.SessionResumptionConfig(),
+            session_resumption=None,
         )
     else:
         run_config = RunConfig(
@@ -70,7 +71,7 @@ async def handle_music_live_websocket(
             response_modalities=["TEXT"],
             input_audio_transcription=None,
             output_audio_transcription=None,
-            session_resumption=types.SessionResumptionConfig(),
+            session_resumption=None,
         )
 
     session = await session_service.get_session(app_name="music-live", user_id=user_id, session_id=session_id)
@@ -80,24 +81,27 @@ async def handle_music_live_websocket(
     live_request_queue = LiveRequestQueue()
 
     async def upstream_task():
-        while True:
-            message = await websocket.receive()
-            if "bytes" in message:
-                audio_data = message["bytes"]
-                audio_blob = types.Blob(mime_type="audio/pcm;rate=16000", data=audio_data)
-                live_request_queue.send_realtime(audio_blob)
-            elif "text" in message:
-                try:
-                    json_message = json.loads(message["text"])
-                    if json_message.get("type") == "text":
-                        content = types.Content(parts=[types.Part(text=json_message["text"])])
-                        live_request_queue.send_content(content)
-                    elif json_message.get("type") == "config":
-                        base = json_message.get("base_url")
-                        if base:
-                            set_music_live_context(uid, base)
-                except json.JSONDecodeError:
-                    pass
+        try:
+            while True:
+                message = await websocket.receive()
+                if "bytes" in message:
+                    audio_data = message["bytes"]
+                    audio_blob = types.Blob(mime_type="audio/pcm;rate=16000", data=audio_data)
+                    live_request_queue.send_realtime(audio_blob)
+                elif "text" in message:
+                    try:
+                        json_message = json.loads(message["text"])
+                        if json_message.get("type") == "text":
+                            content = types.Content(parts=[types.Part(text=json_message["text"])])
+                            live_request_queue.send_content(content)
+                        elif json_message.get("type") == "config":
+                            base = json_message.get("base_url")
+                            if base:
+                                set_music_live_context(uid, base)
+                    except json.JSONDecodeError:
+                        pass
+        except WebSocketDisconnect:
+            pass
 
     def _extract_actions_from_event(event):
         """Extract play/add_to_playlist/download/show_transcript actions from tool results for client execution."""

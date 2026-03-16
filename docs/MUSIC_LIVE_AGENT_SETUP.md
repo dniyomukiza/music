@@ -82,12 +82,12 @@ Add to `glconnect/voc.py` or a new FastAPI router:
 async def music_live_websocket(websocket: WebSocket, user_id: str, session_id: str):
     await websocket.accept()
     live_request_queue = LiveRequestQueue()
+    # session_resumption only supported on Vertex AI; omit for Google AI (Gemini API)
     run_config = RunConfig(
         streaming_mode=StreamingMode.BIDI,
         response_modalities=["AUDIO"],
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
-        session_resumption=types.SessionResumptionConfig(),
     )
     # upstream_task: receive WebSocket messages → send to queue
     # downstream_task: runner.run_live() → send events to WebSocket

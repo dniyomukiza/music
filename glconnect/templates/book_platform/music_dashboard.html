@@ -864,7 +864,7 @@
             const container = document.getElementById('playlistContainer');
             if (!userId) {
                 container.innerHTML = '<p class="text-muted text-center">Login to view your playlist.</p>';
-                return;
+                return Promise.resolve();
             }
 
             // Stop any currently playing audio
@@ -875,7 +875,7 @@
             isPlaylistPlaying = false;
             currentPlayingIndex = -1;
 
-            fetch('/playlist2/view_playlist')
+            return fetch('/playlist2/view_playlist')
                 .then(response => response.json())
                 .then(data => {
                     if (Array.isArray(data) && data.length) {
@@ -946,6 +946,25 @@
                     console.error('Playlist error:', error);
                     container.innerHTML = '<p class="text-muted text-center">Unable to load playlist.</p>';
                 });
+        }
+
+        function findPlaylistAudioForAction(a) {
+            if (!a.url) return null;
+            const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
+            const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
+            let audioEl = null;
+            if (a.song_id != null || a.download_id != null) {
+                const sel = a.song_id != null ? `[data-song-id="${a.song_id}"]` : `[data-download-id="${a.download_id}"]`;
+                const card = document.querySelector('.playlist-song-card' + sel);
+                if (card) audioEl = card.querySelector('.playlist-audio');
+            }
+            if (!audioEl) {
+                document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
+                    const s = el.querySelector('source');
+                    if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || (pathPart && s.src.includes(pathPart)))) audioEl = el;
+                });
+            }
+            return audioEl;
         }
         
         function setupPlaylistPlayback() {
@@ -1146,23 +1165,11 @@
             };
             respEl.appendChild(btn);
         }
-        function executeVoiceAction(a) {
+        function executeVoiceAction(a, retried) {
             if (a.type === 'play' && a.url) {
-                if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id);
+                if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id, retried ? '(retry)' : '');
                 const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
-                const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
-                let audioEl = null;
-                if (a.song_id != null || a.download_id != null) {
-                    const sel = a.song_id != null ? `[data-song-id="${a.song_id}"]` : `[data-download-id="${a.download_id}"]`;
-                    const card = document.querySelector('.playlist-song-card' + sel);
-                    if (card) audioEl = card.querySelector('.playlist-audio');
-                }
-                if (!audioEl) {
-                    document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
-                        const s = el.querySelector('source');
-                        if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || (pathPart && s.src.includes(pathPart)))) audioEl = el;
-                    });
-                }
+                let audioEl = findPlaylistAudioForAction(a);
                 if (audioEl) {
                     if (typeof console !== 'undefined') console.log('[Voice] Playing via playlist element');
                     audioEl.volume = voiceVolumeGain;
@@ -1170,8 +1177,10 @@
                         console.warn('Play failed (playlist):', e);
                         showTapToPlayFallback(playUrl, a.name || 'Song');
                     });
+                } else if (!retried) {
+                    loadPlaylist().then(() => setTimeout(() => executeVoiceAction(a, true), 400));
                 } else {
-                    if (typeof console !== 'undefined') console.log('[Voice] No playlist match, using new Audio');
+                    if (typeof console !== 'undefined') console.log('[Voice] No playlist match after refresh, using new Audio');
                     const audio = new Audio(playUrl);
                     audio.volume = voiceVolumeGain;
                     audio.play().then(() => {}).catch(e => {
