@@ -97,7 +97,7 @@ body {
 }
 
 .btn {
-    width: 30%;
+    width: 80%;
     background-color: #000408;
     color: white;
     padding: 12px;
@@ -127,7 +127,7 @@ body {
 
 /* Footer styles */
 footer {
-    width: 100%;
+    width: 150%;
     background-color: white;
     color: black;
     text-align: center;

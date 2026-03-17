@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Reviewer Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio Admin
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.admin_books') }}">
+                    <i class="fas fa-book"></i> Manage Books
+                </a>
+                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-user-shield me-2"></i>Reviewer Management
+                </h1>
+                <p class="text-muted">Approve, reject, or manage reviewer applications</p>
+            </div>
+            <div class="col-md-4">
+                <div class="btn-group w-100" role="group">
+                    <a href="{{ url_for('book_platform.admin_reviewers', status='pending') }}" 
+                       class="btn btn-{% if status_filter == 'pending' %}primary{% else %}outline-primary{% endif %}">
+                        Pending
+                    </a>
+                    <a href="{{ url_for('book_platform.admin_reviewers', status='accredited') }}" 
+                       class="btn btn-{% if status_filter == 'accredited' %}success{% else %}outline-success{% endif %}">
+                        Accredited
+                    </a>
+                    <a href="{{ url_for('book_platform.admin_reviewers', status='all') }}" 
+                       class="btn btn-{% if status_filter == 'all' %}secondary{% else %}outline-secondary{% endif %}">
+                        All
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if reviewers %}
+        <div class="row">
+            {% for reviewer in reviewers %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-{% if reviewer.accreditation_status.value == 'pending' %}warning{% elif reviewer.accreditation_status.value == 'accredited' %}success{% else %}secondary{% endif %} text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-light text-dark">
+                                {{ reviewer.accreditation_status.value|title }}
+                            </span>
+                            <small>{{ reviewer.created_at.strftime('%m/%d/%Y') }}</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            {% if reviewer.profile_picture %}
+                            <img src="{{ url_for('static', filename=reviewer.profile_picture) }}" 
+                                 alt="{{ reviewer.reviewer_name }}" 
+                                 class="rounded-circle me-3" 
+                                 style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <h5 class="mb-0">{{ reviewer.reviewer_name }}</h5>
+                                <small class="text-muted">{{ reviewer.user.email if reviewer.user else 'N/A' }}</small>
+                            </div>
+                        </div>
+
+                        {% if reviewer.bio %}
+                        <p class="text-muted small mb-3">{{ reviewer.bio[:100] }}{% if reviewer.bio|length > 100 %}...{% endif %}</p>
+                        {% endif %}
+
+                        {% if reviewer.specialties %}
+                        <div class="mb-3">
+                            {% for specialty in reviewer.specialties[:3] %}
+                            <span class="badge bg-light text-dark me-1">{{ specialty }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if reviewer.credentials %}
+                        <div class="mb-3">
+                            <small class="text-muted"><strong>Credentials:</strong></small>
+                            <p class="small mb-0">{{ reviewer.credentials[:150] }}{% if reviewer.credentials|length > 150 %}...{% endif %}</p>
+                        </div>
+                        {% endif %}
+
+                        {% if reviewer.portfolio_url %}
+                        <div class="mb-3">
+                            <a href="{{ reviewer.portfolio_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i> Portfolio
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        <div class="row text-center mb-3">
+                            <div class="col-4">
+                                <div class="fw-bold">{{ reviewer.total_reviews }}</div>
+                                <small class="text-muted">Reviews</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold">{{ reviewer.books_reviewed }}</div>
+                                <small class="text-muted">Books</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold">${{ "%.2f"|format(reviewer.total_earnings) }}</div>
+                                <small class="text-muted">Earnings</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        {% if reviewer.accreditation_status.value == 'pending' %}
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-success btn-sm" 
+                                    onclick="approveReviewer({{ reviewer.id }}, '{{ reviewer.reviewer_name }}')">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" 
+                                    onclick="rejectReviewer({{ reviewer.id }}, '{{ reviewer.reviewer_name }}')">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </div>
+                        {% elif reviewer.accreditation_status.value == 'accredited' %}
+                        <button type="button" class="btn btn-warning btn-sm w-100" 
+                                onclick="suspendReviewer({{ reviewer.id }}, '{{ reviewer.reviewer_name }}')">
+                            <i class="fas fa-ban"></i> Suspend
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h4>No reviewers found</h4>
+            <p>No reviewers match the current filter.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function approveReviewer(reviewerId, reviewerName) {
+            if (!confirm(`Are you sure you want to approve "${reviewerName}" as an accredited reviewer?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`{{ url_for('book_platform.approve_reviewer', reviewer_id=0) }}`.replace('0', reviewerId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error approving reviewer: ' + error.message);
+            }
+        }
+        
+        async function rejectReviewer(reviewerId, reviewerName) {
+            const reason = prompt(`Enter rejection reason for "${reviewerName}" (optional):`);
+            
+            if (reason === null) {
+                return; // User cancelled
+            }
+            
+            if (!confirm(`Are you sure you want to reject "${reviewerName}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`{{ url_for('book_platform.reject_reviewer', reviewer_id=0) }}`.replace('0', reviewerId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ reason: reason || '' }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error rejecting reviewer: ' + error.message);
+            }
+        }
+        
+        async function suspendReviewer(reviewerId, reviewerName) {
+            if (!confirm(`Are you sure you want to suspend "${reviewerName}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`{{ url_for('book_platform.suspend_reviewer', reviewer_id=0) }}`.replace('0', reviewerId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error suspending reviewer: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
+
+

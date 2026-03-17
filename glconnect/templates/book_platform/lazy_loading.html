@@ -1,0 +1,77 @@
+<!-- Optimized Image Loading Template -->
+<!-- Add this to your base template or include it in pages with images -->
+
+<!-- Lazy Loading CSS -->
+<style>
+.lazy {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.lazy.loaded {
+    opacity: 1;
+}
+
+.book-cover-img {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.book-cover-img:before {
+    content: 'Loading...';
+    color: #7f8c8d;
+    font-size: 0.875rem;
+}
+</style>
+
+<!-- Lazy Loading JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Lazy loading for images
+    const images = document.querySelectorAll('img[data-src]');
+    
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.add('loaded');
+                    img.classList.remove('lazy');
+                    imageObserver.unobserve(img);
+                }
+            });
+        });
+        
+        images.forEach(img => {
+            img.classList.add('lazy');
+            imageObserver.observe(img);
+        });
+    } else {
+        // Fallback for older browsers
+        images.forEach(img => {
+            img.src = img.dataset.src;
+            img.classList.add('loaded');
+        });
+    }
+    
+    // Performance monitoring
+    if ('performance' in window) {
+        window.addEventListener('load', function() {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            console.log('Page load time:', perfData.loadEventEnd - perfData.loadEventStart, 'ms');
+        });
+    }
+});
+</script>
+
+<!-- Optimized Image Usage Example -->
+<!-- 
+<img data-src="{{ book.cover_image }}" 
+     class="book-cover-img lazy" 
+     alt="{{ book.title }}"
+     loading="lazy">
+-->

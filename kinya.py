@@ -34,7 +34,7 @@ output_file_path = os.path.expanduser('~/Downloads/cleanv2.docx')
 
 # Check if input file exists
 if not os.path.exists(input_file_path):
-    print(f"File not found: {input_file_path}")
+    print(f"File not found: {input_file_path} ")
 else:
     # Extract and clean sentences from the input file
     cleaned_lines = extract_and_clean_sentences_from_file(input_file_path)

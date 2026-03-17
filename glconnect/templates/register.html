@@ -29,13 +29,17 @@
         <select id="role" name="role" required>
             <option value="" disabled selected>Your role</option>
             <option value="artist">Artist</option>
-            <option value="writer">Writer</option>
+            <option value="author">Author</option>
             <option value="blogger">Blogger</option>
+            <option value="podcaster">Podcaster</option>
             <option value="other">Other</option>
         </select>
         <input type="submit" value="Register" class="btn">
+         <div class="form-group">
+                {{ form.recap }}
+     </div>
     </form>
-
+     
     <p><a href="{{ url_for('routes.home') }}">Homepage</a> Already have an account? <a href="{{ url_for('routes1.login') }}">Log in</a></p>
 </div>
 {% endblock %}

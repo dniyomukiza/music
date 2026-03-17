@@ -7,7 +7,6 @@ from sqlalchemy.orm import sessionmaker
 with open('glconfig.json', 'r') as config_file:
     config = json.load(config_file)
     db_url = config.get('DB_URL')
-
 Base = declarative_base()
 
 # Connect to PostgreSQL using the URL from the config file

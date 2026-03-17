@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Investment Campaign - {{ book.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.ckeditor.com/4.16.2/standard/ckeditor.js" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
+                    <i class="fas fa-arrow-left"></i> Back to Book
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-md-10 mx-auto">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Create Investment Campaign for "{{ book.title }}"</h3>
+                        <small class="opacity-75">Invite patient investors who believe in your work. Outcomes vary—what matters is advancing impactful ideas.</small>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {{ form.hidden_tag() }}
+                            
+                            <div class="mb-3">
+                                {{ form.title.label(class="form-label") }}
+                                {{ form.title(class="form-control") }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger small">{{ form.title.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.description.label(class="form-label") }}
+                                {{ form.description(class="form-control") }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger small">{{ form.description.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.pitch_video_url.label(class="form-label") }}
+                                {{ form.pitch_video_url(class="form-control") }}
+                                {% if form.pitch_video_url.errors %}
+                                    <div class="text-danger small">{{ form.pitch_video_url.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    {{ form.funding_goal.label(class="form-label") }}
+                                    {{ form.funding_goal(class="form-control") }}
+                                    {% if form.funding_goal.errors %}
+                                        <div class="text-danger small">{{ form.funding_goal.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.minimum_investment.label(class="form-label") }}
+                                    {{ form.minimum_investment(class="form-control") }}
+                                    {% if form.minimum_investment.errors %}
+                                        <div class="text-danger small">{{ form.minimum_investment.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.maximum_investment.label(class="form-label") }}
+                                    {{ form.maximum_investment(class="form-control") }}
+                                    {% if form.maximum_investment.errors %}
+                                        <div class="text-danger small">{{ form.maximum_investment.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    {{ form.revenue_share_percentage.label(class="form-label") }}
+                                    {{ form.revenue_share_percentage(class="form-control") }}
+                                    <small class="form-text text-muted">Total % of sales shared with all investors</small>
+                                    {% if form.revenue_share_percentage.errors %}
+                                        <div class="text-danger small">{{ form.revenue_share_percentage.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.return_multiplier_cap.label(class="form-label") }}
+                                    {{ form.return_multiplier_cap(class="form-control") }}
+                                    <small class="form-text text-muted">Maximum return multiplier (e.g., 3.0 = 3x)</small>
+                                    {% if form.return_multiplier_cap.errors %}
+                                        <div class="text-danger small">{{ form.return_multiplier_cap.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.investment_period_days.label(class="form-label") }}
+                                {{ form.investment_period_days(class="form-control") }}
+                                {% if form.investment_period_days.errors %}
+                                    <div class="text-danger small">{{ form.investment_period_days.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.recap }}
+                                {% if form.recap.errors %}
+                                    <div class="text-danger small">{{ form.recap.errors[0] }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="d-grid">
+                                {{ form.submit(class="btn btn-primary btn-lg") }}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.ckeditor.com/4.16.2/standard/ckeditor.js"></script>
+    <script>
+        CKEDITOR.replace('description');
+    </script>
+</body>
+</html>
+
+

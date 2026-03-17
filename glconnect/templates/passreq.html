@@ -17,6 +17,9 @@
             {{ form.email(class="form-control", id="email", placeholder="Enter your email address") }}
         </div>
         <input type="submit" value="Request Password Reset" class="btn">
+         <div class="form-group">
+                {{ form.recap }}
+        </div>
     </form>
     <p>Remembered your password? <a href="{{ url_for('routes1.login') }}">Login</a></p>
 </div>

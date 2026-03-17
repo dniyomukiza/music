@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Podcast - Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+    <style>
+        .upload-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .file-upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s;
+        }
+        .file-upload-area:hover {
+            background: #e9ecef;
+            border-color: #0056b3;
+        }
+        .file-upload-area.dragover {
+            background: #d1ecf1;
+            border-color: #0c5460;
+        }
+        .current-file {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'messages.html' %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.my_podcasts') }}">
+                    <i class="fas fa-arrow-left me-1"></i>Back to My Podcasts
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="upload-container">
+            <h2 class="mb-4">
+                <i class="fas fa-edit me-2"></i>Edit Podcast
+            </h2>
+            <p class="text-muted mb-4">
+                Update your podcast information or replace the file. Maximum duration: 30 minutes. If you upload a new file, it will need admin review again.
+            </p>
+
+            <div class="current-file">
+                <h6><i class="fas fa-file me-2"></i>Current Podcast</h6>
+                <p class="mb-1"><strong>{{ podcast.title }}</strong></p>
+                <p class="mb-0 text-muted small">
+                    Status: <span class="badge bg-{% if podcast.status == 'pending' %}warning{% elif podcast.status == 'approved' %}success{% else %}danger{% endif %}">
+                        {{ podcast.status|title }}
+                    </span>
+                    | File: {{ podcast.file_path.split('/')[-1] if podcast.file_path else 'N/A' }}
+                </p>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" id="editForm">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="title" name="title" value="{{ podcast.title }}" required maxlength="255">
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="4" maxlength="1000">{{ podcast.description or '' }}</textarea>
+                    <small class="text-muted">Optional: Describe your podcast content</small>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">Select Category</option>
+                            <option value="News" {% if podcast.category == 'News' %}selected{% endif %}>News</option>
+                            <option value="Entertainment" {% if podcast.category == 'Entertainment' %}selected{% endif %}>Entertainment</option>
+                            <option value="Education" {% if podcast.category == 'Education' %}selected{% endif %}>Education</option>
+                            <option value="Technology" {% if podcast.category == 'Technology' %}selected{% endif %}>Technology</option>
+                            <option value="Business" {% if podcast.category == 'Business' %}selected{% endif %}>Business</option>
+                            <option value="Health" {% if podcast.category == 'Health' %}selected{% endif %}>Health</option>
+                            <option value="Sports" {% if podcast.category == 'Sports' %}selected{% endif %}>Sports</option>
+                            <option value="Culture" {% if podcast.category == 'Culture' %}selected{% endif %}>Culture</option>
+                            <option value="Other" {% if podcast.category == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="language" class="form-label">Language</label>
+                        <select class="form-select" id="language" name="language">
+                            <option value="en" {% if podcast.language == 'en' %}selected{% endif %}>English</option>
+                            <option value="es" {% if podcast.language == 'es' %}selected{% endif %}>Spanish</option>
+                            <option value="fr" {% if podcast.language == 'fr' %}selected{% endif %}>French</option>
+                            <option value="de" {% if podcast.language == 'de' %}selected{% endif %}>German</option>
+                            <option value="sw" {% if podcast.language == 'sw' %}selected{% endif %}>Swahili</option>
+                            <option value="rw" {% if podcast.language == 'rw' %}selected{% endif %}>Kinyarwanda</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Replace Podcast File (Optional)</label>
+                    <p class="text-muted small mb-2">Leave empty to keep current file. Upload a new file to replace it.</p>
+                    <div class="file-upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                        <p class="mb-2"><strong>Click to select or drag and drop</strong></p>
+                        <p class="text-muted small mb-0">
+                            Audio: MP3, WAV, M4A, OGG<br>
+                            Video: MP4, MOV, AVI, MKV<br>
+                            Max duration: 30 minutes
+                        </p>
+                        <input type="file" class="d-none" id="podcast_file" name="podcast_file" accept=".mp3,.wav,.m4a,.ogg,.mp4,.mov,.avi,.mkv">
+                    </div>
+                    <div id="fileInfo" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-file me-2"></i>
+                            <span id="fileName"></span>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearFile()">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save me-2"></i>Update Podcast
+                    </button>
+                    <a href="{{ url_for('book_platform.my_podcasts') }}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('podcast_file');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileInfo();
+            }
+        });
+
+        fileInput.addEventListener('change', updateFileInfo);
+
+        function updateFileInfo() {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileName.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+                fileInfo.style.display = 'block';
+            }
+        }
+
+        function clearFile() {
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1073 @@
+{% extends "base.html" %}
+
+{% block title %}Community Dictionary - Language Learning{% endblock %}
+
+{% block content %}
+<div class="community-dictionary-page">
+    <div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-users"></i> Community Dictionary</h2>
+            <p class="text-muted">Words contributed by our community members</p>
+        </div>
+    </div>
+
+
+
+    <!-- Search Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search words or meanings...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Words List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Community Words ({{ words|length if words else 0 }} words)</h5>
+                </div>
+                <div class="card-body">
+                    {% if words and words|length > 0 %}
+                        <!-- Desktop Table View -->
+                        <div class="d-none d-lg-block">
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="wordsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Word</th>
+                                            <th>Meaning</th>
+                                            <th>Part of Speech</th>
+                                            <th>Example</th>
+                                            <th>Contributor</th>
+                                            <th>Date Added</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for word in words %}
+                                        <tr data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
+                                            <td><strong>{{ word.word }}</strong></td>
+                                            <td>{{ word.meaning }}</td>
+                                            <td>
+                                                {% if word.part_of_speech %}
+                                                    <span class="badge badge-secondary">{{ word.part_of_speech }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if word.example_sentence %}
+                                                    <small class="text-muted">{{ word.example_sentence[:50] }}{% if word.example_sentence|length > 50 %}...{% endif %}</small>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ word.contributor_name if word.contributor_name else 'Anonymous' }}</td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ word.approved_at[:10] if word.approved_at else '-' }}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Card View -->
+                        <div class="mobile-words-container" id="mobileWordsList" style="display: block !important; visibility: visible !important; opacity: 1 !important;">
+                            <div class="alert alert-info" style="margin-bottom: 1rem; display: block !important;">
+                                <i class="fas fa-mobile-alt"></i> Mobile View - {{ words|length if words else 0 }} words available
+                            </div>
+                            {% for word in words %}
+                            <div class="word-card mb-3" data-word="{{ word.word|lower }}" data-meaning="{{ word.meaning|lower }}">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-0">
+                                                <strong>{{ word.word }}</strong>
+                                                {% if word.part_of_speech %}
+                                                    <span class="badge badge-secondary ml-2">{{ word.part_of_speech }}</span>
+                                                {% endif %}
+                                            </h6>
+                                        </div>
+                                        
+                                        <p class="card-text mb-2">{{ word.meaning }}</p>
+                                        
+                                        {% if word.example_sentence %}
+                                        <div class="example-section mb-2">
+                                            <small class="text-muted">
+                                                <strong>Example:</strong> {{ word.example_sentence }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="word-meta">
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-user"></i> {{ word.contributor_name if word.contributor_name else 'Anonymous' }}
+                                                    </small>
+                                                </div>
+                                                <div class="col-6 text-right">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar"></i> {{ word.approved_at[:10] if word.approved_at else '-' }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No community words yet</h5>
+                            <p class="text-muted">Be the first to contribute a word!</p>
+                            <a href="{{ url_for('routes1.contribute_word_page') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Contribute a Word
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('routes1.findwords') }}" class="btn btn-primary">
+                            <i class="fas fa-book"></i> Main Dictionary
+                        </a>
+                        <button class="btn btn-info" onclick="location.reload()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<script>
+function filterWords() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    // Filter desktop table rows
+    const tableRows = document.querySelectorAll('#wordsTable tbody tr');
+    tableRows.forEach(row => {
+        const word = row.dataset.word;
+        const meaning = row.dataset.meaning;
+        
+        const matchesSearch = !searchTerm || word.includes(searchTerm) || meaning.includes(searchTerm);
+        
+        if (matchesSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Filter mobile card elements
+    const wordCards = document.querySelectorAll('#mobileWordsList .word-card');
+    wordCards.forEach(card => {
+        const word = card.dataset.word;
+        const meaning = card.dataset.meaning;
+        
+        const matchesSearch = !searchTerm || word.includes(searchTerm) || meaning.includes(searchTerm);
+        
+        if (matchesSearch) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Search as you type
+document.getElementById('searchInput').addEventListener('input', filterWords);
+
+// Ensure mobile view is properly initialized
+document.addEventListener('DOMContentLoaded', function() {
+    // Force mobile cards to be visible
+    const mobileWordsList = document.getElementById('mobileWordsList');
+    if (mobileWordsList) {
+        // Remove all Bootstrap classes that might hide content
+        mobileWordsList.classList.remove('d-lg-none', 'd-none');
+        mobileWordsList.classList.add('d-block');
+        
+        // Force visibility with inline styles
+        mobileWordsList.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important; height: auto !important; overflow: visible !important;';
+        
+        // Ensure all word cards are visible
+        const wordCards = mobileWordsList.querySelectorAll('.word-card');
+        wordCards.forEach(card => {
+            card.classList.remove('d-none');
+            card.classList.add('d-block');
+            card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important; margin-bottom: 1rem !important;';
+            
+            // Force card and card-body visibility
+            const cardElement = card.querySelector('.card');
+            if (cardElement) {
+                cardElement.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important;';
+            }
+            
+            const cardBody = card.querySelector('.card-body');
+            if (cardBody) {
+                cardBody.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 10 !important;';
+            }
+        });
+    }
+    
+    // Force desktop table to be hidden on mobile
+    const desktopTable = document.querySelector('.d-none.d-lg-block');
+    if (desktopTable && window.innerWidth <= 991) {
+        desktopTable.style.cssText = 'display: none !important;';
+    }
+    
+    // Debug: Log mobile view status
+    console.log('Mobile words list element:', mobileWordsList);
+    console.log('Word cards found:', wordCards ? wordCards.length : 0);
+    console.log('Window width:', window.innerWidth);
+    console.log('Mobile container computed style:', mobileWordsList ? window.getComputedStyle(mobileWordsList).display : 'not found');
+});
+
+// Function to force mobile content visibility
+function forceMobileVisibility() {
+    const mobileWordsList = document.getElementById('mobileWordsList');
+    if (mobileWordsList && window.innerWidth <= 991) {
+        // Force container visibility
+        mobileWordsList.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; height: auto !important; overflow: visible !important; background: white !important; padding: 10px !important;';
+        
+        // Force all word cards visibility
+        const wordCards = mobileWordsList.querySelectorAll('.word-card');
+        wordCards.forEach(card => {
+            card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; margin-bottom: 15px !important; background: white !important; border: 1px solid #ddd !important; border-radius: 8px !important; padding: 10px !important;';
+            
+            // Force card and card-body visibility
+            const cardElement = card.querySelector('.card');
+            if (cardElement) {
+                cardElement.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: white !important;';
+            }
+            
+            const cardBody = card.querySelector('.card-body');
+            if (cardBody) {
+                cardBody.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: white !important;';
+            }
+        });
+    }
+}
+
+// Additional mobile view fix on window resize
+window.addEventListener('resize', function() {
+    const mobileWordsList = document.getElementById('mobileWordsList');
+    const desktopTable = document.querySelector('.d-none.d-lg-block');
+    
+    if (window.innerWidth <= 991) {
+        // Show mobile content
+        forceMobileVisibility();
+        
+        // Hide desktop table
+        if (desktopTable) {
+            desktopTable.style.cssText = 'display: none !important;';
+        }
+    } else {
+        // Show desktop content
+        if (desktopTable) {
+            desktopTable.style.cssText = 'display: block !important;';
+        }
+        if (mobileWordsList) {
+            mobileWordsList.style.cssText = 'display: none !important;';
+        }
+    }
+});
+
+// Run force visibility every 500ms to ensure content stays visible
+setInterval(forceMobileVisibility, 500);
+</script>
+
+<style>
+.community-dictionary-page {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+    overflow-x: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+.community-dictionary-page .container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-top: 2rem;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.community-dictionary-page h2 {
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.community-dictionary-page h2 i {
+    color: #2c3e50;
+}
+
+.card {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 2px solid #2c3e50;
+    border-radius: 15px 15px 0 0 !important;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-header h5 i {
+    color: #2c3e50;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    background: #f8f9fa;
+    color: #333;
+    padding: 1rem;
+}
+
+.table td {
+    padding: 1rem;
+    vertical-align: middle;
+    color: #333;
+}
+
+/* Mobile Card Styles */
+.word-card .card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Ensure mobile cards are always visible */
+@media (max-width: 991px) {
+    .d-lg-none {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Force mobile container to be visible */
+.mobile-words-container {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    background: transparent !important;
+    height: auto !important;
+    min-height: 100px !important;
+    overflow: visible !important;
+}
+
+/* Override ALL Bootstrap responsive classes that might hide content */
+@media (max-width: 991px) {
+    .d-lg-none {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    .d-none.d-lg-block {
+        display: none !important;
+    }
+    
+    /* Force all mobile content to be visible */
+    .mobile-words-container,
+    .mobile-words-container * {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .mobile-words-container .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 1rem !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    .mobile-words-container .card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    
+    .mobile-words-container .card-body {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+}
+
+/* Additional mobile fixes */
+@media (max-width: 768px) {
+    .mobile-words-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        height: auto !important;
+        min-height: 200px !important;
+        overflow: visible !important;
+    }
+    
+    .mobile-words-container .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 1rem;
+        position: relative !important;
+        z-index: 10 !important;
+        height: auto !important;
+        min-height: 50px !important;
+    }
+    
+    .mobile-words-container .card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        height: auto !important;
+        min-height: 50px !important;
+    }
+    
+    .mobile-words-container .card-body {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        height: auto !important;
+        min-height: 30px !important;
+    }
+    
+    /* Override any Bootstrap hiding classes */
+    .d-lg-none {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    
+    .d-none.d-lg-block {
+        display: none !important;
+    }
+    
+    /* Force all text content to be visible */
+    .mobile-words-container * {
+        color: inherit !important;
+        background: transparent !important;
+    }
+}
+
+/* Ultra-aggressive mobile fix for very small screens */
+@media (max-width: 480px) {
+    .mobile-words-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 999 !important;
+        height: auto !important;
+        min-height: 300px !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 10px !important;
+        margin: 10px 0 !important;
+    }
+    
+    .mobile-words-container .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 15px !important;
+        position: relative !important;
+        z-index: 999 !important;
+        height: auto !important;
+        min-height: 80px !important;
+        background: white !important;
+        border: 1px solid #ddd !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+    }
+}
+
+.word-card .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.word-card .card-title {
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.word-card .card-text {
+    color: #555;
+    line-height: 1.5;
+}
+
+.word-card .example-section {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border-left: 3px solid #2c3e50;
+}
+
+.word-card .word-meta {
+    border-top: 1px solid #e9ecef;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.word-card .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .community-dictionary-page .container {
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .community-dictionary-page h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .word-card .card-body {
+        padding: 1rem;
+    }
+    
+    .word-card .card-title {
+        font-size: 1rem;
+    }
+    
+    .word-card .card-text {
+        font-size: 0.9rem;
+    }
+    
+    .word-card .example-section {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .word-card .word-meta {
+        font-size: 0.8rem;
+    }
+    
+    .input-group-text {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-control {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .community-dictionary-page .container {
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .community-dictionary-page h2 {
+        font-size: 1.3rem;
+    }
+    
+    .word-card .card-body {
+        padding: 0.75rem;
+    }
+    
+    .word-card .card-title {
+        font-size: 0.95rem;
+    }
+    
+    .word-card .card-text {
+        font-size: 0.85rem;
+    }
+    
+    .word-card .example-section {
+        padding: 0.4rem;
+        font-size: 0.75rem;
+    }
+    
+    .word-card .word-meta {
+        font-size: 0.75rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+    background-color: white;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table tbody tr:hover td {
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+/* Ensure text visibility in all table cells */
+.table td strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.table td .text-muted {
+    color: #6c757d !important;
+}
+
+.table td .badge {
+    color: white;
+}
+
+/* Fix any potential text overlap issues */
+.table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    word-wrap: break-word;
+}
+
+.table td:nth-child(2) {
+    white-space: normal;
+    max-width: 300px;
+}
+
+.table td:nth-child(3) {
+    white-space: normal;
+    max-width: 400px;
+}
+
+/* Ensure table is responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile table adjustments */
+@media (max-width: 768px) {
+    .table td {
+        white-space: normal !important;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: initial !important;
+    }
+    
+    /* Ensure mobile cards are visible */
+    .d-lg-none {
+        display: block !important;
+    }
+    
+    /* Fix mobile card visibility */
+    .word-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Ensure mobile cards have proper spacing */
+    .word-card .card {
+        margin-bottom: 1rem;
+        display: block !important;
+    }
+    
+    /* Fix any potential z-index issues */
+    .word-card .card-body {
+        position: relative;
+        z-index: 1;
+    }
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.5em 0.75em;
+    border-radius: 10px;
+}
+
+.badge-secondary,
+.table td .badge-secondary,
+.badge.badge-secondary {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+}
+
+.text-center.py-4 {
+    padding: 3rem 2rem !important;
+}
+
+.text-center.py-4 i {
+    color: #2c3e50 !important;
+}
+
+.text-center.py-4 h5 {
+    color: #333 !important;
+    font-weight: 600;
+}
+
+.text-center.py-4 p {
+    color: #666 !important;
+    font-size: 1.1rem;
+}
+
+
+/* Button Group Styling */
+.btn-group {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+.btn-group .btn {
+    flex: 1;
+    min-width: 150px;
+    margin: 0 !important;
+    border-radius: 10px !important;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-group .btn:hover {
+    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    color: white !important;
+    text-decoration: none !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Override Bootstrap's default btn-group behavior */
+.btn-group > .btn:not(:last-child):not(.dropdown-toggle) {
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+.btn-group > .btn:not(:first-child) {
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+
+/* Ensure all links in Actions section have no underlines */
+.card-body a {
+    text-decoration: none !important;
+}
+
+.card-body a:hover {
+    text-decoration: none !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .community-dictionary-page {
+        padding: 1rem 0;
+    }
+    
+    .community-dictionary-page .container {
+        margin: 0.5rem;
+        padding: 1rem;
+        border-radius: 15px;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    /* Fix table overflow on mobile */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+        min-width: 100%;
+        font-size: 0.85rem;
+    }
+    
+    .table td {
+        white-space: normal !important;
+        max-width: none !important;
+        padding: 0.5rem 0.25rem !important;
+        word-wrap: break-word;
+    }
+    
+    .table th {
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.8rem;
+    }
+    
+    /* Make badges smaller on mobile */
+    .badge {
+        font-size: 0.6rem !important;
+        padding: 0.2rem 0.4rem !important;
+    }
+    
+    /* Ensure form controls fit */
+    .form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Card padding adjustments */
+    .card-body {
+        padding: 1rem 0.75rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .community-dictionary-page {
+        padding: 0.5rem 0;
+    }
+    
+    .community-dictionary-page .container {
+        margin: 0.25rem;
+        padding: 0.75rem;
+        border-radius: 15px;
+    }
+    
+    .table {
+        font-size: 0.75rem;
+    }
+    
+    .table td {
+        padding: 0.4rem 0.2rem !important;
+    }
+    
+    .table th {
+        padding: 0.4rem 0.2rem !important;
+        font-size: 0.7rem;
+    }
+    
+    .badge {
+        font-size: 0.55rem !important;
+        padding: 0.15rem 0.3rem !important;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .card-header {
+        padding: 0.5rem;
+    }
+    
+    .card-header h5 {
+        font-size: 0.9rem;
+    }
+    
+    /* Ensure no horizontal overflow */
+    * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Make sure text doesn't overflow */
+    .table td, .table th {
+        word-break: break-word;
+        hyphens: auto;
+    }
+    
+    /* Adjust input group for very small screens */
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .input-group-prepend {
+        margin-bottom: 0.5rem;
+    }
+    
+    .input-group-text {
+        border-radius: 0.375rem 0.375rem 0 0 !important;
+    }
+    
+    .form-control {
+        border-radius: 0 0 0.375rem 0.375rem !important;
+    }
+}
+</style>
+{% endblock %}
+

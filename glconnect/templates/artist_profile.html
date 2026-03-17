@@ -10,7 +10,7 @@
 <body>
     {% include 'messages.html' %}
     <div class="hero">
-        <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" class="profile-pic">
+        <img src="{{ url_for('static', filename=artist.profile_pic.replace('static/', '') if artist.profile_pic.startswith('static/') else artist.profile_pic) }}" class="profile-pic">
         <h1 class="artist-name">{{ artist.artist_name }}</h1>
         <p class="bio">{{ artist.bio }}</p>
         <div class="follow-links">
@@ -27,6 +27,14 @@
                     <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'photo3.webp')) }}" class="song-cover">
 
                     <p class="song-title">{{ song.name if song.name else song.name_song }}</p>
+                    
+                    <!-- Audio player for the song -->
+                    {% if song.song_path %}
+                    <audio controls style="width: 100%; margin: 10px 0;">
+                        <source src="{{ song.song_path }}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    {% endif %}
         
                     <button onclick="addToPlaylist('{{ song.id if song.id else song.upload_id }}', '{{ song.name if song.name else song.name_song }}')">➕ Add to Playlist</button>
                     <button onclick="shareSong('{{ song.id if song.id else song.upload_id }}', '{{ song.name if song.name else song.name_song }}')">📤 Share</button>

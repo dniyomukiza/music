@@ -1,0 +1,427 @@
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 20:56:06,351 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:06,351 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:06,351 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:06,351 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:06,351 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:06,351 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:09,441 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 20:56:09,882 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 20:56:14,710 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 20:56:14,710 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 20:56:14,710 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 20:56:14,710 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 20:56:14,710 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+ * Serving Flask app 'glconnect'
+ * Debug mode: on
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 20:56:18,150 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:18,150 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:18,150 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:18,150 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:18,150 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:18,150 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:56:19,935 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 20:56:20,244 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 20:56:24,656 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 20:56:24,657 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 20:56:24,657 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 20:56:24,657 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 20:56:24,657 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 20:56:24,707 - werkzeug - WARNING -  * Debugger is active!
+/Applications/untitled folder/music-1/glconnect/__init__.py:265: SAWarning: relationship 'BookProject.author' will copy column book_platform_users.id to column book_projects.author_id, which conflicts with relationship(s): 'BookPlatformUser.authored_books' (copies book_platform_users.id to book_projects.author_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="authored_books"' to the 'BookProject.author' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  analytics = PageAnalytics(
+/Applications/untitled folder/music-1/glconnect/__init__.py:265: SAWarning: relationship 'BookPlatformUser.resolved_comments' will copy column book_platform_users.id to column book_comments.commenter_id, which conflicts with relationship(s): 'BookComment.commenter' (copies book_platform_users.id to book_comments.commenter_id), 'BookPlatformUser.comments' (copies book_platform_users.id to book_comments.commenter_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="commenter,comments"' to the 'BookPlatformUser.resolved_comments' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  analytics = PageAnalytics(
+2026-01-14 20:57:09,600 - glconnect.database_optimizer - WARNING - Slow query in get_dashboard_data: 0.359s
+User johndoe connected
+2026-01-14 20:57:12,324 - glconnect.book_platform_routes - INFO - Upload digital book - Method: GET, User: 5
+2026-01-14 20:57:12,324 - glconnect.book_platform_routes - INFO - Showing upload digital book form
+WebSocket error: handle_disconnect() takes 0 positional arguments but 1 was given
+2026-01-14 20:57:54,342 - glconnect.book_platform_routes - INFO - Upload digital book - Method: POST, User: 5
+2026-01-14 20:57:54,352 - glconnect.book_platform_routes - INFO - POST request received for digital book upload
+2026-01-14 20:57:54,352 - glconnect.book_platform_routes - INFO - Form data keys: ['csrf_token', 'title', 'genre', 'description', 'digital_price']
+2026-01-14 20:57:54,353 - glconnect.book_platform_routes - INFO - Files in request: ['digital_book_file', 'cover_image']
+2026-01-14 20:57:54,353 - glconnect.book_platform_routes - INFO - Form validation passed
+2026-01-14 20:57:54,353 - glconnect.book_platform_routes - INFO - Starting digital book upload process
+2026-01-14 20:57:54,413 - glconnect.book_platform_routes - INFO - User profile: writer, User ID: 5
+2026-01-14 20:57:54,464 - glconnect.book_platform_routes - INFO - Author ID: 1
+2026-01-14 20:57:54,464 - glconnect.book_platform_routes - INFO - Digital file: sample.pdf
+2026-01-14 20:57:54,464 - glconnect.book_platform_routes - INFO - Cover image: GLC.jpg
+2026-01-14 20:57:54,464 - glconnect.book_platform_routes - INFO - Title: Its a book by
+2026-01-14 20:57:54,468 - PyPDF2._reader - WARNING - incorrect startxref pointer(1)
+2026-01-14 20:57:54,471 - glconnect.book_platform_routes - INFO - Creating book project: Its a book by
+2026-01-14 20:57:54,523 - glconnect.book_platform_routes - INFO - Book created with ID: 19, Title: Its a book by
+2026-01-14 20:57:54,723 - glconnect.book_platform_routes - INFO - Book 19 committed to database successfully
+2026-01-14 20:57:54,724 - glconnect.book_platform_routes - INFO - Generate audiobook checkbox: False
+2026-01-14 20:57:54,724 - glconnect.book_platform_routes - INFO - Audiobook price: None
+2026-01-14 20:57:54,724 - glconnect.book_platform_routes - INFO - Audiobook voice: en-US-Standard-A
+2026-01-14 20:57:54,724 - glconnect.book_platform_routes - INFO - Upload successful! Redirecting to book 19
+User johndoe connected
+User johndoe joined book 19, chapter None
+WebSocket error: handle_disconnect() takes 0 positional arguments but 1 was given
+2026-01-14 20:58:06,398 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: TTS credentials file not found at tts.json or default 'tts.json'
+Traceback (most recent call last):
+  File "/Applications/untitled folder/music-1/glconnect/audio_book_generator.py", line 341, in _ensure_client
+    raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
+Exception: TTS credentials file not found at tts.json or default 'tts.json'
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 20:59:33,712 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:33,712 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:33,712 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:33,712 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:33,712 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:33,712 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:35,588 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 20:59:35,969 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 20:59:39,979 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 20:59:39,979 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 20:59:39,979 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 20:59:39,979 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 20:59:39,979 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 20:59:40,016 - werkzeug - WARNING -  * Debugger is active!
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/flask_sqlalchemy/model.py:22: SAWarning: relationship 'BookProject.author' will copy column book_platform_users.id to column book_projects.author_id, which conflicts with relationship(s): 'BookPlatformUser.authored_books' (copies book_platform_users.id to book_projects.author_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="authored_books"' to the 'BookProject.author' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  return cls.query_class(
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/flask_sqlalchemy/model.py:22: SAWarning: relationship 'BookPlatformUser.resolved_comments' will copy column book_platform_users.id to column book_comments.commenter_id, which conflicts with relationship(s): 'BookComment.commenter' (copies book_platform_users.id to book_comments.commenter_id), 'BookPlatformUser.comments' (copies book_platform_users.id to book_comments.commenter_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="commenter,comments"' to the 'BookPlatformUser.resolved_comments' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  return cls.query_class(
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 20:59:59,539 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:59,539 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:59,539 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:59,539 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:59,539 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 20:59:59,539 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:00:01,372 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:00:01,735 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:00:06,267 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:00:06,267 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:00:06,267 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:00:06,267 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:00:06,267 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:00:06,297 - werkzeug - WARNING -  * Debugger is active!
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/flask_sqlalchemy/model.py:22: SAWarning: relationship 'BookProject.author' will copy column book_platform_users.id to column book_projects.author_id, which conflicts with relationship(s): 'BookPlatformUser.authored_books' (copies book_platform_users.id to book_projects.author_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="authored_books"' to the 'BookProject.author' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  return cls.query_class(
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/flask_sqlalchemy/model.py:22: SAWarning: relationship 'BookPlatformUser.resolved_comments' will copy column book_platform_users.id to column book_comments.commenter_id, which conflicts with relationship(s): 'BookComment.commenter' (copies book_platform_users.id to book_comments.commenter_id), 'BookPlatformUser.comments' (copies book_platform_users.id to book_comments.commenter_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="commenter,comments"' to the 'BookPlatformUser.resolved_comments' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  return cls.query_class(
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:31:21,090 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:21,090 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:21,090 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:21,090 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:21,090 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:21,090 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:22,975 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:31:23,315 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:31:29,231 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:31:29,231 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:31:29,231 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:31:29,231 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:31:29,231 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:31:29,265 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:31:51,717 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:51,717 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:51,717 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:51,717 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:51,717 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:51,717 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:31:53,501 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:31:53,865 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:31:58,077 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:31:58,077 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:31:58,077 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:31:58,077 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:31:58,077 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:31:58,105 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:32:13,819 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:13,819 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:13,819 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:13,819 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:13,819 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:13,819 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:15,302 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:32:15,575 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:32:20,218 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:32:20,219 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:32:20,219 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:32:20,219 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:32:20,219 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:32:20,252 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:32:32,836 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:32,837 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:32,837 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:32,837 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:32,837 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:32,837 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:32:34,363 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:32:34,820 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:32:39,610 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:32:39,611 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:32:39,611 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:32:39,611 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:32:39,611 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:32:39,640 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:42:13,825 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:42:13,825 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:42:13,825 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:42:13,825 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:42:13,826 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:42:13,826 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:42:15,499 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:42:15,844 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:42:20,496 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:42:20,496 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:42:20,496 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:42:20,496 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:42:20,496 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:42:20,538 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:43:08,125 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:43:08,125 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:43:08,125 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:43:08,125 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:43:08,125 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:43:08,125 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:43:09,746 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:43:10,084 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:43:14,816 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:43:14,816 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:43:14,816 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:43:14,816 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:43:14,816 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:43:14,879 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:51:09,371 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:09,371 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:09,371 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:09,371 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:09,371 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:09,371 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:11,202 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:51:11,577 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:51:16,240 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:51:16,240 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:51:16,240 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:51:16,240 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:51:16,241 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:51:16,280 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:51:38,349 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:38,350 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:38,350 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:38,350 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:38,350 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:38,350 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:51:39,874 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:51:40,238 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:51:44,752 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:51:44,752 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:51:44,752 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:51:44,752 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:51:44,753 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:51:44,797 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:52:07,765 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:07,766 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:07,766 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:07,766 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:07,766 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:07,766 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:09,290 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:52:09,636 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:52:14,703 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:52:14,703 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:52:14,703 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:52:14,703 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:52:14,703 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:52:14,744 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:52:26,399 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:26,400 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:26,400 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:26,400 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:26,400 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:26,400 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:52:27,886 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:52:28,201 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:52:33,069 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:52:33,069 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:52:33,069 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:52:33,069 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:52:33,069 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:52:33,133 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:53:53,431 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:53:53,431 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:53:53,431 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:53:53,431 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:53:53,431 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:53:53,431 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:53:55,319 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:53:55,679 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:54:00,386 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:54:00,387 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:54:00,387 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:54:00,387 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:54:00,387 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:54:00,432 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:54:50,668 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:54:50,668 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:54:50,668 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:54:50,668 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:54:50,668 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:54:50,668 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:54:52,160 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:54:52,479 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:54:56,806 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:54:56,806 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:54:56,806 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:54:56,806 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:54:56,806 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:54:56,833 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:55:38,921 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:38,921 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:38,921 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:38,921 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:38,921 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:38,921 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:40,406 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:55:40,729 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:55:45,776 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:55:45,776 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:55:45,776 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:55:45,776 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:55:45,777 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:55:45,805 - werkzeug - WARNING -  * Debugger is active!
+DEBUG: Using environment variables for configuration
+GOOGLE_API_KEY from glconfig.json: AIzaSyA-HyErhz4omhMWSqN_hID1aQOwRtrzV1Q
+GEMINI_API_KEY from .env: AIzaSyAN9PhRQkawgarg...
+GOOGLE_APPLICATION_CREDENTIALS: tts.json (local file)
+2026-01-14 21:55:54,368 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:54,368 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:54,368 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:54,368 - google.adk.models.registry - INFO - Updating LLM class for gemini-.* from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:54,368 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/endpoints\/.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:54,368 - google.adk.models.registry - INFO - Updating LLM class for projects\/.+\/locations\/.+\/publishers\/google\/models\/gemini.+ from <class 'google.adk.models.google_llm.Gemini'> to <class 'google.adk.models.google_llm.Gemini'>
+2026-01-14 21:55:55,817 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+DEBUG: GOOGLE_APPLICATION_CREDENTIALS from config: tts.json
+DEBUG: Using TTS credentials path: tts.json
+2026-01-14 21:55:56,142 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+Ink Studio database tables created successfully
+2026-01-14 21:56:01,302 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-01-14 21:56:01,303 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-01-14 21:56:01,303 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-01-14 21:56:01,303 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-01-14 21:56:01,303 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-01-14 21:56:01,341 - werkzeug - WARNING -  * Debugger is active!
+/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+2026-03-16 20:59:10,052 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-03-16 20:59:10,652 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use

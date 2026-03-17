@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Book - Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
+                    <i class="fas fa-arrow-left"></i> Back to Book
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 edit-book">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                {% if book.has_audiobook %}
+                <!-- Success Alert for Generated Audiobook -->
+                <div class="alert alert-success alert-dismissible fade show" role="alert" id="audiobookSuccessAlert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1"><i class="fas fa-headphones me-2"></i>Audiobook Generated Successfully!</h5>
+                            <p class="mb-0">Your audiobook is ready. Scroll down to the <strong>"Audiobook Generation"</strong> section to preview and manage it.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-edit"></i> Edit Book Details
+                        </h4>
+                        <small class="text-muted">Update information for "{{ book.title }}"</small>
+                    </div>
+                    <div class="card-body">
+                        <form id="editBookForm">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Book Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" required
+                                       value="{{ book.title }}" placeholder="Enter book title">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Book Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="4"
+                                          placeholder="Describe your book">{{ book.description or '' }}</textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="genre" class="form-label">Genre</label>
+                                        <select class="form-select" id="genre" name="genre">
+                                            <option value="">Select a genre</option>
+                                            <option value="fiction" {% if book.genre == 'fiction' %}selected{% endif %}>Fiction</option>
+                                            <option value="non-fiction" {% if book.genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                                            <option value="mystery" {% if book.genre == 'mystery' %}selected{% endif %}>Mystery</option>
+                                            <option value="romance" {% if book.genre == 'romance' %}selected{% endif %}>Romance</option>
+                                            <option value="sci-fi" {% if book.genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
+                                            <option value="fantasy" {% if book.genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
+                                            <option value="thriller" {% if book.genre == 'thriller' %}selected{% endif %}>Thriller</option>
+                                            <option value="biography" {% if book.genre == 'biography' %}selected{% endif %}>Biography</option>
+                                            <option value="self-help" {% if book.genre == 'self-help' %}selected{% endif %}>Self-Help</option>
+                                            <option value="business" {% if book.genre == 'business' %}selected{% endif %}>Business</option>
+                                            <option value="history" {% if book.genre == 'history' %}selected{% endif %}>History</option>
+                                            <option value="other" {% if book.genre == 'other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="language" class="form-label">Language *</label>
+                                        {% if book.digital_file_path %}
+                                        <input type="hidden" name="language" value="en">
+                                        <select class="form-select" id="language" required disabled>
+                                            <option value="en" selected>English</option>
+                                        </select>
+                                        <small class="form-text text-muted">Language is set to English for uploaded books (audiobooks are English-only)</small>
+                                        {% else %}
+                                        <select class="form-select" id="language" name="language" required>
+                                            <option value="">Select language</option>
+                                            <option value="en" {% if book.language == 'en' or not book.language %}selected{% endif %}>English</option>
+                                            <option value="es" {% if book.language == 'es' %}selected{% endif %}>Spanish</option>
+                                            <option value="fr" {% if book.language == 'fr' %}selected{% endif %}>French</option>
+                                            <option value="de" {% if book.language == 'de' %}selected{% endif %}>German</option>
+                                            <option value="it" {% if book.language == 'it' %}selected{% endif %}>Italian</option>
+                                            <option value="pt" {% if book.language == 'pt' %}selected{% endif %}>Portuguese</option>
+                                            <option value="ru" {% if book.language == 'ru' %}selected{% endif %}>Russian</option>
+                                            <option value="zh" {% if book.language == 'zh' %}selected{% endif %}>Chinese</option>
+                                            <option value="ja" {% if book.language == 'ja' %}selected{% endif %}>Japanese</option>
+                                            <option value="ko" {% if book.language == 'ko' %}selected{% endif %}>Korean</option>
+                                            <option value="ar" {% if book.language == 'ar' %}selected{% endif %}>Arabic</option>
+                                            <option value="hi" {% if book.language == 'hi' %}selected{% endif %}>Hindi</option>
+                                            <option value="nl" {% if book.language == 'nl' %}selected{% endif %}>Dutch</option>
+                                            <option value="sv" {% if book.language == 'sv' %}selected{% endif %}>Swedish</option>
+                                            <option value="pl" {% if book.language == 'pl' %}selected{% endif %}>Polish</option>
+                                            <option value="tr" {% if book.language == 'tr' %}selected{% endif %}>Turkish</option>
+                                            <option value="vi" {% if book.language == 'vi' %}selected{% endif %}>Vietnamese</option>
+                                            <option value="th" {% if book.language == 'th' %}selected{% endif %}>Thai</option>
+                                            <option value="id" {% if book.language == 'id' %}selected{% endif %}>Indonesian</option>
+                                            <option value="cs" {% if book.language == 'cs' %}selected{% endif %}>Czech</option>
+                                            <option value="ro" {% if book.language == 'ro' %}selected{% endif %}>Romanian</option>
+                                            <option value="hu" {% if book.language == 'hu' %}selected{% endif %}>Hungarian</option>
+                                            <option value="fi" {% if book.language == 'fi' %}selected{% endif %}>Finnish</option>
+                                            <option value="da" {% if book.language == 'da' %}selected{% endif %}>Danish</option>
+                                            <option value="no" {% if book.language == 'no' %}selected{% endif %}>Norwegian</option>
+                                            <option value="he" {% if book.language == 'he' %}selected{% endif %}>Hebrew</option>
+                                            <option value="uk" {% if book.language == 'uk' %}selected{% endif %}>Ukrainian</option>
+                                            <option value="el" {% if book.language == 'el' %}selected{% endif %}>Greek</option>
+                                            <option value="bg" {% if book.language == 'bg' %}selected{% endif %}>Bulgarian</option>
+                                            <option value="hr" {% if book.language == 'hr' %}selected{% endif %}>Croatian</option>
+                                            <option value="sk" {% if book.language == 'sk' %}selected{% endif %}>Slovak</option>
+                                            <option value="sl" {% if book.language == 'sl' %}selected{% endif %}>Slovenian</option>
+                                            <option value="sr" {% if book.language == 'sr' %}selected{% endif %}>Serbian</option>
+                                            <option value="et" {% if book.language == 'et' %}selected{% endif %}>Estonian</option>
+                                            <option value="lv" {% if book.language == 'lv' %}selected{% endif %}>Latvian</option>
+                                            <option value="lt" {% if book.language == 'lt' %}selected{% endif %}>Lithuanian</option>
+                                            <option value="mt" {% if book.language == 'mt' %}selected{% endif %}>Maltese</option>
+                                            <option value="ga" {% if book.language == 'ga' %}selected{% endif %}>Irish</option>
+                                            <option value="cy" {% if book.language == 'cy' %}selected{% endif %}>Welsh</option>
+                                            <option value="is" {% if book.language == 'is' %}selected{% endif %}>Icelandic</option>
+                                            <option value="mk" {% if book.language == 'mk' %}selected{% endif %}>Macedonian</option>
+                                            <option value="sq" {% if book.language == 'sq' %}selected{% endif %}>Albanian</option>
+                                            <option value="bs" {% if book.language == 'bs' %}selected{% endif %}>Bosnian</option>
+                                            <option value="sw" {% if book.language == 'sw' %}selected{% endif %}>Swahili</option>
+                                            <option value="af" {% if book.language == 'af' %}selected{% endif %}>Afrikaans</option>
+                                            <option value="zu" {% if book.language == 'zu' %}selected{% endif %}>Zulu</option>
+                                            <option value="xh" {% if book.language == 'xh' %}selected{% endif %}>Xhosa</option>
+                                            <option value="am" {% if book.language == 'am' %}selected{% endif %}>Amharic</option>
+                                            <option value="bn" {% if book.language == 'bn' %}selected{% endif %}>Bengali</option>
+                                            <option value="ta" {% if book.language == 'ta' %}selected{% endif %}>Tamil</option>
+                                            <option value="te" {% if book.language == 'te' %}selected{% endif %}>Telugu</option>
+                                            <option value="ml" {% if book.language == 'ml' %}selected{% endif %}>Malayalam</option>
+                                            <option value="kn" {% if book.language == 'kn' %}selected{% endif %}>Kannada</option>
+                                            <option value="gu" {% if book.language == 'gu' %}selected{% endif %}>Gujarati</option>
+                                            <option value="pa" {% if book.language == 'pa' %}selected{% endif %}>Punjabi</option>
+                                            <option value="ur" {% if book.language == 'ur' %}selected{% endif %}>Urdu</option>
+                                            <option value="fa" {% if book.language == 'fa' %}selected{% endif %}>Persian</option>
+                                            <option value="ms" {% if book.language == 'ms' %}selected{% endif %}>Malay</option>
+                                            <option value="tl" {% if book.language == 'tl' %}selected{% endif %}>Tagalog</option>
+                                            <option value="haw" {% if book.language == 'haw' %}selected{% endif %}>Hawaiian</option>
+                                            <option value="other" {% if book.language == 'other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                        <small class="form-text text-muted">Select the primary language of your book</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if not book.digital_file_path %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="target_audience" class="form-label">Target Audience</label>
+                                        <select class="form-select" id="target_audience" name="target_audience">
+                                            <option value="">Select target audience</option>
+                                            <option value="children" {% if book.target_audience == 'children' %}selected{% endif %}>Children</option>
+                                            <option value="young-adult" {% if book.target_audience == 'young-adult' %}selected{% endif %}>Young Adult</option>
+                                            <option value="adult" {% if book.target_audience == 'adult' %}selected{% endif %}>Adult</option>
+                                            <option value="general" {% if book.target_audience == 'general' %}selected{% endif %}>General</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="word_count_target" class="form-label">Target Word Count</label>
+                                        <input type="number" class="form-control" id="word_count_target" name="word_count_target" 
+                                               value="{{ book.word_count_target or '' }}" min="0" placeholder="Optional target word count">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="price" class="form-label">Price (USD)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="price" name="price" 
+                                                   value="{{ book.price or '' }}" min="0" step="0.01" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="price" class="form-label">Price (USD)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="price" name="price" 
+                                                   value="{{ book.price or '' }}" min="0" step="0.01" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label for="tags" class="form-label">Tags</label>
+                                <input type="text" class="form-control" id="tags" name="tags" 
+                                       value="{{ book.tags or '' }}" placeholder="Enter tags separated by commas">
+                                <div class="form-text">Separate multiple tags with commas</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cover_image" class="form-label">Cover Image URL</label>
+                                <input type="url" class="form-control" id="cover_image" name="cover_image" 
+                                       value="{{ book.cover_image or '' }}" placeholder="https://example.com/cover.jpg">
+                            </div>
+
+                            {% if book.digital_file_path %}
+                            <!-- Publishing options for uploaded digital books -->
+                            <div class="mb-3">
+                                <h6 class="mb-3"><i class="fas fa-globe me-2"></i>Publishing Options</h6>
+                                
+                                {% if book.digital_file_path %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="publish_digital_book" name="publish_digital_book" value="on"
+                                           {% if book.digital_book_published %}checked{% endif %}>
+                                    <label class="form-check-label" for="publish_digital_book">
+                                        <strong>Publish Digital Book</strong> - Make digital book available in marketplace
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mb-3">Digital book will be available for purchase. Make sure you've set a price first.</small>
+                                {% endif %}
+                                
+                                {% if book.has_audiobook %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="publish_audiobook" name="publish_audiobook" value="on"
+                                           {% if book.audiobook_published %}checked{% endif %}>
+                                    <label class="form-check-label" for="publish_audiobook">
+                                        <strong>Publish Audiobook</strong> - Make audiobook available in marketplace
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block">Audiobook will be available for purchase. Make sure you've set an audiobook price first.</small>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <!-- Publishing option for platform-created books -->
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_published" name="is_published" value="on"
+                                           {% if book.status.value == 'published' %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_published">
+                                        Publish this book (makes it visible in marketplace)
+                                    </label>
+                                </div>
+                                <small class="text-muted">Checking this box will publish your book to the marketplace. Make sure you've set a price first.</small>
+                            </div>
+                            {% endif %}
+
+                            {% if not book.digital_file_path %}
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allow_collaboration" name="allow_collaboration"
+                                           {% if book.allow_collaboration %}checked{% endif %}>
+                                    <label class="form-check-label" for="allow_collaboration">
+                                        Allow collaboration
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                                   class="btn btn-secondary me-md-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Book
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="confirmDeleteBook()">
+                                    <i class="fas fa-trash"></i> Delete Book
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Book Statistics -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar"></i> Book Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% if not book.digital_file_path %}
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Chapters</h6>
+                                    <h4 class="text-primary">{{ book.chapters|length }}</h4>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Word Count</h6>
+                                    <h4 class="text-success">{{ book.word_count or 0 }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">Status</h6>
+                                    <h4 class="text-info">{{ book.status.value.title() if book.status else 'Draft' }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">{% if book.digital_file_path %}Uploaded{% else %}Created{% endif %}</h6>
+                                    <h4 class="text-warning">{{ book.created_at.strftime('%m/%d/%Y') if book.created_at else 'N/A' }}</h4>
+                                </div>
+                            </div>
+                            {% if book.digital_file_path %}
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6 class="text-muted">File Type</h6>
+                                    <h4 class="text-primary">{{ book.digital_file_type.upper() if book.digital_file_type else 'N/A' }}</h4>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chapter Management (Only for books created in platform) -->
+                {% if not book.digital_file_path %}
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> Chapter Management
+                        </h5>
+                        <div>
+                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Add Chapter
+                            </a>
+                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-list"></i> View All
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if book.chapters %}
+                            <div class="row">
+                                {% for chapter in book.chapters %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card chapter-card h-100">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Chapter {{ chapter.chapter_number }}</h6>
+                                            {% if chapter.is_published %}
+                                                <span class="badge bg-success">Published</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Draft</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ chapter.title }}</h6>
+                                            
+                                            {% if chapter.content %}
+                                                <p class="card-text small">{{ chapter.content[:100]|striptags }}{% if chapter.content|length > 100 %}...{% endif %}</p>
+                                            {% else %}
+                                                <p class="card-text small text-muted">No content yet</p>
+                                            {% endif %}
+                                            
+                                            <div class="chapter-meta mb-2">
+                                                {% if chapter.word_count %}
+                                                    <span class="badge bg-info">{{ chapter.word_count }} words</span>
+                                                {% endif %}
+                                                {% if chapter.word_count_target %}
+                                                    <span class="badge bg-secondary">Target: {{ chapter.word_count_target }}</span>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="chapter-stats">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar"></i> {{ chapter.created_at.strftime('%m/%d/%Y') }}
+                                                    {% if chapter.updated_at and chapter.updated_at != chapter.created_at %}
+                                                        <br><i class="fas fa-edit"></i> Updated: {{ chapter.updated_at.strftime('%m/%d/%Y') }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                               <div class="card-footer">
+                                   <div class="btn-group w-100" role="group">
+                                       <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                                          class="btn btn-outline-primary btn-sm">
+                                           <i class="fas fa-eye"></i> View
+                                       </a>
+                                       {% if chapter.is_published %}
+                                           <button class="btn btn-outline-warning btn-sm" disabled title="Published chapters are locked for editing">
+                                               <i class="fas fa-lock"></i> Locked
+                                           </button>
+                                       {% else %}
+                                           <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                                              class="btn btn-outline-secondary btn-sm">
+                                               <i class="fas fa-edit"></i> Edit
+                                           </a>
+                                       {% endif %}
+                                       <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteChapter({{ chapter.id }}, '{{ chapter.title }}')">
+                                           <i class="fas fa-trash"></i> Delete
+                                       </button>
+                                   </div>
+                               </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <!-- Empty State -->
+                            <div class="text-center py-4">
+                                <div class="empty-state">
+                                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                    <h5>No Chapters Yet</h5>
+                                    <p class="text-muted mb-3">Start writing your book by adding your first chapter.</p>
+                                    <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Add First Chapter
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Audiobook Generation -->
+                <div class="card mt-4" id="audiobook-section">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-headphones"></i> Audiobook Generation
+                        </h5>
+                        {% if book.has_audiobook %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> Audiobook Available
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <!-- Status Display (for processing/failed) -->
+                        <div id="audiobookStatusDisplay" style="display: none;" class="mb-3">
+                            <div id="audiobookStatusContent"></div>
+                        </div>
+                        
+                        {% if book.has_audiobook %}
+                            <!-- Audiobook Already Generated -->
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>Audiobook Details</h6>
+                                    <p class="text-muted mb-2">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Duration: {{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} minutes
+                                    </p>
+                                    <p class="text-muted mb-2">
+                                        <i class="fas fa-microphone me-1"></i>
+                                        Voice: {{ book.audiobook_voice or 'en-US-Standard-A' }}
+                                    </p>
+                                    <p class="text-muted mb-2">
+                                        <i class="fas fa-dollar-sign me-1"></i>
+                                        Price: ${{ "%.2f"|format(book.audiobook_price) if book.audiobook_price else "Free" }}
+                                    </p>
+                                    <p class="text-muted mb-3">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Generated: {{ book.audiobook_generated_at.strftime('%B %d, %Y at %I:%M %p') if book.audiobook_generated_at else 'Unknown' }}
+                                    </p>
+                                    
+                                    <!-- Embedded Audio Player -->
+                                    <div class="mb-3">
+                                        <label class="form-label"><i class="fas fa-headphones me-2"></i>Preview Audiobook:</label>
+                                        <audio controls class="w-100" style="max-width: 100%;">
+                                            <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <button class="btn btn-outline-danger btn-sm" onclick="regenerateAudiobook()">
+                                        <i class="fas fa-redo"></i> Regenerate
+                                    </button>
+                                </div>
+                            </div>
+                        {% else %}
+                            <!-- Generate Audiobook -->
+                            <div>
+                                <h6>Create Audiobook Version</h6>
+                                    <div class="alert alert-warning mb-3">
+                                        <i class="fas fa-language me-2"></i>
+                                        <strong>Note:</strong> Audiobooks are currently only available in English.
+                                    </div>
+                                    <p class="text-muted mb-3">
+                                        {% if book.digital_file_path %}
+                                            Generate an audiobook from your uploaded digital book using AI voice synthesis.
+                                            This will create a professional-quality audio version of your book in English.
+                                        {% else %}
+                                            Generate an audiobook from your published chapters using AI voice synthesis.
+                                            This will create a professional-quality audio version of your book in English.
+                                        {% endif %}
+                                    </p>
+                                    
+                                    <div class="mb-3">
+                                        <label for="audiobookPrice" class="form-label">Audiobook Price (USD)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="audiobookPrice" 
+                                                   placeholder="0.00" step="0.01" min="0" value="0">
+                                        </div>
+                                        <div class="form-text">Leave as 0 for free audiobook</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Voice Selection</label>
+                                        <p class="text-dark small mb-2" style="color: #000 !important;">Preview different voices to find the perfect one for your audiobook</p>
+                                        
+                                        <!-- Voice Type Tabs -->
+                                        <ul class="nav nav-tabs mb-3" id="voiceTypeTabs" role="tablist" style="border-bottom-color: #dee2e6;">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="wavenet-tab" data-bs-toggle="tab" data-bs-target="#wavenet-voices" type="button" role="tab" style="color: #000 !important;">
+                                                    WaveNet
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="neural2-tab" data-bs-toggle="tab" data-bs-target="#neural2-voices" type="button" role="tab" style="color: #000 !important;">
+                                                    Neural2
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="studio-tab" data-bs-toggle="tab" data-bs-target="#studio-voices" type="button" role="tab" style="color: #000 !important;">
+                                                    Studio
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="chirp3-tab" data-bs-toggle="tab" data-bs-target="#chirp3-voices" type="button" role="tab" style="color: #000 !important;">
+                                                    Chirp 3 HD
+                                                </button>
+                                            </li>
+                                        </ul>
+                                        
+                                        <!-- Loading indicator -->
+                                        <div id="voicesLoading" class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span class="visually-hidden">Loading voices...</span>
+                                            </div>
+                                            <small class="ms-2" style="color: #000 !important;">Loading available voices...</small>
+                                        </div>
+                                        
+                                        <!-- Voice Selection Container -->
+                                        <div id="voiceSelectionContainer" style="display: none;">
+                                            <!-- Tab Content -->
+                                            <div class="tab-content" id="voiceTypeTabContent">
+                                                <!-- WaveNet Voices -->
+                                                <div class="tab-pane fade show active" id="wavenet-voices" role="tabpanel">
+                                                    <div id="wavenetVoicesList" class="row g-2"></div>
+                                                </div>
+                                                <!-- Neural2 Voices -->
+                                                <div class="tab-pane fade" id="neural2-voices" role="tabpanel">
+                                                    <div id="neural2VoicesList" class="row g-2"></div>
+                                                </div>
+                                                <!-- Studio Voices -->
+                                                <div class="tab-pane fade" id="studio-voices" role="tabpanel">
+                                                    <div id="studioVoicesList" class="row g-2"></div>
+                                                </div>
+                                                <!-- Chirp3 Voices -->
+                                                <div class="tab-pane fade" id="chirp3-voices" role="tabpanel">
+                                                    <div id="chirp3VoicesList" class="row g-2"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Selected Voice Display -->
+                                            <div class="alert alert-info mt-3" id="selectedVoiceDisplay" style="display: none;">
+                                                <strong><i class="fas fa-check-circle me-2"></i>Selected Voice:</strong>
+                                                <span id="selectedVoiceName">None</span>
+                                                <input type="hidden" id="audiobookVoice" value="">
+                                            </div>
+                                            
+                                            <!-- Preview Audio Player -->
+                                            <div id="previewPlayerContainer" class="mt-3" style="display: none;">
+                                                <label class="form-label small" style="color: #000 !important;">Preview Audio:</label>
+                                                <audio id="previewAudioPlayer" controls class="w-100" style="max-width: 500px;">
+                                                    Your browser does not support the audio element.
+                                                </audio>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Error Message -->
+                                        <div id="voiceError" class="alert alert-danger mt-2" style="display: none;"></div>
+                                    </div>
+                                    
+                                    <!-- Generate Button - Appears after voice selection -->
+                                    <div class="mt-4 text-center">
+                                        <button class="btn btn-primary btn-lg" onclick="generateAudiobook()" id="generateBtn">
+                                            <i class="fas fa-headphones"></i> Generate Audiobook
+                                        </button>
+                                    </div>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Requirements:</strong> 
+                                {% if book.digital_file_path %}
+                                    Your uploaded digital book will be used to generate the audiobook.
+                                {% else %}
+                                    You need at least one published chapter to generate an audiobook.
+                                {% endif %}
+                                The process may take several minutes depending on your book's length.
+                                <br><br>
+                                <i class="fas fa-language me-2"></i>
+                                <strong>Language:</strong> Audiobooks are generated in English only, regardless of the book's primary language setting above.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    {% if not book.digital_file_path %}
+    {# Only show AI Assistant for manually created books, not uploaded digital books #}
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.0"></script>
+    {% endif %}
+    <script>
+        // Form submission
+        document.getElementById('editBookForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('{{ url_for("book_platform.edit_book", book_id=book.id) }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success message
+                    showNotification('Book updated successfully!', 'success');
+                    
+                    // Redirect to book view
+                    setTimeout(() => {
+                        window.location.href = result.redirect || '{{ url_for("book_platform.view_book", book_id=book.id) }}';
+                    }, 1500);
+                } else {
+                    showNotification(result.error || 'Failed to update book', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating book:', error);
+                showNotification('An error occurred while updating the book', 'error');
+            }
+        });
+
+        // Voice preview and selection variables
+        let availableVoices = {};
+        let selectedVoice = null;
+        let currentPreviewVoice = null;
+        let reloadTriggered = false; // Flag to prevent multiple reloads
+        let statusCheckInterval = null; // Store interval ID to clear it later
+        
+        // Load available voices on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if not book.has_audiobook %}
+            loadAvailableVoices();
+            {% endif %}
+            
+            // Check audiobook generation status
+            checkAudiobookStatus();
+            
+            // Poll status every 5 seconds if processing (only if audiobook not already generated)
+            {% if not book.has_audiobook %}
+            statusCheckInterval = setInterval(checkAudiobookStatus, 5000);
+            {% endif %}
+            
+            // Scroll to audiobook section if hash is present
+            if (window.location.hash === '#audiobook-section') {
+                setTimeout(function() {
+                    const section = document.getElementById('audiobook-section');
+                    if (section) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 500);
+            }
+        });
+        
+        // Check audiobook generation status
+        async function checkAudiobookStatus() {
+            try {
+                const response = await fetch('{{ url_for("book_platform.get_audiobook_status", book_id=book.id) }}');
+                const result = await response.json();
+                
+                const statusDisplay = document.getElementById('audiobookStatusDisplay');
+                const statusContent = document.getElementById('audiobookStatusContent');
+                
+                if (!statusDisplay || !statusContent) return;
+                
+                // Only show status if not completed and not none
+                if (result.status && result.status !== 'none' && result.status !== 'completed' && !result.has_audiobook) {
+                    statusDisplay.style.display = 'block';
+                    
+                    if (result.status === 'processing') {
+                        statusContent.innerHTML = `
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <strong><i class="fas fa-cog fa-spin me-2"></i>Audiobook Generation in Progress</strong>
+                                        <br>
+                                        <small>Progress: ${result.progress || 0}% - This may take several minutes depending on book length.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else if (result.status === 'pending') {
+                        statusContent.innerHTML = `
+                            <div class="alert alert-warning">
+                                <strong><i class="fas fa-clock me-2"></i>Audiobook Generation Queued</strong>
+                                <br>
+                                <small>Your audiobook is in the queue and will start processing shortly.</small>
+                            </div>
+                        `;
+                    } else if (result.status === 'failed') {
+                        statusContent.innerHTML = `
+                            <div class="alert alert-danger">
+                                <strong><i class="fas fa-exclamation-triangle me-2"></i>Audiobook Generation Failed</strong>
+                                <br>
+                                <small>Error: ${result.error_message || 'Unknown error occurred'}</small>
+                                <br>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="window.location.reload()">
+                                    <i class="fas fa-redo me-1"></i> Try Again
+                                </button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    statusDisplay.style.display = 'none';
+                    
+                    // If completed, reload page to show success (only once)
+                    if (result.has_audiobook && result.status === 'completed' && !reloadTriggered) {
+                        reloadTriggered = true; // Prevent multiple reloads
+                        
+                        // Stop polling since we're done
+                        if (statusCheckInterval) {
+                            clearInterval(statusCheckInterval);
+                            statusCheckInterval = null;
+                        }
+                        
+                        // Add hash to URL to scroll to audiobook section after reload
+                        window.location.hash = 'audiobook-section';
+                        // Small delay to ensure status is updated before reload
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking audiobook status:', error);
+            }
+        }
+        
+        // Load available voices from API
+        async function loadAvailableVoices() {
+            const loadingDiv = document.getElementById('voicesLoading');
+            const container = document.getElementById('voiceSelectionContainer');
+            const errorDiv = document.getElementById('voiceError');
+            
+            try {
+                loadingDiv.style.display = 'block';
+                container.style.display = 'none';
+                errorDiv.style.display = 'none';
+                
+                const response = await fetch('{{ url_for("book_platform.get_available_voices", book_id=book.id) }}');
+                const result = await response.json();
+                
+                if (result.success) {
+                    availableVoices = result.voices;
+                    renderVoices();
+                    loadingDiv.style.display = 'none';
+                    container.style.display = 'block';
+                    
+                    // Auto-generate previews for sample voices from each category
+                    preloadSamplePreviews();
+                } else {
+                    throw new Error(result.error || 'Failed to load voices');
+                }
+            } catch (error) {
+                console.error('Error loading voices:', error);
+                loadingDiv.style.display = 'none';
+                errorDiv.textContent = 'Failed to load voices: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        // Render voices in their respective tabs
+        function renderVoices() {
+            const voiceTypes = {
+                'wavenet': ['WaveNet'],
+                'neural2': ['Neural2'],
+                'studio': ['Studio'],
+                'chirp3': ['Chirp3']
+            };
+            
+            // Render for each tab
+            Object.keys(voiceTypes).forEach(tabKey => {
+                const containerId = `${tabKey}VoicesList`;
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                const typesToShow = voiceTypes[tabKey];
+                let hasVoices = false;
+                
+                typesToShow.forEach(type => {
+                    const voices = availableVoices[type] || [];
+                    voices.forEach(voice => {
+                        hasVoices = true;
+                        const voiceCard = createVoiceCard(voice, type);
+                        container.appendChild(voiceCard);
+                    });
+                });
+                
+                if (!hasVoices) {
+                    container.innerHTML = '<div class="col-12"><p class="text-center py-3" style="color: #000 !important;">No voices available in this category.</p></div>';
+                }
+            });
+        }
+        
+        // Create a voice card element
+        function createVoiceCard(voice, voiceType) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4';
+            
+            const genderIcon = voice.gender === 'FEMALE' ? 'fa-venus' : 'fa-mars';
+            const genderText = voice.gender === 'FEMALE' ? 'Female' : 'Male';
+            const isSelected = selectedVoice === voice.name;
+            
+            col.innerHTML = `
+                <div class="card h-100 ${isSelected ? 'border-primary' : ''}" style="cursor: pointer;" onclick="selectVoice('${voice.name}', '${voiceType}')">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="card-title mb-1 small" style="color: #000 !important;">${voice.name}</h6>
+                                <small style="color: #000 !important;">
+                                    <i class="fas ${genderIcon} me-1"></i>${genderText}
+                                    <span class="badge bg-secondary ms-2" style="color: #fff !important;">${voiceType}</span>
+                                </small>
+                            </div>
+                            ${isSelected ? '<i class="fas fa-check-circle text-primary"></i>' : ''}
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); previewVoice('${voice.name}', event)" data-voice-name="${voice.name}">
+                                <i class="fas fa-play me-1"></i> Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return col;
+        }
+        
+        // Select a voice
+        function selectVoice(voiceName, voiceType) {
+            selectedVoice = voiceName;
+            document.getElementById('audiobookVoice').value = voiceName;
+            
+            // Update selected voice display
+            const display = document.getElementById('selectedVoiceDisplay');
+            const nameSpan = document.getElementById('selectedVoiceName');
+            nameSpan.textContent = voiceName + ` (${voiceType})`;
+            nameSpan.style.color = '#000';
+            display.style.display = 'block';
+            
+            // Re-render to show selection
+            renderVoices();
+        }
+        
+        // Preload sample previews for each voice category
+        async function preloadSamplePreviews() {
+            const categories = ['WaveNet', 'Neural2', 'Studio', 'Chirp3'];
+            const sampleVoices = {};
+            
+            // Get first voice from each category
+            categories.forEach(category => {
+                const voices = availableVoices[category] || [];
+                if (voices.length > 0) {
+                    sampleVoices[category] = voices[0].name;
+                }
+            });
+            
+            // Generate previews in background for sample voices
+            const previewPromises = Object.entries(sampleVoices).map(async ([category, voiceName]) => {
+                try {
+                    const response = await fetch('{{ url_for("book_platform.preview_voice", book_id=book.id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            voice_name: voiceName
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        // Store preview URL for this voice
+                        if (!window.voicePreviews) {
+                            window.voicePreviews = {};
+                        }
+                        window.voicePreviews[voiceName] = result.audio_url;
+                        
+                        // Update the voice card button to show it's ready
+                        const previewBtn = document.querySelector(`button[data-voice-name="${voiceName}"]`);
+                        if (previewBtn) {
+                            previewBtn.classList.add('preview-ready');
+                            previewBtn.setAttribute('data-preview-url', result.audio_url);
+                            previewBtn.innerHTML = '<i class="fas fa-headphones me-1"></i> Ready to Preview';
+                            previewBtn.classList.remove('btn-outline-primary');
+                            previewBtn.classList.add('btn-success');
+                        }
+                    }
+                } catch (error) {
+                    console.log(`Failed to preload preview for ${voiceName}:`, error);
+                }
+            });
+            
+            // Don't wait for all - let them load in background
+            Promise.allSettled(previewPromises).then(() => {
+                console.log('Sample previews preloaded for each category');
+            });
+        }
+        
+        // Preview a voice
+        async function previewVoice(voiceName, event) {
+            const playerContainer = document.getElementById('previewPlayerContainer');
+            const audioPlayer = document.getElementById('previewAudioPlayer');
+            const previewBtn = event ? event.target.closest('button') : null;
+            
+            // Check if preview is already preloaded
+            if (window.voicePreviews && window.voicePreviews[voiceName]) {
+                currentPreviewVoice = voiceName;
+                audioPlayer.src = window.voicePreviews[voiceName];
+                playerContainer.style.display = 'block';
+                
+                // Auto-play preview
+                audioPlayer.play().catch(err => {
+                    console.log('Auto-play prevented:', err);
+                });
+                
+                if (previewBtn) {
+                    previewBtn.innerHTML = '<i class="fas fa-pause me-1"></i> Stop';
+                }
+                return;
+            }
+            
+            // If same voice is already playing, just toggle play/pause
+            if (currentPreviewVoice === voiceName && audioPlayer.src) {
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                } else {
+                    audioPlayer.pause();
+                }
+                return;
+            }
+            
+            // Show loading state
+            let originalHtml = '';
+            if (previewBtn) {
+                originalHtml = previewBtn.innerHTML;
+                previewBtn.disabled = true;
+                previewBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+            }
+            
+            try {
+                const response = await fetch('{{ url_for("book_platform.preview_voice", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        voice_name: voiceName
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentPreviewVoice = voiceName;
+                    audioPlayer.src = result.audio_url;
+                    playerContainer.style.display = 'block';
+                    
+                    // Cache the preview URL
+                    if (!window.voicePreviews) {
+                        window.voicePreviews = {};
+                    }
+                    window.voicePreviews[voiceName] = result.audio_url;
+                    
+                    // Auto-play preview
+                    audioPlayer.play().catch(err => {
+                        console.log('Auto-play prevented:', err);
+                    });
+                    
+                    if (previewBtn) {
+                        previewBtn.innerHTML = '<i class="fas fa-pause me-1"></i> Stop';
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to generate preview');
+                }
+            } catch (error) {
+                console.error('Error generating preview:', error);
+                showNotification('Failed to generate preview: ' + error.message, 'error');
+                if (previewBtn && originalHtml) {
+                    previewBtn.innerHTML = originalHtml;
+                }
+            } finally {
+                if (previewBtn) {
+                    previewBtn.disabled = false;
+                }
+            }
+        }
+        
+        // Handle audio player events
+        document.getElementById('previewAudioPlayer').addEventListener('ended', function() {
+            const previewBtns = document.querySelectorAll('button[onclick*="previewVoice"]');
+            previewBtns.forEach(btn => {
+                if (btn.innerHTML.includes('Stop')) {
+                    btn.innerHTML = '<i class="fas fa-play me-1"></i> Preview';
+                }
+            });
+        });
+
+        // Audiobook generation functions
+        async function generateAudiobook() {
+            const price = document.getElementById('audiobookPrice').value;
+            const voiceInput = document.getElementById('audiobookVoice');
+            const voice = voiceInput ? voiceInput.value : null;
+            const generateBtn = document.getElementById('generateBtn');
+            
+            if (!price || price < 0) {
+                showNotification('Please enter a valid price (0 or higher)', 'error');
+                return;
+            }
+            
+            if (!voice) {
+                showNotification('Please select a voice for your audiobook', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            
+            try {
+                const response = await fetch('{{ url_for("book_platform.generate_audiobook_for_book", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        audiobook_price: parseFloat(price),
+                        voice_name: voice
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    // Reload page after 2 seconds to show updated status
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showNotification(result.error || 'Failed to start audiobook generation', 'error');
+                    // Re-enable button
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = '<i class="fas fa-headphones"></i> Generate Audiobook';
+                }
+            } catch (error) {
+                console.error('Error generating audiobook:', error);
+                showNotification('An error occurred while starting audiobook generation', 'error');
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fas fa-headphones"></i> Generate Audiobook';
+            }
+        }
+        
+        async function regenerateAudiobook() {
+            if (confirm('Are you sure you want to regenerate the audiobook? This will replace the existing version.')) {
+                // Reset audiobook status
+                try {
+                    const response = await fetch('{{ url_for("book_platform.generate_audiobook_for_book", book_id=book.id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            audiobook_price: {{ book.audiobook_price or 0 }},
+                            voice_name: '{{ book.audiobook_voice or "en-US-Standard-A" }}'
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showNotification('Audiobook regeneration started', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification(result.error || 'Failed to start audiobook regeneration', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error regenerating audiobook:', error);
+                    showNotification('An error occurred while starting audiobook regeneration', 'error');
+                }
+            }
+        }
+
+        // Notification function
+        function showNotification(message, type = 'info') {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Auto-save functionality
+        let autoSaveTimeout;
+        const form = document.getElementById('editBookForm');
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => {
+                    // Auto-save logic could be implemented here
+                    console.log('Auto-save triggered');
+                }, 3000);
+            });
+        });
+
+        // Delete book confirmation
+        function confirmDeleteBook() {
+            if (confirm('Are you sure you want to delete this book? This action cannot be undone and will delete all chapters and content.')) {
+                deleteBook();
+            }
+        }
+
+        async function deleteBook() {
+            try {
+                const response = await fetch('{{ url_for("book_platform.delete_book", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '{{ url_for("book_platform.books") }}';
+                    }, 1500);
+                } else {
+                    showNotification(result.error || 'Failed to delete book', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting book:', error);
+                showNotification('An error occurred while deleting the book', 'error');
+            }
+        }
+
+        // Delete chapter confirmation
+        function confirmDeleteChapter(chapterId, chapterTitle) {
+            if (confirm(`Are you sure you want to delete "${chapterTitle}"? This action cannot be undone.`)) {
+                deleteChapter(chapterId);
+            }
+        }
+
+        async function deleteChapter(chapterId) {
+            try {
+                const response = await fetch(`{{ url_for("book_platform.delete_chapter", book_id=book.id, chapter_id=0) }}`.replace('0', chapterId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotification(result.error || 'Failed to delete chapter', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting chapter:', error);
+                showNotification('An error occurred while deleting the chapter', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

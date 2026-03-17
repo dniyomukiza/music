@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}GLC content streaming{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Raleway:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/home.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
   <style>
     body {
       margin: 0;
@@ -86,13 +86,13 @@
     .show {
       display: block;
     }
-
+/*
     footer {
       text-align: center;
       padding: 1rem;
       background-color: #f1f1f1;
       margin-top: 2rem;
-    }
+    }*/
   </style>
 </head>
 <body>
@@ -117,27 +117,31 @@
     <nav>
       
       <ul>
-        <li><a href="https://www.glc.cool/about">About</a></li>
-        <li><a href="https://www.glc.cool/home">Home</a></li>
-        <!--<li><a href="https://www.glc.cool/blog/contact">Contact</a></li>-->
-        <li><a href="https://www.glc.cool/word">API</a></li>
+        <li><a href="https://glc.cool/about">About</a></li>
+        <li><a href="https://glc.cool/home">Home</a></li>
+        <li><a href="{{ url_for('book_platform.ink_studio_access') }}">Ink Studio</a></li>
+        <li><a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a></li>
       </ul>
     </nav>
     <div class="menu-toggle" onclick="toggleMenu()">☰</div>
     <div id="verticalMenu" class="vertical-menu">
       <ul>
         <li><a href="/music/artist_profile">🎵 For artists</a></li>
-        <li><a href="/writer/profile">📚 For authors</a></li>
+        <li><a href="{{ url_for('book_platform.ink_studio_access') }}">📚 For authors</a></li>
         <li><a href="/writer/profile">🧠 For researchers</a></li>
-        <li><a href="/blog/blogs">✍️ For bloggers</a></li>
+        <li><a href="/blog/blogs">✍️ Stories & News</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('book_platform.music_dashboard') }}">Music</a></li>
+        {% else %}
         <li><a href="/prof/uprofile">Others</a></li>
+        {% endif %}
       </ul>
     </div>
   </div>
 </header>
 
 <audio controls>
-  <source src="https://www.glc.cool/station"type="audio/mpeg">
+  <source src="https://glc.cool/station"type="audio/mpeg">
 </audio>
 
 <main>
@@ -148,12 +152,14 @@
     {% block images %}
     {% endblock %}
   </section>
+
+  {% block content %}
+  {% endblock %}
 </main>
-
-<footer>
-    <p style="color: black;">&copy; 2024 GLC | All Rights Reserved</p>
-
+<footer style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
+  <p style="color: black; margin: 0;">&copy; 2024 GLC | All Rights Reserved</p>
 </footer>
+
 
 <script>
   function toggleMenu() {

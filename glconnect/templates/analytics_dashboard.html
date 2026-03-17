@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - GLC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        td {
+            color: #555;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .authenticated {
+            background: #d4edda;
+            color: #155724;
+        }
+        .anonymous {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .refresh-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+        .refresh-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Analytics Dashboard</h1>
+        <p class="subtitle">Comprehensive analytics for your app</p>
+        
+        <button class="refresh-btn" id="refresh-btn" onclick="loadAllData()">🔄 Refresh Data</button>
+        
+        <div id="error-container"></div>
+        
+        <div class="stats-grid" id="stats-grid">
+            <div class="loading">Loading statistics...</div>
+        </div>
+        
+        <div class="section">
+            <h2>🔝 Top Pages</h2>
+            <div id="top-pages" class="loading">Loading top pages...</div>
+        </div>
+        
+        <div class="section">
+            <h2>🕒 Recent Activity</h2>
+            <div id="recent-activity" class="loading">Loading recent activity...</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="section">
+                <h2>🌐 Browser Statistics</h2>
+                <div id="browser-stats" class="loading">Loading browser stats...</div>
+            </div>
+            <div class="section">
+                <h2>📱 Device Statistics</h2>
+                <div id="device-stats" class="loading">Loading device stats...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAPI(endpoint) {
+            try {
+                // Add cache-busting parameter to ensure fresh data
+                const separator = endpoint.includes('?') ? '&' : '?';
+                const url = `${endpoint}${separator}_t=${Date.now()}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Request failed');
+                }
+                return data;
+            } catch (error) {
+                console.error('API error:', error);
+                throw error;
+            }
+        }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat().format(num);
+        }
+
+        function setLoadingState(isLoading) {
+            const elements = ['stats-grid', 'top-pages', 'recent-activity', 'browser-stats', 'device-stats'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && isLoading) {
+                    const currentHTML = el.innerHTML;
+                    if (!currentHTML.includes('Loading')) {
+                        el.dataset.originalContent = currentHTML;
+                        el.innerHTML = '<div class="loading">Loading...</div>';
+                    }
+                }
+            });
+        }
+
+        async function loadAllData() {
+            const refreshBtn = document.getElementById('refresh-btn');
+            const originalText = refreshBtn.textContent;
+            
+            // Disable button and show loading state
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Loading...';
+            document.getElementById('error-container').innerHTML = '';
+            setLoadingState(true);
+            
+            try {
+                // Load stats
+                const statsData = await fetchAPI('/_analytics/api/stats');
+                displayStats(statsData.stats);
+                displayBrowserStats(statsData.stats.browser_stats);
+                displayDeviceStats(statsData.stats.device_stats);
+                
+                // Load top pages
+                const pagesData = await fetchAPI('/_analytics/api/top-paths?limit=15');
+                displayTopPages(pagesData.top_paths);
+                
+                // Load recent activity
+                const activityData = await fetchAPI('/_analytics/api/recent-activity?limit=20');
+                displayRecentActivity(activityData.activities);
+                
+                setLoadingState(false);
+                refreshBtn.textContent = '✅ Data Loaded';
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                }, 2000);
+            } catch (error) {
+                setLoadingState(false);
+                refreshBtn.textContent = '❌ Error';
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                }, 3000);
+                document.getElementById('error-container').innerHTML = 
+                    `<div class="error">Error loading analytics: ${error.message}. Please try clicking "Refresh Data" or reload the page.</div>`;
+                console.error('Failed to load analytics:', error);
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        function displayStats(stats) {
+            document.getElementById('stats-grid').innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Views</h3>
+                    <div class="value">${formatNumber(stats.total_views)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Unique Visitors</h3>
+                    <div class="value">${formatNumber(stats.unique_visitors)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Unique Pages</h3>
+                    <div class="value">${formatNumber(stats.unique_paths)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Views (24h)</h3>
+                    <div class="value">${formatNumber(stats.recent_views_24h)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Authenticated</h3>
+                    <div class="value">${formatNumber(stats.authenticated_views)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Anonymous</h3>
+                    <div class="value">${formatNumber(stats.anonymous_views)}</div>
+                </div>
+            `;
+        }
+
+        function displayBrowserStats(browsers) {
+            const browserHTML = Object.entries(browsers)
+                .sort((a, b) => b[1] - a[1])
+                .map(([browser, count]) => `
+                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;">${browser}</span>
+                        <span style="color: #7f8c8d;">${formatNumber(count)} views</span>
+                    </div>
+                `).join('');
+            
+            document.getElementById('browser-stats').innerHTML = browserHTML || '<p>No browser data available</p>';
+        }
+
+        function displayDeviceStats(devices) {
+            const deviceHTML = Object.entries(devices)
+                .sort((a, b) => b[1] - a[1])
+                .map(([device, count]) => `
+                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;">${device}</span>
+                        <span style="color: #7f8c8d;">${formatNumber(count)} views</span>
+                    </div>
+                `).join('');
+            
+            document.getElementById('device-stats').innerHTML = deviceHTML || '<p>No device data available</p>';
+        }
+
+        function displayTopPages(pages) {
+            if (!pages || pages.length === 0) {
+                document.getElementById('top-pages').innerHTML = '<p>No page data available</p>';
+                return;
+            }
+            
+            const tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Path</th>
+                            <th>Total Views</th>
+                            <th>Unique Visitors</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${pages.map(page => `
+                            <tr>
+                                <td><code>${page.path}</code></td>
+                                <td>${formatNumber(page.views)}</td>
+                                <td>${formatNumber(page.unique_visitors)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('top-pages').innerHTML = tableHTML;
+        }
+
+        function displayRecentActivity(activities) {
+            if (!activities || activities.length === 0) {
+                document.getElementById('recent-activity').innerHTML = '<p>No recent activity</p>';
+                return;
+            }
+            
+            const tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Path</th>
+                            <th>Method</th>
+                            <th>Browser</th>
+                            <th>Device</th>
+                            <th>IP</th>
+                            <th>Auth</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${activities.map(activity => {
+                            const date = new Date(activity.timestamp);
+                            const timeStr = date.toLocaleString();
+                            return `
+                                <tr>
+                                    <td>${timeStr}</td>
+                                    <td><code style="font-size: 12px;">${activity.path}</code></td>
+                                    <td>${activity.method}</td>
+                                    <td>${activity.browser || 'N/A'}</td>
+                                    <td>${activity.device || 'N/A'}</td>
+                                    <td style="font-size: 11px;">${activity.ip_address}</td>
+                                    <td>
+                                        <span class="status-badge ${activity.is_authenticated ? 'authenticated' : 'anonymous'}">
+                                            ${activity.is_authenticated ? '✓ Auth' : 'Anonymous'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('recent-activity').innerHTML = tableHTML;
+        }
+
+        // Load data when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadAllData);
+        } else {
+            // DOM is already ready
+            loadAllData();
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadAllData, 30000);
+    </script>
+</body>
+</html>
+

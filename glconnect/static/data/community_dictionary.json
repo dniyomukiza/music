@@ -1,0 +1,22 @@
+{
+  "dictionary": [
+    {
+      "id": 1,
+      "word": "intambwe",
+      "meaning": "step",
+      "example_sentence": "yateye intambwe ijya mbere, he made a step forward",
+      "part_of_speech": "noun",
+      "phonetics": "",
+      "contributor_name": "Unknown",
+      "approved_at": "2025-09-13T03:48:31.829488+00:00",
+      "approved_by": "nididier"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-09-12T23:30:00Z",
+    "description": "Community-contributed Kinyarwanda dictionary",
+    "total_words": 1,
+    "last_updated": "2025-09-13T03:48:31.829500+00:00"
+  }
+}

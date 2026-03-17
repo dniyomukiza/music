@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Dashboard - Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+        }
+        .page-title {
+            color: #fff;
+        }
+        .music-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .song-audio {
+            width: 100%;
+            max-width: 350px;
+        }
+        .playlist-badge {
+            background: rgba(52, 152, 219, 0.2);
+            border-radius: 50px;
+            padding: 6px 15px;
+            color: #1f78c1;
+            font-weight: 600;
+        }
+        .song-title {
+            color: #000000 !important;
+        }
+        .autocomplete-container {
+            position: relative;
+        }
+        .card-body {
+            overflow: visible !important;
+        }
+        .card {
+            overflow: visible !important;
+        }
+        .row {
+            overflow: visible !important;
+        }
+        .autocomplete-suggestions {
+            position: fixed !important;
+            background: white !important;
+            border: 1px solid #ddd !important;
+            border-radius: 8px !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+            max-height: 500px;
+            overflow-y: auto;
+            z-index: 999999 !important; /* Increased z-index */
+            margin-top: 4px;
+            display: none !important;
+            visibility: hidden;
+            min-width: 400px;
+            /* Force new stacking context to avoid parent clipping */
+            transform: translateZ(0) !important;
+            will-change: transform;
+        }
+        .autocomplete-suggestions.show {
+            display: block !important;
+            visibility: visible !important;
+        }
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        .suggestion-item:hover {
+            background-color: #f8f9fa;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .suggestion-icon {
+            margin-right: 12px;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        .suggestion-content {
+            flex: 1;
+        }
+        .suggestion-name {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 2px;
+        }
+        .suggestion-artist {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .suggestion-type {
+            font-size: 0.75em;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'messages.html' %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') if current_user.is_authenticated else url_for('routes.index') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('routes.index') }}"><i class="fas fa-arrow-left me-1"></i>{{ 'Back to Content Hub' if current_user.is_authenticated else 'Home' }}</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ current_user.username if current_user.is_authenticated else 'Guest' }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if current_user.is_authenticated %}
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>
+                            {% else %}
+                            <li><a class="dropdown-item" href="{{ url_for('routes1.login') }}">Login</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('routes1.register') }}">Register</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1 class="page-title fw-bold"><i class="fas fa-music me-2"></i>Music Dashboard</h1>
+                <p class="text-light">Search songs, listen to tracks, and manage your playlist – all in one place.</p>
+            </div>
+        </div>
+
+        <!-- Music Search -->
+        <!-- Artist Profile & Upload Section -->
+        {% if not has_artist_profile %}
+        <div class="row mb-4">
+            <div class="col-12">
+                {% if is_artist_account %}
+                <div class="card music-card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Create an artist profile to upload and share your music. Your songs will be searchable by other users.</p>
+                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#createArtistModal">
+                            <i class="fas fa-user-plus me-1"></i>Create Artist Profile
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card music-card border-info">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Artist Account Required</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">To create an artist profile and upload music, you need an artist account. Please register with an artist account type or contact support to change your account type.</p>
+                        <a href="{{ url_for('routes1.register') }}" class="btn btn-info">
+                            <i class="fas fa-user-plus me-1"></i>Register as Artist
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card music-card border-success">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-microphone me-2"></i>Artist: {{ artist_profile.artist_name }}</h5>
+                        <div>
+                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-light me-2">
+                                <i class="fas fa-eye me-1"></i>View Profile
+                            </a>
+                            {% if is_artist_account %}
+                            <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
+                                <i class="fas fa-upload me-1"></i>Upload Song
+                            </button>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-info-circle me-1"></i>Artist Account Required
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mb-4" id="searchCardRow">
+            <div class="col-12">
+                <div class="card music-card" id="searchMusicCard">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search Music</h5>
+                        <span class="playlist-badge"><i class="fas fa-user me-1"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
+                    </div>
+                    <div class="card-body p-4" style="overflow: visible !important; position: relative;">
+                        <div class="row g-3 align-items-center" style="overflow: visible !important;">
+                            <div class="col-lg-10" style="position: relative; overflow: visible !important;">
+                                <div class="autocomplete-container" style="position: relative; z-index: 1;">
+                                    <div class="input-group input-group-lg">
+                                        <input type="text" id="musicSearchInput" class="form-control" placeholder="Search by song or artist name..." autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                                        <button class="btn btn-primary" onclick="searchMusic()"><i class="fas fa-search me-1"></i>Search</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 text-lg-end">
+                                <button class="btn btn-outline-light btn-lg w-100" onclick="loadPlaylist()">
+                                    <i class="fas fa-sync me-1"></i>Refresh Playlist
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Voice Agent -->
+                        <div class="mt-3 pt-3 border-top border-light">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <button type="button" class="btn btn-outline-info" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
+                                    <i class="fas fa-microphone me-1"></i>Voice Assistant
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showVoiceTranscript()" title="View conversation transcript">
+                                    <i class="fas fa-file-alt me-1"></i>Transcript
+                                </button>
+                                <div class="d-flex align-items-center gap-1 small">
+                                    <i class="fas fa-volume-down text-muted"></i>
+                                    <input type="range" id="voiceVolumeSlider" class="form-range" min="0.01" max="1" step="0.01" value="0.15" style="width:80px" title="Agent volume">
+                                    <span id="voiceVolumeLabel" class="text-muted">15%</span>
+                                </div>
+                            </div>
+                            <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
+                            <div id="voiceAgentResponse" class="mt-2 small text-muted" style="max-height: 120px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Autocomplete suggestions container - moved outside card structure to avoid stacking context issues -->
+        <div id="autocompleteSuggestions" class="autocomplete-suggestions"></div>
+
+        <div class="row g-4">
+            <!-- Search Results -->
+            <div class="col-lg-7">
+                <div class="card music-card h-100">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="searchResultsContainer" class="row g-3">
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="fas fa-search fa-3x mb-3 d-block"></i>
+                                <p>Search for an artist or song to get started</p>
+                                <small class="text-muted">Enter an artist name to see all their songs, or search for a specific song</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playlist -->
+            <div class="col-lg-5">
+                <div class="card music-card h-100">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Your Playlist</h5>
+                        <button class="btn btn-sm btn-light" onclick="loadPlaylist()"><i class="fas fa-sync me-1"></i>Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="playlistContainer" class="playlist-container">
+                            <p class="text-muted text-center"><i class="fas fa-music me-1"></i>Loading playlist...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const userId = {{ current_user.user_id if current_user.is_authenticated else 'null' }};
+        
+        // Playlist continuous playback state
+        let playlistSongs = [];
+        let currentPlayingIndex = -1;
+        let currentPlayingAudio = null;
+        let isPlaylistPlaying = false;
+        
+        // Autocomplete state
+        let autocompleteTimeout = null;
+        let selectedSuggestionIndex = -1;
+        
+        // Handle search input for autocomplete
+        function handleSearchInput() {
+            const input = document.getElementById('musicSearchInput');
+            const query = input.value.trim();
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            
+            // Clear previous timeout
+            if (autocompleteTimeout) {
+                clearTimeout(autocompleteTimeout);
+                autocompleteTimeout = null;
+            }
+            
+            // Hide suggestions if query is empty
+            if (query.length === 0) {
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+                selectedSuggestionIndex = -1;
+                return;
+            }
+            
+            // Show suggestions immediately for 2+ characters, with debounce for API calls
+            if (query.length >= 2) {
+                // Debounce autocomplete requests (wait 200ms after user stops typing)
+                autocompleteTimeout = setTimeout(() => {
+                    if (input.value.trim() === query) { // Only fetch if query hasn't changed
+                        fetchSuggestions(query);
+                    }
+                }, 200);
+            } else {
+                // Hide if less than 2 characters
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+        
+        // Fetch autocomplete suggestions
+        function fetchSuggestions(query) {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            
+            console.log('fetchSuggestions called with query:', query);
+            
+            // Validate query
+            if (!query || query.length < 2) {
+                console.log('Query too short, hiding suggestions');
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Double-check that the input value hasn't changed (avoid race conditions)
+            if (input && input.value.trim() !== query) {
+                console.log('Query changed, ignoring response');
+                return; // Query changed, ignore this response
+            }
+            
+            // Show loading state
+            suggestionsContainer.innerHTML = '<div class="suggestion-item"><div class="suggestion-content"><div class="suggestion-name">Loading...</div></div></div>';
+            
+            // Position the container before showing it
+            positionSuggestionsContainer(suggestionsContainer, input);
+            
+            suggestionsContainer.style.display = 'block';
+            suggestionsContainer.style.visibility = 'visible';
+            suggestionsContainer.classList.add('show');
+            
+            console.log('Fetching suggestions from /playlist2/suggestions?q=' + encodeURIComponent(query));
+            
+            fetch(`/playlist2/suggestions?q=${encodeURIComponent(query)}`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Suggestions data received:', data);
+                    // Check again if query hasn't changed
+                    if (input && input.value.trim() === query) {
+                        displaySuggestions(data);
+                    } else {
+                        console.log('Query changed after fetch, not displaying');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching suggestions:', error);
+                    suggestionsContainer.classList.remove('show');
+                    suggestionsContainer.style.display = 'none';
+                });
+        }
+        
+        // Position suggestions container - extracted to reusable function
+        function positionSuggestionsContainer(suggestionsContainer, input) {
+            const searchCard = document.getElementById('searchMusicCard');
+            const searchResultsContainer = document.querySelector('.row.g-4 .col-lg-7');
+            
+            if (searchCard && searchResultsContainer) {
+                const cardRect = searchCard.getBoundingClientRect();
+                const resultsRect = searchResultsContainer.getBoundingClientRect();
+                
+                // Position right below the entire search card (including header and body)
+                // Align left edge with Search Results container
+                suggestionsContainer.style.top = (cardRect.bottom + window.scrollY + 4) + 'px';
+                suggestionsContainer.style.left = (resultsRect.left + window.scrollX) + 'px';
+                suggestionsContainer.style.width = resultsRect.width + 'px';
+                
+                console.log('Positioned suggestions - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left, 'Width:', suggestionsContainer.style.width);
+            } else if (searchCard) {
+                // Fallback: use search card position
+                const cardRect = searchCard.getBoundingClientRect();
+                suggestionsContainer.style.top = (cardRect.bottom + window.scrollY + 4) + 'px';
+                suggestionsContainer.style.left = (cardRect.left + window.scrollX) + 'px';
+                suggestionsContainer.style.width = Math.max(cardRect.width, 500) + 'px';
+                console.log('Positioned suggestions (fallback 1) - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+            } else {
+                // Last fallback: try class selector
+                const searchCardFallback = document.querySelector('.row.mb-4 .card.music-card');
+                if (searchCardFallback) {
+                    const cardRect = searchCardFallback.getBoundingClientRect();
+                    suggestionsContainer.style.top = (cardRect.bottom + window.scrollY + 4) + 'px';
+                    suggestionsContainer.style.left = (cardRect.left + window.scrollX) + 'px';
+                    suggestionsContainer.style.width = Math.max(cardRect.width, 500) + 'px';
+                    console.log('Positioned suggestions (fallback 2) - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+                } else {
+                    // Final fallback: position right below search input
+                    const inputRect = input.getBoundingClientRect();
+                    suggestionsContainer.style.top = (inputRect.bottom + window.scrollY + 4) + 'px';
+                    suggestionsContainer.style.left = (inputRect.left + window.scrollX) + 'px';
+                    suggestionsContainer.style.width = Math.max(inputRect.width, 500) + 'px';
+                    console.log('Positioned suggestions (fallback 3) - Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+                }
+            }
+        }
+        
+        // Display autocomplete suggestions
+        function displaySuggestions(data) {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            
+            console.log('displaySuggestions called with data:', data);
+            
+            if (!suggestionsContainer || !input) {
+                console.error('Suggestions container or input not found');
+                return;
+            }
+            
+            const artists = data.artists || [];
+            const songs = data.songs || [];
+            
+            console.log('Artists:', artists.length, 'Songs:', songs.length);
+            
+            if (artists.length === 0 && songs.length === 0) {
+                console.log('No suggestions found, hiding container');
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Position the suggestions dropdown
+            positionSuggestionsContainer(suggestionsContainer, input);
+            
+            // Ensure container is visible and has highest z-index
+            suggestionsContainer.style.display = 'block';
+            suggestionsContainer.style.visibility = 'visible';
+            suggestionsContainer.style.zIndex = '999999'; // Increased z-index
+            suggestionsContainer.style.position = 'fixed'; // Ensure fixed positioning
+            suggestionsContainer.style.transform = 'translateZ(0)'; // Force new stacking context
+            suggestionsContainer.classList.add('show');
+            
+            console.log('Positioning suggestions. Top:', suggestionsContainer.style.top, 'Left:', suggestionsContainer.style.left);
+            
+            let html = '';
+            
+            // Display artists first
+            if (artists.length > 0) {
+                artists.forEach((artist, index) => {
+                    const artistId = artist.id || '';
+                    const artistName = artist.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <div class="suggestion-item" data-type="artist" data-artist-id="${artistId}" data-artist-name="${artistName}" data-value="${artistName}" onclick="selectArtistSuggestion(${artistId}, '${artistName}')">
+                            <i class="fas fa-user suggestion-icon"></i>
+                            <div class="suggestion-content">
+                                <div class="suggestion-name">${artist.name}</div>
+                                <div class="suggestion-artist">Artist</div>
+                            </div>
+                            <span class="suggestion-type">Artist</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Display songs
+            if (songs.length > 0) {
+                songs.forEach((song, index) => {
+                    const songId = song.id || '';
+                    const songName = song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const songArtist = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <div class="suggestion-item" data-type="song" data-song-id="${songId}" data-song-name="${songName}" data-song-artist="${songArtist}" data-value="${songName} by ${songArtist}" onclick="selectSongSuggestion('${songName} by ${songArtist}')">
+                            <i class="fas fa-music suggestion-icon"></i>
+                            <div class="suggestion-content">
+                                <div class="suggestion-name">${song.name}</div>
+                                <div class="suggestion-artist">by ${song.artist}</div>
+                            </div>
+                            <span class="suggestion-type">Song</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            suggestionsContainer.innerHTML = html;
+            
+            // Ensure container is visible before adding show class
+            suggestionsContainer.style.display = 'block';
+            suggestionsContainer.style.visibility = 'visible';
+            suggestionsContainer.classList.add('show');
+            
+            // Double-check visibility
+            if (!suggestionsContainer.classList.contains('show')) {
+                suggestionsContainer.classList.add('show');
+            }
+            
+            console.log('Suggestions HTML set, container should be visible now. HTML length:', html.length);
+            console.log('Container classes:', suggestionsContainer.className);
+            console.log('Container style.display:', suggestionsContainer.style.display);
+            console.log('Container computed style:', window.getComputedStyle(suggestionsContainer).display);
+            console.log('Container position:', suggestionsContainer.style.top, suggestionsContainer.style.left);
+            
+            selectedSuggestionIndex = -1;
+            
+            // Debug: log to console
+            console.log('Suggestions displayed:', { artists: artists.length, songs: songs.length, top: suggestionsContainer.style.top });
+        }
+        
+        // Handle keyboard navigation in suggestions
+        function handleSearchKeydown(event) {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+            
+            if (!suggestionsContainer.classList.contains('show') || suggestions.length === 0) {
+                if (event.key === 'Enter') {
+                    searchMusic();
+                }
+                return;
+            }
+            
+            switch(event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+                    updateSuggestionSelection(suggestions);
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+                    updateSuggestionSelection(suggestions);
+                    break;
+                case 'Enter':
+                    event.preventDefault();
+                    if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.length) {
+                        const selected = suggestions[selectedSuggestionIndex];
+                        const type = selected.getAttribute('data-type');
+                        if (type === 'artist') {
+                            const artistId = selected.getAttribute('data-artist-id');
+                            const artistName = selected.getAttribute('data-artist-name');
+                            selectArtistSuggestion(parseInt(artistId), artistName);
+                        } else {
+                            const songValue = selected.getAttribute('data-value');
+                            selectSongSuggestion(songValue);
+                        }
+                    } else {
+                        searchMusic();
+                    }
+                    break;
+                case 'Escape':
+                    suggestionsContainer.classList.remove('show');
+                    suggestionsContainer.innerHTML = '';
+                    selectedSuggestionIndex = -1;
+                    break;
+            }
+        }
+        
+        // Update visual selection of suggestions
+        function updateSuggestionSelection(suggestions) {
+            suggestions.forEach((item, index) => {
+                if (index === selectedSuggestionIndex) {
+                    item.style.backgroundColor = '#e9ecef';
+                    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                } else {
+                    item.style.backgroundColor = '';
+                }
+            });
+        }
+        
+        // Select an artist suggestion - get all their songs including collaborations
+        function selectArtistSuggestion(artistId, artistName) {
+            const input = document.getElementById('musicSearchInput');
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            input.value = artistName;
+            suggestionsContainer.classList.remove('show');
+            suggestionsContainer.innerHTML = '';
+            selectedSuggestionIndex = -1;
+            
+            // Fetch all songs by this artist including collaborations
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Loading songs...</div>';
+            
+            const url = artistId 
+                ? `/playlist2/artist-songs?artist_id=${artistId}`
+                : `/playlist2/artist-songs?artist_name=${encodeURIComponent(artistName)}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length) {
+                        // Get artist profile picture from first song (if available)
+                        const artistProfilePic = data[0]?.artist_profile_pic;
+                        const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
+                        
+                        let html = `
+                            <div class="col-12 mb-3">
+                                <div class="alert alert-info d-flex align-items-center gap-3">
+                                    ${imageUrl ? `<img src="${imageUrl}" alt="${artistName}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
+                                    <div>
+                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistName}</strong></h6>
+                                        <small>Found ${data.length} song${data.length !== 1 ? 's' : ''} (including collaborations)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        data.forEach(song => {
+                            html += createSongCard(song, true);
+                        });
+                        
+                        resultsContainer.innerHTML = html;
+                    } else {
+                        resultsContainer.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
+                                <p class="text-muted">No songs found for "${artistName}"</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching artist songs:', error);
+                    resultsContainer.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Error loading songs. Please try again.
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+        
+        // Select a song suggestion - show it in search results so it can be added to playlist
+        function selectSongSuggestion(songValue) {
+            const input = document.getElementById('musicSearchInput');
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            input.value = songValue;
+            suggestionsContainer.classList.remove('show');
+            suggestionsContainer.innerHTML = '';
+            selectedSuggestionIndex = -1;
+            // Perform normal search for the song immediately (no delay, no button click needed)
+            searchMusic();
+        }
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(event) {
+            const container = document.querySelector('.autocomplete-container');
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            if (container && !container.contains(event.target) && !suggestionsContainer.contains(event.target)) {
+                suggestionsContainer.classList.remove('show');
+                suggestionsContainer.innerHTML = '';
+                selectedSuggestionIndex = -1;
+            }
+        });
+        
+        // Update suggestions position on scroll
+        window.addEventListener('scroll', function() {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            if (suggestionsContainer && suggestionsContainer.classList.contains('show') && input) {
+                positionSuggestionsContainer(suggestionsContainer, input);
+            }
+        });
+        
+        // Update suggestions position on window resize
+        window.addEventListener('resize', function() {
+            const suggestionsContainer = document.getElementById('autocompleteSuggestions');
+            const input = document.getElementById('musicSearchInput');
+            if (suggestionsContainer && suggestionsContainer.classList.contains('show') && input) {
+                positionSuggestionsContainer(suggestionsContainer, input);
+            }
+        });
+
+        function createSongCard(song, includeActions = true) {
+            // Use path from API (handles both artist songs and downloads); fallback for song_id only
+            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+            
+            // Clean and extract song name and artist
+            let rawSongName = (song.name && song.name.trim()) ? song.name.trim() : '';
+            let rawArtistName = (song.artist && song.artist.trim()) ? song.artist.trim() : '';
+            
+            // If song name contains "by [artist]" pattern, extract the actual song name
+            // Handle patterns like "by P.Square", "by Artist Name", etc.
+            const byPattern = /^\s*by\s+(.+)$/i;
+            if (byPattern.test(rawSongName)) {
+                // The song name field actually contains the artist name
+                // Swap them if artist field is empty or use the extracted artist
+                const extractedArtist = rawSongName.match(byPattern)[1].trim();
+                if (!rawArtistName || rawArtistName === 'Unknown' || rawArtistName === 'Unknown Artist') {
+                    rawArtistName = extractedArtist;
+                }
+                rawSongName = ''; // Clear it since it's not actually the song name
+            }
+            
+            // Also check if song name is empty but artist has the info (reverse case)
+            if (!rawSongName && rawArtistName && !rawArtistName.includes('Unknown')) {
+                // Check if we can extract from filename pattern "Artist - Song"
+                // This is handled by the backend, so we'll just use what we have
+            }
+            
+            // Final values
+            const songName = rawSongName || 'Untitled Track';
+            const artistName = rawArtistName || 'Unknown Artist';
+            const safeName = songName.replace(/'/g, "\\'");
+
+            return `
+                <div class="col-12">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <div style="flex: 1;">
+                                    <h6 class="mb-1 song-title"><strong>${songName}</strong></h6>
+                                    <p class="mb-2 text-muted small"><i class="fas fa-user me-1"></i>${artistName}</p>
+                                    <audio controls class="song-audio" preload="none" crossorigin="anonymous" style="width: 100%; max-width: 400px;">
+                                        <source src="${songPath}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                </div>
+                                ${includeActions && userId ? `
+                                <button class="btn btn-primary" onclick="addSongToPlaylist(${song.song_id != null ? song.song_id : 'null'}, ${song.download_id != null ? song.download_id : 'null'}, '${safeName}', this)">
+                                    <i class="fas fa-plus me-1"></i>Add to Playlist
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function searchMusic() {
+            const query = document.getElementById('musicSearchInput').value.trim();
+            const resultsContainer = document.getElementById('searchResultsContainer');
+
+            if (!query) {
+                resultsContainer.innerHTML = `
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+                        <p>Search for an artist or song to get started</p>
+                        <small class="text-muted">Enter an artist name to see all their songs, or search for a specific song</small>
+                    </div>
+                `;
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Searching...</div>';
+
+            fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                        return;
+                    }
+
+                    if (Array.isArray(data) && data.length) {
+                        // Group songs by artist for better display
+                        const artistGroups = {};
+                        data.forEach(song => {
+                            const artist = song.artist || 'Unknown Artist';
+                            if (!artistGroups[artist]) {
+                                artistGroups[artist] = [];
+                            }
+                            artistGroups[artist].push(song);
+                        });
+                        
+                        let html = '';
+                        
+                        // If only one artist, show header with artist picture
+                        const artistNames = Object.keys(artistGroups);
+                        if (artistNames.length === 1) {
+                            // Get artist profile picture from first song (if available)
+                            const artistProfilePic = data[0]?.artist_profile_pic;
+                            const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
+                            
+                            html += `
+                                <div class="col-12 mb-3">
+                                    <div class="alert alert-info d-flex align-items-center gap-3">
+                                        ${imageUrl ? `<img src="${imageUrl}" alt="${artistNames[0]}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
+                                        <div>
+                                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistNames[0]}</strong></h6>
+                                            <small>Found ${data.length} song${data.length !== 1 ? 's' : ''}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (artistNames.length > 1) {
+                            html += `
+                                <div class="col-12 mb-3">
+                                    <div class="alert alert-success">
+                                        <h6 class="mb-0"><i class="fas fa-music me-2"></i>Found ${data.length} song${data.length !== 1 ? 's' : ''} from ${artistNames.length} artist${artistNames.length !== 1 ? 's' : ''}</h6>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Display all songs with add to playlist buttons
+                        // If multiple artists, show artist picture with each song
+                        data.forEach(song => {
+                            html += createSongCard(song, true); // Always include actions (add to playlist)
+                        });
+                        
+                        resultsContainer.innerHTML = html;
+                    } else {
+                        resultsContainer.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
+                                <p class="text-muted">No songs found for "${query}"</p>
+                                <small class="text-muted">Try searching for a different artist or song name</small>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    resultsContainer.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Error searching songs. Please try again.
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+
+
+        function loadPlaylist() {
+            const container = document.getElementById('playlistContainer');
+            if (!userId) {
+                container.innerHTML = '<p class="text-muted text-center">Login to view your playlist.</p>';
+                return Promise.resolve();
+            }
+
+            // Stop any currently playing audio
+            if (currentPlayingAudio) {
+                currentPlayingAudio.pause();
+                currentPlayingAudio = null;
+            }
+            isPlaylistPlaying = false;
+            currentPlayingIndex = -1;
+
+            return fetch('/playlist2/view_playlist')
+                .then(response => response.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length) {
+                        // Store playlist data globally for continuous playback
+                        playlistSongs = data.map((song, index) => {
+                            // Clean and extract song name and artist
+                            let rawSongName = (song.name && song.name.trim()) ? song.name.trim() : '';
+                            let rawArtistName = (song.artist && song.artist.trim()) ? song.artist.trim() : '';
+                            
+                            // If song name contains "by [artist]" pattern, extract the actual song name
+                            const byPattern = /^\s*by\s+(.+)$/i;
+                            if (byPattern.test(rawSongName)) {
+                                const extractedArtist = rawSongName.match(byPattern)[1].trim();
+                                if (!rawArtistName || rawArtistName === 'Unknown' || rawArtistName === 'Unknown Artist') {
+                                    rawArtistName = extractedArtist;
+                                }
+                                rawSongName = '';
+                            }
+                            
+                            const songName = rawSongName || 'Untitled Track';
+                            const artistName = rawArtistName || 'Unknown Artist';
+                            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`);
+                            
+                            return {
+                                id: song.id,
+                                song_id: song.song_id,
+                                download_id: song.download_id,
+                                name: songName,
+                                artist: artistName,
+                                path: songPath,
+                                index: index
+                            };
+                        });
+                        
+                        let html = '';
+                        playlistSongs.forEach((song, index) => {
+                            const safeName = song.name.replace(/'/g, "\\'");
+                            const songIdArg = song.song_id != null ? song.song_id : 'null';
+                            const downloadIdArg = song.download_id != null ? song.download_id : 'null';
+                            html += `
+                                <div class="card mb-3 playlist-song-card" data-song-index="${index}" data-song-id="${song.song_id != null ? song.song_id : ''}" data-download-id="${song.download_id != null ? song.download_id : ''}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                            <div>
+                                                <h6 class="mb-1 song-title"><strong>${song.name} by ${song.artist}</strong></h6>
+                                                <audio id="playlist-audio-${index}" controls class="song-audio playlist-audio" data-song-index="${index}" data-song-id="${song.song_id != null ? song.song_id : ''}" data-download-id="${song.download_id != null ? song.download_id : ''}">
+                                                    <source src="${song.path}" type="audio/mpeg">
+                                                </audio>
+                                            </div>
+                                            <button class="btn btn-outline-danger" onclick="removeFromPlaylist(${songIdArg}, ${downloadIdArg}, this)">
+                                                <i class="fas fa-trash me-1"></i>Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        container.innerHTML = html;
+                        
+                        // Set up event listeners for continuous playback
+                        setupPlaylistPlayback();
+                    } else {
+                        playlistSongs = [];
+                        container.innerHTML = '<p class="text-muted text-center"><i class="fas fa-info-circle me-1"></i>Your playlist is empty. Add songs to get started.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Playlist error:', error);
+                    container.innerHTML = '<p class="text-muted text-center">Unable to load playlist.</p>';
+                });
+        }
+
+        function findPlaylistAudioForAction(a) {
+            if (!a.url) return null;
+            const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
+            const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
+            let audioEl = null;
+            if (a.song_id != null || a.download_id != null) {
+                const sel = a.song_id != null ? `[data-song-id="${a.song_id}"]` : `[data-download-id="${a.download_id}"]`;
+                const card = document.querySelector('.playlist-song-card' + sel);
+                if (card) audioEl = card.querySelector('.playlist-audio');
+            }
+            if (!audioEl) {
+                document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
+                    const s = el.querySelector('source');
+                    if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || (pathPart && s.src.includes(pathPart)))) audioEl = el;
+                });
+            }
+            return audioEl;
+        }
+        
+        function setupPlaylistPlayback() {
+            // Set up event listeners for all playlist audio elements
+            const audioElements = document.querySelectorAll('.playlist-audio');
+            console.log(`Setting up continuous playback for ${audioElements.length} songs`);
+            
+            audioElements.forEach((audio) => {
+                const songIndex = parseInt(audio.getAttribute('data-song-index'));
+                if (isNaN(songIndex)) {
+                    console.warn('Invalid song index for audio element');
+                    return;
+                }
+                
+                // When a song starts playing, pause all others and enable continuous playback
+                audio.addEventListener('play', function() {
+                    pauseAllOtherPlaylistAudios(songIndex);
+                    currentPlayingIndex = songIndex;
+                    currentPlayingAudio = audio;
+                    // Always enable continuous playback when a song starts (including resume)
+                    isPlaylistPlaying = true;
+                });
+                
+                // When a song is paused by user, keep continuous playback enabled
+                // This allows resume to continue playing the next song automatically
+                audio.addEventListener('pause', function() {
+                    // Don't disable continuous playback on pause
+                    // User can pause/resume, and when current song ends, next will play
+                });
+                
+                // When a song ends naturally, play the next one automatically
+                audio.addEventListener('ended', function() {
+                    // Always play next song when current song ends
+                    // This enables continuous playback regardless of pause/resume state
+                    if (currentPlayingIndex === songIndex) {
+                        console.log(`Song ${songIndex} ended, playing next...`);
+                        playNextInPlaylist();
+                    }
+                });
+                
+                // Handle errors - skip to next song
+                audio.addEventListener('error', function() {
+                    console.error(`Error loading song at index ${songIndex}`);
+                    if (currentPlayingIndex === songIndex) {
+                        // Skip to next song on error (always, not just when isPlaylistPlaying)
+                        console.log(`Skipping to next song due to error...`);
+                        playNextInPlaylist();
+                    }
+                });
+            });
+        }
+        
+        function pauseAllOtherPlaylistAudios(currentIndex) {
+            document.querySelectorAll('.playlist-audio').forEach((audio, index) => {
+                if (index !== currentIndex && !audio.paused) {
+                    audio.pause();
+                }
+            });
+        }
+        
+        function playNextInPlaylist() {
+            if (currentPlayingIndex < 0 || currentPlayingIndex >= playlistSongs.length - 1) {
+                // Reached the end of playlist
+                isPlaylistPlaying = false;
+                currentPlayingIndex = -1;
+                currentPlayingAudio = null;
+                return;
+            }
+            
+            const nextIndex = currentPlayingIndex + 1;
+            const nextAudio = document.getElementById(`playlist-audio-${nextIndex}`);
+            
+            if (nextAudio) {
+                currentPlayingIndex = nextIndex;
+                currentPlayingAudio = nextAudio;
+                // Ensure continuous playback is enabled
+                isPlaylistPlaying = true;
+                
+                // Automatically play the next song
+                nextAudio.play().then(() => {
+                    console.log(`Now playing: ${playlistSongs[nextIndex].artist} - ${playlistSongs[nextIndex].name}`);
+                }).catch(err => {
+                    console.error('Error playing next song:', err);
+                    // Skip to next if this one fails
+                    playNextInPlaylist();
+                });
+            } else {
+                // Audio element not found, skip to next
+                currentPlayingIndex = nextIndex;
+                playNextInPlaylist();
+            }
+        }
+
+        function addSongToPlaylist(songId, downloadId, songName, button) {
+            if (!userId) {
+                alert('Please log in to manage your playlist.');
+                return;
+            }
+            if ((!songId && !downloadId) || (songId && downloadId)) {
+                console.error('Provide exactly one of song_id or download_id');
+                return;
+            }
+
+            const original = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Adding...';
+
+            const body = { user_id: userId };
+            if (songId) body.song_id = songId;
+            if (downloadId) body.download_id = downloadId;
+
+            fetch('/playlist2/add_to_playlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    button.innerHTML = '<i class="fas fa-check me-1"></i>Added';
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-success');
+                    loadPlaylist();
+                } else {
+                    alert(data.message || 'Error adding to playlist');
+                    button.innerHTML = original;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Add playlist error:', error);
+                alert('Unable to add song to playlist.');
+                button.innerHTML = original;
+                button.disabled = false;
+            });
+        }
+
+        // Voice Agent - Gemini Live only (no fallback)
+        let voiceAgentActive = false;
+        let voiceAgentUserStopped = false;
+        let voiceLiveWs = null;
+        let voiceLiveMode = false;
+        let voiceLiveTried = false;
+        let voiceLivePlayerNode = null;
+        let voiceLiveMicStream = null;
+        const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
+        let voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
+
+        let voiceTranscriptLog = [];
+        let voiceVolumeGain = 0.15;
+        function isInternalReasoning(t) {
+            const s = (t || '').trim();
+            return /^\*\*[^*]+\*\*/.test(s) || /^I've (determined|registered|zeroed in)/i.test(s);
+        }
+        function addAgentTranscript(t) {
+            const text = (t || '').trim().replace(/\n/g, ' ');
+            if (!text || isInternalReasoning(text)) return;
+            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
+            if (last && last.role === 'Agent') {
+                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
+                    last.text = text;
+                    return;
+                }
+                if (last.text.startsWith(text) || last.text === text) return;
+            }
+            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
+                voiceTranscriptLog.push({ role: 'Agent', text: text });
+            }
+        }
+        function addUserTranscript(t) {
+            const text = (t || '').trim().replace(/\n/g, ' ');
+            if (!text) return;
+            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
+            if (last && last.role === 'You') {
+                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
+                    last.text = text;
+                    return;
+                }
+                if (last.text.startsWith(text) || last.text === text) return;
+            }
+            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
+                voiceTranscriptLog.push({ role: 'You', text: text });
+            }
+        }
+        let voiceLiveGainNode = null;
+        function getVoiceVolume() { return voiceVolumeGain; }
+        function showTapToPlayFallback(url, label) {
+            const respEl = document.getElementById('voiceAgentResponse');
+            respEl.querySelectorAll('.voice-tap-to-play').forEach(b => b.remove());
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-success btn-sm mt-1 voice-tap-to-play';
+            btn.innerHTML = '<i class="fas fa-play me-1"></i>Tap to play: ' + (label || 'Song');
+            btn.onclick = () => {
+                const a = new Audio(url);
+                a.volume = voiceVolumeGain;
+                a.play().catch(() => {});
+                btn.remove();
+            };
+            respEl.appendChild(btn);
+        }
+        function executeVoiceAction(a, retried) {
+             if (a.type === 'play' && a.url) {
+                 if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id, retried ? '(retry)' : '');
+                 const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
+
+                 // Try to find in UI first
+                 let audioEl = findPlaylistAudioForAction(a);
+
+                 if (audioEl) {
+                     if (typeof console !== 'undefined') console.log('[Voice] Playing via existing playlist element');
+                     audioEl.volume = voiceVolumeGain;
+                     audioEl.play().catch(e => {
+                         console.warn('Play failed (playlist):', e);
+                         showTapToPlayFallback(playUrl, a.name || 'Song');
+                     });
+                 } else if (!retried) {
+                     // If not found, refresh playlist and try again after a delay for DOM rendering
+                     if (typeof console !== 'undefined') console.log('[Voice] Song not in UI, refreshing playlist...');
+                     loadPlaylist().then(() => {
+                         setTimeout(() => executeVoiceAction(a, true), 800); // 800ms to allow DOM to render cards
+                     });
+                 } else {
+                     // Last resort: play via new Audio object if still not in UI
+                     if (typeof console !== 'undefined') console.log('[Voice] Still no playlist match, using new Audio');
+                     const audio = new Audio(playUrl);
+                     audio.volume = voiceVolumeGain;
+                     audio.play().catch(e => {
+                         console.warn('Play failed:', e);
+                         showTapToPlayFallback(playUrl, a.name || 'Song');
+                     });
+                 }
+             } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
+                 loadPlaylist();
+             }
+ else if (a.type === 'show_transcript') {
+                showVoiceTranscript();
+            } else if (a.type === 'download' && a.url) {
+                const aEl = document.createElement('a');
+                aEl.href = a.url;
+                aEl.download = (a.filename || 'song.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
+                aEl.click();
+            }
+        }
+        async function tryStartVoiceLive() {
+            const btn = document.getElementById('voiceAgentBtn');
+            const respEl = document.getElementById('voiceAgentResponse');
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
+            try {
+                voiceLiveWs = new WebSocket(wsUrl);
+                await new Promise((resolve, reject) => {
+                    const t = setTimeout(() => reject(new Error('timeout')), 5000);
+                    voiceLiveWs.onopen = () => { clearTimeout(t); resolve(); };
+                    voiceLiveWs.onerror = () => { clearTimeout(t); reject(new Error('WebSocket error')); };
+                });
+                const recorderCtx = new AudioContext({ sampleRate: 16000 });
+                await recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}');
+                voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
+                const playerCtx = new AudioContext({ sampleRate: 24000 });
+                await playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}');
+                voiceLivePlayerNode = new AudioWorkletNode(playerCtx, 'pcm-player-processor');
+                voiceLiveGainNode = playerCtx.createGain();
+                voiceLiveGainNode.gain.value = voiceVolumeGain;
+                voiceLivePlayerNode.connect(voiceLiveGainNode);
+                voiceLiveGainNode.connect(playerCtx.destination);
+                voiceLiveMode = true;
+                voiceLiveTried = true;
+                voiceAgentUserStopped = false;
+                voiceAgentActive = true;
+                btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening… (click to end)';
+                btn.onclick = () => {
+                    voiceAgentUserStopped = true;
+                    voiceAgentActive = false;
+                    if (voiceLivePlayerNode) voiceLivePlayerNode.port.postMessage({ command: 'endOfAudio' });
+                    if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
+                    if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) voiceLiveWs.close();
+                    voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
+                    btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                    btn.onclick = () => startVoiceRecognition();
+                };
+                voiceTranscriptLog = [];
+                if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
+                voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
+                voiceLiveWs.onclose = () => {
+                    if (!voiceAgentUserStopped && voiceAgentActive) {
+                        voiceAgentActive = false;
+                        voiceLiveMode = false;
+                        if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
+                        const b = document.getElementById('voiceAgentBtn');
+                        const r = document.getElementById('voiceAgentResponse');
+                        if (b) { b.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant'; b.onclick = () => startVoiceRecognition(); }
+                        if (r) r.innerHTML = '<span class="text-warning">Connection closed. Click to reconnect.</span>';
+                    }
+                };
+                voiceLiveWs.onerror = () => {
+                    if (!voiceAgentUserStopped && voiceAgentActive) {
+                        const r = document.getElementById('voiceAgentResponse');
+                        if (r) r.innerHTML = '<span class="text-warning">Connection error. Click Voice Assistant to reconnect.</span>';
+                    }
+                };
+                const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
+                const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
+                source.connect(recNode);
+
+                let audioBuffer = [];
+                recNode.port.onmessage = (e) => {
+                    const float32 = e.data;
+                    audioBuffer.push(...float32);
+
+                    // Send in ~100ms chunks (1600 samples at 16kHz)
+                    if (audioBuffer.length >= 1600) {
+                        const pcm16 = new Int16Array(audioBuffer.length);
+                        for (let i = 0; i < audioBuffer.length; i++) {
+                            pcm16[i] = Math.max(-1, Math.min(1, audioBuffer[i])) * 0x7fff;
+                        }
+                        if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN && voiceAgentActive) {
+                            voiceLiveWs.send(pcm16.buffer);
+                        }
+                        audioBuffer = [];
+                    }
+                };
+
+                function tryExecuteActionFromEvent(evt) {
+                    if (evt.type === 'music_action' && evt.action) {
+                        if (typeof console !== 'undefined') console.log('[Voice] Received music_action:', evt.action.type);
+                        executeVoiceAction(evt.action);
+                        return true;
+                    }
+                    if (evt.content && evt.content.parts) {
+                        for (const p of evt.content.parts) {
+                            const fr = p.functionResponse || p.function_response;
+                            if (fr) {
+                                const r = fr.response || fr;
+                                let action = null;
+                                if (r && typeof r === 'object' && r.action) action = r.action;
+                                else if (r && typeof r === 'object' && r.result) {
+                                    const res = r.result;
+                                    if (typeof res === 'object' && res && res.action) action = res.action;
+                                    else if (typeof res === 'string') try {
+                                        const d = JSON.parse(res);
+                                        if (d && d.action) action = d.action;
+                                    } catch (_) {}
+                                } else if (typeof r === 'string') try {
+                                    const d = JSON.parse(r);
+                                    if (d && d.action) action = d.action;
+                                } catch (_) {}
+                                if (action) {
+                                    if (typeof console !== 'undefined') console.log('[Voice] Extracted action from event:', action.type);
+                                    executeVoiceAction(action);
+                                    return true;
+                                }
+                            }
+                            if (p.text && p.text.includes('"action"')) {
+                                try {
+                                    const idx = p.text.indexOf('{"');
+                                    if (idx >= 0) {
+                                        let depth = 0, end = -1;
+                                        for (let i = idx; i < p.text.length; i++) {
+                                            if (p.text[i] === '{') depth++;
+                                            else if (p.text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+                                        }
+                                        if (end >= 0) {
+                                            const o = JSON.parse(p.text.substring(idx, end + 1));
+                                            if (o && o.action) { executeVoiceAction(o.action); return true; }
+                                        }
+                                    }
+                                } catch (_) {}
+                            }
+                        }
+                        if (typeof evt === 'object') {
+                            const findAction = (obj) => {
+                                if (!obj || typeof obj !== 'object') return null;
+                                if (obj.action && obj.action.type === 'play' && obj.action.url) return obj.action;
+                                for (const k of Object.keys(obj)) {
+                                    const v = obj[k];
+                                    if (v && typeof v === 'object' && v.action && v.action.type === 'play') return v.action;
+                                    if (Array.isArray(v)) for (const item of v) { const a = findAction(item); if (a) return a; }
+                                    else { const a = findAction(v); if (a) return a; }
+                                }
+                                return null;
+                            };
+                            const action = findAction(evt);
+                            if (action) {
+                                if (typeof console !== 'undefined') console.log('[Voice] Found play action in event (fallback)');
+                                executeVoiceAction(action);
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+                voiceLiveWs.onmessage = (ev) => {
+                    try {
+                        const evt = JSON.parse(ev.data);
+                        tryExecuteActionFromEvent(evt);
+                        if (evt.content && evt.content.parts) {
+                            for (const p of evt.content.parts) {
+                                if (p.inlineData && p.inlineData.data && voiceLivePlayerNode) {
+                                    const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
+                                    voiceLivePlayerNode.port.postMessage(buf);
+                                }
+                                if (p.text && p.text.trim()) addAgentTranscript(p.text);
+                            }
+                        }
+                        const outT = evt.outputTranscription || evt.output_transcription;
+                        if (outT && outT.text && outT.text.trim()) addAgentTranscript(outT.text);
+                        const inT = evt.inputTranscription || evt.input_transcription;
+                        if (inT && inT.text && inT.text.trim()) addUserTranscript(inT.text);
+                        if (evt.content && evt.content.role === 'user') {
+                            for (const p of (evt.content.parts || [])) {
+                                if (p.text && p.text.trim()) addUserTranscript(p.text);
+                            }
+                        }
+                    } catch (_) {}
+                };
+                respEl.innerHTML = '<span class="text-success">Live mode – speak now</span>';
+            } catch (e) {
+                voiceLiveTried = true;
+                voiceLiveMode = false;
+                voiceAgentActive = false;
+                if (voiceLiveWs) try { voiceLiveWs.close(); } catch (_) {}
+                voiceLiveWs = null;
+                const respEl = document.getElementById('voiceAgentResponse');
+                const btn = document.getElementById('voiceAgentBtn');
+                respEl.innerHTML = '<span class="text-danger">Gemini Live failed: ' + (e.message || 'Connection error') + '</span>';
+                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
+                btn.onclick = () => startVoiceRecognition();
+            }
+        }
+
+        function startVoiceRecognition() {
+            if (voiceLiveTried && voiceLiveMode && voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+            tryStartVoiceLive();
+        }
+
+        function removeFromPlaylist(songId, downloadId, button) {
+            if (!confirm('Remove this song from your playlist?')) return;
+            if ((!songId && !downloadId) || (songId && downloadId)) return;
+            
+            // If removing the currently playing song, stop playback
+            const songCard = button.closest('.playlist-song-card');
+            if (songCard) {
+                const songIndex = parseInt(songCard.getAttribute('data-song-index'));
+                if (songIndex === currentPlayingIndex) {
+                    if (currentPlayingAudio) {
+                        currentPlayingAudio.pause();
+                    }
+                    isPlaylistPlaying = false;
+                    currentPlayingIndex = -1;
+                    currentPlayingAudio = null;
+                }
+            }
+            
+            button.disabled = true;
+            const body = {};
+            if (songId) body.song_id = songId;
+            if (downloadId) body.download_id = downloadId;
+
+            fetch('/playlist2/remove_song', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadPlaylist();
+                } else {
+                    alert(data.message || 'Error removing song.');
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Remove song error:', error);
+                alert('Unable to remove song.');
+                button.disabled = false;
+            });
+        }
+
+        // Create Artist Profile
+        function createArtistProfile() {
+            const artistName = document.getElementById('artistNameInput').value.trim();
+            const bio = document.getElementById('artistBioInput').value.trim();
+            const profilePicFile = document.getElementById('artistProfilePicInput').files[0];
+            
+            if (!artistName) {
+                alert('Artist name is required.');
+                return;
+            }
+            
+            // Validate profile picture if provided
+            if (profilePicFile) {
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml'];
+                const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+                const fileExtension = profilePicFile.name.split('.').pop().toLowerCase();
+                
+                // Check file type
+                if (!allowedTypes.includes(profilePicFile.type) && !allowedExtensions.includes(fileExtension)) {
+                    alert('Invalid image format. Please upload a PNG, JPG, JPEG, GIF, WEBP, or SVG file.');
+                    return;
+                }
+                
+                // Check file size (10MB limit)
+                const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+                if (profilePicFile.size > MAX_SIZE) {
+                    alert('Image file is too large. Maximum allowed size is 10MB.');
+                    return;
+                }
+            }
+            
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('artist_name', artistName);
+            formData.append('bio', bio);
+            if (profilePicFile) {
+                formData.append('profile_pic', profilePicFile);
+            }
+            
+            fetch('/mybook/music/create-artist-profile', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.message || 'Error creating artist profile.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Unable to create artist profile.');
+            });
+        }
+        
+        // Profile picture preview
+        document.getElementById('artistProfilePicInput')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('profilePicPreview');
+            const previewImg = document.getElementById('profilePicPreviewImg');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+
+        // Upload Song
+        function uploadSong() {
+            const form = document.getElementById('uploadSongForm');
+            const formData = new FormData(form);
+            
+            const submitBtn = document.getElementById('uploadSongBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+            
+            fetch('/mybook/music/upload-song', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    form.reset();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadSongModal'));
+                    modal.hide();
+                    // Song uploaded successfully, user can search for it
+                } else {
+                    alert(data.message || 'Error uploading song.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Unable to upload song.');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPlaylist();
+            const volSlider = document.getElementById('voiceVolumeSlider');
+            const volLabel = document.getElementById('voiceVolumeLabel');
+            if (volSlider && volLabel) {
+                volSlider.addEventListener('input', function() {
+                    voiceVolumeGain = parseFloat(this.value);
+                    volLabel.textContent = Math.round(voiceVolumeGain * 100) + '%';
+                    if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
+                });
+            }
+        });
+        function showVoiceTranscript() {
+            const html = voiceTranscriptLog.length ? voiceTranscriptLog.map(e => `<div class="mb-2"><strong>${e.role}:</strong> ${e.text}</div>`).join('') : '<p class="text-muted mb-0">No transcript yet. Start a voice conversation first.</p>';
+            document.getElementById('voiceTranscriptModalBody').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('voiceTranscriptModal')).show();
+        }
+    </script>
+
+    <!-- Voice Transcript Modal -->
+    <div class="modal fade" id="voiceTranscriptModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i>Conversation Transcript</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="voiceTranscriptModalBody" style="max-height: 70vh; overflow-y: auto;">
+                    <p class="text-muted mb-0">No transcript yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Artist Profile Modal -->
+    <div class="modal fade" id="createArtistModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="artistNameInput" class="form-label">Artist Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="artistNameInput" placeholder="Enter your artist name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="artistBioInput" class="form-label">Bio (Optional)</label>
+                        <textarea class="form-control" id="artistBioInput" rows="3" placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="artistProfilePicInput" class="form-label">Profile Picture (Optional)</label>
+                        <input type="file" class="form-control" id="artistProfilePicInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
+                        <small class="form-text text-muted">Allowed formats: PNG, JPG, JPEG, GIF, WEBP, SVG (Max 10MB)</small>
+                        <div id="profilePicPreview" class="mt-2" style="display: none;">
+                            <img id="profilePicPreviewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="createArtistProfile()">
+                        <i class="fas fa-check me-1"></i>Create Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Song Modal -->
+    <div class="modal fade" id="uploadSongModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Upload Song</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadSongForm" onsubmit="event.preventDefault(); uploadSong();">
+                        <div class="mb-3">
+                            <label for="song_file" class="form-label">🎵 Song File (MP3) <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" id="song_file" name="song_file" accept=".mp3" required>
+                            <small class="form-text text-muted">Only MP3 files are allowed (max 50MB)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="song_name" class="form-label">🎶 Song Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="song_name" name="song_name" placeholder="Enter song title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cover_image" class="form-label">🖼️ Cover Image</label>
+                            <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/*">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="twitter" class="form-label">🐦 Twitter URL</label>
+                                <input type="url" class="form-control" id="twitter" name="twitter" placeholder="https://twitter.com/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="instagram" class="form-label">📸 Instagram URL</label>
+                                <input type="url" class="form-control" id="instagram" name="instagram" placeholder="https://instagram.com/...">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="spotify" class="form-label">🎧 Spotify URL</label>
+                                <input type="url" class="form-control" id="spotify" name="spotify" placeholder="https://open.spotify.com/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apple_music" class="form-label">🍏 Apple Music URL</label>
+                                <input type="url" class="form-control" id="apple_music" name="apple_music" placeholder="https://music.apple.com/...">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="uploadSongBtn" onclick="uploadSong()">
+                        <i class="fas fa-upload me-1"></i>Upload Song
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,94 +1,127 @@
 import os
-import openai
+import json
 from glconnect.forms import *
-from dotenv import load_dotenv
-from flask import render_template, request,Blueprint
+from flask import render_template, request, Blueprint, send_from_directory
 from glconnect.search import SongSearcher
 from google.cloud import texttospeech
+import google.generativeai as genai
 
-# Load environment variables
-load_dotenv()
-# Load your OpenAI API key from an environment variable
-# openai.api_key = os.getenv("OPENAI_AI_KEY")
+# Load Google API key from environment variables (lazy - no exit at import)
+def _get_google_api_key():
+    return os.getenv("GOOGLE_API_KEY")
+
+def _ensure_genai_configured():
+    """Configure Gemini only when needed; raises if key missing."""
+    key = _get_google_api_key()
+    if not key:
+        raise ValueError("GOOGLE_API_KEY not set. Add it to .env or glconfig.json.")
+    genai.configure(api_key=key)
+
 bp2 = Blueprint('routes2', __name__)
 
-# Check for API key
-# if not openai.api_key:
-#     print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
-#     exit(1)
+# Get TTS credentials path from environment variables
+tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 
-# Set the path to your Google Cloud service account key file
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
+# Create the text-to-speech client (lazy initialization)
+client = None
 
-# Create the text-to-speech client
-client = texttospeech.TextToSpeechClient()
+def generate_news_with_gemini(topic: str) -> str:
+    """Generate news content using Gemini API for a single topic."""
+    try:
+        _ensure_genai_configured()
+        # Configure model with memory-efficient settings
+        generation_config = genai.types.GenerationConfig(
+            max_output_tokens=1024,  # Limit output length
+            temperature=0.7,  # Balanced creativity
+            top_p=0.8,  # Focus on most likely tokens
+            top_k=40  # Limit token selection
+        )
+        
+        model = genai.GenerativeModel(
+            'gemini-2.0-flash',
+            generation_config=generation_config
+        )
+        
+        prompt = f"""
+        You are an experienced news reporter assistant that summarizes the latest news regarding certain topics.
+        
+        Provide a balanced article of the latest news about {topic} with an analytical perspective and potential impact. 
+        Never include any header titles, intro, and subtitles.
+        
+        Write as a professional news reporter would deliver it on air.
+        """
+        
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error generating news with Gemini: {e}")
+        return f"Error generating news content: {str(e)}"
 @bp2.route("/news", methods=["GET", "POST"])
 def news():
     form = KeywordForm()
     audio_file_path = None
-    news_file_path = None  
+    news_file_path = None
+    validation_error = None
     
     if form.validate_on_submit():
         keyword = form.keyword.data
         print(f"Form keyword: {form.keyword.data}")
         
-        news_script = ""
+        # Step 0: Validate topic using NewsTopicValidationAgent
         try:
-            # Step 1: Generate news content using OpenAI API
-            # ai_response = openai.ChatCompletion.create(
-            #     model="gpt-4",
-            #     messages=[
-            #         {"role": "system", "content": "You are an experienced news reporter assistant that summarizes the latest news regarding certain topics."},
-            #         {"role": "user", "content": f"Provide a balanced article of the latest news about {keyword} with an analytical perspective and potential impact. Never include any header titles, intro, and subtitles."}
-            #     ],
-            #     max_tokens=300
-            # )
-            # news_script = ai_response['choices'][0]['message']['content']
+            from .news_routes import get_validation_agent
+            validation_agent = get_validation_agent()
+            is_valid, error_message = validation_agent.validate_topic(keyword)
             
-            # Step 2: Save the generated news content to news.txt
-            static_folder = os.path.join(os.getcwd(), 'glconnect/static')
-            if not os.path.exists(static_folder):
-                os.makedirs(static_folder)
-
-            news_file_path = os.path.join(static_folder, 'news.txt')
-            with open(news_file_path, 'w') as news_file:
-                news_file.write(news_script)
-            print(f"News text saved to {news_file_path}")
-
-            # Step 3: Generate speech using Google Cloud TTS
-            client = texttospeech.TextToSpeechClient()
-            synthesis_input = texttospeech.SynthesisInput(text=news_script)
-            voice = texttospeech.VoiceSelectionParams(
-                language_code="en-US",
-                name="en-US-Neural2-D"
-            )
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3
-            )
-
-            response = client.synthesize_speech(
-                input=synthesis_input,
-                voice=voice,
-                audio_config=audio_config
-            )
-
-            # Step 4: Save the generated audio to news_audio.mp3
-            audio_file_path = os.path.join(static_folder, 'news_audio.mp3')
-            with open(audio_file_path, "wb") as audio_file:
-                audio_file.write(response.audio_content)
-            print(f"Audio saved to {audio_file_path}")
-        
+            if not is_valid:
+                validation_error = f"This topic does not seem to be a news topic: {error_message}"
+                print(f"❌ Topic validation failed: {error_message}")
+                # Return early with error message
+                return render_template(
+                    "newsgen.html",
+                    form=form,
+                    validation_error=validation_error,
+                    audio_file=None,
+                    audio_file_path=None,
+                    news_file_path=None
+                )
+            else:
+                print(f"✅ Topic validation passed: {keyword}")
+                # Topic is valid - show success message and clear form
+                success_message = f"Topic '{keyword}' added successfully! You can add more topics or generate news when ready."
+                return render_template(
+                    "newsgen.html",
+                    form=form,
+                    success_message=success_message,
+                    audio_file=None,
+                    audio_file_path=None,
+                    news_file_path=None
+                )
+                
         except Exception as e:
-            print(f"Error generating speech: {e}")
+            print(f"Error during topic validation: {e}")
+            validation_error = f"Validation error: {str(e)}"
+            return render_template(
+                "newsgen.html",
+                form=form,
+                validation_error=validation_error,
+                audio_file=None,
+                audio_file_path=None,
+                news_file_path=None
+            )
     
-    # Ensure audio file exists before passing to template (only if audio_file_path is not None)
-    audio_file_ready = audio_file_path and os.path.exists(audio_file_path)
-    
-    # Render template and pass paths for news and audio
+    # Render template for GET requests or when no form submission
     return render_template(
         "newsgen.html",
         form=form,
-        audio_file_path=audio_file_path if audio_file_ready else None,
-        news_file_path=news_file_path
+        audio_file=None,
+        audio_file_path=None,
+        news_file_path=None
     )
+
+@bp2.route('/static/<filename>')
+def serve_audio(filename):
+    """Serve audio files from the static directory"""
+    static_folder = os.path.join(os.getcwd(), 'glconnect/static')
+    return send_from_directory(static_folder, filename)
 

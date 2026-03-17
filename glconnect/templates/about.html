@@ -9,8 +9,12 @@
     <div class="info-box">
         <h3>About Us</h3>
         <p>
-            GLC is a dynamic multimedia initiative that fosters engagement by delivering intentional, high-quality content. We empower creatives by providing them with space to connect with their niche audience, share their unique talents, and amplify their potential.
-        </p>
+    GLC is a dynamic multimedia initiative and a subsidiary of 
+    <a href="https://www.ndotonic.com" target="_blank">Ndotonic</a>. 
+    It fosters engagement by delivering intentional, high-quality content. 
+    We empower creatives by providing them with space to connect with their niche audience, 
+    share their unique talents, and amplify their potential.
+</p>
     </div>
 
     <div class="info-box">
@@ -24,17 +28,23 @@
             We envision to be the ultimate platform where undiscovered talent thrives empowering independent creators
             to share their voices, ideas, and art with the world.
         </p>
+        <a href="{{ url_for('routes.careers') }}" class="join-mission-button">Join Our Mission</a>
     </div>
-
 
     <div class="info-box call-to-action">
-        <h3>Partner with Us</h3>
-        <p>
-            Whether you're or a creator: artist, author, researcher, or an independent thinker looking to reach the right audience to grow your presence, come work with us. Collaborate on strategy and leverage our platform to amplify your impact.
-        </p>
-        <a href="{{ url_for('blog.contact') }}" class="btn">Get in Touch</a>
+    <h3>Contact Us</h3>
+    <p>
+        Whether you're a creator: artist, author, researcher, or an independent thinker looking to reach the right audience to grow your presence, come work with us. Collaborate on strategy and leverage our platform to amplify your impact. Leave us feedback on how to improve.
+    </p>
+    
+    <a href="{{ url_for('blog.contact') }}" class="btn">Get in Touch</a>
+    <a href="https://www.instagram.com/glc_cool" class="insta-link" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; margin-left: 10px; text-decoration: none;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+        alt="Instagram" style="width: 20px; height: 20px; margin-right: 6px;">
+    @GLConnect_cool
+    </a>
     </div>
-   
+
     <style>
         .info-sections {
             max-width: 1100px;
@@ -82,6 +92,25 @@
             font-size: 1.05rem;
             line-height: 1.7;
             color: #34495e;
+        }
+        
+        .join-mission-button {
+            display: inline-block;
+            background-color: #333;
+            color: #f8f0e3;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+            border: 2px solid #333;
+        }
+
+        .join-mission-button:hover {
+            background-color: #555;
+            border-color: #555;
         }
         
         .call-to-action {

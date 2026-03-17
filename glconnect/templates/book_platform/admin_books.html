@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin – All tasks | Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio - Admin Panel
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link fw-bold" href="{{ url_for('book_platform.admin_books') }}">
+                    <i class="fas fa-th-large"></i> Admin hub
+                </a>
+                <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
+                    <i class="fas fa-store"></i> Marketplace
+                </a>
+                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section bg-gradient-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-outline-primary btn-sm me-3">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <span class="badge bg-warning text-dark fs-6">
+                            <i class="fas fa-shield-alt me-1"></i>Admin Panel
+                        </span>
+                    </div>
+                    <h1 class="display-4 fw-bold mb-3">
+                        <i class="fas fa-cogs me-3"></i>Admin hub
+                    </h1>
+                    <p class="lead mb-4">All tasks that need admin approval or verification: books, podcasts, songs, reviewers, word contributions, community dictionary, YouTube download, radio streams.</p>
+                    <div class="d-flex gap-3 flex-wrap align-items-center">
+                        <span class="badge bg-white text-dark fs-6">
+                            <i class="fas fa-book me-2"></i>{{ books|length }} Total Books
+                        </span>
+                        <form method="POST" action="{{ url_for('book_platform.admin_delete_test_books') }}" class="d-inline" onsubmit="return confirm('Delete all books with \"test\" in the title? This cannot be undone.');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-trash me-1"></i>Delete Test Books
+                            </button>
+                        </form>
+                        <span class="badge bg-white text-dark fs-6">
+                            <i class="fas fa-globe me-2"></i>{{ books|selectattr('status.value', 'equalto', 'published')|list|length }} Published
+                        </span>
+                        <span class="badge bg-white text-dark fs-6">
+                            <i class="fas fa-edit me-2"></i>{{ books|selectattr('status.value', 'equalto', 'draft')|list|length }} Drafts
+                        </span>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="hero-stats">
+                        <div class="stat-circle">
+                            <i class="fas fa-tools fa-2x"></i>
+                            <div class="stat-number">{{ books|length }}</div>
+                            <div class="stat-label">Books</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <!-- Admin Management Navigation -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h4 class="mb-0">
+                            <i class="fas fa-tasks me-2 text-primary"></i>All admin tasks
+                        </h4>
+                        <p class="text-muted mb-0 small">Approval and verification: pick a task below</p>
+                    </div>
+                    <div class="card-body">
+                <div class="row g-3">
+                    <!-- Books Management (Current Page) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #007bff !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-book fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Books</h5>
+                                        <small class="text-muted">Manage all books</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review, publish, unpublish, and manage all books in the platform</p>
+                                <a href="{{ url_for('book_platform.admin_books') }}" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-cog me-1"></i>Manage Books
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Podcasts Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #28a745 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-podcast fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Podcasts</h5>
+                                        <small class="text-muted">Review & approve</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review pending podcasts, approve or reject submissions from users</p>
+                                <a href="{{ url_for('book_platform.admin_podcasts') }}" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-check-circle me-1"></i>Review Podcasts
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Music / Song uploads (artist approval) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #6f42c1 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 me-3" style="background: #6f42c1 !important;">
+                                        <i class="fas fa-music fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Songs</h5>
+                                        <small class="text-muted">Approve artist uploads</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Approve or reject songs uploaded by artists before they appear in search</p>
+                                <a href="{{ url_for('book_platform.admin_songs') }}" class="btn btn-sm w-100" style="background: #6f42c1; color: white;">
+                                    <i class="fas fa-gavel me-1"></i>Review Songs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YouTube Download (admin only) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #dc3545 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-danger text-white rounded-circle p-3 me-3">
+                                        <i class="fab fa-youtube fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">YouTube Download</h5>
+                                        <small class="text-muted">Admin only</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Paste a YouTube playlist or video URL to download songs into the catalog</p>
+                                <a href="{{ url_for('book_platform.admin_music') }}" class="btn btn-danger btn-sm w-100">
+                                    <i class="fas fa-download me-1"></i>Download from YouTube
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Freelance Stories Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #17a2b8 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-info text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-newspaper fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Freelance Stories</h5>
+                                        <small class="text-muted">Manage stories</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review and manage stories from freelance journalists worldwide</p>
+                                <a href="{{ url_for('blog.blogs') }}?freelance=true" class="btn btn-info btn-sm w-100">
+                                    <i class="fas fa-edit me-1"></i>Manage Stories
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blogs Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #ffc107 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-warning text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-blog fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Blogs</h5>
+                                        <small class="text-muted">Content management</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Manage all blog posts, moderate content, and review submissions</p>
+                                <a href="{{ url_for('blog.blogs') }}" class="btn btn-warning btn-sm w-100">
+                                    <i class="fas fa-list me-1"></i>Manage Blogs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reviewers Management -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #6f42c1 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-purple text-white rounded-circle p-3 me-3" style="background-color: #6f42c1 !important;">
+                                        <i class="fas fa-user-check fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Reviewers</h5>
+                                        <small class="text-muted">Accreditation</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Manage accredited reviewers, approve applications, and monitor performance</p>
+                                <a href="{{ url_for('book_platform.admin_reviewers') }}" class="btn btn-sm w-100" style="background-color: #6f42c1; color: white; border-color: #6f42c1;">
+                                    <i class="fas fa-user-shield me-1"></i>Manage Reviewers
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Investor Payout Requests -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #198754 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-success text-white rounded-circle p-3 me-3">
+                                        <i class="fas fa-money-check-alt fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Payout Requests</h5>
+                                        <small class="text-muted">Investor withdrawals</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Process investor payout requests after bank transfer</p>
+                                <a href="{{ url_for('book_platform.admin_payout_requests') }}" class="btn btn-success btn-sm w-100 mb-2">
+                                    <i class="fas fa-money-bill-wave me-1"></i>Investor Payouts
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_refund_requests') }}" class="btn btn-outline-warning btn-sm w-100 mb-2">
+                                    <i class="fas fa-undo me-1"></i>Investor Refunds
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_reviewer_payout_requests') }}" class="btn btn-outline-info btn-sm w-100 mb-2">
+                                    <i class="fas fa-star me-1"></i>Reviewer Payouts
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_author_sales_payout_requests') }}" class="btn btn-outline-secondary btn-sm w-100 mb-2">
+                                    <i class="fas fa-book-open me-1"></i>Author Sales Payouts
+                                </a>
+                                <a href="{{ url_for('book_platform.admin_author_payout_requests') }}" class="btn btn-outline-success btn-sm w-100">
+                                    <i class="fas fa-lock-open me-1"></i>Author Fund Releases
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Word contributions (dictionary) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #20c997 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle p-3 me-3" style="background-color: #20c997; color: white;">
+                                        <i class="fas fa-spell-check fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Word contributions</h5>
+                                        <small class="text-muted">Approve / reject</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">Review and approve or reject word contributions to the community dictionary</p>
+                                <a href="{{ url_for('routes1.admin_contributions') }}" class="btn btn-sm w-100" style="background-color: #20c997; color: white;">
+                                    <i class="fas fa-gavel me-1"></i>Review contributions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Community dictionary (admin view) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #fd7e14 !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle p-3 me-3" style="background-color: #fd7e14; color: white;">
+                                        <i class="fas fa-book-open fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Community dictionary</h5>
+                                        <small class="text-muted">Admin view</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">View and manage the community dictionary (approved words)</p>
+                                <a href="{{ url_for('routes1.community_dictionary') }}" class="btn btn-sm w-100" style="background-color: #fd7e14; color: white;">
+                                    <i class="fas fa-list me-1"></i>View dictionary
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Radio streams (Icecast status) -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card shadow-sm border-0 h-100" style="border-left: 4px solid #0d6efd !important;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle p-3 me-3 bg-primary text-white">
+                                        <i class="fas fa-broadcast-tower fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">Radio streams</h5>
+                                        <small class="text-muted">Icecast status</small>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-3">View Icecast stream status, mount points, and listeners</p>
+                                <a href="https://glc.cool/admin/" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-external-link-alt me-1"></i>Open Radio streams
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Books Management Section -->
+        <div class="row">
+            <div class="col-12">
+                <!-- Admin Controls -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title text-primary mb-0">
+                                <i class="fas fa-filter me-2"></i>Admin Controls
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="exportData()">
+                                    <i class="fas fa-download me-1"></i>Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Filter by Status</label>
+                                <select class="form-select" id="statusFilter" onchange="filterBooks()">
+                                    <option value="">All Statuses</option>
+                                    <option value="published">Published</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="in_review">In Review</option>
+                                    <option value="archived">Archived</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Filter by Price</label>
+                                <select class="form-select" id="priceFilter" onchange="filterBooks()">
+                                    <option value="">All Prices</option>
+                                    <option value="free">Free Books</option>
+                                    <option value="paid">Paid Books</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Search</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search books...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button class="btn btn-primary" onclick="searchBooks()">
+                                        <i class="fas fa-search me-1"></i>Search
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if books %}
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title text-primary mb-0">
+                                <i class="fas fa-list me-2"></i>All Books ({{ books|length }} total)
+                            </h5>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="selectAll()">
+                                    <i class="fas fa-check-square me-1"></i>Select All
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
+                                    <i class="fas fa-trash me-1"></i>Bulk Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
+                                        </th>
+                                        <th>Book</th>
+                                        <th>Author</th>
+                                        <th>Status</th>
+                                        <th>Price</th>
+                                        <th>Created</th>
+                                        <th>Published</th>
+                                        <th width="200">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for book in books %}
+                                    <tr class="book-row" data-book-id="{{ book.id }}">
+                                        <td>
+                                            <input type="checkbox" class="form-check-input book-checkbox" value="{{ book.id }}">
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="book-cover-mini me-3">
+                                                    {% if book.cover_image %}
+                                                        <img src="{{ book.cover_image }}" class="book-cover-small" alt="{{ book.title }}">
+                                                    {% else %}
+                                                        <div class="book-cover-placeholder-small">
+                                                            <i class="fas fa-book text-muted"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-1 text-dark">{{ book.title }}</h6>
+                                                    {% if book.description %}
+                                                        <small class="text-muted">{{ book.description[:60] }}{% if book.description|length > 60 %}...{% endif %}</small>
+                                                    {% endif %}
+                                                    <div class="mt-1">
+                                                        <span class="badge bg-secondary">{{ book.genre or 'No genre' }}</span>
+                                                        {% if book.word_count %}
+                                                            <span class="badge bg-info">{{ book.word_count }} words</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ book.author.pen_name or book.author.user.username }}</strong>
+                                                <br><small class="text-muted">ID: {{ book.author.user_id }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if book.status.value == 'published' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-globe me-1"></i>Published
+                                                </span>
+                                            {% elif book.status.value == 'draft' %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-edit me-1"></i>Draft
+                                                </span>
+                                            {% elif book.status.value == 'in_review' %}
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-eye me-1"></i>In Review
+                                                </span>
+                                            {% elif book.status.value == 'archived' %}
+                                                <span class="badge bg-dark">
+                                                    <i class="fas fa-archive me-1"></i>Archived
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if book.price and book.price > 0 %}
+                                                <span class="text-success fw-bold">${{ "%.2f"|format(book.price) }}</span>
+                                            {% else %}
+                                                <span class="text-muted">Free</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ book.created_at.strftime('%Y-%m-%d') if book.created_at else 'N/A' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ book.published_at.strftime('%Y-%m-%d') if book.published_at else 'Not published' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                                                   class="btn btn-outline-primary" title="View Book">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if book.status.value == 'published' %}
+                                                    <button class="btn btn-outline-warning" 
+                                                            onclick="unpublishBook({{ book.id }}, '{{ book.title }}')" 
+                                                            title="Unpublish Book">
+                                                        <i class="fas fa-eye-slash"></i>
+                                                    </button>
+                                                {% elif book.status.value == 'draft' %}
+                                                    <button class="btn btn-outline-success" 
+                                                            onclick="publishBook({{ book.id }}, '{{ book.title }}')" 
+                                                            title="Publish Book">
+                                                        <i class="fas fa-globe"></i>
+                                                    </button>
+                                                {% endif %}
+                                                <button class="btn btn-outline-danger" 
+                                                        onclick="deleteBook({{ book.id }}, '{{ book.title }}')" 
+                                                        title="Delete Book">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h5>No Books Found</h5>
+                        <p class="text-muted">There are no books in the system yet.</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function unpublishBook(bookId, bookTitle) {
+            if (confirm(`Are you sure you want to unpublish "${bookTitle}"? This will remove it from the marketplace but the author can republish it anytime.`)) {
+                fetch(`/mybook/books/${bookId}/unpublish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Book unpublished successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error unpublishing book: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error unpublishing book');
+                });
+            }
+        }
+
+        function publishBook(bookId, bookTitle) {
+            if (confirm(`Are you sure you want to publish "${bookTitle}"? This will make it available in the marketplace.`)) {
+                fetch(`/mybook/books/${bookId}/publish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Book published successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error publishing book: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error publishing book');
+                });
+            }
+        }
+
+        function deleteBook(bookId, bookTitle) {
+            if (confirm(`Are you sure you want to permanently delete "${bookTitle}"? This action cannot be undone and will remove all chapters and data associated with this book.`)) {
+                fetch(`/mybook/books/${bookId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Book deleted successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error deleting book: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting book');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

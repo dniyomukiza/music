@@ -4,54 +4,487 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blogs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='blogs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='book_platform.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+            min-height: 100vh;
+        }
+        .filters-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #ecf0f1;
+        }
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ecf0f1;
+        }
+        .filter-group select option {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-filter {
+            padding: 8px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+        .btn-filter:hover {
+            background: #2980b9;
+        }
+        .btn-clear {
+            background: #7f8c8d;
+        }
+        .btn-clear:hover {
+            background: #5d6d7e;
+        }
+        .post-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .meta-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #ecf0f1;
+        }
+        .meta-badge.category {
+            background: #3498db;
+            color: white;
+        }
+        .meta-badge.language {
+            background: #27ae60;
+            color: white;
+        }
+        .meta-badge.country {
+            background: #f39c12;
+            color: white;
+        }
+        /* Ensure blog post titles are white */
+        h2, h2 a {
+            color: #ffffff !important;
+        }
+        h2 a:hover {
+            color: #ecf0f1 !important;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     {% include 'messages.html' %}
+    <!-- Ink Studio Integration Banner -->
+    <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+                <h3 style="margin: 0; font-size: 20px;">
+                    <i class="fas fa-pen-fancy"></i> Stories & News - Ink Studio
+                </h3>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
+                    Part of Ink Studio's unified content platform
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('book_platform.ink_studio_access') }}" 
+                   style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; border: 1px solid rgba(255, 255, 255, 0.3); transition: background 0.3s;"
+                   onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                    <i class="fas fa-th-large me-1"></i>Content Hub
+                </a>
+            </div>
+        </div>
+    </div>
+    
     <div style="margin-bottom: 20px;">
         <div class="button-container">
-            <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
-            <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Blog</a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
+                <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Story</a>
+            {% else %}
+                <a href="{{ url_for('routes1.login') }}" class="btn">Login to Post</a>
+            {% endif %}
+        </div>
+
+        <!-- Filters Section -->
+        {% if is_freelance_filter %}
+        <div style="background: rgba(52, 152, 219, 0.2); border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #ecf0f1;">
+            <strong><i class="fas fa-newspaper me-2"></i>Showing Freelance Journalism Stories</strong>
+            <p class="mb-0 small" style="opacity: 0.8; margin-top: 5px;">Filtered by: News, Features, Opinion, Investigative, Analysis, Editorial</p>
+            <a href="{{ url_for('blog.blogs') }}" class="btn btn-sm btn-outline-primary mt-2" style="background: #3498db; color: white; border: 1px solid #3498db; padding: 6px 15px; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 10px;">
+                <i class="fas fa-times me-1"></i>Show All Blogs
+            </a>
+        </div>
+        {% endif %}
+        <div class="filters-container">
+            <form method="GET" action="{{ url_for('blog.blogs') }}" style="display: flex; flex-wrap: wrap; gap: 15px; width: 100%; align-items: flex-end;">
+                {% if is_freelance_filter %}
+                <input type="hidden" name="freelance" value="true">
+                {% endif %}
+                <div class="filter-group">
+                    <label for="category">Category</label>
+                    <select name="category" id="category">
+                        <option value="">All Categories</option>
+                        {% for cat in available_categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="language">Language</label>
+                    <select name="language" id="language">
+                        <option value="">All Languages</option>
+                        {% for lang in available_languages %}
+                        <option value="{{ lang }}" {% if selected_language == lang %}selected{% endif %}>{{ lang }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="country">Country</label>
+                    <input type="text" name="country" id="country" value="{{ selected_country or '' }}" placeholder="Enter country name">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn-filter">Apply Filters</button>
+                    <a href="{{ url_for('blog.blogs') }}" class="btn-filter btn-clear">Clear</a>
+                </div>
+            </form>
         </div>
 
         {% for post in posts.items %}
-        <div style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc;">
-            <div style="font-size: 12px; margin-bottom: 5px;">
-                <small>Posted by: {{ post.author.username }}</small>
+        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); border-radius: 4px; backdrop-filter: blur(10px);" data-post-id="{{ post.id }}">
+            <div style="font-size: 12px; margin-bottom: 5px; color: #bdc3c7;">
+                <small>Posted by: {{ post.author.username if post.author else 'Unknown' }}</small>
                 <br>
-                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d") }}</small>
+                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") if post.date_posted else 'N/A' }}</small>
             </div>
-            <h2 style="font-size: 24px; margin-bottom: 10px;">
-                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: rgb(70, 24, 24); text-decoration: none;">{{ post.title }}</a>
+            <h2 style="font-size: 24px; margin-bottom: 10px; color: #ffffff !important;">
+                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: #ffffff !important; text-decoration: none;">{{ post.title }}</a>
             </h2>
-            <p style="font-size: 16px; margin-bottom: 10px;">{{ post.content | safe }}</p>
+            <div class="post-meta">
+                {% if post.category %}
+                <span class="meta-badge category">{{ post.category }}</span>
+                {% endif %}
+                {% if post.language %}
+                <span class="meta-badge language">{{ post.language }}</span>
+                {% endif %}
+                {% if post.country %}
+                <span class="meta-badge country">{{ post.country }}</span>
+                {% endif %}
+            </div>
+            <p style="font-size: 16px; margin-bottom: 10px; margin-top: 10px; color: #bdc3c7;">{{ post.content | safe | truncate(300) }}</p>
 
-            <!-- Play Audio Button -->
-            <button onclick="playAudio('{{ post.id }}')" class="btn play-btn">▶️ Play Audio</button>
-
-            <audio id="audio-{{ post.id }}" controls style="display: none;"></audio>
+            <!-- Metrics and Actions -->
+            <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
+                        <button id="like-btn-{{ post.id }}" 
+                                onclick="toggleLike({{ post.id }})" 
+                                style="background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; transition: all 0.2s; display: flex; align-items: center;"
+                                title="{% if current_user.is_authenticated %}Click to like{% else %}Login to like{% endif %}"
+                                data-liked="{{ 'true' if (post.user_liked if hasattr(post, 'user_liked') else False) else 'false' }}">
+                            <i class="fas fa-heart like-icon-{{ post.id }}" style="color: {% if hasattr(post, 'user_liked') and post.user_liked %}#e74c3c{% else %}#95a5a6{% endif %}; font-size: 18px; transition: color 0.2s;"></i>
+                        </button>
+                        <span class="likes-count-{{ post.id }}" style="font-weight: bold; color: #ecf0f1;">{{ post.likes_count if post.likes_count else 0 }}</span>
+                        <span style="color: #bdc3c7; font-size: 12px;">likes</span>
+                    </div>
+                    <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-eye" style="color: #3498db;"></i>
+                        <span class="impressions-count-{{ post.id }}" style="font-weight: bold; color: #ecf0f1;">{{ post.impressions_count if post.impressions_count else 0 }}</span>
+                        <span style="color: #bdc3c7; font-size: 12px;">views</span>
+                    </div>
+                </div>
+                <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                    <button onclick="copyPostLink({{ post.id }})" 
+                            class="btn" 
+                            style="background: rgba(52, 152, 219, 0.3); color: #ecf0f1; border: 1px solid rgba(52, 152, 219, 0.5); padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: all 0.3s;"
+                            title="Copy link to share"
+                            id="share-btn-{{ post.id }}">
+                        <i class="fas fa-share-alt" style="margin-right: 5px;"></i>Share
+                    </button>
+                </div>
+            </div>
         </div>
         {% endfor %}
 
         <!-- Pagination Controls -->
-        <div style="text-align: center; margin-top: 20px;">
-            {% if posts.has_prev %}
-                <a href="{{ url_for('blog.blogs', page=posts.prev_num) }}" class="btn">Previous</a>
-            {% endif %}
-            <span>Page {{ posts.page }} of {{ posts.pages }}</span>
-            {% if posts.has_next %}
-                <a href="{{ url_for('blog.blogs', page=posts.next_num) }}" class="btn">Next</a>
+        {% if posts.pages > 1 %}
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; backdrop-filter: blur(10px);">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+                {% if posts.has_prev %}
+                    <a href="{{ url_for('blog.blogs', page=posts.prev_num, category=selected_category, language=selected_language, country=selected_country) }}" 
+                       class="btn" 
+                       style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s;"
+                       onmouseover="this.style.background='#2980b9'" 
+                       onmouseout="this.style.background='#3498db'">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                {% else %}
+                    <span style="background: rgba(255, 255, 255, 0.1); color: #95a5a6; padding: 10px 20px; border-radius: 5px; cursor: not-allowed;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </span>
+                {% endif %}
+                
+                <span style="color: #ecf0f1; font-size: 16px; font-weight: bold; padding: 10px 20px;">
+                    Page {{ posts.page }} of {{ posts.pages }}
+                </span>
+                
+                {% if posts.has_next %}
+                    <a href="{{ url_for('blog.blogs', page=posts.next_num, category=selected_category, language=selected_language, country=selected_country) }}" 
+                       class="btn" 
+                       style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s;"
+                       onmouseover="this.style.background='#2980b9'" 
+                       onmouseout="this.style.background='#3498db'">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                {% else %}
+                    <span style="background: rgba(255, 255, 255, 0.1); color: #95a5a6; padding: 10px 20px; border-radius: 5px; cursor: not-allowed;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </span>
+                {% endif %}
+            </div>
+            {% if posts.total > 0 %}
+            <div style="margin-top: 10px; color: #bdc3c7; font-size: 14px;">
+                Showing {{ ((posts.page - 1) * posts.per_page) + 1 }} to {{ [posts.page * posts.per_page, posts.total] | min }} of {{ posts.total }} posts
+            </div>
             {% endif %}
         </div>
+        {% elif posts.total > 0 %}
+        <div style="text-align: center; margin-top: 30px; padding: 15px; color: #bdc3c7; font-size: 14px;">
+            Showing all {{ posts.total }} post{{ 's' if posts.total != 1 else '' }}
+        </div>
+        {% endif %}
     </div>
 
-    <!-- JavaScript for Playing Audio -->
+    <!-- JavaScript -->
     <script>
-    function playAudio(postId) {
-        let audioElement = document.getElementById(`audio-${postId}`);
-        audioElement.src = `/blog/play-audio/${postId}`;
-        audioElement.style.display = "block";
-        audioElement.play();
+    // Copy post link to clipboard
+    function copyPostLink(postId) {
+        const postUrl = window.location.origin + '{{ url_for("blog.update", post_id=0) }}'.replace('0', postId);
+        const shareBtn = document.getElementById(`share-btn-${postId}`);
+        const originalText = shareBtn.innerHTML;
+        
+        // Try to use the Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(postUrl)
+                .then(() => {
+                    shareBtn.innerHTML = '<i class="fas fa-check" style="margin-right: 5px;"></i>Copied!';
+                    shareBtn.style.background = 'rgba(39, 174, 96, 0.3)';
+                    shareBtn.style.borderColor = 'rgba(39, 174, 96, 0.5)';
+                    setTimeout(() => {
+                        shareBtn.innerHTML = originalText;
+                        shareBtn.style.background = 'rgba(52, 152, 219, 0.3)';
+                        shareBtn.style.borderColor = 'rgba(52, 152, 219, 0.5)';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    fallbackCopyTextToClipboard(postUrl, shareBtn, originalText);
+                });
+        } else {
+            // Fallback for older browsers
+            fallbackCopyTextToClipboard(postUrl, shareBtn, originalText);
+        }
+    }
+    
+    // Fallback copy function for older browsers
+    function fallbackCopyTextToClipboard(text, button, originalText) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                button.innerHTML = '<i class="fas fa-check" style="margin-right: 5px;"></i>Copied!';
+                button.style.background = 'rgba(39, 174, 96, 0.3)';
+                button.style.borderColor = 'rgba(39, 174, 96, 0.5)';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = 'rgba(52, 152, 219, 0.3)';
+                    button.style.borderColor = 'rgba(52, 152, 219, 0.5)';
+                }, 2000);
+            } else {
+                // If copy fails, show the URL in a prompt
+                prompt('Copy this link:', text);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            prompt('Copy this link:', text);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    // Like/Unlike functionality - prevents duplicate likes
+    let likeRequestInProgress = {}; // Track ongoing like requests per post
+    
+    function toggleLike(postId) {
+        {% if current_user.is_authenticated %}
+        // Prevent multiple simultaneous requests for the same post
+        if (likeRequestInProgress[postId]) {
+            console.log('Like request already in progress for post:', postId);
+            return;
+        }
+        
+        const likeBtn = document.getElementById(`like-btn-${postId}`);
+        const likesCountEl = document.querySelector(`.likes-count-${postId}`);
+        const icon = document.querySelector(`.like-icon-${postId}`);
+        
+        if (!likeBtn || !likesCountEl || !icon) {
+            console.error('Like button elements not found for post:', postId);
+            return;
+        }
+        
+        const isLiked = likeBtn.dataset.liked === 'true';
+        
+        // Disable button during request
+        likeBtn.style.pointerEvents = 'none';
+        likeBtn.style.opacity = '0.6';
+        likeRequestInProgress[postId] = true;
+        
+        // Optimistic UI update
+        const currentCount = parseInt(likesCountEl.textContent) || 0;
+        if (isLiked) {
+            likesCountEl.textContent = Math.max(0, currentCount - 1);
+            icon.style.color = '#95a5a6';
+            likeBtn.dataset.liked = 'false';
+        } else {
+            likesCountEl.textContent = currentCount + 1;
+            icon.style.color = '#e74c3c';
+            likeBtn.dataset.liked = 'true';
+        }
+        
+        // Send request to server
+        fetch(`/blog/post/${postId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update with server response (ensures accuracy)
+                likesCountEl.textContent = data.likes_count;
+                likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                icon.style.color = data.user_has_liked ? '#e74c3c' : '#95a5a6';
+            } else {
+                // Revert on error
+                likesCountEl.textContent = currentCount;
+                likeBtn.dataset.liked = isLiked ? 'true' : 'false';
+                icon.style.color = isLiked ? '#e74c3c' : '#95a5a6';
+                // Update with server state if available
+                if (data.likes_count !== undefined) {
+                    likesCountEl.textContent = data.likes_count;
+                }
+                if (data.user_has_liked !== undefined) {
+                    likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
+                    icon.style.color = data.user_has_liked ? '#e74c3c' : '#95a5a6';
+                }
+                console.error('Like error:', data.error || 'Failed to update like');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Revert on error
+            likesCountEl.textContent = currentCount;
+            likeBtn.dataset.liked = isLiked ? 'true' : 'false';
+            icon.style.color = isLiked ? '#e74c3c' : '#95a5a6';
+        })
+        .finally(() => {
+            // Re-enable button
+            likeBtn.style.pointerEvents = '';
+            likeBtn.style.opacity = '1';
+            delete likeRequestInProgress[postId];
+        });
+        {% else %}
+        alert('Please log in to like stories');
+        window.location.href = '{{ url_for("routes1.login") }}';
+        {% endif %}
+    }
+    </script>
+    
+    <!-- Real-time metrics updates for blog listing -->
+    <script>
+    // Update metrics for all visible posts every 10 seconds
+    function updateAllPostMetrics() {
+        const postElements = document.querySelectorAll('[data-post-id]');
+        postElements.forEach(function(element) {
+            const postId = element.getAttribute('data-post-id');
+            fetch(`/blog/post/${postId}/metrics`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const likesEl = element.querySelector(`.likes-count-${postId}`);
+                        const impressionsEl = element.querySelector(`.impressions-count-${postId}`);
+                        if (likesEl) likesEl.textContent = data.likes_count;
+                        if (impressionsEl) impressionsEl.textContent = data.impressions_count;
+                    }
+                })
+                .catch(error => console.error('Error updating metrics:', error));
+        });
+    }
+    
+    // Update metrics every 10 seconds
+    setInterval(updateAllPostMetrics, 10000);
+    
+    // Also try WebSocket if available
+    if (typeof io !== 'undefined') {
+        try {
+            const socket = io();
+            socket.on('post_metrics_update', function(data) {
+                const postElement = document.querySelector(`[data-post-id="${data.post_id}"]`);
+                if (postElement) {
+                    const likesEl = postElement.querySelector(`.likes-count-${data.post_id}`);
+                    const impressionsEl = postElement.querySelector(`.impressions-count-${data.post_id}`);
+                    if (likesEl) likesEl.textContent = data.likes_count;
+                    if (impressionsEl) impressionsEl.textContent = data.impressions_count;
+                }
+            });
+        } catch (e) {
+            console.log('WebSocket not available, using polling');
+        }
     }
     </script>
 </body>

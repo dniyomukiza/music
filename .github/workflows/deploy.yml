@@ -1,0 +1,74 @@
+# Deploy to server on push to enhancements (current production branch)
+# Matches manual deploy order: pull → down → udev → prune → build all → up. Requires passwordless sudo for udev (see scripts/setup-passwordless-sudo-udev.sh).
+# Secrets: SSH_PRIVATE_KEY in GitHub.
+
+name: Deploy to server
+
+on:
+  push:
+    branches: [enhancements]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 167.172.224.239
+          username: nididier
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /home/nididier/music
+
+            echo "--- Pulling latest code ---"
+            git fetch origin
+            git reset --hard origin/enhancements
+            git status --short
+            echo "Deploying commit: $(git log -1 --oneline)"
+
+            echo "--- Stopping containers (match manual: down first) ---"
+            docker compose down
+
+            echo "--- Udev cleanup (match manual; errors ignored) ---"
+            sudo find /run/udev/data -type f -delete 2>/dev/null || true
+            sudo systemctl start systemd-udevd 2>/dev/null || true
+
+            echo "--- Pruning unused images (match manual: clean slate) ---"
+            docker system prune -a -f
+
+            echo "--- Building all images (app, nginx, fastapi) ---"
+            docker compose build
+
+            echo "--- Verifying all images built ---"
+            docker compose images
+            docker image inspect myapp:latest --format 'myapp:latest OK' || (echo "ERROR: myapp:latest not found"; exit 1)
+            echo "All images built successfully."
+
+            echo "--- Starting containers ---"
+            docker compose up -d
+
+            echo "--- Waiting for app to be ready (avoids 502) ---"
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              if curl -sf http://localhost:5000/health >/dev/null; then echo "App is up."; break; fi
+              echo "waiting... ($i/12)"
+              sleep 10
+            done
+
+            echo "--- Checking nginx can reach app (full path) ---"
+            for i in 1 2 3 4 5; do
+              if curl -sf http://localhost/health >/dev/null 2>&1 || curl -skf https://localhost/health >/dev/null 2>&1; then echo "Nginx -> app OK."; break; fi
+              echo "nginx->app wait... ($i/5)"; sleep 5
+            done
+
+            echo "--- Checking FastAPI (Gemini Live WebSocket) ---"
+            for i in 1 2 3 4 5; do
+              if curl -sf http://localhost:8002/health >/dev/null; then echo "FastAPI OK."; break; fi
+              echo "FastAPI wait... ($i/5)"; sleep 5
+            done
+
+            echo "Deploy finished."
+      - name: Done
+        run: echo "Deploy finished."

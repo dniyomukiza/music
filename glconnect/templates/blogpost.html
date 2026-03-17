@@ -1,14 +1,52 @@
 {%extends "parent.html"%}
 {%block content%}
 {% include 'messages.html' %}
-      <form method="POST" action="">
+
+    <form method="POST" action="" enctype="multipart/form-data">
         <legend>{{ legend }}</legend>
-            {{ form.hidden_tag()}}
-            {{ form.title}}
-            {{ form.content | safe}}
-            {{form.submit }}
-          
-      </form>
-     
+        {{ form.hidden_tag()}}
+
+        <div style="margin-bottom: 15px;">
+            <label for="{{ form.title.id }}">Title</label>
+            {{ form.title(class="form-control") }}
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="{{ form.content.id }}">Content</label>
+            {{ form.content() }}
+        </div>
+
+        <!-- Optional fields for filtering and translation -->
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <h4 style="font-size: 16px; margin-bottom: 15px; color: #666;">Optional: Help readers find your story</h4>
+            
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="{{ form.category.id }}">Category <span style="color: #999; font-size: 12px;">(Optional)</span></label>
+                    {{ form.category(class="form-control") }}
+                </div>
+                
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="{{ form.language.id }}">Language <span style="color: #999; font-size: 12px;">(Optional)</span></label>
+                    {{ form.language(class="form-control") }}
+                </div>
+                
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="{{ form.country.id }}">Country <span style="color: #999; font-size: 12px;">(Optional)</span></label>
+                    {{ form.country(class="form-control") }}
+                </div>
+            </div>
+            <small style="color: #666; font-size: 12px;">
+                These fields help readers filter and discover your content. You can leave them blank and your post will still be published.
+            </small>
+        </div>
+
+        <div style="margin-top: 20px;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+    {{ ckeditor.load() }}
+    {{ ckeditor.config(name='content', upload_url=url_for('blog.upload')) }}
 
 {%endblock content%}

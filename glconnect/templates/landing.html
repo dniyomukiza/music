@@ -155,6 +155,17 @@
             letter-spacing: 0.5px;
         }
 
+        .tagline {
+            font-size: 1.1em;
+            margin-top: 30px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+            font-weight: 300;
+            letter-spacing: 0.3px;
+        }
+
         .coming-soon {
             font-size: 4em;
             font-weight: bold;
@@ -183,31 +194,42 @@
             .logo {
                 margin-right: 0; /* Reset logo margin for mobile */
             }
+
+            .coming-soon {
+                font-size: 2.5em;
+            }
+
+            .headline {
+                font-size: 1.2em;
+            }
+
+            .tagline {
+                font-size: 0.95em;
+                padding: 0 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <video autoplay loop muted class="background-video">
+        <!--<video autoplay loop muted class="background-video">
             <source src="{{ url_for('static', filename='images/trial.mp4') }}">
 
-
-            Your browser does not support the video tag.
-        </video>
+        </video>-->
         <div class="video-overlay"></div>
         <div class="header">
             <div class="nav-container">
                 <div class="nav-links">
-                    <a href="{{ url_for('routes.home') }}">Radio</a>
                     <a href="{{ url_for('blog.blogs') }}">Blogs</a>
-                    <a href="{{ url_for('prof.profile') }}">Music</a>
-                    <a href="{{ url_for('routes.home') }}">Podcasts</a>
+                    <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
+                    <a href="{{ url_for('news_bp.index') }}">News</a>
                     <a href="{{ url_for('routes1.findwords') }}">Language</a>
+
            
                 </div>
             </div>
             <div class="platform-button-container">
-                <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
+                <a href="{{ url_for('routes.about') }}" class="platform-button">ABOUT</a>
             </div>
             <div class="mobile-menu-button" onclick="toggleMobileMenu()">
                 <div class="bar"></div>
@@ -216,16 +238,18 @@
             </div>
         </div>
         <div class="mobile-nav" id="mobileNav">
-            <a href="{{ url_for('routes.home') }}">Radio</a>
             <a href="{{ url_for('blog.blogs') }}">Blogs</a>
-            <a href="{{ url_for('prof.profile') }}">Music</a>
-            <a href="{{ url_for('routes.home') }}">Podcasts</a>
-            <a href="{{ url_for('routes.about') }}" class="platform-button">PLATFORM</a>
+            <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
+            <a href="{{ url_for('news_bp.index') }}">News</a>
+            <a href="{{ url_for('routes1.findwords') }}">Language</a>
+
+            <a href="{{ url_for('routes.about') }}" class="platform-button">ABOUT</a>
 
         </div>
         <div class="content">
-            <h1 class="coming-soon">GLCONNECT</h1>
+            <h1 class="coming-soon">GLC</h1>
             <h2 class="headline">THE EPICENTER OF PREMIUM CONTENT</h2>
+            <p class="tagline">We connect talented creators to their niche audience through storytelling, art, and music</p>
         </div>   
     </div>
     <script>

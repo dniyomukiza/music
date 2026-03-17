@@ -4,26 +4,63 @@ services:
     container_name: myapp
     build:
       context: .
+    env_file:
+      - .env
     depends_on:
       - icecast2
     volumes:
-      - ./music:/usr/src/appdir
-      - /etc/glconfig.json:/etc/glconfig.json 
-    networks:
-      - app_network
+      - .:/usr/src/appdir
+      - /etc/glconfig.json:/etc/glconfig.json:ro
+      # If cookies file in ~/music on host instead of project root, uncomment and set your home path:
+      # - /home/YOUR_USER/music:/ytdlp_cookies_mount:ro
     command: >
-      sh -c "gunicorn -b 0.0.0.0:5000 run:app"
+     sh -c "python run.py"
+    mem_limit: 4g  # Increased for news generation and TTS processing
+    mem_reservation: 2g  # Increased minimum memory reservation
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+ 
     ports:
       - "5000:5000"
+    networks:
+      app_network:
+        aliases: [myapp]
+    # Values here are fallbacks; prefer setting secrets in .env (copy from .env.example). Do not commit .env with real keys.
     environment:
+      - PYTHONUNBUFFERED=1
       - FLASK_APP=run.py
-      - FLASK_ENV=development
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_AI_KEY=${OPENAI_AI_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-tts.json}
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_URL=${DB_URL:-${DATABASE_URL}}
+      - SENDER_MAIL=${SENDER_MAIL}
+      - SENDER_PASSWORD=${SENDER_PASSWORD}
+      - RECEIVER_MAIL=${RECEIVER_MAIL}
+      - RECAPTCHAPUB=${RECAPTCHAPUB}
+      - RECAPTCHAPRIV=${RECAPTCHAPRIV}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MAIL_TRAP=${MAIL_TRAP}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - YTDLP_COOKIES_FILE=${YTDLP_COOKIES_FILE:-/usr/src/appdir/ytdlp_cookiesfull.txt}
 
   nginx:
-      image: custom-nginx
+      build:
+        context: .
+        dockerfile: Dockerfile.nginx
       container_name: nginx_service
       depends_on:
         - app
+        - fastapi
       volumes:
         - ./nginx.conf:/etc/nginx/conf.d/default.conf 
         - /etc/letsencrypt/live/www.glc.cool:/etc/letsencrypt/live/www.glc.cool:ro
@@ -45,6 +82,15 @@ services:
     networks:
       - app_network
     command: /usr/bin/icecast -c /etc/icecast.xml -b
+    restart: unless-stopped
+    mem_limit: 256M
+    mem_reservation: 128M
+    healthcheck:
+      test: ["CMD", "pgrep", "icecast"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     
   certbot:
     image: certbot/certbot
@@ -61,16 +107,6 @@ services:
     networks:
       - app_network
 
-  api_fastapi:
-    image: fastapi:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.uvi  
-    ports:
-      - "8001:8001"
-    networks:
-      - app_network
-
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
     container_name: liquidsoap_service
@@ -81,6 +117,44 @@ services:
     networks:
       - app_network
     command: liquidsoap /liqfolder/scripts/main.liq
+    environment:
+     - TZ=America/New_York
+    restart: unless-stopped
+    mem_limit: 512M
+    mem_reservation: 256M
+    healthcheck:
+      test: ["CMD", "pgrep", "liquidsoap"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.uvi
+    container_name: fastapi
+    env_file:
+      - .env
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./glconnect:/app/glconnect
+      - /etc/glconfig.json:/etc/glconfig.json
+    networks:
+      - app_network
+    environment:
+      - DB_URL=${DB_URL:-${DATABASE_URL}}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    mem_limit: 256M
+    mem_reservation: 128M
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   app_network:

@@ -9,9 +9,13 @@
 <body>
     {% include 'messages.html' %}
     <div class="hero">
-        <img src="{{ url_for('static', filename='song_uploads/' + artist.profile_pic) }}" class="profile-pic">
+        {% if artist.profile_pic %}
+        <img src="{{ url_for('static', filename=artist.profile_pic.replace('static/', '') if artist.profile_pic.startswith('static/') else artist.profile_pic) }}" class="profile-pic" alt="Profile Picture">
+        {% else %}
+        <img src="{{ url_for('static', filename='images/profile.jpg') }}" class="profile-pic" alt="Default Profile">
+        {% endif %}
         <h1 class="artist-name">{{ artist.artist_name }}</h1>
-        <p class="bio">{{ artist.bio }}</p>
+        <p class="bio">{{ artist.bio if artist.bio else '' }}</p>
         <div class="follow-links">
             <a href="{{ url_for('music.artist_edit') }}">Edit profile</a>
             <span> | </span>
@@ -31,21 +35,43 @@
     </div>
 
     <div class="songs">
+        {% if songs %}
         {% for song in songs %}
         <div class="song-card">
-            <img src="{{ url_for('static', filename='images/' + (song.cover_image if song.cover_image else 'default.jpg')) }}" class="song-cover">
+            {% if song.cover_image %}
+            <img src="{{ url_for('static', filename='song_uploads/' + song.cover_image) }}" class="song-cover" alt="Song Cover">
+            {% else %}
+            <img src="{{ url_for('static', filename='images/cover.webp') }}" class="song-cover" alt="Default Cover">
+            {% endif %}
             
             <p class="song-title">
-                {{ song.name if song.name is defined else song.name_song }}
+                {{ song.name if song.name is defined else (song.name_song if song.name_song is defined else 'Untitled') }}
             </p>
             
-            <form action="{{ url_for('music.delete_song', song_id=song.id if song.id is defined else song.upload_id) }}" method="POST">
-                <button type="submit" class="btn delete-song-btn">Remove</button>
-            </form>
+            <!-- Audio player for the song -->
+            {% if song.song_path %}
+            <audio controls style="width: 100%; margin: 10px 0;">
+                <source src="{{ song.song_path }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            {% else %}
+            <p style="color: #999; font-size: 0.9em;">Audio file not available</p>
+            {% endif %}
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                {% set song_id = song.id if song.id is defined else (song.upload_id if song.upload_id is defined else None) %}
+                {% if song_id %}
+                <form action="{{ url_for('music.delete_song', song_id=song_id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn delete-song-btn" onclick="return confirm('Are you sure you want to remove this song?')">🗑️ Remove</button>
+                </form>
+                {% endif %}
+                <a href="{{ url_for('art.artist_profile', artist_id=artist.artist_id) }}" class="btn" style="background: #3498db; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px;">👁️ View Public Profile</a>
+            </div>
         </div>
-        {% else %}
-        <p>No songs found.</p>
         {% endfor %}
+        {% else %}
+        <p>No songs found. <a href="{{ url_for('music.upload_song') }}">Upload your first song</a> to get started!</p>
+        {% endif %}
     </div>
     
 

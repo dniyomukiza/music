@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block title %}Contribute Word - Language Learning{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='words.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='upload_song.css') }}">
+<div class="contribute-page">
+    <!-- Hero Section -->
+    <div class="contribute-hero">
+        <div class="hero-content">
+            
+            <p class="hero-subtitle">
+                Help expand our Kinyarwanda dictionary by contributing new words and their meanings
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number" id="totalWords">0</span>
+                    <span class="stat-label">Total Words</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="pendingWords">0</span>
+                    <span class="stat-label">Pending Review</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="approvedWords">0</span>
+                    <span class="stat-label">Approved</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contribution Form Section -->
+    <div class="contribution-section">
+        <div class="contribution-container">
+            <div class="contribution-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-edit"></i> Submit New Word</h2>
+                    <p>Share your knowledge and help others learn Kinyarwanda</p>
+                </div>
+                
+                <form id="contributionForm" class="contribution-form">
+                    <div class="form-group">
+                        <label for="kinyarwandaWord">
+                            <i class="fas fa-language"></i>
+                            Kinyarwanda Word *
+                        </label>
+                        <input type="text" id="kinyarwandaWord" name="kinyarwanda_word" required 
+                               placeholder="Enter the Kinyarwanda word">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="englishMeaning">
+                            <i class="fas fa-book"></i>
+                            English Meaning *
+                        </label>
+                        <input type="text" id="englishMeaning" name="english_meaning" required 
+                               placeholder="Enter the English translation">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="partOfSpeech">
+                            <i class="fas fa-tags"></i>
+                            Part of Speech
+                        </label>
+                        <select id="partOfSpeech" name="part_of_speech">
+                            <option value="">Select part of speech</option>
+                            <option value="noun">Noun (Izina)</option>
+                            <option value="verb">Verb (Inshinga)</option>
+                            <option value="adjective">Adjective (Icyitabiri)</option>
+                            <option value="adverb">Adverb (Icyitabiri)</option>
+                            <option value="pronoun">Pronoun (Icyitabiri)</option>
+                            <option value="preposition">Preposition</option>
+                            <option value="conjunction">Conjunction</option>
+                            <option value="interjection">Interjection</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="exampleSentence">
+                            <i class="fas fa-quote-left"></i>
+                            Example Sentence (Optional)
+                        </label>
+                        <textarea id="exampleSentence" name="example_sentence" rows="3" 
+                                  placeholder="Provide an example sentence using this word"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contributorName">
+                            <i class="fas fa-user"></i>
+                            Your Name (Optional)
+                        </label>
+                        <input type="text" id="contributorName" name="contributor_name" 
+                               placeholder="Enter your name (will be kept private)">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-paper-plane"></i>
+                            Submit Contribution
+                        </button>
+                        <button type="reset" class="reset-btn">
+                            <i class="fas fa-undo"></i>
+                            Clear Form
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="contributionMessage" class="contribution-message" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guidelines Section -->
+    <div class="guidelines-section">
+        <div class="guidelines-container">
+            <h2><i class="fas fa-info-circle"></i> Contribution Guidelines</h2>
+            <div class="guidelines-grid">
+                <div class="guideline-card">
+                    <div class="guideline-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Accuracy</h3>
+                    <p>Ensure the word and meaning are accurate. Double-check spelling and pronunciation.</p>
+                </div>
+                
+                <div class="guideline-card">
+                    <div class="guideline-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h3>Context</h3>
+                    <p>Provide example sentences when possible to help others understand usage.</p>
+                </div>
+                
+                <div class="guideline-card">
+                    <div class="guideline-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Community</h3>
+                    <p>Your contributions help build a comprehensive learning resource for everyone.</p>
+                </div>
+                
+                <div class="guideline-card">
+                    <div class="guideline-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Review Process</h3>
+                    <p>All submissions are reviewed by our team before being added to the dictionary.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community Dictionary Link -->
+    <div class="community-links">
+        <div class="links-container">
+            <a href="{{ url_for('routes1.community_dictionary_public') }}" class="community-link">
+                <i class="fas fa-book"></i>
+                View Community Dictionary
+            </a>
+            <a href="{{ url_for('routes1.findwords') }}" class="community-link">
+                <i class="fas fa-search"></i>
+                Back to Word Search
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Contribute Page Styles */
+.contribute-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.contribute-hero {
+    background: linear-gradient(135deg, rgba(44, 62, 80, 0.9), rgba(52, 73, 94, 0.9));
+    color: white;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero-title {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.hero-title i {
+    color: #2c3e50;
+}
+
+.hero-subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    padding: 1.5rem 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: white;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.contribution-section {
+    padding: 4rem 2rem;
+    background: white;
+}
+
+.contribution-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.contribution-card {
+    background: white;
+    border-radius: 20px;
+    padding: 3rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+}
+
+.card-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.card-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.card-header h2 i {
+    color: #2c3e50;
+}
+
+.card-header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.contribution-form {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-group label i {
+    color: #2c3e50;
+    width: 16px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2c3e50;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.submit-btn, .reset-btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.submit-btn {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
+}
+
+.reset-btn {
+    background: #f8f9fa;
+    color: #666;
+    border: 2px solid #e9ecef;
+}
+
+.reset-btn:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.contribution-message {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.contribution-message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.contribution-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.guidelines-section {
+    background: #f8f9fa;
+    padding: 4rem 2rem;
+}
+
+.guidelines-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.guidelines-container h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.guidelines-container h2 i {
+    color: #2c3e50;
+}
+
+.guidelines-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.guideline-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.guideline-card:hover {
+    transform: translateY(-5px);
+}
+
+.guideline-icon {
+    width: 60px;
+    height: 60px;
+    background: white;
+    border: 3px solid #2c3e50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.guideline-card h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.guideline-card p {
+    color: #666;
+    line-height: 1.6;
+}
+
+.community-links {
+    background: white;
+    padding: 3rem 2rem;
+}
+
+.links-container {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.community-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.community-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(44, 62, 80, 0.3);
+    color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2rem;
+        flex-direction: column;
+    }
+    
+    .hero-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .stat-item {
+        padding: 1rem 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .links-container {
+        flex-direction: column;
+    }
+    
+    .contribution-card {
+        padding: 2rem;
+    }
+}
+</style>
+
+<script>
+// Load stats on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+});
+
+async function loadStats() {
+    try {
+        const response = await fetch('/routes1/api/community-stats');
+        const data = await response.json();
+        
+        document.getElementById('totalWords').textContent = data.total_words || 0;
+        document.getElementById('pendingWords').textContent = data.pending_words || 0;
+        document.getElementById('approvedWords').textContent = data.approved_words || 0;
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Contribution form handling
+document.getElementById('contributionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const messageDiv = document.getElementById('contributionMessage');
+    
+    try {
+        const response = await fetch('/routes1/contribute-word', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            messageDiv.className = 'contribution-message success';
+            messageDiv.innerHTML = '<i class="fas fa-check-circle"></i> ' + result.message;
+            messageDiv.style.display = 'block';
+            this.reset();
+            
+            // Reload stats
+            loadStats();
+        } else {
+            messageDiv.className = 'contribution-message error';
+            messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + result.message;
+            messageDiv.style.display = 'block';
+        }
+    } catch (error) {
+        messageDiv.className = 'contribution-message error';
+        messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error submitting contribution. Please try again.';
+        messageDiv.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

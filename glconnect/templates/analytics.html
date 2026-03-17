@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Trends Analytics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 30px;
+            color: white;
+            text-decoration: none;
+            background: rgba(255,255,255,0.1);
+            padding: 12px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-link:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #2c3e50, #34495e);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .stat:last-child {
+            border-bottom: none;
+        }
+
+        .stat:hover {
+            background: rgba(102, 126, 234, 0.05);
+            margin: 0 -15px;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .category-link {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .category-link:hover {
+            color: #34495e;
+            text-decoration: underline;
+        }
+
+        .recent-searches {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .recent-searches::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .recent-searches::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 3px;
+        }
+
+        .recent-searches::-webkit-scrollbar-thumb {
+            background: #2c3e50;
+            border-radius: 3px;
+        }
+
+        .search-item {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .search-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-item:hover {
+            background: rgba(102, 126, 234, 0.05);
+            margin: 0 -15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+        }
+
+        .search-topic {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .search-time {
+            color: #666;
+            font-size: 0.8em;
+            margin-top: 4px;
+        }
+
+        .chart-container {
+            height: 250px;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+
+        .trend-up {
+            color: #28a745;
+        }
+
+        .trend-down {
+            color: #dc3545;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #28a745;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #2c3e50;
+        }
+
+        .spinner {
+            border: 3px solid rgba(44, 62, 80, 0.3);
+            border-top: 3px solid #2c3e50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('news_bp.index') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to News Generator
+        </a>
+        
+        <div class="header">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                Real-time Analytics
+                <span class="live-indicator">
+                    <div class="pulse"></div>
+                    LIVE
+                </span>
+            </h1>
+            <p>Comprehensive insights into your news generation patterns and trends</p>
+        </div>
+        
+        <!-- Key Metrics Row -->
+        <div class="dashboard">
+            <div class="metric-card">
+                <div class="metric-value">{{ total_searches }}</div>
+                <div class="metric-label">Total Searches</div>
+                <div class="trend-indicator trend-up">
+                    <i class="fas fa-arrow-up"></i>
+                    +12% this week
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value">{{ categories|length }}</div>
+                <div class="metric-label">Active Categories</div>
+                <div class="trend-indicator trend-up">
+                    <i class="fas fa-arrow-up"></i>
+                    +3 new this month
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value">{{ recent_searches|length }}</div>
+                <div class="metric-label">Recent Activity</div>
+                <div class="trend-indicator trend-up">
+                    <i class="fas fa-arrow-up"></i>
+                    Active now
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Dashboard -->
+        <div class="dashboard">
+            <!-- AI Categorization Stats Card -->
+            <div class="card">
+                <h3><i class="fas fa-brain"></i> AI Categorization Stats</h3>
+                <div class="stat">
+                    <span class="stat-label">Total Categorizations</span>
+                    <span class="stat-value">{{ confidence_stats.total_categorizations }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">AI-Powered</span>
+                    <span class="stat-value">{{ confidence_stats.ai_categorizations }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Keyword Fallback</span>
+                    <span class="stat-value">{{ confidence_stats.keyword_categorizations }}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Avg Confidence</span>
+                    <span class="stat-value">{{ confidence_stats.average_confidence }}</span>
+                </div>
+            </div>
+            
+            <!-- Top Categories Card -->
+            <div class="card">
+                <h3><i class="fas fa-trophy"></i> Top Categories</h3>
+                {% for category, count in categories[:5] %}
+                <div class="stat">
+                    <a href="{{ url_for('news_bp.category_details', category=category) }}" class="category-link">
+                        <i class="fas fa-{{ 'newspaper' if category == 'Politics' else 'football' if category == 'Sports' else 'chart-line' if category == 'Economy' else 'laptop' if category == 'Technology' else 'heartbeat' if category == 'Health & Science' else 'globe' if category == 'World & International' else 'gavel' if category == 'Crime & Law' else 'star' if category == 'Entertainment' else 'question' }}"></i>
+                        {{ category }}
+                    </a>
+                    <span class="stat-value">{{ count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Recent Activity Card -->
+            <div class="card">
+                <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+                <div class="recent-searches">
+                    {% for search in recent_searches %}
+                    <div class="search-item">
+                        <div class="search-topic">
+                            <i class="fas fa-search"></i>
+                            {{ search.topic }}
+                        </div>
+                        <div class="search-time">{{ search.timestamp[:19] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Daily Trends Chart -->
+            <div class="card">
+                <h3><i class="fas fa-chart-bar"></i> Daily Trends (Last 7 Days)</h3>
+                <div class="chart-container">
+                    <canvas id="dailyTrendsChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Category Distribution -->
+            <div class="card">
+                <h3><i class="fas fa-pie-chart"></i> Category Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- All Categories Table -->
+        <div class="card">
+            <h3><i class="fas fa-list"></i> All Categories Overview</h3>
+            <div class="recent-searches">
+                {% for category, count in categories %}
+                <div class="search-item">
+                    <div class="search-topic">
+                        <a href="{{ url_for('news_bp.category_details', category=category) }}" class="category-link">
+                            <i class="fas fa-{{ 'newspaper' if category == 'Politics' else 'football' if category == 'Sports' else 'chart-line' if category == 'Economy' else 'laptop' if category == 'Technology' else 'heartbeat' if category == 'Health & Science' else 'globe' if category == 'World & International' else 'gavel' if category == 'Crime & Law' else 'star' if category == 'Entertainment' else 'question' }}"></i>
+                            {{ category }}
+                        </a>
+                    </div>
+                    <div class="search-time">{{ count }} searches</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Refresh Button -->
+    <button class="refresh-btn" onclick="refreshData()" title="Refresh Data">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+    
+    <!-- Loading Indicator -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Refreshing data...</p>
+    </div>
+
+    <script>
+        // Chart.js configuration
+        const dailyData = {{ daily_trends | tojson }};
+        const categoryData = {{ categories | tojson }};
+        
+        // Daily Trends Chart
+        const dailyCtx = document.getElementById('dailyTrendsChart').getContext('2d');
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: dailyData.map(day => day.date.substring(5)),
+                datasets: [{
+                    label: 'Searches',
+                    data: dailyData.map(day => day.count),
+                    borderColor: '#2c3e50',
+                    backgroundColor: 'rgba(44, 62, 80, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#2c3e50',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Category Distribution Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: categoryData.map(item => item[0].charAt(0).toUpperCase() + item[0].slice(1)),
+                datasets: [{
+                    data: categoryData.map(item => item[1]),
+                    backgroundColor: [
+                        '#2c3e50',
+                        '#34495e',
+                        '#4a6741',
+                        '#5d6d7e',
+                        '#6c7b95',
+                        '#7d8b9a',
+                        '#43e97b',
+                        '#38f9d7'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Refresh functionality
+        function refreshData() {
+            document.getElementById('loading').style.display = 'block';
+            
+            fetch('/routes2/news/api/analytics/summary')
+                .then(response => response.json())
+                .then(data => {
+                    // Update the page with new data
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error refreshing data:', error);
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+        
+        // Add some interactive effects
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-8px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
+

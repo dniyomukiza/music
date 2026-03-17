@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ campaign.title }} - Investment Campaign</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
+                    <i class="fas fa-arrow-left"></i> Back to Investments
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{% if category == 'error' %}danger{% elif category == 'success' %}success{% elif category == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                        <strong>{{ message }}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Platform Ethos: Patient Capital -->
+        <div class="alert alert-primary mb-4 border-0">
+            <h5 class="mb-2"><i class="fas fa-heart me-2"></i>Turning Social Alignment into Financial Reality</h5>
+            <p class="mb-3 small">
+                This is a platform for <strong>patient investors</strong>. You may lose, break even, or profit—what matters is advancing impactful work and helping authors bring their vision to life. Invest because you believe in the project, not for guaranteed returns.
+            </p>
+            <h6 class="mb-2">Before Investing, Check:</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="mb-0 small">
+                        <li><strong>Author Credibility</strong> - Profile and track record</li>
+                        <li><strong>Book Quality</strong> - Word count, chapters, reviews</li>
+                        <li><strong>Accredited Reviews</strong> - Professional ratings</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="mb-0 small">
+                        <li><strong>Investment Terms</strong> - Revenue share and caps</li>
+                        <li><strong>Book Completion</strong> - Progress and timeline</li>
+                        <li><strong>Impact</strong> - Does this work deserve your support?</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <h1>{{ campaign.title }}</h1>
+                <p class="text-muted">for "{{ book.title if book else 'Unknown Book' }}"</p>
+
+                <!-- Author Credibility Card -->
+                {% if author %}
+                <div class="card shadow mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>Author Credibility</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            {% if author.profile_picture %}
+                            <img src="{{ url_for('static', filename=author.profile_picture) }}" 
+                                 class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                            {% else %}
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-user fa-2x"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <h5 class="mb-0">{{ author.pen_name or author.user.username if author.user else 'Unknown' }}</h5>
+                                <small class="text-muted">{{ author.user.email if author.user else '' }}</small>
+                            </div>
+                        </div>
+                        {% if author.bio %}
+                        <p class="text-muted">{{ author.bio[:200] }}{% if author.bio|length > 200 %}...{% endif %}</p>
+                        {% endif %}
+                        {% if author_other_books %}
+                        <div class="mt-3">
+                            <strong>Author's Other Books:</strong>
+                            <div class="mt-2">
+                                {% for other_book in author_other_books %}
+                                <span class="badge bg-secondary me-1">{{ other_book.title }}</span>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted">Track record: {{ author_other_books|length }} other book(s)</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Book Quality Indicators -->
+                {% if book %}
+                <div class="card shadow mb-4 border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-book-open me-2"></i>Book Quality Indicators</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h4 fw-bold text-primary">{{ book.word_count or 0 }}</div>
+                                <small class="text-muted">Words</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h4 fw-bold text-success">{{ chapters_count }}</div>
+                                <small class="text-muted">Chapters</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h4 fw-bold text-warning">
+                                    {% if avg_rating > 0 %}{{ "%.1f"|format(avg_rating) }}{% else %}N/A{% endif %}
+                                </div>
+                                <small class="text-muted">Avg Rating</small>
+                            </div>
+                        </div>
+                        {% if book.genre %}
+                        <div class="mt-3">
+                            <strong>Genre:</strong> <span class="badge bg-primary">{{ book.genre }}</span>
+                        </div>
+                        {% endif %}
+                        {% if book.description %}
+                        <div class="mt-3">
+                            <strong>Book Description:</strong>
+                            <p class="text-muted">{{ book.description[:300] }}{% if book.description|length > 300 %}...{% endif %}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Sample Chapters Preview - KEY FOR DEBUT AUTHORS -->
+                {% if completed_chapters %}
+                <div class="card shadow mb-4 border-info">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Sample Chapters - Read the Content!</h5>
+                        <small>Preview the actual writing quality</small>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>For Debut Authors:</strong> This is your chance to showcase your writing! 
+                            Investors can read your actual content to assess quality.
+                        </p>
+                        
+                        <div class="list-group">
+                            {% for chapter in completed_chapters %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-check-circle text-success me-2"></i>
+                                            Chapter {{ chapter.chapter_number }}: {{ chapter.title }}
+                                        </h6>
+                                        <small class="text-muted">
+                                            {{ chapter.word_count or 0 }} words
+                                            {% if chapter.is_published %}
+                                            <span class="badge bg-success ms-2">Published</span>
+                                            {% else %}
+                                            <span class="badge bg-warning ms-2">Draft</span>
+                                            {% endif %}
+                                        </small>
+                                        {% if chapter.summary %}
+                                        <p class="text-muted small mb-0 mt-1">{{ chapter.summary[:100] }}{% if chapter.summary|length > 100 %}...{% endif %}</p>
+                                        {% endif %}
+                                    </div>
+                                    <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}" 
+                                       class="btn btn-primary btn-sm" target="_blank">
+                                        <i class="fas fa-book-reader"></i> Read
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if completed_chapters_count > 3 %}
+                        <div class="mt-3 text-center">
+                            <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                               class="btn btn-outline-info">
+                                <i class="fas fa-book me-2"></i>View All {{ completed_chapters_count }} Completed Chapters
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mb-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>No Sample Chapters Available</strong> - The author hasn't completed any chapters yet. 
+                    Consider this when making your investment decision.
+                </div>
+                {% endif %}
+
+                <!-- Writing Progress Tracker -->
+                {% if chapters_count > 0 %}
+                {% set progress_pct = (completed_chapters_count / chapters_count * 100) if chapters_count > 0 else 0 %}
+                <div class="card shadow mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Writing Progress Tracker</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <strong>Chapter Completion</strong>
+                                <strong>{{ completed_chapters_count }} / {{ chapters_count }} chapters ({{ "%.0f"|format(progress_pct) }}%)</strong>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar {% if progress_pct >= 75 %}bg-success{% elif progress_pct >= 50 %}bg-info{% elif progress_pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     style="width: {{ progress_pct }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h5 fw-bold text-success">{{ completed_chapters_count }}</div>
+                                <small class="text-muted">Completed</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 fw-bold text-warning">{{ chapters_count - completed_chapters_count }}</div>
+                                <small class="text-muted">Remaining</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 fw-bold text-primary">{{ book.word_count or 0 }}</div>
+                                <small class="text-muted">Total Words</small>
+                            </div>
+                        </div>
+
+                        <!-- Writing Milestones -->
+                        <div class="mt-4">
+                            <h6><i class="fas fa-trophy me-2"></i>Writing Milestones</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        {% if completed_chapters_count >= 1 %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        {% else %}
+                                        <i class="far fa-circle text-muted me-2"></i>
+                                        {% endif %}
+                                        First Chapter Completed
+                                    </div>
+                                    <div class="mb-2">
+                                        {% if (book.word_count or 0) >= 10000 %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        {% else %}
+                                        <i class="far fa-circle text-muted me-2"></i>
+                                        {% endif %}
+                                        10,000 Words Milestone
+                                    </div>
+                                    <div class="mb-2">
+                                        {% if (book.word_count or 0) >= 25000 %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        {% else %}
+                                        <i class="far fa-circle text-muted me-2"></i>
+                                        {% endif %}
+                                        25,000 Words Milestone
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        {% if progress_pct >= 50 %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        {% else %}
+                                        <i class="far fa-circle text-muted me-2"></i>
+                                        {% endif %}
+                                        Halfway Point Reached
+                                    </div>
+                                    <div class="mb-2">
+                                        {% if progress_pct >= 100 %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        {% else %}
+                                        <i class="far fa-circle text-muted me-2"></i>
+                                        {% endif %}
+                                        All Chapters Complete
+                                    </div>
+                                    <div class="mb-2">
+                                        {% if book.status.value == 'published' %}
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        {% else %}
+                                        <i class="far fa-circle text-muted me-2"></i>
+                                        {% endif %}
+                                        Book Published
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Last Update Info -->
+                        {% if book.updated_at %}
+                        <div class="mt-3 alert alert-light">
+                            <small>
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Last Updated:</strong> {{ book.updated_at.strftime('%B %d, %Y') if book.updated_at else 'Never' }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+
+                <!-- Accredited Reviews -->
+                {% if accredited_reviews %}
+                <div class="card shadow mb-4 border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-star me-2"></i>Accredited Reviews ({{ accredited_reviews|length }})</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for review in accredited_reviews[:3] %}
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong>{{ review.title }}</strong>
+                                <div>
+                                    {% for i in range(5) %}
+                                        <i class="fas fa-star {% if i < review.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <p class="text-muted small mb-2">{{ review.content[:200] }}{% if review.content|length > 200 %}...{% endif %}</p>
+                            <small class="text-muted">
+                                By {{ review.reviewer.reviewer_name }} | 
+                                Revenue Share: {{ review.revenue_share_percentage }}%
+                            </small>
+                        </div>
+                        {% endfor %}
+                        {% if accredited_reviews|length > 3 %}
+                        <small class="text-muted">+ {{ accredited_reviews|length - 3 }} more review(s)</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mb-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>No Accredited Reviews Yet</strong> - This book hasn't been reviewed by accredited reviewers. 
+                    Consider this when making your investment decision.
+                </div>
+                {% endif %}
+
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <h5>Campaign Description</h5>
+                        <div>{{ campaign.description|safe }}</div>
+                    </div>
+                </div>
+
+                {% if campaign.pitch_video_url %}
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <h5>Pitch Video</h5>
+                        <div class="ratio ratio-16x9">
+                            <iframe src="{{ campaign.pitch_video_url }}" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Social Proof: Investors -->
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Investors ({{ unique_investor_count }})</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if investor_summaries %}
+                        <div class="list-group">
+                            {% for summary in investor_summaries %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <strong class="me-2">${{ "%.2f"|format(summary.total_amount) }}</strong>
+                                            {% if summary.investment_count > 1 %}
+                                            <span class="badge bg-secondary">{{ summary.investment_count }} investments</span>
+                                            {% endif %}
+                                        </div>
+                                        {% set total_percentage = (summary.total_amount / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
+                                        <small class="text-muted">{{ "%.2f"|format(total_percentage) }}% of goal</small>
+                                        {% if summary.investor %}
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>{{ summary.investor.pen_name or summary.investor.username or 'Anonymous' }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        {% if summary.first_investment_date %}
+                                        <small class="text-muted d-block">
+                                            {% if summary.investment_count > 1 %}
+                                            First: {{ summary.first_investment_date.strftime('%b %d, %Y') }}<br>
+                                            Last: {{ summary.last_investment_date.strftime('%b %d, %Y') }}
+                                            {% else %}
+                                            {{ summary.first_investment_date.strftime('%B %d, %Y') }}
+                                            {% endif %}
+                                        </small>
+                                        {% else %}
+                                        <small class="text-muted">Pending</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Total invested: ${{ "%.2f"|format(campaign.current_funding) }} by {{ unique_investor_count }} investor{{ 's' if unique_investor_count != 1 else '' }}
+                            </small>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>No investments yet. Be the first investor!
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- View Full Book Details -->
+                {% if book %}
+                <div class="card shadow mt-4">
+                    <div class="card-body text-center">
+                        <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-book me-2"></i>View Full Book Details & Sample Chapters
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow sticky-top" style="top: 20px;">
+                    <div class="card-body">
+                        <h5 class="card-title">Campaign Stats</h5>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Funding Progress</small>
+                                <small class="fw-bold">${{ "%.2f"|format(campaign.current_funding) }} / ${{ "%.2f"|format(campaign.funding_goal) }}</small>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar {% if progress_percentage >= 100 %}bg-success{% else %}bg-primary{% endif %}" 
+                                     style="width: {{ progress_percentage }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ "%.1f"|format(progress_percentage) }}% funded</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Investment Terms -->
+                        <div class="mb-3">
+                            <strong><i class="fas fa-percentage me-2"></i>Revenue Share:</strong> 
+                            <span class="badge bg-primary">{{ campaign.revenue_share_percentage }}%</span>
+                            <small class="d-block text-muted mt-1">of sales shared with all investors</small>
+                        </div>
+                        <div class="mb-3">
+                            <strong><i class="fas fa-chart-line me-2"></i>Max Return:</strong> 
+                            <span class="badge bg-success">{{ campaign.return_multiplier_cap }}x</span>
+                            <small class="d-block text-muted mt-1">Maximum return on your investment</small>
+                        </div>
+                        <div class="mb-3">
+                            <strong><i class="fas fa-dollar-sign me-2"></i>Min Investment:</strong> 
+                            ${{ "%.2f"|format(campaign.minimum_investment) }}
+                        </div>
+                        {% if campaign.maximum_investment %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-dollar-sign me-2"></i>Max Investment:</strong> 
+                            ${{ "%.2f"|format(campaign.maximum_investment) }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Time Remaining -->
+                        {% if days_remaining > 0 %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-clock me-2"></i>Time Remaining:</strong> 
+                            <span class="badge bg-{% if days_remaining < 7 %}danger{% elif days_remaining < 14 %}warning{% else %}info{% endif %}">
+                                {{ days_remaining }} day{{ 's' if days_remaining != 1 else '' }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Patient Investor: Outcomes Vary -->
+                        <div class="alert alert-secondary mt-3">
+                            <small>
+                                <strong><i class="fas fa-seedling me-1"></i>Patient Investor:</strong><br>
+                                • Books may not sell—you could lose your investment<br>
+                                • You may break even or make a profit<br>
+                                • What matters: supporting authors and impactful work, regardless of outcome
+                            </small>
+                        </div>
+                        <!-- Fund Release Safeguard -->
+                        <div class="alert alert-info mt-2">
+                            <small>
+                                <strong><i class="fas fa-shield-alt me-1"></i>Your funds are protected:</strong> Author receives 50% when they complete a full first draft (25,000+ words), 50% when published. Reduces ghost-author risk.
+                            </small>
+                        </div>
+
+                        {# Show Invest Now only if campaign is ACTIVE (not FUNDED, not published) #}
+                        {% if campaign.status.value == 'active' and book.status.value != 'published' %}
+                            {% if is_author %}
+                            <div class="alert alert-info mb-0">
+                                <small>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <strong>You are the author</strong> - Authors cannot invest in their own books, but you can invest in other authors' books in the marketplace.
+                                </small>
+                            </div>
+                            {% else %}
+                            <a href="{{ url_for('book_platform.make_investment', campaign_id=campaign.id) }}" 
+                               class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-dollar-sign"></i> Invest Now
+                            </a>
+                            {% endif %}
+                        {% else %}
+                        <button class="btn btn-secondary btn-lg w-100" disabled>
+                            {% if campaign.status.value == 'funded' %}
+                                <i class="fas fa-check-circle me-1"></i> Funding Goal Reached
+                            {% elif book.status.value == 'published' %}
+                                <i class="fas fa-book me-1"></i> Book Published - No More Investments
+                            {% else %}
+                                Campaign {{ campaign.status.value|title }}
+                            {% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

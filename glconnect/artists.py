@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import os,subprocess
 from glconnect import db
+from urllib.parse import urlparse
 from glconnect.models import *
 
 music = Blueprint("music", __name__)
@@ -28,23 +29,19 @@ def sanitize_input(input_string):
     return ""
 
 def sanitize_url(url):
-    """Sanitize URL to ensure it starts with http:// or https://"""
+    """Sanitize and enforce HTTPS for URLs."""
     if url:
-        # Remove any unwanted characters
         sanitized_url = sanitize_input(url)
 
-        # Ensure URL starts with http:// or https://
+        # Enforce https:// by default
         if not sanitized_url.startswith('http://') and not sanitized_url.startswith('https://'):
-            sanitized_url = 'http://' + sanitized_url
-        
-        # Check if the URL has a valid format
-        url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+')
-        if re.match(url_pattern, sanitized_url):
-            return sanitized_url
-        else:
-            return ""  # Invalid URL, return empty string
-    return ""
+            sanitized_url = 'https://' + sanitized_url
 
+        # Validate URL structure
+        parsed = urlparse(sanitized_url)
+        if parsed.scheme in ['http', 'https'] and parsed.netloc:
+            return sanitized_url
+    return ""
 @music.route("/upload_song", methods=["GET", "POST"])
 @login_required
 def upload_song():
@@ -81,11 +78,24 @@ def upload_song():
         flash(f"Artist {artist_name} not found.", "error")
         return redirect(url_for("music.upload_song"))
 
-    # Secure and unique file naming
-    base_filename = secure_filename(f"{artist_name} - {song_name}")
+    # Create filename with spaces and dashes (not underscores)
+    # Sanitize but preserve spaces and dashes
+    def sanitize_filename_preserve_spaces(text):
+        """Sanitize filename but preserve spaces and dashes"""
+        import re
+        # Keep alphanumeric, spaces, dashes, and dots
+        sanitized = re.sub(r'[^a-zA-Z0-9\s\-\.]', '', text)
+        # Remove multiple consecutive spaces
+        sanitized = re.sub(r'\s+', ' ', sanitized)
+        # Strip leading/trailing spaces and dashes
+        sanitized = sanitized.strip(' -')
+        return sanitized
+    
+    # Format: "Artist Name - Song Name.mp3" with spaces preserved
+    base_filename = f"{sanitize_filename_preserve_spaces(artist_name)} - {sanitize_filename_preserve_spaces(song_name)}"
     mp3_filename = f"{base_filename}.mp3"
     mp3_path = os.path.join(UPLOAD_FOLDER, mp3_filename)
-
+    
     counter = 1
     while os.path.exists(mp3_path):
         mp3_filename = f"{base_filename} ({counter}).mp3"
@@ -127,6 +137,54 @@ def upload_song():
 
 
 
+def get_song_path_for_artist(song, artist_name=None):
+    """Helper function to get the correct path for a song in artist profile"""
+    import os
+    import urllib.parse
+    
+    # Check if it's a Song model or Song_upload model
+    local_path = getattr(song, 'local_path', None)
+    song_name = getattr(song, 'name', None) or getattr(song, 'name_song', None)
+    song_artist = getattr(song, 'artist', None) or getattr(song, 'name_artist', None) or artist_name
+    
+    if local_path:
+        # Extract filename from local_path if it's a full path
+        if '/' in local_path or '\\' in local_path:
+            filename = os.path.basename(local_path)
+            if '/' in filename:
+                filename = filename.split('/')[-1]
+            if '\\' in filename:
+                filename = filename.split('\\')[-1]
+            # Check if file exists in song_uploads directory
+            song_uploads_path = os.path.join(UPLOAD_FOLDER, filename)
+            if os.path.exists(song_uploads_path):
+                return f"/static/song_uploads/{filename}"
+            # Fallback to afro directory
+            return f"/static/afro/{filename}"
+        else:
+            # It's already a relative path or filename
+            if local_path.startswith('/'):
+                return local_path
+            elif local_path.startswith('static/'):
+                return f"/{local_path}"
+            else:
+                # Check if file exists in song_uploads directory
+                song_uploads_path = os.path.join(UPLOAD_FOLDER, local_path)
+                if os.path.exists(song_uploads_path):
+                    return f"/static/song_uploads/{local_path}"
+                # Fallback to afro directory
+                return f"/static/afro/{local_path}"
+    else:
+        # Fallback to constructed path - try song_uploads first
+        if song_artist and song_name:
+            constructed_filename = f"{song_artist} - {song_name}.mp3"
+            song_uploads_path = os.path.join(UPLOAD_FOLDER, constructed_filename)
+            if os.path.exists(song_uploads_path):
+                return f"/static/song_uploads/{urllib.parse.quote(constructed_filename)}"
+            # Fallback to afro directory
+            return f"/static/afro/{urllib.parse.quote(song_artist)} - {urllib.parse.quote(song_name)}.mp3"
+        return None
+
 @music.route("/artist_profile")
 @login_required
 def artist_profile():
@@ -141,7 +199,14 @@ def artist_profile():
     # Get songs uploaded via Song_upload model (assuming artist_name is stored in Song_upload)
     uploaded_songs_upload = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
 
-    # Combine both song lists (you could also filter out duplicates based on some criteria, if needed)
+    # Add path attribute to each song object
+    for song in uploaded_songs:
+        song.song_path = get_song_path_for_artist(song, artist.artist_name)
+    
+    for song_upload in uploaded_songs_upload:
+        song_upload.song_path = get_song_path_for_artist(song_upload, artist.artist_name)
+
+    # Combine both song lists (no duplicates based on song ID)
     all_songs = uploaded_songs + uploaded_songs_upload
 
     return render_template("artists.html", user=current_user, artist=artist, songs=all_songs)
@@ -252,7 +317,7 @@ def artist_edit():
             filename = secure_filename(profile_pic.filename)
 
             # Define the folder where the profile picture will be stored
-            upload_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'song_uploads')
+            upload_folder = os.path.join(os.getcwd(), 'glconnect', 'static', 'uploads')
 
             # Ensure the directory exists before saving
             if not os.path.exists(upload_folder):
@@ -262,8 +327,8 @@ def artist_edit():
             filepath = os.path.join(upload_folder, filename)
             profile_pic.save(filepath)
 
-            # Save the relative path in the database (no need for full file path)
-            artist.profile_pic = filename
+            # Save the path as static/uploads/picname.jpg in database
+            artist.profile_pic = f"static/uploads/{filename}"
 
         # Commit changes to the database
         db.session.commit()

@@ -1,14 +1,17 @@
 # services.py
 import os
+import json
 import subprocess
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+config = {
+    "ICECAST_CONFIG": os.getenv("ICECAST_CONFIG")
+}
 
 def start_icecast():
     """Start the Icecast server."""
-    icecast_config = os.getenv('ICECAST_CONFIG')
+    icecast_config = config.get('ICECAST_CONFIG')
     if not icecast_config:
         print("ICECAST_CONFIG is not set in the .env file")
         return

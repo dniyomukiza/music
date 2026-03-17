@@ -6,8 +6,12 @@ class SongSearcher:
         self.query = query
 
     def search_song_in_database(self):
-        # Ensure you're using the app context when accessing the database
-        song = db.session.query(Song).filter(Song.name.ilike(f"%{self.query}%")).first()
+        # Ensure you're using the app context when accessing the database; only approved songs
+        from sqlalchemy import or_
+        song = db.session.query(Song).filter(
+            Song.name.ilike(f"%{self.query}%"),
+            or_(Song.approval_status.is_(None), Song.approval_status == 'approved')
+        ).first()
         return song
 
     def play_song(self, song):

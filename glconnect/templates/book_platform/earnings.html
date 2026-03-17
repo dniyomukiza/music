@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Dashboard - Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="mb-4"><i class="fas fa-dollar-sign me-2"></i>Earnings Dashboard</h1>
+
+        <!-- Reviewer Earnings -->
+        {% if earnings_data.reviewer_earnings %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-star me-2"></i>Reviewer Earnings</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h4 class="mb-0">Total Earnings: ${{ "%.2f"|format(earnings_data.total_reviewer_earnings) }}</h4>
+                        {% if earnings_data.reviewer_available_balance is defined %}
+                        <small>Available for payout: ${{ "%.2f"|format(earnings_data.reviewer_available_balance) }}</small>
+                        {% endif %}
+                    </div>
+                    {% if earnings_data.reviewer_available_balance >= payout_minimum and not earnings_data.reviewer_pending_payout_requests %}
+                    <button type="button" class="btn btn-light" id="btn-request-reviewer-payout" data-amount="{{ earnings_data.reviewer_available_balance }}">
+                        <i class="fas fa-paper-plane me-1"></i>Request Payout (${{ "%.2f"|format(earnings_data.reviewer_available_balance) }})
+                    </button>
+                    {% elif earnings_data.reviewer_pending_payout_requests %}
+                    <span class="badge bg-warning">Payout request pending</span>
+                    {% elif earnings_data.reviewer_available_balance < payout_minimum %}
+                    <small class="text-muted">Min ${{ "%.2f"|format(payout_minimum) }} to request payout</small>
+                    {% endif %}
+                </div>
+                
+                <!-- Earnings by Book -->
+                {% if earnings_data.reviewer_earnings_by_book %}
+                <h5 class="mt-4 mb-3">Earnings by Book</h5>
+                {% for book_id, book_data in earnings_data.reviewer_earnings_by_book.items() %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">{{ book_data.book.title if book_data.book else 'Unknown Book' }}</h6>
+                            <div>
+                                <strong class="text-success">${{ "%.2f"|format(book_data.total) }}</strong>
+                                <a href="{{ url_for('book_platform.reviewer_earnings_by_book', book_id=book_id) }}" 
+                                   class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="fas fa-chart-line"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ book_data.earnings|length }} earning{{ 's' if book_data.earnings|length != 1 else '' }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Book</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for earning in earnings_data.reviewer_earnings %}
+                            <tr>
+                                <td>{{ earning.created_at.strftime('%B %d, %Y') }}</td>
+                                <td>{{ earning.review.book_project.title if earning.review and earning.review.book_project else 'N/A' }}</td>
+                                <td>${{ "%.2f"|format(earning.amount) }}</td>
+                                <td>
+                                    <span class="badge bg-{% if earning.status.value == 'completed' %}success{% else %}warning{% endif %}">
+                                        {{ earning.status.value|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Investment Returns -->
+        {% if earnings_data.investments %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-chart-line me-2"></i>Investment Returns</h3>
+                <small class="opacity-75">Patient capital—you invested in impactful work. Outcomes vary; your support advanced authors regardless.</small>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h4>Total Returns: ${{ "%.2f"|format(earnings_data.total_investment_returns) }}</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Book</th>
+                                <th>Investment</th>
+                                <th>Returns</th>
+                                <th>Available</th>
+                                <th>ROI</th>
+                                <th>Max Return</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for investment in earnings_data.investments %}
+                            <tr>
+                                <td>{{ investment.book_project.title }}</td>
+                                <td>${{ "%.2f"|format(investment.amount) }}</td>
+                                <td>${{ "%.2f"|format(investment.total_returns) }}</td>
+                                <td><strong>${{ "%.2f"|format(investment.available_balance) }}</strong></td>
+                                <td>
+                                    <strong class="text-success">
+                                        {{ "%.1f"|format((investment.total_returns / investment.amount * 100) if investment.amount > 0 else 0) }}%
+                                    </strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${{ "%.2f"|format(investment.amount * investment.return_multiplier) }} 
+                                        ({{ investment.return_multiplier }}x)
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if investment.status.value == 'active' %}success{% else %}secondary{% endif %}">
+                                        {{ investment.status.value|title }}
+                                    </span>
+                                    {% if investment.pending_payout_requests %}
+                                    <span class="badge bg-warning text-dark ms-1">Payout Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('book_platform.investor_returns_by_book', book_id=investment.book_project_id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Details
+                                    </a>
+                                    <a href="{{ url_for('book_platform.investment_refund_status', investment_id=investment.id) }}" 
+                                       class="btn btn-sm btn-outline-warning ms-1">
+                                        <i class="fas fa-undo"></i> Refund
+                                    </a>
+                                    {% if investment.available_balance >= payout_minimum and not investment.pending_payout_requests %}
+                                    <button type="button" class="btn btn-sm btn-success ms-1" 
+                                            onclick="requestPayout({{ investment.id }}, {{ investment.available_balance }})">
+                                        <i class="fas fa-money-bill-wave"></i> Request Payout
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Author Sales -->
+        {% if earnings_data.author_sales %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0"><i class="fas fa-book me-2"></i>Author Sales</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h4 class="mb-0">Total Revenue: ${{ "%.2f"|format(earnings_data.total_author_revenue) }}</h4>
+                        {% if earnings_data.author_available_balance is defined %}
+                        <small>Available for payout: ${{ "%.2f"|format(earnings_data.author_available_balance) }}</small>
+                        {% endif %}
+                    </div>
+                    {% if earnings_data.author_available_balance >= payout_minimum and not earnings_data.author_pending_payout_requests %}
+                    <button type="button" class="btn btn-light" id="btn-request-author-payout" data-amount="{{ earnings_data.author_available_balance }}">
+                        <i class="fas fa-paper-plane me-1"></i>Request Payout (${{ "%.2f"|format(earnings_data.author_available_balance) }})
+                    </button>
+                    {% elif earnings_data.author_pending_payout_requests %}
+                    <span class="badge bg-warning">Payout request pending</span>
+                    {% elif earnings_data.author_available_balance < payout_minimum %}
+                    <small class="text-muted">Min ${{ "%.2f"|format(payout_minimum) }} to request payout</small>
+                    {% endif %}
+                </div>
+                
+                <!-- Sales by Book -->
+                {% if earnings_data.author_sales_by_book %}
+                <h5 class="mt-4 mb-3">Sales by Book</h5>
+                {% for book_id, book_data in earnings_data.author_sales_by_book.items() %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">{{ book_data.book.title if book_data.book else 'Unknown Book' }}</h6>
+                            <div>
+                                <strong class="text-info">${{ "%.2f"|format(book_data.total) }}</strong>
+                                <span class="badge bg-secondary ms-2">{{ book_data.sales|length }} sale{{ 's' if book_data.sales|length != 1 else '' }}</span>
+                                <a href="{{ url_for('book_platform.book_sales_transparency', book_id=book_id) }}" 
+                                   class="btn btn-sm btn-outline-info ms-2">
+                                    <i class="fas fa-chart-pie"></i> View Transparency
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Book</th>
+                                <th>Sale Amount</th>
+                                <th>Net Amount</th>
+                                <th>Distributed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in earnings_data.author_sales %}
+                            <tr>
+                                <td>{{ sale.created_at.strftime('%B %d, %Y') }}</td>
+                                <td>{{ sale.book_project.title }}</td>
+                                <td>${{ "%.2f"|format(sale.net_amount + sale.platform_fee) }}</td>
+                                <td>${{ "%.2f"|format(sale.net_amount) }}</td>
+                                <td>
+                                    <small class="text-muted">
+                                        Reviewers: ${{ "%.2f"|format(sale.distributed_to_reviewers) }}<br>
+                                        Investors: ${{ "%.2f"|format(sale.distributed_to_investors) }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if sale.status.value == 'completed' %}success{% else %}warning{% endif %}">
+                                        {{ sale.status.value|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not earnings_data.reviewer_earnings and not earnings_data.investments and not earnings_data.author_sales %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h4>No earnings yet</h4>
+            <p>Start reviewing books, investing in campaigns, or selling your books to see earnings here.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Payout Request Modal -->
+    <div class="modal fade" id="payoutModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave me-2"></i>Request Payout</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Minimum payout: ${{ "%.2f"|format(payout_minimum) }}. Enter the amount you wish to withdraw.</p>
+                    <div class="mb-3">
+                        <label for="payoutAmount" class="form-label">Amount (USD)</label>
+                        <input type="number" class="form-control" id="payoutAmount" step="0.01" min="{{ payout_minimum }}" placeholder="0.00">
+                        <small class="text-muted">Available: $<span id="payoutAvailable">0.00</span></small>
+                    </div>
+                    <input type="hidden" id="payoutInvestmentId" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmPayoutBtn">
+                        <i class="fas fa-paper-plane me-1"></i>Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function requestPayout(investmentId, availableBalance) {
+            document.getElementById('payoutInvestmentId').value = investmentId;
+            document.getElementById('payoutAvailable').textContent = availableBalance.toFixed(2);
+            document.getElementById('payoutAmount').value = Math.min(availableBalance, Math.max({{ payout_minimum }}, availableBalance));
+            document.getElementById('payoutAmount').max = availableBalance;
+            new bootstrap.Modal(document.getElementById('payoutModal')).show();
+        }
+        document.getElementById('confirmPayoutBtn').addEventListener('click', function() {
+            const investmentId = document.getElementById('payoutInvestmentId').value;
+            const amount = parseFloat(document.getElementById('payoutAmount').value);
+            if (!amount || amount < {{ payout_minimum }}) {
+                alert('Minimum payout is ${{ "%.2f"|format(payout_minimum) }}');
+                return;
+            }
+            fetch('{{ url_for("book_platform.request_payout") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({investment_id: investmentId, amount: amount})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) alert(data.error);
+                else {
+                    alert(data.message);
+                    window.location.reload();
+                }
+            })
+            .catch(err => alert('Request failed. Please try again.'));
+        });
+        // Reviewer payout request
+        const btnReviewerPayout = document.getElementById('btn-request-reviewer-payout');
+        if (btnReviewerPayout) {
+            btnReviewerPayout.addEventListener('click', function() {
+                const amount = parseFloat(this.dataset.amount);
+                if (!confirm('Request payout of $' + amount.toFixed(2) + '? Admin will process it shortly.')) return;
+                fetch('{{ url_for("book_platform.request_reviewer_payout") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({amount: amount})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) alert(data.error);
+                    else {
+                        alert(data.message);
+                        window.location.reload();
+                    }
+                })
+                .catch(err => alert('Request failed. Please try again.'));
+            });
+        }
+        // Author sales payout request
+        const btnAuthorPayout = document.getElementById('btn-request-author-payout');
+        if (btnAuthorPayout) {
+            btnAuthorPayout.addEventListener('click', function() {
+                const amount = parseFloat(this.dataset.amount);
+                if (!confirm('Request payout of $' + amount.toFixed(2) + '? Admin will process it shortly.')) return;
+                fetch('{{ url_for("book_platform.request_author_sales_payout") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({amount: amount})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) alert(data.error);
+                    else {
+                        alert(data.message);
+                        window.location.reload();
+                    }
+                })
+                .catch(err => alert('Request failed. Please try again.'));
+            });
+        }
+    </script>
+</body>
+</html>
+

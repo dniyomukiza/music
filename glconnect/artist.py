@@ -3,19 +3,63 @@ from flask import render_template, Blueprint,request,session,jsonify
 from flask_login import current_user
 from .models import*
 import urllib.parse
+from flask_cors import CORS
 
 
 art = Blueprint("art", __name__)
+def get_song_path(song, artist_name=None):
+    """Helper function to get the correct path for a song"""
+    import os
+    
+    # Check if it's a Song model or Song_upload model
+    local_path = getattr(song, 'local_path', None)
+    song_name = getattr(song, 'name', None) or getattr(song, 'name_song', None)
+    song_artist = getattr(song, 'artist', None) or getattr(song, 'name_artist', None) or artist_name
+    
+    if local_path:
+        # Extract filename from local_path if it's a full path
+        if '/' in local_path or '\\' in local_path:
+            filename = os.path.basename(local_path)
+            if '/' in filename:
+                filename = filename.split('/')[-1]
+            if '\\' in filename:
+                filename = filename.split('\\')[-1]
+            return f"/static/afro/{filename}"
+        else:
+            # It's already a relative path or filename
+            if local_path.startswith('/'):
+                return local_path
+            elif local_path.startswith('static/'):
+                return f"/{local_path}"
+            else:
+                return f"/static/afro/{local_path}"
+    else:
+        # Fallback to constructed path
+        if song_artist and song_name:
+            return f"/static/afro/{urllib.parse.quote(song_artist)} - {urllib.parse.quote(song_name)}.mp3"
+        return None
 
 @art.route('/artist/<int:artist_id>')
 def artist_profile(artist_id):
     artist = Artist.query.get_or_404(artist_id)
 
-    # Get songs uploaded by the artist via Song model
-    songs_from_song_model = Song.query.filter_by(artist_id=artist_id).all()
+    # Get songs uploaded by the artist via Song model (only approved for public view)
+    from sqlalchemy import or_
+    songs_from_song_model = Song.query.filter_by(artist_id=artist_id).filter(
+        or_(Song.approval_status.is_(None), Song.approval_status == 'approved')
+    ).all()
 
-    # Get songs uploaded via Song_upload model (where name_artist matches the artist_name)
-    songs_from_upload_model = Song_upload.query.filter_by(name_artist=artist.artist_name).all()
+    # Get songs uploaded via Song_upload model (only approved)
+    songs_from_upload_model = Song_upload.query.filter_by(name_artist=artist.artist_name).filter(
+        or_(Song_upload.approval_status.is_(None), Song_upload.approval_status == 'approved')
+    ).all()
+
+    # Add path attribute to each song object
+    for song in songs_from_song_model:
+        song.song_path = get_song_path(song, artist.artist_name)
+    
+    for song_upload in songs_from_upload_model:
+        song_upload.song_path = get_song_path(song_upload, artist.artist_name)
 
     # Combine both song lists (no duplicates based on song ID)
     all_songs = songs_from_song_model + songs_from_upload_model
@@ -85,14 +129,14 @@ def save_playlist():
 
 @art.route('/get_playlist/<int:user_id>', methods=['GET'])
 def get_playlist(user_id):
-    # Retrieve the user's playlist entries
+    from flask import url_for
     playlist_entries = Playlist.query.filter_by(user_id=user_id).all()
-
-    # Get the song details for each playlist entry
     songs = []
     for entry in playlist_entries:
-        song = Song.query.get(entry.song_id)
-        if song:
+        if entry.song_id:
+            song = Song.query.get(entry.song_id)
+            if not song:
+                continue
             # Get the artist details using the artist_id from the song
             artist = Artist.query.get(song.artist_id)
             if artist:
@@ -100,46 +144,86 @@ def get_playlist(user_id):
             else:
                 artist_name = "Unknown Artist"
 
-            # Construct the song path using the artist and song name
-            song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.mp3"
+            # Use local_path if available, otherwise construct path
+            if song.local_path:
+                # Extract filename from local_path if it's a full path
+                import os
+                if '/' in song.local_path or '\\' in song.local_path:
+                    filename = os.path.basename(song.local_path)
+                    # Remove any directory prefixes
+                    if '/' in filename:
+                        filename = filename.split('/')[-1]
+                    if '\\' in filename:
+                        filename = filename.split('\\')[-1]
+                    song_path = f"/static/afro/{filename}"
+                else:
+                    # It's already a relative path or filename
+                    if song.local_path.startswith('/'):
+                        song_path = song.local_path
+                    elif song.local_path.startswith('static/'):
+                        song_path = f"/{song.local_path}"
+                    else:
+                        song_path = f"/static/afro/{song.local_path}"
+            else:
+                # Fallback to constructed path
+                song_path = f"/static/afro/{urllib.parse.quote(song.artist)} - {urllib.parse.quote(song.name)}.mp3"
             
             songs.append({
                 'song_id': song.id,
                 'song_name': song.name,
-                'artist_name': artist_name,  # Add artist name to the response
-                'song_url': song_path  # Return the dynamically constructed song path
+                'artist_name': artist_name,
+                'song_url': song_path
             })
+        elif entry.download_id:
+            d = DownloadedSong.query.get(entry.download_id)
+            if d:
+                songs.append({
+                    'song_id': None,
+                    'song_name': d.name or 'Untitled',
+                    'artist_name': d.artist or 'Unknown',
+                    'song_url': url_for('playlist2.serve_downloaded_song_file', download_id=d.id)
+                })
 
     if not songs:
         return jsonify({'message': 'No songs found in playlist'}), 404
 
     return jsonify({'playlist': songs}), 200
 
-@art.route('/delete_song_from_playlist', methods=['DELETE'])
-def delete_song_from_playlist():
-    data = request.get_json()
-    print(f"Request data: {data}")  # Log the data received from the frontend
-    
-    song_id = data.get('song_id')
-    if not song_id:
-        print("Song ID is missing!")
-        return jsonify({'message': 'song_id is required'}), 400
+from flask import request, jsonify
+from flask_login import current_user, login_required
+import traceback
+from .models import Playlist, db  # Adjust import based on your structure
 
+@art.route('/delete_song_from_playlist', methods=['DELETE'])
+@login_required
+def delete_song_from_playlist():
     try:
-        # Find the song in the database
-        song = Playlist.query.filter_by(song_id=song_id, user_id=current_user.user_id).first()
-        
+        data = request.get_json()
+        print(f"Request data: {data}")
+
+        song_id = data.get('song_id')
+        if not song_id:
+            print("Missing song_id!")
+            return jsonify({'message': 'song_id is required'}), 400
+
+        # Ensure current_user has user_id
+        user_id = getattr(current_user, 'user_id', None)
+        if not user_id:
+            print("User not authenticated or missing user_id")
+            return jsonify({'message': 'User not authenticated'}), 401
+
+        # Attempt to find and delete the song
+        song = Playlist.query.filter_by(song_id=song_id, user_id=user_id).first()
         if song:
-            print(f"Found song: {song}")  # Log the song being deleted
+            print(f"Deleting song: {song}")
             db.session.delete(song)
             db.session.commit()
-            print("Song deleted from playlist!")
-            return jsonify({'message': 'Song removed from playlist! Refresh page'}), 200
+            return jsonify({'message': 'Song removed from playlist!'}), 200
         else:
-            print(f"Song with ID {song_id} not found.")
-            return jsonify({'message': 'Song not found in playlist!'}), 404
+            print(f"Song with ID {song_id} not found for user_id {user_id}")
+            return jsonify({'message': 'Song not found in playlist'}), 404
+
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'message': f'Error: {str(e)}'}), 500
-
-
+        print("Exception occurred while deleting song:")
+        traceback.print_exc()
+        return jsonify({'message': 'Internal server error'}), 500

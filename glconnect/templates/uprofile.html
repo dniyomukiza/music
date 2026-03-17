@@ -72,15 +72,19 @@
                         const songDiv = document.createElement("div");
                         songDiv.classList.add("song-item");
     
-                        const songPath = `/static/afro/${encodeURIComponent(song.artist)} - ${encodeURIComponent(song.name)}.mp3`;
+                        // Use song file serving route for reliable file access, fallback to path if available
+                        const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+                        const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
+                        const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
+                        const safeName = songName.replace(/'/g, "\\'");
     
                         songDiv.innerHTML = `
-                            <p><strong>${song.name}</strong> by ${song.artist}</p>
+                            <p><strong>${songName}</strong> by ${artistName}</p>
                             <audio controls>
                                 <source src="${songPath}" type="audio/mpeg">
                                 Your browser does not support the audio element.
                             </audio>
-                            <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${song.name}', ${userId})">Add to Playlist</button>
+                            <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${safeName}', ${userId})">Add to Playlist</button>
                         `;
                         resultsContainer.appendChild(songDiv);
                     });

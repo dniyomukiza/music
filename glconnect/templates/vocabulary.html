@@ -1,63 +1,1047 @@
 {% extends "base.html" %}
 
 {% block images %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='./words.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='words.css') }}">
 
-    <div class="container">
+    <div class="language-page">
         {% include 'messages.html' %}
-        <h1>Learn Kinyarwanda</h1>
-        <form action="{{ url_for('routes1.findwords') }}" method="GET" class="search-form">
-            <input type="text" placeholder="Search a word" name="word" required>
-            <button type="submit">Search</button>
-        </form>
+        
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <p class="hero-description">
+                        Discover, play, and contribute to the rich vocabulary of Kinyarwanda. 
+                        Join thousands of learners in this interactive journey!
+                    </p>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">10,000+</span>
+                            <span class="stat-label">Words</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">2</span>
+                            <span class="stat-label">Games</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">100+</span>
+                            <span class="stat-label">Learners</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="floating-elements">
+                        <div class="floating-word">Muraho</div>
+                        <div class="floating-word">Murakoze</div>
+                        <div class="floating-word">Murabeho</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-card search-card">
+                <div class="card-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <p>Look up any Kinyarwanda word instantly</p>
+                <form action="{{ url_for('routes1.findwords') }}" method="POST" class="search-form">
+                    <input type="text" placeholder="Search a word..." name="word" required>
+                    <button type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="action-card contribute-card">
+                <div class="card-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <p>Contribute to Kinyarwanda by adding words</p>
+                <a href="{{ url_for('routes1.contribute_word_page') }}" class="card-button">
+                    <i class="fas fa-arrow-right"></i>
+                    Add Words
+                </a>
+            </div>
+            
+            <div class="action-card community-card">
+                <div class="card-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <p>Discover new words added by the community of learners and contributors</p>
+                <a href="{{ url_for('routes1.community_dictionary_public') }}" class="card-button">
+                    <i class="fas fa-arrow-right"></i>
+                    Browse Words
+                </a>
+            </div>
+            
+        </div>
+
+        <!-- Word Search Results -->
         {% if word %}
-            {% if word.error %}
-                <p class="error-message">{{ word.error }}</p>
-            {% else %}
-                <h2>{{ word.word }}</h2>
-                <div class="definitions">
-                    <h3>Definitions:</h3>
-                    <ul>
-                        {% for meaning in word.igisobanuro_meaning %}
-                            <li>{{ meaning }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="part-of-speech">
-                    <h3>Part of Speech:</h3>
-                    <ul>
-                        {% for pos in word.icyiciro_pos %}
-                            <li>{{ pos }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% if word.basoma_phonetics %}
-                    <div class="phonetics">
-                        <h3>Phonetics:</h3>
-                        <ul>
-                            {% for key, phonetic in word.basoma_phonetics.items() %}
-                                <li><strong>{{ key }}:</strong> {{ phonetic }}</li>
-                            {% endfor %}
-                        </ul>
+            <div class="word-results-section">
+                {% if word.error %}
+                    <div class="error-card">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="error-content">
+                            <h3>Word Not Found</h3>
+                            <p>{{ word.error }}</p>
+                            <p class="error-suggestion">Try checking your spelling or search for a different word.</p>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="word-detail-card">
+                        <div class="word-header">
+                            <div class="word-title">
+                                <h2>{{ word.word }}</h2>
+                                {% if word.icyiciro_pos %}
+                                    <div class="word-pos">
+                                        {% for pos in word.icyiciro_pos %}
+                                            <span class="pos-tag">{{ pos }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="word-actions">
+                                <button class="action-btn" onclick="speakWord('{{ word.word }}')">
+                                    <i class="fas fa-volume-up"></i>
+                                </button>
+                                <button class="action-btn" onclick="copyWord('{{ word.word }}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="word-content">
+                            {% if word.igisobanuro_meaning %}
+                                <div class="meaning-section">
+                                    <h3><i class="fas fa-book"></i> Definitions</h3>
+                                    <div class="meanings-list">
+                                        {% for meaning in word.igisobanuro_meaning %}
+                                            <div class="meaning-item">
+                                                <span class="meaning-number">{{ loop.index }}</span>
+                                                <span class="meaning-text">{{ meaning }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if word.basoma_phonetics %}
+                                <div class="phonetics-section">
+                                    <h3><i class="fas fa-microphone"></i> Phonetics</h3>
+                                    <div class="phonetics-grid">
+                                        {% for key, phonetic in word.basoma_phonetics.items() %}
+                                            <div class="phonetic-item">
+                                                <span class="phonetic-key">{{ key }}</span>
+                                                <span class="phonetic-value">{{ phonetic }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if word.umzi_root %}
+                                <div class="root-section">
+                                    <h3><i class="fas fa-seedling"></i> Root</h3>
+                                    <p class="root-text">{{ word.umzi_root }}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if word.bandika_writing %}
+                                <div class="writing-section">
+                                    <h3><i class="fas fa-pen"></i> Bandika Writing</h3>
+                                    <p class="writing-text">{{ word.bandika_writing }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 {% endif %}
-                {% if word.umzi_root %}
-                    <div class="root">
-                        <h3>Root:</h3>
-                        <p>{{ word.umzi_root }}</p>
-                    </div>
-                {% endif %}
-                {% if word.bandika_writing %}
-                    <div class="bandika-writing">
-                        <h3>Bandika Writing:</h3>
-                        <p>{{ word.bandika_writing }}</p>
-                    </div>
-                {% endif %}
-            {% endif %}
-        {% else %}
-            <p>No word found. Please try again.</p>
+            </div>
         {% endif %}
+        
+        <!-- Games Section -->
+        <div class="games-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-gamepad"></i>
+                    Interactive Learning Games
+                </h2>
+                <p class="section-subtitle">Master Kinyarwanda through fun, engaging games</p>
+            </div>
+            
+            <div class="games-grid">
+                <!-- Word Matching Game -->
+                <div class="game-card word-matching-card">
+                    <div class="game-header">
+                        <div class="game-icon">
+                            <i class="fas fa-puzzle-piece"></i>
+                        </div>
+                        <div class="game-info">
+                            <h3>Word Matching</h3>
+                            <p>Match Kinyarwanda words with English meanings</p>
+                        </div>
+                    </div>
+                    <div class="game-stats">
+                        <div class="stat">
+                            <i class="fas fa-clock"></i>
+                            <span>60s</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-star"></i>
+                            <span>6 words</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-trophy"></i>
+                            <span>+10/-5</span>
+                        </div>
+                    </div>
+                    <div class="game-controls">
+                        <button id="startGameBtn" class="game-play-btn">
+                            <i class="fas fa-play"></i> Start Game
+                        </button>
+                        <button id="resetGameBtn" class="game-reset-btn" style="display: none;">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div id="gameArea" class="game-area" style="display: none;">
+                <div class="game-header">
+                    <div class="game-stats">
+                        <div class="score-display">
+                            <i class="fas fa-star"></i>
+                            <span id="gameScore">0</span> points
+                        </div>
+                        <div class="timer-display">
+                            <i class="fas fa-clock"></i>
+                            <span id="gameTimer">60</span>s
+                        </div>
+                    </div>
+                    <div class="game-progress">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <span id="progressText">0/6 matches</span>
+                    </div>
+                </div>
+                
+                <div class="game-board">
+                    <div class="words-column">
+                        <h4>Kinyarwanda Words</h4>
+                        <div id="wordsContainer" class="words-container">
+                            <!-- Words will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div class="meanings-column">
+                        <h4>English Meanings</h4>
+                        <div id="meaningsContainer" class="meanings-container">
+                            <!-- Meanings will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="gameResult" class="game-result" style="display: none;">
+                    <div class="result-content">
+                        <h3 id="resultTitle">Game Over!</h3>
+                        <p id="resultMessage">You scored <span id="finalScore">0</span> points!</p>
+                        <div class="result-actions">
+                            <button id="playAgainBtn" class="play-again-btn">
+                                <i class="fas fa-play"></i> Play Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Picture-Word Matching Game -->
+        <div class="game-section">
+            <h3><i class="fas fa-images"></i> Picture-Word Matching Game</h3>
+            <p style="color: white;">Match Kinyarwanda words with their corresponding pictures!</p>
+            
+            <div class="game-controls">
+                <button id="startPictureGameMain" class="btn btn-success">
+                    <i class="fas fa-play"></i> Start Picture Game
+                </button>
+                <button id="resetPictureGameMain" class="btn btn-secondary" disabled>
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+            
+            <div class="game-info">
+                <div class="score-display">
+                    <span>Score: <span id="pictureGameScore">0</span></span>
+                </div>
+                <div class="timer-display">
+                    <span>Time: <span id="pictureGameTimer">45</span>s</span>
+                </div>
+            </div>
+            
+            <div id="pictureGameArea" class="picture-game-area" style="display: none;">
+                <div class="game-progress">
+                    <div class="progress-bar">
+                        <div id="pictureProgressFill" class="progress-fill"></div>
+                    </div>
+                    <span id="pictureProgressText">0/4</span>
+                </div>
+                
+                <div class="picture-game-grid">
+                    <div class="pictures-column">
+                        <h4>Pictures</h4>
+                        <div id="picturesContainer" class="pictures-container">
+                            <!-- Pictures will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div class="words-column">
+                        <h4>Kinyarwanda Words</h4>
+                        <div id="pictureWordsContainer" class="picture-words-container">
+                            <!-- Words will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="pictureGameResult" class="game-result" style="display: none;">
+                <h3>Picture Game Complete!</h3>
+                <p>Your Score: <span id="pictureFinalScore">0</span></p>
+                <p>Time Taken: <span id="pictureFinalTime">0</span>s</p>
+                <button id="playPictureAgain" class="btn btn-success">
+                    <i class="fas fa-play"></i> Play Again
+                </button>
+            </div>
+        </div>
+
     </div>
+
+    <script>
+        // Word Matching Game Logic
+        class WordMatchingGame {
+            constructor() {
+                this.gameData = null;
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 60;
+                this.timer = null;
+                this.gameActive = false;
+                this.correctPairs = new Map();
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('resetGameBtn').addEventListener('click', () => this.resetGame());
+                document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
+            }
+            
+            async startGame() {
+                try {
+                    console.log('Starting game...');
+                    
+                    // Show loading state
+                    const startBtn = document.getElementById('startGameBtn');
+                    startBtn.disabled = true;
+                    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                    
+                    console.log('Fetching game data...');
+                    const startTime = Date.now();
+                    
+                    // Fetch game data
+                    const response = await fetch('/routes1/api/game-words');
+                    const data = await response.json();
+                    
+                    const loadTime = Date.now() - startTime;
+                    console.log(`Game data loaded in ${loadTime}ms`);
+                    
+                    if (!data.success) {
+                        throw new Error(data.message);
+                    }
+                    
+                    this.gameData = data;
+                    console.log('Game data received:', data);
+                    this.setupGame();
+                    console.log('Game setup complete');
+                    this.showGameArea();
+                    console.log('Game area shown');
+                    this.startTimer();
+                    console.log('Timer started');
+                    
+                } catch (error) {
+                    alert('Error loading game: ' + error.message);
+                    this.resetButtons();
+                }
+            }
+            
+            setupGame() {
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 60;
+                this.gameActive = true;
+                this.correctPairs.clear();
+                
+                // Create correct pairs mapping
+                this.gameData.words.forEach(word => {
+                    this.correctPairs.set(word.word, word.meaning);
+                });
+                
+                this.renderWords();
+                this.renderMeanings();
+                this.updateUI();
+            }
+            
+            renderWords() {
+                const container = document.getElementById('wordsContainer');
+                container.innerHTML = '';
+                
+                this.gameData.words.forEach(word => {
+                    const wordElement = document.createElement('div');
+                    wordElement.className = 'game-word';
+                    wordElement.textContent = word.word;
+                    wordElement.draggable = true;
+                    wordElement.dataset.word = word.word;
+                    
+                    wordElement.addEventListener('dragstart', (e) => this.handleDragStart(e));
+                    wordElement.addEventListener('dragend', (e) => this.handleDragEnd(e));
+                    
+                    container.appendChild(wordElement);
+                });
+            }
+            
+            renderMeanings() {
+                const container = document.getElementById('meaningsContainer');
+                container.innerHTML = '';
+                
+                this.gameData.meanings.forEach(meaning => {
+                    const meaningElement = document.createElement('div');
+                    meaningElement.className = 'game-meaning';
+                    meaningElement.textContent = meaning;
+                    meaningElement.dataset.meaning = meaning;
+                    
+                    meaningElement.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    meaningElement.addEventListener('drop', (e) => this.handleDrop(e));
+                    
+                    container.appendChild(meaningElement);
+                });
+            }
+            
+            handleDragStart(e) {
+                if (!this.gameActive) return;
+                e.target.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', e.target.dataset.word);
+            }
+            
+            handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+            }
+            
+            handleDragOver(e) {
+                if (!this.gameActive) return;
+                e.preventDefault();
+            }
+            
+            handleDrop(e) {
+                if (!this.gameActive) return;
+                e.preventDefault();
+                
+                const word = e.dataTransfer.getData('text/plain');
+                const meaning = e.target.dataset.meaning;
+                
+                // Find the word element
+                const wordElement = document.querySelector(`[data-word="${word}"]`);
+                
+                if (this.correctPairs.get(word) === meaning) {
+                    // Correct match!
+                    this.score += 10;
+                    this.matches++;
+                    
+                    wordElement.classList.add('matched');
+                    e.target.classList.add('matched');
+                    
+                    // Disable both elements
+                    wordElement.draggable = false;
+                    wordElement.style.cursor = 'default';
+                    e.target.style.cursor = 'default';
+                    
+                    // Remove event listeners
+                    wordElement.removeEventListener('dragstart', this.handleDragStart);
+                    wordElement.removeEventListener('dragend', this.handleDragEnd);
+                    e.target.removeEventListener('dragover', this.handleDragOver);
+                    e.target.removeEventListener('drop', this.handleDrop);
+                    
+                } else {
+                    // Incorrect match
+                    this.score = Math.max(0, this.score - 5);
+                    
+                    wordElement.classList.add('incorrect');
+                    e.target.classList.add('incorrect');
+                    
+                    // Remove incorrect styling after animation
+                    setTimeout(() => {
+                        wordElement.classList.remove('incorrect');
+                        e.target.classList.remove('incorrect');
+                    }, 500);
+                }
+                
+                this.updateUI();
+                
+                // Check if game is complete
+                if (this.matches === 6) {
+                    this.endGame(true);
+                }
+            }
+            
+            startTimer() {
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateUI();
+                    
+                    if (this.timeLeft <= 0) {
+                        this.endGame(false);
+                    }
+                }, 1000);
+            }
+            
+            endGame(won) {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                const resultDiv = document.getElementById('gameResult');
+                const resultTitle = document.getElementById('resultTitle');
+                const resultMessage = document.getElementById('resultMessage');
+                const finalScore = document.getElementById('finalScore');
+                
+                if (won) {
+                    resultTitle.textContent = '🎉 Congratulations!';
+                    resultMessage.innerHTML = `You completed all matches!<br>Final Score: <span id="finalScore">${this.score}</span> points!`;
+                } else {
+                    resultTitle.textContent = '⏰ Time\'s Up!';
+                    resultMessage.innerHTML = `You matched ${this.matches}/6 words<br>Final Score: <span id="finalScore">${this.score}</span> points!`;
+                }
+                
+                finalScore.textContent = this.score;
+                resultDiv.style.display = 'flex';
+                
+                // Show reset button
+                document.getElementById('resetGameBtn').style.display = 'inline-block';
+            }
+            
+            resetGame() {
+                // Hide game area and result
+                document.getElementById('gameArea').style.display = 'none';
+                document.getElementById('gameResult').style.display = 'none';
+                document.getElementById('resetGameBtn').style.display = 'none';
+                
+                // Reset buttons
+                this.resetButtons();
+                
+                // Clear game data
+                this.gameData = null;
+                this.gameActive = false;
+            }
+            
+            resetButtons() {
+                const startBtn = document.getElementById('startGameBtn');
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-play"></i> Start Game';
+            }
+            
+            showGameArea() {
+                document.getElementById('gameArea').style.display = 'block';
+            }
+            
+            updateUI() {
+                document.getElementById('gameScore').textContent = this.score;
+                document.getElementById('gameTimer').textContent = this.timeLeft;
+                document.getElementById('progressText').textContent = `${this.matches}/6 matches`;
+                
+                const progressFill = document.getElementById('progressFill');
+                const progressPercent = (this.matches / 6) * 100;
+                progressFill.style.width = `${progressPercent}%`;
+            }
+        }
+
+        // Picture-Word Matching Game Class
+        class PictureWordMatchingGame {
+            constructor() {
+                this.gameData = null;
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 45;
+                this.timer = null;
+                this.gameActive = false;
+                this.selectedPicture = null;
+                this.selectedWord = null;
+                this.correctPairs = new Map();
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('startPictureGameMain').addEventListener('click', () => this.startGame());
+                document.getElementById('resetPictureGameMain').addEventListener('click', () => this.resetGame());
+                document.getElementById('playPictureAgain').addEventListener('click', () => this.startGame());
+            }
+            
+            async startGame() {
+                try {
+                    console.log('Starting Picture-Word Matching Game...');
+                    
+                    // Clear any existing game data to free memory
+                    this.gameData = null;
+                    this.correctPairs.clear();
+                    
+                    // Force garbage collection if available
+                    if (window.gc) {
+                        window.gc();
+                    }
+                    
+                    // Create AbortController for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                    
+                    const response = await fetch('/routes1/api/picture-word-game', {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    console.log('Picture game response status:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    let responseText = await response.text();
+                    console.log('Picture game response length:', responseText.length);
+                    
+                    const data = JSON.parse(responseText);
+                    
+                    if (data.success) {
+                        this.gameData = data.game_data;
+                        this.score = 0;
+                        this.matches = 0;
+                        this.timeLeft = 45;
+                        this.gameActive = true;
+                        this.draggedWordId = null;
+                        this.correctPairs.clear();
+                        
+                        try {
+                            this.renderGame();
+                            this.startTimer();
+                            this.updateUI();
+                            
+                            document.getElementById('pictureGameArea').style.display = 'block';
+                            document.getElementById('startPictureGameMain').disabled = true;
+                            document.getElementById('resetPictureGameMain').disabled = false;
+                            
+                            console.log('Picture game started successfully');
+                        } catch (renderError) {
+                            console.error('Error rendering game:', renderError);
+                            alert('Error rendering game: ' + renderError.message);
+                        }
+                        
+                        // Clear response data to free memory
+                        responseText = null;
+                    } else {
+                        alert('Error loading game: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error starting picture game:', error);
+                    
+                    if (error.name === 'AbortError') {
+                        alert('Game request timed out. Please try again.');
+                    } else {
+                        alert('Error starting game. Please try again.');
+                    }
+                    
+                    // Clean up on error
+                    this.gameData = null;
+                    this.correctPairs.clear();
+                    if (window.gc) {
+                        window.gc();
+                    }
+                }
+            }
+            
+            renderGame() {
+                try {
+                    const picturesContainer = document.getElementById('picturesContainer');
+                    const wordsContainer = document.getElementById('pictureWordsContainer');
+                    
+                    if (!picturesContainer || !wordsContainer) {
+                        console.error('Game containers not found');
+                        throw new Error('Game containers not found');
+                    }
+                    
+                    if (!this.gameData || !Array.isArray(this.gameData)) {
+                        console.error('Invalid game data');
+                        throw new Error('Invalid game data');
+                    }
+                    
+                    // Clear containers and free memory
+                    picturesContainer.innerHTML = '';
+                    wordsContainer.innerHTML = '';
+                    
+                    // Force garbage collection if available
+                    if (window.gc) {
+                        window.gc();
+                    }
+                    
+                    // Shuffle the game data
+                    const shuffledData = [...this.gameData].sort(() => Math.random() - 0.5);
+                
+                // Create picture cards (drop zones)
+                shuffledData.forEach((item, index) => {
+                    const pictureCard = document.createElement('div');
+                    pictureCard.className = 'picture-card drop-zone';
+                    pictureCard.dataset.wordId = item.id;
+                    pictureCard.dataset.index = index;
+                    
+                    // Create picture based on type
+                    if (item.image.type === 'generated_image' && item.image.data_url) {
+                        // Use generated image from Gemini API
+                        const pictureImg = document.createElement('img');
+                        pictureImg.className = 'picture-generated';
+                        pictureImg.src = item.image.data_url;
+                        pictureImg.alt = item.image.description;
+                        pictureImg.style.width = '100%';
+                        pictureImg.style.height = '100%';
+                        pictureImg.style.objectFit = 'cover';
+                        pictureImg.style.borderRadius = '8px';
+                        
+                        pictureCard.appendChild(pictureImg);
+                    } else if (item.image.type === 'stored_image' && item.image.image_url) {
+                        // Use stored image from local files with enhanced text-overlay support
+                        const pictureImg = document.createElement('img');
+                        pictureImg.className = 'picture-generated';
+                        pictureImg.src = item.image.image_url;
+                        pictureImg.alt = item.image.description;
+                        pictureImg.style.width = '100%';
+                        pictureImg.style.height = '100%';
+                        pictureImg.style.objectFit = 'cover';
+                        pictureImg.style.borderRadius = '8px';
+                        
+                        // Add English text overlay if available
+                        if (item.image.image_type === 'text_overlay' && item.image.text_overlay) {
+                            const textOverlay = document.createElement('div');
+                            textOverlay.className = 'english-text-overlay';
+                            textOverlay.style.cssText = `
+                                position: absolute;
+                                bottom: 0;
+                                left: 0;
+                                right: 0;
+                                background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.4));
+                                padding: 8px 12px;
+                                border-radius: 0 0 8px 8px;
+                                color: white;
+                                text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+                                text-align: center;
+                            `;
+                            
+                            // Only English meaning (clean and simple)
+                            const englishText = document.createElement('div');
+                            englishText.className = 'english-hint-text';
+                            englishText.textContent = item.image.text_overlay.english_meaning;
+                            englishText.style.cssText = `
+                                font-size: ${item.image.text_overlay.font_size === 'medium' ? '0.9em' : '0.8em'};
+                                font-weight: 600;
+                                line-height: 1.2;
+                            `;
+                            
+                            textOverlay.appendChild(englishText);
+                            
+                            pictureCard.style.position = 'relative';
+                            pictureCard.appendChild(pictureImg);
+                            pictureCard.appendChild(textOverlay);
+                        } else {
+                            // Regular stored image without text overlay
+                            pictureCard.appendChild(pictureImg);
+                        }
+                    } else if (item.image.type === 'simple_placeholder' || item.image.type === 'enhanced_placeholder') {
+                        // Enhanced placeholder for nouns (with icon)
+                        const picturePlaceholder = document.createElement('div');
+                        picturePlaceholder.className = 'picture-placeholder enhanced';
+                        picturePlaceholder.style.backgroundColor = item.image.color;
+                        picturePlaceholder.innerHTML = `
+                            <div class="placeholder-icon">${item.image.icon}</div>
+                            <div class="placeholder-text">${item.image.description}</div>
+                        `;
+                        pictureCard.appendChild(picturePlaceholder);
+                    } else {
+                        // Regular text placeholder for non-nouns
+                        const picturePlaceholder = document.createElement('div');
+                        picturePlaceholder.className = 'picture-placeholder';
+                        picturePlaceholder.style.backgroundColor = item.image.color;
+                        picturePlaceholder.textContent = item.image.description;
+                        pictureCard.appendChild(picturePlaceholder);
+                    }
+                    
+                    // Add drop zone functionality
+                    pictureCard.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    pictureCard.addEventListener('drop', (e) => this.handleDrop(e, item.id));
+                    pictureCard.addEventListener('dragenter', (e) => this.handleDragEnter(e));
+                    pictureCard.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                    
+                    picturesContainer.appendChild(pictureCard);
+                });
+                
+                // Create word cards (draggable)
+                shuffledData.forEach((item, index) => {
+                    const wordCard = document.createElement('div');
+                    wordCard.className = 'picture-word-card draggable';
+                    wordCard.dataset.wordId = item.id;
+                    wordCard.dataset.index = index;
+                    wordCard.draggable = true;
+                    
+                    const wordText = document.createElement('div');
+                    wordText.className = 'picture-word-text';
+                    wordText.textContent = item.word;
+                    
+                    // Don't show English meaning on Kinyarwanda word cards to avoid revealing answers
+                    // const wordMeaning = document.createElement('div');
+                    // wordMeaning.className = 'picture-word-meaning';
+                    // wordMeaning.textContent = item.meaning;
+                    
+                    wordCard.appendChild(wordText);
+                    // wordCard.appendChild(wordMeaning);
+                    
+                    // Add drag functionality
+                    wordCard.addEventListener('dragstart', (e) => this.handleDragStart(e, item.id));
+                    wordCard.addEventListener('dragend', (e) => this.handleDragEnd(e));
+                    
+                    wordsContainer.appendChild(wordCard);
+                });
+                } catch (error) {
+                    console.error('Error in renderGame:', error);
+                    throw error; // Re-throw to be caught by the calling function
+                }
+            }
+            
+            // Drag and Drop Methods
+            handleDragStart(e, wordId) {
+                if (!this.gameActive || this.correctPairs.has(wordId)) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                this.draggedWordId = wordId;
+                e.target.style.opacity = '0.5';
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', e.target.outerHTML);
+            }
+            
+            handleDragEnd(e) {
+                e.target.style.opacity = '1';
+                this.draggedWordId = null;
+            }
+            
+            handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            }
+            
+            handleDragEnter(e) {
+                e.preventDefault();
+                if (this.draggedWordId && !this.correctPairs.has(parseInt(e.currentTarget.dataset.wordId))) {
+                    e.currentTarget.classList.add('drag-over');
+                }
+            }
+            
+            handleDragLeave(e) {
+                e.currentTarget.classList.remove('drag-over');
+            }
+            
+            handleDrop(e, pictureWordId) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+                
+                if (!this.draggedWordId || this.correctPairs.has(pictureWordId)) {
+                    return;
+                }
+                
+                // Check if the dragged word matches the picture
+                if (this.draggedWordId === pictureWordId) {
+                    // Correct match!
+                    this.correctMatch(this.draggedWordId, e.currentTarget);
+                } else {
+                    // Wrong match
+                    this.wrongMatch();
+                }
+                
+                this.draggedWordId = null;
+            }
+            
+            correctMatch(wordId, pictureCard) {
+                this.score += 10;
+                this.matches++;
+                this.correctPairs.set(wordId, true);
+                
+                // Find the corresponding word card
+                const wordCard = document.querySelector(`[data-word-id="${wordId}"].picture-word-card`);
+                
+                // Mark cards as correct
+                pictureCard.classList.add('correct');
+                if (wordCard) {
+                    wordCard.classList.add('correct');
+                }
+                
+                // Remove drag functionality and make cards unclickable
+                pictureCard.style.pointerEvents = 'none';
+                if (wordCard) {
+                    wordCard.draggable = false;
+                    wordCard.style.opacity = '0.7';
+                }
+                
+                this.updateUI();
+                
+                // Check if game is complete
+                if (this.gameData && this.matches === this.gameData.length) {
+                    this.endGame();
+                }
+            }
+            
+            wrongMatch() {
+                this.score = Math.max(0, this.score - 2);
+                
+                // Find the dragged word card and mark it as wrong temporarily
+                const wordCard = document.querySelector(`[data-word-id="${this.draggedWordId}"].picture-word-card`);
+                if (wordCard) {
+                    wordCard.classList.add('wrong');
+                    setTimeout(() => {
+                        wordCard.classList.remove('wrong');
+                    }, 1000);
+                }
+                
+                this.updateUI();
+            }
+            
+            startTimer() {
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateUI();
+                    
+                    if (this.timeLeft <= 0) {
+                        this.endGame();
+                    }
+                }, 1000);
+            }
+            
+            endGame() {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                // Clear DOM elements to free memory
+                const picturesContainer = document.getElementById('picturesContainer');
+                const wordsContainer = document.getElementById('pictureWordsContainer');
+                if (picturesContainer) picturesContainer.innerHTML = '';
+                if (wordsContainer) wordsContainer.innerHTML = '';
+                
+                document.getElementById('pictureGameArea').style.display = 'none';
+                document.getElementById('pictureGameResult').style.display = 'block';
+                document.getElementById('pictureFinalScore').textContent = this.score;
+                document.getElementById('pictureFinalTime').textContent = 45 - this.timeLeft;
+                
+                // Show result message
+                let message = '';
+                const totalPictures = this.gameData ? this.gameData.length : 0;
+                if (this.matches === totalPictures) {
+                    message = 'Perfect! You matched all the pictures!';
+                } else if (this.matches >= totalPictures * 0.7) {
+                    message = 'Great job! You matched most of the pictures!';
+                } else {
+                    message = 'Good try! Keep practicing to improve!';
+                }
+                
+                document.querySelector('#pictureGameResult p').textContent = message;
+                
+                // Clear game data to free memory
+                this.gameData = null;
+                this.correctPairs.clear();
+                
+                // Force garbage collection
+                if (window.gc) {
+                    window.gc();
+                }
+            }
+            
+            resetGame() {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                // Clear DOM elements to free memory
+                const picturesContainer = document.getElementById('picturesContainer');
+                const wordsContainer = document.getElementById('pictureWordsContainer');
+                if (picturesContainer) picturesContainer.innerHTML = '';
+                if (wordsContainer) wordsContainer.innerHTML = '';
+                
+                document.getElementById('pictureGameArea').style.display = 'none';
+                document.getElementById('pictureGameResult').style.display = 'none';
+                document.getElementById('startPictureGameMain').disabled = false;
+                document.getElementById('resetPictureGameMain').disabled = true;
+                
+                this.score = 0;
+                this.matches = 0;
+                this.timeLeft = 45;
+                this.draggedWordId = null;
+                this.correctPairs.clear();
+                this.gameData = null; // Clear game data to free memory
+                
+                this.updateUI();
+            }
+            
+            updateUI() {
+                document.getElementById('pictureGameScore').textContent = this.score;
+                document.getElementById('pictureGameTimer').textContent = this.timeLeft;
+                document.getElementById('pictureProgressText').textContent = `${this.matches}/${this.gameData ? this.gameData.length : 0}`;
+                
+                const progressFill = document.getElementById('pictureProgressFill');
+                if (this.gameData) {
+                    const progress = (this.matches / this.gameData.length) * 100;
+                    progressFill.style.width = `${progress}%`;
+                }
+            }
+        }
+        
+        // Initialize the games when page loads
+        const wordMatchingGame = new WordMatchingGame();
+        const pictureWordMatchingGame = new PictureWordMatchingGame();
+
+        // Word action functions
+        function speakWord(word) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'rw-RW'; // Kinyarwanda language code
+                utterance.rate = 0.8;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis not supported in this browser');
+            }
+        }
+
+        function copyWord(word) {
+            navigator.clipboard.writeText(word).then(() => {
+                // Show a temporary success message
+                const button = event.target.closest('.action-btn');
+                const originalIcon = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalIcon;
+                    button.style.background = '';
+                }, 2000);
+            }).catch(() => {
+                alert('Failed to copy word to clipboard');
+            });
+        }
+
+    </script>
 
 {% endblock %}

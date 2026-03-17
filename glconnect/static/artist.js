@@ -2,233 +2,211 @@ let playlist = [];
 let isPlayingAll = false;
 let currentAudio = null;
 let currentPlaylistIndex = 0;
-let songAudioMap = {};
+const songAudioMap = new Map();
+
+function encodeUrl(url) {
+    // First decode any existing encodings to get raw spaces etc.
+    const decodedUrl = decodeURIComponent(url);
+    // Then encode once properly
+    return encodeURI(decodedUrl).replace(/#/g, '%23');
+}
+
 
 // Toggle play/pause for a single song
 function togglePlayPause(songId) {
-    const audioElement = document.getElementById(`audio-${songId}`);
-    const button = document.querySelector(`button[onclick="togglePlayPause('${songId}')"]`);
+    const audio = songAudioMap.get(songId);
+    if (!audio) return;
 
-    if (audioElement.paused) {
-        audioElement.play();
-        button.innerHTML = '⏸ Pause';
+    if (audio.paused) {
+        audio.play();
     } else {
-        audioElement.pause();
-        button.innerHTML = '▶ Play';
+        audio.pause();
     }
 }
 
+// Add a song to the playlist
 function addToPlaylist(songId, songName, userId) {
-    // Check if the song is already in the playlist
     if (!playlist.some(song => song.id === songId)) {
-        // Add the song to the frontend playlist state
         playlist.push({ id: songId, name: songName });
-        
-        // Save the new song to the backend
         saveSongToBackend(songId, userId);
     } else {
         alert('This song is already in your playlist!');
     }
 }
 
-// Save the newly added song to the backend
+// Save a new song to the backend
 function saveSongToBackend(songId, userId) {
-    // Instead of sending the whole playlist, just send the newly added song
-    fetch('https://www.glc.cool/art/add_to_playlist', {  // Use the add_to_playlist endpoint
+    fetch('/art/add_to_playlist', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ user_id: userId, song_id: songId })  // Only send the new song
+        body: JSON.stringify({ user_id: userId, song_id: songId })
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => alert(data.message))
-    .catch(error => {
-        console.error("Error saving song to playlist:", error);
-        alert("There was an error saving the song to the playlist.");
+    .catch(err => {
+        console.error("Error saving song:", err);
+        alert("Failed to save the song to your playlist.");
     });
 }
 
-
-// Toggle play all / pause all
+// Play all songs sequentially
 function togglePlayAll() {
     const playAllButton = document.getElementById('play-all-button');
-    if (playlist.length === 0) {
-        alert("Your playlist is empty! Add songs before playing.");
-        return;
-    }
+    if (!playlist.length) return alert("Your playlist is empty!");
 
     if (isPlayingAll) {
         if (currentAudio) currentAudio.pause();
-        playAllButton.innerHTML = '▶ Play All';
         isPlayingAll = false;
+        playAllButton.textContent = '▶ Play All';
     } else {
-        if (currentAudio && currentAudio.paused) {
-            // Resume where we left off
-            currentAudio.play();
-        } else {
-            currentPlaylistIndex = currentPlaylistIndex || 0;
-            playSongSequentially(currentPlaylistIndex);
-        }
-        playAllButton.innerHTML = '⏸ Pause All';
+        currentPlaylistIndex = 0;
         isPlayingAll = true;
+        playSongSequentially(currentPlaylistIndex);
+        playAllButton.textContent = '⏸ Pause All';
     }
 }
 
-// Sequential playback
+// Recursive playback
 function playSongSequentially(index) {
     if (index >= playlist.length) {
         isPlayingAll = false;
-        currentPlaylistIndex = 0;
-        document.getElementById('play-all-button').innerHTML = '▶ Play All';
+        document.getElementById('play-all-button').textContent = '▶ Play All';
         return;
     }
 
     const song = playlist[index];
-    const songUrl = song.song_url;
+    const audio = new Audio(encodeUrl(song.song_url));
+    currentAudio = audio;
+    audio.play();
 
-    if (!songUrl) {
-        console.error("Missing song_url for song", song);
-        currentPlaylistIndex++;
-        playSongSequentially(currentPlaylistIndex);
-        return;
-    }
-
-    if (!currentAudio || currentAudio.src !== songUrl) {
-        currentAudio = new Audio(songUrl);
-    }
-
-    currentAudio.play();
-    currentAudio.onended = () => {
+    audio.onended = () => {
         currentPlaylistIndex++;
         playSongSequentially(currentPlaylistIndex);
     };
 
-    currentAudio.onerror = () => {
-        console.error("Error playing audio:", songUrl);
+    audio.onerror = () => {
+        console.error(`Error playing: ${song.song_url}`);
         currentPlaylistIndex++;
         playSongSequentially(currentPlaylistIndex);
     };
 }
 
-// Pause all playback
-function pauseAllSongs() {
-    if (currentAudio) currentAudio.pause();
-    isPlayingAll = false;
-    document.getElementById('play-all-button').innerHTML = '▶ Play All';
-}
-
-// Save full playlist
+// Save entire playlist
 function savePlaylist(userId) {
-    if (playlist.length === 0) {
-        alert("Your playlist is empty! Add songs before saving.");
-        return;
-    }
+    if (!playlist.length) return alert("Your playlist is empty!");
 
     const songIds = playlist.map(song => song.id);
-
-    fetch('https://www.glc.cool/art/save_playlist', {
+    fetch('/art/save_playlist', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ user_id: userId, song_ids: songIds })
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => alert(data.message))
-    .catch(error => console.error("Error saving playlist:", error));
+    .catch(err => console.error("Error saving playlist:", err));
 }
 
-// Delete song from playlist
+// Delete a song from backend and update UI
 function deleteSongFromBackend(songId) {
-    fetch('https://www.glc.cool/art/delete_song_from_playlist', {
+    fetch('/art/delete_song_from_playlist', {
         method: 'DELETE',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ song_id: songId })
     })
-    .then(response => response.ok ? response.json() : Promise.reject('Failed'))
-    .then(data => alert(data.message))
-    .catch(error => {
-        console.error("Error:", error);
-        alert("There was an error removing the song from the playlist.");
+    .then(res => res.ok ? res.json() : Promise.reject('Failed'))
+    .then(data => {
+        alert(data.message);
+        playlist = playlist.filter(song => song.id !== songId);
+        fetchUserPlaylist(currentUserId);
+    })
+    .catch(err => {
+        console.error("Delete error:", err);
+        alert("Error removing song from playlist.");
     });
 }
 
 // Fetch playlist from backend
 function fetchUserPlaylist(userId) {
-    fetch(`https://www.glc.cool/art/get_playlist/${userId}`, {
+    fetch(`/art/get_playlist/${userId}`, {
         method: 'GET',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
-        if (data.playlist) {
-            const songs = data.playlist;
-            playlist = songs.map(song => ({
-                id: song.song_id,
-                name: song.song_name,
-                artist_name: song.artist_name,
-                song_url: song.song_url
-            }));
+        if (!data.playlist) return;
 
-            const mydbPlaylistElement = document.getElementById('mydb-playlist');
-            mydbPlaylistElement.innerHTML = '';
+        playlist = data.playlist.map(song => ({
+            id: song.song_id,
+            name: song.song_name,
+            artist_name: song.artist_name,
+            song_url: song.song_url
+        }));
 
-            songs.forEach(song => {
-                const songItem = document.createElement('li');
-                songItem.textContent = `${song.song_name} by ${song.artist_name}`;
+        const playlistElement = document.getElementById('mydb-playlist');
+        playlistElement.innerHTML = '';
 
-                const playButton = document.createElement('button');
-                playButton.textContent = '▶';
-                playButton.onclick = () => playSong(song.song_id, song.artist_name, song.song_name, song.song_url);
+        playlist.forEach(song => {
+            const li = document.createElement('li');
+            li.textContent = `${song.name} by ${song.artist_name}`;
 
-                const removeButton = document.createElement('button');
-                removeButton.textContent = '❌';
-                removeButton.onclick = () => deleteSongFromBackend(song.song_id);
+            const playBtn = document.createElement('button');
+            playBtn.textContent = '▶';
+            playBtn.addEventListener('click', () => playSong(song));
 
-                songItem.appendChild(playButton);
-                songItem.appendChild(removeButton);
-                mydbPlaylistElement.appendChild(songItem);
-            });
-        } else {
-            console.log("No songs found in the playlist.");
-        }
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '❌';
+            removeBtn.addEventListener('click', () => deleteSongFromBackend(song.id));
+
+            li.appendChild(playBtn);
+            li.appendChild(removeBtn);
+            playlistElement.appendChild(li);
+        });
     })
-    .catch(error => {
-        console.error("Error fetching playlist:", error);
-        alert("There was an error fetching your playlist.");
+    .catch(err => {
+        console.error("Error loading playlist:", err);
+        alert("Could not load your playlist.");
     });
 }
 
-// Play individual song
-function playSong(songId, artistName, songName, songUrl) {
-    const audioFilePath = songUrl || `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`;
-    
-    let audioElement = songAudioMap[songId];
-
-    if (!audioElement) {
-        audioElement = new Audio(audioFilePath);
-        songAudioMap[songId] = audioElement;
+// Play a single song with toggle
+function playSong(song) {
+    if (!songAudioMap.has(song.id)) {
+        const audio = new Audio(encodeUrl(song.song_url));
+        songAudioMap.set(song.id, audio);
     }
 
-    if (!audioElement.paused) {
-        audioElement.pause();
-        audioElement.currentTime = 0;
+    const audio = songAudioMap.get(song.id);
+    if (!audio) return;
+
+    if (!audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
     } else {
-        audioElement.play();
+        audio.play();
     }
 
-    const playButton = document.querySelector(`button[onclick="playSong('${songId}', '${artistName}', '${songName}', '${songUrl}')"]`);
-    if (playButton) {
-        playButton.textContent = audioElement.paused ? '▶ Play' : '⏸ Pause';
-
-        audioElement.onpause = () => {
-            playButton.textContent = '▶ Play';
-        };
-        audioElement.onplay = () => {
-            playButton.textContent = '⏸ Pause';
-        };
-    }
+    audio.onplay = () => updatePlayButton(song.id, '⏸ Pause');
+    audio.onpause = () => updatePlayButton(song.id, '▶ Play');
 }
 
+// Update button text by ID
+function updatePlayButton(songId, text) {
+    const buttons = document.querySelectorAll('#mydb-playlist li button');
+    buttons.forEach(btn => {
+        if (btn.onclick && btn.onclick.toString().includes(songId)) {
+            btn.textContent = text;
+        }
+    });
+}
+
+// Replace with dynamic user ID logic
+let currentUserId = 5;
+
 // On page load
-document.addEventListener("DOMContentLoaded", function () {
-    const userId = 5; // Replace with actual user ID
-    fetchUserPlaylist(userId);
+document.addEventListener("DOMContentLoaded", () => {
+    fetchUserPlaylist(currentUserId);
 });

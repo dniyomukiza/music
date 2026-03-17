@@ -13,6 +13,71 @@ UPLOAD_FOLDER = os.path.join("glconnect", "static", "writer_uploads")  # Relativ
 ABS_UPLOAD_FOLDER = os.path.join(os.getcwd(), UPLOAD_FOLDER)  # Absolute path for saving
 
 
+@writer.route('/complete-profile', methods=['GET', 'POST'])
+@login_required
+def complete_profile():
+    """Profile completion page for new authors - simplified version"""
+    # Only allow authors to access this
+    if current_user.role != 'author':
+        flash('This page is only for authors.', 'warning')
+        return redirect(url_for('prof.profile'))
+    
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
+    if not writer:
+        flash('Writer profile not found. Please contact support.', 'error')
+        return redirect(url_for('prof.profile'))
+    
+    form = WriterProfileForm()
+    
+    # Pre-fill form with existing data
+    if writer:
+        form.writer_name.data = writer.writer_name
+        form.bio.data = writer.bio or ""
+    
+    if form.validate_on_submit():
+        bio = form.bio.data
+        profile_pic = form.profile_picture.data
+        
+        # Default to current picture if no new upload
+        relative_path = writer.profile_picture
+        
+        # Check if a new profile picture is uploaded
+        if profile_pic and hasattr(profile_pic, 'filename') and profile_pic.filename:
+            try:
+                # Ensure upload folder exists
+                os.makedirs(ABS_UPLOAD_FOLDER, exist_ok=True)
+                
+                filename = secure_filename(profile_pic.filename)
+                if not filename:
+                    flash("Invalid filename for profile picture.", "danger")
+                    return render_template('writer_complete_profile.html', form=form, writer=writer)
+                
+                absolute_path = os.path.join(ABS_UPLOAD_FOLDER, filename)
+                profile_pic.save(absolute_path)
+                relative_path = f"writer_uploads/{filename}"
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Error uploading profile picture: {str(e)}", "danger")
+                return render_template('writer_complete_profile.html', form=form, writer=writer)
+        
+        # Update writer profile (bio is optional, but update if provided)
+        try:
+            if bio:
+                writer.bio = bio
+            writer.profile_picture = relative_path
+            
+            db.session.commit()
+            flash("Profile completed successfully! Welcome to Ink Studio.", "success")
+            # Return immediately after redirect - no code should run after this
+            return redirect(url_for('book_platform.dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred while saving: {str(e)}", "danger")
+            # Return immediately on error too
+            return render_template('writer_complete_profile.html', form=form, writer=writer)
+    
+    return render_template('writer_complete_profile.html', form=form, writer=writer)
+
 @writer.route('/profile', methods=['GET', 'POST'])
 @login_required
 def writer_profile():
@@ -23,7 +88,12 @@ def writer_profile():
         writer_name = form.writer_name.data
         bio = form.bio.data
         profile_pic = form.profile_picture.data
-        relative_path = writer.profile_picture  # Default to the current picture if no new upload
+        
+        # Default to current picture if updating, or empty if creating new
+        if writer:
+            relative_path = writer.profile_picture  # Keep current picture if no new upload
+        else:
+            relative_path = "static/uploads/default_writer.jpg"  # Default for new profiles
 
         # Check if a new profile picture is uploaded
         if profile_pic:
@@ -57,7 +127,7 @@ def writer_profile():
 
             try:
                 db.session.commit()
-                flash("Profile saved successfully!", "success")
+                flash("Profile created successfully!", "success")
                 return redirect(url_for('writer.writer_dashboard'))
             except Exception as e:
                 db.session.rollback()
@@ -83,9 +153,23 @@ def writer_dashboard():
 
     # Fetch books uploaded by this writer
     books = Book.query.filter_by(writer_id=writer.writer_id).all()
+    
+    # Check if user has Ink Studio profile
+    from glconnect.book_platform_models import BookPlatformUser
+    book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    
+    # Get Ink Studio books if user has profile
+    book_platform_books = []
+    if book_platform_user:
+        from glconnect.book_platform_models import BookProject
+        book_platform_books = BookProject.query.filter_by(author_id=book_platform_user.id).all()
 
     # Render the writer's dashboard and pass the writer and books to the template
-    return render_template('writer_dashboard.html', writer=writer, books=books)
+    return render_template('writer_dashboard.html', 
+                         writer=writer, 
+                         books=books,
+                         book_platform_user=book_platform_user,
+                         book_platform_books=book_platform_books)
 
 
 
@@ -206,20 +290,15 @@ def delete_book(book_id):
     flash("Book deleted successfully.", "success")
     return redirect(url_for('writer.writer_dashboard'))
 
-@writer.route('/search-writer', methods=['GET'])
-def search_writer():
-    query = request.args.get('q', '').strip().lower()
-    if not query:
-        return jsonify([])
+@writer.route('/book-platform')
+@login_required
+def access_book_platform():
+    """Redirect to Ink Studio dashboard - writers can access directly"""
+    # Writers can now access Ink Studio directly without separate profile
+    return redirect(url_for('book_platform.dashboard'))
 
-    # Search for writer name (case-insensitive, partial match)
-    writer = Writer.query.filter(Writer.writer_name.ilike(f"%{query}%")).first()
-    if writer:
-        return jsonify({'redirect': url_for('writer.view_writer', writer_id=writer.writer_id)})
-
-    # If not found, search for a book title
-    book = Book.query.filter(Book.title.ilike(f"%{query}%")).first()
-    if book:
-        return jsonify({'redirect': url_for('writer.view_writer', writer_id=book.writer_id)})
-
-    return jsonify([])  # No match found
+@writer.route('/marketplace')
+@login_required
+def access_marketplace():
+    """Access marketplace from writer platform"""
+    return redirect(url_for('book_platform.marketplace'))

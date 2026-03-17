@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink Studio Dashboard - {{ current_user.username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy"></i> Ink Studio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
+                            <i class="fas fa-th-large"></i> Content Hub
+                        </a>
+                    </li>
+                    {% if is_author %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">
+                            <i class="fas fa-book-open"></i> My Books
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.reviewers') }}">
+                            <i class="fas fa-star"></i> Reviewers
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
+                            <i class="fas fa-store"></i> Marketplace
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
+                            <i class="fas fa-chart-line"></i> Investments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
+                            <i class="fas fa-dollar-sign"></i> Earnings
+                        </a>
+                    </li>
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">
+                            <i class="fas fa-cogs"></i> Admin Panel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.admin_reviewers') }}">
+                            <i class="fas fa-user-check"></i> Admin Reviewers
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section bg-gradient-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    {% if is_author and current_user.role == 'author' %}
+                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ user_profile.pen_name or current_user.first_name or current_user.username }}!</h1>
+                    <p class="lead mb-4">Your professional writing platform for creating, collaborating, and publishing digital books</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus-circle me-2"></i>Start Writing
+                        </a>
+                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-upload me-2"></i>Upload Existing Book
+                        </a>
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-store me-2"></i>Browse Marketplace
+                        </a>
+                    </div>
+                    {% elif is_freelancer or current_user.role == 'freelancer' %}
+                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ current_user.username }}!</h1>
+                    <p class="lead mb-4">Your freelance journalism platform - Create stories, access content hub, and browse the marketplace</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info btn-lg">
+                            <i class="fas fa-pen me-2"></i>Write Story
+                        </a>
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-th-large me-2"></i>Content Hub
+                        </a>
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-store me-2"></i>Marketplace
+                        </a>
+                    </div>
+                    {% elif current_user.role == 'podcaster' %}
+                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ current_user.username }}!</h1>
+                    <p class="lead mb-4">Your podcasting platform - Upload podcasts, browse content, and manage your audio content</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-th-large me-2"></i>Content Hub
+                        </a>
+                        <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-podcast me-2"></i>Browse Podcasts
+                        </a>
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-store me-2"></i>Marketplace
+                        </a>
+                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-success btn-lg">
+                            <i class="fas fa-chart-line me-2"></i>Browse Investments
+                        </a>
+                    </div>
+                    {% else %}
+                    <h1 class="display-4 fw-bold mb-3">Ink Studio</h1>
+                    <p class="lead mb-4">Your all-in-one digital content platform: Books, Stories, News, Podcasts, and more</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-store me-2"></i>Browse Books
+                        </a>
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-th-large me-2"></i>Content Hub
+                        </a>
+                        {% if current_user.role not in ['podcaster', 'other'] %}
+                        <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-star me-2"></i>Become a Reviewer
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-success btn-lg">
+                            <i class="fas fa-chart-line me-2"></i>Browse Investments
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="hero-stats">
+                        {% if is_author %}
+                        <div class="stat-circle">
+                            <i class="fas fa-book-open fa-2x"></i>
+                            <div class="stat-number">{{ authored_books|length }}</div>
+                            <div class="stat-label">My Books</div>
+                        </div>
+                        {% elif current_user.role == 'podcaster' %}
+                        <div class="stat-circle">
+                            <i class="fas fa-podcast fa-2x"></i>
+                            <div class="stat-number">-</div>
+                            <div class="stat-label">My Podcasts</div>
+                        </div>
+                        {% elif is_freelancer or current_user.role == 'freelancer' %}
+                        <div class="stat-circle">
+                            <i class="fas fa-newspaper fa-2x"></i>
+                            <div class="stat-number">{{ freelancer_stories|length if freelancer_stories else 0 }}</div>
+                            <div class="stat-label">My Stories</div>
+                        </div>
+                        {% elif current_user.role == 'blogger' %}
+                        <div class="stat-circle">
+                            <i class="fas fa-newspaper fa-2x"></i>
+                            <div class="stat-number">-</div>
+                            <div class="stat-label">My Stories</div>
+                        </div>
+                        {% elif current_user.role == 'artist' %}
+                        <div class="stat-circle">
+                            <i class="fas fa-palette fa-2x"></i>
+                            <div class="stat-number">-</div>
+                            <div class="stat-label">My Content</div>
+                        </div>
+                        {% else %}
+                        <div class="stat-circle">
+                            <i class="fas fa-user-circle fa-2x"></i>
+                            <div class="stat-number">{{ user_investments|length if user_investments else 0 }}</div>
+                            <div class="stat-label">My Investments</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-5">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <!-- Quick Stats Card (Authors Only) -->
+                {% if is_author %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0 pb-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Your Progress
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-icon bg-primary text-white rounded-circle mx-auto mb-2">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="stat-number h4 mb-0">{{ authored_books|length }}</div>
+                                    <div class="stat-label text-muted small">Books Written</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-icon bg-success text-white rounded-circle mx-auto mb-2">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="stat-number h4 mb-0">{{ collaborations|length }}</div>
+                                    <div class="stat-label text-muted small">Collaborations</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-icon bg-warning text-white rounded-circle mx-auto mb-2">
+                                        <i class="fas fa-bell"></i>
+                                    </div>
+                                    <div class="stat-number h4 mb-0">{{ notifications|length }}</div>
+                                    <div class="stat-label text-muted small">Notifications</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-icon bg-info text-white rounded-circle mx-auto mb-2">
+                                        <i class="fas fa-eye"></i>
+                                    </div>
+                                    <div class="stat-number h4 mb-0">{{ authored_books|selectattr('status.value', 'equalto', 'published')|list|length }}</div>
+                                    <div class="stat-label text-muted small">Published</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+
+                <!-- Recent Notifications (Authors Only) -->
+                {% if is_author %}
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-0 pb-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-bell me-2"></i>Recent Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if notifications %}
+                            {% for notification in notifications %}
+                                <div class="notification-item p-3 border-start border-primary border-3 mb-3 bg-white rounded">
+                                    <div class="notification-title fw-bold text-dark">{{ notification.title }}</div>
+                                    <div class="notification-message text-muted small">{{ notification.message }}</div>
+                                    <div class="notification-time text-muted small">
+                                        <i class="fas fa-clock me-1"></i>{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-bell-slash fa-2x mb-2"></i>
+                                <p class="mb-0">No recent activity</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Welcome Message -->
+                <div class="welcome-card bg-white rounded-3 shadow-sm p-4 mb-4 border-start border-primary border-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="text-primary mb-2">
+                                <i class="fas fa-user-circle me-2"></i>{{ current_user.username }}
+                            </h3>
+                            {% if is_author %}
+                            <p class="text-muted mb-0">Ready to continue your creative journey? Let's create something amazing together.</p>
+                            {% elif current_user.role == 'podcaster' %}
+                            <p class="text-muted mb-0">Manage your podcasts, explore content, and grow your audience.</p>
+                            {% elif current_user.role == 'blogger' %}
+                            <p class="text-muted mb-0">Write and share your stories with the world.</p>
+                            {% elif current_user.role == 'freelancer' or is_freelancer %}
+                            <p class="text-muted mb-0">Create freelance stories and build your journalism portfolio.</p>
+                            {% elif current_user.role == 'artist' %}
+                            <p class="text-muted mb-0">Showcase your art and connect with your audience.</p>
+                            {% else %}
+                            <p class="text-muted mb-0">Explore content, invest in books, and discover new opportunities.</p>
+                            {% endif %}
+                        </div>
+                      
+                    </div>
+                </div>
+
+                <!-- Role-Specific Quick Actions -->
+                <div class="row g-3 mb-4">
+                    <!-- Podcast Actions (Podcasters Only) -->
+                    {% if current_user.role == 'podcaster' %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-podcast fa-3x text-success"></i>
+                                </div>
+                                <h5 class="card-title">Podcasts</h5>
+                                <p class="card-text text-muted small">Manage your podcast content</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.upload_podcast') }}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-upload me-1"></i>Upload Podcast
+                                    </a>
+                                    <a href="{{ url_for('book_platform.my_podcasts') }}" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-list me-1"></i>My Podcasts
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Blog/Story Actions (Bloggers Only) -->
+                    {% if current_user.role == 'blogger' %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-newspaper fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="card-title">Stories & News</h5>
+                                <p class="card-text text-muted small">Write and manage your stories</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.create_story_redirect') }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-pen me-1"></i>Write Story
+                                    </a>
+                                    <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-list me-1"></i>My Stories
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Freelancing Actions (Freelancers Only) -->
+                    {% if current_user.role == 'freelancer' or is_freelancer %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-pen-fancy fa-3x text-info"></i>
+                                </div>
+                                <h5 class="card-title">Freelance Journalism</h5>
+                                <p class="card-text text-muted small">Create and manage your freelance stories</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info btn-sm">
+                                        <i class="fas fa-pen me-1"></i>Write Story
+                                    </a>
+                                    <a href="{{ url_for('blog.blogs') }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-list me-1"></i>View All Stories
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Artist Actions (Artists Only) -->
+                    {% if current_user.role == 'artist' %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-music fa-3x text-danger"></i>
+                                </div>
+                                <h5 class="card-title">Music</h5>
+                                <p class="card-text text-muted small">Manage your music and artist profile</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('book_platform.music_dashboard') }}" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-music me-1"></i>Music Dashboard
+                                    </a>
+                                    <a href="{{ url_for('music.artist_profile') }}" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-user me-1"></i>Artist Profile
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if is_author %}
+                <!-- My Books Section (Authors Only) -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title text-primary mb-0">
+                                <i class="fas fa-book-open me-2"></i>My Books
+                            </h5>
+                            <span class="badge bg-primary">{{ authored_books|length }} total</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if authored_books %}
+                            <div class="row g-4">
+                                {% for book in authored_books %}
+                                    <div class="col-lg-4 col-md-6">
+                                        <div class="book-card h-100">
+                                            <div class="card border-0 shadow-sm h-100">
+                                                <div class="book-cover-container">
+                                                    {% if book.cover_image %}
+                                                        <img src="{{ book.cover_image }}" class="book-cover-img" alt="{{ book.title }}">
+                                                    {% else %}
+                                                        <div class="book-cover-placeholder">
+                                                            <i class="fas fa-book fa-3x text-muted"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                    <div class="book-status-overlay">
+                                                        {% if book.status.value == 'published' %}
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-globe me-1"></i>Published
+                                                            </span>
+                                                        {% elif book.status.value == 'draft' %}
+                                                            <span class="badge bg-warning">
+                                                                <i class="fas fa-edit me-1"></i>Draft
+                                                            </span>
+                                                        {% elif book.status.value == 'in_review' %}
+                                                            <span class="badge bg-info">
+                                                                <i class="fas fa-eye me-1"></i>In Review
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="card-body d-flex flex-column">
+                                                    <h6 class="card-title text-dark mb-2">{{ book.title }}</h6>
+                                                    <p class="card-text text-muted small mb-2">
+                                                        <i class="fas fa-tag me-1"></i>{{ book.genre or 'No genre' }}
+                                                    </p>
+                                                    {% if book.description %}
+                                                        <p class="card-text small text-muted mb-3">
+                                                            {{ book.description[:100] }}{% if book.description|length > 100 %}...{% endif %}
+                                                        </p>
+                                                    {% endif %}
+                                                    <div class="mt-auto">
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-calendar me-1"></i>{{ book.created_at.strftime('%b %d, %Y') if book.created_at else 'Recently' }}
+                                                            </small>
+                                                            {% if book.price and book.price > 0 %}
+                                                                <span class="text-success fw-bold">${{ "%.2f"|format(book.price) }}</span>
+                                                            {% else %}
+                                                                <span class="text-muted">Free</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="btn-group w-100" role="group">
+                                                            <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                                                               class="btn btn-outline-primary btn-sm">
+                                                                <i class="fas fa-eye me-1"></i>View
+                                                            </a>
+                                                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" 
+                                                               class="btn btn-outline-secondary btn-sm">
+                                                                <i class="fas fa-edit me-1"></i>Edit
+                                                            </a>
+                                                            <button class="btn btn-outline-danger btn-sm delete-book-btn" 
+                                                                    data-book-id="{{ book.id }}"
+                                                                    data-book-title="{{ book.title }}">
+                                                                <i class="fas fa-trash me-1"></i>Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-state text-center py-5">
+                                <div class="empty-icon mb-4">
+                                    <i class="fas fa-book fa-4x text-muted"></i>
+                                </div>
+                                <h4 class="text-muted mb-3">No books yet</h4>
+                                <p class="text-muted mb-4">Start your writing journey by creating your first book or uploading an existing one.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- My Stories Section (Freelancers Only) -->
+                {% if is_freelancer or current_user.role == 'freelancer' %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title text-primary mb-0">
+                                <i class="fas fa-newspaper me-2"></i>My Freelance Stories
+                            </h5>
+                            <span class="badge bg-info">{{ freelancer_stories|length if freelancer_stories else 0 }} total</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if freelancer_stories %}
+                            <div class="list-group">
+                                {% for story in freelancer_stories %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <a href="{{ url_for('blog.update', post_id=story.id) }}" class="text-dark text-decoration-none">
+                                                    {{ story.title }}
+                                                </a>
+                                            </h6>
+                                            <p class="mb-1 text-muted small">
+                                                {{ story.content[:150] }}{% if story.content|length > 150 %}...{% endif %}
+                                            </p>
+                                            <div class="d-flex gap-3 mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar me-1"></i>{{ story.date_posted.strftime('%b %d, %Y') if story.date_posted else 'Recently' }}
+                                                </small>
+                                                {% if story.category %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-tag me-1"></i>{{ story.category }}
+                                                </small>
+                                                {% endif %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-eye me-1"></i>{{ story.impressions_count or 0 }} views
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="ms-3">
+                                            <a href="{{ url_for('blog.update', post_id=story.id) }}" class="btn btn-sm btn-outline-info">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3 text-center">
+                                <a href="{{ url_for('blog.blogs') }}" class="btn btn-info">
+                                    <i class="fas fa-list me-1"></i>View All Stories
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="empty-state text-center py-5">
+                                <div class="empty-icon mb-4">
+                                    <i class="fas fa-newspaper fa-4x text-muted"></i>
+                                </div>
+                                <h4 class="text-muted mb-3">No stories yet</h4>
+                                <p class="text-muted mb-4">Start your freelance journalism journey by creating your first story.</p>
+                                <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info">
+                                    <i class="fas fa-pen me-1"></i>Write Your First Story
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Investment Campaigns Section (Authors Only) -->
+                {% if investment_campaigns and is_author %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>My Investment Campaigns
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            {% for campaign in investment_campaigns[:3] %}
+                            <div class="col-md-4">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ campaign.title }}</h6>
+                                        <p class="text-muted small mb-2">{{ campaign.book_project.title }}</p>
+                                        <div class="progress mb-2" style="height: 8px;">
+                                            {% set progress = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
+                                            <div class="progress-bar" role="progressbar" style="width: {{ progress }}%"></div>
+                                        </div>
+                                        <p class="small mb-0">
+                                            <strong>${{ "%.2f"|format(campaign.current_funding) }}</strong> / ${{ "%.2f"|format(campaign.funding_goal) }}
+                                        </p>
+                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                                            View Campaign
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Review Requests Section (Authors Only) -->
+                {% if review_requests and is_author %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-star me-2"></i>Pending Review Requests
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for review in review_requests[:5] %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h6 class="mb-1">{{ review.book_project.title }}</h6>
+                                        <p class="mb-0 text-muted small">Review submitted by {{ review.reviewer.reviewer_name }}{% if review.agreed_fee %} · Agreed fee: ${{ "%.2f"|format(review.agreed_fee) }}{% endif %}</p>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ url_for('book_platform.view_book', book_id=review.book_project_id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        <button type="button" class="btn btn-sm btn-success btn-publish-review" data-publish-url="{{ url_for('book_platform.publish_review', book_id=review.book_project_id, review_id=review.id) }}">
+                                            Publish review
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Collaborations Section (Authors Only) -->
+                {% if is_author %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users"></i> My Collaborations</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if collaborations %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Book</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for collab in collaborations %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ collab.book_project.title }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">by {{ collab.book_project.author.pen_name or collab.book_project.author.user.username }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-info">{{ collab.role.value.title() }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-success">Active</span>
+                                                </td>
+                                                <td>
+                                                    <a href="{{ url_for('book_platform.view_book', book_id=collab.book_project.id) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No collaborations yet</h5>
+                                <p class="text-muted">You haven't been invited to collaborate on any books.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if not is_author %}
+                <!-- Regular User Content (Non-Authors) -->
+                
+                <!-- Reviewer Status Section (Not for podcasters, freelancers, bloggers, artists) -->
+                {% if current_user.role not in ['podcaster', 'freelancer', 'blogger', 'artist'] %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-star me-2"></i>Reviewer Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if user_reviewer_profile %}
+                            {% if user_reviewer_profile.accreditation_status.value == 'accredited' %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>You are an Accredited Reviewer!</strong>
+                                <p class="mb-0 mt-2">You can now submit reviews and earn from book sales.</p>
+                                <a href="{{ url_for('book_platform.books_seeking_review') }}" class="btn btn-sm btn-success mt-2 me-2">
+                                    <i class="fas fa-search me-1"></i>Books Seeking Your Review
+                                </a>
+                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-sm btn-outline-success mt-2">
+                                    Browse Review Opportunities
+                                </a>
+                            </div>
+                            {% elif user_reviewer_profile.accreditation_status.value == 'pending' %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Reviewer Application Pending</strong>
+                                <p class="mb-0 mt-2">Your application is being reviewed. We'll notify you once it's approved.</p>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Reviewer Status: {{ user_reviewer_profile.accreditation_status.value|title }}</strong>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted mb-3">Become an Accredited Reviewer</h5>
+                                <p class="text-muted mb-4">Earn money by reviewing books and helping authors improve their work.</p>
+                                <a href="{{ url_for('book_platform.register_reviewer') }}" class="btn btn-primary">
+                                    <i class="fas fa-user-plus me-2"></i>Register as Reviewer
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- My Investments Section (Not for podcasters, freelancers, bloggers, artists) -->
+                {% if current_user.role not in ['podcaster', 'freelancer', 'blogger', 'artist'] %}
+                {% if user_investments %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>My Investments
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            {% for investment in user_investments %}
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ investment.book_project.title }}</h6>
+                                        <p class="text-muted small mb-2">Investment: ${{ "%.2f"|format(investment.amount) }}</p>
+                                        <p class="text-muted small mb-2">Returns: ${{ "%.2f"|format(investment.total_returns) }}</p>
+                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id) }}" class="btn btn-sm btn-outline-primary">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-primary">
+                                View All Investments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Invest in Books
+                        </h5>
+                    </div>
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted mb-3">Start Investing in Books</h5>
+                        <p class="text-muted mb-4">Support authors and earn returns when their books sell.</p>
+                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Browse Investment Opportunities
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+
+                <!-- Quick Actions for Regular Users -->
+                {% if current_user.role not in ['podcaster', 'freelancer', 'blogger', 'artist'] %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="card-title text-primary mb-0">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-store me-2"></i>Browse Books
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-outline-success w-100">
+                                    <i class="fas fa-dollar-sign me-2"></i>View Earnings
+                                </a>
+                            </div>
+                            {% if is_author %}
+                            <div class="col-md-4">
+                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-warning w-100">
+                                    <i class="fas fa-star me-2"></i>Find Reviewers
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='book_platform.js') }}"></script>
+    <script>
+        // Handle delete button clicks
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteButtons = document.querySelectorAll('.delete-book-btn');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const bookId = this.getAttribute('data-book-id');
+                    const bookTitle = this.getAttribute('data-book-title');
+                    confirmDeleteBook(bookId, bookTitle);
+                });
+            });
+        });
+
+        // Function to confirm and delete a book from dashboard
+        function confirmDeleteBook(bookId, bookTitle) {
+            if (confirm(`Are you sure you want to delete "${bookTitle}"? This action cannot be undone and will delete all chapters and content.`)) {
+                fetch(`/mybook/books/${bookId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({}),
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Failed to delete book');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Book deleted successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to delete book'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error: ' + (error.message || 'An error occurred while deleting the book'));
+                });
+            }
+        }
+
+        document.querySelectorAll('.btn-publish-review').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var url = this.getAttribute('data-publish-url');
+                if (!url) return;
+                if (!confirm('Publish this review? It will be visible and the reviewer will earn any agreed fee (pending your payment).')) return;
+                fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success) { alert(data.message || 'Review published.'); location.reload(); }
+                        else { alert(data.error || 'Failed to publish'); }
+                    })
+                    .catch(function(e) { alert('Error: ' + (e.message || 'Could not publish')); });
+            });
+        });
+    </script>
+</body>
+</html>

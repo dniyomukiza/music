@@ -1,26 +1,37 @@
 import os
+import json
+from dotenv import load_dotenv
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
+import os
 from dotenv import load_dotenv
 from glconnect.models import WordsData,db
 from sqlalchemy.orm import declarative_base
 
-
 # Load environment variables
 load_dotenv()
-db_url = os.getenv('DB_URL')
+
+db_url = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
 if not db_url:
-    # Use a default SQLite database for local development
-    temp_dir = '/home/nididier1/.gemini/tmp/music'
-    os.makedirs(temp_dir, exist_ok=True)
-    db_url = f"sqlite:///{os.path.join(temp_dir, 'local_dev.db')}"
+    for path in ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]:
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    cfg = json.load(f)
+                db_url = cfg.get("DB_URL") or cfg.get("DATABASE_URL")
+                if db_url:
+                    break
+            except Exception:
+                pass
+if not db_url:
+    raise ValueError("DB_URL or DATABASE_URL must be set (env or glconfig.json)")
 
 # Set up the database engine and session
-engine = create_engine(db_url)  # Using the environment DB_URL
+engine = create_engine(db_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
@@ -36,6 +47,20 @@ def get_db() -> Generator[Session, None, None]:
 
 # Initialize FastAPI
 app = FastAPI()
+
+
+@app.get("/health")
+def health():
+    """Health check for Docker and load balancers."""
+    return {"status": "healthy", "service": "fastapi"}
+
+
+# Music Live WebSocket (Gemini Live API - bidi-demo architecture)
+@app.websocket("/ws/music/{user_id}/{session_id}")
+async def music_live_websocket(websocket: WebSocket, user_id: str, session_id: str):
+    """WebSocket for music voice assistant with native audio."""
+    from glconnect.music_live_ws import handle_music_live_websocket
+    await handle_music_live_websocket(websocket, user_id, session_id)
 
 
 # The dictionary containing your word data

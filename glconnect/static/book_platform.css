@@ -1,0 +1,1646 @@
+/* Ink Studio - Professional Book Platform CSS */
+
+:root {
+    --primary-color: #2c3e50;
+    --primary-dark: #34495e;
+    --secondary-color: #7f8c8d;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --info-color: #7f8c8d;
+    --light-color: #ecf0f1;
+    --dark-color: #2c3e50;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --gradient-primary: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    --gradient-secondary: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+}
+
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    min-height: 100vh;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Hero Section */
+.hero-section {
+    background: var(--gradient-primary);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+.hero-stats {
+    position: relative;
+    z-index: 2;
+}
+
+.stat-circle {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.stat-circle .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.stat-circle .stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+/* Enhanced Cards */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+    background: white;
+    color: #333;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-lg);
+}
+
+.card-header {
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    padding: 1.25rem;
+    color: #333;
+}
+
+/* Welcome Card */
+.welcome-card {
+    background: white;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.welcome-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-lg);
+}
+
+/* Stat Cards */
+.stat-card {
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.stat-number {
+    font-weight: 700;
+    color: var(--dark-color);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+}
+
+/* Book Cards */
+.book-card {
+    transition: all 0.3s ease;
+}
+
+.book-card:hover {
+    transform: translateY(-4px);
+}
+
+.book-cover-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+    border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+}
+
+.book-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.book-card:hover .book-cover-img {
+    transform: scale(1.05);
+}
+
+.book-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-color);
+}
+
+.book-status-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 3rem 1rem;
+}
+
+.empty-icon {
+    opacity: 0.5;
+}
+
+/* Notification Items */
+.notification-item {
+    transition: all 0.3s ease;
+    border-radius: var(--border-radius-sm);
+}
+
+.notification-item:hover {
+    background-color: #f1f5f9 !important;
+    transform: translateX(4px);
+}
+
+/* Enhanced Buttons */
+.btn {
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+/* Badges */
+.badge {
+    border-radius: 20px;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Book Cover Styles */
+.book-cover-large {
+    width: 200px;
+    height: 280px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-lg);
+    transition: transform 0.3s ease;
+}
+
+.book-cover-large:hover {
+    transform: scale(1.05);
+}
+
+.book-cover-placeholder-large {
+    width: 200px;
+    height: 280px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-color);
+    box-shadow: var(--box-shadow-lg);
+}
+
+.book-cover-hero {
+    position: relative;
+    z-index: 2;
+}
+
+/* Book Stats Grid */
+.book-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.book-stats-grid .stat-card {
+    padding: 0.75rem;
+    border-radius: var(--border-radius-sm);
+    background: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+.book-stats-grid .stat-card:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+}
+
+/* Enhanced Navigation */
+.navbar {
+    backdrop-filter: blur(10px);
+    background: rgba(44, 62, 80, 0.95) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1050;
+}
+
+/* Ensure dropdown menu appears above all other elements */
+.navbar .dropdown-menu {
+    z-index: 9999 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    max-height: none !important;
+    pointer-events: auto;
+}
+
+.navbar .dropdown {
+    position: relative;
+    z-index: 9999;
+}
+
+.navbar .dropdown-toggle {
+    position: relative;
+    z-index: 9999;
+}
+
+/* Ensure dropdown items are clickable and visible */
+.navbar .dropdown-item {
+    position: relative;
+    z-index: 10000;
+    background-color: white;
+}
+
+.navbar .dropdown-item:hover {
+    position: relative;
+    z-index: 10000;
+}
+
+/* Make sure dropdown is visible even when navbar has overflow hidden */
+.navbar-nav .dropdown {
+    overflow: visible;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: white !important;
+}
+
+.navbar-brand:hover {
+    color: white !important;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Smooth Transitions */
+* {
+    transition: all 0.3s ease;
+}
+
+/* Focus States */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25);
+    border-color: var(--primary-color);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Admin Table Styles */
+.book-cover-small {
+    width: 40px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.book-cover-placeholder-small {
+    width: 40px;
+    height: 56px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+}
+
+.book-cover-mini {
+    flex-shrink: 0;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8fafc;
+    transform: translateX(2px);
+}
+
+.book-row {
+    transition: all 0.3s ease;
+}
+
+.book-row:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Enhanced Table */
+.table thead th {
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 600;
+    color: var(--dark-color);
+    padding: 1rem 0.75rem;
+}
+
+.table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Form Controls */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* Button Groups */
+.btn-group-sm .btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Empty State */
+.empty-state {
+    padding: 4rem 2rem;
+}
+
+.empty-state i {
+    opacity: 0.3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-section {
+        text-align: center;
+    }
+    
+    .hero-section .display-4 {
+        font-size: 2rem;
+    }
+    
+    .stat-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .stat-circle .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .book-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.375rem;
+        font-size: 0.75rem;
+    }
+}
+
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600;
+}
+
+.btn {
+    border-radius: var(--border-radius);
+    font-weight: 500;
+}
+
+/* Dashboard Styles */
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    background-color: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Book Card Styles */
+.book-card {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+    color: #333;
+}
+
+.book-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.book-cover {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.book-cover-placeholder {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+}
+
+.book-info {
+    padding: 1rem;
+    color: #333;
+}
+
+.book-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark-color);
+}
+
+.book-genre {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.book-status {
+    margin-bottom: 1rem;
+}
+
+.book-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Badge Styles */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 50px;
+}
+
+.badge-success {
+    background-color: var(--success-color);
+}
+
+.badge-warning {
+    background-color: var(--warning-color);
+    color: var(--dark-color);
+}
+
+.badge-info {
+    background-color: var(--info-color);
+}
+
+.badge-primary {
+    background-color: var(--primary-color);
+}
+
+/* Notification Styles */
+.notification-item {
+    padding: 0.75rem;
+    border-left: 3px solid var(--primary-color);
+    background-color: #f8f9fa;
+    margin-bottom: 0.5rem;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.25rem;
+}
+
+.notification-message {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.notification-time {
+    color: var(--secondary-color);
+    font-size: 0.8rem;
+}
+
+/* Collaborator Styles */
+.collaborator-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.collaborator-item:last-child {
+    border-bottom: none;
+}
+
+.collaborator-name {
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.collaborator-role {
+    font-size: 0.8rem;
+}
+
+/* Book Info Styles */
+.book-info .stat-item {
+    background-color: white;
+    border: 1px solid #e9ecef;
+}
+
+.book-description {
+    border-top: 1px solid #e9ecef;
+    padding-top: 1rem;
+}
+
+.book-meta {
+    border-top: 1px solid #e9ecef;
+    padding-top: 1rem;
+}
+
+/* Form Styles */
+.form-control, .form-select {
+    border-radius: var(--border-radius);
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    background-color: white;
+    color: #333;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Rich Text Editor Styles */
+.rich-text-editor {
+    border: 1px solid #ced4da;
+    border-radius: var(--border-radius);
+    background-color: white;
+    min-height: 400px;
+    color: #333;
+}
+
+.editor-toolbar {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ced4da;
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.editor-toolbar button {
+    background: none;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.editor-toolbar button:hover {
+    background-color: #f8f9fa;
+}
+
+.editor-toolbar button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.editor-content {
+    padding: 1rem;
+    min-height: 350px;
+    outline: none;
+    color: #333;
+}
+
+.editor-content:focus {
+    outline: none;
+}
+
+/* Comment Styles */
+.comment-item {
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    color: #333;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.comment-time {
+    color: var(--secondary-color);
+    font-size: 0.8rem;
+}
+
+.comment-content {
+    color: #333;
+    line-height: 1.5;
+}
+
+.comment-actions {
+    margin-top: 0.5rem;
+}
+
+.comment-resolved {
+    opacity: 0.7;
+    background-color: #f8f9fa;
+}
+
+.comment-resolved::before {
+    content: "✓ Resolved";
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: var(--success-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* Real-time Collaboration Styles */
+.collaboration-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: var(--success-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    z-index: 1000;
+}
+
+.collaboration-indicator.offline {
+    background-color: var(--danger-color);
+}
+
+.active-users {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.active-user {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+}
+
+.user-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+/* Marketplace Styles */
+.marketplace-card {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+    color: #333;
+}
+
+.marketplace-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Marketplace Bootstrap Overrides */
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.text-primary {
+    color: white !important;
+}
+
+.text-primary i {
+    color: white !important;
+}
+
+/* Ensure marketplace headings are white */
+.display-4,
+h1, h2, h3, h4, h5, h6 {
+    color: white !important;
+}
+
+.display-4 i,
+h1 i, h2 i, h3 i, h4 i, h5 i, h6 i {
+    color: white !important;
+}
+
+/* Ensure all chapter management buttons are white */
+.btn-outline-secondary {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-outline-warning {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-warning:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-outline-danger {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+/* Ensure all outline buttons are white on book view page */
+.btn-outline-primary {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+/* Ensure all other button variants are white */
+.btn-success {
+    color: white !important;
+}
+
+.btn-warning {
+    color: white !important;
+}
+
+.btn-outline-success {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-success:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-outline-info {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-info:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: white !important;
+}
+
+/* Additional Bootstrap Overrides */
+.bg-info {
+    background-color: var(--info-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.btn-info {
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-info {
+    color: var(--info-color);
+    border-color: var(--info-color);
+}
+
+.btn-outline-info:hover {
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+    color: white;
+}
+
+/* Secondary Button Overrides */
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-secondary {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+/* Border Overrides */
+.border-primary {
+    border-color: var(--primary-color) !important;
+}
+
+.border-start.border-primary {
+    border-left-color: var(--primary-color) !important;
+}
+
+.border-end.border-primary {
+    border-right-color: var(--primary-color) !important;
+}
+
+.border-top.border-primary {
+    border-top-color: var(--primary-color) !important;
+}
+
+.border-bottom.border-primary {
+    border-bottom-color: var(--primary-color) !important;
+}
+
+/* Light Background Overrides */
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+/* Badge Overrides */
+.badge.bg-info {
+    background-color: var(--info-color) !important;
+}
+
+/* Additional Button State Overrides */
+.btn-outline-secondary:focus,
+.btn-outline-secondary.focus {
+    box-shadow: 0 0 0 0.2rem rgba(127, 140, 141, 0.25);
+}
+
+.btn-outline-secondary:not(:disabled):not(.disabled):active,
+.btn-outline-secondary:not(:disabled):not(.disabled).active {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+/* Ensure all info elements use muted gray */
+.text-info,
+i.text-info {
+    color: var(--info-color) !important;
+}
+
+/* COMPREHENSIVE BLUE COLOR ELIMINATION */
+/* Override ALL possible Bootstrap blue classes */
+.btn-link {
+    color: var(--primary-color) !important;
+}
+
+.btn-link:hover {
+    color: var(--primary-dark) !important;
+}
+
+/* Override any remaining blue colors */
+a {
+    color: var(--primary-color) !important;
+}
+
+a:hover {
+    color: var(--primary-dark) !important;
+}
+
+/* Override focus states */
+.btn:focus,
+.btn:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25) !important;
+}
+
+/* Override any blue links */
+.nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.nav-link:hover {
+    color: white !important;
+}
+
+/* Override dropdown links */
+.dropdown-item {
+    color: var(--dark-color) !important;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa !important;
+    color: var(--primary-color) !important;
+}
+
+/* Override any remaining blue elements */
+* {
+    --bs-blue: var(--primary-color) !important;
+    --bs-info: var(--info-color) !important;
+}
+
+/* Override Bootstrap's default blue */
+:root {
+    --bs-blue: var(--primary-color) !important;
+    --bs-info: var(--info-color) !important;
+}
+
+/* Ensure navbar text is white */
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-link {
+    color: white !important;
+}
+
+.navbar-dark .navbar-brand:hover,
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: white !important;
+}
+
+/* Ensure sidebar Ink Studio text is white */
+.sidebar-header h4 {
+    color: white !important;
+}
+
+.sidebar-header h4 i {
+    color: white !important;
+}
+
+/* COMPREHENSIVE LIGHT/BLUE COLOR ELIMINATION */
+.btn-light {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+.btn-light:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: white !important;
+}
+
+.btn-outline-light {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: white !important;
+    color: white !important;
+}
+
+.bg-light {
+    background-color: white !important;
+}
+
+.text-light {
+    color: white !important;
+}
+
+.book-price {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--success-color);
+}
+
+.book-author {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+.book-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.star {
+    color: #ffc107;
+    font-size: 0.9rem;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .book-actions {
+        flex-direction: column;
+    }
+    
+    .editor-toolbar {
+        flex-direction: column;
+    }
+    
+    .collaboration-indicator {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-item {
+        margin-bottom: 0.5rem;
+    }
+    
+    .book-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --light-color: #212529;
+        --dark-color: #f8f9fa;
+    }
+    
+    body {
+        background-color: #121212;
+        color: var(--dark-color);
+    }
+    
+    .card {
+        background-color: #1e1e1e;
+        color: var(--dark-color);
+    }
+    
+    .card-header {
+        background-color: #1e1e1e;
+        border-bottom-color: #333;
+    }
+    
+    .form-control, .form-select {
+        background-color: #2d2d2d;
+        border-color: #444;
+        color: var(--dark-color);
+    }
+    
+    .rich-text-editor {
+        background-color: #2d2d2d;
+        border-color: #444;
+    }
+    
+    .editor-content {
+        color: var(--dark-color);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .navbar, .btn, .editor-toolbar {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .book-card {
+        break-inside: avoid;
+    }
+}
+
+/* Chapter Management Styles */
+.chapter-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e9ecef;
+}
+
+.chapter-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.chapter-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.chapter-stats {
+    margin-top: 0.5rem;
+}
+
+.empty-state {
+    padding: 2rem;
+    text-align: center;
+}
+
+.empty-state i {
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+/* Edit Book Page Chapter Cards */
+.edit-book .chapter-card {
+    border-left: 4px solid var(--primary-color);
+}
+
+.edit-book .chapter-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.edit-book .chapter-card .card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+}
+
+.edit-book .chapter-card .card-text {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #6c757d;
+}
+
+.edit-book .chapter-card .btn-group .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.edit-book .chapter-card .badge {
+    font-size: 0.7rem;
+}
+
+/* Fix: Make buttons visible on white book cards */
+.book-card .btn-outline-primary,
+.book-card .btn-outline-secondary,
+.book-card .btn-outline-danger,
+.book-card .btn-outline-info,
+.book-card .btn-outline-warning {
+    color: #333 !important;
+    border-color: #ced4da !important;
+    background-color: white !important;
+}
+
+.book-card .btn-outline-primary {
+    color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.book-card .btn-outline-primary:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.book-card .btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.book-card .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: white !important;
+    border-color: #6c757d !important;
+}
+
+.book-card .btn-outline-danger {
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.book-card .btn-outline-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border-color: #dc3545 !important;
+}
+
+.book-card .btn-outline-info {
+    color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+}
+
+.book-card .btn-outline-info:hover {
+    background-color: #17a2b8 !important;
+    color: white !important;
+    border-color: #17a2b8 !important;
+}
+
+.book-card .btn-outline-warning {
+    color: #ffc107 !important;
+    border-color: #ffc107 !important;
+}
+
+.book-card .btn-outline-warning:hover {
+    background-color: #ffc107 !important;
+    color: #333 !important;
+    border-color: #ffc107 !important;
+}
+
+/* Also fix buttons in card-body and card-footer on white backgrounds */
+.card-body .btn-outline-primary,
+.card-footer .btn-outline-primary,
+.card-body .btn-outline-secondary,
+.card-footer .btn-outline-secondary,
+.card-body .btn-outline-danger,
+.card-footer .btn-outline-danger,
+.card-body .btn-outline-info,
+.card-footer .btn-outline-info,
+.card-body .btn-outline-warning,
+.card-footer .btn-outline-warning {
+    color: #333 !important;
+    border-color: #ced4da !important;
+    background-color: white !important;
+}
+
+.card-body .btn-outline-primary,
+.card-footer .btn-outline-primary {
+    color: #007bff !important;
+    border-color: #007bff !important;
+}
+
+.card-body .btn-outline-primary:hover,
+.card-footer .btn-outline-primary:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.card-body .btn-outline-secondary,
+.card-footer .btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.card-body .btn-outline-secondary:hover,
+.card-footer .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: white !important;
+    border-color: #6c757d !important;
+}
+
+.card-body .btn-outline-danger,
+.card-footer .btn-outline-danger {
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.card-body .btn-outline-danger:hover,
+.card-footer .btn-outline-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border-color: #dc3545 !important;
+}
+
+.card-body .btn-outline-info,
+.card-footer .btn-outline-info {
+    color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+}
+
+.card-body .btn-outline-info:hover,
+.card-footer .btn-outline-info:hover {
+    background-color: #17a2b8 !important;
+    color: white !important;
+    border-color: #17a2b8 !important;
+}
+
+/* Fix: Make Edit, Chapters, Unpublish, Delete buttons and icons black on books listing page */
+.book-card .card-footer .btn-outline-secondary,
+.book-card .card-footer .btn-outline-info,
+.book-card .card-footer .btn-outline-warning,
+.book-card .card-footer .btn-outline-danger {
+    color: #000000 !important;
+    border-color: #ced4da !important;
+}
+
+.book-card .card-footer .btn-outline-secondary i,
+.book-card .card-footer .btn-outline-info i,
+.book-card .card-footer .btn-outline-warning i,
+.book-card .card-footer .btn-outline-danger i {
+    color: #000000 !important;
+}
+
+.book-card .card-footer .btn-outline-secondary:hover,
+.book-card .card-footer .btn-outline-info:hover,
+.book-card .card-footer .btn-outline-warning:hover,
+.book-card .card-footer .btn-outline-danger:hover {
+    color: #000000 !important;
+    background-color: #f8f9fa !important;
+    border-color: #000000 !important;
+}
+
+.book-card .card-footer .btn-outline-secondary:hover i,
+.book-card .card-footer .btn-outline-info:hover i,
+.book-card .card-footer .btn-outline-warning:hover i,
+.book-card .card-footer .btn-outline-danger:hover i {
+    color: #000000 !important;
+}
+
+/* Category Buttons Styles */
+
+.category-btn {
+    border-radius: 25px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    background-color: white;
+}
+
+.category-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(44, 62, 80, 0.2);
+    text-decoration: none;
+}
+
+.category-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(44, 62, 80, 0.3);
+}
+
+.category-btn.active:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.category-btn .badge {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.category-btn.active .badge {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    color: white;
+}
+
+/* Category Section Background */
+.category-container {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+/* Responsive Category Buttons */
+@media (max-width: 768px) {
+    .category-container {
+        padding: 1rem;
+    }
+    
+    .category-btn {
+        font-size: 0.875rem;
+        padding: 0.4rem 1rem;
+    }
+}
+

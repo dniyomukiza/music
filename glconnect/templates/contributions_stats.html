@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Contributions Statistics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-chart-bar"></i> Word Contributions Statistics</h2>
+            <p class="text-muted">Statistics and management for approved word contributions</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ stats.total_contributions }}</h4>
+                            <p class="mb-0">Total Contributions</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-book fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ contributions|length }}</h4>
+                            <p class="mb-0">Approved Words</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ stats.version }}</h4>
+                            <p class="mb-0">File Version</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-code-branch fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <small>{{ stats.last_updated }}</small>
+                            <p class="mb-0">Last Updated</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contributions List -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Approved Contributions</h5>
+                </div>
+                <div class="card-body">
+                    {% if contributions %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Word</th>
+                                        <th>Meaning</th>
+                                        <th>Part of Speech</th>
+                                        <th>Contributor</th>
+                                        <th>Approved By</th>
+                                        <th>Approved At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for contrib in contributions %}
+                                    <tr>
+                                        <td>{{ contrib.id }}</td>
+                                        <td><strong>{{ contrib.word }}</strong></td>
+                                        <td>{{ contrib.meaning }}</td>
+                                        <td>
+                                            {% if contrib.part_of_speech %}
+                                                <span class="badge badge-secondary">{{ contrib.part_of_speech }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ contrib.contributor_name }}</td>
+                                        <td>{{ contrib.approved_by }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ contrib.approved_at[:10] if contrib.approved_at else '-' }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No contributions yet</h5>
+                            <p class="text-muted">Approved word contributions will appear here.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('routes1.admin_contributions') }}" class="btn btn-primary">
+                            <i class="fas fa-list"></i> View Pending Contributions
+                        </a>
+                        <a href="{{ url_for('routes1.words') }}" class="btn btn-secondary">
+                            <i class="fas fa-book"></i> Back to Dictionary
+                        </a>
+                        <button class="btn btn-info" onclick="location.reload()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+/* Button Group Styling */
+.btn-group {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+.btn-group .btn {
+    flex: 1;
+    min-width: 150px;
+    margin: 0 !important;
+    border-radius: 10px !important;
+}
+
+/* Override Bootstrap's default btn-group behavior */
+.btn-group > .btn:not(:last-child):not(.dropdown-toggle) {
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+.btn-group > .btn:not(:first-child) {
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        min-width: auto;
+    }
+}
+</style>
+{% endblock %}
+
