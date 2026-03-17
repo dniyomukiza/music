@@ -107,7 +107,10 @@ async def handle_music_live_websocket(
         """Extract play/add_to_playlist/download/show_transcript actions from tool results for client execution."""
         actions = []
         try:
-            for fr in (event.get_function_responses() or []):
+            fr_list = event.get_function_responses() or []
+            if fr_list:
+                logger.debug("Event has %d function_response(s)", len(fr_list))
+            for fr in fr_list:
                 resp = getattr(fr, "response", None)
                 if resp is None:
                     continue
@@ -156,8 +159,33 @@ async def handle_music_live_websocket(
                                     break
                             except json.JSONDecodeError:
                                 pass
-        except Exception:
-            pass
+            if not actions:
+                def find_action_in_obj(obj, depth=0):
+                    if depth > 15:
+                        return None
+                    if isinstance(obj, dict):
+                        if obj.get("type") == "play" and obj.get("url") and "playlist2" in str(obj.get("url", "")):
+                            return obj
+                        for v in obj.values():
+                            a = find_action_in_obj(v, depth + 1)
+                            if a:
+                                return a
+                    elif isinstance(obj, list):
+                        for item in obj:
+                            a = find_action_in_obj(item, depth + 1)
+                            if a:
+                                return a
+                    return None
+                try:
+                    evt_dict = event.model_dump() if hasattr(event, "model_dump") else {}
+                    action = find_action_in_obj(evt_dict)
+                    if action:
+                        actions.append(action)
+                        logger.debug("Extracted play action from event via recursive search")
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.debug("_extract_actions_from_event error: %s", e)
         return actions
 
     async def downstream_task():

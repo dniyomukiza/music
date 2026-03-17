@@ -127,9 +127,7 @@ def search_songs_impl(query: str, base_url: str = "") -> List[Dict[str, Any]]:
     for d in downloads:
         name = (d.name or "").strip() or "Untitled Track"
         artist = d.artist or "Unknown"
-        path = url_for("playlist2.serve_downloaded_song_file", download_id=d.id)
-        if base_url and path.startswith("/"):
-            path = base_url.rstrip("/") + path
+        path = url_for("playlist2.serve_downloaded_song_file", download_id=d.id, _external=True)
         add_if_unique({
             "id": 2000000 + d.id,
             "song_id": None,
@@ -145,9 +143,7 @@ def search_songs_impl(query: str, base_url: str = "") -> List[Dict[str, Any]]:
     if artist:
         songs_data = get_all_songs_by_artist(artist_id=artist.artist_id, artist_name=artist.artist_name, include_collaborations=True)
         for s in songs_data:
-            path = s.get("path") or url_for("playlist2.serve_song_file", song_id=s["id"])
-            if base_url and path.startswith("/"):
-                path = base_url.rstrip("/") + path
+            path = s.get("path") or url_for("playlist2.serve_song_file", song_id=s["id"], _external=True)
             add_if_unique({
                 **s,
                 "play_url": path,
@@ -167,9 +163,7 @@ def search_songs_impl(query: str, base_url: str = "") -> List[Dict[str, Any]]:
         if artist_id or artist_name:
             songs_data = get_all_songs_by_artist(artist_id=artist_id, artist_name=artist_name)
             for s in songs_data:
-                path = s.get("path") or url_for("playlist2.serve_song_file", song_id=s["id"])
-                if base_url and path.startswith("/"):
-                    path = base_url.rstrip("/") + path
+                path = s.get("path") or url_for("playlist2.serve_song_file", song_id=s["id"], _external=True)
                 add_if_unique({**s, "play_url": path})
             if all_songs_data:
                 return all_songs_data
@@ -185,9 +179,7 @@ def search_songs_impl(query: str, base_url: str = "") -> List[Dict[str, Any]]:
             if a:
                 artist_name = a.artist_name
         song_name = (song.name or "").strip() or "Untitled Track"
-        path = url_for("playlist2.serve_song_file", song_id=song.id)
-        if base_url and path.startswith("/"):
-            path = base_url.rstrip("/") + path
+        path = url_for("playlist2.serve_song_file", song_id=song.id, _external=True)
         add_if_unique({
             "id": song.id,
             "song_id": song.id,
@@ -261,9 +253,7 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
                 from flask import url_for
                 song = Song.query.get(song_id)
                 if song:
-                    path = url_for("playlist2.serve_song_file", song_id=song_id)
-                    if base_url and path.startswith("/"):
-                        path = base_url.rstrip("/") + path
+                    path = url_for("playlist2.serve_song_file", song_id=song_id, _external=True)
                     actions.append({"type": "play", "url": path, "name": song.name or "Track", "artist": song.artist or "Unknown"})
                     return json.dumps({"success": True, "message": f"Playing {song.name or 'track'} by {song.artist or 'Unknown'}"})
             if download_id:
@@ -271,9 +261,7 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
                 from flask import url_for
                 d = DownloadedSong.query.get(download_id)
                 if d:
-                    path = url_for("playlist2.serve_downloaded_song_file", download_id=download_id)
-                    if base_url and path.startswith("/"):
-                        path = base_url.rstrip("/") + path
+                    path = url_for("playlist2.serve_downloaded_song_file", download_id=download_id, _external=True)
                     actions.append({"type": "play", "url": path, "name": d.name or "Track", "artist": d.artist or "Unknown"})
                     return json.dumps({"success": True, "message": f"Playing {d.name or 'track'} by {d.artist or 'Unknown'}"})
             return json.dumps({"success": False, "message": "Song not found"})
@@ -343,18 +331,14 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
             if song_id:
                 song = Song.query.get(song_id)
                 if song:
-                    path = url_for("playlist2.serve_song_file", song_id=song_id)
-                    if base_url and path.startswith("/"):
-                        path = base_url.rstrip("/") + path
+                    path = url_for("playlist2.serve_song_file", song_id=song_id, _external=True)
                     fname = f"{song.artist or 'Unknown'} - {song.name or 'track'}.mp3".replace("/", "-")
                     actions.append({"type": "download", "url": path, "filename": fname})
                     return json.dumps({"success": True, "message": f"Download ready: {song.name or 'track'}"})
             if download_id:
                 d = DownloadedSong.query.get(download_id)
                 if d:
-                    path = url_for("playlist2.serve_downloaded_song_file", download_id=download_id)
-                    if base_url and path.startswith("/"):
-                        path = base_url.rstrip("/") + path
+                    path = url_for("playlist2.serve_downloaded_song_file", download_id=download_id, _external=True)
                     fname = f"{d.artist or 'Unknown'} - {d.name or 'track'}.mp3".replace("/", "-")
                     actions.append({"type": "download", "url": path, "filename": fname})
                     return json.dumps({"success": True, "message": f"Download ready: {d.name or 'track'}"})
