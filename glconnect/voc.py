@@ -23574,23 +23574,6 @@ def insert_data():
     
     db.session.commit()
 #Endpoint to look up a word
-@app.get("/word/{word_name}")
-async def lookup_word(word_name: str, db: Session = Depends(get_db)):
-    word_data = db.query(WordsData).filter(WordsData.word == word_name.lower()).first()
-    if word_data:
-        return {
-            "word": word_data.word,
-            "umuzi_root": word_data.umuzi_root,
-            "basoma_phonetics": word_data.basoma_phonetics,
-            "bandika_writing": word_data.bandika_writing,
-            "icyiciro_pos": word_data.icyiciro_pos,
-            "igisobanuro_meaning": word_data.igisobanuro_meaning
-        }
-    else:
-        raise HTTPException(status_code=404, detail="Word not found")
-from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy.orm import Session
-
 @app.get("/word/{word_name}/{filter}")
 async def lookup_filtered_word(word_name: str, filter: str, db: Session = Depends(get_db)):
     # Convert the word name to lowercase to ensure case-insensitive matching
