@@ -23,7 +23,7 @@ def _get_runner():
         return _cached_adk
 
     from google.adk.agents.live_request_queue import LiveRequestQueue
-    from google.adk.agents.run_config import RunConfig, StreamingMode
+    from google.adk.agents.run_config import RunConfig, StreamingMode, ToolThreadPoolConfig
     from google.adk.runners import Runner
     from google.adk.sessions import InMemorySessionService
     from google.genai import types
@@ -32,7 +32,7 @@ def _get_runner():
     session_service = InMemorySessionService()
     runner = Runner(app_name="music-live", agent=music_agent, session_service=session_service)
     
-    _cached_adk = (runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context)
+    _cached_adk = (runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context, ToolThreadPoolConfig)
     return _cached_adk
 
 
@@ -44,7 +44,7 @@ async def handle_music_live_websocket(
 ) -> None:
     """Handle WebSocket connection for music Live API."""
     try:
-        runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context = _get_runner()
+        runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context, ToolThreadPoolConfig = _get_runner()
     except Exception as e:
         logger.error(f"Failed to load music Live ADK: {e}")
         await websocket.close(code=1011, reason=str(e))
@@ -73,6 +73,9 @@ async def handle_music_live_websocket(
             input_audio_transcription=None, # Disable for lower latency
             output_audio_transcription=None, # Disable for lower latency
             session_resumption=None,
+            tool_thread_pool_config=ToolThreadPoolConfig(max_workers=4),
+            enable_affective_dialog=True,
+            proactivity=types.ProactivityConfig(),
         )
     else:
         run_config = RunConfig(
@@ -81,6 +84,7 @@ async def handle_music_live_websocket(
             input_audio_transcription=None,
             output_audio_transcription=None,
             session_resumption=None,
+            tool_thread_pool_config=ToolThreadPoolConfig(max_workers=4),
         )
 
     session = await session_service.get_session(app_name="music-live", user_id=user_id, session_id=session_id)

@@ -43,24 +43,26 @@ def _approved_filter():
 
 def search_songs(query: str) -> str:
     """
-    Search for songs or artists in the music catalog.
+    Search for songs or artists in the music catalog or your playlist.
     Use when the user asks about a song, artist, or wants to find music.
-    Returns matching songs with song_id, download_id, name, artist, and play_url.
+    Returns matching songs with song_id, download_id, name, artist, play_url, and cover_image.
     """
     from glconnect.voc import SessionLocal
-    from glconnect.models import db, Song, Artist, DownloadedSong
+    from glconnect.models import db, Song, Artist, DownloadedSong, Playlist
 
     query = (query or "").strip().lower()
     if not query:
-        return json.dumps({"found": 0, "songs": []})
+        return json.dumps({"found": 0, "songs": [], "success": False})
 
+    ctx = _ctx()
+    user_id = ctx.get("user_id")
     session = SessionLocal()
     try:
         all_songs_data = []
         seen_keys = set()
         approved = _approved_filter()
 
-        def add_unique(sid, did, name, artist, url):
+        def add_unique(sid, did, name, artist, url, cover):
             key = f"{name.lower()}|{artist.lower()}"
             if key in seen_keys:
                 return
@@ -71,34 +73,52 @@ def search_songs(query: str) -> str:
                 "download_id": did,
                 "name": name,
                 "artist": artist,
-                "play_url": url
+                "play_url": url,
+                "cover_image": cover or "/static/uploads/default_cover.jpg"
             })
 
-        # 1. Priority: Artist exact match
+        # 1. Check User's Playlist First (Personal Relevance)
+        if user_id:
+            playlist_entries = session.query(Playlist).filter_by(user_id=user_id).all()
+            for entry in playlist_entries:
+                if entry.song_id:
+                    s = session.query(Song).get(entry.song_id)
+                    if s and (query in s.name.lower() or (s.artist and query in s.artist.lower())):
+                        s_artist = s.artist or "Unknown"
+                        if s.artist_id:
+                            a = session.query(Artist).get(s.artist_id)
+                            if a: s_artist = a.artist_name
+                        add_unique(s.id, None, s.name or "Untitled", s_artist, _url_song(s.id), s.cover_image)
+                elif entry.download_id:
+                    d = session.query(DownloadedSong).get(entry.download_id)
+                    if d and (query in d.name.lower() or (d.artist and query in d.artist.lower())):
+                        add_unique(None, d.id, d.name or "Untitled", d.artist or "Unknown", _url_download(d.id), None)
+
+        # 2. Artist exact match (Highest Catalog Priority)
         artist = session.query(Artist).filter(db.func.lower(Artist.artist_name) == query).first()
         if artist:
             songs = session.query(Song).filter_by(artist_id=artist.artist_id).filter(approved).limit(10).all()
             for s in songs:
-                add_unique(s.id, None, s.name or "Untitled", artist.artist_name, _url_song(s.id))
+                add_unique(s.id, None, s.name or "Untitled", artist.artist_name, _url_song(s.id), s.cover_image)
 
-        # 2. Search Song table (name or artist partial)
-        if len(all_songs_data) < 10:
+        # 3. Search Song table (name/artist catalog search)
+        if len(all_songs_data) < 15:
             songs = session.query(Song).filter(
                 approved,
                 db.or_(
                     db.func.lower(Song.name).like(f"%{query}%"),
                     db.func.lower(Song.artist).like(f"%{query}%")
                 )
-            ).limit(15).all()
+            ).limit(20).all()
             for s in songs:
                 s_artist = s.artist or "Unknown"
                 if s.artist_id:
                     a = session.query(Artist).get(s.artist_id)
                     if a: s_artist = a.artist_name
-                add_unique(s.id, None, s.name or "Untitled", s_artist, _url_song(s.id))
+                add_unique(s.id, None, s.name or "Untitled", s_artist, _url_song(s.id), s.cover_image)
 
-        # 3. Search DownloadedSong table
-        if len(all_songs_data) < 10:
+        # 4. Search DownloadedSong table
+        if len(all_songs_data) < 15:
             downloads = session.query(DownloadedSong).filter(
                 db.or_(
                     db.func.lower(DownloadedSong.name).like(f"%{query}%"),
@@ -106,10 +126,14 @@ def search_songs(query: str) -> str:
                 )
             ).limit(10).all()
             for d in downloads:
-                add_unique(None, d.id, d.name or "Untitled", d.artist or "Unknown", _url_download(d.id))
+                add_unique(None, d.id, d.name or "Untitled", d.artist or "Unknown", _url_download(d.id), None)
 
         out = all_songs_data[:10]
-        return json.dumps({"found": len(out), "songs": out, "success": True})
+        return json.dumps({
+            "success": True, 
+            "message": f"Found {len(out)} matching songs.",
+            "action": {"type": "search_results", "songs": out}
+        })
     finally:
         session.close()
 
@@ -289,13 +313,47 @@ def request_transcript() -> str:
     })
 
 
-MUSIC_INSTRUCTION = """You are a high-speed music assistant. Prioritize tools over chat.
-Tools: search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist.
+def get_catalog_suggestions() -> str:
+    """
+    Get a list of available artists and popular songs from the catalog.
+    Use this when a user's search returns no results or when they ask 'what do you have?'.
+    Returns a JSON with a list of artists and songs to suggest to the user.
+    """
+    from glconnect.voc import SessionLocal
+    from glconnect.models import Song, Artist, DownloadedSong
+    import random
+
+    session = SessionLocal()
+    try:
+        # Get up to 5 unique artists from the Artist table
+        artists = session.query(Artist).limit(20).all()
+        suggested_artists = list(set([a.artist_name for a in artists if a.artist_name]))
+        random.shuffle(suggested_artists)
+        
+        # Get up to 5 songs from the Song table
+        songs = session.query(Song).filter(Song.approval_status == 'approved').limit(20).all()
+        suggested_songs = [{"name": s.name, "artist": s.artist or "Unknown"} for s in songs if s.name]
+        random.shuffle(suggested_songs)
+
+        return json.dumps({
+            "success": True,
+            "message": "Here are some things you can ask for.",
+            "artists": suggested_artists[:5],
+            "songs": suggested_songs[:5]
+        })
+    finally:
+        session.close()
+
+
+MUSIC_INSTRUCTION = """You are a high-speed music assistant for the Ink Studio dashboard. 
+STRICT SCOPE: Only perform music tasks (search, play, playlist, download). If the user asks unrelated questions (e.g., 'who are you', 'how are you', 'tell me a joke'), politely redirect them back to music tasks.
+
+Tools: search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist, get_catalog_suggestions.
 Rules:
 - Be extremely brief.
+- If search_songs returns no results, IMMEDIATELY call get_catalog_suggestions().
 - To 'play it': use IDs from the most recent tool result (search or playlist).
-- If IDs are unknown, call search_songs or list_my_playlist first.
-- You MUST call play_song() to trigger playback. Saying 'playing' is not enough."""
+- You MUST call play_song() to trigger playback."""
 
 
 # Create agent - must be done after tools are defined
@@ -304,6 +362,6 @@ from google.adk.agents import Agent
 music_agent = Agent(
     name="music_agent",
     model=os.getenv("MUSIC_LIVE_MODEL", "gemini-2.5-flash-native-audio-preview-12-2025"),
-    tools=[search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist, request_transcript],
+    tools=[search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist, request_transcript, get_catalog_suggestions],
     instruction=MUSIC_INSTRUCTION,
 )

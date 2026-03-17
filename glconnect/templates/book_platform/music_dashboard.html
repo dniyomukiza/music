@@ -1184,10 +1184,9 @@
                      // If not found, refresh playlist and try again after a delay for DOM rendering
                      if (typeof console !== 'undefined') console.log('[Voice] Song not in UI, refreshing playlist...');
                      loadPlaylist().then(() => {
-                         setTimeout(() => executeVoiceAction(a, true), 800); // 800ms to allow DOM to render cards
+                         setTimeout(() => executeVoiceAction(a, true), 800);
                      });
                  } else {
-                     // Last resort: play via new Audio object if still not in UI
                      if (typeof console !== 'undefined') console.log('[Voice] Still no playlist match, using new Audio');
                      const audio = new Audio(playUrl);
                      audio.volume = voiceVolumeGain;
@@ -1198,73 +1197,126 @@
                  }
              } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
                  loadPlaylist();
+                 if (a.type === 'add_to_playlist') {
+                     // Optional: Pulse the playlist title or show a temporary notification
+                     const title = document.querySelector('.playlist-section h4');
+                     if (title) {
+                         title.classList.add('text-success');
+                         setTimeout(() => title.classList.remove('text-success'), 2000);
+                     }
+                 }
+             } else if (a.type === 'search_results' && Array.isArray(a.songs)) {
+                 // Professional move: Update the search results UI with agent results
+                 renderAgentSearchResults(a.songs);
+             } else if (a.type === 'show_transcript') {
+                 showVoiceTranscript();
+             } else if (a.type === 'download' && a.url) {
+                 const aEl = document.createElement('a');
+                 aEl.href = a.url;
+                 aEl.download = (a.filename || 'song.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
+                 aEl.click();
              }
- else if (a.type === 'show_transcript') {
-                showVoiceTranscript();
-            } else if (a.type === 'download' && a.url) {
-                const aEl = document.createElement('a');
-                aEl.href = a.url;
-                aEl.download = (a.filename || 'song.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
-                aEl.click();
-            }
         }
+
+        function renderAgentSearchResults(songs) {
+            const container = document.getElementById('searchResults');
+            if (!container) return;
+            
+            // Clear current results and show new ones
+            container.innerHTML = '';
+            
+            if (!songs || songs.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-center text-muted">No songs found for that search.</p></div>';
+                return;
+            }
+            
+            let html = '';
+            songs.forEach(song => {
+                const sId = song.song_id || 'null';
+                const dId = song.download_id || 'null';
+                const sNameSafe = song.name.replace(/'/g, "\\'");
+                html += `
+                    <div class="col-md-6 col-lg-4 mb-4 fade-in">
+                        <div class="card h-100 song-card shadow-sm border-0">
+                            <img src="${song.cover_image || '/static/uploads/default_cover.jpg'}" class="card-img-top song-cover" alt="${song.name}" loading="lazy">
+                            <div class="card-body">
+                                <h5 class="card-title text-truncate">${song.name}</h5>
+                                <p class="card-text text-muted text-truncate">${song.artist}</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary btn-sm flex-grow-1" onclick="playSong(${sId}, ${dId}, '${sNameSafe}', this)">
+                                        <i class="fas fa-play me-1"></i>Play
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="addSongToPlaylist(${sId}, ${dId}, '${sNameSafe}', this)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            // Scroll to search results smoothly
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        // Global audio contexts for reuse and easier mobile unlocking
+        let recorderCtx = null;
+        let playerCtx = null;
+
+        async function unlockAudioContexts() {
+            if (recorderCtx && recorderCtx.state === 'suspended') await recorderCtx.resume();
+            if (playerCtx && playerCtx.state === 'suspended') await playerCtx.resume();
+        }
+
         async function tryStartVoiceLive() {
             const btn = document.getElementById('voiceAgentBtn');
             const respEl = document.getElementById('voiceAgentResponse');
+
+            // Mobile Autoplay Fix: Contexts MUST be created or resumed on a user gesture
+            try {
+                if (!recorderCtx) recorderCtx = new AudioContext({ sampleRate: 16000 });
+                if (!playerCtx) playerCtx = new AudioContext({ sampleRate: 24000 });
+                await unlockAudioContexts();
+            } catch (err) {
+                console.error('AudioContext initialization failed:', err);
+            }
+
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
+
             try {
                 voiceLiveWs = new WebSocket(wsUrl);
                 await new Promise((resolve, reject) => {
-                    const t = setTimeout(() => reject(new Error('timeout')), 5000);
+                    const t = setTimeout(() => reject(new Error('Connection timeout')), 8000);
                     voiceLiveWs.onopen = () => { clearTimeout(t); resolve(); };
-                    voiceLiveWs.onerror = () => { clearTimeout(t); reject(new Error('WebSocket error')); };
+                    voiceLiveWs.onerror = () => { clearTimeout(t); reject(new Error('WebSocket connection failed')); };
                 });
-                const recorderCtx = new AudioContext({ sampleRate: 16000 });
+
                 await recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}');
-                voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
-                const playerCtx = new AudioContext({ sampleRate: 24000 });
                 await playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}');
+
+                try {
+                    voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { 
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true
+                        } 
+                    });
+                } catch (micErr) {
+                    throw new Error('Microphone access denied or unavailable. Please check your settings.');
+                }
+
                 voiceLivePlayerNode = new AudioWorkletNode(playerCtx, 'pcm-player-processor');
                 voiceLiveGainNode = playerCtx.createGain();
                 voiceLiveGainNode.gain.value = voiceVolumeGain;
                 voiceLivePlayerNode.connect(voiceLiveGainNode);
                 voiceLiveGainNode.connect(playerCtx.destination);
+
                 voiceLiveMode = true;
-                voiceLiveTried = true;
-                voiceAgentUserStopped = false;
                 voiceAgentActive = true;
-                btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening… (click to end)';
-                btn.onclick = () => {
-                    voiceAgentUserStopped = true;
-                    voiceAgentActive = false;
-                    if (voiceLivePlayerNode) voiceLivePlayerNode.port.postMessage({ command: 'endOfAudio' });
-                    if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
-                    if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) voiceLiveWs.close();
-                    voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
-                    btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
-                    btn.onclick = () => startVoiceRecognition();
-                };
-                voiceTranscriptLog = [];
-                if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
-                voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
-                voiceLiveWs.onclose = () => {
-                    if (!voiceAgentUserStopped && voiceAgentActive) {
-                        voiceAgentActive = false;
-                        voiceLiveMode = false;
-                        if (voiceLiveMicStream) voiceLiveMicStream.getTracks().forEach(t => t.stop());
-                        const b = document.getElementById('voiceAgentBtn');
-                        const r = document.getElementById('voiceAgentResponse');
-                        if (b) { b.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant'; b.onclick = () => startVoiceRecognition(); }
-                        if (r) r.innerHTML = '<span class="text-warning">Connection closed. Click to reconnect.</span>';
-                    }
-                };
-                voiceLiveWs.onerror = () => {
-                    if (!voiceAgentUserStopped && voiceAgentActive) {
-                        const r = document.getElementById('voiceAgentResponse');
-                        if (r) r.innerHTML = '<span class="text-warning">Connection error. Click Voice Assistant to reconnect.</span>';
-                    }
-                };
+                btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening... (click to stop)';
+
                 const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
                 const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
                 source.connect(recNode);
@@ -1273,9 +1325,7 @@
                 recNode.port.onmessage = (e) => {
                     const float32 = e.data;
                     audioBuffer.push(...float32);
-
-                    // Send in ~100ms chunks (1600 samples at 16kHz)
-                    if (audioBuffer.length >= 1600) {
+                    if (audioBuffer.length >= 960) {
                         const pcm16 = new Int16Array(audioBuffer.length);
                         for (let i = 0; i < audioBuffer.length; i++) {
                             pcm16[i] = Math.max(-1, Math.min(1, audioBuffer[i])) * 0x7fff;
@@ -1287,114 +1337,33 @@
                     }
                 };
 
-                function tryExecuteActionFromEvent(evt) {
-                    if (evt.type === 'music_action' && evt.action) {
-                        if (typeof console !== 'undefined') console.log('[Voice] Received music_action:', evt.action.type);
-                        executeVoiceAction(evt.action);
-                        return true;
-                    }
-                    if (evt.content && evt.content.parts) {
-                        for (const p of evt.content.parts) {
-                            const fr = p.functionResponse || p.function_response;
-                            if (fr) {
-                                const r = fr.response || fr;
-                                let action = null;
-                                if (r && typeof r === 'object' && r.action) action = r.action;
-                                else if (r && typeof r === 'object' && r.result) {
-                                    const res = r.result;
-                                    if (typeof res === 'object' && res && res.action) action = res.action;
-                                    else if (typeof res === 'string') try {
-                                        const d = JSON.parse(res);
-                                        if (d && d.action) action = d.action;
-                                    } catch (_) {}
-                                } else if (typeof r === 'string') try {
-                                    const d = JSON.parse(r);
-                                    if (d && d.action) action = d.action;
-                                } catch (_) {}
-                                if (action) {
-                                    if (typeof console !== 'undefined') console.log('[Voice] Extracted action from event:', action.type);
-                                    executeVoiceAction(action);
-                                    return true;
-                                }
-                            }
-                            if (p.text && p.text.includes('"action"')) {
-                                try {
-                                    const idx = p.text.indexOf('{"');
-                                    if (idx >= 0) {
-                                        let depth = 0, end = -1;
-                                        for (let i = idx; i < p.text.length; i++) {
-                                            if (p.text[i] === '{') depth++;
-                                            else if (p.text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
-                                        }
-                                        if (end >= 0) {
-                                            const o = JSON.parse(p.text.substring(idx, end + 1));
-                                            if (o && o.action) { executeVoiceAction(o.action); return true; }
-                                        }
-                                    }
-                                } catch (_) {}
-                            }
-                        }
-                        if (typeof evt === 'object') {
-                            const findAction = (obj) => {
-                                if (!obj || typeof obj !== 'object') return null;
-                                if (obj.action && obj.action.type === 'play' && obj.action.url) return obj.action;
-                                for (const k of Object.keys(obj)) {
-                                    const v = obj[k];
-                                    if (v && typeof v === 'object' && v.action && v.action.type === 'play') return v.action;
-                                    if (Array.isArray(v)) for (const item of v) { const a = findAction(item); if (a) return a; }
-                                    else { const a = findAction(v); if (a) return a; }
-                                }
-                                return null;
-                            };
-                            const action = findAction(evt);
-                            if (action) {
-                                if (typeof console !== 'undefined') console.log('[Voice] Found play action in event (fallback)');
-                                executeVoiceAction(action);
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                }
                 voiceLiveWs.onmessage = (ev) => {
                     try {
                         const evt = JSON.parse(ev.data);
-                        tryExecuteActionFromEvent(evt);
+                        executeVoiceAction(evt); // Unified action handler
+
                         if (evt.content && evt.content.parts) {
                             for (const p of evt.content.parts) {
                                 if (p.inlineData && p.inlineData.data && voiceLivePlayerNode) {
                                     const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
                                     voiceLivePlayerNode.port.postMessage(buf);
                                 }
-                                if (p.text && p.text.trim()) addAgentTranscript(p.text);
-                            }
-                        }
-                        const outT = evt.outputTranscription || evt.output_transcription;
-                        if (outT && outT.text && outT.text.trim()) addAgentTranscript(outT.text);
-                        const inT = evt.inputTranscription || evt.input_transcription;
-                        if (inT && inT.text && inT.text.trim()) addUserTranscript(inT.text);
-                        if (evt.content && evt.content.role === 'user') {
-                            for (const p of (evt.content.parts || [])) {
-                                if (p.text && p.text.trim()) addUserTranscript(p.text);
+                                if (p.text) addAgentTranscript(p.text);
                             }
                         }
                     } catch (_) {}
                 };
-                respEl.innerHTML = '<span class="text-success">Live mode – speak now</span>';
+
+                voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
+                respEl.innerHTML = '<span class="text-success">Live – Speak now</span>';
+
             } catch (e) {
-                voiceLiveTried = true;
-                voiceLiveMode = false;
-                voiceAgentActive = false;
-                if (voiceLiveWs) try { voiceLiveWs.close(); } catch (_) {}
-                voiceLiveWs = null;
-                const respEl = document.getElementById('voiceAgentResponse');
-                const btn = document.getElementById('voiceAgentBtn');
-                respEl.innerHTML = '<span class="text-danger">Gemini Live failed: ' + (e.message || 'Connection error') + '</span>';
+                console.error('[VoiceLive] Error:', e);
+                respEl.innerHTML = `<span class="text-danger">${e.message}</span>`;
                 btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
-                btn.onclick = () => startVoiceRecognition();
+                voiceAgentActive = false;
             }
         }
-
         function startVoiceRecognition() {
             if (voiceLiveTried && voiceLiveMode && voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) {
                 return;
