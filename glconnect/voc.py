@@ -12,7 +12,12 @@ from sqlalchemy.orm import declarative_base
 
 # Load environment variables
 load_dotenv()
-db_url = os.getenv('DB_URL')  
+db_url = os.getenv('DB_URL')
+if not db_url:
+    # Use a default SQLite database for local development
+    temp_dir = '/home/nididier1/.gemini/tmp/music'
+    os.makedirs(temp_dir, exist_ok=True)
+    db_url = f"sqlite:///{os.path.join(temp_dir, 'local_dev.db')}"
 
 # Set up the database engine and session
 engine = create_engine(db_url)  # Using the environment DB_URL

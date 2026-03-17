@@ -1,14 +1,16 @@
 import os
-from dotenv import load_dotenv
+import json
 from sqlalchemy import create_engine, Column, String, Boolean, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-load_dotenv()
-db_url = os.getenv('DB_URL')
+with open('glconfig.json', 'r') as config_file:
+    config = json.load(config_file)
+    db_url = config.get('DB_URL')
+
 Base = declarative_base()
 
-# Connect to PostgreSQL using the URL from environment variables
+# Connect to PostgreSQL using the URL from the config file
 engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
 session = Session()
