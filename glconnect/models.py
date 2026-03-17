@@ -20,6 +20,11 @@ class Song(db.Model):
     # Admin approval for artist uploads: 'pending', 'approved', 'rejected'. Default 'approved' for pipeline/legacy.
     approval_status = db.Column(db.String(20), default='approved', nullable=True)
 
+    __table_args__ = (
+        db.Index('idx_song_name', 'name'),
+        db.Index('idx_song_artist', 'artist'),
+    )
+
     def is_approved(self):
         return self.approval_status in (None, 'approved')
 
@@ -36,6 +41,11 @@ class DownloadedSong(db.Model):
     local_path = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
     synced_at = db.Column(db.DateTime, nullable=True)  # when file was renamed / path synced from DB (NULL = not yet synced)
+
+    __table_args__ = (
+        db.Index('idx_downloaded_song_name', 'name'),
+        db.Index('idx_downloaded_song_artist', 'artist'),
+    )
 
 
 class Post(db.Model):

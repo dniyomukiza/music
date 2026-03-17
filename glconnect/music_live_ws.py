@@ -13,8 +13,15 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
 
+# Module-level cache for ADK components
+_cached_adk = None
+
 # Lazy imports to avoid loading ADK at module level (can fail if deps missing)
 def _get_runner():
+    global _cached_adk
+    if _cached_adk:
+        return _cached_adk
+
     from google.adk.agents.live_request_queue import LiveRequestQueue
     from google.adk.agents.run_config import RunConfig, StreamingMode
     from google.adk.runners import Runner
@@ -24,7 +31,9 @@ def _get_runner():
 
     session_service = InMemorySessionService()
     runner = Runner(app_name="music-live", agent=music_agent, session_service=session_service)
-    return runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context
+    
+    _cached_adk = (runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context)
+    return _cached_adk
 
 
 async def handle_music_live_websocket(
@@ -107,83 +116,44 @@ async def handle_music_live_websocket(
         """Extract play/add_to_playlist/download/show_transcript actions from tool results for client execution."""
         actions = []
         try:
+            # 1. Check function_responses directly (most common for tools)
             fr_list = event.get_function_responses() or []
-            if fr_list:
-                logger.debug("Event has %d function_response(s)", len(fr_list))
             for fr in fr_list:
                 resp = getattr(fr, "response", None)
-                if resp is None:
-                    continue
-                action = None
+                if not resp: continue
+                
+                # Tools return JSON strings or dicts
+                data = None
                 if isinstance(resp, dict):
-                    if "action" in resp:
-                        action = resp["action"]
-                    elif "result" in resp:
-                        r = resp["result"]
-                        if isinstance(r, dict) and "action" in r:
-                            action = r["action"]
-                        elif isinstance(r, str):
-                            try:
-                                data = json.loads(r)
-                                if isinstance(data, dict) and "action" in data:
-                                    action = data["action"]
-                            except json.JSONDecodeError:
-                                pass
-                if action is None and isinstance(resp, str):
-                    try:
-                        data = json.loads(resp)
-                        if isinstance(data, dict) and "action" in data:
-                            action = data["action"]
-                    except json.JSONDecodeError:
-                        pass
-                if action:
-                    actions.append(action)
-            # Fallback: traverse event content.parts if get_function_responses is empty
+                    data = resp
+                elif isinstance(resp, str):
+                    try: data = json.loads(resp)
+                    except: pass
+                
+                if data and isinstance(data, dict):
+                    # Standard format: {"action": {...}}
+                    if "action" in data:
+                        actions.append(data["action"])
+                    # Fallback for nested results: {"result": {"action": {...}}}
+                    elif "result" in data and isinstance(data["result"], dict) and "action" in data["result"]:
+                        actions.append(data["result"]["action"])
+
+            # 2. Fast fallback for content parts if needed (less likely with get_function_responses)
             if not actions and hasattr(event, "content") and event.content:
                 parts = getattr(event.content, "parts", None) or []
                 for p in parts:
                     fr = getattr(p, "function_response", None)
-                    if not fr:
-                        continue
+                    if not fr: continue
                     resp = getattr(fr, "response", None)
                     if isinstance(resp, dict) and "action" in resp:
                         actions.append(resp["action"])
-                        break
-                    if isinstance(resp, dict) and "result" in resp:
-                        r = resp["result"]
-                        if isinstance(r, str):
-                            try:
-                                d = json.loads(r)
-                                if isinstance(d, dict) and "action" in d:
-                                    actions.append(d["action"])
-                                    break
-                            except json.JSONDecodeError:
-                                pass
-            if not actions:
-                def find_action_in_obj(obj, depth=0):
-                    if depth > 15:
-                        return None
-                    if isinstance(obj, dict):
-                        if obj.get("type") == "play" and obj.get("url") and "playlist2" in str(obj.get("url", "")):
-                            return obj
-                        for v in obj.values():
-                            a = find_action_in_obj(v, depth + 1)
-                            if a:
-                                return a
-                    elif isinstance(obj, list):
-                        for item in obj:
-                            a = find_action_in_obj(item, depth + 1)
-                            if a:
-                                return a
-                    return None
-                try:
-                    evt_dict = event.model_dump() if hasattr(event, "model_dump") else {}
-                    action = find_action_in_obj(evt_dict)
-                    if action:
-                        actions.append(action)
-                        logger.debug("Extracted play action from event via recursive search")
-                except Exception:
-                    pass
+                    elif isinstance(resp, str):
+                        try:
+                            d = json.loads(resp)
+                            if isinstance(d, dict) and "action" in d:
+                                actions.append(d["action"])
+                        except: pass
+
         except Exception as e:
             logger.debug("_extract_actions_from_event error: %s", e)
         return actions

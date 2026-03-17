@@ -56,99 +56,60 @@ def search_songs(query: str) -> str:
 
     session = SessionLocal()
     try:
-        seen_song_ids = set()
-        seen_song_keys = set()
         all_songs_data = []
+        seen_keys = set()
         approved = _approved_filter()
 
-        def add_if_unique(song_data):
-            sid = song_data["id"]
-            skey = f"{(song_data.get('name') or '').lower()}|{(song_data.get('artist') or '').lower()}"
-            if sid in seen_song_ids or skey in seen_song_keys:
+        def add_unique(sid, did, name, artist, url):
+            key = f"{name.lower()}|{artist.lower()}"
+            if key in seen_keys:
                 return
-            seen_song_ids.add(sid)
-            seen_song_keys.add(skey)
-            all_songs_data.append(song_data)
-
-        # Downloaded songs
-        downloads = session.query(DownloadedSong).filter(
-            db.or_(
-                db.func.lower(DownloadedSong.name).like(f"%{query}%"),
-                db.func.lower(DownloadedSong.artist).like(f"%{query}%"),
-            )
-        ).limit(20).all()
-        for d in downloads:
-            add_if_unique({
-                "id": 2000000 + d.id,
-                "song_id": None,
-                "download_id": d.id,
-                "name": (d.name or "").strip() or "Untitled Track",
-                "artist": d.artist or "Unknown",
-                "play_url": _url_download(d.id),
+            seen_keys.add(key)
+            all_songs_data.append({
+                "id": sid or (2000000 + did),
+                "song_id": sid,
+                "download_id": did,
+                "name": name,
+                "artist": artist,
+                "play_url": url
             })
 
-        # Artist exact match - get songs by artist
+        # 1. Priority: Artist exact match
         artist = session.query(Artist).filter(db.func.lower(Artist.artist_name) == query).first()
         if artist:
-            songs = session.query(Song).filter_by(artist_id=artist.artist_id).filter(approved).all()
-            for song in songs:
-                artist_name = song.artist or "Unknown"
-                if song.artist_id:
-                    a = session.query(Artist).get(song.artist_id)
-                    if a:
-                        artist_name = a.artist_name
-                add_if_unique({
-                    "id": song.id,
-                    "song_id": song.id,
-                    "download_id": None,
-                    "name": (song.name or "").strip() or "Untitled Track",
-                    "artist": artist_name,
-                    "play_url": _url_song(song.id),
-                })
-            if all_songs_data:
-                out = [{"id": x["id"], "song_id": x.get("song_id"), "download_id": x.get("download_id"), "name": x.get("name"), "artist": x.get("artist"), "play_url": x.get("play_url")} for x in all_songs_data[:10]]
-                return json.dumps({"found": len(all_songs_data), "songs": out})
+            songs = session.query(Song).filter_by(artist_id=artist.artist_id).filter(approved).limit(10).all()
+            for s in songs:
+                add_unique(s.id, None, s.name or "Untitled", artist.artist_name, _url_song(s.id))
 
-        # Song name partial match
-        songs = session.query(Song).filter(db.func.lower(Song.name).like(f"%{query}%")).filter(approved).limit(20).all()
-        if songs:
-            for song in songs:
-                artist_name = song.artist or "Unknown"
-                if song.artist_id:
-                    a = session.query(Artist).get(song.artist_id)
-                    if a:
-                        artist_name = a.artist_name
-                add_if_unique({
-                    "id": song.id,
-                    "song_id": song.id,
-                    "download_id": None,
-                    "name": (song.name or "").strip() or "Untitled Track",
-                    "artist": artist_name,
-                    "play_url": _url_song(song.id),
-                })
-            if all_songs_data:
-                out = [{"id": x["id"], "song_id": x.get("song_id"), "download_id": x.get("download_id"), "name": x.get("name"), "artist": x.get("artist"), "play_url": x.get("play_url")} for x in all_songs_data[:10]]
-                return json.dumps({"found": len(all_songs_data), "songs": out})
+        # 2. Search Song table (name or artist partial)
+        if len(all_songs_data) < 10:
+            songs = session.query(Song).filter(
+                approved,
+                db.or_(
+                    db.func.lower(Song.name).like(f"%{query}%"),
+                    db.func.lower(Song.artist).like(f"%{query}%")
+                )
+            ).limit(15).all()
+            for s in songs:
+                s_artist = s.artist or "Unknown"
+                if s.artist_id:
+                    a = session.query(Artist).get(s.artist_id)
+                    if a: s_artist = a.artist_name
+                add_unique(s.id, None, s.name or "Untitled", s_artist, _url_song(s.id))
 
-        # Song.artist partial match
-        songs_artist = session.query(Song).filter(db.func.lower(Song.artist).like(f"%{query}%")).filter(approved).all()
-        for song in songs_artist:
-            artist_name = song.artist or "Unknown"
-            if song.artist_id:
-                a = session.query(Artist).get(song.artist_id)
-                if a:
-                    artist_name = a.artist_name
-            add_if_unique({
-                "id": song.id,
-                "song_id": song.id,
-                "download_id": None,
-                "name": (song.name or "").strip() or "Untitled Track",
-                "artist": artist_name,
-                "play_url": _url_song(song.id),
-            })
+        # 3. Search DownloadedSong table
+        if len(all_songs_data) < 10:
+            downloads = session.query(DownloadedSong).filter(
+                db.or_(
+                    db.func.lower(DownloadedSong.name).like(f"%{query}%"),
+                    db.func.lower(DownloadedSong.artist).like(f"%{query}%")
+                )
+            ).limit(10).all()
+            for d in downloads:
+                add_unique(None, d.id, d.name or "Untitled", d.artist or "Unknown", _url_download(d.id))
 
-        out = [{"id": x["id"], "song_id": x.get("song_id"), "download_id": x.get("download_id"), "name": x.get("name"), "artist": x.get("artist"), "play_url": x.get("play_url")} for x in all_songs_data[:10]]
-        return json.dumps({"found": len(all_songs_data), "songs": out})
+        out = all_songs_data[:10]
+        return json.dumps({"found": len(out), "songs": out, "success": True})
     finally:
         session.close()
 
@@ -328,29 +289,21 @@ def request_transcript() -> str:
     })
 
 
-MUSIC_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the manual UI: search, play, add to playlist, remove from playlist, download, list playlist. Same logic as the buttons—just via voice.
+MUSIC_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the manual UI via voice commands.
 
-You have full access to the music database:
-- Artist-uploaded songs (Song table) and YouTube-downloaded songs (DownloadedSong table)
-- User playlists (Playlist table) for logged-in users
+Tools:
+1. search_songs(query): Search songs/artists. Use this first when a user mentions a song or artist.
+2. play_song(song_id or download_id): Start playback. CRITICAL: Playback only happens when you call this tool. Use IDs from search or playlist.
+3. add_song_to_playlist(song_id or download_id): Add to user's playlist (requires login).
+4. remove_song_from_playlist(song_id or download_id): Remove from user's playlist (requires login).
+5. download_song(song_id or download_id): Get download link.
+6. list_my_playlist(): List user's playlist (requires login).
+7. request_transcript(): Display conversation transcript when requested.
 
-Your tools (use them to fulfill requests):
-1. search_songs(query) - Find songs/artists in the catalog. Always use this first when the user mentions a song or artist.
-2. play_song(song_id or download_id) - Start playback. You MUST call this to actually play audio. Use song_id for artist uploads, download_id for YouTube downloads.
-3. add_song_to_playlist(song_id or download_id) - Add to user's playlist. Requires login.
-4. remove_song_from_playlist(song_id or download_id) - Remove a song from the user's playlist. Use list_my_playlist first to get IDs. Requires login.
-5. download_song(song_id or download_id) - Get download link for the user to save the file.
-6. list_my_playlist() - List songs in the user's playlist (requires login).
-7. request_transcript() - When the user asks for a transcript of the conversation (e.g. "give me the transcript", "show our conversation", "what did we say"), call this to display it.
-
-Playing songs (CRITICAL—playback only happens when you call the tool):
-- You MUST call play_song(song_id=X) or play_song(download_id=Y) to trigger playback. Saying "playing" or "playing now" without calling the tool does NOTHING—the user will hear you but no song will play.
-- To play by name: call search_songs first, then play_song with song_id or download_id from the results.
-- To play from playlist: call list_my_playlist first, get the song_id or download_id of the song (e.g. first song = songs[0].song_id or songs[0].download_id), then call play_song with that exact ID.
-- Never say "playing your song now" or similar without having just called play_song—the tool is the only way to start playback.
-
-Voice examples: "Play Laho", "Play the first song in my playlist", "Add X to my playlist", "Give me the transcript of our conversation".
-When the user asks for a transcript, conversation summary, or "what did we say", call request_transcript()—you CAN do this. Be conversational and confirm actions clearly."""
+Rules:
+- You MUST call play_song() to trigger playback. Confirming play without calling it does nothing.
+- To play from the playlist, call list_my_playlist() first to get IDs.
+- Be conversational, confirm actions clearly, and use tools proactively to fulfill requests."""
 
 
 # Create agent - must be done after tools are defined

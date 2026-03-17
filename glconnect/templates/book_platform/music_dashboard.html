@@ -1259,12 +1259,25 @@
                 const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
                 const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
                 source.connect(recNode);
+
+                let audioBuffer = [];
                 recNode.port.onmessage = (e) => {
                     const float32 = e.data;
-                    const pcm16 = new Int16Array(float32.length);
-                    for (let i = 0; i < float32.length; i++) pcm16[i] = float32[i] * 0x7fff;
-                    if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN && voiceAgentActive) voiceLiveWs.send(pcm16.buffer);
+                    audioBuffer.push(...float32);
+
+                    // Send in ~100ms chunks (1600 samples at 16kHz)
+                    if (audioBuffer.length >= 1600) {
+                        const pcm16 = new Int16Array(audioBuffer.length);
+                        for (let i = 0; i < audioBuffer.length; i++) {
+                            pcm16[i] = Math.max(-1, Math.min(1, audioBuffer[i])) * 0x7fff;
+                        }
+                        if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN && voiceAgentActive) {
+                            voiceLiveWs.send(pcm16.buffer);
+                        }
+                        audioBuffer = [];
+                    }
                 };
+
                 function tryExecuteActionFromEvent(evt) {
                     if (evt.type === 'music_action' && evt.action) {
                         if (typeof console !== 'undefined') console.log('[Voice] Received music_action:', evt.action.type);

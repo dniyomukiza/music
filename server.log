@@ -423,3 +423,5 @@ Ink Studio database tables created successfully
 2026-01-14 21:56:01,341 - werkzeug - WARNING -  * Debugger is active!
 /Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
   warnings.warn('resource_tracker: There appear to be %d '
+2026-03-16 20:59:10,052 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-03-16 20:59:10,652 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
