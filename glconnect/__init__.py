@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from flask import Flask
 from .models import db, User
 from .voc import insert_data
@@ -41,9 +42,16 @@ def create_app():
             config_path = 'glconfig.json'
         
         if os.path.exists(config_path):
+            logging.info(f"Loading configuration from {config_path}")
             with open(config_path, 'r') as config_file:
                 config = json.load(config_file)
                 db_url = config.get('DB_URL')
+        else:
+            logging.warning("Could not find glconfig.json.")
+
+    if not db_url:
+        logging.critical("DB_URL is not set. Please set the DB_URL environment variable or create a glconfig.json file.")
+        raise ValueError("DB_URL is not set.")
 
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

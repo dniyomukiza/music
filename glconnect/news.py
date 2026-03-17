@@ -10,12 +10,12 @@ import select
 load_dotenv()
 
 # Load your OpenAI API key from an environment variable
-openai.api_key = os.getenv("OPENAI_AI_KEY")
+# openai.api_key = os.getenv("OPENAI_AI_KEY")
 
 # Check for API key
-if not openai.api_key:
-    print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
-    exit(1)
+# if not openai.api_key:
+#     print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
+#     exit(1)
 
 # Set the path to your Google Cloud service account key file
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
@@ -82,29 +82,29 @@ while True:
         break
 
     # Process the input if it's valid (generate news)
-    try:
-        # Generate news using OpenAI
-        ai_response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an experienced news reporter assistant that summarizes latest news regarding certain topics"},
-                {"role": "user", "content": f"Provide a balanced article of the latest news about {keyword} with analytical perspective and potential impact. Never ever include any header titles, intro, and subtitles"}
-            ],
-            max_tokens=300
-        )
+    # try:
+    #     # Generate news using OpenAI
+    #     ai_response = openai.ChatCompletion.create(
+    #         model="gpt-4",
+    #         messages=[
+    #             {"role": "system", "content": "You are an experienced news reporter assistant that summarizes latest news regarding certain topics"},
+    #             {"role": "user", "content": f"Provide a balanced article of the latest news about {keyword} with analytical perspective and potential impact. Never ever include any header titles, intro, and subtitles"}
+    #         ],
+    #         max_tokens=300
+    #     )
 
-        news_script = ai_response['choices'][0]['message']['content']
-        print(news_script)
+    #     news_script = ai_response['choices'][0]['message']['content']
+    #     print(news_script)
 
-        # Save to news.txt (append mode)
-        with open("news.txt", "a") as file:
-            file.write(news_script)
-            file.write("\n")
+    #     # Save to news.txt (append mode)
+    #     with open("news.txt", "a") as file:
+    #         file.write(news_script)
+    #         file.write("\n")
 
-        print("News script saved to news.txt")
+    #     print("News script saved to news.txt")
 
-    except openai.error.OpenAIError as e:
-        print(f"Error generating response from OpenAI: {e}")
+    # except openai.error.OpenAIError as e:
+    #     print(f"Error generating response from OpenAI: {e}")
 
     # Wait before prompting the next request
     print("Waiting for the next request...")

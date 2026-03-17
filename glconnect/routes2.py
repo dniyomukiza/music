@@ -9,13 +9,13 @@ from google.cloud import texttospeech
 # Load environment variables
 load_dotenv()
 # Load your OpenAI API key from an environment variable
-openai.api_key = os.getenv("OPENAI_AI_KEY")
+# openai.api_key = os.getenv("OPENAI_AI_KEY")
 bp2 = Blueprint('routes2', __name__)
 
 # Check for API key
-if not openai.api_key:
-    print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
-    exit(1)
+# if not openai.api_key:
+#     print("API key not found. Please set the 'OPENAI_AI_KEY' environment variable.")
+#     exit(1)
 
 # Set the path to your Google Cloud service account key file
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "textspeechdemo.json"
@@ -32,17 +32,18 @@ def news():
         keyword = form.keyword.data
         print(f"Form keyword: {form.keyword.data}")
         
+        news_script = ""
         try:
             # Step 1: Generate news content using OpenAI API
-            ai_response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an experienced news reporter assistant that summarizes the latest news regarding certain topics."},
-                    {"role": "user", "content": f"Provide a balanced article of the latest news about {keyword} with an analytical perspective and potential impact. Never include any header titles, intro, and subtitles."}
-                ],
-                max_tokens=300
-            )
-            news_script = ai_response['choices'][0]['message']['content']
+            # ai_response = openai.ChatCompletion.create(
+            #     model="gpt-4",
+            #     messages=[
+            #         {"role": "system", "content": "You are an experienced news reporter assistant that summarizes the latest news regarding certain topics."},
+            #         {"role": "user", "content": f"Provide a balanced article of the latest news about {keyword} with an analytical perspective and potential impact. Never include any header titles, intro, and subtitles."}
+            #     ],
+            #     max_tokens=300
+            # )
+            # news_script = ai_response['choices'][0]['message']['content']
             
             # Step 2: Save the generated news content to news.txt
             static_folder = os.path.join(os.getcwd(), 'glconnect/static')
@@ -77,8 +78,6 @@ def news():
                 audio_file.write(response.audio_content)
             print(f"Audio saved to {audio_file_path}")
         
-        except openai.error.OpenAIError as e:
-            print(f"Error generating response from OpenAI: {e}")
         except Exception as e:
             print(f"Error generating speech: {e}")
     
