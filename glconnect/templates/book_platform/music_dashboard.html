@@ -1166,31 +1166,40 @@
             respEl.appendChild(btn);
         }
         function executeVoiceAction(a, retried) {
-            if (a.type === 'play' && a.url) {
-                if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id, retried ? '(retry)' : '');
-                const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
-                let audioEl = findPlaylistAudioForAction(a);
-                if (audioEl) {
-                    if (typeof console !== 'undefined') console.log('[Voice] Playing via playlist element');
-                    audioEl.volume = voiceVolumeGain;
-                    audioEl.play().catch(e => {
-                        console.warn('Play failed (playlist):', e);
-                        showTapToPlayFallback(playUrl, a.name || 'Song');
-                    });
-                } else if (!retried) {
-                    loadPlaylist().then(() => setTimeout(() => executeVoiceAction(a, true), 400));
-                } else {
-                    if (typeof console !== 'undefined') console.log('[Voice] No playlist match after refresh, using new Audio');
-                    const audio = new Audio(playUrl);
-                    audio.volume = voiceVolumeGain;
-                    audio.play().then(() => {}).catch(e => {
-                        console.warn('Play failed:', e);
-                        showTapToPlayFallback(playUrl, a.name || 'Song');
-                    });
-                }
-            } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
-                loadPlaylist();
-            } else if (a.type === 'show_transcript') {
+             if (a.type === 'play' && a.url) {
+                 if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id, retried ? '(retry)' : '');
+                 const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
+
+                 // Try to find in UI first
+                 let audioEl = findPlaylistAudioForAction(a);
+
+                 if (audioEl) {
+                     if (typeof console !== 'undefined') console.log('[Voice] Playing via existing playlist element');
+                     audioEl.volume = voiceVolumeGain;
+                     audioEl.play().catch(e => {
+                         console.warn('Play failed (playlist):', e);
+                         showTapToPlayFallback(playUrl, a.name || 'Song');
+                     });
+                 } else if (!retried) {
+                     // If not found, refresh playlist and try again after a delay for DOM rendering
+                     if (typeof console !== 'undefined') console.log('[Voice] Song not in UI, refreshing playlist...');
+                     loadPlaylist().then(() => {
+                         setTimeout(() => executeVoiceAction(a, true), 800); // 800ms to allow DOM to render cards
+                     });
+                 } else {
+                     // Last resort: play via new Audio object if still not in UI
+                     if (typeof console !== 'undefined') console.log('[Voice] Still no playlist match, using new Audio');
+                     const audio = new Audio(playUrl);
+                     audio.volume = voiceVolumeGain;
+                     audio.play().catch(e => {
+                         console.warn('Play failed:', e);
+                         showTapToPlayFallback(playUrl, a.name || 'Song');
+                     });
+                 }
+             } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
+                 loadPlaylist();
+             }
+ else if (a.type === 'show_transcript') {
                 showVoiceTranscript();
             } else if (a.type === 'download' && a.url) {
                 const aEl = document.createElement('a');

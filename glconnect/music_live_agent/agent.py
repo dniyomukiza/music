@@ -289,21 +289,13 @@ def request_transcript() -> str:
     })
 
 
-MUSIC_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the manual UI via voice commands.
-
-Tools:
-1. search_songs(query): Search songs/artists. Use this first when a user mentions a song or artist.
-2. play_song(song_id or download_id): Start playback. CRITICAL: Playback only happens when you call this tool. Use IDs from search or playlist.
-3. add_song_to_playlist(song_id or download_id): Add to user's playlist (requires login).
-4. remove_song_from_playlist(song_id or download_id): Remove from user's playlist (requires login).
-5. download_song(song_id or download_id): Get download link.
-6. list_my_playlist(): List user's playlist (requires login).
-7. request_transcript(): Display conversation transcript when requested.
-
+MUSIC_INSTRUCTION = """You are a high-speed music assistant. Prioritize tools over chat.
+Tools: search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist.
 Rules:
-- You MUST call play_song() to trigger playback. Confirming play without calling it does nothing.
-- To play from the playlist, call list_my_playlist() first to get IDs.
-- Be conversational, confirm actions clearly, and use tools proactively to fulfill requests."""
+- Be extremely brief.
+- To 'play it': use IDs from the most recent tool result (search or playlist).
+- If IDs are unknown, call search_songs or list_my_playlist first.
+- You MUST call play_song() to trigger playback. Saying 'playing' is not enough."""
 
 
 # Create agent - must be done after tools are defined

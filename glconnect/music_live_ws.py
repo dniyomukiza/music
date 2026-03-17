@@ -70,8 +70,8 @@ async def handle_music_live_websocket(
         run_config = RunConfig(
             streaming_mode=StreamingMode.BIDI,
             response_modalities=["AUDIO"],
-            input_audio_transcription=types.AudioTranscriptionConfig(),
-            output_audio_transcription=types.AudioTranscriptionConfig(),
+            input_audio_transcription=None, # Disable for lower latency
+            output_audio_transcription=None, # Disable for lower latency
             session_resumption=None,
         )
     else:
