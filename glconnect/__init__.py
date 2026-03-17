@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask
 from .models import db, User
 from .voc import insert_data
@@ -33,7 +34,18 @@ def create_app():
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
     
     # Database and JWT configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URL')
+    db_url = os.getenv('DB_URL')
+    if not db_url:
+        config_path = '/etc/glconfig.json'
+        if not os.path.exists(config_path):
+            config_path = 'glconfig.json'
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as config_file:
+                config = json.load(config_file)
+                db_url = config.get('DB_URL')
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config["JWT_SECRET_KEY"] = "abarayon"
 
