@@ -1285,7 +1285,6 @@
             const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
 
             try {
-                if (typeof console !== 'undefined') console.log('[Voice] Connecting to', wsUrl);
                 voiceLiveWs = new WebSocket(wsUrl);
                 await new Promise((resolve, reject) => {
                     const t = setTimeout(() => reject(new Error('Connection timeout (8s). Check if FastAPI is running.')), 8000);
@@ -1301,8 +1300,10 @@
                     };
                 });
 
-                await recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}');
-                await playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}');
+                await Promise.all([
+                    recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}'),
+                    playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}')
+                ]);
 
                 try {
                     voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ 
@@ -1330,35 +1331,42 @@
                 const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
                 source.connect(recNode);
 
-                let audioBuffer = [];
+                const CHUNK = 320;
+                const buf = new Float32Array(CHUNK * 2);
+                let bufLen = 0;
+                const pcm16 = new Int16Array(CHUNK);
                 recNode.port.onmessage = (e) => {
-                    const float32 = e.data;
-                    audioBuffer.push(...float32);
-                    if (audioBuffer.length >= 960) {
-                        const pcm16 = new Int16Array(audioBuffer.length);
-                        for (let i = 0; i < audioBuffer.length; i++) {
-                            pcm16[i] = Math.max(-1, Math.min(1, audioBuffer[i])) * 0x7fff;
+                    const f = e.data;
+                    for (let i = 0; i < f.length; i++) {
+                        buf[bufLen++] = f[i];
+                        if (bufLen >= CHUNK) {
+                            if (voiceLiveWs?.readyState === WebSocket.OPEN && voiceAgentActive) {
+                                for (let j = 0; j < CHUNK; j++) pcm16[j] = (buf[j] < -1 ? -1 : buf[j] > 1 ? 1 : buf[j]) * 0x7fff;
+                                voiceLiveWs.send(pcm16.buffer);
+                            }
+                            const remain = bufLen - CHUNK;
+                            for (let k = 0; k < remain; k++) buf[k] = buf[CHUNK + k];
+                            bufLen = remain;
                         }
-                        if (voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN && voiceAgentActive) {
-                            voiceLiveWs.send(pcm16.buffer);
-                        }
-                        audioBuffer = [];
                     }
                 };
 
                 voiceLiveWs.onmessage = (ev) => {
                     try {
                         const evt = JSON.parse(ev.data);
-                        executeVoiceAction(evt); // Unified action handler
-
-                        if (evt.content && evt.content.parts) {
-                            for (const p of evt.content.parts) {
-                                if (p.inlineData && p.inlineData.data && voiceLivePlayerNode) {
-                                    const buf = Uint8Array.from(atob(p.inlineData.data.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
-                                    voiceLivePlayerNode.port.postMessage(buf);
-                                }
-                                if (p.text) addAgentTranscript(p.text);
+                        if (evt.type === 'music_action' && evt.action) executeVoiceAction(evt.action);
+                        const parts = evt.content?.parts || evt.server_content?.model_turn?.parts;
+                        if (!parts) return;
+                        for (const p of parts) {
+                            const inline = p.inlineData || p.inline_data;
+                            if (inline?.data && voiceLivePlayerNode) {
+                                const b64 = inline.data.replace(/-/g,'+').replace(/_/g,'/');
+                                const bin = atob(b64);
+                                const u8 = new Uint8Array(bin.length);
+                                for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+                                voiceLivePlayerNode.port.postMessage(u8.buffer);
                             }
+                            if (p.text) addAgentTranscript(p.text);
                         }
                     } catch (_) {}
                 };

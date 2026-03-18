@@ -4,11 +4,7 @@
  */
 class PCMProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
-    if (inputs.length > 0 && inputs[0].length > 0) {
-      const inputChannel = inputs[0][0];
-      const inputCopy = new Float32Array(inputChannel);
-      this.port.postMessage(inputCopy);
-    }
+    if (inputs[0]?.[0]) this.port.postMessage(inputs[0][0].slice(0));
     return true;
   }
 }

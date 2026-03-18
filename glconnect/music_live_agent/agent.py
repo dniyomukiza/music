@@ -44,7 +44,8 @@ def _approved_filter():
 def search_songs(query: str) -> str:
     """
     Search for songs or artists in the music catalog or your playlist.
-    Use when the user asks about a song, artist, or wants to find music.
+    Invocation: ONLY when the user explicitly asks to search, find, or play a specific song/artist (e.g. 'find X', 'play Y', 'search for Z').
+    Do NOT call for greetings ('hi', 'hello', 'can you hear me') or small talk.
     Returns matching songs with song_id, download_id, name, artist, play_url, and cover_image.
     """
     from glconnect.voc import SessionLocal
@@ -316,7 +317,8 @@ def request_transcript() -> str:
 def get_catalog_suggestions() -> str:
     """
     Get a list of available artists and popular songs from the catalog.
-    Use this when a user's search returns no results or when they ask 'what do you have?'.
+    Invocation: ONLY when search_songs returned no results, OR when the user explicitly asks 'what do you have?', 'what can I listen to?', 'show me options'.
+    Do NOT call for greetings ('hi', 'hello', 'can you hear me') or small talk.
     Returns a JSON with a list of artists and songs to suggest to the user.
     """
     from glconnect.voc import SessionLocal
@@ -345,15 +347,12 @@ def get_catalog_suggestions() -> str:
         session.close()
 
 
-MUSIC_INSTRUCTION = """You are a high-speed music assistant for the Ink Studio dashboard. 
-STRICT SCOPE: Only perform music tasks (search, play, playlist, download). If the user asks unrelated questions (e.g., 'who are you', 'how are you', 'tell me a joke'), politely redirect them back to music tasks.
+MUSIC_INSTRUCTION = """Music assistant for Ink Studio. Scope: search, play, playlist, download only.
 
-Tools: search_songs, play_song, add_song_to_playlist, remove_song_from_playlist, download_song, list_my_playlist, get_catalog_suggestions.
 Rules:
-- Be extremely brief.
-- If search_songs returns no results, IMMEDIATELY call get_catalog_suggestions().
-- To 'play it': use IDs from the most recent tool result (search or playlist).
-- You MUST call play_song() to trigger playback."""
+- Be brief. Greetings ('hi','hello','can you hear me')→short verbal reply only, NO tools.
+- Tools only when user explicitly asks for music. Play→use IDs from last search/playlist result; MUST call play_song().
+- search_songs empty→call get_catalog_suggestions()."""
 
 
 # Create agent - must be done after tools are defined

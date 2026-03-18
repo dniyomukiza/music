@@ -4,7 +4,6 @@ Adds WebSocket endpoint to FastAPI app.
 """
 
 import asyncio
-import base64
 import json
 import logging
 from typing import Optional
@@ -71,12 +70,11 @@ async def handle_music_live_websocket(
         run_config = RunConfig(
             streaming_mode=StreamingMode.BIDI,
             response_modalities=["AUDIO"],
-            input_audio_transcription=None, # Disable for lower latency
-            output_audio_transcription=None, # Disable for lower latency
+            input_audio_transcription=None,
+            output_audio_transcription=None,
             session_resumption=None,
             tool_thread_pool_config=ToolThreadPoolConfig(max_workers=4),
-            enable_affective_dialog=True,
-            proactivity=types.ProactivityConfig(),
+            enable_affective_dialog=False,
         )
     else:
         run_config = RunConfig(

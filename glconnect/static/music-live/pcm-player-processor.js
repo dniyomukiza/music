@@ -19,13 +19,11 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
     };
   }
   _enqueue(int16Samples) {
-    for (let i = 0; i < int16Samples.length; i++) {
-      const floatVal = int16Samples[i] / 32768;
-      this.buffer[this.writeIndex] = floatVal;
+    const len = int16Samples.length;
+    for (let i = 0; i < len; i++) {
+      this.buffer[this.writeIndex] = int16Samples[i] / 32768;
       this.writeIndex = (this.writeIndex + 1) % this.bufferSize;
-      if (this.writeIndex === this.readIndex) {
-        this.readIndex = (this.readIndex + 1) % this.bufferSize;
-      }
+      if (this.writeIndex === this.readIndex) this.readIndex = (this.readIndex + 1) % this.bufferSize;
     }
   }
   process(inputs, outputs, parameters) {
