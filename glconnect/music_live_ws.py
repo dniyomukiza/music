@@ -47,6 +47,7 @@ async def handle_music_live_websocket(
         runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context, ToolThreadPoolConfig = _get_runner()
     except Exception as e:
         logger.error(f"Failed to load music Live ADK: {e}")
+        await websocket.accept()
         await websocket.close(code=1011, reason=str(e))
         return
 

@@ -1285,11 +1285,20 @@
             const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
 
             try {
+                if (typeof console !== 'undefined') console.log('[Voice] Connecting to', wsUrl);
                 voiceLiveWs = new WebSocket(wsUrl);
                 await new Promise((resolve, reject) => {
-                    const t = setTimeout(() => reject(new Error('Connection timeout')), 8000);
+                    const t = setTimeout(() => reject(new Error('Connection timeout (8s). Check if FastAPI is running.')), 8000);
+                    let rejected = false;
+                    const fail = (msg) => { if (!rejected) { rejected = true; clearTimeout(t); reject(new Error(msg)); } };
                     voiceLiveWs.onopen = () => { clearTimeout(t); resolve(); };
-                    voiceLiveWs.onerror = () => { clearTimeout(t); reject(new Error('WebSocket connection failed')); };
+                    voiceLiveWs.onerror = () => fail('WebSocket connection failed'); 
+                    voiceLiveWs.onclose = (e) => {
+                        if (!rejected && voiceLiveWs.readyState !== WebSocket.OPEN) {
+                            const reason = e.reason || ('code ' + e.code);
+                            fail('WebSocket closed: ' + reason + (e.code === 1006 ? ' (check server logs)' : ''));
+                        }
+                    };
                 });
 
                 await recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}');
