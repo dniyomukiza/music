@@ -50,6 +50,8 @@ def _load_config():
                     cfg["GOOGLE_API_KEY"] = file_cfg["GOOGLE_API_KEY"]
                 if not cfg.get("GEMINI_API_KEY") and file_cfg.get("GEMINI_API_KEY"):
                     cfg["GEMINI_API_KEY"] = file_cfg["GEMINI_API_KEY"]
+                if not cfg.get("DB_URL") and file_cfg.get("DB_URL"):
+                    cfg["DB_URL"] = file_cfg["DB_URL"]
                 break
             except Exception:
                 pass
