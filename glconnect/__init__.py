@@ -135,15 +135,25 @@ def create_app():
     app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
 
-    # Database and JWT configuration
-    db_url = config.get('DB_URL')
-    if db_url and 'postgresql://' in db_url:
-        # Add SSL configuration for PostgreSQL
+    # Database configuration
+    db_url = os.getenv("DB_URL")
+    
+    # --- TEMPORARY DEBUGGING ---
+    # This will print the value to your Cloud Run logs to verify what is being injected.
+    print("====================================================================", flush=True)
+    print(f"DEBUG: DB_URL from environment is: {db_url}", flush=True)
+    print("====================================================================", flush=True)
+
+    if not db_url:
+        raise RuntimeError("DB_URL environment variable is not set. This must be injected by the environment (e.g., Cloud Run secrets).")
+
+    if 'postgresql://' in db_url and 'sslmode' not in db_url:
+        # Add SSL configuration for PostgreSQL if not already present
         if '?' in db_url:
             db_url += '&sslmode=require'
         else:
             db_url += '?sslmode=require'
-    
+
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
