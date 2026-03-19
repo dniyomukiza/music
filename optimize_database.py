@@ -13,22 +13,12 @@ from sqlalchemy.exc import SQLAlchemyError
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def get_database_uri():
-    """Get database URI from environment or config"""
-    db_uri = os.getenv('DATABASE_URL') or os.getenv('DB_URL')
-    if db_uri:
-        return db_uri
-    
-    # Fallback to the database URL from docker-compose.yml
-    db_uri = 'postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr'
-    
-    try:
-        engine = create_engine(db_uri)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return db_uri
-    except Exception as e:
-        print(f"Failed to connect to database: {e}")
-        return None
+    """Get database URI from environment"""
+    db_uri = os.getenv('DATABASE_URL')
+    if not db_uri:
+        print("Error: DATABASE_URL environment variable not set.", file=sys.stderr)
+        sys.exit(1)
+    return db_uri
 
 def create_indexes():
     """Create database indexes for optimal performance"""

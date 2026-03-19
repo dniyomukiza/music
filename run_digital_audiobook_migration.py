@@ -8,8 +8,11 @@ import psycopg2
 import sys
 import os
 
-# Database connection string (from docker-compose.yml or environment)
-DB_URL = os.getenv("DB_URL", "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr")
+# Database connection string
+DB_URL = os.getenv("DATABASE_URL")
+if not DB_URL:
+    print("Error: DATABASE_URL environment variable not set.", file=sys.stderr)
+    sys.exit(1)
 
 def check_column_exists(cursor, table_name, column_name):
     """Check if a column exists in a table"""

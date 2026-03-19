@@ -2,8 +2,13 @@
 # Run the accountability columns migration
 # This script connects to your PostgreSQL database and runs the migration
 
-# Database connection details (from docker-compose.yml)
-DB_URL="postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr"
+# Database connection details
+if [ -z "$DATABASE_URL" ] && [ -z "$DB_URL" ]; then
+    echo "Error: DATABASE_URL or DB_URL environment variable is not set." >&2
+    exit 1
+fi
+
+DB_URL="${DATABASE_URL:-$DB_URL}"
 
 echo "Running migration: add_accountability_columns.sql"
 echo "Connecting to database..."

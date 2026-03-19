@@ -425,3 +425,17 @@ Ink Studio database tables created successfully
   warnings.warn('resource_tracker: There appear to be %d '
 2026-03-16 20:59:10,052 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
 2026-03-16 20:59:10,652 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-03-18 05:16:57,037 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-03-18 05:16:57,598 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-03-18 05:17:00,334 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-03-18 05:17:00,335 - __main__ - INFO - Reloader: DISABLED (prevents 502 errors)
+2026-03-18 05:17:00,335 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-03-18 05:17:00,335 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-03-18 05:17:00,335 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-03-18 05:21:04,890 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-03-18 05:21:05,450 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-03-18 05:21:08,075 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-03-18 05:21:08,075 - __main__ - INFO - Reloader: DISABLED (prevents 502 errors)
+2026-03-18 05:21:08,075 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-03-18 05:21:08,075 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-03-18 05:21:08,075 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.

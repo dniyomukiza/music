@@ -17,45 +17,30 @@ Run the migration script `add_accountability_columns.sql` on your PostgreSQL dat
 
 ## Option 1: Using psql (Recommended)
 
-### If you have psql installed locally:
+This is the easiest method. Before running, ensure the `DATABASE_URL` environment variable is set to your database connection string.
 
 ```bash
+# Example of setting the environment variable
+export DATABASE_URL="postgresql://user:password@host:port/dbname"
+
 # Run the migration script
 ./run_migration.sh
 ```
 
-Or manually:
-
-```bash
-psql "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr" -f add_accountability_columns.sql
-```
+The script will use the `DATABASE_URL` from your environment.
 
 ---
 
 ## Option 2: Using Python Script
 
-Create and run this Python script:
+You can use the `run_migration.py` script. It also uses the `DATABASE_URL` environment variable.
 
-```python
-import psycopg2
-from psycopg2 import sql
+```bash
+# Example of setting the environment variable
+export DATABASE_URL="postgresql://user:password@host:port/dbname"
 
-# Database connection
-conn = psycopg2.connect(
-    "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr"
-)
-
-cur = conn.cursor()
-
-# Read and execute migration
-with open('add_accountability_columns.sql', 'r') as f:
-    cur.execute(f.read())
-
-conn.commit()
-cur.close()
-conn.close()
-
-print("✅ Migration completed!")
+# Run the python migration script
+./run_migration.py
 ```
 
 ---

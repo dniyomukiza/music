@@ -9,7 +9,10 @@ import sys
 import os
 
 # Database connection string
-DB_URL = os.getenv('DATABASE_URL', "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr")
+DB_URL = os.getenv('DATABASE_URL')
+if not DB_URL:
+    print("Error: DATABASE_URL environment variable is not set.", file=sys.stderr)
+    sys.exit(1)
 
 def clear_stuck_transactions():
     """Terminate stuck/aborted transactions"""

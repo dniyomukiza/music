@@ -9,8 +9,13 @@ except ImportError:
     from models import db, Song, DownloadedSong
 
 # Load configuration from environment variables
+load_dotenv()
+DB_URL = os.getenv("DATABASE_URL")
+if not DB_URL:
+    raise RuntimeError("Error: DATABASE_URL environment variable not set.")
+
 config = {
-    "DB_URL": os.getenv("DB_URL", "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr")
+    "DB_URL": DB_URL
 }
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
