@@ -30,6 +30,9 @@ services:
     networks:
       app_network:
         aliases: [myapp]
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     # Values here are fallbacks; prefer setting secrets in .env (copy from .env.example). Do not commit .env with real keys.
     environment:
       - PYTHONUNBUFFERED=1
@@ -71,6 +74,9 @@ services:
         - "443:443"
       networks:
         - app_network
+      dns:
+        - 8.8.8.8
+        - 8.8.4.4
 
   icecast2:
     image: deepcomp/icecast2
@@ -81,6 +87,9 @@ services:
       - ./icecast.xml:/etc/icecast.xml
     networks:
       - app_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     command: /usr/bin/icecast -c /etc/icecast.xml -b
     restart: unless-stopped
     mem_limit: 256M
@@ -106,6 +115,9 @@ services:
       - nginx
     networks:
       - app_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
@@ -116,6 +128,9 @@ services:
       - ./:/liqfolder
     networks:
       - app_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     command: liquidsoap /liqfolder/scripts/main.liq
     environment:
      - TZ=America/New_York
@@ -142,6 +157,9 @@ services:
       - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       - DB_URL=${DB_URL:-${DATABASE_URL}}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
