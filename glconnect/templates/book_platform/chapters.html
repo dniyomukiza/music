@@ -4,27 +4,201 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chapters - {{ book.title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+    <style>
+        :root {
+          --bg-dark: #07090f;
+          --bg-panel: rgba(17, 24, 39, 0.4);
+          --text-main: #f8fafc;
+          --text-muted: #94a3b8;
+          --accent-primary: #0ea5e9;
+          --accent-secondary: #0d9488;
+          --border-light: rgba(255, 255, 255, 0.08);
+          --glass-bg: rgba(15, 23, 42, 0.6);
+          --gradient-accent: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+          --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #07090f; /* Fallback */
+            background: radial-gradient(circle at top right, #0f172a, #07090f 80%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; color: #fff; }
+
+        /* Sidebar Styling */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: var(--sidebar-width);
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid var(--border-light);
+            z-index: 100;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+            background: transparent;
+        }
+        .sidebar-header h4 {
+            margin: 0;
+            font-weight: 600;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-nav { padding: 1.5rem 0; flex: 1; overflow-y: auto; }
+        .sidebar-nav .nav-item { margin-bottom: 0.25rem; }
+        .sidebar-nav .nav-link {
+            color: var(--text-muted);
+            padding: 0.8rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-nav .nav-link i { margin-right: 12px; width: 20px; text-align: center; font-size: 1.1rem; }
+        .sidebar-nav .nav-link:hover, .sidebar-nav .nav-link.active {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+            border-left-color: var(--accent-primary);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 3rem 2rem;
+            min-height: 100vh;
+        }
+
+        .content-header {
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .content-header h1 { font-size: 2.2rem; font-weight: 600; }
+
+        /* Buttons */
+        .btn-primary {
+            background: var(--gradient-accent); border: none;
+            border-radius: 50px; padding: 0.6rem 1.5rem; font-weight: 600;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+            font- കുടുംബം: 'Outfit', sans-serif;
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14, 165, 233, 0.5);
+            background: linear-gradient(135deg, #0284c7, #0f766e);
+            color: white;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        
+        .chapter-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+
+        .card-header {
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1.25rem 1.5rem;
+            color: #fff;
+        }
+
+        .card-body { padding: 1.5rem; }
+        .card-title { font-size: 1.25rem; margin-bottom: 1rem; }
+        .card-text { color: var(--text-muted); font-size: 0.95rem; }
+
+        .card-footer {
+            background: transparent;
+            border-top: 1px solid var(--border-light);
+            padding: 1rem 1.5rem;
+        }
+
+        /* Stats Cards */
+        .stat-item {
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-light);
+        }
+        .stat-item h3 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .text-primary { color: var(--accent-primary) !important; }
+        .text-success { color: var(--accent-secondary) !important; }
+
+        /* Badges */
+        .badge {
+            padding: 0.4em 0.8em; border-radius: 50px; font-weight: 500; letter-spacing: 0.5px;
+        }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .badge-info { background: rgba(14, 165, 233, 0.2); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.4); }
+
+        /* Outline buttons in footer */
+        .btn-outline-primary { color: var(--accent-primary); border-color: var(--accent-primary); }
+        .btn-outline-primary:hover { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
+        .btn-outline-secondary { color: var(--text-muted); border-color: var(--border-light); }
+        .btn-outline-secondary:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .btn-outline-danger { color: #ef4444; border-color: rgba(239, 68, 68, 0.5); }
+        .btn-outline-danger:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+
+        .btn-group .btn { border-radius: 8px !important; margin: 0 2px; }
+
+        @media (max-width: 768px) {
+            .sidebar { position: static; width: 100%; border-right: none; border-bottom: 1px solid var(--border-light); }
+            .main-content { margin-left: 0; padding: 2rem 1rem; }
+            .content-header { flex-direction: column; align-items: flex-start !important; gap: 1rem; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid p-0">
+        <div class="d-flex flex-column flex-md-row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar">
+            <div class="sidebar">
                 <div class="sidebar-header">
-                    <h4><i class="fas fa-pen-fancy"></i> Ink Studio</h4>
+                    <h4><i class="fas fa-layer-group me-2"></i> Ink Studio</h4>
                 </div>
                 <nav class="sidebar-nav">
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                                <i class="fas fa-border-all"></i> Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.books') }}">
+                            <a class="nav-link active" href="{{ url_for('book_platform.books') }}">
                                 <i class="fas fa-book"></i> My Books
                             </a>
                         </li>
@@ -33,24 +207,15 @@
                                 <i class="fas fa-store"></i> Marketplace
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.reviewers') }}">
-                                <i class="fas fa-star"></i> Reviewers
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
-                                <i class="fas fa-chart-line"></i> Investments
-                            </a>
-                        </li>
+                        <li class="nav-item mt-4 mb-2 ms-3 text-muted" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Metrics</li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
-                                <i class="fas fa-dollar-sign"></i> Earnings
+                                <i class="fas fa-chart-line"></i> Analytics &amp; Earnings
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
-                                <i class="fas fa-arrow-left"></i> Back to Book
+                        <li class="nav-item mt-4">
+                            <a class="nav-link" style="color: #ef4444;" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
+                                <i class="fas fa-arrow-left"></i> Exit to Book
                             </a>
                         </li>
                     </ul>
@@ -58,16 +223,16 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 main-content">
+            <div class="main-content flex-grow-1">
                 <div class="content-header">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center w-100 flex-wrap">
                         <div>
-                            <h1><i class="fas fa-list"></i> Chapters</h1>
-                            <p class="text-muted">{{ book.title }}</p>
+                            <h1 class="mb-1">Manuscript Chapters</h1>
+                            <p class="text-muted mb-0"><i class="fas fa-book-open me-2"></i>{{ book.title }}</p>
                         </div>
-                        <div>
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add Chapter
+                        <div class="mt-3 mt-md-0">
+                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary shadow-lg">
+                                <i class="fas fa-plus me-2"></i> New Chapter
                             </a>
                         </div>
                     </div>
@@ -77,14 +242,14 @@
                 {% if chapters %}
                     <div class="row">
                         {% for chapter in chapters %}
-                            <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="col-md-6 col-xxl-4">
                                 <div class="card chapter-card h-100">
                                     <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">Chapter {{ chapter.chapter_number }}</h6>
+                                        <h6 class="mb-0 text-muted" style="font-family: 'Inter', sans-serif;">CH {{ chapter.chapter_number }}</h6>
                                         {% if chapter.is_published %}
-                                            <span class="badge badge-success">Published</span>
+                                            <span class="badge badge-success"><i class="fas fa-check-circle me-1"></i>Published</span>
                                         {% else %}
-                                            <span class="badge badge-warning">Draft</span>
+                                            <span class="badge badge-warning"><i class="fas fa-pen me-1"></i>Draft</span>
                                         {% endif %}
                                     </div>
                                     <div class="card-body">
@@ -93,57 +258,67 @@
                                         {% if chapter.content %}
                                             <p class="card-text">{{ chapter.content[:150]|striptags }}{% if chapter.content|length > 150 %}...{% endif %}</p>
                                         {% else %}
-                                            <p class="card-text text-muted">No content yet</p>
+                                            <p class="card-text text-muted fst-italic">Empty chapter canvas.</p>
                                         {% endif %}
                                         
-                                        <div class="chapter-meta mb-3">
+                                        <div class="chapter-meta mt-3 mb-3">
                                             {% if chapter.word_count %}
-                                                <span class="badge badge-info">{{ chapter.word_count }} words</span>
+                                                <span class="badge badge-info"><i class="fas fa-align-left me-1"></i>{{ chapter.word_count }} words</span>
                                             {% endif %}
                                         </div>
 
-                                        <div class="chapter-stats">
-                                            <small class="text-muted">
-                                                <i class="fas fa-calendar"></i> Created: {{ chapter.created_at.strftime('%Y-%m-%d') }}
-                                                {% if chapter.updated_at and chapter.updated_at != chapter.created_at %}
-                                                    <br><i class="fas fa-edit"></i> Updated: {{ chapter.updated_at.strftime('%Y-%m-%d') }}
-                                                {% endif %}
+                                        <div class="chapter-stats border-top pt-3" style="border-color: var(--border-light) !important;">
+                                            <small class="text-muted d-block">
+                                                <i class="fas fa-calendar-alt me-1"></i> Created: {{ chapter.created_at.strftime('%b %d, %Y') }}
                                             </small>
+                                            {% if chapter.updated_at and chapter.updated_at != chapter.created_at %}
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="fas fa-history me-1"></i> Updated: {{ chapter.updated_at.strftime('%b %d, %Y') }}
+                                            </small>
+                                            {% endif %}
                                         </div>
                                     </div>
-       <div class="card-footer">
-           <div class="btn-group w-100" role="group">
-               <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}" class="btn btn-outline-primary btn-sm">
-                   <i class="fas fa-eye"></i> View
-               </a>
-               {% if chapter.is_published %}
-                   <button class="btn btn-outline-warning btn-sm" disabled title="Published chapters are locked for editing">
-                       <i class="fas fa-lock"></i> Locked
-                   </button>
-               {% else %}
-                   <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}" class="btn btn-outline-secondary btn-sm">
-                       <i class="fas fa-edit"></i> Edit
-                   </a>
-               {% endif %}
-               <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteChapter({{ chapter.id }}, '{{ chapter.title }}')">
-                   <i class="fas fa-trash"></i> Delete
-               </button>
-           </div>
-       </div>
+                                    <div class="card-footer">
+                                        <div class="btn-group w-100" role="group">
+                                            <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            {% if chapter.is_published %}
+                                                <button class="btn btn-outline-secondary btn-sm" disabled style="opacity: 0.5;">
+                                                    <i class="fas fa-lock"></i> Locked
+                                                </button>
+                                            {% else %}
+                                                <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}" class="btn btn-outline-secondary btn-sm" style="color:#fff;">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                            {% endif %}
+                                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteChapter({{ chapter.id }}, '{{ chapter.title }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         {% endfor %}
                     </div>
                 {% else %}
                     <!-- Empty State -->
-                    <div class="text-center py-5">
-                        <div class="empty-state">
-                            <i class="fas fa-file-alt fa-4x text-muted mb-4"></i>
-                            <h3>No Chapters Yet</h3>
-                            <p class="text-muted mb-4">Start writing your book by adding your first chapter.</p>
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary btn-lg">
-                                <i class="fas fa-plus"></i> Add First Chapter
-                            </a>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card text-center py-5 border-dashed" style="border-style: dashed; border-width: 2px;">
+                                <div class="card-body py-5">
+                                    <div class="mb-4">
+                                        <div class="d-inline-flex align-items-center justify-content-center border rounded-circle" style="width: 80px; height: 80px; background: rgba(14, 165, 233, 0.1); border-color: rgba(14, 165, 233, 0.2) !important;">
+                                            <i class="fas fa-feather-alt fa-2x text-primary"></i>
+                                        </div>
+                                    </div>
+                                    <h3 class="mb-3">A Blank Canvas Awaits</h3>
+                                    <p class="text-muted mb-4 mx-auto" style="max-width: 400px;">Every great book starts with a single chapter. Begin weaving your thoughts into reality.</p>
+                                    <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary px-4 py-2">
+                                        <i class="fas fa-plus me-2"></i> Start Writing
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 {% endif %}
@@ -153,33 +328,33 @@
                 <div class="row mt-5">
                     <div class="col-12">
                         <div class="card">
-                            <div class="card-header">
-                                <h5><i class="fas fa-chart-bar"></i> Chapter Statistics</h5>
+                            <div class="card-header border-0 pb-0 pt-4 px-4 bg-transparent">
+                                <h5><i class="fas fa-chart-pie me-2 text-info"></i> Manuscript Overview</h5>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body px-4">
                                 <div class="row text-center">
-                                    <div class="col-md-3">
-                                        <div class="stat-item">
+                                    <div class="col-6 col-md-3 mb-3 mb-md-0">
+                                        <div class="stat-item h-100">
                                             <h3 class="text-primary">{{ chapters|length }}</h3>
-                                            <p class="text-muted">Total Chapters</p>
+                                            <p class="text-muted mb-0">Total Chapters</p>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="stat-item">
+                                    <div class="col-6 col-md-3 mb-3 mb-md-0">
+                                        <div class="stat-item h-100">
                                             <h3 class="text-success">{{ chapters|selectattr('is_published')|list|length }}</h3>
-                                            <p class="text-muted">Published</p>
+                                            <p class="text-muted mb-0">Published</p>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="stat-item">
+                                    <div class="col-6 col-md-3">
+                                        <div class="stat-item h-100">
                                             <h3 class="text-warning">{{ chapters|rejectattr('is_published')|list|length }}</h3>
-                                            <p class="text-muted">Drafts</p>
+                                            <p class="text-muted mb-0">Drafts</p>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="stat-item">
+                                    <div class="col-6 col-md-3">
+                                        <div class="stat-item h-100">
                                             <h3 class="text-info">{{ chapters|sum(attribute='word_count') }}</h3>
-                                            <p class="text-muted">Total Words</p>
+                                            <p class="text-muted mb-0">Total Words</p>
                                         </div>
                                     </div>
                                 </div>
@@ -188,61 +363,15 @@
                     </div>
                 </div>
                 {% endif %}
-
-                <!-- Chapter Management Tips -->
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="fas fa-lightbulb"></i> Chapter Management Tips</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <h6><i class="fas fa-edit text-primary"></i> Writing Tips</h6>
-                                        <ul>
-                                            <li>Keep chapters focused on one main idea</li>
-                                            <li>Aim for consistent chapter lengths</li>
-                                            <li>End chapters with hooks to keep readers engaged</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6><i class="fas fa-sort text-info"></i> Organization</h6>
-                                        <ul>
-                                            <li>Use descriptive chapter titles</li>
-                                            <li>Number chapters sequentially</li>
-                                            <li>Consider chapter outlines before writing</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6><i class="fas fa-check-circle text-success"></i> Publishing</h6>
-                                        <ul>
-                                            <li>Review chapters before publishing</li>
-                                            <li>Get feedback from beta readers</li>
-                                            <li>Ensure consistent formatting</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 
+    <!-- Scripts remain identical -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Add any JavaScript functionality here if needed
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize tooltips if needed
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        });
+        document.addEventListener('DOMContentLoaded', function() {});
 
-        // Delete chapter confirmation
         function confirmDeleteChapter(chapterId, chapterTitle) {
             if (confirm(`Are you sure you want to delete "${chapterTitle}"? This action cannot be undone.`)) {
                 deleteChapter(chapterId);
@@ -253,50 +382,25 @@
             try {
                 const response = await fetch(`{{ url_for("book_platform.delete_chapter", book_id=book.id, chapter_id=0) }}`.replace('0', chapterId), {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
-                
                 const result = await response.json();
-                
                 if (result.success) {
                     showNotification(result.message, 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showNotification(result.error || 'Failed to delete chapter', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting chapter:', error);
-                showNotification('An error occurred while deleting the chapter', 'error');
-            }
+                    setTimeout(() => window.location.reload(), 1500);
+                } else showNotification(result.error || 'Failed to delete chapter', 'error');
+            } catch (error) { showNotification('An error occurred while deleting the chapter', 'error'); }
         }
 
-        // Notification function
         function showNotification(message, type = 'info') {
-            const alertClass = type === 'success' ? 'alert-success' : 
-                              type === 'error' ? 'alert-danger' : 'alert-info';
-            
-            const notification = document.createElement('div');
-            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            notification.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const el = document.createElement('div');
+            el.className = `alert ${alertClass} alert-dismissible fade show position-fixed shadow-lg`;
+            el.style.cssText = 'top:20px; right:20px; z-index:9999; border-radius:10px; border:none; background:var(--glass-bg); color:#fff; backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.1);';
+            el.innerHTML = `${message}<button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>`;
+            document.body.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
         }
     </script>
 </body>
 </html>
-
