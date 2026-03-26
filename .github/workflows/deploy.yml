@@ -7,6 +7,7 @@ name: Deploy to server
 on:
   push:
     branches: [enhancements]
+  workflow_dispatch:
 
 jobs:
   deploy:
