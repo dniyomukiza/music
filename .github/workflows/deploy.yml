@@ -20,7 +20,7 @@ jobs:
           username: nididier
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
-          command_timeout: 60m
+          command_timeout: 120m
           script: |
             set -e
             cd /home/nididier/music

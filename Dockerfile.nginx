@@ -1,3 +1,5 @@
 FROM nginx:alpine
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/
+# Single default.conf only — compose may bind-mount over it; do not also copy as nginx.conf
+# or both files load duplicate server {} blocks (conflicting server_name warnings).
+RUN rm -f /etc/nginx/conf.d/*.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf

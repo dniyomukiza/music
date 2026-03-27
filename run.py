@@ -7,14 +7,17 @@ from flask_migrate import Migrate
 from glconnect import create_app, db
 from glconnect.models import *
 
-# Configure logging for local development
+# Logging: always stdout; file only if writable (Docker bind mounts often deny appuser ./server.log)
+_handlers = [logging.StreamHandler(sys.stdout)]
+try:
+    _fh = logging.FileHandler("server.log")
+    _handlers.append(_fh)
+except OSError:
+    pass
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),  # Output to console
-        logging.FileHandler('server.log')  # Also log to file
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=_handlers,
 )
 
 # Set specific loggers to appropriate levels
