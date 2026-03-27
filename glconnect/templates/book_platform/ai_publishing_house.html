@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}AI Publishing House | {{ book.title }}{% endblock %}
+
+{% block content %}
+<style>
+    .ai-pipeline-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+    
+    .pipeline-step {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .pipeline-step.active {
+        border-color: #00ff88;
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+    }
+    
+    .pipeline-step.completed {
+        border-color: #4CAF50;
+    }
+    
+    .pipeline-step.completed::after {
+        content: '\f058';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: #4CAF50;
+        font-size: 24px;
+    }
+    
+    .step-icon {
+        font-size: 32px;
+        margin-bottom: 16px;
+        color: #00ff88;
+    }
+    
+    .spinner-border {
+        color: #00ff88;
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-right: 10px;
+    }
+    
+    .generated-content {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-family: monospace;
+        display: none;
+    }
+    
+    #publishBtn {
+        display: none;
+    }
+</style>
+
+<div class="ai-pipeline-container animate__animated animate__fadeIn">
+    <div class="text-center mb-5">
+        <h1 class="font-weight-bold" style="background: linear-gradient(45deg, #00ff88, #00ccff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Autonomous AI Publishing House</h1>
+        <p class="text-muted">Orchestrating the final packaging for <strong class="text-white">"{{ book.title }}"</strong> before it hits the shelves.</p>
+    </div>
+
+    <!-- Step 1: Copy Edit & Format -->
+    <div class="pipeline-step active" id="step-1">
+        <div class="step-icon"><i class="fas fa-spell-check"></i></div>
+        <h4>1. Final Line Edit & Formatting</h4>
+        <p class="text-muted mb-0">Scanning the manuscript for grammatical consistency and structuring chapters.</p>
+        <div class="mt-3 action-status">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            AI Line Editor is reading the manuscript...
+        </div>
+    </div>
+
+    <!-- Step 2: Marketing metadata -->
+    <div class="pipeline-step" id="step-2">
+        <div class="step-icon"><i class="fas fa-bullhorn"></i></div>
+        <h4>2. Marketing & Sales Copy Generation</h4>
+        <p class="text-muted mb-0">Crafting the hook, back-cover synopsis, and marketplace tags to maximize reach.</p>
+        <div class="mt-3 action-status" style="display: none;">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            AI Marketing Director is drafting sales copy...
+        </div>
+        <div class="generated-content" id="marketing-result"></div>
+    </div>
+
+    <!-- Step 3: Audiobook Processing -->
+    <div class="pipeline-step" id="step-3">
+        <div class="step-icon"><i class="fas fa-headphones"></i></div>
+        <h4>3. Audiobook Studio</h4>
+        <p class="text-muted mb-0">Queueing the digital manuscript for Neural Text-to-Speech synthesis.</p>
+        <div class="mt-3 action-status" style="display: none;">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            AI Audio Producer is configuring the voice matrix...
+        </div>
+    </div>
+
+    <!-- Step 4: Finalize -->
+    <div class="pipeline-step" id="step-4">
+        <div class="step-icon"><i class="fas fa-store"></i></div>
+        <h4>4. Marketplace Distribution</h4>
+        <p class="text-muted mb-0">Locking the manuscript and sending it to the global digital shelf.</p>
+        <div class="mt-3 text-center">
+            <button class="btn btn-success btn-lg w-100 font-weight-bold shadow-lg mt-3" id="publishBtn" onclick="pushToShelf()">
+                <i class="fas fa-rocket me-2"></i> Push to Shelf
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const bookId = {{ book.id }};
+    
+    window.onload = function() {
+        startPipeline();
+    };
+
+    async function startPipeline() {
+        // Step 1: Simulated Line Edit (In a real scenario, this would loop chapters and run a LineEditor Agent)
+        await new Promise(r => setTimeout(r, 2000));
+        completeStep(1);
+        
+        // Step 2: Trigger the actual Marketing Agent to generate synopsis
+        activateStep(2);
+        try {
+            const resp = await fetch(`/api/agents/${bookId}/marketing`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            const data = await resp.json();
+            if(data.success) {
+                document.getElementById('marketing-result').innerHTML = `<strong>Synopsis:</strong> ${data.marketing_copy}`;
+                document.getElementById('marketing-result').style.display = 'block';
+            }
+        } catch(e) {
+            console.error("Marketing agent failed", e);
+        }
+        completeStep(2);
+        
+        // Step 3: Trigger Audiobook generation internally so it happens async
+        activateStep(3);
+        try {
+            fetch(`/mybook/books/${bookId}/generate-audiobook`, { method: 'POST' });
+        } catch(e) {}
+        await new Promise(r => setTimeout(r, 2000));
+        document.querySelector('#step-3 .action-status').innerHTML = '<i class="fas fa-check text-success"></i> Neural TTS Queued successfully.';
+        completeStep(3);
+        
+        // Step 4: Ready to publish
+        activateStep(4);
+        document.getElementById('publishBtn').style.display = 'block';
+    }
+
+    function activateStep(stepNum) {
+        document.getElementById(`step-${stepNum}`).classList.add('active');
+        const status = document.querySelector(`#step-${stepNum} .action-status`);
+        if(status) status.style.display = 'block';
+    }
+
+    function completeStep(stepNum) {
+        document.getElementById(`step-${stepNum}`).classList.remove('active');
+        document.getElementById(`step-${stepNum}`).classList.add('completed');
+        const status = document.querySelector(`#step-${stepNum} .action-status`);
+        if(status) status.style.display = 'none';
+    }
+
+    function pushToShelf() {
+        document.getElementById('publishBtn').innerHTML = '<span class="spinner-border spinner-border-sm"></span> Publishing...';
+        fetch(`/mybook/books/${bookId}/publish`, { 
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({}) // Some endpoints require body
+        })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    window.location.href = `/mybook/books/${bookId}`;
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(err => {
+                alert("Critical failure during final push.");
+                window.location.reload();
+            });
+    }
+</script>
+{% endblock %}

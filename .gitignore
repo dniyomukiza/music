@@ -33,3 +33,7 @@ ytdlp_cookiesfull.txt
 scripts/fix_ytauto_from_disk.py
 
 # Media files - both audio and pictures are now tracked for remote server
+
+# Ignore large backup and archive files
+*.zip
+*.sql

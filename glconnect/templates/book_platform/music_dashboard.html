@@ -8,110 +8,152 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
     <style>
+        :root {
+          --bg-dark: #07090f;
+          --bg-panel: rgba(17, 24, 39, 0.6);
+          --text-main: #f8fafc;
+          --text-muted: #94a3b8;
+          --accent-primary: #0ea5e9;
+          --accent-secondary: #0d9488;
+          --border-light: rgba(255, 255, 255, 0.08);
+          --glass-bg: rgba(15, 23, 42, 0.75);
+          --gradient-accent: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        }
+
         body {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, #0f172a, #07090f 70%);
+            background-attachment: fixed;
+            color: var(--text-main);
             min-height: 100vh;
         }
-        .page-title {
-            color: #fff;
+
+        h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; color: #fff; }
+
+        .navbar {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 0;
         }
-        .music-card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        .song-audio {
-            width: 100%;
-            max-width: 350px;
-        }
-        .playlist-badge {
-            background: rgba(52, 152, 219, 0.2);
-            border-radius: 50px;
-            padding: 6px 15px;
-            color: #1f78c1;
+        .navbar-brand {
+            font-family: 'Outfit', sans-serif;
             font-weight: 600;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .song-title {
-            color: #000000 !important;
+        .nav-link { color: var(--text-muted) !important; transition: 0.3s; font-weight: 500; }
+        .nav-link:hover { color: #fff !important; }
+        
+        /* Cards */
+        .music-card {
+            background: var(--bg-panel) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-light) !important;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: visible !important;
         }
-        .autocomplete-container {
-            position: relative;
+        
+        .card-header {
+            background: transparent !important;
+            border-bottom: 1px solid var(--border-light);
+            padding: 1.5rem;
+            color: #fff !important;
+        }
+        .card-header.bg-warning, .card-header.bg-success, .card-header.bg-info, .card-header.bg-primary, .card-header.bg-dark {
+            background: rgba(255,255,255,0.02) !important; 
         }
         .card-body {
             overflow: visible !important;
+            padding: 1.5rem;
+            color: var(--text-main);
         }
-        .card {
-            overflow: visible !important;
+
+        /* Song Audio & Titles */
+        .song-audio { width: 100%; max-width: 400px; height: 40px; border-radius: 20px; }
+        .song-title { color: #fff !important; font-family: 'Outfit', sans-serif; letter-spacing: 0.5px; }
+
+        /* Form Controls */
+        .form-control, .input-group .form-control {
+            background: rgba(15, 23, 42, 0.8) !important;
+            border: 1px solid var(--border-light) !important;
+            color: #fff !important;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
         }
-        .row {
-            overflow: visible !important;
+        .form-control::placeholder { color: rgba(255,255,255,0.3); }
+        .form-control:focus { box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25) !important; border-color: var(--accent-primary) !important; }
+
+        /* Buttons */
+        .btn-primary, .btn-success {
+            background: var(--gradient-accent) !important;
+            border: none; border-radius: 50px; font-weight: 500; font-family: 'Outfit', sans-serif;
+            transition: all 0.3s;
         }
+        .btn-primary:hover, .btn-success:hover {
+            transform: translateY(-2px); box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+        .btn-outline-light {
+            border-color: rgba(255,255,255,0.2) !important; border-radius: 50px;
+        }
+        .btn-outline-light:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; }
+
+        .btn-outline-danger {
+            border-color: rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 50px;
+        }
+        .btn-outline-danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        /* Autocomplete */
+        .autocomplete-container { position: relative; }
         .autocomplete-suggestions {
             position: fixed !important;
-            background: white !important;
-            border: 1px solid #ddd !important;
-            border-radius: 8px !important;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
-            max-height: 500px;
-            overflow-y: auto;
-            z-index: 999999 !important; /* Increased z-index */
-            margin-top: 4px;
-            display: none !important;
-            visibility: hidden;
-            min-width: 400px;
-            /* Force new stacking context to avoid parent clipping */
-            transform: translateZ(0) !important;
-            will-change: transform;
+            background: var(--bg-panel) !important;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5) !important;
+            max-height: 400px; overflow-y: auto; z-index: 999999 !important;
+            display: none !important; visibility: hidden;
+            color: #fff !important;
         }
-        .autocomplete-suggestions.show {
-            display: block !important;
-            visibility: visible !important;
-        }
+        .autocomplete-suggestions.show { display: block !important; visibility: visible !important; }
         .suggestion-item {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
-            display: flex;
-            align-items: center;
-            transition: background-color 0.2s;
+            padding: 12px 20px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; align-items: center; transition: 0.2s;
         }
-        .suggestion-item:hover {
-            background-color: #f8f9fa;
+        .suggestion-item:hover, .suggestion-item[style*="background-color"] {
+            background-color: rgba(255,255,255,0.05) !important;
         }
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-        .suggestion-icon {
-            margin-right: 12px;
-            color: #6c757d;
-            font-size: 1.1em;
-        }
-        .suggestion-content {
-            flex: 1;
-        }
-        .suggestion-name {
-            font-weight: 600;
-            color: #212529;
-            margin-bottom: 2px;
-        }
-        .suggestion-artist {
-            font-size: 0.9em;
-            color: #6c757d;
-        }
-        .suggestion-type {
-            font-size: 0.75em;
-            color: #6c757d;
-            text-transform: uppercase;
-            margin-left: 8px;
-        }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-name { font-weight: 600; color: #fff; }
+        .suggestion-artist { color: var(--text-muted); font-size: 0.85em; }
+        .suggestion-icon { color: var(--accent-primary); margin-right: 15px; font-size: 1.25em; }
+
+        /* Playlist container adjustments */
+        #playlistContainer .card { background: rgba(255,255,255,0.02) !important; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; }
+        .playlist-badge { background: rgba(14, 165, 233, 0.1); color: var(--accent-primary); padding: 5px 15px; border-radius: 50px; font-weight: 600; font-size: 0.85rem;}
+
+        /* Transcript Modal overwrites to match dark mode */
+        .modal-content { background: var(--bg-dark); border: 1px solid var(--border-light); border-radius: 20px; color: #fff; }
+        .modal-header { background: var(--glass-bg) !important; border-bottom: 1px solid var(--border-light); border-radius: 20px 20px 0 0; }
+        .modal-footer { background: var(--glass-bg); border-top: 1px solid var(--border-light); border-radius: 0 0 20px 20px; }
+        .modal-header .text-dark, .modal-header .text-white { color: #fff !important; }
+        .text-dark { color: #fff !important; }
+        .alert-warning { background: rgba(245, 158, 11, 0.1); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .alert-info { background: rgba(14, 165, 233, 0.1); color: #7dd3fc; border: 1px solid rgba(14, 165, 233, 0.2); }
+        .alert-success { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.2); }
     </style>
 </head>
 <body>
     {% include 'messages.html' %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') if current_user.is_authenticated else url_for('routes.index') }}">
-                <i class="fas fa-pen-fancy"></i> Ink Studio
+                <i class="fas fa-layer-group me-2"></i> Ink Studio 
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -119,22 +161,24 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('routes.index') }}"><i class="fas fa-arrow-left me-1"></i>{{ 'Back to Content Hub' if current_user.is_authenticated else 'Home' }}</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('routes.index') }}">
+                            <i class="fas fa-arrow-left me-1"></i>{{ 'Back to Hub' if current_user.is_authenticated else 'Home' }}
+                        </a>
                     </li>
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user"></i> {{ current_user.username if current_user.is_authenticated else 'Guest' }}
+                            <i class="fas fa-user-circle me-1"></i> {{ current_user.username if current_user.is_authenticated else 'Guest' }}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
+                        <ul class="dropdown-menu dropdown-menu-end" style="background: var(--bg-panel); border: 1px solid var(--border-light); backdrop-filter: blur(10px);">
                             {% if current_user.is_authenticated %}
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                            <li><hr class="dropdown-divider" style="border-color: var(--border-light);"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign Out</a></li>
                             {% else %}
-                            <li><a class="dropdown-item" href="{{ url_for('routes1.login') }}">Login</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('routes1.register') }}">Register</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('routes1.login') }}">Login</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('routes1.register') }}">Register</a></li>
                             {% endif %}
                         </ul>
                     </li>
@@ -144,39 +188,41 @@
     </nav>
 
     <div class="container py-5">
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                <h1 class="page-title fw-bold"><i class="fas fa-music me-2"></i>Music Dashboard</h1>
-                <p class="text-light">Search songs, listen to tracks, and manage your playlist – all in one place.</p>
+        <div class="row mb-5 text-center">
+            <div class="col-12">
+                <h1 class="page-title fw-bold display-5 mb-3" style="background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    Artist Dashboard
+                </h1>
+                <p class="text-muted" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Stream infinite high-fidelity tracks, manage your dynamic queue, or command our intelligent Voice Agent.</p>
             </div>
         </div>
 
-        <!-- Music Search -->
-        <!-- Artist Profile & Upload Section -->
         {% if not has_artist_profile %}
-        <div class="row mb-4">
+        <div class="row mb-5">
             <div class="col-12">
                 {% if is_artist_account %}
-                <div class="card music-card border-warning">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
+                <div class="card music-card">
+                    <div class="card-header d-flex align-items-center">
+                        <i class="fas fa-star text-warning me-3 fa-2x"></i>
+                        <h5 class="mb-0">Claim Your Stage</h5>
                     </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-3">Create an artist profile to upload and share your music. Your songs will be searchable by other users.</p>
-                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#createArtistModal">
-                            <i class="fas fa-user-plus me-1"></i>Create Artist Profile
+                    <div class="card-body pt-0">
+                        <p class="text-muted mb-4">Complete your artist profile to upload music and distribute your masters globally.</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createArtistModal">
+                            <i class="fas fa-user-plus me-2"></i>Setup Artist Profile
                         </button>
                     </div>
                 </div>
                 {% else %}
-                <div class="card music-card border-info">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Artist Account Required</h5>
+                <div class="card music-card">
+                    <div class="card-header d-flex align-items-center">
+                        <i class="fas fa-lock text-info me-3 fa-2x"></i>
+                        <h5 class="mb-0">Upload Access Locked</h5>
                     </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-3">To create an artist profile and upload music, you need an artist account. Please register with an artist account type or contact support to change your account type.</p>
-                        <a href="{{ url_for('routes1.register') }}" class="btn btn-info">
-                            <i class="fas fa-user-plus me-1"></i>Register as Artist
+                    <div class="card-body pt-0">
+                        <p class="text-muted mb-4">You are currently on a listener account. Please register an artist account to distribute your music.</p>
+                        <a href="{{ url_for('routes1.register') }}" class="btn btn-outline-light">
+                            Switch to Artist
                         </a>
                     </div>
                 </div>
@@ -184,23 +230,22 @@
             </div>
         </div>
         {% else %}
-        <div class="row mb-4">
+        <div class="row mb-5">
             <div class="col-12">
-                <div class="card music-card border-success">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-microphone me-2"></i>Artist: {{ artist_profile.artist_name }}</h5>
+                <div class="card music-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div d-flex align-items-center>
+                            <span class="badge bg-success me-2 px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Verified</span>
+                            <h5 class="mb-0 d-inline-block">{{ artist_profile.artist_name }}</h5>
+                        </div>
                         <div>
-                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-light me-2">
-                                <i class="fas fa-eye me-1"></i>View Profile
+                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-outline-light me-2 rounded-pill px-3">
+                                View Profile
                             </a>
                             {% if is_artist_account %}
-                            <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
-                                <i class="fas fa-upload me-1"></i>Upload Song
+                            <button class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
+                                <i class="fas fa-upload me-1"></i>Release Track
                             </button>
-                            {% else %}
-                            <span class="badge bg-warning text-dark">
-                                <i class="fas fa-info-circle me-1"></i>Artist Account Required
-                            </span>
                             {% endif %}
                         </div>
                     </div>
@@ -209,68 +254,69 @@
         </div>
         {% endif %}
 
-        <div class="row mb-4" id="searchCardRow">
+        <div class="row mb-5" id="searchCardRow">
             <div class="col-12">
                 <div class="card music-card" id="searchMusicCard">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search Music</h5>
-                        <span class="playlist-badge"><i class="fas fa-user me-1"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
+                    <div class="card-header d-flex justify-content-between align-items-center border-bottom border-light">
+                        <h5 class="mb-0"><i class="fas fa-search me-2 text-info"></i>Discover</h5>
+                        <span class="playlist-badge"><i class="fas fa-headphones me-1"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
                     </div>
                     <div class="card-body p-4" style="overflow: visible !important; position: relative;">
                         <div class="row g-3 align-items-center" style="overflow: visible !important;">
                             <div class="col-lg-10" style="position: relative; overflow: visible !important;">
                                 <div class="autocomplete-container" style="position: relative; z-index: 1;">
                                     <div class="input-group input-group-lg">
-                                        <input type="text" id="musicSearchInput" class="form-control" placeholder="Search by song or artist name..." autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
-                                        <button class="btn btn-primary" onclick="searchMusic()"><i class="fas fa-search me-1"></i>Search</button>
+                                        <span class="input-group-text bg-transparent border-end-0 border-light text-muted" style="border-radius: 12px 0 0 12px;"><i class="fas fa-search"></i></span>
+                                        <input type="text" id="musicSearchInput" class="form-control border-start-0 ps-0" style="border-radius: 0 12px 12px 0;" placeholder="Search for artists or tracks..." autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                                        <button class="btn btn-primary px-4 ms-2 rounded-pill" onclick="searchMusic()">Search</button>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-lg-2 text-lg-end">
-                                <button class="btn btn-outline-light btn-lg w-100" onclick="loadPlaylist()">
-                                    <i class="fas fa-sync me-1"></i>Refresh Playlist
+                                <button class="btn btn-outline-light btn-lg w-100 rounded-pill" onclick="loadPlaylist()">
+                                    <i class="fas fa-sync me-1"></i>Sync Queue
                                 </button>
                             </div>
                         </div>
-                        <!-- Voice Agent -->
-                        <div class="mt-3 pt-3 border-top border-light">
-                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                <button type="button" class="btn btn-outline-info" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
-                                    <i class="fas fa-microphone me-1"></i>Voice Assistant
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showVoiceTranscript()" title="View conversation transcript">
-                                    <i class="fas fa-file-alt me-1"></i>Transcript
-                                </button>
-                                <div class="d-flex align-items-center gap-1 small">
-                                    <i class="fas fa-volume-down text-muted"></i>
-                                    <input type="range" id="voiceVolumeSlider" class="form-range" min="0.01" max="1" step="0.01" value="0.15" style="width:80px" title="Agent volume">
-                                    <span id="voiceVolumeLabel" class="text-muted">15%</span>
-                                </div>
+                        
+                        <!-- AI Co-Pilot / Voice Agent -->
+                        <div class="d-flex align-items-center justify-content-between flex-wrap p-3 mt-4" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div><button class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 border-0" style="background: rgba(14, 165, 233, 0.1);" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
+                                    <i class="fas fa-microphone-alt me-2"></i>Virtual DJ
+                                </button></div>
+                                <div><button type="button" class="btn btn-link text-muted text-decoration-none btn-sm" onclick="showVoiceTranscript()">
+                                    <i class="fas fa-stream me-1"></i>Log
+                                </button></div>
                             </div>
-                            <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
-                            <div id="voiceAgentResponse" class="mt-2 small text-muted" style="max-height: 120px; overflow-y: auto;"></div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-volume-down text-muted small"></i>
+                                <input type="range" id="voiceVolumeSlider" class="form-range custom-range" min="0.01" max="1" step="0.01" value="0.15" style="width: 100px;">
+                                <span id="voiceVolumeLabel" class="text-muted small" style="min-width: 35px;">15%</span>
+                            </div>
                         </div>
+                        <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
+                        <div id="voiceAgentResponse" class="mt-2 text-center text-info small" style="min-height: 20px;"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Autocomplete suggestions container - moved outside card structure to avoid stacking context issues -->
         <div id="autocompleteSuggestions" class="autocomplete-suggestions"></div>
 
-        <div class="row g-4">
+        <div class="row g-5">
             <!-- Search Results -->
             <div class="col-lg-7">
-                <div class="card music-card h-100">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search Results</h5>
-                    </div>
-                    <div class="card-body">
+                <h4 class="mb-4 text-white" style="font-family: 'Outfit'; border-bottom: 2px solid var(--border-light); padding-bottom: 1rem;">Browsing</h4>
+                <div class="card music-card bg-transparent border-0 shadow-none">
+                    <div class="card-body p-0">
                         <div id="searchResultsContainer" class="row g-3">
-                            <div class="col-12 text-center text-muted py-5">
-                                <i class="fas fa-search fa-3x mb-3 d-block"></i>
-                                <p>Search for an artist or song to get started</p>
-                                <small class="text-muted">Enter an artist name to see all their songs, or search for a specific song</small>
+                            <div class="col-12 text-center py-5">
+                                <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-panel); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; border: 1px solid var(--border-light);">
+                                    <i class="fas fa-headphones-alt fa-2x text-muted"></i>
+                                </div>
+                                <h6 class="text-light">Start Exploring</h6>
+                                <p class="text-muted small">Type an artist name to bring up their discography</p>
                             </div>
                         </div>
                     </div>
@@ -279,14 +325,13 @@
 
             <!-- Playlist -->
             <div class="col-lg-5">
+                 <h4 class="mb-4 text-white" style="font-family: 'Outfit'; border-bottom: 2px solid var(--border-light); padding-bottom: 1rem;">Up Next Queue</h4>
                 <div class="card music-card h-100">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Your Playlist</h5>
-                        <button class="btn btn-sm btn-light" onclick="loadPlaylist()"><i class="fas fa-sync me-1"></i>Refresh</button>
-                    </div>
-                    <div class="card-body">
+                    <div class="card-body" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
                         <div id="playlistContainer" class="playlist-container">
-                            <p class="text-muted text-center"><i class="fas fa-music me-1"></i>Loading playlist...</p>
+                            <div class="text-center py-5">
+                                <i class="fas fa-spinner fa-spin text-muted me-2"></i>Loading queue...
+                            </div>
                         </div>
                     </div>
                 </div>
