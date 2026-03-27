@@ -40,8 +40,9 @@ def _load_config():
         "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
         "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
     }
-    # Fallback: load from glconfig.json if env vars are empty (e.g. server with mounted config)
-    for path in ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]:
+    # Fallback: load from glconfig.json if env vars are empty (e.g. /etc/glconfig.json in Docker)
+    _gl_paths = ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]
+    for path in _gl_paths:
         if os.path.exists(path):
             try:
                 with open(path) as f:
@@ -50,6 +51,18 @@ def _load_config():
                     cfg["GOOGLE_API_KEY"] = file_cfg["GOOGLE_API_KEY"]
                 if not cfg.get("GEMINI_API_KEY") and file_cfg.get("GEMINI_API_KEY"):
                     cfg["GEMINI_API_KEY"] = file_cfg["GEMINI_API_KEY"]
+                if not cfg.get("DB_URL"):
+                    cfg["DB_URL"] = file_cfg.get("DB_URL") or file_cfg.get("DATABASE_URL")
+                if not cfg.get("OPENAI_AI_KEY") and file_cfg.get("OPENAI_AI_KEY"):
+                    cfg["OPENAI_AI_KEY"] = file_cfg["OPENAI_AI_KEY"]
+                if cfg.get("GOOGLE_APPLICATION_CREDENTIALS") == "tts.json" and file_cfg.get("GOOGLE_APPLICATION_CREDENTIALS"):
+                    cfg["GOOGLE_APPLICATION_CREDENTIALS"] = file_cfg["GOOGLE_APPLICATION_CREDENTIALS"]
+                elif not cfg.get("GOOGLE_APPLICATION_CREDENTIALS"):
+                    cfg["GOOGLE_APPLICATION_CREDENTIALS"] = file_cfg.get("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
+                if not cfg.get("RECAPTCHAPUB") and file_cfg.get("RECAPTCHAPUB"):
+                    cfg["RECAPTCHAPUB"] = file_cfg["RECAPTCHAPUB"]
+                if not cfg.get("RECAPTCHAPRIV") and file_cfg.get("RECAPTCHAPRIV"):
+                    cfg["RECAPTCHAPRIV"] = file_cfg["RECAPTCHAPRIV"]
                 break
             except Exception:
                 pass
@@ -70,6 +83,10 @@ if config.get("GOOGLE_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = config["GOOGLE_API_KEY"]
 if config.get("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY"):
     os.environ["GEMINI_API_KEY"] = config["GEMINI_API_KEY"]
+if config.get("DB_URL") and not os.getenv("DB_URL"):
+    os.environ["DB_URL"] = config["DB_URL"]
+if config.get("DB_URL") and not os.getenv("DATABASE_URL"):
+    os.environ["DATABASE_URL"] = config["DB_URL"]
 
 google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")

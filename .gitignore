@@ -1,3 +1,6 @@
+# Nested clone / duplicate tree (do not commit as embedded repo)
+music/
+
 .env
 myenv
 __pycache__
