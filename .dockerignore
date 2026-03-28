@@ -20,6 +20,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Node (not used by Dockerfile COPY/PyPI install; huge if present locally)
+node_modules/
+
 # Virtual environments
 myenv/
 venv/
