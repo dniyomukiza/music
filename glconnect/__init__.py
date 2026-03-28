@@ -152,6 +152,11 @@ def create_app():
 
     # Database and JWT configuration
     db_url = config.get('DB_URL')
+    if not db_url or not str(db_url).strip():
+        raise RuntimeError(
+            "DATABASE_URL / DB_URL is missing. Set them in `.env` (see .env.example) or "
+            "add glconfig.json with DB_URL in the project root (glconfig.json is gitignored)."
+        )
     if db_url and 'postgresql://' in db_url:
         # Add SSL configuration for PostgreSQL
         if '?' in db_url:

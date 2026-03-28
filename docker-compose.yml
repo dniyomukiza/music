@@ -19,38 +19,29 @@ services:
     mem_reservation: 2g  # Increased minimum memory reservation
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      # Use Python (always in image). curl is often missing on slim images until rebuilt → false "unhealthy".
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=8); print('ok')\"",
+        ]
+      interval: 15s
+      timeout: 12s
+      retries: 8
+      start_period: 180s
  
     ports:
       - "5000:5000"
     networks:
       app_network:
         aliases: [myapp]
-    # Values here are fallbacks; prefer setting secrets in .env (copy from .env.example). Do not commit .env with real keys.
+    # Secrets and API keys: set them in `.env` only (env_file above). Do NOT repeat them here as
+    # `KEY=${KEY}` — when Compose interpolation is empty, that overrides env_file with blank strings.
     environment:
       - PYTHONUNBUFFERED=1
       - FLASK_APP=run.py
       - FLASK_ENV=${FLASK_ENV:-development}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - OPENAI_AI_KEY=${OPENAI_AI_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-tts.json}
-      - DATABASE_URL=${DATABASE_URL}
-      - DB_URL=${DB_URL:-${DATABASE_URL}}
-      - SENDER_MAIL=${SENDER_MAIL}
-      - SENDER_PASSWORD=${SENDER_PASSWORD}
-      - RECEIVER_MAIL=${RECEIVER_MAIL}
-      - RECAPTCHAPUB=${RECAPTCHAPUB}
-      - RECAPTCHAPRIV=${RECAPTCHAPRIV}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - MAIL_TRAP=${MAIL_TRAP}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
-      - SECRET_KEY=${SECRET_KEY}
       - YTDLP_COOKIES_FILE=${YTDLP_COOKIES_FILE:-/usr/src/appdir/ytdlp_cookiesfull.txt}
 
   nginx:
@@ -144,10 +135,6 @@ services:
       - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
-    environment:
-      - DB_URL=${DB_URL:-${DATABASE_URL}}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
     mem_limit: 256M
     mem_reservation: 128M
     restart: unless-stopped
