@@ -33,29 +33,32 @@ def careers():
 
 @bp.route('/health')
 def health():
-    """Health check endpoint for monitoring."""
+    """Health check endpoint for monitoring and Docker healthchecks.
+
+    Always returns HTTP 200 if the app process is serving requests. Metrics are best-effort:
+    psutil can fail in some container/cgroup setups; a 500 here breaks Docker's urllib
+    healthcheck and nginx depends_on: service_healthy.
+    """
+    payload = {
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+    }
     try:
-        # Get memory usage
         process = psutil.Process(os.getpid())
         memory_info = process.memory_info()
         memory_mb = memory_info.rss / 1024 / 1024
-        
-        # Get system memory
         system_memory = psutil.virtual_memory()
-        
-        return jsonify({
+        payload.update({
             'status': 'healthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
             'memory_usage_mb': round(memory_mb, 2),
             'system_memory_percent': round(system_memory.percent, 2),
-            'system_memory_available_gb': round(system_memory.available / 1024 / 1024 / 1024, 2)
-        }), 200
+            'system_memory_available_gb': round(system_memory.available / 1024 / 1024 / 1024, 2),
+        })
     except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
+        payload.update({
+            'status': 'degraded',
             'error': str(e),
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        }), 500
+        })
+    return jsonify(payload), 200
 import glconnect.routes1
 import glconnect.routes2
 

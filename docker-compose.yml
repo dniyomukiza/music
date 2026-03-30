@@ -20,15 +20,16 @@ services:
     restart: unless-stopped
     healthcheck:
       # Use Python (always in image). curl is often missing on slim images until rebuilt → false "unhealthy".
+      # Long start_period + retries: first boot can be slow (DB, imports, SocketIO); avoid false "unhealthy".
       test:
         [
           "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=8); print('ok')\"",
+          "python -c \"import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=10); exit(0 if r.status == 200 else 1)\"",
         ]
       interval: 15s
-      timeout: 12s
-      retries: 8
-      start_period: 180s
+      timeout: 15s
+      retries: 12
+      start_period: 360s
  
     ports:
       - "5000:5000"
