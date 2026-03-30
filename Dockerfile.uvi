@@ -1,18 +1,35 @@
 # Start from the Python 3.10 slim image
 FROM python:3.10-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Set the working directory inside the container
 WORKDIR /app
+
+# Same as main Dockerfile: avoid apt hanging forever on bad IPv6 / stalled mirrors.
+RUN printf '%s\n' \
+  'Acquire::http::Timeout "120";' \
+  'Acquire::https::Timeout "120";' \
+  'Acquire::ftp::Timeout "120";' \
+  'Acquire::Retries "5";' \
+  'Acquire::ForceIPv4 "true";' \
+  > /etc/apt/apt.conf.d/99docker-build
 
 # Install curl for healthchecks and other dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Fail stalled downloads instead of hanging for hours; fresher pip = faster resolver.
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_RETRIES=5
+
 # Slimmer deps than main app (no moviepy — avoids long setup.py builds in CI)
 COPY requirements-fastapi.txt /app/requirements-fastapi.txt
-RUN pip install --no-cache-dir uvicorn
-RUN pip install --no-cache-dir -r /app/requirements-fastapi.txt
+RUN pip install --upgrade --no-cache-dir pip setuptools wheel \
+    && pip install --no-cache-dir uvicorn \
+    && pip install --no-cache-dir -r /app/requirements-fastapi.txt
 
 # Copy the entire glconnect package to ensure all WebSocket and agent logic is available
 COPY glconnect /app/glconnect
