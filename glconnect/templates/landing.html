@@ -14,11 +14,12 @@
             --bg-elevated: #0c0f0e;
             --text-primary: #e8ece9;
             --text-muted: #7a8982;
-            --accent: #c4f12c;
-            --accent-dim: rgba(196, 241, 44, 0.12);
-            --accent-hot: #e8ff4d;
-            --edge: #2a3d32;
+            /* Hero eyebrow / brand gold (formerly lime — unified to this tone sitewide on landing) */
             --bronze: #c9a227;
+            --accent: var(--bronze);
+            --accent-dim: rgba(201, 162, 39, 0.12);
+            --accent-hot: #e0bc3a;
+            --edge: #2a3d32;
             --header-h: 4.25rem;
         }
 
@@ -45,7 +46,7 @@
             background:
                 radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.09), transparent 50%),
                 radial-gradient(ellipse 90% 70% at 100% 30%, rgba(42, 61, 50, 0.55), transparent 55%),
-                radial-gradient(circle at 50% 100%, rgba(196, 241, 44, 0.06), transparent 45%),
+                radial-gradient(circle at 50% 100%, rgba(201, 162, 39, 0.07), transparent 45%),
                 var(--bg-void);
         }
 
@@ -167,13 +168,13 @@
             border: none;
             border-radius: 2px;
             transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-            box-shadow: 0 0 0 1px rgba(196, 241, 44, 0.4), 0 12px 40px rgba(196, 241, 44, 0.15);
+            box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.45), 0 12px 40px rgba(201, 162, 39, 0.14);
         }
 
         .platform-button:hover {
             background: var(--accent-hot);
             transform: translateY(-1px);
-            box-shadow: 0 0 0 1px rgba(232, 255, 77, 0.5), 0 16px 48px rgba(196, 241, 44, 0.22);
+            box-shadow: 0 0 0 1px rgba(224, 188, 58, 0.55), 0 16px 48px rgba(201, 162, 39, 0.2);
         }
 
         .platform-button:focus-visible {
@@ -281,7 +282,7 @@
             content: "";
             width: 2rem;
             height: 2px;
-            background: linear-gradient(90deg, var(--accent), var(--bronze));
+            background: linear-gradient(90deg, var(--accent), var(--accent-hot));
         }
 
         .display {
@@ -298,7 +299,7 @@
         .display em {
             font-style: normal;
             color: var(--accent);
-            text-shadow: 0 0 60px rgba(196, 241, 44, 0.25);
+            text-shadow: 0 0 60px rgba(201, 162, 39, 0.28);
         }
 
         .lede {
@@ -407,7 +408,7 @@
             bottom: 15%;
             width: min(55vw, 420px);
             height: 4px;
-            background: linear-gradient(90deg, transparent, var(--bronze), var(--accent));
+            background: linear-gradient(90deg, transparent, var(--accent), var(--accent-hot));
             transform: rotate(-8deg);
             opacity: 0.85;
             pointer-events: none;
@@ -445,7 +446,7 @@
         }
 
         .pillar:hover {
-            background: rgba(196, 241, 44, 0.04);
+            background: rgba(201, 162, 39, 0.06);
         }
 
         .pillar h3 {
