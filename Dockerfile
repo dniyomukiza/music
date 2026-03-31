@@ -38,6 +38,8 @@ ENV MALLOC_MMAP_THRESHOLD_=131072
 ENV MALLOC_TRIM_THRESHOLD_=131072
 ENV MALLOC_TOP_PAD_=131072
 ENV MALLOC_MMAP_MAX_=65536
+# Bound V8 heap when yt-dlp invokes Node for JS challenges (image installs nodejs).
+ENV NODE_OPTIONS=--max-old-space-size=256
 
 # Same apt robustness as builder (see comment above).
 RUN printf '%s\n' \

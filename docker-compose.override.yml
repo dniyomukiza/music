@@ -1,9 +1,9 @@
 services:
   app:
-    # Memory optimizations for container environments
-    mem_limit: 4G  # Increased for news generation and TTS processing
-    mem_reservation: 2G  # Increased minimum memory reservation
-    
+    # Defaults match docker-compose.yml (~4GB host). Scale up: APP_MEM_LIMIT=2g docker compose up -d
+    mem_limit: ${APP_MEM_LIMIT:-1536m}
+    mem_reservation: ${APP_MEM_RESERVATION:-384m}
+
     # Environment variables for memory optimization
     environment:
       - MALLOC_ARENA_MAX=1
@@ -15,7 +15,10 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - GUNICORN_WORKERS=1
-      - GUNICORN_WORKER_MEMORY_LIMIT=2048  # Increased to 2GB for news generation
+      # Align with APP_MEM_LIMIT (frugal default ~4GB hosts)
+      - GUNICORN_WORKER_MEMORY_LIMIT=${GUNICORN_WORKER_MEMORY_LIMIT:-768}
+      # yt-dlp uses optional Node; cap V8 heap so one challenge solver cannot balloon RAM.
+      - NODE_OPTIONS=--max-old-space-size=256
     
     # DNS configuration for external API access
     dns:
@@ -30,5 +33,5 @@ services:
     # Restart policy
     restart: unless-stopped
     
-    # Shared memory for temporary files
-    shm_size: 256m  # Increased for news generation (was 128m)
+    # 128m saves RAM vs 256m; raise to 256m if heavy in-container FFmpeg/temp I/O faults appear.
+    shm_size: 128m

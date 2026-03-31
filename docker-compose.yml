@@ -1,3 +1,5 @@
+# Memory budget (~4GB VPS): app + fastapi + liquidsoap + icecast + nginx + OS/Docker overhead.
+# Override: APP_MEM_LIMIT=2g docker compose up -d
 services:
   app:
     image: myapp:latest
@@ -15,8 +17,8 @@ services:
       # - /home/YOUR_USER/music:/ytdlp_cookies_mount:ro
     command: >
      sh -c "python run.py"
-    mem_limit: 4g  # Increased for news generation and TTS processing
-    mem_reservation: 2g  # Increased minimum memory reservation
+    mem_limit: ${APP_MEM_LIMIT:-1536m}
+    mem_reservation: ${APP_MEM_RESERVATION:-384m}
     restart: unless-stopped
     healthcheck:
       # Use Python (always in image). curl is often missing on slim images until rebuilt → false "unhealthy".
@@ -65,6 +67,8 @@ services:
         - "443:443"
       networks:
         - app_network
+      mem_limit: 128M
+      mem_reservation: 64M
 
   icecast2:
     image: deepcomp/icecast2
@@ -77,15 +81,15 @@ services:
       - app_network
     command: /usr/bin/icecast -c /etc/icecast.xml -b
     restart: unless-stopped
-    mem_limit: 256M
-    mem_reservation: 128M
+    mem_limit: 192M
+    mem_reservation: 96M
     healthcheck:
       test: ["CMD", "pgrep", "icecast"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    
+
   certbot:
     image: certbot/certbot
     container_name: certbot
@@ -100,6 +104,8 @@ services:
       - nginx
     networks:
       - app_network
+    mem_limit: 256M
+    mem_reservation: 64M
 
   liquidsoap:
     image: phasecorex/liquidsoap:latest 
@@ -114,8 +120,8 @@ services:
     environment:
      - TZ=America/New_York
     restart: unless-stopped
-    mem_limit: 512M
-    mem_reservation: 256M
+    mem_limit: 384M
+    mem_reservation: 128M
     healthcheck:
       test: ["CMD", "pgrep", "liquidsoap"]
       interval: 30s
@@ -129,6 +135,10 @@ services:
     container_name: fastapi
     env_file:
       - .env
+    environment:
+      - MALLOC_ARENA_MAX=2
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
     ports:
       - "8002:8002"
     volumes:
@@ -136,8 +146,9 @@ services:
       - /etc/glconfig.json:/etc/glconfig.json
     networks:
       - app_network
-    mem_limit: 256M
-    mem_reservation: 128M
+    # ADK/Gemini imports need more headroom than a minimal API; 384M is a frugal default for ~4GB hosts.
+    mem_limit: ${FASTAPI_MEM_LIMIT:-384m}
+    mem_reservation: ${FASTAPI_MEM_RESERVATION:-96m}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
