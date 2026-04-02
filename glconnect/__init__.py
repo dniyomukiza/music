@@ -385,6 +385,11 @@ def create_app():
             print("Exception occurred while logging: ", ex)
 
     with app.app_context():
+        # Idempotent PostgreSQL DDL: model maps milestone columns that older DBs lack
+        # (fixes ProgrammingError on InvestmentCampaign after login → Ink Studio).
+        from .db_schema_patches import ensure_investment_campaign_milestone_schema
+        ensure_investment_campaign_milestone_schema(db)
+
         # Import and register blueprints
         from .routes import bp 
         from .routes1 import bp1 

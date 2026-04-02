@@ -1,0 +1,65 @@
+{# Fixed live stream — same UX as landing /home (void bar, gold LIVE RADIO).
+   Styles are inline so pages without book_platform.css (e.g. content_hub, storefront) still match. #}
+<style>
+body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
+.live-broadcast-bar.ink-studio-live-radio {
+    position: fixed;
+    bottom: clamp(0.75rem, 3vw, 1.25rem);
+    left: clamp(0.75rem, 3vw, 1.25rem);
+    right: clamp(0.75rem, 3vw, 1.25rem);
+    max-width: 420px;
+    margin-right: auto;
+    z-index: 1040;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 0.85rem;
+    padding: 0.65rem 1rem;
+    background: rgba(6, 8, 7, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    border-radius: 4px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.live-broadcast-bar.ink-studio-live-radio .live-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.live-broadcast-bar.ink-studio-live-radio .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c9a227;
+    box-shadow: 0 0 12px rgba(201, 162, 39, 0.7);
+    animation: ink-live-pulse-radio 1.8s ease-in-out infinite;
+}
+@keyframes ink-live-pulse-radio {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.65; transform: scale(0.92); }
+}
+.live-broadcast-bar.ink-studio-live-radio .live-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #c9a227;
+}
+.live-broadcast-bar.ink-studio-live-radio .live-audio {
+    flex: 1;
+    min-width: 200px;
+    height: 36px;
+    vertical-align: middle;
+}
+</style>
+<div class="live-broadcast-bar ink-studio-live-radio" role="region" aria-label="GLC live radio broadcast">
+    <div class="live-meta">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="live-label">Live Radio</span>
+    </div>
+    <audio class="live-audio" controls preload="none" aria-label="Play live stream">
+        <source src="/station" type="audio/mpeg">
+    </audio>
+</div>

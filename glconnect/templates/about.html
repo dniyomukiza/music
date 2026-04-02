@@ -96,23 +96,27 @@
             color: #9aa8a0;
         }
         
+        /* Black underline off; glc-theme's `main a:not(.btn)` otherwise wins on color */
+        main a.join-mission-button,
         .join-mission-button {
             display: inline-block;
             background-color: #c9a227;
-            color: #0a0b0a;
+            color: #0a0b0a !important;
             padding: 15px 40px;
             text-decoration: none;
             border-radius: 6px;
             font-size: 1.05em;
             font-weight: 700;
             margin-top: 20px;
-            transition: background-color 0.3s ease, filter 0.3s ease;
+            transition: background-color 0.3s ease, filter 0.3s ease, color 0.3s ease;
             border: 2px solid #c9a227;
         }
 
+        main a.join-mission-button:hover,
         .join-mission-button:hover {
             background-color: #e0bc3a;
             border-color: #e0bc3a;
+            color: #000000 !important;
             filter: brightness(1.05);
         }
         
