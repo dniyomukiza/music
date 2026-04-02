@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics Dashboard - GLC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
     <style>
         * {
             margin: 0;
@@ -11,21 +15,27 @@
             box-sizing: border-box;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f5f7fa;
-            color: #333;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: #060807;
+            background-image:
+                radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.07), transparent 50%),
+                radial-gradient(ellipse 90% 70% at 100% 25%, rgba(42, 61, 50, 0.4), transparent 55%);
+            background-attachment: fixed;
+            color: #e8ece9;
             padding: 20px;
+            min-height: 100vh;
         }
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
         h1 {
-            color: #2c3e50;
+            font-family: 'Syne', sans-serif;
+            color: #e8ece9;
             margin-bottom: 10px;
         }
         .subtitle {
-            color: #7f8c8d;
+            color: #aeb4b0;
             margin-bottom: 30px;
         }
         .stats-grid {
@@ -35,14 +45,15 @@
             margin-bottom: 30px;
         }
         .stat-card {
-            background: white;
-            border-radius: 10px;
+            background: rgba(12, 15, 14, 0.92);
+            border: 1px solid rgba(201, 162, 39, 0.2);
+            border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35);
         }
         .stat-card h3 {
             font-size: 14px;
-            color: #7f8c8d;
+            color: #aeb4b0;
             margin-bottom: 10px;
             text-transform: uppercase;
             font-weight: 600;
@@ -50,17 +61,23 @@
         .stat-card .value {
             font-size: 36px;
             font-weight: 700;
-            color: #2c3e50;
+            background: linear-gradient(135deg, #f5d76a, #c9a227);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .section {
-            background: white;
-            border-radius: 10px;
+            background: rgba(12, 15, 14, 0.92);
+            border: 1px solid rgba(201, 162, 39, 0.2);
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+            color: #e8ece9;
         }
         .section h2 {
-            color: #2c3e50;
+            font-family: 'Syne', sans-serif;
+            color: #e8ece9;
             margin-bottom: 20px;
             font-size: 20px;
         }
@@ -71,17 +88,17 @@
         th, td {
             padding: 12px;
             text-align: left;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid rgba(201, 162, 39, 0.15);
         }
         th {
-            background: #f8f9fa;
+            background: rgba(201, 162, 39, 0.1);
             font-weight: 600;
-            color: #2c3e50;
+            color: #e0bc3a;
             text-transform: uppercase;
             font-size: 12px;
         }
         td {
-            color: #555;
+            color: #e8ece9;
         }
         .status-badge {
             display: inline-block;
@@ -91,42 +108,48 @@
             font-weight: 600;
         }
         .authenticated {
-            background: #d4edda;
-            color: #155724;
+            background: rgba(40, 167, 69, 0.2);
+            color: #6ecf8f;
+            border: 1px solid rgba(40, 167, 69, 0.35);
         }
         .anonymous {
-            background: #fff3cd;
-            color: #856404;
+            background: rgba(255, 193, 7, 0.15);
+            color: #f5d76a;
+            border: 1px solid rgba(255, 193, 7, 0.35);
         }
         .loading {
             text-align: center;
             padding: 40px;
-            color: #7f8c8d;
+            color: #aeb4b0;
         }
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background: rgba(60, 20, 24, 0.5);
+            color: #f5b8bf;
+            border: 1px solid rgba(220, 53, 69, 0.4);
             padding: 15px;
-            border-radius: 5px;
+            border-radius: 8px;
             margin-bottom: 20px;
         }
         .refresh-btn {
-            background: #3498db;
-            color: white;
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            color: #060807;
             border: none;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
         }
         .refresh-btn:hover {
-            background: #2980b9;
+            filter: brightness(1.06);
         }
         .refresh-btn:disabled {
-            background: #95a5a6;
+            background: #4a5350;
+            color: #aeb4b0;
             cursor: not-allowed;
             opacity: 0.7;
+            box-shadow: none;
         }
     </style>
 </head>

@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GLC News Generator - Professional News Broadcasting</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -14,10 +18,14 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: #060807;
+            background-image:
+                radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.07), transparent 50%),
+                radial-gradient(ellipse 90% 70% at 100% 25%, rgba(42, 61, 50, 0.4), transparent 55%);
+            background-attachment: fixed;
             min-height: 100vh;
-            color: #333;
+            color: #e8ece9;
         }
 
         .container {
@@ -29,13 +37,14 @@
         .header {
             text-align: center;
             margin-bottom: 40px;
-            color: white;
+            color: #e8ece9;
         }
 
         .header h1 {
+            font-family: 'Syne', sans-serif;
             font-size: 3rem;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 0 2px 24px rgba(201, 162, 39, 0.2);
         }
 
         .header p {
@@ -44,18 +53,21 @@
         }
 
         .main-card {
-            background: white;
+            background: rgba(12, 15, 14, 0.94);
+            border: 1px solid rgba(201, 162, 39, 0.2);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35);
             overflow: hidden;
             margin-bottom: 30px;
+            color: #e8ece9;
         }
 
         .card-header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
+            background: linear-gradient(145deg, #1a221c 0%, #2a3d32 45%, #3d2f14 100%);
+            color: #e8ece9;
             padding: 30px;
             text-align: center;
+            border-bottom: 1px solid rgba(201, 162, 39, 0.25);
         }
 
         .card-header h2 {
@@ -65,6 +77,7 @@
 
         .card-body {
             padding: 40px;
+            background: rgba(8, 10, 9, 0.5);
         }
 
         .features-grid {
@@ -75,16 +88,16 @@
         }
 
         .feature-card {
-            background: #f8f9fa;
+            background: rgba(15, 20, 18, 0.85);
             padding: 25px;
             border-radius: 15px;
             text-align: center;
-            border: 2px solid transparent;
+            border: 2px solid rgba(201, 162, 39, 0.15);
             transition: all 0.3s ease;
         }
 
         .feature-card:hover {
-            border-color: #2c3e50;
+            border-color: #c9a227;
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
@@ -96,10 +109,10 @@
         }
 
         .clickable-card:hover {
-            border-color: #2c3e50;
+            border-color: #c9a227;
             transform: translateY(-8px);
-            box-shadow: 0 15px 35px rgba(44, 62, 80, 0.3);
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            box-shadow: 0 15px 35px rgba(201, 162, 39, 0.25);
+            background: rgba(201, 162, 39, 0.08);
         }
 
         .card-hover-effect {
@@ -109,7 +122,7 @@
             transform: translateY(-50%);
             opacity: 0;
             transition: all 0.3s ease;
-            color: #2c3e50;
+            color: #e0bc3a;
             font-size: 1.5rem;
         }
 
@@ -119,24 +132,25 @@
         }
 
         .clickable-card:hover .feature-icon {
-            color: #2c3e50;
+            color: #e0bc3a;
             transform: scale(1.1);
         }
 
         .feature-icon {
             font-size: 2.5rem;
-            color: #2c3e50;
+            color: #e0bc3a;
             margin-bottom: 15px;
         }
 
         .feature-card h3 {
-            color: #333;
+            color: #e8ece9;
             margin-bottom: 10px;
             font-size: 1.2rem;
+            font-family: 'Syne', sans-serif;
         }
 
         .feature-card p {
-            color: #666;
+            color: #aeb4b0;
             font-size: 0.9rem;
             line-height: 1.5;
         }
@@ -150,7 +164,7 @@
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 15px;
-            color: #333;
+            color: #e8ece9;
         }
 
         .topic-input-container {
@@ -170,8 +184,8 @@
         }
 
         .generate-btn-mobile {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: white;
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            color: #060807;
             border: none;
             padding: 12px 20px;
             border-radius: 8px;
@@ -186,9 +200,9 @@
         }
 
         .generate-btn-mobile:hover {
-            background: linear-gradient(135deg, #1a252f, #2c3e50);
+            background: linear-gradient(145deg, #0f1412, #1a221c);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+            box-shadow: 0 5px 15px rgba(201, 162, 39, 0.25);
         }
 
         .generate-btn-mobile:active {
@@ -269,32 +283,33 @@
         .topic-input {
             width: 100%;
             padding: 15px 20px;
-            border: 2px solid #e1e5e9;
+            border: 2px solid rgba(201, 162, 39, 0.3);
             border-radius: 12px;
             font-size: 1rem;
             transition: all 0.3s ease;
-            background: #f8f9fa;
+            background: rgba(8, 10, 9, 0.85);
+            color: #e8ece9;
         }
 
         .topic-input:focus {
             outline: none;
-            border-color: #2c3e50;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+            border-color: #e0bc3a;
+            background: rgba(12, 15, 14, 0.95);
+            box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15);
         }
 
         .topic-input::placeholder {
-            color: #999;
+            color: #7a827e;
         }
 
         .topic-input.invalid {
             border-color: #dc3545;
-            background: #fff5f5;
+            background: rgba(60, 20, 24, 0.35);
         }
 
         .topic-input.valid {
             border-color: #28a745;
-            background: #f8fff8;
+            background: rgba(20, 40, 28, 0.4);
         }
 
         .validation-feedback {
@@ -409,7 +424,7 @@
         }
 
         .topic-tag {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(145deg, #1a221c 0%, #2a3d32 55%, #141a18 100%);
             color: white;
             padding: 8px 15px;
             border-radius: 25px;
@@ -469,15 +484,15 @@
         .topic-suggestions {
             margin-top: 8px;
             padding: 12px;
-            background: #f8f9fa;
+            background: rgba(15, 20, 18, 0.9);
             border-radius: 8px;
-            border-left: 4px solid #2c3e50;
+            border-left: 4px solid #c9a227;
             display: none;
         }
 
         .topic-suggestions h4 {
             margin: 0 0 8px 0;
-            color: #495057;
+            color: #e0bc3a;
             font-size: 0.9rem;
         }
 
@@ -488,7 +503,7 @@
 
         .topic-suggestions li {
             margin-bottom: 4px;
-            color: #6c757d;
+            color: #aeb4b0;
             font-size: 0.85rem;
         }
 
@@ -558,9 +573,9 @@
         .audio-files-section {
             margin-top: 20px;
             padding: 20px;
-            background: #f8f9fa;
+            background: rgba(15, 20, 18, 0.85);
             border-radius: 12px;
-            border: 1px solid #e9ecef;
+            border: 1px solid rgba(201, 162, 39, 0.2);
             display: none;
             width: 100%;
             box-sizing: border-box; /* Include padding in width calculation */
@@ -577,13 +592,13 @@
         .audio-files-title {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #495057;
+            color: #e8ece9;
             margin: 0;
         }
 
         .audio-files-count {
-            background: #2c3e50;
-            color: white;
+            background: #c9a227;
+            color: #060807;
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
@@ -600,17 +615,17 @@
             align-items: center;
             justify-content: space-between;
             padding: 15px;
-            background: white;
+            background: rgba(8, 10, 9, 0.75);
             border-radius: 8px;
-            border: 1px solid #e9ecef;
+            border: 1px solid rgba(201, 162, 39, 0.2);
             transition: all 0.2s ease;
             min-width: 0; /* Allow flex items to shrink */
             overflow: hidden; /* Prevent content from overflowing */
         }
 
         .audio-file-item:hover {
-            border-color: #2c3e50;
-            box-shadow: 0 2px 8px rgba(44, 62, 80, 0.1);
+            border-color: #c9a227;
+            box-shadow: 0 2px 8px rgba(201, 162, 39, 0.15);
         }
 
         .audio-file-info {
@@ -625,7 +640,7 @@
         .audio-file-icon {
             width: 40px;
             height: 40px;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(145deg, #1a221c 0%, #2a3d32 55%, #141a18 100%);
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -642,7 +657,7 @@
 
         .audio-file-name {
             font-weight: 600;
-            color: #495057;
+            color: #e8ece9;
             margin: 0 0 4px 0;
             font-size: 0.95rem;
             white-space: nowrap; /* Prevent text wrapping */
@@ -652,7 +667,7 @@
 
         .audio-file-meta {
             font-size: 0.8rem;
-            color: #6c757d;
+            color: #aeb4b0;
             margin: 0;
         }
 
@@ -710,13 +725,13 @@
         .audio-loading {
             text-align: center;
             padding: 20px;
-            color: #6c757d;
+            color: #aeb4b0;
         }
 
         .audio-empty {
             text-align: center;
             padding: 40px 20px;
-            color: #6c757d;
+            color: #aeb4b0;
         }
 
         .audio-empty i {
@@ -750,8 +765,8 @@
         }
 
         .generate-btn {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            color: #060807;
             border: none;
             padding: 15px 40px;
             border-radius: 12px;
@@ -767,7 +782,7 @@
 
         .generate-btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(44, 62, 80, 0.3);
+            box-shadow: 0 10px 25px rgba(201, 162, 39, 0.25);
         }
 
         .generate-btn:disabled {
@@ -780,9 +795,9 @@
         .approved-topics-section {
             margin-top: 30px;
             padding: 25px;
-            background: #f8f9fa;
+            background: rgba(15, 20, 18, 0.85);
             border-radius: 15px;
-            border: 2px solid #e9ecef;
+            border: 2px solid rgba(201, 162, 39, 0.25);
         }
 
         .approved-topics-title {
@@ -801,7 +816,7 @@
         }
 
         .approved-topic-item {
-            background: white;
+            background: rgba(8, 10, 9, 0.85);
             border: 2px solid #28a745;
             border-radius: 25px;
             padding: 12px 20px;
@@ -860,7 +875,7 @@
             width: 60px;
             height: 60px;
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #2c3e50;
+            border-top: 4px solid #c9a227;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -873,13 +888,13 @@
 
         .loading-text {
             font-size: 1.1rem;
-            color: #666;
+            color: #aeb4b0;
             margin-bottom: 10px;
         }
 
         .loading-details {
             font-size: 0.9rem;
-            color: #999;
+            color: #8a928d;
         }
         
         .progress-container {
@@ -890,7 +905,7 @@
         .progress-bar {
             width: 100%;
             height: 8px;
-            background-color: #e0e0e0;
+            background-color: rgba(201, 162, 39, 0.15);
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 10px;
@@ -898,7 +913,7 @@
         
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #007bff, #0056b3);
+            background: linear-gradient(90deg, #c9a227, #e0bc3a);
             border-radius: 4px;
             transition: width 0.3s ease;
             width: 0%;
@@ -907,7 +922,7 @@
         .progress-text {
             text-align: center;
             font-size: 14px;
-            color: #666;
+            color: #aeb4b0;
             margin-top: 5px;
         }
 
@@ -915,8 +930,10 @@
             display: none;
             margin-top: 30px;
             padding: 20px;
-            background: #f8f9fa;
+            background: rgba(15, 20, 18, 0.85);
+            border: 1px solid rgba(201, 162, 39, 0.2);
             border-radius: 8px;
+            color: #e8ece9;
         }
 
         .result-content {
@@ -950,8 +967,8 @@
         }
 
         .audio-actions .btn-primary {
-            background: #007bff;
-            color: white;
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            color: #060807;
         }
 
         .audio-actions .btn-secondary {
@@ -962,21 +979,24 @@
         .generation-info {
             margin-top: 20px;
             padding: 15px;
-            background: #e9ecef;
+            background: rgba(8, 10, 9, 0.65);
+            border: 1px solid rgba(201, 162, 39, 0.15);
             border-radius: 5px;
             text-align: left;
         }
 
         .generation-info p {
             margin: 5px 0;
-            color: #495057;
+            color: #e8ece9;
         }
 
         .result-card {
-            background: white;
+            background: rgba(12, 15, 14, 0.94);
+            border: 1px solid rgba(201, 162, 39, 0.2);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35);
             overflow: hidden;
+            color: #e8ece9;
         }
 
         .result-header {
@@ -1054,7 +1074,7 @@
 
         .empty-state {
             text-align: center;
-            color: #999;
+            color: #8a928d;
             font-style: italic;
             padding: 20px;
         }
@@ -1062,7 +1082,7 @@
         .progress-bar {
             width: 100%;
             height: 6px;
-            background: #e9ecef;
+            background: rgba(201, 162, 39, 0.15);
             border-radius: 3px;
             overflow: hidden;
             margin: 20px 0;
@@ -1070,7 +1090,7 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(90deg, #c9a227, #e0bc3a);
             width: 0%;
             transition: width 0.3s ease;
         }
@@ -1091,8 +1111,8 @@
         
         /* Added Topics Styles */
         .added-topics-section {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
+            background: rgba(15, 20, 18, 0.85);
+            border: 2px solid rgba(201, 162, 39, 0.2);
             border-radius: 15px;
             padding: 20px;
             margin-top: 20px;
@@ -1106,7 +1126,7 @@
         }
         
         .topic-item {
-            background: white;
+            background: rgba(8, 10, 9, 0.85);
             border: 2px solid #28a745;
             border-radius: 25px;
             padding: 8px 15px;
@@ -1247,7 +1267,7 @@
                                 </button>
                             </div>
                             <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
+                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(145deg, #c9a227, #a88416); border: none; padding: 10px 20px; border-radius: 8px; color: #060807;">
                                     <i class="fas fa-play"></i> Generate News
                                 </button>
                             </div>
@@ -1297,7 +1317,7 @@
                 
                 <!-- Added Topics List -->
                 <div id="addedTopicsList" class="added-topics-section" style="margin-top: 20px; display: none;">
-                    <h4 style="color: #2c3e50; margin-bottom: 15px;">
+                    <h4 style="color: #e0bc3a; margin-bottom: 15px;">
                         <i class="fas fa-list"></i> Added Topics 
                         <span id="topicCount" style="font-size: 0.8em; color: #6c757d; font-weight: normal;">
                             (0/3 maximum)
@@ -1329,7 +1349,7 @@
                                 </button>
                             </div>
                             <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(135deg, #2c3e50, #34495e); border: none; padding: 10px 20px; border-radius: 8px; color: white;">
+                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(145deg, #c9a227, #a88416); border: none; padding: 10px 20px; border-radius: 8px; color: #060807;">
                                     <i class="fas fa-play"></i> Generate News
                                 </button>
                             </div>
@@ -1654,14 +1674,16 @@
 
             modal.innerHTML = `
                 <div style="
-                    background: white;
+                    background: rgba(12, 15, 14, 0.98);
+                    border: 1px solid rgba(201, 162, 39, 0.35);
+                    color: #e8ece9;
                     border-radius: 15px;
                     padding: 30px;
                     max-width: 800px;
                     width: 100%;
                     max-height: 80vh;
                     overflow-y: auto;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
                 ">
                     <div style="
                         display: flex;
@@ -1669,9 +1691,9 @@
                         align-items: center;
                         margin-bottom: 20px;
                         padding-bottom: 15px;
-                        border-bottom: 2px solid #e9ecef;
+                        border-bottom: 2px solid rgba(201, 162, 39, 0.25);
                     ">
-                        <h3 style="margin: 0; color: #2c3e50;">
+                        <h3 style="margin: 0; color: #e0bc3a;">
                             <i class="fas fa-file-text"></i> Audio Transcription
                         </h3>
                         <button onclick="this.closest('.modal').remove()" style="
@@ -1689,14 +1711,15 @@
                         <strong>File:</strong> ${filename}
                     </div>
                     <div style="
-                        background: #f8f9fa;
-                        border: 1px solid #e9ecef;
+                        background: rgba(8, 10, 9, 0.85);
+                        border: 1px solid rgba(201, 162, 39, 0.2);
                         border-radius: 8px;
                         padding: 20px;
                         margin-bottom: 20px;
                         white-space: pre-wrap;
                         line-height: 1.6;
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        color: #e8ece9;
+                        font-family: 'DM Sans', system-ui, sans-serif;
                     ">${transcript}</div>
                     <div style="text-align: center;">
                         <button onclick="downloadTranscript('${transcript}', '${filename}')" style="
@@ -2443,10 +2466,10 @@
                         ${data.audio_file && data.audio_file.endsWith('.txt') ? `
                             <div class="error-message">
                                 <strong>Note:</strong> Audio generation failed, but you can read the text version below:
-                                <pre style="margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; white-space: pre-wrap;">${data.summary || 'Text content not available'}</pre>
+                                <pre style="margin-top: 10px; padding: 15px; background: rgba(8,10,9,0.9); color: #e8ece9; border: 1px solid rgba(201,162,39,0.2); border-radius: 8px; white-space: pre-wrap;">${data.summary || 'Text content not available'}</pre>
                             </div>
                         ` : ''}
-                        ${data.summary ? `<p style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;"><strong>Summary:</strong> ${data.summary}</p>` : ''}
+                        ${data.summary ? `<p style="margin-top: 20px; padding: 15px; background: rgba(8,10,9,0.9); color: #e8ece9; border: 1px solid rgba(201,162,39,0.2); border-radius: 8px;"><strong>Summary:</strong> ${data.summary}</p>` : ''}
                     </div>
                 </div>
             `;
@@ -2860,12 +2883,12 @@
                         <p>Your professional news broadcast has been generated successfully.</p>
                         
                         ${hasContent ? `
-                            <div class="news-content-container" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <div class="news-content-container" style="margin: 20px 0; padding: 20px; background: rgba(15,20,18,0.9); color: #e8ece9; border-radius: 8px; border-left: 4px solid #c9a227;">
                                 <h4><i class="fas fa-newspaper"></i> Generated News Content</h4>
                                 <div class="news-articles">
                                     ${result.content.map((article, index) => `
                                         <div class="news-article" style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                            <h5 style="color: #007bff; margin-bottom: 10px;">Article ${index + 1}</h5>
+                                            <h5 style="color: #e0bc3a; margin-bottom: 10px;">Article ${index + 1}</h5>
                                             <div style="white-space: pre-line; line-height: 1.6;">${article}</div>
                                         </div>
                                     `).join('')}

@@ -6,25 +6,13 @@
   <title>{% block title %}GLC | Premium Content Streaming{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
   <style>
-    :root {
-      --bg-dark: #0b0f19;
-      --text-light: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent-blue: #2563eb;
-      --accent-teal: #0d9488;
-      --glass-bg: rgba(11, 15, 25, 0.75);
-      --glass-border: rgba(255, 255, 255, 0.08);
-    }
-    
     body {
       margin: 0;
-      font-family: 'Inter', sans-serif;
-      background-color: var(--bg-dark);
-      color: var(--text-light);
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -64,7 +52,7 @@
     }
     .logo-img:hover {
       transform: scale(1.05);
-      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 4px 24px rgba(201, 162, 39, 0.35);
     }
 
     nav ul {
@@ -76,11 +64,12 @@
     }
 
     nav ul li a {
-      color: var(--text-light);
+      color: var(--text-primary);
       text-decoration: none;
-      font-family: 'Outfit', sans-serif;
-      font-weight: 500;
-      font-size: 1rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
       padding: 0.5rem 0;
       position: relative;
       transition: color 0.3s ease;
@@ -93,7 +82,7 @@
       height: 2px;
       bottom: 0;
       left: 0;
-      background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
+      background: linear-gradient(90deg, var(--bronze), var(--accent-hot));
       transition: width 0.3s ease;
       border-radius: 2px;
     }
@@ -109,7 +98,7 @@
     /* Mobile Menu Toggle */
     .menu-toggle {
       font-size: 1.5rem;
-      color: var(--text-light);
+      color: var(--text-primary);
       cursor: pointer;
       user-select: none;
       transition: color 0.3s ease;
@@ -132,7 +121,7 @@
       position: absolute;
       top: calc(100% + 15px);
       right: 0;
-      background: rgba(17, 24, 39, 0.95);
+      background: rgba(12, 15, 14, 0.96);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--glass-border);
@@ -164,8 +153,8 @@
 
     .vertical-menu a {
       text-decoration: none;
-      color: var(--text-light);
-      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
       font-weight: 500;
       font-size: 0.95rem;
       display: flex;
@@ -226,7 +215,7 @@
       color: var(--text-muted);
       margin: 0;
       font-size: 0.9rem;
-      font-family: 'Inter', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       letter-spacing: 0.5px;
     }
 

@@ -415,10 +415,68 @@
         }
 
         /* Pillars */
+        /* Live broadcast — same Icecast stream as base.html (/home), styled for this page */
+        .live-broadcast-bar {
+            position: fixed;
+            bottom: clamp(0.75rem, 3vw, 1.25rem);
+            left: clamp(0.75rem, 3vw, 1.25rem);
+            right: clamp(0.75rem, 3vw, 1.25rem);
+            max-width: 420px;
+            margin-right: auto;
+            z-index: 95;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.65rem 0.85rem;
+            padding: 0.65rem 1rem;
+            background: rgba(6, 8, 7, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(201, 162, 39, 0.35);
+            border-radius: 4px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .live-broadcast-bar .live-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 12px rgba(201, 162, 39, 0.7);
+            animation: live-pulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(0.92); }
+        }
+
+        .live-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .live-broadcast-bar .live-audio {
+            flex: 1;
+            min-width: 200px;
+            height: 36px;
+            vertical-align: middle;
+        }
+
         .pillars {
             position: relative;
             z-index: 10;
-            padding: 0 clamp(1.25rem, 5vw, 4rem) 5rem;
+            padding: 0 clamp(1.25rem, 5vw, 4rem) 6.5rem;
         }
 
         .pillars-inner {
@@ -581,6 +639,16 @@
             </div>
         </div>
     </section>
+
+    <div class="live-broadcast-bar" role="region" aria-label="GLC live radio broadcast">
+        <div class="live-meta">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="live-label">Live Radio</span>
+        </div>
+        <audio class="live-audio" controls preload="none" aria-label="Play live stream">
+            <source src="/station" type="audio/mpeg">
+        </audio>
+    </div>
 
     <script>
         function toggleMobileMenu() {

@@ -1,30 +1,36 @@
 /* Ink Studio - Professional Book Platform CSS */
+@import url("glc-theme.css");
 
 :root {
-    --primary-color: #2c3e50;
-    --primary-dark: #34495e;
-    --secondary-color: #7f8c8d;
-    --success-color: #27ae60;
-    --warning-color: #f39c12;
-    --danger-color: #e74c3c;
-    --info-color: #7f8c8d;
-    --light-color: #ecf0f1;
-    --dark-color: #2c3e50;
+    --primary-color: #c9a227;
+    --primary-dark: #a68520;
+    --secondary-color: #7a8982;
+    --success-color: #2d6a4f;
+    --warning-color: #e0bc3a;
+    --danger-color: #c94c4c;
+    --info-color: #5c7a6e;
+    --light-color: #e8ece9;
+    --dark-color: #060807;
     --border-radius: 12px;
     --border-radius-sm: 8px;
-    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --gradient-primary: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    --gradient-secondary: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.22), 0 2px 4px -1px rgba(0, 0, 0, 0.12);
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    --gradient-primary: linear-gradient(135deg, #0c0f0e 0%, #1a221c 55%, #0c0f0e 100%);
+    --gradient-secondary: linear-gradient(135deg, #1a221c 0%, #0c0f0e 100%);
 }
 
-/* General Styles */
+/* General Styles — GLC void + legible text */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    font-family: 'DM Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #060807;
+    background-image:
+        radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.07), transparent 50%),
+        radial-gradient(ellipse 90% 70% at 100% 25%, rgba(42, 61, 50, 0.4), transparent 55%),
+        linear-gradient(180deg, #060807, #050605 100%);
+    background-attachment: fixed;
     min-height: 100vh;
     line-height: 1.6;
-    color: #333;
+    color: #e8ece9;
 }
 
 /* Hero Section */
@@ -76,13 +82,13 @@ body {
 
 /* Enhanced Cards */
 .card {
-    border: none;
+    border: 1px solid rgba(42, 61, 50, 0.5);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     margin-bottom: 1.5rem;
     transition: all 0.3s ease;
-    background: white;
-    color: #333;
+    background: rgba(12, 15, 14, 0.92);
+    color: #e8ece9;
 }
 
 .card:hover {
@@ -91,16 +97,16 @@ body {
 }
 
 .card-header {
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
+    background: rgba(6, 8, 7, 0.9);
+    border-bottom: 1px solid rgba(42, 61, 50, 0.5);
     font-weight: 600;
     padding: 1.25rem;
-    color: #333;
+    color: #e8ece9;
 }
 
 /* Welcome Card */
 .welcome-card {
-    background: white;
+    background: rgba(12, 15, 14, 0.92);
     border-left: 4px solid var(--primary-color);
     transition: all 0.3s ease;
 }
@@ -131,7 +137,7 @@ body {
 
 .stat-number {
     font-weight: 700;
-    color: var(--dark-color);
+    color: var(--light-color);
 }
 
 .stat-label {
@@ -886,13 +892,14 @@ body {
 
 /* Marketplace Styles */
 .marketplace-card {
-    background: white;
+    background: rgba(12, 15, 14, 0.92);
+    border: 1px solid rgba(42, 61, 50, 0.45);
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--box-shadow);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     height: 100%;
-    color: #333;
+    color: #e8ece9;
 }
 
 .marketplace-card:hover {
@@ -1090,7 +1097,8 @@ h1 i, h2 i, h3 i, h4 i, h5 i, h6 i {
 
 /* Light Background Overrides */
 .bg-light {
-    background-color: #f8f9fa !important;
+    background-color: rgba(12, 15, 14, 0.88) !important;
+    color: #e8ece9 !important;
 }
 
 /* Badge Overrides */
@@ -1642,5 +1650,392 @@ a:hover {
         font-size: 0.875rem;
         padding: 0.4rem 1rem;
     }
+}
+
+/* =============================================================================
+   Ink Marketplace (/mybook/marketplace) — full GLC void + bronze
+   Scoped to body.ink-marketplace so aggressive legacy .book-card / .card rules
+   elsewhere in this file do not stay “white Bootstrap” on this page.
+   ============================================================================= */
+body.ink-marketplace .navbar-dark.bg-primary {
+    background: rgba(6, 8, 7, 0.96) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.32);
+}
+
+body.ink-marketplace .navbar-dark .navbar-brand,
+body.ink-marketplace .navbar-dark .nav-link {
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .hero-section.bg-gradient-primary {
+    background: linear-gradient(145deg, #1a221c 0%, #2a3d32 45%, #3d2f14 100%) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+body.ink-marketplace .category-container {
+    background: rgba(12, 15, 14, 0.88) !important;
+    border: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+body.ink-marketplace .category-btn {
+    background: rgba(8, 10, 9, 0.82) !important;
+    color: #e0bc3a !important;
+    border: 2px solid rgba(201, 162, 39, 0.45) !important;
+    box-shadow: none;
+}
+
+body.ink-marketplace .category-btn:hover {
+    background: rgba(201, 162, 39, 0.18) !important;
+    color: #f5d76a !important;
+    border-color: #e0bc3a !important;
+    box-shadow: 0 6px 20px rgba(201, 162, 39, 0.2);
+}
+
+body.ink-marketplace .category-btn.active {
+    background: linear-gradient(145deg, #c9a227, #a88416) !important;
+    color: #060807 !important;
+    border-color: #c9a227 !important;
+}
+
+body.ink-marketplace .category-btn.active .badge {
+    background-color: rgba(6, 8, 7, 0.35) !important;
+    color: #060807 !important;
+}
+
+body.ink-marketplace .category-btn .badge.bg-primary {
+    background-color: #c9a227 !important;
+    color: #060807 !important;
+}
+
+body.ink-marketplace .book-card {
+    background: transparent !important;
+    color: #e8ece9 !important;
+    box-shadow: none !important;
+}
+
+body.ink-marketplace .book-card > .card {
+    background: rgba(12, 15, 14, 0.94) !important;
+    border: 1px solid rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .book-info,
+body.ink-marketplace .book-title {
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .book-genre {
+    color: #aeb4b0 !important;
+}
+
+body.ink-marketplace .book-cover-placeholder {
+    background: linear-gradient(145deg, #1a221c 0%, #2a3d32 50%, #141a18 100%) !important;
+    color: #c9a227 !important;
+}
+
+body.ink-marketplace .card-header.bg-white {
+    background: rgba(6, 8, 7, 0.95) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.2) !important;
+}
+
+body.ink-marketplace .card-title.text-primary,
+body.ink-marketplace h3.text-primary {
+    color: #e0bc3a !important;
+}
+
+body.ink-marketplace .form-label {
+    color: #e8ece9;
+}
+
+body.ink-marketplace .form-control,
+body.ink-marketplace .form-select {
+    background: rgba(8, 10, 9, 0.88) !important;
+    border: 1px solid rgba(201, 162, 39, 0.28) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .form-control:focus,
+body.ink-marketplace .form-select:focus {
+    border-color: #e0bc3a;
+    box-shadow: 0 0 0 0.2rem rgba(201, 162, 39, 0.2);
+}
+
+body.ink-marketplace .input-group-text.bg-primary.text-white {
+    background: #c9a227 !important;
+    color: #060807 !important;
+    border-color: #c9a227 !important;
+}
+
+body.ink-marketplace .badge.bg-white.text-dark {
+    background: rgba(201, 162, 39, 0.18) !important;
+    color: #e8ece9 !important;
+    border: 1px solid rgba(201, 162, 39, 0.38);
+}
+
+body.ink-marketplace .btn-success {
+    background: linear-gradient(145deg, #2d6a4f, #1b4332) !important;
+    border: none !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .btn-warning {
+    background: linear-gradient(145deg, #c9a227, #a88416) !important;
+    border: none !important;
+    color: #060807 !important;
+}
+
+body.ink-marketplace .alert-info {
+    background: rgba(201, 162, 39, 0.12) !important;
+    border: 1px solid rgba(201, 162, 39, 0.35) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .alert-link {
+    color: #f5d76a !important;
+}
+
+body.ink-marketplace .stat-item {
+    background: rgba(8, 10, 9, 0.72) !important;
+    border: 1px solid rgba(201, 162, 39, 0.15) !important;
+    color: #e8ece9;
+}
+
+body.ink-marketplace .stat-item .stat-number {
+    color: #e0bc3a !important;
+}
+
+body.ink-marketplace .text-muted {
+    color: #9aa8a0 !important;
+}
+
+body.ink-marketplace .pagination .page-link {
+    background: rgba(12, 15, 14, 0.92);
+    border-color: rgba(201, 162, 39, 0.25);
+    color: #e8ece9;
+}
+
+body.ink-marketplace .pagination .page-link:hover {
+    background: rgba(201, 162, 39, 0.15);
+    color: #f5d76a;
+    border-color: rgba(201, 162, 39, 0.4);
+}
+
+body.ink-marketplace .pagination .page-item.active .page-link {
+    background: #c9a227;
+    border-color: #c9a227;
+    color: #060807;
+}
+
+body.ink-marketplace .modal-content {
+    background: rgba(12, 15, 14, 0.98) !important;
+    border: 1px solid rgba(201, 162, 39, 0.3) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .modal-header {
+    border-bottom-color: rgba(201, 162, 39, 0.25) !important;
+}
+
+body.ink-marketplace .modal-footer {
+    border-top-color: rgba(201, 162, 39, 0.25) !important;
+}
+
+body.ink-marketplace .modal-header.bg-primary {
+    background: linear-gradient(145deg, #1a221c 0%, #2a3d32 50%, #3d2f14 100%) !important;
+}
+
+body.ink-marketplace .modal-header.bg-success {
+    background: linear-gradient(145deg, #1e4d3a, #2d6a4f) !important;
+}
+
+/* =============================================================================
+   My Books list + Create Book (/mybook/books, /mybook/books/create)
+   ============================================================================= */
+body.ink-books-ui .navbar-dark.bg-primary {
+    background: rgba(6, 8, 7, 0.96) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.32);
+}
+
+body.ink-books-ui .navbar-dark .navbar-brand,
+body.ink-books-ui .navbar-dark .nav-link {
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .navbar-dark .navbar-brand:hover,
+body.ink-books-ui .navbar-dark .nav-link:hover {
+    color: #e0bc3a !important;
+}
+
+body.ink-books-list .sidebar {
+    background: rgba(12, 15, 14, 0.94) !important;
+    border-right: 1px solid rgba(201, 162, 39, 0.22) !important;
+    min-height: 100vh;
+    padding-bottom: 2rem;
+}
+
+body.ink-books-list .sidebar-header {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.18);
+    margin-bottom: 0.5rem;
+}
+
+body.ink-books-list .sidebar-header h4 {
+    color: #e0bc3a !important;
+    font-size: 1rem;
+    margin: 0;
+}
+
+body.ink-books-list .sidebar-nav .nav-link {
+    color: #aeb4b0 !important;
+    border-radius: 8px;
+    margin: 0.15rem 0.5rem;
+    padding: 0.55rem 1rem !important;
+}
+
+body.ink-books-list .sidebar-nav .nav-link:hover {
+    background: rgba(201, 162, 39, 0.1) !important;
+    color: #f5d76a !important;
+}
+
+body.ink-books-list .sidebar-nav .nav-link.active {
+    background: rgba(201, 162, 39, 0.18) !important;
+    color: #e0bc3a !important;
+    border-left: 3px solid #c9a227;
+}
+
+body.ink-books-list .main-content {
+    padding: 2rem 1.5rem 3rem;
+    color: #e8ece9;
+}
+
+body.ink-books-list .content-header h1 {
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .card.book-card {
+    background: rgba(12, 15, 14, 0.94) !important;
+    border: 1px solid rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .card.book-card .card-header {
+    background: rgba(6, 8, 7, 0.95) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.2) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .card.book-card .card-header h6 {
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .card.book-card .card-body {
+    background: transparent !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .card.book-card .card-text {
+    color: #cfd6d2 !important;
+}
+
+body.ink-books-ui .card.book-card .card-footer {
+    background: rgba(8, 10, 9, 0.9) !important;
+    border-top: 1px solid rgba(201, 162, 39, 0.18) !important;
+}
+
+body.ink-books-ui .main-content > .row.mt-5 .card:not(.book-card) {
+    background: rgba(12, 15, 14, 0.94) !important;
+    border: 1px solid rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .main-content > .row.mt-5 .card:not(.book-card) .card-header {
+    background: rgba(6, 8, 7, 0.95) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.2) !important;
+    color: #e0bc3a !important;
+}
+
+body.ink-books-ui .main-content > .row.mt-5 .card:not(.book-card) .card-header h5 {
+    color: #e0bc3a !important;
+    margin: 0;
+}
+
+body.ink-books-ui .main-content > .row.mt-5 .stat-item {
+    background: rgba(8, 10, 9, 0.72) !important;
+    border: 1px solid rgba(201, 162, 39, 0.12) !important;
+}
+
+body.ink-books-ui .main-content > .row.mt-5 .stat-item h3 {
+    color: inherit !important;
+}
+
+body.ink-books-create .container .card {
+    background: rgba(12, 15, 14, 0.94) !important;
+    border: 1px solid rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-create .card-header.text-center {
+    background: rgba(6, 8, 7, 0.95) !important;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.2) !important;
+}
+
+body.ink-books-create .card-header h3 {
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .form-label {
+    color: #e8ece9;
+}
+
+body.ink-books-ui .form-control,
+body.ink-books-ui .form-select {
+    background: rgba(8, 10, 9, 0.88) !important;
+    border: 1px solid rgba(201, 162, 39, 0.28) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .form-control:focus,
+body.ink-books-ui .form-select:focus {
+    border-color: #e0bc3a;
+    box-shadow: 0 0 0 0.2rem rgba(201, 162, 39, 0.2);
+}
+
+body.ink-books-ui .form-text.text-muted {
+    color: #9aa8a0 !important;
+}
+
+body.ink-books-ui .form-check-label {
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .form-check-label strong {
+    color: #f0e6b8;
+}
+
+body.ink-books-ui .alert-info {
+    background: rgba(201, 162, 39, 0.12) !important;
+    border: 1px solid rgba(201, 162, 39, 0.35) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .alert-success {
+    background: rgba(45, 106, 79, 0.25) !important;
+    border: 1px solid rgba(45, 106, 79, 0.5) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .text-muted {
+    color: #9aa8a0 !important;
+}
+
+body.ink-books-ui .btn-info {
+    background: rgba(92, 122, 110, 0.9) !important;
+    border-color: rgba(92, 122, 110, 1) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-books-ui .btn-info:hover {
+    filter: brightness(1.08);
+    color: #fff !important;
 }
 

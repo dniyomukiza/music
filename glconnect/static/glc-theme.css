@@ -1,0 +1,253 @@
+/**
+ * GLC global theme — aligned with landing page (void + bronze).
+ * Load after home.css / book_platform.css to unify brand across the platform.
+ */
+
+:root {
+  --glc-void: #060807;
+  --glc-elevated: #0c0f0e;
+  --glc-text: #e8ece9;
+  --glc-text-muted: #9aa8a0;
+  --glc-bronze: #c9a227;
+  --glc-bronze-hot: #e0bc3a;
+  --glc-bronze-dim: rgba(201, 162, 39, 0.14);
+  --glc-edge: #2a3d32;
+
+  /* Legacy aliases (base.html, home.css, Ink Studio inline) */
+  --bg-dark: var(--glc-void);
+  --bg-void: var(--glc-void);
+  --bg-elevated: var(--glc-elevated);
+  --text-primary: var(--glc-text);
+  --text-light: var(--glc-text);
+  --text-main: var(--glc-text);
+  --text-muted: var(--glc-text-muted);
+  --bronze: var(--glc-bronze);
+  --accent: var(--glc-bronze);
+  --accent-hot: var(--glc-bronze-hot);
+
+  --glass-bg: rgba(6, 8, 7, 0.82);
+  --glass-border: rgba(201, 162, 39, 0.22);
+  --border-light: rgba(42, 61, 50, 0.45);
+  --bg-card: rgba(12, 15, 14, 0.78);
+
+  --accent-blue: var(--glc-bronze);
+  --accent-teal: #5c7a6e;
+  --accent-primary: var(--glc-bronze);
+  --accent-secondary: var(--glc-bronze-hot);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Typography (landing: DM Sans + Syne) */
+body {
+  font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  background-color: var(--glc-void) !important;
+  background-image:
+    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.07), transparent 50%),
+    radial-gradient(ellipse 90% 70% at 100% 25%, rgba(42, 61, 50, 0.45), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(201, 162, 39, 0.05), transparent 42%),
+    linear-gradient(180deg, var(--glc-void), #050605 100%) !important;
+  background-attachment: fixed !important;
+  color: var(--glc-text) !important;
+}
+
+h1, h2, h3, h4, h5, h6,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+  font-family: "Syne", sans-serif !important;
+  color: var(--glc-text) !important;
+}
+
+/* Links — visible on dark */
+main a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link),
+.hero a:not(.btn) {
+  color: var(--glc-bronze-hot);
+  text-decoration-color: rgba(201, 162, 39, 0.45);
+}
+
+main a:not(.btn):hover,
+.hero a:not(.btn):hover {
+  color: #f0e6b8;
+  text-decoration-color: var(--glc-bronze);
+}
+
+/* Bootstrap 5 — primary = bronze */
+.btn-primary {
+  --bs-btn-color: #0a0b0a;
+  --bs-btn-bg: var(--glc-bronze);
+  --bs-btn-border-color: var(--glc-bronze);
+  --bs-btn-hover-color: #0a0b0a;
+  --bs-btn-hover-bg: var(--glc-bronze-hot);
+  --bs-btn-hover-border-color: var(--glc-bronze-hot);
+  --bs-btn-active-color: #0a0b0a;
+  --bs-btn-active-bg: #c4aa2c;
+  --bs-btn-active-border-color: #c4aa2c;
+}
+
+.text-primary {
+  color: var(--glc-bronze-hot) !important;
+}
+
+.bg-primary {
+  background-color: var(--glc-bronze) !important;
+  color: #0a0b0a !important;
+}
+
+.border-primary {
+  border-color: var(--glc-bronze) !important;
+}
+
+/* Surfaces: no white cards on dark unless explicit */
+.card:not(.bg-light):not(.text-dark) {
+  background-color: rgba(12, 15, 14, 0.92) !important;
+  border: 1px solid var(--border-light) !important;
+  color: var(--glc-text) !important;
+}
+
+.card-header {
+  background: rgba(6, 8, 7, 0.88) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+  color: var(--glc-text) !important;
+}
+
+.card-footer {
+  background: rgba(6, 8, 7, 0.75) !important;
+  border-top: 1px solid var(--border-light) !important;
+  color: var(--glc-text-muted) !important;
+}
+
+.modal-content {
+  background: var(--glc-elevated) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--glc-text) !important;
+}
+
+.modal-header, .modal-footer {
+  border-color: var(--border-light) !important;
+}
+
+.form-control, .form-select {
+  background-color: rgba(6, 8, 7, 0.65) !important;
+  border: 1px solid var(--border-light) !important;
+  color: var(--glc-text) !important;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--glc-bronze) !important;
+  box-shadow: 0 0 0 0.2rem var(--glc-bronze-dim) !important;
+  color: var(--glc-text) !important;
+}
+
+.form-control::placeholder {
+  color: var(--glc-text-muted) !important;
+  opacity: 0.9;
+}
+
+.input-group-text {
+  background: rgba(12, 15, 14, 0.9) !important;
+  border-color: var(--border-light) !important;
+  color: var(--glc-text-muted) !important;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(201, 162, 39, 0.04);
+  --bs-table-hover-bg: rgba(201, 162, 39, 0.08);
+  color: var(--glc-text) !important;
+  border-color: var(--border-light) !important;
+}
+
+.table > :not(caption) > * > * {
+  color: inherit !important;
+}
+
+.dropdown-menu {
+  background: var(--glc-elevated) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+.dropdown-item {
+  color: var(--glc-text) !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: var(--glc-bronze-dim) !important;
+  color: var(--glc-text) !important;
+}
+
+.list-group-item {
+  background: rgba(12, 15, 14, 0.65) !important;
+  border-color: var(--border-light) !important;
+  color: var(--glc-text) !important;
+}
+
+.text-muted {
+  color: var(--glc-text-muted) !important;
+}
+
+.bg-light {
+  background-color: rgba(12, 15, 14, 0.88) !important;
+  color: var(--glc-text) !important;
+}
+
+.badge.bg-white.text-dark {
+  background: var(--glc-text) !important;
+  color: var(--glc-void) !important;
+}
+
+/* Navbar dark — bronze focus */
+.navbar-dark .navbar-brand {
+  color: var(--glc-text) !important;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+  color: var(--glc-text-muted) !important;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+  color: var(--glc-bronze-hot) !important;
+}
+
+/* Alerts readable on dark */
+.alert {
+  border-width: 1px;
+}
+
+.alert-info {
+  background: rgba(92, 122, 110, 0.2) !important;
+  border-color: rgba(92, 122, 110, 0.45) !important;
+  color: var(--glc-text) !important;
+}
+
+.alert-success {
+  background: rgba(45, 106, 79, 0.22) !important;
+  border-color: rgba(45, 106, 79, 0.45) !important;
+  color: var(--glc-text) !important;
+}
+
+.alert-warning {
+  background: rgba(201, 162, 39, 0.12) !important;
+  border-color: rgba(201, 162, 39, 0.4) !important;
+  color: var(--glc-text) !important;
+}
+
+.alert-danger {
+  background: rgba(183, 62, 62, 0.15) !important;
+  border-color: rgba(183, 62, 62, 0.4) !important;
+  color: #f5d4d4 !important;
+}
+
+/* Prose in main */
+main p, main li, .card-body {
+  color: var(--glc-text);
+}
+
+/* Selection */
+::selection {
+  background: var(--glc-bronze-dim);
+  color: var(--glc-text);
+}

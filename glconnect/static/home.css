@@ -1,16 +1,16 @@
 /* Modern Global Styles for GLC Platform */
 
 :root {
-  --bg-dark: #07090f;
-  --bg-card: rgba(17, 24, 39, 0.4);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --accent-primary: #0ea5e9;
-  --accent-secondary: #0d9488;
-  --border-light: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(15, 23, 42, 0.3);
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  --bg-dark: #060807;
+  --bg-card: rgba(12, 15, 14, 0.78);
+  --text-main: #e8ece9;
+  --text-muted: #9aa8a0;
+  --accent-primary: #c9a227;
+  --accent-secondary: #e0bc3a;
+  --border-light: rgba(42, 61, 50, 0.45);
+  --glass-bg: rgba(6, 8, 7, 0.72);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 10px 10px -5px rgba(0, 0, 0, 0.25);
 }
 
 * {
@@ -26,19 +26,16 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background: radial-gradient(circle at top right, #0f172a, #07090f 60%);
-  background-attachment: fixed;
-  color: var(--text-main);
+  font-family: 'DM Sans', system-ui, sans-serif;
   overflow-x: hidden;
 }
 
-/* Typography Headings */
+/* Typography — Syne for display (glc-theme sets body bg) */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Syne', sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--text-main);
 }
 
 /* Base Container */
@@ -51,8 +48,8 @@ h1, h2, h3, h4, h5, h6 {
 /* Call to Action Buttons */
 .cta-btn {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  color: #fff;
-  font-family: 'Outfit', sans-serif;
+  color: #0a0b0a;
+  font-family: 'Syne', sans-serif;
   font-weight: 600;
   font-size: 1.1rem;
   padding: 0.8rem 2rem;
@@ -60,7 +57,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+  box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -69,8 +66,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .cta-btn:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5);
-  background: linear-gradient(135deg, #0284c7, #0f766e);
+  box-shadow: 0 8px 28px rgba(201, 162, 39, 0.35);
+  filter: brightness(1.06);
 }
 
 /* Category Cards Layout */
@@ -126,7 +123,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .category-cards .card:hover {
   transform: translateY(-10px);
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(14, 165, 233, 0.3);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(201, 162, 39, 0.28);
 }
 
 .category-cards .card:hover::before {

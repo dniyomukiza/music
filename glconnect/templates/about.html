@@ -50,30 +50,32 @@
             max-width: 1100px;
             margin: 4rem auto;
             padding: 0 1.5rem;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #1c1c1c;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            color: #e8ece9;
             display: flex;
             flex-direction: column;
             gap: 2rem;
         }
         
         .info-box {
-            background: linear-gradient(135deg, #ffffff, #f4f6fc);
+            background: rgba(12, 15, 14, 0.92);
             padding: 2.5rem 2rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 1px solid #e4e9f2;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 1px solid rgba(201, 162, 39, 0.2);
         }
         
         .info-box:hover {
             transform: translateY(-4px);
-            box-shadow: 0 14px 35px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+            border-color: rgba(201, 162, 39, 0.35);
         }
         
         .info-box h3 {
-            font-size: 1.8rem;
-            color: #2c3e50;
+            font-family: 'Syne', sans-serif;
+            font-size: 1.65rem;
+            color: #e8ece9;
             margin-bottom: 1rem;
             position: relative;
         }
@@ -83,7 +85,7 @@
             display: block;
             width: 50px;
             height: 3px;
-            background: #4a90e2;
+            background: linear-gradient(90deg, #c9a227, #e0bc3a);
             margin-top: 0.5rem;
             border-radius: 2px;
         }
@@ -91,39 +93,40 @@
         .info-box p {
             font-size: 1.05rem;
             line-height: 1.7;
-            color: #34495e;
+            color: #9aa8a0;
         }
         
         .join-mission-button {
             display: inline-block;
-            background-color: #333;
-            color: #f8f0e3;
+            background-color: #c9a227;
+            color: #0a0b0a;
             padding: 15px 40px;
             text-decoration: none;
-            border-radius: 5px;
-            font-size: 1.1em;
-            font-weight: bold;
+            border-radius: 6px;
+            font-size: 1.05em;
+            font-weight: 700;
             margin-top: 20px;
-            transition: background-color 0.3s ease;
-            border: 2px solid #333;
+            transition: background-color 0.3s ease, filter 0.3s ease;
+            border: 2px solid #c9a227;
         }
 
         .join-mission-button:hover {
-            background-color: #555;
-            border-color: #555;
+            background-color: #e0bc3a;
+            border-color: #e0bc3a;
+            filter: brightness(1.05);
         }
         
         .call-to-action {
-            background: linear-gradient(135deg, #e8f0ff, #ffffff);
-            border: 1px solid #d6e2f5;
+            background: rgba(12, 15, 14, 0.95);
+            border: 1px solid rgba(201, 162, 39, 0.28);
         }
         
         .call-to-action .btn {
             display: inline-block;
             margin-top: 1.5rem;
             padding: 0.75rem 1.5rem;
-            background: #4a90e2;
-            color: #fff;
+            background: #c9a227;
+            color: #0a0b0a;
             font-weight: 600;
             border-radius: 8px;
             text-decoration: none;
@@ -131,7 +134,65 @@
         }
         
         .call-to-action .btn:hover {
-            background: #3a78c2;
+            background: #e0bc3a;
+        }
+        
+        .insta-link { color: #e0bc3a !important; }
+        .insta-link:hover { color: #f0e6b8 !important; }
+
+        /* Hide base.html bare audio; show labeled live bar (matches landing) */
+        .audio-wrapper { display: none !important; }
+
+        .live-broadcast-bar {
+            position: fixed;
+            bottom: clamp(0.75rem, 3vw, 1.25rem);
+            left: clamp(0.75rem, 3vw, 1.25rem);
+            right: clamp(0.75rem, 3vw, 1.25rem);
+            max-width: 420px;
+            margin-right: auto;
+            z-index: 95;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.65rem 0.85rem;
+            padding: 0.65rem 1rem;
+            background: rgba(6, 8, 7, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(201, 162, 39, 0.35);
+            border-radius: 4px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+        .live-broadcast-bar .live-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #c9a227;
+            box-shadow: 0 0 12px rgba(201, 162, 39, 0.7);
+            animation: live-pulse-about 1.8s ease-in-out infinite;
+        }
+        @keyframes live-pulse-about {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.65; transform: scale(0.92); }
+        }
+        .live-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #c9a227;
+        }
+        .live-broadcast-bar .live-audio {
+            flex: 1;
+            min-width: 200px;
+            height: 36px;
+            vertical-align: middle;
         }
         
         /* Responsive */
@@ -153,6 +214,16 @@
                 text-align: center;
             }
         }
-        </style>     
+        </style>
+
+    <div class="live-broadcast-bar" role="region" aria-label="GLC live radio broadcast">
+        <div class="live-meta">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="live-label">Live Radio</span>
+        </div>
+        <audio class="live-audio" controls preload="none" aria-label="Play live stream">
+            <source src="/station" type="audio/mpeg">
+        </audio>
+    </div>
 </div>
 {% endblock %}
