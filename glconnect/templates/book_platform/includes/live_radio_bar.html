@@ -1,4 +1,4 @@
-{# Fixed live stream — same UX as landing /home (void bar, gold LIVE RADIO).
+{# Fixed live stream — same UX as landing /home (void bar; LIVE label gold, pulsing red dot).
    Styles are inline so pages without book_platform.css (e.g. content_hub, storefront) still match. #}
 <style>
 body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
@@ -32,8 +32,8 @@ body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #c9a227;
-    box-shadow: 0 0 12px rgba(201, 162, 39, 0.7);
+    background: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
     animation: ink-live-pulse-radio 1.8s ease-in-out infinite;
 }
 @keyframes ink-live-pulse-radio {
