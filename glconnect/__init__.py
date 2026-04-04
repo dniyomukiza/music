@@ -217,6 +217,25 @@ def create_app():
     ckeditor.init_app(app)
     mail.init_app(app)
 
+    # HLS (Liquidsoap profile video writes under project hls-video/). Served at /hls/* via nginx → Flask.
+    _hls_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'hls-video'))
+
+    @app.route('/hls/<path:fname>')
+    def hls_serve(fname):
+        from flask import abort, send_from_directory
+
+        if '..' in fname.split('/'):
+            abort(404)
+        path = os.path.join(_hls_root, fname)
+        if not os.path.isfile(path):
+            abort(404)
+        mimetype = None
+        if fname.endswith('.m3u8'):
+            mimetype = 'application/vnd.apple.mpegurl'
+        elif fname.endswith('.ts'):
+            mimetype = 'video/mp2t'
+        return send_from_directory(_hls_root, fname, mimetype=mimetype, max_age=0)
+
     login_manager.login_view = 'routes1.login'
 
     @login_manager.user_loader
@@ -355,7 +374,12 @@ def create_app():
                 from flask_login import current_user
                 
                 # Skip static files and admin endpoints (including analytics)
-                if not request.path.startswith('/static') and not request.path.startswith('/_analytics') and request.path != '/analytics':
+                if (
+                    not request.path.startswith('/static')
+                    and not request.path.startswith('/hls')
+                    and not request.path.startswith('/_analytics')
+                    and request.path != '/analytics'
+                ):
                     # Only log non-static pages to avoid database bloat
                     analytics = PageAnalytics(
                         path=request.path,

@@ -59,7 +59,6 @@ services:
           condition: service_started
       volumes:
         - ./nginx.conf:/etc/nginx/conf.d/default.conf 
-        - ./hls-video:/var/www/hls-video:ro
         - /etc/letsencrypt/live/www.glc.cool:/etc/letsencrypt/live/www.glc.cool:ro
         - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
 
