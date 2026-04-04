@@ -7,6 +7,7 @@
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 
 log.stdout := true
+settings.harbor.bind_addrs := ["0.0.0.0"]
 
 v = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 v = mksafe(v)
