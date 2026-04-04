@@ -1,0 +1,104 @@
+{# Fixed HLS live TV — mirrors live_radio_bar styling; anchored bottom-right. Same-origin /hls/ works on glc.cool and local. #}
+<style>
+body:has(.ink-studio-live-tv) { padding-bottom: 13.5rem; }
+.live-broadcast-bar.ink-studio-live-tv {
+    position: fixed;
+    bottom: clamp(0.75rem, 3vw, 1.25rem);
+    right: clamp(0.75rem, 3vw, 1.25rem);
+    left: auto;
+    max-width: 320px;
+    width: min(320px, calc(100vw - 1.75rem));
+    margin: 0;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    background: rgba(6, 8, 7, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    border-radius: 4px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.live-broadcast-bar.ink-studio-live-tv .live-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.live-broadcast-bar.ink-studio-live-tv .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+    animation: ink-live-pulse-tv 1.8s ease-in-out infinite;
+}
+@keyframes ink-live-pulse-tv {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.65; transform: scale(0.92); }
+}
+.live-broadcast-bar.ink-studio-live-tv .live-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #c9a227;
+}
+.live-broadcast-bar.ink-studio-live-tv .live-tv-video {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 2px;
+    display: block;
+    vertical-align: middle;
+}
+@media (max-width: 720px) {
+    .live-broadcast-bar.ink-studio-live-tv {
+        bottom: clamp(5.25rem, 24vw, 7rem);
+        max-width: min(280px, calc(100vw - 1.5rem));
+    }
+}
+body:has(.glc-live-radio-home):has(.ink-studio-live-tv) main {
+    padding-bottom: 15rem;
+}
+</style>
+<div class="live-broadcast-bar ink-studio-live-tv" role="region" aria-label="GLC live TV broadcast">
+    <div class="live-meta">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="live-label">Live TV</span>
+    </div>
+    <video id="ink-studio-live-tv-video" class="live-tv-video" controls playsinline preload="metadata" aria-label="Play live video stream"></video>
+</div>
+<script>
+(function () {
+    var el = document.getElementById("ink-studio-live-tv-video");
+    if (!el || el.dataset.glcHlsBound === "1") return;
+    el.dataset.glcHlsBound = "1";
+    var src = "/hls/live.m3u8";
+    function attach() {
+        if (window.Hls && Hls.isSupported()) {
+            var hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+            hls.loadSource(src);
+            hls.attachMedia(el);
+            hls.on(Hls.Events.ERROR, function (_, data) {
+                if (data.fatal) console.error("Live TV HLS:", data);
+            });
+        } else if (el.canPlayType("application/vnd.apple.mpegurl")) {
+            el.src = src;
+        } else {
+            el.insertAdjacentHTML("afterend", "<p style=\"margin:0;font-size:0.75rem;color:#9aa8a0;\">HLS not supported in this browser. Try Safari or open <a href=\"https://glc.cool/hls/live.m3u8\" style=\"color:#c9a227;\">the stream</a>.</p>");
+        }
+    }
+    if (window.Hls) attach();
+    else {
+        var s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.7";
+        s.async = true;
+        s.onload = attach;
+        document.head.appendChild(s);
+    }
+})();
+</script>

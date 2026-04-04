@@ -5,12 +5,15 @@
 #
 # Setup: media in ./video/ ; paths in ./video/videolist.m3u (container: /liqfolder/video/...)
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
+# Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
 v = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 v = mksafe(v)
+v = video.fade.in(transition="fade", duration=3., v)
+v = video.fade.out(transition="fade", duration=3., v)
 
 enc_main = %ffmpeg(
   format="mpegts",
