@@ -217,24 +217,47 @@ def create_app():
     ckeditor.init_app(app)
     mail.init_app(app)
 
-    # HLS (Liquidsoap profile video writes under project hls-video/). Served at /hls/* via nginx → Flask.
-    _hls_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'hls-video'))
+    def _hls_root() -> str:
+        # Docker: set HLS_VIDEO_DIR=/usr/src/appdir/hls-video (same bind mount as Liquidsoap ./hls-video)
+        return os.path.abspath(
+            os.getenv("HLS_VIDEO_DIR")
+            or os.path.join(os.path.dirname(__file__), "..", "hls-video")
+        )
 
-    @app.route('/hls/<path:fname>')
-    def hls_serve(fname):
-        from flask import abort, send_from_directory
+    try:
+        os.makedirs(_hls_root(), mode=0o755, exist_ok=True)
+    except OSError:
+        pass
 
-        if '..' in fname.split('/'):
-            abort(404)
-        path = os.path.join(_hls_root, fname)
-        if not os.path.isfile(path):
-            abort(404)
-        mimetype = None
-        if fname.endswith('.m3u8'):
-            mimetype = 'application/vnd.apple.mpegurl'
-        elif fname.endswith('.ts'):
-            mimetype = 'video/mp2t'
-        return send_from_directory(_hls_root, fname, mimetype=mimetype, max_age=0)
+    @app.route("/hls/status")
+    @app.route("/api/hls-status")
+    def hls_status():
+        """Debug JSON. Prefer /api/hls-status — /hls/status may be proxied to Liquidsoap if nginx has no exact match."""
+        from flask import jsonify
+
+        root = _hls_root()
+        try:
+            files = sorted(os.listdir(root)) if os.path.isdir(root) else []
+        except OSError as exc:
+            return (
+                jsonify(
+                    mode="harbor",
+                    hint="HLS is at https://glc.cool/hls/live.m3u8 via liquidsoap_video:8920 (docker compose --profile video up -d)",
+                    hls_root_disk=root,
+                    disk_error=str(exc),
+                    files=[],
+                ),
+                200,
+            )
+        return (
+            jsonify(
+                mode="harbor",
+                hint="Manifest/proxy: nginx /hls/ → liquidsoap_video:8920. If 404/502, start liquidsoap_video and check its logs.",
+                hls_root_disk=root,
+                disk_files=files[:200],
+            ),
+            200,
+        )
 
     login_manager.login_view = 'routes1.login'
 
@@ -377,6 +400,7 @@ def create_app():
                 if (
                     not request.path.startswith('/static')
                     and not request.path.startswith('/hls')
+                    and not request.path.startswith('/api/hls-status')
                     and not request.path.startswith('/_analytics')
                     and request.path != '/analytics'
                 ):

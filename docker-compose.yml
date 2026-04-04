@@ -46,6 +46,7 @@ services:
       - FLASK_ENV=${FLASK_ENV:-development}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-tts.json}
       - YTDLP_COOKIES_FILE=${YTDLP_COOKIES_FILE:-/usr/src/appdir/ytdlp_cookiesfull.txt}
+      - HLS_VIDEO_DIR=/usr/src/appdir/hls-video
 
   nginx:
       build:
