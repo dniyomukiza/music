@@ -49,8 +49,8 @@ jobs:
             docker image inspect myapp:latest --format 'myapp:latest OK' || (echo "ERROR: myapp:latest not found"; exit 1)
             echo "All images built successfully."
 
-            echo "--- Starting containers ---"
-            docker compose up -d
+            echo "--- Starting containers (includes video profile for /video mount) ---"
+            docker compose --profile video up -d
 
             echo "--- Waiting for app to be ready (avoids 502) ---"
             for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
