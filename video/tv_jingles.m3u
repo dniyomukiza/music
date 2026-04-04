@@ -1,3 +1,4 @@
-# Short bumpers between programs (container paths). Picked at random each time.
+#EXTM3U
+# Short bumpers after each program (container paths). mode=random in video.liq.
 /liqfolder/video/tvjingle.mp4
 /liqfolder/video/tvjingle2.mp4

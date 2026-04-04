@@ -5,18 +5,19 @@
 #
 # Setup: media in ./video/
 #   - videolist.m3u = main programs (order preserved)
-#   - tv_jingles.m3u = bumpers; random pick between each program
+#   - tv_jingles.m3u = bumpers; random pick after each program track
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 # Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
-# rotate: https://www.liquidsoap.info/doc-2.2.5/reference.html#rotate
+# Use append (not rotate): rotate depends on clean track marks between children;
+# with file/FFmpeg video, rotation often stays on the first playlist (jingles never air).
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
 programs = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 jingles = playlist(mode="random", reload_mode="watch", "/liqfolder/video/tv_jingles.m3u")
-# One main segment, then one jingle, repeat (… → bumper → …).
-v = rotate(weights=[1, 1], [programs, jingles])
+# After every program file, play one track from jingles (… → bumper → …).
+v = append(programs, fun (_) -> jingles)
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)
