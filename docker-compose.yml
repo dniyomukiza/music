@@ -59,6 +59,7 @@ services:
           condition: service_started
       volumes:
         - ./nginx.conf:/etc/nginx/conf.d/default.conf 
+        - ./hls-video:/var/www/hls-video:ro
         - /etc/letsencrypt/live/www.glc.cool:/etc/letsencrypt/live/www.glc.cool:ro
         - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
 
@@ -129,7 +130,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # Optional video-only Liquidsoap (Ogg/Theora+Vorbis → Icecast /video). Not started unless profile is on.
+  # Optional video-only Liquidsoap: HLS (H.264/AAC) → ./hls-video, served at https://glc.cool/hls/
   # Enable: docker compose --profile video up -d
   # Disable: docker compose --profile video stop liquidsoap_video  (or never pass --profile video)
   # Requires ./video/videolist.m3u with at least one valid path (see video/videolist.m3u.example).
@@ -138,8 +139,6 @@ services:
     container_name: liquidsoap_video_service
     profiles:
       - video
-    depends_on:
-      - icecast2
     volumes:
       - ./:/liqfolder
     networks:

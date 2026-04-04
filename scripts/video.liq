@@ -1,32 +1,39 @@
-# Optional standalone video → Icecast (do NOT include from main.liq).
-# Run only via: docker compose --profile video up -d
+# Optional standalone video → HLS (H.264 + AAC) for browser playback (Safari native, Chrome/Firefox via hls.js).
+# Not included from main.liq. Enable: docker compose --profile video up -d
+#
+# Watch: https://glc.cool/static/video_live.html  (manifest: /hls/live.m3u8)
 #
 # Setup:
-#   1. Add files under ./video/ on the host.
-#   2. Edit ./video/videolist.m3u — one absolute-in-container path per line, e.g.:
-#        /liqfolder/video/myclip.mp4
-#   3. Icecast must accept mount "video" (see icecast.xml).
+#   1. Media in ./video/ ; paths in ./video/videolist.m3u (container: /liqfolder/video/...)
+#   2. HLS segments written to ./hls-video/ ; nginx serves /hls/ from that directory
 #
-# To turn off: omit --profile video, or: docker compose --profile video stop liquidsoap_video
-# To remove this feature entirely: delete this file, the video/ folder contents you added,
-#   and the liquidsoap_video service from docker-compose.yml.
+# Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html
 
 log.stdout := true
 
 v = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 v = mksafe(v)
 
-output.icecast(
-  %ffmpeg(
-    format="ogg",
-    %audio(codec="libvorbis"),
-    %video(codec="libtheora")
-  ),
-  host="icecast2",
-  port=8000,
-  password="123",
-  mount="video",
-  name="Video (optional)",
-  description="Self-contained Liquidsoap video experiment",
+# Single browser-friendly rendition: MPEG-TS + AAC + H.264 (RFC 8216–friendly via ffmpeg)
+enc_main = %ffmpeg(
+  format="mpegts",
+  %audio(codec="aac", channels=2, ar=44100, b="128k"),
+  %video(
+    codec="libx264",
+    b="1500k",
+    preset="veryfast",
+    "x264-params"="scenecut=0:open_gop=0:min-keyint=96:keyint=96"
+  )
+)
+
+streams = [("main", enc_main)]
+
+output.file.hls(
+  playlist="live.m3u8",
+  segment_duration=4.0,
+  segments=12,
+  segments_overhead=6,
+  "/liqfolder/hls-video",
+  streams,
   v
 )

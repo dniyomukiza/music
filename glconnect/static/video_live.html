@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GLC · Live video</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f1412; color: #e8eee9; margin: 0; padding: 1.25rem; max-width: 56rem; }
+    video { width: 100%; max-height: 80vh; background: #000; border-radius: 8px; }
+    p.note { color: #8a9a90; font-size: 0.9rem; margin-top: 1rem; }
+    a { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <h1>Live video</h1>
+  <video id="video" controls playsinline autoplay muted></video>
+  <p class="note">Stream: <code>/hls/live.m3u8</code> · If the picture never starts, wait ~10s for the first HLS segments after deploy.</p>
+  <p><a href="/">← Home</a></p>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7"></script>
+  <script>
+(function () {
+  var el = document.getElementById("video");
+  var src = "/hls/live.m3u8";
+  if (window.Hls && Hls.isSupported()) {
+    var hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+    hls.loadSource(src);
+    hls.attachMedia(el);
+    hls.on(Hls.Events.ERROR, function (_, data) {
+      if (data.fatal) console.error("HLS fatal:", data);
+    });
+  } else if (el.canPlayType("application/vnd.apple.mpegurl")) {
+    el.src = src;
+  } else {
+    el.outerHTML = "<p>This browser needs HLS support or try Safari. Manifest: <a href=\"" + src + "\">" + src + "</a></p>";
+  }
+})();
+  </script>
+</body>
+</html>
