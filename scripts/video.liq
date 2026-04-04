@@ -3,14 +3,20 @@
 #
 # Internal URL (compose network): http://liquidsoap_video:8920/hls/live.m3u8
 #
-# Setup: media in ./video/ ; paths in ./video/videolist.m3u (container: /liqfolder/video/...)
+# Setup: media in ./video/
+#   - videolist.m3u = main programs (order preserved)
+#   - tv_jingles.m3u = bumpers; random pick between each program
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 # Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
+# rotate: https://www.liquidsoap.info/doc-2.2.5/reference.html#rotate
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
-v = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
+programs = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
+jingles = playlist(mode="random", reload_mode="watch", "/liqfolder/video/tv_jingles.m3u")
+# One main segment, then one jingle, repeat (… → bumper → …).
+v = rotate(weights=[1, 1], [programs, jingles])
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)
