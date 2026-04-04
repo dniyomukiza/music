@@ -128,6 +128,35 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Optional video-only Liquidsoap (Ogg/Theora+Vorbis → Icecast /video). Not started unless profile is on.
+  # Enable: docker compose --profile video up -d
+  # Disable: docker compose --profile video stop liquidsoap_video  (or never pass --profile video)
+  # Requires ./video/videolist.m3u with at least one valid path (see video/videolist.m3u.example).
+  liquidsoap_video:
+    image: phasecorex/liquidsoap:latest
+    container_name: liquidsoap_video_service
+    profiles:
+      - video
+    depends_on:
+      - icecast2
+    volumes:
+      - ./:/liqfolder
+    networks:
+      - app_network
+    command: liquidsoap /liqfolder/scripts/video.liq
+    environment:
+      - TZ=America/New_York
+    restart: unless-stopped
+    mem_limit: ${LIQUIDSOAP_VIDEO_MEM_LIMIT:-1536m}
+    mem_reservation: ${LIQUIDSOAP_VIDEO_MEM_RESERVATION:-256m}
+    healthcheck:
+      test: ["CMD", "pgrep", "liquidsoap"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   fastapi:
     build:
       context: .

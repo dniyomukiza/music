@@ -417,6 +417,13 @@ def create_app():
         app.register_blueprint(book, url_prefix='/book')
         app.register_blueprint(news_bp, url_prefix='/routes2/news')
         app.register_blueprint(analytics_bp)
+
+        # Optional: Grok + X Search radio prep endpoint (self-contained — remove file + this try block anytime)
+        try:
+            from .xai_radio_research import register_xai_radio_research
+            register_xai_radio_research(app)
+        except ImportError:
+            pass
         
         # Initialize book platform
         app, socketio = init_book_platform(app)

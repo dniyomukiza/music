@@ -473,3 +473,132 @@ Ink Studio database tables created successfully
 2026-04-01 21:54:16,834 - __main__ - INFO - Logging configured - logs will appear in console and server.log
 2026-04-01 21:54:16,834 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
 2026-04-01 21:54:16,858 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 18:57:10,793 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 18:57:11,132 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 18:57:16,467 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 18:57:16,467 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 18:57:16,467 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 18:57:16,467 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 18:57:16,468 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 18:57:19,988 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 18:57:20,249 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 18:57:25,547 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 18:57:25,547 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 18:57:25,547 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 18:57:25,547 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 18:57:25,547 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 18:57:25,583 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 18:59:47,988 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 18:59:48,325 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 18:59:54,459 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 18:59:54,459 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 18:59:54,459 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 18:59:54,459 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 18:59:54,460 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 18:59:54,488 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 18:59:59,210 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 18:59:59,477 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:00:04,876 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:00:04,877 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:00:04,877 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:00:04,877 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:00:04,877 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:00:04,901 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:02:02,658 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:02:03,006 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:02:08,978 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:02:08,978 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:02:08,978 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:02:08,978 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:02:08,978 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:02:09,005 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:02:14,348 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:02:14,602 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:02:19,946 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:02:19,946 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:02:19,946 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:02:19,946 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:02:19,946 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:02:19,970 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:07:37,945 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:07:38,270 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:07:43,518 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:07:43,518 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:07:43,518 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:07:43,519 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:07:43,519 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:07:43,547 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:11:10,118 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:11:10,471 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:11:16,632 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:11:16,632 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:11:16,632 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:11:16,632 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:11:16,632 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:11:16,655 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:12:47,366 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:12:47,703 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:12:53,170 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:12:53,170 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:12:53,170 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:12:53,170 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:12:53,170 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:12:53,198 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:16:27,318 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:16:27,672 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:16:33,338 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:16:33,339 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:16:33,339 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:16:33,339 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:16:33,339 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:16:33,362 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:17:44,503 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:17:44,846 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:17:50,210 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:17:50,211 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:17:50,211 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:17:50,211 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:17:50,211 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:17:50,235 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:17:56,875 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:17:57,189 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:18:02,962 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:18:02,962 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:18:02,962 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:18:02,962 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:18:02,962 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:18:02,989 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:19:37,410 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:19:37,772 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:19:44,962 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:19:44,962 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:19:44,962 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:19:44,963 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:19:44,963 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:19:44,988 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:22:12,416 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:22:12,700 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:22:17,766 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:22:17,766 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:22:17,766 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:22:17,766 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:22:17,766 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:22:17,793 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:23:32,868 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:23:33,096 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:23:38,304 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:23:38,304 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:23:38,304 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:23:38,304 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:23:38,304 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:23:38,334 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 19:23:43,180 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 19:23:43,425 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-04-02 19:23:48,408 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-04-02 19:23:48,409 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-04-02 19:23:48,409 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-04-02 19:23:48,409 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-04-02 19:23:48,409 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-04-02 19:23:48,435 - werkzeug - WARNING -  * Debugger is active!
+2026-04-02 20:13:28,716 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-04-02 20:13:29,041 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
