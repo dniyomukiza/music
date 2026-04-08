@@ -48,6 +48,22 @@ class DownloadedSong(db.Model):
     )
 
 
+class DownloadedVideo(db.Model):
+    """Admin YouTube → MP4 TV catalog. Paths merged into video/videolist.m3u for Liquidsoap HLS."""
+    __tablename__ = 'downloaded_videos'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    artist = db.Column(db.String(200), nullable=True)
+    local_path = db.Column(db.String(400), nullable=True)
+    source_url = db.Column(db.String(500), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
+
+    __table_args__ = (
+        db.Index('idx_downloaded_video_name', 'name'),
+        db.Index('idx_downloaded_video_artist', 'artist'),
+    )
+
+
 class Post(db.Model):
     __tablename__ = 'post'
     id = db.Column(db.Integer, primary_key=True)

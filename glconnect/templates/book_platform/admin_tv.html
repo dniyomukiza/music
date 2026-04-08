@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - YouTube Download | Ink Studio</title>
+    <title>Admin - YouTube TV | Ink Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
 </head>
 <body>
     {% include 'messages.html' %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #6f42c1;">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
                 <i class="fas fa-pen-fancy"></i> Ink Studio
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.admin_tv') }}">
-                    <i class="fas fa-tv me-1"></i>TV download
-                </a>
                 <a class="nav-link" href="{{ url_for('book_platform.admin_books') }}">
                     <i class="fas fa-cogs me-1"></i>Admin Panel
+                </a>
+                <a class="nav-link" href="{{ url_for('book_platform.admin_music') }}">
+                    <i class="fas fa-music me-1"></i>Music download
                 </a>
                 <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
                     <i class="fas fa-arrow-left me-1"></i>Dashboard
@@ -31,9 +31,14 @@
 
     <div class="container py-5">
         <h2 class="mb-4">
-            <i class="fas fa-download me-2"></i>YouTube Song Download
+            <i class="fas fa-tv me-2"></i>YouTube TV (HLS) download
         </h2>
-        <p class="text-muted">Paste a YouTube playlist or video URL below. Songs will be downloaded as MP3, renamed, added to the catalog, and will appear in search. Only admins can use this. Runs in the background; large playlists may take several minutes.</p>
+        <p class="text-muted">
+            Paste a YouTube video or playlist URL. Videos are saved as MP4 under <code>glconnect/static/ytautovid/</code>,
+            recorded in <code>downloaded_videos</code>, and merged into <code>video/videolist.m3u</code> with
+            <code>video/videolist_extra.m3u</code> (manual paths). Liquidsoap TV service reloads the playlist when the file changes.
+            Same admin-only, background workflow as music.
+        </p>
 
         <div class="card shadow-sm">
             <div class="card-body">
@@ -41,31 +46,25 @@
                     <div class="mb-3">
                         <label for="youtube_url" class="form-label">YouTube URL</label>
                         <input type="url" class="form-control" id="youtube_url" name="url"
-                               placeholder="https://www.youtube.com/playlist?list=... or https://www.youtube.com/watch?v=..."
+                               placeholder="https://www.youtube.com/watch?v=... or playlist"
                                required>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <i class="fas fa-play me-1"></i>Start Download
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="background-color: #6f42c1; border-color: #6f42c1;">
+                        <i class="fas fa-play me-1"></i>Start TV download
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- Clean / Fix from disk: always available (not part of workflow) -->
         <div class="card shadow-sm mt-4">
             <div class="card-body py-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="syncFromDbBtn" title="After cleaning names in DB: rename files to &#39;name by artist&#39;, then write M3U from DB paths">
-                    <i class="fas fa-broom me-1"></i>Clean
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="syncPlaylistBtn" title="Rebuild videolist.m3u from DB + videolist_extra.m3u">
+                    <i class="fas fa-sync me-1"></i>Sync TV playlist only
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="syncFromDiskBtn" title="Fix discrepancies: use actual files on disk as source of truth. Updates DB and M3U to match.">
-                    <i class="fas fa-hdd me-1"></i>Fix from disk
-                </button>
-                <span class="ms-2 small text-muted" id="syncFromDbResult"></span>
-                <span class="ms-2 small text-muted" id="syncFromDiskResult"></span>
+                <span class="ms-2 small text-muted" id="syncPlaylistResult"></span>
             </div>
         </div>
 
-        <!-- Workflow progress (admin sees live status here) -->
         <div class="card shadow-sm mt-4" id="progressCard">
             <div class="card-header bg-light d-flex align-items-center">
                 <i class="fas fa-tasks me-2 text-primary"></i>
@@ -75,7 +74,7 @@
                 <div id="stepsList" class="mb-3" style="display: none;">
                     <div class="step-item mb-2" data-step="download">
                         <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
-                        <span class="step-label">Download audio (yt-dlp)</span>
+                        <span class="step-label">Download MP4 (yt-dlp)</span>
                         <span class="step-detail text-muted small ms-3"></span>
                     </div>
                     <div class="step-item mb-2" data-step="rename">
@@ -86,6 +85,11 @@
                     <div class="step-item mb-2" data-step="ingest">
                         <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
                         <span class="step-label">Save to database</span>
+                        <span class="step-detail text-muted small ms-3"></span>
+                    </div>
+                    <div class="step-item mb-2" data-step="playlist">
+                        <span class="step-icon text-muted"><i class="fas fa-circle fa-xs"></i></span>
+                        <span class="step-label">Write videolist.m3u</span>
                         <span class="step-detail text-muted small ms-3"></span>
                     </div>
                 </div>
@@ -99,15 +103,15 @@
 
         <div class="alert alert-info mt-4" role="alert">
             <i class="fas fa-info-circle me-2"></i>
-            Progress updates automatically. Do not close this page while a download is running. New songs will appear in music search when the workflow completes.
+            Ensure the <code>video</code> Docker volume is shared with the Liquidsoap container (<code>./:/liqfolder</code>).
+            After sync, TV plays entries in <code>videolist.m3u</code>; bumpers still come from <code>tv_jingles.m3u</code>.
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var pollInterval = null;
-
-        var stepOrder = ['download', 'rename', 'ingest'];
+        var stepOrder = ['download', 'rename', 'ingest', 'playlist'];
 
         function renderStatus(s) {
             var status = s.status || 'idle';
@@ -137,7 +141,7 @@
             stepsList.style.display = 'block';
             progressText.style.display = 'none';
 
-            var currentIndex = step ? stepOrder.indexOf(step) : -1;
+            var currentIndex = (step && stepOrder.indexOf(step) >= 0) ? stepOrder.indexOf(step) : -1;
             if (currentIndex < 0 && status === 'downloading') currentIndex = 0;
             if (currentIndex < 0 && status === 'renaming') currentIndex = 1;
             if (currentIndex < 0 && status === 'ingesting') currentIndex = 2;
@@ -190,7 +194,7 @@
         }
 
         function fetchStatus() {
-            fetch('/mybook/admin/music/status')
+            fetch('{{ url_for("book_platform.admin_tv_status") }}')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     renderStatus(data);
@@ -198,7 +202,7 @@
                     if (status === 'completed' || status === 'failed') {
                         if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
                         document.getElementById('submitBtn').disabled = false;
-                        document.getElementById('submitBtn').innerHTML = '<i class="fas fa-play me-1"></i>Start Download';
+                        document.getElementById('submitBtn').innerHTML = '<i class="fas fa-play me-1"></i>Start TV download';
                     }
                 })
                 .catch(function() {});
@@ -219,7 +223,7 @@
             }
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting...';
-            fetch('/mybook/admin/music/download', {
+            fetch('{{ url_for("book_platform.admin_tv_download") }}', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({url: url})
@@ -227,24 +231,23 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success) {
-                    renderStatus(data.status || { status: 'downloading', message: 'Starting…' });
+                    renderStatus(data.status || { status: 'downloading', message: 'Starting…', step: 'download' });
                     startPolling();
                 } else {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-play me-1"></i>Start Download';
-                    alert('Error: ' + (data.error || 'Failed to start download'));
+                    btn.innerHTML = '<i class="fas fa-play me-1"></i>Start TV download';
+                    alert('Error: ' + (data.error || 'Failed to start'));
                 }
             })
             .catch(function(err) {
                 console.error(err);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play me-1"></i>Start Download';
+                btn.innerHTML = '<i class="fas fa-play me-1"></i>Start TV download';
                 alert('Request failed. Try again.');
             });
         });
 
-        // On load: show current status; if a run is already in progress, poll and disable button
-        fetch('/mybook/admin/music/status')
+        fetch('{{ url_for("book_platform.admin_tv_status") }}')
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 renderStatus(d);
@@ -256,37 +259,13 @@
             })
             .catch(function() { renderStatus({ status: 'idle' }); });
 
-        document.getElementById('syncFromDbBtn').addEventListener('click', function() {
+        document.getElementById('syncPlaylistBtn').addEventListener('click', function() {
             var btn = this;
-            var resultEl = document.getElementById('syncFromDbResult');
+            var resultEl = document.getElementById('syncPlaylistResult');
             btn.disabled = true;
             resultEl.textContent = 'Syncing…';
             resultEl.className = 'ms-2 small text-muted';
-            fetch('/mybook/admin/music/sync-from-db', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.success) {
-                        resultEl.textContent = data.message || 'Done.';
-                        resultEl.className = 'ms-2 small text-success';
-                    } else {
-                        resultEl.textContent = data.error || 'Failed';
-                        resultEl.className = 'ms-2 small text-danger';
-                    }
-                })
-                .catch(function() {
-                    resultEl.textContent = 'Request failed';
-                    resultEl.className = 'ms-2 small text-danger';
-                })
-                .finally(function() { btn.disabled = false; });
-        });
-
-        document.getElementById('syncFromDiskBtn').addEventListener('click', function() {
-            var btn = this;
-            var resultEl = document.getElementById('syncFromDiskResult');
-            btn.disabled = true;
-            resultEl.textContent = 'Fixing from disk…';
-            resultEl.className = 'ms-2 small text-muted';
-            fetch('/mybook/admin/music/sync-from-disk', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            fetch('{{ url_for("book_platform.admin_tv_sync_playlist") }}', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success) {

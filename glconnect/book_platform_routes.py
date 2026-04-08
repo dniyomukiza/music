@@ -8420,6 +8420,192 @@ def admin_music_sync_from_disk():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ----- Admin YouTube TV download (parallel to music; feeds Liquidsoap video/videolist.m3u) -----
+_tv_download_status = {
+    'status': 'idle',
+    'step': None,
+    'message': '',
+    'error': None,
+    'url': '',
+    'started_at': None,
+    'completed_at': None,
+}
+_tv_download_lock = threading.Lock()
+
+
+def _set_tv_download_status(status, message='', error=None, url=None, completed=False, step=None):
+    with _tv_download_lock:
+        _tv_download_status['status'] = status
+        _tv_download_status['message'] = message
+        _tv_download_status['error'] = error
+        if step is not None:
+            _tv_download_status['step'] = step
+        if url is not None:
+            _tv_download_status['url'] = url
+        if status == 'downloading':
+            _tv_download_status['started_at'] = datetime.now(timezone.utc).isoformat()
+            _tv_download_status['completed_at'] = None
+        if completed:
+            _tv_download_status['completed_at'] = datetime.now(timezone.utc).isoformat()
+
+
+def _get_tv_download_status():
+    with _tv_download_lock:
+        return dict(_tv_download_status)
+
+
+@book_bp.route('/admin/tv')
+@login_required
+def admin_tv():
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    return render_template('book_platform/admin_tv.html')
+
+
+@book_bp.route('/admin/tv/status')
+@login_required
+def admin_tv_status():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin privileges required'}), 403
+    return jsonify(_get_tv_download_status())
+
+
+@book_bp.route('/admin/tv/download', methods=['POST'])
+@login_required
+def admin_tv_download():
+    """yt-dlp → MP4 in static/ytautovid → DB → merge videolist.m3u for HLS TV."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    data = request.get_json() or request.form
+    url = (data.get('url') or data.get('youtube_url') or '').strip()
+    if not url:
+        return jsonify({'success': False, 'error': 'YouTube URL is required'}), 400
+    if 'youtube.com' not in url and 'youtu.be' not in url:
+        return jsonify({'success': False, 'error': 'Please provide a valid YouTube URL'}), 400
+    import shutil
+    if not shutil.which('yt-dlp'):
+        return jsonify({
+            'success': False,
+            'error': 'yt-dlp is not installed. Install it to enable YouTube TV downloads.',
+        }), 400
+
+    _set_tv_download_status('downloading', 'Starting…', url=url, step='download')
+
+    app = current_app._get_current_object()
+
+    def run_pipeline():
+        with app.app_context():
+            current_step = 'download'
+            try:
+                from glconnect import pipeline as pipeline_mod
+                from glconnect.pipeline import (
+                    VideoDownloader,
+                    MusicFileRenamer,
+                    PlaylistIngestion,
+                    sync_tv_videolist_from_db,
+                )
+                glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
+                output_folder = os.path.join(glconnect_dir, 'static', 'ytautovid')
+                output_folder = os.path.normpath(output_folder)
+
+                current_step = 'download'
+                _set_tv_download_status(
+                    'downloading',
+                    'Downloading video with yt-dlp (may take several minutes)…',
+                    url=url,
+                    step=current_step,
+                )
+                downloader = VideoDownloader(playlist_url=url, output_folder=output_folder)
+                downloader.download_and_convert()
+                _set_tv_download_status('downloading', 'Download finished.', url=url, step=current_step)
+
+                current_step = 'rename'
+                _set_tv_download_status('renaming', 'Renaming files…', url=url, step=current_step)
+                MusicFileRenamer.clean_music_names(output_folder)
+                _set_tv_download_status('renaming', 'Renaming finished.', url=url, step=current_step)
+
+                current_step = 'ingest'
+                _set_tv_download_status('ingesting', 'Saving to database…', url=url, step=current_step)
+                added, _ = PlaylistIngestion.ingest_videos_from_folder(output_folder, source_url=url)
+                _set_tv_download_status(
+                    'ingesting',
+                    f'Saved to database. {added} new video(s).' if added > 0 else 'Saved (no new rows; duplicates or empty).',
+                    url=url,
+                    step=current_step,
+                )
+
+                current_step = 'playlist'
+                _set_tv_download_status('ingesting', 'Writing TV playlist (videolist.m3u)…', url=url, step=current_step)
+                npaths = sync_tv_videolist_from_db()
+                _set_tv_download_status(
+                    'ingesting',
+                    f'Playlist updated: {npaths} path(s) in videolist.m3u.',
+                    url=url,
+                    step=current_step,
+                )
+
+                if added > 0:
+                    _set_tv_download_status(
+                        'completed',
+                        f'Done. {added} new video(s); TV playlist has {npaths} entr(y/ies). Liquidsoap will reload if watch mode is on.',
+                        url=url,
+                        completed=True,
+                        step=None,
+                    )
+                    logger.info("Admin TV download finished: %s new video(s), %s playlist paths", added, npaths)
+                else:
+                    _set_tv_download_status(
+                        'completed',
+                        'Completed but no new videos in DB (duplicates). Playlist refreshed.',
+                        url=url,
+                        completed=True,
+                        step=None,
+                    )
+            except Exception as e:
+                logger.exception("Admin TV download failed at step %s: %s", current_step, e)
+                step_label = {
+                    'download': 'Download',
+                    'rename': 'Renaming',
+                    'ingest': 'Database / playlist',
+                    'playlist': 'Playlist',
+                }.get(current_step, current_step)
+                _set_tv_download_status(
+                    'failed',
+                    f'{step_label} failed.',
+                    error=str(e),
+                    url=url,
+                    completed=True,
+                    step=current_step,
+                )
+
+    threading.Thread(target=run_pipeline, daemon=True).start()
+    return jsonify({
+        'success': True,
+        'message': 'TV download started.',
+        'status': _get_tv_download_status(),
+    })
+
+
+@book_bp.route('/admin/tv/sync-playlist', methods=['POST'])
+@login_required
+def admin_tv_sync_playlist():
+    """Rewrite video/videolist.m3u from videolist_extra.m3u + downloaded_videos."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+    try:
+        from glconnect.pipeline import sync_tv_videolist_from_db
+        n = sync_tv_videolist_from_db()
+        return jsonify({
+            'success': True,
+            'message': f'TV playlist updated: {n} path(s) in videolist.m3u.',
+            'paths': n,
+        })
+    except Exception as e:
+        logger.exception("Admin TV sync-playlist failed: %s", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @book_bp.route('/podcasts/<int:podcast_id>/play')
 @login_required
 def play_podcast(podcast_id):

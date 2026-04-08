@@ -4,9 +4,9 @@ from flask import Flask, has_app_context
 from subprocess import run
 from dotenv import load_dotenv
 try:
-    from glconnect.models import db, Song, DownloadedSong
+    from glconnect.models import db, Song, DownloadedSong, DownloadedVideo
 except ImportError:
-    from models import db, Song, DownloadedSong
+    from models import db, Song, DownloadedSong, DownloadedVideo
 
 # Load configuration from environment variables
 config = {
@@ -79,6 +79,67 @@ class AudioDownloader:
 
     def download_and_convert(self):
         self.download_audio()
+
+
+class VideoDownloader:
+    """YouTube → merged MP4 (H.264/AAC-friendly) for TV / Liquidsoap HLS."""
+
+    def __init__(self, playlist_url=None, output_folder=None):
+        self.playlist_url = playlist_url.strip() if playlist_url else None
+        self.output_folder = os.path.expanduser(output_folder) if output_folder else os.getcwd()
+
+    def prepare_output_folder(self):
+        os.makedirs(self.output_folder, exist_ok=True)
+
+    def download_video(self):
+        if not self.playlist_url:
+            raise ValueError("No playlist URL provided for downloading.")
+        import shutil
+        ytdlp_path = shutil.which("yt-dlp")
+        if not ytdlp_path:
+            raise FileNotFoundError(
+                "yt-dlp is not installed or not in PATH. Install it (e.g. pip install yt-dlp or brew install yt-dlp) and try again."
+            )
+        self.prepare_output_folder()
+        print(f"Downloading TV video to folder: {self.output_folder}")
+        command = [
+            ytdlp_path,
+            "-f",
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best",
+            "--merge-output-format",
+            "mp4",
+            "--yes-playlist",
+            "--extractor-args",
+            "youtube:player_client=android,web",
+            "--js-runtimes",
+            "node",
+            "--remote-components",
+            "ejs:github",
+            "-o",
+            os.path.join(self.output_folder, "%(title)s.%(ext)s"),
+        ]
+        cookies_file = os.environ.get("YTDLP_COOKIES_FILE")
+        if cookies_file and os.path.isfile(cookies_file):
+            command.extend(["--cookies", cookies_file])
+            print(f"Using cookies file: {cookies_file}")
+        elif cookies_file:
+            print(f"YTDLP_COOKIES_FILE is set but file not found: {cookies_file}")
+        command.append(self.playlist_url)
+        print(f"Running command: {' '.join(command)}")
+        result = run(command, capture_output=True, text=True)
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "").strip() or f"Exit code {result.returncode}"
+            raise RuntimeError(f"yt-dlp failed: {err}")
+        mp4s = [f for f in os.listdir(self.output_folder) if f.lower().endswith(".mp4")]
+        if not mp4s:
+            raise RuntimeError(
+                "yt-dlp finished but no MP4 files were saved. Check the URL and that the video/playlist is available."
+            )
+        print(f"TV download completed successfully! {len(mp4s)} file(s) saved to: {self.output_folder}")
+
+    def download_and_convert(self):
+        self.download_video()
+
 
 class MusicFileRenamer:
     @staticmethod
@@ -227,6 +288,50 @@ class PlaylistIngestion:
             print(f"Added download: {artist} - {song_name}")
             return True
 
+    @staticmethod
+    def ingest_videos_from_folder(output_folder, source_url=None):
+        """
+        Scan folder for .mp4, add rows to downloaded_videos with Liquidsoap container paths.
+        Returns (added_count, skipped_count).
+        """
+        if not has_app_context():
+            with app.app_context():
+                return PlaylistIngestion._do_ingest_videos_from_folder(output_folder, source_url)
+        return PlaylistIngestion._do_ingest_videos_from_folder(output_folder, source_url)
+
+    @staticmethod
+    def _do_ingest_videos_from_folder(output_folder, source_url=None):
+        prefix_liq = "/liqfolder/glconnect/static/ytautovid/"
+        if not os.path.isdir(output_folder):
+            print(f"TV output folder does not exist: {output_folder}")
+            return 0, 0
+        mp4_files = [f for f in os.listdir(output_folder) if f.lower().endswith(".mp4")]
+        added_count = 0
+        skipped_count = 0
+        url_trim = (source_url or "").strip()[:500] or None
+        for filename in sorted(mp4_files, key=lambda x: x.lower()):
+            artist, title = _parse_video_title(filename)
+            key_artist = (artist or "").strip() or None
+            key_name = (title or "").strip() or "Unknown"
+            existing = DownloadedVideo.query.filter_by(artist=key_artist, name=key_name).first()
+            if existing:
+                print(f"Skipped duplicate TV: {artist} - {title}")
+                skipped_count += 1
+                continue
+            local_path = prefix_liq + filename
+            row = DownloadedVideo(
+                name=key_name,
+                artist=key_artist,
+                local_path=local_path,
+                source_url=url_trim,
+            )
+            db.session.add(row)
+            print(f"Added TV: {artist} - {title} -> {filename}")
+            added_count += 1
+        db.session.commit()
+        print(f"TV folder ingestion: {added_count} added, {skipped_count} skipped.")
+        return added_count, skipped_count
+
 
 def _parse_artist_title(filename):
     """Return (artist, song_name) from filename like 'Artist - Song.mp3'. Normalize for dedupe."""
@@ -235,6 +340,62 @@ def _parse_artist_title(filename):
         artist, song_name = name.split(" - ", 1)
         return (artist.strip() or None, song_name.strip())
     return (None, name or None)
+
+
+def _parse_video_title(filename):
+    """Return (artist, title) from filename like 'Artist - Title.mp4'."""
+    name = os.path.basename(filename)
+    lower = name.lower()
+    if lower.endswith(".mp4"):
+        name = name[:-4]
+    name = name.strip()
+    if " - " in name:
+        artist, title = name.split(" - ", 1)
+        return (artist.strip() or None, title.strip())
+    return (None, name or None)
+
+
+def sync_tv_videolist_from_db():
+    """
+    Merge video/videolist_extra.m3u (manual paths, optional) with downloaded_videos local_path
+    rows and write video/videolist.m3u for Liquidsoap (reload_mode=watch).
+    Must run inside Flask app context. Returns path count written.
+    """
+    glconnect_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(glconnect_dir)
+    video_dir = os.path.join(project_root, "video")
+    extra_m3u = os.path.join(video_dir, "videolist_extra.m3u")
+    out_m3u = os.path.join(video_dir, "videolist.m3u")
+    paths = []
+    if os.path.isfile(extra_m3u):
+        with open(extra_m3u, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    paths.append(line)
+    rows = (
+        DownloadedVideo.query.filter(
+            DownloadedVideo.local_path.isnot(None),
+            DownloadedVideo.local_path != "",
+        )
+        .order_by(DownloadedVideo.id)
+        .all()
+    )
+    for row in rows:
+        p = (row.local_path or "").strip()
+        if p and p not in paths:
+            paths.append(p)
+    os.makedirs(video_dir, exist_ok=True)
+    with open(out_m3u, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n")
+        f.write(
+            "# Merged: videolist_extra.m3u + downloaded_videos (DB). "
+            "Regenerated by admin TV download/sync.\n"
+        )
+        for p in paths:
+            f.write(p + "\n")
+    print(f"TV videolist written: {len(paths)} paths -> {out_m3u}")
+    return len(paths)
 
 
 def create_or_append_m3u_playlist(output_folder, m3u_filename):

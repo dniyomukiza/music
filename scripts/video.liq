@@ -4,20 +4,20 @@
 # Internal URL (compose network): http://liquidsoap_video:8920/hls/live.m3u8
 #
 # Setup: media in ./video/
-#   - videolist.m3u = main programs (order preserved)
-#   - tv_jingles.m3u = bumpers; random pick after each program track
+#   - videolist.m3u = merged from videolist_extra.m3u + DB downloaded_videos (admin TV sync)
+#   - tv_jingles.m3u = bumpers (random). Used after each program and as fallback when no programs
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 # Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
-# Use append (not rotate): rotate depends on clean track marks between children;
-# with file/FFmpeg video, rotation often stays on the first playlist (jingles never air).
+# append: after each resolved program track, play one jingle. fallback keeps bumpers on air
+# when videolist has no valid files (deleted shows, wrong paths).
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
 programs = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 jingles = playlist(mode="random", reload_mode="watch", "/liqfolder/video/tv_jingles.m3u")
-# After every program file, play one track from jingles (… → bumper → …).
-v = append(programs, fun (_) -> jingles)
+with_jingles = append(programs, fun (_) -> jingles)
+v = fallback(track_sensitive=false, [with_jingles, jingles])
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)

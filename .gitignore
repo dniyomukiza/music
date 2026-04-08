@@ -6,6 +6,7 @@ myenv
 __pycache__
 .DS_Store
 /glconnect/static/ytauto
+/glconnect/static/ytautovid
 /glconnect/static/afro
 /glconnect/static/gosp3
 /glconnect/static/gospel2
