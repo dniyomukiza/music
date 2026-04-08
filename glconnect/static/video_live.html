@@ -16,24 +16,12 @@
   <video id="video" controls playsinline autoplay muted></video>
   <p class="note">Manifest: <code>/hls/live.m3u8</code> (nginx → Liquidsoap :8920). Debug JSON: <a href="/api/hls-status"><code>/api/hls-status</code></a> (use this — not <code>/hls/status</code>, which can hit Liquidsoap and 404).</p>
   <p><a href="/">← Home</a></p>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7"></script>
+  <script src="/static/glc-hls-live.js"></script>
   <script>
-(function () {
-  var el = document.getElementById("video");
-  var src = "/hls/live.m3u8";
-  if (window.Hls && Hls.isSupported()) {
-    var hls = new Hls({ enableWorker: true, lowLatencyMode: false });
-    hls.loadSource(src);
-    hls.attachMedia(el);
-    hls.on(Hls.Events.ERROR, function (_, data) {
-      if (data.fatal) console.error("HLS fatal:", data);
-    });
-  } else if (el.canPlayType("application/vnd.apple.mpegurl")) {
-    el.src = src;
-  } else {
-    el.outerHTML = "<p>This browser needs HLS support or try Safari. Manifest: <a href=\"" + src + "\">" + src + "</a></p>";
-  }
-})();
+  (function () {
+    var el = document.getElementById("video");
+    if (el) window.GlcLiveHls.attach(el, "/hls/live.m3u8");
+  })();
   </script>
 </body>
 </html>
