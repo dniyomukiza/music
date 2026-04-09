@@ -2144,41 +2144,79 @@ def resolve_comment(comment_id):
     
     return jsonify({'success': True})
 
+def _marketplace_cover_url(book):
+    """Resolve cover image URL for API and templates."""
+    if not book or not getattr(book, "cover_image", None):
+        return None
+    path = (book.cover_image or "").strip()
+    if not path:
+        return None
+    if path.startswith(("http://", "https://")):
+        return path
+    if path.startswith("/"):
+        return path
+    return url_for("static", filename=path)
+
+
 # Marketplace routes
 @book_bp.route('/marketplace')
 @login_required
 def marketplace():
     """Browse published books in marketplace - accessible to all logged-in users"""
     try:
-        # Get pagination parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = 20  # Limit to 20 books per page
-        
-        # Get filter parameters
-        genre = request.args.get('genre', None)
-        language = request.args.get('language', None)
-        search_term = request.args.get('search', None)
-        
-        # Use optimized database queries with pagination and filters
-        books = DatabaseOptimizer.get_marketplace_books(limit=per_page, genre=genre, language=language, search_term=search_term)
-        
-        # Get available genres and languages with book counts
+        page = max(1, request.args.get('page', 1, type=int) or 1)
+        per_page = 20
+
+        genre = request.args.get('genre', None) or None
+        language = request.args.get('language', None) or None
+        search_term = (request.args.get('search', None) or "").strip() or None
+        sort_by = request.args.get('sort_by', 'newest') or 'newest'
+        price_range = request.args.get('price_range', None) or None
+        if price_range == '':
+            price_range = None
+
+        offset = (page - 1) * per_page
+
+        books = DatabaseOptimizer.get_marketplace_books(
+            limit=per_page,
+            offset=offset,
+            genre=genre,
+            language=language,
+            search_term=search_term,
+            sort_by=sort_by,
+            price_range=price_range,
+        )
+        total_books = DatabaseOptimizer.count_marketplace_books(
+            genre=genre, language=language, search_term=search_term, price_range=price_range
+        )
+        list_stats = DatabaseOptimizer.get_marketplace_list_stats(
+            genre=genre, language=language, search_term=search_term, price_range=price_range
+        )
+        total_pages = max(1, (total_books + per_page - 1) // per_page) if total_books else 1
+
         available_genres = DatabaseOptimizer.get_available_genres()
         available_languages = DatabaseOptimizer.get_available_languages()
-        
-        # Check if user has writer profile for conditional UI elements
+
         has_writer_profile = Writer.query.filter_by(user_id=current_user.user_id).first() is not None
 
-        return render_template('book_platform/marketplace.html', 
-                             books=books, 
-                             has_writer_profile=has_writer_profile,
-                             page=page,
-                             per_page=per_page,
-                             selected_genre=genre,
-                             selected_language=language,
-                             available_genres=available_genres,
-                             available_languages=available_languages,
-                             search_term=search_term)
+        return render_template(
+            'book_platform/marketplace.html',
+            books=books,
+            has_writer_profile=has_writer_profile,
+            page=page,
+            per_page=per_page,
+            total_books=total_books,
+            total_pages=total_pages,
+            list_stats=list_stats,
+            selected_genre=genre,
+            selected_language=language,
+            selected_sort=sort_by,
+            selected_price_range=price_range,
+            available_genres=available_genres,
+            available_languages=available_languages,
+            search_term=search_term or '',
+            marketplace_cover_url=_marketplace_cover_url,
+        )
     except Exception as e:
         # Rollback any failed transaction to prevent "transaction aborted" errors
         try:
@@ -2190,16 +2228,97 @@ def marketplace():
         import traceback
         traceback.print_exc()
         # Return empty list on error
-        return render_template('book_platform/marketplace.html', 
-                             books=[], 
-                             has_writer_profile=False,
-                             page=1,
-                             per_page=20,
-                             selected_genre=None,
-                             selected_language=None,
-                             available_genres=[],
-                             available_languages=[],
-                             search_term=None)
+        return render_template(
+            'book_platform/marketplace.html',
+            books=[],
+            has_writer_profile=False,
+            page=1,
+            per_page=20,
+            total_books=0,
+            total_pages=1,
+            list_stats={'total': 0, 'paid': 0, 'free': 0},
+            selected_genre=None,
+            selected_language=None,
+            selected_sort='newest',
+            selected_price_range=None,
+            available_genres=[],
+            available_languages=[],
+            search_term='',
+            marketplace_cover_url=_marketplace_cover_url,
+        )
+
+
+@book_bp.route('/api/marketplace/books/<int:book_id>', methods=['GET'])
+@login_required
+def api_marketplace_book_detail(book_id):
+    """JSON detail for marketplace modal / future PDP (published books only)."""
+    lang_labels = {
+        'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
+        'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean',
+        'ar': 'Arabic', 'hi': 'Hindi', 'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish',
+        'other': 'Other',
+    }
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).filter_by(id=book_id).first()
+    if not book or not is_book_published(book):
+        return jsonify({'success': False, 'error': 'Book not found or not available in the marketplace.'}), 404
+
+    author = book.author
+    author_name = 'Unknown'
+    author_user_id = None
+    if author:
+        if author.pen_name:
+            author_name = author.pen_name
+        elif author.user:
+            author_name = author.user.username
+            author_user_id = author.user.user_id
+        else:
+            author_name = 'Author'
+
+    author_listing_count = DatabaseOptimizer.marketplace_books_base_query().filter(
+        BookProject.author_id == book.author_id
+    ).count()
+
+    inv = InvestmentCampaign.query.filter_by(book_project_id=book.id).first() if book.has_investment_campaign else None
+
+    payload = {
+        'success': True,
+        'book': {
+            'id': book.id,
+            'title': book.title,
+            'description': book.description or '',
+            'genre': book.genre or '',
+            'language': book.language or '',
+            'language_label': lang_labels.get((book.language or '').lower(), (book.language or 'Other').title()),
+            'word_count': book.word_count or 0,
+            'target_audience': book.target_audience or '',
+            'price': float(book.price) if book.price is not None else None,
+            'currency': book.currency or 'USD',
+            'cover_url': _marketplace_cover_url(book),
+            'published_at': book.published_at.isoformat() if book.published_at else None,
+            'created_at': book.created_at.isoformat() if book.created_at else None,
+            'formats': {
+                'digital': bool(book.digital_book_published and book.digital_file_path),
+                'audiobook': bool(book.audiobook_published and book.has_audiobook),
+            },
+            'digital_file_type': (book.digital_file_type or '').upper() if book.digital_file_type else None,
+            'audiobook_price': float(book.audiobook_price) if book.audiobook_price is not None else None,
+            'total_sales': book.total_sales or 0,
+            'author': {
+                'id': author.id if author else None,
+                'name': author_name,
+                'user_id': author_user_id,
+                'marketplace_book_count': author_listing_count,
+            },
+            'investment': {
+                'active': bool(inv and inv.status == CampaignStatus.ACTIVE) if inv else False,
+                'funded': bool(inv and inv.status == CampaignStatus.FUNDED) if inv else False,
+            } if book.has_investment_campaign else None,
+        },
+    }
+    return jsonify(payload)
+
 
 @book_bp.route('/books/<int:book_id>/publish', methods=['POST'])
 @book_platform_required
@@ -3576,6 +3695,13 @@ def purchase_success():
         book_id = request.args.get('book_id') or request.form.get('book_id')
         session_id = request.args.get('session_id') or request.form.get('session_id')
         payment_intent_id = request.args.get('payment_intent') or request.form.get('payment_intent')
+        purchase_id_raw = request.args.get('purchase_id') or request.form.get('purchase_id')
+        purchase_id = None
+        if purchase_id_raw is not None and str(purchase_id_raw).strip() != '':
+            try:
+                purchase_id = int(purchase_id_raw)
+            except (TypeError, ValueError):
+                purchase_id = None
         
         if not book_id:
             # Try to get from localStorage data (if passed via redirect)
@@ -3797,6 +3923,11 @@ def stripe_webhook():
         payload = request.get_data()
         sig_header = request.headers.get('Stripe-Signature')
         
+        # Production: never accept unsigned webhooks
+        if not current_app.debug and (not webhook_secret or not stripe_available or not sig_header):
+            logger.error("Stripe webhook rejected: signature verification required in production")
+            return jsonify({'error': 'Webhook verification required'}), 503
+        
         # Verify webhook signature (if secret is configured and stripe is available)
         if webhook_secret and sig_header and stripe_available:
             try:
@@ -3810,7 +3941,7 @@ def stripe_webhook():
                 logger.error("Invalid signature in Stripe webhook")
                 return jsonify({'error': 'Invalid signature'}), 400
         else:
-            # No secret configured or stripe not available - parse JSON directly (development only)
+            # Development only: parse JSON without verification when DEBUG is on
             event = json.loads(payload)
         
         # Set Stripe API key if available (for retrieving additional payment info if needed)

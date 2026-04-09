@@ -6,7 +6,7 @@ Optimizes database queries to reduce N+1 problems and improve performance
 from functools import wraps
 from flask import current_app
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
-from sqlalchemy import func, desc, asc
+from sqlalchemy import func, desc, asc, or_, and_
 import time
 import logging
 
@@ -93,40 +93,125 @@ class DatabaseOptimizer:
         return book_user, authored_books, collaborations, notifications
     
     @staticmethod
-    @query_performance_monitor
-    def get_marketplace_books(limit=50, genre=None, language=None, search_term=None):
-        """Get marketplace books with optimized queries
-        Shows books that are published either:
-        - Platform-created books: status == PUBLISHED
-        - Uploaded digital books: digital_book_published == True
-        - Books with audiobooks: audiobook_published == True
-        """
-        from .book_platform_models import BookProject, BookStatus, BookPlatformUser
-        from sqlalchemy import or_
-        
-        query = BookProject.query.options(
-            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-        ).filter(
-            or_(
-                BookProject.status == BookStatus.PUBLISHED,  # Platform-created books
-                BookProject.digital_book_published == True,  # Published digital books
-                BookProject.audiobook_published == True      # Published audiobooks
-            )
+    def _marketplace_published_filter():
+        from .book_platform_models import BookProject, BookStatus
+        return or_(
+            BookProject.status == BookStatus.PUBLISHED,
+            BookProject.digital_book_published == True,
+            BookProject.audiobook_published == True,
         )
-        
+
+    @staticmethod
+    def marketplace_books_base_query(genre=None, language=None, search_term=None, price_range=None):
+        """
+        Base query for marketplace listings (no eager load — safe for count).
+        Search matches title, description, pen name, username, first/last name.
+        """
+        from .book_platform_models import BookProject, BookPlatformUser
+        from .models import User
+
+        query = BookProject.query.filter(DatabaseOptimizer._marketplace_published_filter())
+
         if genre:
             query = query.filter(BookProject.genre == genre)
-        
         if language:
             query = query.filter(BookProject.language == language)
-        
-        if search_term:
-            query = query.filter(
-                BookProject.title.ilike(f'%{search_term}%') |
-                BookProject.description.ilike(f'%{search_term}%')
+
+        if price_range:
+            pr = (price_range or "").strip()
+            if pr == "0-5":
+                query = query.filter(
+                    or_(BookProject.price.is_(None), BookProject.price <= 5)
+                )
+            elif pr == "5-10":
+                query = query.filter(
+                    and_(BookProject.price.isnot(None), BookProject.price > 5, BookProject.price <= 10)
+                )
+            elif pr == "10-20":
+                query = query.filter(
+                    and_(BookProject.price.isnot(None), BookProject.price > 10, BookProject.price <= 20)
+                )
+            elif pr == "20+":
+                query = query.filter(
+                    and_(BookProject.price.isnot(None), BookProject.price > 20)
+                )
+
+        st = (search_term or "").strip()
+        if st:
+            term = f"%{st}%"
+            query = (
+                query.join(BookPlatformUser, BookProject.author_id == BookPlatformUser.id)
+                .join(User, BookPlatformUser.user_id == User.user_id)
+                .filter(
+                    or_(
+                        BookProject.title.ilike(term),
+                        BookProject.description.ilike(term),
+                        BookPlatformUser.pen_name.ilike(term),
+                        User.username.ilike(term),
+                        User.first_name.ilike(term),
+                        User.last_name.ilike(term),
+                    )
+                )
             )
-        
-        return query.limit(limit).all()
+        return query
+
+    @staticmethod
+    @query_performance_monitor
+    def count_marketplace_books(genre=None, language=None, search_term=None, price_range=None):
+        return DatabaseOptimizer.marketplace_books_base_query(
+            genre=genre, language=language, search_term=search_term, price_range=price_range
+        ).count()
+
+    @staticmethod
+    @query_performance_monitor
+    def get_marketplace_books(
+        limit=20,
+        offset=0,
+        genre=None,
+        language=None,
+        search_term=None,
+        sort_by="newest",
+        price_range=None,
+    ):
+        """Paginated marketplace books with sort. Default sort: newest first."""
+        from .book_platform_models import BookProject, BookPlatformUser
+
+        query = DatabaseOptimizer.marketplace_books_base_query(
+            genre=genre, language=language, search_term=search_term, price_range=price_range
+        )
+        query = query.options(
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        )
+
+        sort_by = (sort_by or "newest").lower()
+        if sort_by == "oldest":
+            query = query.order_by(asc(BookProject.created_at), asc(BookProject.id))
+        elif sort_by == "price_low":
+            query = query.order_by(asc(BookProject.price), asc(BookProject.id))
+        elif sort_by == "price_high":
+            query = query.order_by(desc(BookProject.price), asc(BookProject.id))
+        elif sort_by == "title":
+            query = query.order_by(asc(BookProject.title), asc(BookProject.id))
+        elif sort_by == "popular":
+            query = query.order_by(desc(BookProject.total_sales), desc(BookProject.id))
+        else:
+            query = query.order_by(desc(BookProject.created_at), desc(BookProject.id))
+
+        return query.offset(offset).limit(limit).all()
+
+    @staticmethod
+    @query_performance_monitor
+    def get_marketplace_list_stats(genre=None, language=None, search_term=None, price_range=None):
+        """Totals for current filter (for marketplace sidebar)."""
+        from .book_platform_models import BookProject
+
+        total = DatabaseOptimizer.count_marketplace_books(
+            genre=genre, language=language, search_term=search_term, price_range=price_range
+        )
+        paid = DatabaseOptimizer.marketplace_books_base_query(
+            genre=genre, language=language, search_term=search_term, price_range=price_range
+        ).filter(BookProject.price > 0).count()
+        return {"total": total, "paid": paid, "free": max(0, total - paid)}
     
     @staticmethod
     @query_performance_monitor

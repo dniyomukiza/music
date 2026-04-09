@@ -38,8 +38,8 @@
                     <h1 class="display-4 fw-bold mb-3">
                         <i class="fas fa-store me-3"></i>Marketplace
                     </h1>
-                    <p class="lead mb-4">Discover amazing books from talented authors around the world</p>
-                    <p class="small opacity-90 mb-3"><i class="fas fa-heart me-1"></i>Turning Social Alignment into Financial Reality—patient capital for impactful work</p>
+                    <p class="lead mb-4">Discover digital books and audiobooks from independent authors—in multiple languages, with transparent community funding and fair revenue sharing.</p>
+                    <p class="small opacity-90 mb-3"><i class="fas fa-globe me-1"></i>Buy securely, support writers directly, and explore titles backed by readers and reviewers on Ink Studio.</p>
                     <!-- Action Buttons -->
                     <div class="mb-4 d-flex flex-wrap gap-3">
                         <a href="{{ url_for('book_platform.investments') }}" 
@@ -53,7 +53,7 @@
                     </div>
                     <div class="d-flex gap-3">
                         <span class="badge bg-white text-dark fs-6">
-                            <i class="fas fa-book me-2"></i>{{ books|length }} Books Available
+                            <i class="fas fa-book me-2"></i>{{ total_books }} {{ 'book' if total_books == 1 else 'books' }} in catalog
                         </span>
                     </div>
                 </div>
@@ -61,7 +61,7 @@
                     <div class="hero-stats">
                         <div class="stat-circle">
                             <i class="fas fa-book-open fa-2x"></i>
-                            <div class="stat-number">{{ books|length }}</div>
+                            <div class="stat-number">{{ total_books }}</div>
                             <div class="stat-label">Books</div>
                         </div>
                     </div>
@@ -82,7 +82,7 @@
                        class="btn btn-outline-primary category-btn {% if not selected_genre %}active{% endif %}"
                        data-genre="">
                         <i class="fas fa-th me-1"></i>All Books
-                        <span class="badge bg-primary ms-2">{{ books|length if not selected_genre else '' }}</span>
+                        <span class="badge bg-primary ms-2">{{ total_books if not selected_genre else '' }}</span>
                     </a>
                     {% if available_genres %}
                         {% for genre_info in available_genres %}
@@ -144,7 +144,7 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <form id="filterForm">
+                        <form id="filterForm" method="get" action="{{ url_for('book_platform.marketplace') }}">
                             <!-- Search -->
                             <div class="mb-4">
                                 <label for="search" class="form-label fw-bold">Search Books</label>
@@ -152,7 +152,7 @@
                                     <span class="input-group-text bg-primary text-white">
                                         <i class="fas fa-search"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="search" name="search" placeholder="Search by title, author..." value="{{ search_term or '' }}">
+                                    <input type="text" class="form-control" id="search" name="search" placeholder="Title, author, or description…" value="{{ search_term or '' }}" autocomplete="off">
                                 </div>
                             </div>
 
@@ -225,23 +225,23 @@
                             <div class="mb-3">
                                 <label for="priceRange" class="form-label">Price Range</label>
                                 <select class="form-select" id="priceRange" name="price_range">
-                                    <option value="">Any Price</option>
-                                    <option value="0-5">$0 - $5</option>
-                                    <option value="5-10">$5 - $10</option>
-                                    <option value="10-20">$10 - $20</option>
-                                    <option value="20+">$20+</option>
+                                    <option value="" {% if not selected_price_range %}selected{% endif %}>Any price</option>
+                                    <option value="0-5" {% if selected_price_range == '0-5' %}selected{% endif %}>$0 – $5</option>
+                                    <option value="5-10" {% if selected_price_range == '5-10' %}selected{% endif %}>$5 – $10</option>
+                                    <option value="10-20" {% if selected_price_range == '10-20' %}selected{% endif %}>$10 – $20</option>
+                                    <option value="20+" {% if selected_price_range == '20+' %}selected{% endif %}>$20+</option>
                                 </select>
                             </div>
 
                             <div class="mb-3">
                                 <label for="sortBy" class="form-label">Sort By</label>
                                 <select class="form-select" id="sortBy" name="sort_by">
-                                    <option value="newest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="price_low">Price: Low to High</option>
-                                    <option value="price_high">Price: High to Low</option>
-                                    <option value="title">Title A-Z</option>
-                                    <option value="popular">Most Popular</option>
+                                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest first</option>
+                                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest first</option>
+                                    <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
+                                    <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
+                                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title A–Z</option>
+                                    <option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>Bestselling</option>
                                 </select>
                             </div>
 
@@ -260,16 +260,16 @@
                     </div>
                     <div class="card-body">
                         <div class="stat-item">
-                            <span class="stat-number">{{ books|length }}</span>
-                            <span class="stat-label">Books Available</span>
+                            <span class="stat-number">{{ list_stats.total }}</span>
+                            <span class="stat-label">Matching listings</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">{{ books|selectattr('price')|list|length }}</span>
-                            <span class="stat-label">Paid Books</span>
+                            <span class="stat-number">{{ list_stats.paid }}</span>
+                            <span class="stat-label">Paid titles</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">{{ books|rejectattr('price')|list|length }}</span>
-                            <span class="stat-label">Free Books</span>
+                            <span class="stat-number">{{ list_stats.free }}</span>
+                            <span class="stat-label">Free titles</span>
                         </div>
                     </div>
                 </div>
@@ -284,10 +284,12 @@
                             <i class="fas fa-book-open me-2"></i>Available Books
                         </h3>
                         <p class="text-muted mb-0">
-                            {% if selected_genre %}
-                                Showing {{ books|length }} books in <strong>{{ selected_genre|title }}</strong>
+                            {% if total_books %}
+                                Showing <strong>{{ (page - 1) * per_page + 1 }}–{{ (page - 1) * per_page + books|length }}</strong>
+                                of <strong>{{ total_books }}</strong>
+                                {% if selected_genre %} in <strong>{{ selected_genre|title }}</strong>{% endif %}
                             {% else %}
-                                Showing {{ books|length }} books in the marketplace
+                                No books match your filters.
                             {% endif %}
                         </p>
                     </div>
@@ -313,12 +315,13 @@
                 <div class="row g-4" id="booksGrid">
                     {% if books %}
                         {% for book in books %}
-                            <div class="col-lg-4 col-md-6">
+                            <div class="col-lg-4 col-md-6 marketplace-card">
                                 <div class="book-card h-100">
                                     <div class="card border-0 shadow-sm h-100">
                                         <div class="book-cover-container">
-                                            {% if book.cover_image %}
-                                                <img src="{{ book.cover_image }}" class="book-cover-img" alt="{{ book.title }}">
+                                            {% set cover_u = marketplace_cover_url(book) %}
+                                            {% if cover_u %}
+                                                <img src="{{ cover_u }}" class="book-cover-img" alt="{{ book.title }}">
                                             {% else %}
                                                 <div class="book-cover-placeholder">
                                                     <i class="fas fa-book fa-3x text-muted"></i>
@@ -337,14 +340,15 @@
                                             </div>
                                         </div>
                                         <div class="card-body d-flex flex-column">
-                                            <h5 class="card-title text-dark mb-2">{{ book.title }}</h5>
-                                            <p class="card-text text-muted small mb-2">
+                                            <h5 class="card-title text-dark mb-2 book-title">{{ book.title }}</h5>
+                                            <p class="card-text text-muted small mb-2 book-author">
                                                 <i class="fas fa-user me-1"></i>by 
                                                 <a href="#" class="text-primary text-decoration-none author-link" 
                                                    onclick="showAuthorDetails({{ book.author.id }}, event)">
                                                     {{ book.author.pen_name or book.author.user.username }}
                                                 </a>
                                             </p>
+                                            <span class="book-price visually-hidden">{% if book.price and book.price > 0 %}${{ "%.2f"|format(book.price) }}{% else %}Free{% endif %}</span>
                                             
                                             {% if book.description %}
                                                 <p class="card-text small text-muted mb-3">
@@ -353,21 +357,19 @@
                                             {% endif %}
                                             
                                             <div class="book-meta mb-3">
-                                                <span class="badge bg-primary me-1">{{ book.genre or 'No genre' }}</span>
+                                                <span class="badge bg-primary me-1 badge-info">{{ book.genre or 'No genre' }}</span>
                                                 {% if book.word_count %}
                                                     <span class="badge bg-secondary">{{ book.word_count }} words</span>
                                                 {% endif %}
                                             </div>
                                             
-                                            <div class="book-rating mb-3">
-                                                <div class="stars text-warning">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="far fa-star"></i>
-                                                </div>
-                                                <span class="rating-text text-muted small ms-2">(4.2)</span>
+                                            <div class="book-meta-extra mb-3 d-flex flex-wrap gap-1 align-items-center">
+                                                {% if book.language %}
+                                                    <span class="badge rounded-pill bg-info text-dark">{{ book.language|upper }}</span>
+                                                {% endif %}
+                                                {% if book.total_sales and book.total_sales > 0 %}
+                                                    <span class="badge rounded-pill bg-light text-muted border"><i class="fas fa-shopping-bag me-1"></i>{{ book.total_sales }} sold</span>
+                                                {% endif %}
                                             </div>
                                             
                                             <div class="mt-auto">
@@ -426,26 +428,34 @@
                     {% endif %}
                 </div>
 
-                <!-- Pagination -->
-                {% if books|length > 12 %}
-                    <nav aria-label="Books pagination" class="mt-4">
-                        <ul class="pagination justify-content-center">
-                            <li class="page-item disabled">
-                                <span class="page-link">Previous</span>
+                {% if total_pages > 1 %}
+                    <nav aria-label="Books pagination" class="mt-5 mb-4">
+                        <ul class="pagination justify-content-center flex-wrap gap-1">
+                            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                                {% if page > 1 %}
+                                    <a class="page-link" href="{{ url_for('book_platform.marketplace', page=page-1, genre=selected_genre, language=selected_language, search=search_term if search_term else none, sort_by=selected_sort, price_range=selected_price_range) }}">Previous</a>
+                                {% else %}
+                                    <span class="page-link">Previous</span>
+                                {% endif %}
                             </li>
-                            <li class="page-item active">
-                                <span class="page-link">1</span>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="#">2</a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="#">3</a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="#">Next</a>
+                            {% if total_pages <= 20 %}
+                                {% for p in range(1, total_pages + 1) %}
+                                    <li class="page-item {% if p == page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('book_platform.marketplace', page=p, genre=selected_genre, language=selected_language, search=search_term if search_term else none, sort_by=selected_sort, price_range=selected_price_range) }}">{{ p }}</a>
+                                    </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">{{ page }} / {{ total_pages }}</span></li>
+                            {% endif %}
+                            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                {% if page < total_pages %}
+                                    <a class="page-link" href="{{ url_for('book_platform.marketplace', page=page+1, genre=selected_genre, language=selected_language, search=search_term if search_term else none, sort_by=selected_sort, price_range=selected_price_range) }}">Next</a>
+                                {% else %}
+                                    <span class="page-link">Next</span>
+                                {% endif %}
                             </li>
                         </ul>
+                        <p class="text-center text-muted small mb-0">Page {{ page }} of {{ total_pages }}</p>
                     </nav>
                 {% endif %}
             </div>
@@ -463,9 +473,9 @@
                 <div class="modal-body" id="bookDetailsBody">
                     <!-- Book details will be loaded here -->
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="purchaseButton">Purchase</button>
+                <div class="modal-footer flex-wrap gap-2 justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <div class="d-flex flex-wrap gap-2 justify-content-end" id="bookDetailsActions"></div>
                 </div>
             </div>
         </div>
@@ -532,28 +542,26 @@
     <script>
         // Search functionality
         function searchBooks() {
-            const searchTerm = document.getElementById('searchInput').value;
-            const genre = document.getElementById('genre').value;
-            const language = document.getElementById('language').value;
-            
-            // Build URL with parameters
+            const searchTerm = (document.getElementById('searchInput') || {}).value || '';
+            const genreEl = document.getElementById('genre');
+            const languageEl = document.getElementById('language');
+            const sortEl = document.getElementById('sortBy');
+            const priceEl = document.getElementById('priceRange');
+            const genre = genreEl ? genreEl.value : '';
+            const language = languageEl ? languageEl.value : '';
+            const sort_by = sortEl ? sortEl.value : 'newest';
+            const price_range = priceEl ? priceEl.value : '';
+
             let url = '{{ url_for("book_platform.marketplace") }}';
             const params = new URLSearchParams();
-            
-            if (genre) {
-                params.append('genre', genre);
-            }
-            if (language) {
-                params.append('language', language);
-            }
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-            
-            if (params.toString()) {
-                url += '?' + params.toString();
-            }
-            
+            params.append('page', '1');
+            if (genre) params.append('genre', genre);
+            if (language) params.append('language', language);
+            if (searchTerm.trim()) params.append('search', searchTerm.trim());
+            if (sort_by) params.append('sort_by', sort_by);
+            if (price_range) params.append('price_range', price_range);
+
+            url += '?' + params.toString();
             window.location.href = url;
         }
 
@@ -597,68 +605,146 @@
                     }
                 }
                 
-                bookCard.parentElement.style.display = show ? 'block' : 'none';
+                bookCard.style.display = show ? '' : 'none';
             });
         }
 
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const d = document.createElement('div');
+            d.textContent = String(text);
+            return d.innerHTML;
+        }
+
         function viewBook(bookId) {
-            // In a real implementation, this would fetch book details from the server
             const modalEl = document.getElementById('bookDetailsModal');
-            if (!modalEl) {
-                console.error('bookDetailsModal not found');
-                return;
-            }
+            if (!modalEl) return;
             const modal = new bootstrap.Modal(modalEl);
-            
             const titleEl = document.getElementById('bookDetailsTitle');
-            if (titleEl) {
-                titleEl.textContent = 'Book Details';
-            }
-            
             const bodyEl = document.getElementById('bookDetailsBody');
-            if (!bodyEl) {
-                console.error('bookDetailsBody not found');
-                return;
-            }
+            const actionsEl = document.getElementById('bookDetailsActions');
+            if (!bodyEl || !actionsEl) return;
+
+            if (titleEl) titleEl.textContent = 'Loading…';
+            actionsEl.innerHTML = '';
             bodyEl.innerHTML = `
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Loading book details...</p>
-                </div>
-            `;
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading…</span></div>
+                    <p class="mt-3 text-muted mb-0">Loading book details…</p>
+                </div>`;
             modal.show();
-            
-            // Simulate loading book details
-            setTimeout(() => {
-                const bodyEl = document.getElementById('bookDetailsBody');
-                if (bodyEl) {
-                    bodyEl.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="book-cover-placeholder text-center">
-                                <i class="fas fa-book fa-3x"></i>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <h4>Sample Book Title</h4>
-                            <p class="text-muted">by Sample Author</p>
-                            <p>This is a sample book description that would be loaded from the database.</p>
-                            <div class="book-meta">
-                                <span class="badge badge-info">Fiction</span>
-                                <span class="badge badge-secondary">50,000 words</span>
-                            </div>
-                            <div class="book-price-section mt-3">
-                                <div class="book-price">$9.99</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                } else {
-                    console.error('bookDetailsBody not found in setTimeout');
-                }
-            }, 1000);
+
+            fetch('/mybook/api/marketplace/books/' + encodeURIComponent(bookId), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+                .then(function (r) {
+                    return r.json().then(function (data) {
+                        if (!r.ok) throw new Error((data && data.error) || 'Could not load this book.');
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    if (!data.success || !data.book) throw new Error('Invalid response');
+                    const b = data.book;
+                    if (titleEl) titleEl.textContent = b.title;
+
+                    const coverBlock = b.cover_url
+                        ? '<div class="col-md-4 text-center mb-3 mb-md-0"><img src="' + escapeHtml(b.cover_url) + '" class="img-fluid rounded shadow" alt=""></div>'
+                        : '<div class="col-md-4 text-center mb-3 mb-md-0"><div class="book-cover-placeholder rounded d-flex align-items-center justify-content-center bg-light" style="min-height:220px"><i class="fas fa-book fa-4x text-muted"></i></div></div>';
+
+                    const descHtml = escapeHtml(b.description || '').replace(/\n/g, '<br>');
+                    const priceDigital = b.price != null ? Number(b.price) : null;
+                    const priceAudio = b.audiobook_price != null ? Number(b.audiobook_price) : null;
+                    const fmtDigital = b.formats && b.formats.digital;
+                    const fmtAudio = b.formats && b.formats.audiobook;
+
+                    let investBadge = '';
+                    if (b.investment && (b.investment.active || b.investment.funded)) {
+                        investBadge = '<span class="badge bg-success ms-1">Community-funded</span>';
+                    }
+
+                    bodyEl.innerHTML =
+                        '<div class="row">' +
+                        coverBlock +
+                        '<div class="col-md-8">' +
+                        '<p class="text-muted mb-2"><i class="fas fa-user-edit me-1"></i>by <strong>' + escapeHtml(b.author.name) + '</strong>' +
+                        (b.author.marketplace_book_count > 1 ? ' <span class="small">(' + b.author.marketplace_book_count + ' titles)</span>' : '') +
+                        '</p>' +
+                        '<div class="d-flex flex-wrap gap-1 mb-3">' +
+                        (b.genre ? '<span class="badge bg-primary">' + escapeHtml(b.genre) + '</span>' : '') +
+                        '<span class="badge bg-secondary">' + escapeHtml(b.language_label || b.language || '') + '</span>' +
+                        (b.word_count ? '<span class="badge bg-light text-dark border">' + b.word_count.toLocaleString() + ' words</span>' : '') +
+                        investBadge +
+                        '</div>' +
+                        '<div class="book-description text-muted small" style="line-height:1.65">' + (descHtml || '<em>No description yet.</em>') + '</div>' +
+                        '<div class="mt-4 pt-3 border-top">' +
+                        '<p class="small text-muted mb-1"><strong>Formats</strong></p>' +
+                        '<ul class="small mb-0">' +
+                        (fmtDigital ? '<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + (priceDigital != null && priceDigital > 0 ? ' — <strong>$' + priceDigital.toFixed(2) + '</strong>' : ' — <strong>Free</strong>') + '</li>' : '') +
+                        (fmtAudio ? '<li>Audiobook' + (priceAudio != null && priceAudio > 0 ? ' — <strong>$' + priceAudio.toFixed(2) + '</strong>' : ' — <strong>Free</strong>') + '</li>' : '') +
+                        (!fmtDigital && !fmtAudio ? '<li class="text-muted">See listing for availability.</li>' : '') +
+                        '</ul></div></div></div>';
+
+                    actionsEl.innerHTML = '';
+                    const closeModal = function () {
+                        const inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    };
+
+                    if (fmtDigital) {
+                        if (priceDigital != null && priceDigital > 0) {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-success';
+                            btn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>Buy digital';
+                            btn.addEventListener('click', function () {
+                                closeModal();
+                                showPurchaseModal(b.id, priceDigital, false);
+                            });
+                            actionsEl.appendChild(btn);
+                        } else {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-outline-primary';
+                            btn.innerHTML = '<i class="fas fa-download me-1"></i>Free download';
+                            btn.addEventListener('click', function () {
+                                window.open('/mybook/books/' + b.id + '/download', '_blank');
+                            });
+                            actionsEl.appendChild(btn);
+                        }
+                    }
+                    if (fmtAudio) {
+                        if (priceAudio != null && priceAudio > 0) {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-warning text-dark';
+                            btn.innerHTML = '<i class="fas fa-headphones me-1"></i>Buy audiobook';
+                            btn.addEventListener('click', function () {
+                                closeModal();
+                                showPurchaseModal(b.id, priceAudio, true);
+                            });
+                            actionsEl.appendChild(btn);
+                        } else {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-outline-warning';
+                            btn.innerHTML = '<i class="fas fa-headphones me-1"></i>Listen free';
+                            btn.addEventListener('click', function () {
+                                window.open('/mybook/audiobook/' + b.id + '/player', '_blank');
+                            });
+                            actionsEl.appendChild(btn);
+                        }
+                    }
+                })
+                .catch(function (err) {
+                    console.error(err);
+                    if (titleEl) titleEl.textContent = 'Book unavailable';
+                    bodyEl.innerHTML =
+                        '<div class="alert alert-warning mb-0"><i class="fas fa-exclamation-triangle me-2"></i>' +
+                        escapeHtml(err.message || 'Something went wrong.') +
+                        '</div>';
+                });
         }
 
         function purchaseBook(bookId) {
@@ -1172,7 +1258,24 @@
             });
         }
 
-        // Search input enter key
+        // Search input enter key + sync sidebar / top search fields
+        document.addEventListener('DOMContentLoaded', function () {
+            const sideSearch = document.getElementById('search');
+            const topSearch = document.getElementById('searchInput');
+            if (sideSearch && topSearch) {
+                if (!topSearch.value && sideSearch.value) topSearch.value = sideSearch.value;
+                topSearch.addEventListener('input', function () {
+                    sideSearch.value = topSearch.value;
+                });
+            }
+            const ff = document.getElementById('filterForm');
+            if (ff && topSearch && sideSearch) {
+                ff.addEventListener('submit', function () {
+                    sideSearch.value = topSearch.value || sideSearch.value;
+                });
+            }
+        });
+
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('keypress', function(e) {
