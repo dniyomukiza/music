@@ -1,5 +1,4 @@
 #EXTM3U
-# Manual TV paths (always merged first into videolist.m3u on admin TV sync / download).
-# e.g. local bumpers or files under /liqfolder/video/
-/liqfolder/video/tvjingle.mp4
-/liqfolder/video/tvjingle2.mp4
+# Manual TV paths (merged first into videolist.m3u on admin TV sync).
+# Put full programs here, e.g. /liqfolder/video/myshow.mp4
+# Do NOT list bumpers here — those belong only in tv_jingles.m3u
