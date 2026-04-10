@@ -5166,145 +5166,50 @@ def download_audio_book(book_id):
 # REVIEWER & INVESTMENT SYSTEM ROUTES
 # ============================================================================
 
+def _accredited_book_reviews_disabled_flash():
+    flash(
+        'Accredited book reviews are no longer offered on Ink Studio. '
+        'Collaboration roles, admin tools, and existing payouts are unchanged.',
+        'info',
+    )
+
+
+def _accredited_book_reviews_disabled_redirect_public():
+    _accredited_book_reviews_disabled_flash()
+    if current_user.is_authenticated:
+        return redirect(url_for('book_platform.dashboard'))
+    return redirect(url_for('routes1.login'))
+
+
 # Reviewer Registration
 @book_bp.route('/reviewers/register', methods=['GET', 'POST'])
 @login_required
 def register_reviewer():
     """Register as an accredited reviewer"""
-    # Check if already registered
-    existing_reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
-    if existing_reviewer:
-        flash('You are already registered as a reviewer.', 'info')
-        return redirect(url_for('book_platform.reviewer_profile', reviewer_id=existing_reviewer.id))
-    
-    form = ReviewerRegistrationForm()
-    
-    if form.validate_on_submit():
-        try:
-            # Parse specialties
-            specialties = []
-            if form.specialties.data:
-                specialties = [s.strip() for s in form.specialties.data.split(',') if s.strip()]
-            
-            # Handle profile picture upload
-            profile_picture_path = None
-            if form.profile_picture.data and form.profile_picture.data.filename:
-                upload_folder = os.path.join(current_app.root_path, 'static', 'reviewer_uploads')
-                os.makedirs(upload_folder, exist_ok=True)
-                filename = secure_filename(form.profile_picture.data.filename)
-                filepath = os.path.join(upload_folder, filename)
-                form.profile_picture.data.save(filepath)
-                profile_picture_path = f"reviewer_uploads/{filename}"
-            
-            # Create reviewer profile
-            reviewer = AccreditedReviewer(
-                user_id=current_user.user_id,
-                reviewer_name=form.reviewer_name.data,
-                bio=form.bio.data,
-                profile_picture=profile_picture_path,
-                portfolio_url=form.portfolio_url.data,
-                specialties=specialties if specialties else None,
-                credentials=form.credentials.data,
-                default_revenue_share_percentage=form.default_revenue_share.data or 2.5,
-                accreditation_status=ReviewerStatus.PENDING
-            )
-            
-            db.session.add(reviewer)
-            db.session.commit()
-            
-            flash('Reviewer application submitted! It will be reviewed by our team.', 'success')
-            return redirect(url_for('book_platform.reviewers'))
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error registering reviewer: {str(e)}", exc_info=True)
-            flash(f'An error occurred: {str(e)}', 'error')
-    
-    return render_template('book_platform/register_reviewer.html', form=form)
+    _accredited_book_reviews_disabled_flash()
+    return redirect(url_for('book_platform.dashboard'))
 
 # Reviewer Marketplace
 @book_bp.route('/reviewers', methods=['GET'])
 def reviewers():
     """Browse accredited reviewers"""
-    status_filter = request.args.get('status', 'accredited')
-    genre_filter = request.args.get('genre', '')
-    search_query = request.args.get('q', '')
-    
-    query = AccreditedReviewer.query
-    
-    if status_filter == 'accredited':
-        query = query.filter_by(accreditation_status=ReviewerStatus.ACCREDITED)
-    elif status_filter == 'all':
-        pass  # Show all
-    
-    if genre_filter:
-        query = query.filter(AccreditedReviewer.specialties.contains([genre_filter]))
-    
-    if search_query:
-        query = query.filter(
-            db.or_(
-                AccreditedReviewer.reviewer_name.ilike(f'%{search_query}%'),
-                AccreditedReviewer.bio.ilike(f'%{search_query}%')
-            )
-        )
-    
-    reviewers_list = query.order_by(AccreditedReviewer.average_rating.desc()).all()
-    
-    return render_template('book_platform/reviewers.html', 
-                         reviewers=reviewers_list,
-                         status_filter=status_filter,
-                         genre_filter=genre_filter,
-                         search_query=search_query)
+    return _accredited_book_reviews_disabled_redirect_public()
 
 # Books seeking review - visible to accredited reviewers (pending requests addressed to them)
 @book_bp.route('/reviewers/books-seeking-review', methods=['GET'])
 @login_required
 def books_seeking_review():
     """Reviewers see books with pending review requests addressed to them"""
-    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
-    if not reviewer:
-        flash('Reviewer profile required to view this page.', 'info')
-        return redirect(url_for('book_platform.reviewers'))
-    if reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
-        flash('You must be an accredited reviewer to view review requests.', 'warning')
-        return redirect(url_for('book_platform.reviewers'))
-    
-    pending_requests = ReviewRequest.query.filter_by(
-        reviewer_id=reviewer.id,
-        status=ReviewRequestStatus.PENDING
-    ).options(
-        joinedload(ReviewRequest.book_project).joinedload(BookProject.author),
-        joinedload(ReviewRequest.requested_by)
-    ).order_by(ReviewRequest.created_at.desc()).all()
-    
-    return render_template('book_platform/books_seeking_review.html',
-        pending_requests=pending_requests,
-        reviewer=reviewer
-    )
+    _accredited_book_reviews_disabled_flash()
+    return redirect(url_for('book_platform.dashboard'))
 
 
 # Reviewer Profile
 @book_bp.route('/reviewers/<int:reviewer_id>', methods=['GET'])
 def reviewer_profile(reviewer_id):
     """View reviewer profile"""
-    reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
-    reviews = BookReview.query.filter_by(reviewer_id=reviewer_id, status=ReviewStatus.PUBLISHED).all()
-    
-    # Get author's books if user is logged in and is an author
-    author_books = []
-    is_author = False
-    if current_user.is_authenticated:
-        user_profile, profile_type = get_user_profile()
-        if user_profile:
-            author_id = get_profile_id(user_profile, profile_type)
-            author_books = BookProject.query.filter_by(author_id=author_id).all()
-            is_author = len(author_books) > 0
-    
-    return render_template('book_platform/reviewer_profile.html', 
-                         reviewer=reviewer, 
-                         reviews=reviews,
-                         author_books=author_books,
-                         is_author=is_author)
+    AccreditedReviewer.query.get_or_404(reviewer_id)
+    return _accredited_book_reviews_disabled_redirect_public()
 
 # Helper function to send reviewer invitation email
 def send_reviewer_invitation_email(reviewer, book, inviter, message=None):
@@ -5374,42 +5279,10 @@ Ink Studio Team
 @writer_or_book_platform_required
 def invite_reviewer(reviewer_id, user_profile, profile_type):
     """Invite a reviewer to review a book"""
-    reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
-    
-    # Get the correct author ID based on profile type
-    author_id = get_profile_id(user_profile, profile_type)
-    
-    # Get the BookPlatformUser object for the inviter
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    if not book_user:
-        return jsonify({'error': 'Ink Studio profile required'}), 403
-    
-    data = request.get_json()
-    book_id = data.get('book_id')
-    
-    if not book_id:
-        return jsonify({'error': 'Book ID is required'}), 400
-    
-    book = BookProject.query.get_or_404(book_id)
-    
-    # Only author can invite reviewers for their own books
-    if book.author_id != author_id:
-        return jsonify({'error': 'You can only invite reviewers for your own books'}), 403
-    
-    # Check if reviewer is accredited
-    if reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
-        return jsonify({'error': 'This reviewer is not currently accredited'}), 400
-    
-    # Send email invitation via Mailtrap
-    try:
-        message = data.get('message', '')
-        send_reviewer_invitation_email(reviewer, book, book_user, message)
-        logger.info(f"Reviewer invitation sent: Reviewer {reviewer_id} invited to review book {book_id} by author {author_id}")
-    except Exception as e:
-        logger.error(f"Failed to send reviewer invitation email: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Failed to send invitation email'}), 500
-    
-    return jsonify({'success': True, 'message': f'Invitation sent to {reviewer.reviewer_name}'})
+    return jsonify({
+        'success': False,
+        'error': 'Accredited book reviews are no longer available.',
+    }), 410
 
 # Request Review for Book
 @book_bp.route('/books/<int:book_id>/request-review', methods=['GET', 'POST'])
@@ -5423,131 +5296,17 @@ def request_review(book_id, user_profile, profile_type):
         flash('You can only request reviews for your own books.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
-    if request.method == 'POST':
-        reviewer_id = request.form.get('reviewer_id')
-        agreed_fee = request.form.get('agreed_fee')
-        if reviewer_id:
-            reviewer = AccreditedReviewer.query.get(reviewer_id)
-            if reviewer and reviewer.accreditation_status == ReviewerStatus.ACCREDITED:
-                book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-                if not book_user:
-                    flash('Ink Studio profile required.', 'error')
-                    return redirect(url_for('book_platform.view_book', book_id=book_id))
-                # Avoid duplicate pending request
-                existing = ReviewRequest.query.filter_by(
-                    book_project_id=book_id,
-                    reviewer_id=reviewer.id,
-                    requested_by_id=book_user.id
-                ).filter(ReviewRequest.status.in_([
-                    ReviewRequestStatus.PENDING, ReviewRequestStatus.ACCEPTED, ReviewRequestStatus.IN_PROGRESS
-                ])).first()
-                if existing:
-                    flash(f'You already have a pending review request with {reviewer.reviewer_name}.', 'info')
-                    return redirect(url_for('book_platform.view_book', book_id=book_id))
-                try:
-                    fee = float(agreed_fee) if agreed_fee and str(agreed_fee).strip() else None
-                    if fee is not None and fee < 0:
-                        fee = None
-                except (ValueError, TypeError):
-                    fee = None
-                req = ReviewRequest(
-                    book_project_id=book_id,
-                    reviewer_id=reviewer.id,
-                    requested_by_id=book_user.id,
-                    agreed_fee=fee,
-                    status=ReviewRequestStatus.PENDING
-                )
-                db.session.add(req)
-                db.session.commit()
-                try:
-                    send_reviewer_invitation_email(reviewer, book, book_user, message=f'Review request for "{book.title}".' + (f' Agreed fee: ${fee:.2f}' if fee else ''))
-                except Exception:
-                    pass
-                flash(f'Review request sent to {reviewer.reviewer_name}. They will be notified.' + (f' Agreed fee: ${fee:.2f}' if fee else ''), 'success')
-                return redirect(url_for('book_platform.view_book', book_id=book_id))
-    
-    # Get available reviewers
-    available_reviewers = AccreditedReviewer.query.filter_by(
-        accreditation_status=ReviewerStatus.ACCREDITED
-    ).all()
-    
-    return render_template('book_platform/request_review.html', 
-                         book=book, 
-                         reviewers=available_reviewers)
+    _accredited_book_reviews_disabled_flash()
+    return redirect(url_for('book_platform.view_book', book_id=book_id))
 
 # Submit Review
 @book_bp.route('/books/<int:book_id>/reviews/submit', methods=['GET', 'POST'])
 @login_required
 def submit_review(book_id):
     """Reviewer submits a review for a book"""
-    book = BookProject.query.get_or_404(book_id)
-    
-    # Check if user is an accredited reviewer
-    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
-    if not reviewer or reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
-        flash('You must be an accredited reviewer to submit reviews.', 'error')
-        return redirect(url_for('book_platform.register_reviewer'))
-    
-    # Prevent authors from reviewing their own books
-    if book.author and book.author.user_id == current_user.user_id:
-        flash('You cannot review your own book.', 'error')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
-    
-    # Check if already reviewed
-    existing_review = BookReview.query.filter_by(
-        book_project_id=book_id,
-        reviewer_id=reviewer.id
-    ).first()
-    
-    if existing_review:
-        flash('You have already submitted a review for this book.', 'info')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
-    
-    form = BookReviewForm()
-    
-    if form.validate_on_submit():
-        try:
-            # Link to review request if author sent one with agreed fee
-            review_request = ReviewRequest.query.filter_by(
-                book_project_id=book_id,
-                reviewer_id=reviewer.id
-            ).filter(ReviewRequest.status.in_([ReviewRequestStatus.PENDING, ReviewRequestStatus.ACCEPTED])).first()
-            agreed_fee = review_request.agreed_fee if review_request else None
-            review_request_id = review_request.id if review_request else None
-            if review_request:
-                review_request.status = ReviewRequestStatus.IN_PROGRESS
-            
-            review = BookReview(
-                book_project_id=book_id,
-                reviewer_id=reviewer.id,
-                title=form.title.data,
-                content=form.content.data,
-                rating=form.rating.data,
-                revenue_share_percentage=form.revenue_share_percentage.data,
-                minimum_sales_threshold=form.minimum_sales_threshold.data or 0,
-                is_public=form.is_public.data,
-                status=ReviewStatus.SUBMITTED,
-                submitted_at=datetime.now(timezone.utc),
-                agreed_fee=agreed_fee,
-                review_request_id=review_request_id
-            )
-            
-            db.session.add(review)
-            
-            # Update reviewer stats
-            reviewer.total_reviews += 1
-            
-            db.session.commit()
-            
-            flash('Review submitted successfully! It will be published after author approval.', 'success')
-            return redirect(url_for('book_platform.view_book', book_id=book_id))
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error submitting review: {str(e)}", exc_info=True)
-            flash(f'An error occurred: {str(e)}', 'error')
-    
-    return render_template('book_platform/submit_review.html', form=form, book=book)
+    BookProject.query.get_or_404(book_id)
+    _accredited_book_reviews_disabled_flash()
+    return redirect(url_for('book_platform.view_book', book_id=book_id))
 
 
 # Author publishes a submitted review (and records task completion / fixed-fee earning)

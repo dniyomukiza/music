@@ -35,11 +35,6 @@
                             <i class="fas fa-book-open"></i> My Books
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.reviewers') }}">
-                            <i class="fas fa-star"></i> Reviewers
-                        </a>
-                    </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
@@ -145,11 +140,6 @@
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-primary btn-lg">
                             <i class="fas fa-th-large me-2"></i>Content Hub
                         </a>
-                        {% if current_user.role not in ['podcaster', 'other'] %}
-                        <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-primary btn-lg">
-                            <i class="fas fa-star me-2"></i>Become a Reviewer
-                        </a>
-                        {% endif %}
                         <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-success btn-lg">
                             <i class="fas fa-chart-line me-2"></i>Browse Investments
                         </a>
@@ -698,54 +688,6 @@
                 {% if not is_author %}
                 <!-- Regular User Content (Non-Authors) -->
                 
-                <!-- Reviewer Status Section (Not for podcasters, freelancers, bloggers, artists) -->
-                {% if current_user.role not in ['podcaster', 'freelancer', 'blogger', 'artist'] %}
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white border-0">
-                        <h5 class="card-title text-primary mb-0">
-                            <i class="fas fa-star me-2"></i>Reviewer Status
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        {% if user_reviewer_profile %}
-                            {% if user_reviewer_profile.accreditation_status.value == 'accredited' %}
-                            <div class="alert alert-success">
-                                <i class="fas fa-check-circle me-2"></i>
-                                <strong>You are an Accredited Reviewer!</strong>
-                                <p class="mb-0 mt-2">You can now submit reviews and earn from book sales.</p>
-                                <a href="{{ url_for('book_platform.books_seeking_review') }}" class="btn btn-sm btn-success mt-2 me-2">
-                                    <i class="fas fa-search me-1"></i>Books Seeking Your Review
-                                </a>
-                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-sm btn-outline-success mt-2">
-                                    Browse Review Opportunities
-                                </a>
-                            </div>
-                            {% elif user_reviewer_profile.accreditation_status.value == 'pending' %}
-                            <div class="alert alert-warning">
-                                <i class="fas fa-clock me-2"></i>
-                                <strong>Reviewer Application Pending</strong>
-                                <p class="mb-0 mt-2">Your application is being reviewed. We'll notify you once it's approved.</p>
-                            </div>
-                            {% else %}
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>Reviewer Status: {{ user_reviewer_profile.accreditation_status.value|title }}</strong>
-                            </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="text-center py-3">
-                                <i class="fas fa-star fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted mb-3">Become an Accredited Reviewer</h5>
-                                <p class="text-muted mb-4">Earn money by reviewing books and helping authors improve their work.</p>
-                                <a href="{{ url_for('book_platform.register_reviewer') }}" class="btn btn-primary">
-                                    <i class="fas fa-user-plus me-2"></i>Register as Reviewer
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
                 <!-- My Investments Section (Not for podcasters, freelancers, bloggers, artists) -->
                 {% if current_user.role not in ['podcaster', 'freelancer', 'blogger', 'artist'] %}
                 {% if user_investments %}
@@ -818,13 +760,6 @@
                                     <i class="fas fa-dollar-sign me-2"></i>View Earnings
                                 </a>
                             </div>
-                            {% if is_author %}
-                            <div class="col-md-4">
-                                <a href="{{ url_for('book_platform.reviewers') }}" class="btn btn-outline-warning w-100">
-                                    <i class="fas fa-star me-2"></i>Find Reviewers
-                                </a>
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
