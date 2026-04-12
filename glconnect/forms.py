@@ -145,17 +145,19 @@ class DigitalBookUploadForm(FlaskForm):
         FileAllowed(['pdf', 'epub', 'docx', 'txt'], 'Only PDF, EPUB, DOCX, and TXT files are allowed!')
     ])
     cover_image = FileField('Cover Image', validators=[
-        DataRequired(message='Please upload a cover image for your marketplace listing.'),
+        Optional(),
         FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Cover must be JPG, PNG, GIF, or WebP.')
     ])
-    
+    use_ai_cover = BooleanField('Generate cover with AI')
+    cover_art_brief = TextAreaField('Cover art direction (for AI)', validators=[Optional(), Length(max=2000)])
+
     # Pricing
     digital_price = FloatField('Digital Book Price (USD)', validators=[Optional()])
     generate_audiobook = BooleanField('Generate Audiobook Version')
     audiobook_price = FloatField('Audiobook Price (USD)', validators=[Optional()])
     audiobook_voice = StringField('Audiobook Voice', validators=[Optional()], default='en-US-Standard-A')
     
-    submit = SubmitField('Upload Digital Book')
+    submit = SubmitField('List on marketplace')
     recap = RecaptchaField(validators=[])  # Make optional - can be validated conditionally
 
 # Reviewer Registration Form

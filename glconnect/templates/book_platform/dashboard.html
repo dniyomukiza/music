@@ -35,6 +35,11 @@
                             <i class="fas fa-book-open"></i> My Books
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.author_my_listings') }}">
+                            <i class="fas fa-chart-bar"></i> Listings &amp; performance
+                        </a>
+                    </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
@@ -87,16 +92,19 @@
                 <div class="col-lg-8">
                     {% if is_author and current_user.role == 'author' %}
                     <h1 class="display-4 fw-bold mb-3">Welcome, {{ user_profile.pen_name or current_user.first_name or current_user.username }}!</h1>
-                    <p class="lead mb-4">Your professional writing platform for creating, collaborating, and publishing digital books</p>
+                    <p class="lead mb-4">Treat Ink Studio as your <strong>Amazon-style book store</strong> for indies: publish to the marketplace, add <strong>AI covers</strong> and <strong>TTS audiobooks</strong>, and reach readers worldwide. <strong>Ink Studio Live</strong> radio spotlights reviews and author interviews—listen from the player on most pages or explore the content hub.</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-plus-circle me-2"></i>Start Writing
                         </a>
                         <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-success btn-lg">
-                            <i class="fas fa-upload me-2"></i>Upload Existing Book
+                            <i class="fas fa-plus-circle me-2"></i>List your book
                         </a>
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
                             <i class="fas fa-store me-2"></i>Browse Marketplace
+                        </a>
+                        <a href="{{ url_for('book_platform.author_my_listings') }}" class="btn btn-outline-light btn-lg border-2">
+                            <i class="fas fa-chart-bar me-2"></i>Listings &amp; performance
                         </a>
                     </div>
                     {% elif is_freelancer or current_user.role == 'freelancer' %}
@@ -476,6 +484,11 @@
                                                                     data-book-title="{{ book.title }}">
                                                                 <i class="fas fa-trash me-1"></i>Delete
                                                             </button>
+                                                        </div>
+                                                        <div class="d-flex flex-wrap gap-1 justify-content-center mt-2">
+                                                            <a href="{{ url_for('book_platform.book_analytics', book_id=book.id) }}" class="small text-decoration-none">Analytics</a>
+                                                            <span class="text-muted">·</span>
+                                                            <a href="{{ url_for('book_platform.author_my_listings') }}" class="small text-decoration-none">All listings</a>
                                                         </div>
                                                     </div>
                                                 </div>

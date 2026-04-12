@@ -47,6 +47,14 @@ body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
     text-transform: uppercase;
     color: #c9a227;
 }
+.live-broadcast-bar.ink-studio-live-radio .live-sub {
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    line-height: 1.2;
+    max-width: 11rem;
+}
 .live-broadcast-bar.ink-studio-live-radio .live-audio {
     flex: 1;
     min-width: 200px;
@@ -54,10 +62,13 @@ body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
     vertical-align: middle;
 }
 </style>
-<div class="live-broadcast-bar ink-studio-live-radio" role="region" aria-label="GLC live radio broadcast">
+<div class="live-broadcast-bar ink-studio-live-radio" role="region" aria-label="Ink Studio live radio: book reviews, author interviews, and community programming" title="Book reviews, author interviews, and more">
     <div class="live-meta">
         <span class="live-dot" aria-hidden="true"></span>
-        <span class="live-label">Live Radio</span>
+        <span class="d-flex flex-column lh-sm">
+            <span class="live-label">Ink Studio Live</span>
+            <span class="live-sub">Reviews · author interviews</span>
+        </span>
     </div>
     <audio class="live-audio" controls preload="none" aria-label="Play live stream">
         <source src="/station" type="audio/mpeg">

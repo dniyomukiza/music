@@ -126,10 +126,15 @@ def create_app():
             WTF_CSRF_ENABLED=True,
         )
     
+    _fe = os.getenv("FRONTEND_BASE_URL")
     app.config.update(
         JWT_SECRET_KEY="abarayon",
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
+        STRIPE_SECRET_KEY=os.getenv("STRIPE_SECRET_KEY"),
+        STRIPE_API_KEY=os.getenv("STRIPE_API_KEY"),
+        STRIPE_WEBHOOK_SECRET=os.getenv("STRIPE_WEBHOOK_SECRET"),
+        FRONTEND_BASE_URL=_fe.rstrip("/") if _fe else "",
     )
 
     # Secret key for sessions (use fixed key for local dev to maintain sessions across restarts)

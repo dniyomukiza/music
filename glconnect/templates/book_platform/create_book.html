@@ -46,9 +46,25 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="cover_image" class="form-label">Book cover *</label>
-                                <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" required>
-                                <div class="form-text">Choose the image shoppers will see in the marketplace. You can change it later from Edit book.</div>
+                                <h6 class="text-secondary">Cover for the marketplace</h6>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="use_ai_cover" value="on" id="useAiCoverCreate">
+                                    <label class="form-check-label" for="useAiCoverCreate">Generate cover with AI (Gemini — needs <code>GOOGLE_API_KEY</code>)</label>
+                                </div>
+                                <div class="mb-2" id="coverArtBriefCreateWrap" style="display: none;">
+                                    <label for="cover_art_brief" class="form-label">Art direction for AI (optional)</label>
+                                    <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="2" placeholder="e.g. warm literary fiction, soft watercolor, open road at sunset"></textarea>
+                                </div>
+                                <div id="coverFileCreateWrap">
+                                    <label for="cover_image" class="form-label">Upload your cover</label>
+                                    <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+                                    <div class="form-text">Or use AI above. You can replace either option later in <strong>Edit book</strong>.</div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-light border mb-3">
+                                <h6 class="alert-heading"><i class="fas fa-headphones me-2"></i>Audiobook later</h6>
+                                <p class="small mb-0">After you add and publish chapters, open <strong>Edit book</strong> to generate an <strong>AI audiobook</strong> (Google TTS) from your chapter text—chapter-by-chapter listening when you’re ready.</p>
                             </div>
 
                             <div class="row">
@@ -179,7 +195,7 @@
 
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
-                                <strong>Getting Started:</strong> You can edit title, description, and cover anytime before publishing to the marketplace.
+                                <strong>Writing on Ink Studio:</strong> Chapters you publish here can go to the marketplace with optional AI audiobook. Already have a PDF or EPUB? Use <a href="{{ url_for('book_platform.upload_digital_book') }}">List your book</a> instead—no need to retype your manuscript.
                             </div>
 
                             <div class="d-grid gap-2">
@@ -200,6 +216,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const useAi = document.getElementById('useAiCoverCreate');
+            const brief = document.getElementById('coverArtBriefCreateWrap');
+            const fileWrap = document.getElementById('coverFileCreateWrap');
+            const coverInput = document.getElementById('cover_image');
+            function syncCoverCreate() {
+                const on = useAi && useAi.checked;
+                if (brief) brief.style.display = on ? 'block' : 'none';
+                if (fileWrap) fileWrap.style.display = on ? 'none' : 'block';
+                if (coverInput && on) coverInput.value = '';
+            }
+            if (useAi) {
+                useAi.addEventListener('change', syncCoverCreate);
+                syncCoverCreate();
+            }
+        });
+
         document.getElementById('createBookForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -207,6 +240,8 @@
             const title = (formData.get('title') || '').toString().trim();
             const language = formData.get('language');
             const coverInput = document.getElementById('cover_image');
+            const useAiCover = document.getElementById('useAiCoverCreate');
+            const ai = useAiCover && useAiCover.checked;
             const coverFile = coverInput && coverInput.files && coverInput.files[0];
 
             if (!title) {
@@ -219,8 +254,8 @@
                 return;
             }
 
-            if (!coverFile) {
-                alert('Please choose a cover image for your book');
+            if (!ai && !coverFile) {
+                alert('Upload a cover image, or check “Generate cover with AI”.');
                 return;
             }
 

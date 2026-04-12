@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Digital Book - Ink Studio</title>
+    <title>List your book - Ink Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
@@ -15,12 +15,12 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-upload me-2"></i>Upload Digital Book
+                        <i class="fas fa-book me-2"></i>List your book
                     </h3>
-                    <p class="text-muted mb-0">Upload your existing digital book to make it available in the marketplace</p>
+                    <p class="text-muted mb-0"><strong>Path 1 — List an existing title:</strong> Add your ebook file, your own cover <em>or</em> an AI-generated cover, optional AI audiobook from the file’s text, then publish from <strong>Edit book</strong>. <strong>Path 2 — Write here:</strong> Use <a href="{{ url_for('book_platform.create_book') }}">Start Writing</a>; when you publish, your book appears on the marketplace the same way.</p>
                 </div>
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data" id="digitalBookForm">
+                    <form method="POST" enctype="multipart/form-data" id="digitalBookForm" aria-label="List book on marketplace">
                         {{ form.hidden_tag() }}
                         
                         <!-- Basic Information -->
@@ -57,18 +57,18 @@
                             </div>
                         </div>
 
-                        <!-- File Upload -->
+                        <!-- Ebook file + cover -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <h5 class="text-primary mb-3">
-                                    <i class="fas fa-file-upload me-2"></i>File Upload
+                                    <i class="fas fa-file-upload me-2"></i>Ebook file &amp; cover
                                 </h5>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="digital_book_file" class="form-label">Digital Book File *</label>
+                                    <label for="digital_book_file" class="form-label">Ebook file *</label>
                                     {{ form.digital_book_file(class="form-control") }}
-                                    <div class="form-text">Supported formats: PDF, EPUB, DOCX, TXT (Max 50MB)</div>
+                                    <div class="form-text">PDF, EPUB, DOCX, or TXT (max 50MB). Text is used for search, optional AI audiobook, and optional AI cover context.</div>
                                     {% if form.digital_book_file.errors %}
                                         <div class="text-danger small">
                                             {% for error in form.digital_book_file.errors %}
@@ -80,9 +80,50 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="cover_image" class="form-label">Cover image *</label>
-                                    {{ form.cover_image(class="form-control", accept="image/png,image/jpeg,image/gif,image/webp") }}
-                                    <div class="form-text">Required for marketplace listing. JPG, PNG, GIF, or WebP. You can replace it later under Edit book.</div>
+                                    <div class="form-check mb-2">
+                                        {{ form.use_ai_cover(class="form-check-input", id="useAiCover") }}
+                                        <label class="form-check-label" for="useAiCover">Generate cover with AI (Gemini)</label>
+                                    </div>
+                                    <div class="form-text small mb-2">Uses your title, description, and genre. Requires <code>GOOGLE_API_KEY</code>. Or leave this off and upload your own file.</div>
+                                    <div id="coverArtBriefBlock" class="mb-3" style="display: none;">
+                                        <label for="cover_art_brief" class="form-label">Art direction for AI (optional)</label>
+                                        {{ form.cover_art_brief(class="form-control", rows="2", placeholder="e.g. dark thriller mood, teal and black, lone figure on a bridge") }}
+                                    </div>
+                                    <div id="coverFileBlock">
+                                        <label for="cover_image" class="form-label">Cover image</label>
+                                        {{ form.cover_image(class="form-control", accept="image/png,image/jpeg,image/gif,image/webp", id="cover_image") }}
+                                        <div class="form-text">JPG, PNG, GIF, or WebP. Swap or refine later under <strong>Edit book</strong>.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Optional AI audiobook -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-headphones me-2"></i>Optional AI audiobook
+                                </h5>
+                                <p class="text-muted small">Turn your ebook’s text into speech (Google Cloud TTS). You can also generate or adjust this later from <strong>Edit book</strong>.</p>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check mb-3">
+                                    {{ form.generate_audiobook(class="form-check-input", id="generate_audiobook") }}
+                                    <label class="form-check-label" for="generate_audiobook">Generate audiobook now (chapter-style tracks when possible)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="audiobook_price" class="form-label">Audiobook price (USD)</label>
+                                    {{ form.audiobook_price(class="form-control", placeholder="0.00", step="0.01", min="0") }}
+                                    <div class="form-text">Set to 0 for free audio with purchase, or match your pricing strategy.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="audiobook_voice" class="form-label">Voice</label>
+                                    {{ form.audiobook_voice(class="form-control", placeholder="en-US-Standard-A") }}
+                                    <div class="form-text">Google TTS voice name (e.g. <code>en-US-Standard-A</code>).</div>
                                 </div>
                             </div>
                         </div>
@@ -96,20 +137,19 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="digital_price" class="form-label">Digital Book Price (USD)</label>
+                                    <label for="digital_price" class="form-label">Digital ebook price (USD)</label>
                                     {{ form.digital_price(class="form-control", placeholder="0.00", step="0.01", min="0") }}
-                                    <div class="form-text">Leave empty for free book</div>
+                                    <div class="form-text">Leave empty for a free ebook listing.</div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Information Box -->
                         <div class="alert alert-info mb-4">
-                            <h6><i class="fas fa-info-circle me-2"></i>Important Information</h6>
+                            <h6><i class="fas fa-info-circle me-2"></i>Two ways authors reach readers</h6>
                             <ul class="mb-0">
-                                <li>Your digital book file will be processed to extract text content</li>
-                                <li>After uploading, you can edit your book and generate an audiobook version from the edit page</li>
-                                <li>Your digital book will be available for purchase in the marketplace</li>
+                                <li><strong>List a finished book</strong> (this page): ebook file + your cover or AI cover + optional AI audiobook → then <strong>Edit book</strong> to publish on the marketplace.</li>
+                                <li><strong>Write in Ink Studio</strong>: create a book, add chapters, publish → same marketplace; optional AI audiobook from your chapters; cover at creation or in Edit book.</li>
                             </ul>
                         </div>
 
@@ -119,7 +159,7 @@
                                 <i class="fas fa-arrow-left me-2"></i>Cancel
                             </a>
                             <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <i class="fas fa-upload me-2"></i>Upload Digital Book
+                                <i class="fas fa-check me-2"></i>List on marketplace
                             </button>
                         </div>
                     </form>
@@ -132,21 +172,44 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
     const form = document.getElementById('digitalBookForm');
     const submitBtn = document.getElementById('submitBtn');
-    
+    const useAiCover = document.getElementById('useAiCover');
+    const coverFileBlock = document.getElementById('coverFileBlock');
+    const coverArtBriefBlock = document.getElementById('coverArtBriefBlock');
+    const coverInput = document.getElementById('cover_image');
+
+    function syncCoverUi() {
+        const ai = useAiCover && useAiCover.checked;
+        if (coverArtBriefBlock) coverArtBriefBlock.style.display = ai ? 'block' : 'none';
+        if (coverFileBlock) coverFileBlock.style.display = ai ? 'none' : 'block';
+        if (coverInput && ai) coverInput.value = '';
+    }
+    if (useAiCover) {
+        useAiCover.addEventListener('change', syncCoverUi);
+        syncCoverUi();
+    }
+
     form.addEventListener('submit', function(e) {
         const digitalFile = document.querySelector('input[name="digital_book_file"]');
-        
+
         if (!digitalFile.files.length) {
             e.preventDefault();
-            alert('Please select a digital book file to upload.');
+            alert('Please choose your ebook file (PDF, EPUB, DOCX, or TXT).');
             return;
         }
-        
-        // Show loading state
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+
+        const ai = useAiCover && useAiCover.checked;
+        if (!ai && (!coverInput || !coverInput.files.length)) {
+            e.preventDefault();
+            alert('Upload a cover image, or check “Generate cover with AI”.');
+            return;
+        }
+
+        const waitMsg = ai
+            ? '<i class="fas fa-spinner fa-spin me-2"></i>Listing… (AI cover can take up to a minute)'
+            : '<i class="fas fa-spinner fa-spin me-2"></i>Submitting…';
+        submitBtn.innerHTML = waitMsg;
         submitBtn.disabled = true;
     });
     

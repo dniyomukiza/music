@@ -389,10 +389,12 @@ class BookPurchase(db.Model):
     # Buyer information (stored for easy access and historical record)
     buyer_username = db.Column(db.String(80), nullable=True)  # Store username for quick access
     buyer_full_name = db.Column(db.String(200), nullable=True)  # Store full name (first_name + last_name or pen_name)
-    
-    # Ensure at least one buyer identifier is set
+
     __table_args__ = (
-        CheckConstraint('(buyer_id IS NOT NULL) OR (buyer_user_id IS NOT NULL)', name='check_buyer_exists'),
+        CheckConstraint(
+            "(buyer_id IS NOT NULL) OR (buyer_user_id IS NOT NULL)",
+            name='check_book_purchase_has_buyer',
+        ),
     )
     
     # Relationships
@@ -430,7 +432,7 @@ class BookPurchase(db.Model):
                 if user.first_name and user.last_name:
                     return f"{user.first_name} {user.last_name}"
                 return user.username
-        
+
         return "Unknown Buyer"
     
     def get_buyer_username(self):
@@ -470,7 +472,7 @@ class BookPurchase(db.Model):
             user = User.query.get(self.buyer_user_id)
             if user:
                 return user.email
-        
+
         return None
     
     def populate_buyer_info(self):
