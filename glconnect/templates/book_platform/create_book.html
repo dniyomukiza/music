@@ -34,7 +34,7 @@
                         <p class="text-muted">Start your writing journey</p>
                     </div>
                     <div class="card-body">
-                        <form id="createBookForm">
+                        <form id="createBookForm" enctype="multipart/form-data" method="post">
                             <div class="mb-3">
                                 <label for="title" class="form-label">Book Title *</label>
                                 <input type="text" class="form-control" id="title" name="title" required placeholder="Enter your book title">
@@ -43,6 +43,12 @@
                             <div class="mb-3">
                                 <label for="description" class="form-label">Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="4" placeholder="Brief description of your book..."></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cover_image" class="form-label">Book cover *</label>
+                                <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" required>
+                                <div class="form-text">Choose the image shoppers will see in the marketplace. You can change it later from Edit book.</div>
                             </div>
 
                             <div class="row">
@@ -173,7 +179,7 @@
 
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
-                                <strong>Getting Started:</strong> You can always edit these details later. Focus on getting your ideas down first!
+                                <strong>Getting Started:</strong> You can edit title, description, and cover anytime before publishing to the marketplace.
                             </div>
 
                             <div class="d-grid gap-2">
@@ -196,42 +202,40 @@
     <script>
         document.getElementById('createBookForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(this);
-            const data = {
-                title: formData.get('title'),
-                description: formData.get('description'),
-                genre: formData.get('genre'),
-                language: formData.get('language'),
-                target_audience: formData.get('target_audience'),
-                goals: Array.from(document.querySelectorAll('input[name="goals"]:checked')).map(cb => cb.value)
-            };
-            
-            if (!data.title.trim()) {
+            const title = (formData.get('title') || '').toString().trim();
+            const language = formData.get('language');
+            const coverInput = document.getElementById('cover_image');
+            const coverFile = coverInput && coverInput.files && coverInput.files[0];
+
+            if (!title) {
                 alert('Please enter a book title');
                 return;
             }
-            
-            if (!data.language) {
+
+            if (!language) {
                 alert('Please select a language for your book');
                 return;
             }
-            
+
+            if (!coverFile) {
+                alert('Please choose a cover image for your book');
+                return;
+            }
+
             try {
                 const response = await fetch('{{ url_for("book_platform.create_book") }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
+                    body: formData
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     window.location.href = `/mybook/books/${result.book_id}`;
                 } else {
-                    alert('Error creating book. Please try again.');
+                    alert(result.error || 'Error creating book. Please try again.');
                 }
             } catch (error) {
                 console.error('Error:', error);

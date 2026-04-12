@@ -140,7 +140,7 @@ class BookProject(db.Model):
     target_audience = db.Column(db.String(100), nullable=True)
     word_count = db.Column(db.Integer, default=0)
     status = db.Column(db.Enum(BookStatus), default=BookStatus.DRAFT)
-    cover_image = db.Column(db.String(200), nullable=True)
+    cover_image = db.Column(db.String(500), nullable=True)
     isbn = db.Column(db.String(20), nullable=True)
     price = db.Column(db.Float, nullable=True)  # Price in USD
     currency = db.Column(db.String(3), default='USD')

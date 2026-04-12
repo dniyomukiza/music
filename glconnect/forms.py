@@ -144,7 +144,10 @@ class DigitalBookUploadForm(FlaskForm):
         DataRequired(),
         FileAllowed(['pdf', 'epub', 'docx', 'txt'], 'Only PDF, EPUB, DOCX, and TXT files are allowed!')
     ])
-    cover_image = FileField('Cover Image', validators=[Optional()])
+    cover_image = FileField('Cover Image', validators=[
+        DataRequired(message='Please upload a cover image for your marketplace listing.'),
+        FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Cover must be JPG, PNG, GIF, or WebP.')
+    ])
     
     # Pricing
     digital_price = FloatField('Digital Book Price (USD)', validators=[Optional()])

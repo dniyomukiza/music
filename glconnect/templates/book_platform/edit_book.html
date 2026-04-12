@@ -46,7 +46,7 @@
                         <small class="text-muted">Update information for "{{ book.title }}"</small>
                     </div>
                     <div class="card-body">
-                        <form id="editBookForm">
+                        <form id="editBookForm" method="post" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="title" class="form-label">Book Title *</label>
                                 <input type="text" class="form-control" id="title" name="title" required
@@ -218,9 +218,25 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="cover_image" class="form-label">Cover Image URL</label>
-                                <input type="url" class="form-control" id="cover_image" name="cover_image" 
-                                       value="{{ book.cover_image or '' }}" placeholder="https://example.com/cover.jpg">
+                                <label class="form-label">Cover (marketplace)</label>
+                                {% set cov = (book.cover_image or '')|trim %}
+                                {% if cov %}
+                                <div class="mb-2">
+                                    {% if cov.startswith('http://') or cov.startswith('https://') %}
+                                    <img src="{{ cov }}" alt="Current cover" class="img-thumbnail" style="max-height: 180px;">
+                                    {% elif cov.startswith('/') %}
+                                    <img src="{{ cov }}" alt="Current cover" class="img-thumbnail" style="max-height: 180px;">
+                                    {% else %}
+                                    <img src="{{ url_for('static', filename=cov) }}" alt="Current cover" class="img-thumbnail" style="max-height: 180px;">
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                <label for="cover_upload" class="form-label small text-muted">Replace with uploaded file</label>
+                                <input type="file" class="form-control mb-2" id="cover_upload" name="cover_upload" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+                                <label for="cover_image" class="form-label small text-muted">Or cover image URL</label>
+                                <input type="url" class="form-control" id="cover_image" name="cover_image"
+                                       value="{% if cov.startswith('http://') or cov.startswith('https://') %}{{ cov }}{% endif %}" placeholder="https://example.com/cover.jpg">
+                                <div class="form-text">Uploading a file replaces the stored cover. URL is optional if you already use an uploaded file path. Change either any time before publishing to the marketplace.</div>
                             </div>
 
                             {% if book.digital_file_path %}

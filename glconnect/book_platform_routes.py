@@ -65,6 +65,34 @@ def allowed_image_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
+
+def book_has_listing_cover(book):
+    """Whether the book has a cover path or URL set for marketplace display."""
+    if not book:
+        return False
+    c = getattr(book, 'cover_image', None)
+    return bool(c and str(c).strip())
+
+
+def save_book_cover_file(file_storage):
+    """
+    Persist an uploaded cover to static/book_covers/.
+    Returns a relative path suitable for BookProject.cover_image, or None if invalid.
+    """
+    if not file_storage or not getattr(file_storage, 'filename', None):
+        return None
+    if not allowed_image_file(file_storage.filename):
+        return None
+    covers_dir = os.path.join(current_app.root_path, 'static', 'book_covers')
+    os.makedirs(covers_dir, exist_ok=True)
+    cover_filename = secure_filename(file_storage.filename)
+    cover_name, cover_ext = os.path.splitext(cover_filename)
+    unique_cover_filename = f"{cover_name}_{uuid.uuid4().hex[:8]}{cover_ext}"
+    abs_path = os.path.join(covers_dir, unique_cover_filename)
+    file_storage.save(abs_path)
+    return f"book_covers/{unique_cover_filename}"
+
+
 # Import performance optimizations
 from .database_optimizer import DatabaseOptimizer, QueryCache, cache_result
 # from .performance_optimizer import MemoryManager, memory_monitor
@@ -617,25 +645,51 @@ def create_book(user_profile, profile_type):
     # The dashboard template will hide the "Start Writing" button for non-authors
     # This allows Writer profiles to create books immediately
     if request.method == 'POST':
-        data = request.get_json()
-        
-        # Get the correct author_id (BookPlatformUser.id)
         author_id = get_profile_id(user_profile, profile_type)
-        
+        if not author_id:
+            return jsonify({'success': False, 'error': 'Could not resolve author profile.'}), 400
+
+        # Require multipart upload so authors choose a cover at creation time
+        if not request.content_type or 'multipart/form-data' not in request.content_type:
+            return jsonify({
+                'success': False,
+                'error': 'Submit the create-book form with a cover image (multipart form).'
+            }), 400
+
+        title = (request.form.get('title') or '').strip()
+        if not title:
+            return jsonify({'success': False, 'error': 'Book title is required.'}), 400
+
+        language = (request.form.get('language') or '').strip()
+        if not language:
+            return jsonify({'success': False, 'error': 'Please select a language for your book.'}), 400
+
+        cover_file = request.files.get('cover_image')
+        if not cover_file or not cover_file.filename:
+            return jsonify({'success': False, 'error': 'Please upload a cover image.'}), 400
+
+        cover_rel = save_book_cover_file(cover_file)
+        if not cover_rel:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid cover image. Use PNG, JPG, GIF, WebP, or SVG.'
+            }), 400
+
         book = BookProject(
-            title=data['title'],
-            description=data.get('description'),
-            genre=data.get('genre'),
-            language=data.get('language'),
-            target_audience=data.get('target_audience'),
-            author_id=author_id
+            title=title,
+            description=(request.form.get('description') or '').strip() or None,
+            genre=(request.form.get('genre') or '').strip() or None,
+            language=language,
+            target_audience=(request.form.get('target_audience') or '').strip() or None,
+            author_id=author_id,
+            cover_image=cover_rel,
         )
-        
+
         db.session.add(book)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'book_id': book.id})
-    
+
     return render_template('book_platform/create_book.html')
 
 @book_bp.route('/books/<int:book_id>')
@@ -812,7 +866,19 @@ def edit_book(book_id, user_profile, profile_type):
             book.price = float(data.get('price', 0)) if data.get('price') else None
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
-            book.cover_image = data.get('cover_image', '')
+            cover_upload = request.files.get('cover_upload')
+            if cover_upload and cover_upload.filename:
+                saved_cover = save_book_cover_file(cover_upload)
+                if not saved_cover:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid cover upload. Use PNG, JPG, GIF, WebP, or SVG.'
+                    }), 400
+                book.cover_image = saved_cover
+            elif 'cover_image' in request.form:
+                ci = (request.form.get('cover_image') or '').strip()
+                if ci:
+                    book.cover_image = ci
             book.allow_collaboration = data.get('allow_collaboration') == 'on' or data.get('allow_collaboration') == True
             book.updated_at = datetime.now(timezone.utc)
             
@@ -829,6 +895,11 @@ def edit_book(book_id, user_profile, profile_type):
                         return jsonify({
                             'success': False, 
                             'error': 'Please set a price before publishing your digital book to the marketplace.'
+                        }), 400
+                    if not book_has_listing_cover(book):
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please add a cover image before publishing to the marketplace. You can upload a file or set a cover URL in this form.'
                         }), 400
                     if not book.digital_book_published:
                         book.digital_book_published = True
@@ -851,6 +922,11 @@ def edit_book(book_id, user_profile, profile_type):
                         return jsonify({
                             'success': False, 
                             'error': 'Please set an audiobook price before publishing it to the marketplace.'
+                        }), 400
+                    if not book_has_listing_cover(book):
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please add a cover image before publishing the audiobook to the marketplace.'
                         }), 400
                     if not book.audiobook_published:
                         book.audiobook_published = True
@@ -878,7 +954,12 @@ def edit_book(book_id, user_profile, profile_type):
                             'success': False, 
                             'error': 'Please set a price before publishing your book to the marketplace.'
                         }), 400
-                    
+                    if not book_has_listing_cover(book):
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please add a cover image before publishing to the marketplace.'
+                        }), 400
+
                     if book.status != BookStatus.PUBLISHED:
                         book.status = BookStatus.PUBLISHED
                         if not book.published_at:
@@ -2146,11 +2227,12 @@ def resolve_comment(comment_id):
 
 def _marketplace_cover_url(book):
     """Resolve cover image URL for API and templates."""
+    placeholder = url_for("static", filename="book_platform/placeholder_cover.svg")
     if not book or not getattr(book, "cover_image", None):
-        return None
+        return placeholder
     path = (book.cover_image or "").strip()
     if not path:
-        return None
+        return placeholder
     if path.startswith(("http://", "https://")):
         return path
     if path.startswith("/"):
@@ -2338,7 +2420,9 @@ def publish_book(book_id):
     # Validate book is ready for publishing
     if not book.price or book.price <= 0:
         return jsonify({'error': 'Please set a price before publishing'}), 400
-    
+    if not book_has_listing_cover(book):
+        return jsonify({'error': 'Please add a cover image before publishing to the marketplace.'}), 400
+
     book.status = BookStatus.PUBLISHED
     book.published_at = datetime.now(timezone.utc)
     
