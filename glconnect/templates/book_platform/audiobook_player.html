@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.title }} - Audiobook | GLC</title>
+    <title>{{ book.title }} - Audiobook | Ink Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
@@ -24,6 +24,7 @@
         }
         .chapter-item .duration { font-size: 0.85rem; color: #6c757d; }
         .audio-player { width: 100%; height: 54px; border-radius: 8px; }
+        .transport .btn { min-width: 2.75rem; }
     </style>
 </head>
 <body>
@@ -46,19 +47,65 @@
             <h1 class="display-6 fw-bold mb-2">
                 <i class="fas fa-headphones text-warning me-2"></i>{{ book.title }}
             </h1>
-            <p class="text-muted mb-0">Audiobook — Listen to any chapter</p>
+            <p class="text-muted mb-0" id="nowPlayingLabel">
+                {% if chapters %}
+                Listen by chapter — tap a track or use Next / Previous
+                {% else %}
+                Full audiobook — continuous playback
+                {% endif %}
+            </p>
         </div>
 
-        <div class="card shadow-lg border-0 mb-4">
+        <div class="card shadow-lg border-0 mb-3">
             <div class="card-body p-4">
-                <audio id="audioPlayer" class="audio-player" controls preload="metadata">
-                    {% if chapters %}
-                    <source src="{{ url_for('book_platform.serve_audiobook_chapter_file', book_id=book.id, chapter_id=chapters[0].id) }}" type="audio/mpeg">
-                    {% else %}
-                    <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+                <audio id="audioPlayer" class="audio-player" controls preload="metadata" playsinline>
+                    {% if chapter_tracklist %}
+                    <source id="audioSource" src="{{ chapter_tracklist[0].src }}" type="audio/mpeg">
+                    {% elif single_audiobook_src %}
+                    <source id="audioSource" src="{{ single_audiobook_src }}" type="audio/mpeg">
                     {% endif %}
                     Your browser does not support the audio element.
                 </audio>
+                {% if chapter_tracklist %}
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 transport">
+                    <div class="btn-group" role="group" aria-label="Chapter navigation">
+                        <button type="button" class="btn btn-outline-primary" id="btnPrevChapter" title="Previous chapter">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnNextChapter" title="Next chapter">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="playbackSpeed" class="small text-muted mb-0">Speed</label>
+                        <select id="playbackSpeed" class="form-select form-select-sm" style="width: auto;">
+                            <option value="0.75">0.75×</option>
+                            <option value="1" selected>1×</option>
+                            <option value="1.25">1.25×</option>
+                            <option value="1.5">1.5×</option>
+                            <option value="2">2×</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="autoAdvance" checked>
+                        <label class="form-check-label small" for="autoAdvance">Auto-play next chapter</label>
+                    </div>
+                </div>
+                <p class="small text-muted mt-2 mb-0" id="chapterPosition">
+                    Chapter <span id="chapterIndexDisplay">1</span> of {{ chapter_tracklist|length }}
+                </p>
+                {% elif single_audiobook_src %}
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    <label for="playbackSpeed" class="small text-muted mb-0">Speed</label>
+                    <select id="playbackSpeed" class="form-select form-select-sm" style="width: auto;">
+                        <option value="0.75">0.75×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.25">1.25×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -72,7 +119,7 @@
                 <div class="chapter-list">
                     {% for ch in chapters %}
                     <div class="chapter-item d-flex justify-content-between align-items-center"
-                         data-chapter-id="{{ ch.id }}"
+                         data-chapter-idx="{{ loop.index0 }}"
                          data-src="{{ url_for('book_platform.serve_audiobook_chapter_file', book_id=book.id, chapter_id=ch.id) }}">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-play-circle text-primary me-3 fa-lg"></i>
@@ -93,35 +140,149 @@
         {% else %}
         <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
-            Full audiobook — use the player above. Total duration: {{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} minutes.
+            This title uses a single audio file. New uploads are split into chapter-style tracks when possible.
+            {% if book.audiobook_duration %}
+            Total duration: about {{ (book.audiobook_duration // 60) }} minutes.
+            {% endif %}
         </div>
         {% endif %}
 
         <div class="mt-4 text-center">
             <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-outline-primary">
-                <i class="fas fa-download me-1"></i>Download Audiobook
+                <i class="fas fa-download me-1"></i>Download current audiobook file
             </a>
+            {% if chapter_tracklist|length > 1 %}
+            <p class="small text-muted mt-2 mb-0">Download is the first chapter file; listen in-app for all chapters.</p>
+            {% endif %}
         </div>
     </div>
 
+    <script type="application/json" id="audiobook-tracklist-data">{{ (chapter_tracklist or [])|tojson }}</script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         (function() {
+            const bookId = {{ book.id|int }};
+            const storageKeyIdx = 'ink_audiobook_' + bookId + '_chapter_idx';
+            const storageKeyTime = 'ink_audiobook_' + bookId + '_time';
             const player = document.getElementById('audioPlayer');
+            const speedSel = document.getElementById('playbackSpeed');
+            const raw = document.getElementById('audiobook-tracklist-data');
+            let tracklist = [];
+            try {
+                tracklist = raw ? JSON.parse(raw.textContent || '[]') : [];
+            } catch (e) { tracklist = []; }
+
+            function formatTitle(t) {
+                const el = document.getElementById('nowPlayingLabel');
+                if (el) el.textContent = t;
+            }
+
+            function setSpeed() {
+                if (!player || !speedSel) return;
+                const v = parseFloat(speedSel.value, 10);
+                if (!isNaN(v)) { player.playbackRate = v; }
+            }
+            if (speedSel) {
+                speedSel.addEventListener('change', setSpeed);
+                setSpeed();
+            }
+
+            if (!tracklist.length) {
+                if (player) {
+                    player.addEventListener('loadedmetadata', function tryResume() {
+                        const t = parseFloat(localStorage.getItem(storageKeyTime) || '0', 10);
+                        if (t > 2 && t < player.duration - 2) {
+                            player.currentTime = t;
+                        }
+                    });
+                    player.addEventListener('timeupdate', function() {
+                        if (player.currentTime > 1) {
+                            localStorage.setItem(storageKeyTime, String(player.currentTime));
+                        }
+                    });
+                }
+                return;
+            }
+
+            let currentIdx = 0;
             const items = document.querySelectorAll('.chapter-item');
-            items.forEach(function(item) {
-                item.addEventListener('click', function() {
-                    const src = item.dataset.src;
-                    if (src) {
-                        player.querySelector('source').src = src;
-                        player.load();
-                        player.play();
-                        items.forEach(i => i.classList.remove('playing'));
-                        item.classList.add('playing');
+            const btnPrev = document.getElementById('btnPrevChapter');
+            const btnNext = document.getElementById('btnNextChapter');
+            const autoAdvance = document.getElementById('autoAdvance');
+            const idxDisplay = document.getElementById('chapterIndexDisplay');
+
+            function highlight(idx) {
+                items.forEach(function(i, j) {
+                    i.classList.toggle('playing', j === idx);
+                });
+                if (idxDisplay) idxDisplay.textContent = String(idx + 1);
+            }
+
+            function loadChapter(idx, autoplay, resumeSeconds) {
+                if (idx < 0 || idx >= tracklist.length) return;
+                currentIdx = idx;
+                const tr = tracklist[idx];
+                const srcEl = document.getElementById('audioSource');
+                if (srcEl) srcEl.src = tr.src;
+
+                function onMeta() {
+                    const t = resumeSeconds != null ? resumeSeconds : 0;
+                    if (t > 2 && player.duration && t < player.duration - 2) {
+                        player.currentTime = t;
                     }
+                    player.removeEventListener('loadedmetadata', onMeta);
+                }
+                player.addEventListener('loadedmetadata', onMeta);
+                player.load();
+                formatTitle('Now playing: ' + (tr.title || ('Chapter ' + (idx + 1))));
+                highlight(idx);
+                localStorage.setItem(storageKeyIdx, String(idx));
+                if (autoplay) {
+                    player.play().catch(function() {});
+                }
+            }
+
+            const savedIdx = parseInt(localStorage.getItem(storageKeyIdx) || '0', 10);
+            const savedTime = parseFloat(localStorage.getItem(storageKeyTime) || '0', 10);
+            if (savedIdx >= 0 && savedIdx < tracklist.length) {
+                loadChapter(savedIdx, false, savedTime);
+            } else {
+                highlight(0);
+                formatTitle('Now playing: ' + (tracklist[0].title || 'Chapter 1'));
+            }
+
+            player.addEventListener('timeupdate', function() {
+                if (player.currentTime > 1) {
+                    localStorage.setItem(storageKeyTime, String(player.currentTime));
+                }
+            });
+
+            player.addEventListener('ended', function() {
+                if (!autoAdvance || !autoAdvance.checked) return;
+                if (currentIdx + 1 < tracklist.length) {
+                    loadChapter(currentIdx + 1, true);
+                }
+            });
+
+            items.forEach(function(item, j) {
+                item.addEventListener('click', function() {
+                    localStorage.removeItem(storageKeyTime);
+                    loadChapter(j, true);
                 });
             });
-            if (items.length) items[0].classList.add('playing');
+
+            if (btnPrev) btnPrev.addEventListener('click', function() {
+                if (currentIdx > 0) {
+                    localStorage.removeItem(storageKeyTime);
+                    loadChapter(currentIdx - 1, true);
+                }
+            });
+            if (btnNext) btnNext.addEventListener('click', function() {
+                if (currentIdx + 1 < tracklist.length) {
+                    localStorage.removeItem(storageKeyTime);
+                    loadChapter(currentIdx + 1, true);
+                }
+            });
         })();
     </script>
     {% include 'book_platform/includes/live_radio_bar.html' %}

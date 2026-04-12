@@ -37,6 +37,7 @@ from glconnect.book_platform_models import (
 # Import additional modules
 from glconnect.forms import DigitalBookUploadForm, ReviewerRegistrationForm, BookReviewForm, InvestmentCampaignForm, InvestmentForm
 from glconnect.digital_book_processor import digital_book_processor
+from glconnect.audiobook_text_segments import build_uploaded_book_audiobook_chapters
 from glconnect.audio_book_generator import audio_book_generator
 from glconnect.revenue_distribution_service import distribute_revenue
 from glconnect.stripe_utils import init_stripe, get_webhook_secret
@@ -1496,8 +1497,11 @@ def generate_audiobook_for_book(book_id):
         full_text_for_thread = full_text
         voice_name_for_thread = voice_name
         audiobook_price_for_thread = audiobook_price
-        # For platform chapters: per-chapter audio so listeners can pick any chapter
-        chapters_for_audio_thread = chapters_for_audio if not book.digital_file_path else []
+        # Per-chapter audio: platform books use real chapters; uploads use detected headings or word-based parts
+        if not book.digital_file_path:
+            chapters_for_audio_thread = chapters_for_audio
+        else:
+            chapters_for_audio_thread = build_uploaded_book_audiobook_chapters(full_text)
         
         app = current_app._get_current_object()
 
@@ -1515,8 +1519,7 @@ def generate_audiobook_for_book(book_id):
                     audio_task.progress = 10
                     db.session.commit()
                     
-                    # Platform chapters: generate per-chapter audio (listeners pick any chapter)
-                    # Uploaded books: single combined file
+                    # Always chapter-based when we have segments (platform chapters or upload parts)
                     if chapters_for_audio_thread:
                         audio_result = audio_book_generator.generate_audiobook_by_chapters(
                             chapters_for_audio_thread,
@@ -4879,21 +4882,37 @@ def upload_digital_book():
                         audio_task.progress = 10
                         db.session.commit()
                         
-                        # Generate audiobook
-                        audio_result = audio_book_generator.generate_audiobook(
-                            extraction_result['text'],
+                        # Chapter-based audio (Audible-style) for uploads: headings or word-based parts
+                        upload_chapters = build_uploaded_book_audiobook_chapters(
+                            extraction_result.get('text') or ''
+                        )
+                        audio_result = audio_book_generator.generate_audiobook_by_chapters(
+                            upload_chapters,
                             book.id,
                             selected_voice
                         )
                         
                         if audio_result['success']:
-                            # Update book with audiobook info
                             book.has_audiobook = True
-                            book.audiobook_file_path = audio_result['audio_file_path']
                             book.audiobook_price = audiobook_price
-                            book.audiobook_duration = audio_result['duration']
                             book.audiobook_generated_at = datetime.now(timezone.utc)
                             book.audiobook_voice = selected_voice
+                            ch_results = audio_result.get('chapter_results') or []
+                            book.audiobook_duration = audio_result.get('duration', 0)
+                            book.audiobook_file_path = (
+                                ch_results[0]['audio_file_path'] if ch_results else None
+                            )
+                            for ch in ch_results:
+                                db.session.add(
+                                    AudiobookChapter(
+                                        book_project_id=book.id,
+                                        chapter_number=ch['chapter_number'],
+                                        title=ch['title'],
+                                        audio_file_path=ch['audio_file_path'],
+                                        duration_seconds=ch.get('duration', 0),
+                                        book_chapter_id=ch.get('book_chapter_id'),
+                                    )
+                                )
                             
                             # Update task
                             audio_task.status = 'completed'
@@ -5181,8 +5200,32 @@ def audiobook_player(book_id):
         return redirect(url_for('book_platform.marketplace'))
     
     chapters = AudiobookChapter.query.filter_by(book_project_id=book_id).order_by(AudiobookChapter.chapter_number).all()
-    
-    return render_template('book_platform/audiobook_player.html', book=book, chapters=chapters)
+    chapter_tracklist = [
+        {
+            'id': ch.id,
+            'title': ch.title,
+            'seconds': ch.duration_seconds or 0,
+            'src': url_for(
+                'book_platform.serve_audiobook_chapter_file',
+                book_id=book.id,
+                chapter_id=ch.id,
+            ),
+        }
+        for ch in chapters
+    ]
+    single_audiobook_src = (
+        None
+        if chapter_tracklist
+        else url_for('book_platform.serve_audiobook_file', book_id=book.id)
+    )
+
+    return render_template(
+        'book_platform/audiobook_player.html',
+        book=book,
+        chapters=chapters,
+        chapter_tracklist=chapter_tracklist,
+        single_audiobook_src=single_audiobook_src,
+    )
 
 
 @book_bp.route('/books/<int:book_id>/download-audio')
