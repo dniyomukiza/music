@@ -49,8 +49,9 @@
                                 <h6 class="text-secondary">Cover for the marketplace</h6>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="use_ai_cover" value="on" id="useAiCoverCreate">
-                                    <label class="form-check-label" for="useAiCoverCreate">Generate cover with AI (Gemini — needs <code>GOOGLE_API_KEY</code>)</label>
+                                    <label class="form-check-label" for="useAiCoverCreate">Create cover with AI from my book details</label>
                                 </div>
+                                <div class="form-text small mb-2">Uses your title, description, and genre. If that isn’t available here, upload an image below instead—no technical setup on your side.</div>
                                 <div class="mb-2" id="coverArtBriefCreateWrap" style="display: none;">
                                     <label for="cover_art_brief" class="form-label">Art direction for AI (optional)</label>
                                     <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="2" placeholder="e.g. warm literary fiction, soft watercolor, open road at sunset"></textarea>
@@ -64,7 +65,7 @@
 
                             <div class="alert alert-light border mb-3">
                                 <h6 class="alert-heading"><i class="fas fa-headphones me-2"></i>Audiobook later</h6>
-                                <p class="small mb-0">After you add and publish chapters, open <strong>Edit book</strong> to generate an <strong>AI audiobook</strong> (Google TTS) from your chapter text—chapter-by-chapter listening when you’re ready.</p>
+                                <p class="small mb-0">After you add and publish chapters, open <strong>Edit book</strong> to generate an <strong>AI audiobook</strong> from your chapter text—chapter-by-chapter listening when you’re ready.</p>
                             </div>
 
                             <div class="row">
@@ -255,7 +256,7 @@
             }
 
             if (!ai && !coverFile) {
-                alert('Upload a cover image, or check “Generate cover with AI”.');
+                alert('Upload a cover image, or turn on “Create cover with AI from my book details”.');
                 return;
             }
 

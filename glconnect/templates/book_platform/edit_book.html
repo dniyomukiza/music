@@ -84,11 +84,11 @@
                                     <div class="mb-3">
                                         <label for="language" class="form-label">Language *</label>
                                         {% if book.digital_file_path %}
-                                        <input type="hidden" name="language" value="en">
+                                        <input type="hidden" name="language" value="{{ book.language or 'en' }}">
                                         <select class="form-select" id="language" required disabled>
-                                            <option value="en" selected>English</option>
+                                            <option selected>{{ ebook_language_label }} (original file)</option>
                                         </select>
-                                        <small class="form-text text-muted">Language is set to English for uploaded books (audiobooks are English-only)</small>
+                                        <small class="form-text text-muted">This matches the language you chose when listing the ebook. Optional AI editions in other languages show up as extra downloads on the book page when ready.</small>
                                         {% else %}
                                         <select class="form-select" id="language" name="language" required>
                                             <option value="">Select language</option>
@@ -513,17 +513,15 @@
                             <!-- Generate Audiobook -->
                             <div>
                                 <h6>Create Audiobook Version</h6>
-                                    <div class="alert alert-warning mb-3">
+                                    <div class="alert alert-info mb-3">
                                         <i class="fas fa-language me-2"></i>
-                                        <strong>Note:</strong> Audiobooks are currently only available in English.
+                                        <strong>Voice language:</strong> Pick a voice that matches your book’s language (listed as <strong>{{ ebook_language_label }}</strong> for uploaded files). Extra ebook languages you added at listing appear as separate text downloads first; audiobook stays one voice per generation.
                                     </div>
                                     <p class="text-muted mb-3">
                                         {% if book.digital_file_path %}
                                             Generate an audiobook from your uploaded digital book using AI voice synthesis.
-                                            This will create a professional-quality audio version of your book in English.
                                         {% else %}
                                             Generate an audiobook from your published chapters using AI voice synthesis.
-                                            This will create a professional-quality audio version of your book in English.
                                         {% endif %}
                                     </p>
                                     
@@ -634,7 +632,7 @@
                                 The process may take several minutes depending on your book's length.
                                 <br><br>
                                 <i class="fas fa-language me-2"></i>
-                                <strong>Language:</strong> Audiobooks are generated in English only, regardless of the book's primary language setting above.
+                                <strong>Language:</strong> The voice list matches your book’s language. Pick a voice that fits your text.
                             </div>
                         {% endif %}
                     </div>

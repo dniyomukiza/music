@@ -222,10 +222,23 @@
                             <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary">
                                 <i class="fas fa-edit me-2"></i>Edit Details
                             </a>
-                            {% if book.digital_file_path %}
-                            <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-outline-info">
-                                <i class="fas fa-download me-2"></i>Download Book
-                            </a>
+                            {% if book.digital_file_path and digital_download_options %}
+                            <div class="dropdown">
+                                <button class="btn btn-outline-info dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-download me-2"></i>Download ebook
+                                </button>
+                                <ul class="dropdown-menu w-100">
+                                    {% for opt in digital_download_options %}
+                                    <li>
+                                        {% if opt.ready and opt.url %}
+                                        <a class="dropdown-item" href="{{ opt.url }}">{{ opt.label }}</a>
+                                        {% else %}
+                                        <span class="dropdown-item disabled text-muted small">{{ opt.label }}</span>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
                             {% endif %}
                             {% if book.has_audiobook %}
                             <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-outline-success">
@@ -442,11 +455,24 @@
                                     <i class="fas fa-keyboard me-1"></i>
                                     Word Count: <strong>{{ book.word_count or 0 }}</strong> words
                                 </p>
-                                {% if book.digital_file_path %}
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <a href="{{ url_for('book_platform.download_digital_book', book_id=book.id) }}" class="btn btn-primary">
-                                        <i class="fas fa-download me-2"></i>Download Book File
-                                    </a>
+                                {% if book.digital_file_path and digital_download_options %}
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                    <div class="dropdown">
+                                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-download me-2"></i>Download ebook
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            {% for opt in digital_download_options %}
+                                            <li>
+                                                {% if opt.ready and opt.url %}
+                                                <a class="dropdown-item" href="{{ opt.url }}">{{ opt.label }}</a>
+                                                {% else %}
+                                                <span class="dropdown-item disabled text-muted small">{{ opt.label }}</span>
+                                                {% endif %}
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
                                     {% if book.has_audiobook %}
                                     <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-success">
                                         <i class="fas fa-headphones me-2"></i>Download Audiobook

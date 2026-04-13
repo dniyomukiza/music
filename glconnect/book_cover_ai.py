@@ -1,6 +1,6 @@
 """
-Optional AI-generated ebook covers (Gemini image), for authors listing without a design file.
-Uses GOOGLE_API_KEY — same credential family as other Gemini features in this project.
+Optional AI-generated ebook covers for authors without a design file.
+Credentials are read from the server environment (not exposed to end users).
 """
 
 from __future__ import annotations
@@ -23,7 +23,11 @@ def generate_book_cover_bytes(
     """
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        return {"success": False, "error": "GOOGLE_API_KEY is not configured.", "image_bytes": None}
+        return {
+            "success": False,
+            "error": "AI cover isn’t available on this site right now. Please upload your own cover image.",
+            "image_bytes": None,
+        }
 
     title = (title or "").strip()[:200]
     desc = (description or "").strip()[:1200]
@@ -54,15 +58,27 @@ Requirements:
             contents=[prompt],
         )
         if not response.candidates:
-            return {"success": False, "error": "Cover request was blocked or empty.", "image_bytes": None}
+            return {
+                "success": False,
+                "error": "We couldn’t create a cover from that information. Try again or upload your own image.",
+                "image_bytes": None,
+            }
         image_bytes = None
         for part in response.candidates[0].content.parts:
             if part.inline_data is not None:
                 image_bytes = part.inline_data.data
                 break
         if not image_bytes:
-            return {"success": False, "error": "No image returned from the model.", "image_bytes": None}
+            return {
+                "success": False,
+                "error": "We couldn’t produce a cover image. Try again or upload your own image.",
+                "image_bytes": None,
+            }
         return {"success": True, "image_bytes": image_bytes, "error": None}
     except Exception as e:
         logger.exception("book cover AI generation failed: %s", e)
-        return {"success": False, "error": str(e), "image_bytes": None}
+        return {
+            "success": False,
+            "error": "Something went wrong while generating the cover. Try again or upload your own image.",
+            "image_bytes": None,
+        }

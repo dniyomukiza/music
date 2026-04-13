@@ -14,7 +14,7 @@ CASCADE DELETE BEHAVIOR:
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, JSON, Enum, CheckConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Float, JSON, Enum, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from enum import Enum as PyEnum
 import uuid
@@ -224,6 +224,26 @@ class AudiobookChapter(db.Model):
     # Relationships
     book_project = db.relationship('BookProject', backref='audiobook_chapters')
     book_chapter = db.relationship('BookChapter', backref='audiobook_chapter')
+
+
+# Extra digital ebook editions (AI-translated plain text), in addition to the uploaded master file
+class DigitalBookEdition(db.Model):
+    __tablename__ = 'digital_book_editions'
+    __table_args__ = (
+        UniqueConstraint('book_project_id', 'language_code', name='uq_digital_edition_book_lang'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False)
+    language_code = db.Column(db.String(10), nullable=False)
+    digital_file_path = db.Column(db.String(500), nullable=True)
+    file_format = db.Column(db.String(10), default='txt', nullable=False)
+    status = db.Column(db.String(20), default='pending', nullable=False)  # pending, ready, failed
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    book_project = db.relationship('BookProject', backref=db.backref('digital_book_editions', lazy=True, cascade='all, delete-orphan'))
 
 
 # Book Collaboration Model

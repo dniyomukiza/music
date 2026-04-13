@@ -42,9 +42,7 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-8">
-                    <h1 class="display-4 fw-bold mb-3">
-                        <i class="fas fa-store me-3"></i>Your book store
-                    </h1>
+                    <h1 class="visually-hidden">Book store</h1>
                     <p class="lead mb-3">Shop digital books and audiobooks the way you would on a major retailer—discovery, categories, secure checkout, and direct support for authors—built for independents and small presses on Ink Studio.</p>
                     <p class="small opacity-95 mb-3 border border-light border-opacity-25 rounded px-3 py-2 bg-white bg-opacity-10">
                         <i class="fas fa-magic me-2"></i><strong>Creation stack:</strong> Write in Ink Studio or upload a manuscript, add an <strong>AI-generated cover</strong> or your own art, and publish <strong>AI-narrated audiobooks</strong> with TTS—so one platform covers listing, audio, and visuals.
@@ -596,27 +594,12 @@
     <script>
         // Search functionality
         function searchBooks() {
-            const searchTerm = (document.getElementById('searchInput') || {}).value || '';
-            const genreEl = document.getElementById('genre');
-            const languageEl = document.getElementById('language');
-            const sortEl = document.getElementById('sortBy');
-            const priceEl = document.getElementById('priceRange');
-            const genre = genreEl ? genreEl.value : '';
-            const language = languageEl ? languageEl.value : '';
-            const sort_by = sortEl ? sortEl.value : 'newest';
-            const price_range = priceEl ? priceEl.value : '';
-
-            let url = '{{ url_for("book_platform.marketplace") }}';
-            const params = new URLSearchParams();
-            params.append('page', '1');
-            if (genre) params.append('genre', genre);
-            if (language) params.append('language', language);
-            if (searchTerm.trim()) params.append('search', searchTerm.trim());
-            if (sort_by) params.append('sort_by', sort_by);
-            if (price_range) params.append('price_range', price_range);
-
-            url += '?' + params.toString();
-            window.location.href = url;
+            const top = document.getElementById('searchInput');
+            const side = document.getElementById('search');
+            if (top && side) {
+                side.value = (top.value || '').trim();
+            }
+            window.location.href = buildMarketplaceUrlFromFilters(1);
         }
 
         function filterBooks(searchTerm, genre, priceRange, sortBy) {
@@ -1297,34 +1280,34 @@
             checkForCompletedPurchases();
         });
 
+        /** Build marketplace URL from sidebar filter controls (must include sort + price or Apply Filters drops them). */
+        function buildMarketplaceUrlFromFilters(page) {
+            const p = Math.max(1, parseInt(page, 10) || 1);
+            const sideSearch = document.getElementById('search');
+            const topSearch = document.getElementById('searchInput');
+            if (sideSearch && topSearch && topSearch.value && !(sideSearch.value || '').trim()) {
+                sideSearch.value = topSearch.value;
+            }
+            const params = new URLSearchParams();
+            params.set('page', String(p));
+            const genre = document.getElementById('genre');
+            const language = document.getElementById('language');
+            const sortEl = document.getElementById('sortBy');
+            const priceEl = document.getElementById('priceRange');
+            if (genre && genre.value) params.set('genre', genre.value);
+            if (language && language.value) params.set('language', language.value);
+            if (sideSearch && sideSearch.value.trim()) params.set('search', sideSearch.value.trim());
+            if (sortEl && sortEl.value) params.set('sort_by', sortEl.value);
+            if (priceEl && priceEl.value) params.set('price_range', priceEl.value);
+            return '{{ url_for("book_platform.marketplace") }}?' + params.toString();
+        }
+
         // Filter form submission
         const filterForm = document.getElementById('filterForm');
         if (filterForm) {
             filterForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                const genre = document.getElementById('genre').value;
-                const language = document.getElementById('language').value;
-                const search = document.getElementById('search').value;
-                
-                // Build URL with parameters
-                let url = '{{ url_for("book_platform.marketplace") }}';
-                const params = new URLSearchParams();
-                
-                if (genre) {
-                    params.append('genre', genre);
-                }
-                if (language) {
-                    params.append('language', language);
-                }
-                if (search) {
-                    params.append('search', search);
-                }
-                
-                if (params.toString()) {
-                    url += '?' + params.toString();
-                }
-                
-                window.location.href = url;
+                window.location.href = buildMarketplaceUrlFromFilters(1);
             });
         }
         
@@ -1332,29 +1315,7 @@
         const genreEl = document.getElementById('genre');
         if (genreEl) {
             genreEl.addEventListener('change', function() {
-                const genre = this.value;
-                const language = document.getElementById('language').value;
-                const search = document.getElementById('search').value;
-                
-                // Build URL with parameters
-                let url = '{{ url_for("book_platform.marketplace") }}';
-                const params = new URLSearchParams();
-                
-                if (genre) {
-                    params.append('genre', genre);
-                }
-                if (language) {
-                    params.append('language', language);
-                }
-                if (search) {
-                    params.append('search', search);
-                }
-                
-                if (params.toString()) {
-                    url += '?' + params.toString();
-                }
-                
-                window.location.href = url;
+                window.location.href = buildMarketplaceUrlFromFilters(1);
             });
         }
         
@@ -1362,29 +1323,7 @@
         const languageEl = document.getElementById('language');
         if (languageEl) {
             languageEl.addEventListener('change', function() {
-                const genre = document.getElementById('genre').value;
-                const language = this.value;
-                const search = document.getElementById('search').value;
-                
-                // Build URL with parameters
-                let url = '{{ url_for("book_platform.marketplace") }}';
-                const params = new URLSearchParams();
-                
-                if (genre) {
-                    params.append('genre', genre);
-                }
-                if (language) {
-                    params.append('language', language);
-                }
-                if (search) {
-                    params.append('search', search);
-                }
-                
-                if (params.toString()) {
-                    url += '?' + params.toString();
-                }
-                
-                window.location.href = url;
+                window.location.href = buildMarketplaceUrlFromFilters(1);
             });
         }
 
@@ -1396,12 +1335,6 @@
                 if (!topSearch.value && sideSearch.value) topSearch.value = sideSearch.value;
                 topSearch.addEventListener('input', function () {
                     sideSearch.value = topSearch.value;
-                });
-            }
-            const ff = document.getElementById('filterForm');
-            if (ff && topSearch && sideSearch) {
-                ff.addEventListener('submit', function () {
-                    sideSearch.value = topSearch.value || sideSearch.value;
                 });
             }
         });
@@ -1552,7 +1485,9 @@
             }
         })();
     </script>
+    {% with ink_hide_live_tv=True %}
     {% include 'book_platform/includes/live_radio_bar.html' %}
+    {% endwith %}
 </body>
 </html>
 

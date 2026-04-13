@@ -3,7 +3,7 @@ from flask import flash
 from .models import User
 from flask_wtf.file import FileAllowed
 from flask_ckeditor import CKEditorField
-from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,TextAreaField,FileField,IntegerField,FloatField
+from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,SelectMultipleField,TextAreaField,FileField,IntegerField,FloatField
 from wtforms.validators import DataRequired, Email, EqualTo, Length,ValidationError,Optional
 import os
 
@@ -140,6 +140,18 @@ class DigitalBookUploadForm(FlaskForm):
     title = StringField('Book Title', validators=[DataRequired(), Length(min=3, max=200)])
     description = TextAreaField('Description', validators=[Optional()])
     genre = StringField('Genre', validators=[Optional(), Length(max=100)])
+    ebook_language = SelectField(
+        'Original language of your ebook',
+        validators=[DataRequired()],
+        choices=[],
+        default='en',
+    )
+    extra_digital_languages = SelectMultipleField(
+        'Also publish AI-translated editions (plain text)',
+        validators=[Optional()],
+        choices=[],
+        render_kw={'class': 'form-select', 'size': '6'},
+    )
     digital_book_file = FileField('Digital Book File', validators=[
         DataRequired(),
         FileAllowed(['pdf', 'epub', 'docx', 'txt'], 'Only PDF, EPUB, DOCX, and TXT files are allowed!')

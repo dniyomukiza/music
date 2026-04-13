@@ -91,3 +91,53 @@ CREATE TABLE IF NOT EXISTS author_campaign_payout_requests (
             exc_info=True,
         )
         raise
+
+
+def ensure_digital_book_editions_schema(db) -> None:
+    """Create digital_book_editions if missing (PostgreSQL). SQLite uses metadata create_all."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        bind = db.engine
+        if bind.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("digital_book_editions patch: dialect check failed: %s", e)
+        return
+
+    check = db.session.execute(
+        text(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_name = 'digital_book_editions'"
+        )
+    ).fetchone()
+    db.session.rollback()
+    if check:
+        return
+
+    logger.info("Creating digital_book_editions table (PostgreSQL catch-up).")
+    stmts = [
+        """
+CREATE TABLE digital_book_editions (
+    id SERIAL PRIMARY KEY,
+    book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+    language_code VARCHAR(10) NOT NULL,
+    digital_file_path VARCHAR(500),
+    file_format VARCHAR(10) DEFAULT 'txt' NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' NOT NULL,
+    error_message TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uq_digital_edition_book_lang UNIQUE (book_project_id, language_code)
+)
+""".strip(),
+        "CREATE INDEX IF NOT EXISTS ix_digital_book_editions_book_project_id ON digital_book_editions(book_project_id)",
+    ]
+    try:
+        for stmt in stmts:
+            db.session.execute(text(stmt))
+        db.session.commit()
+        logger.info("digital_book_editions table ready.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not create digital_book_editions: %s", e, exc_info=True)

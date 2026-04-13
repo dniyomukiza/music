@@ -440,8 +440,12 @@ def create_app():
     with app.app_context():
         # Idempotent PostgreSQL DDL: model maps milestone columns that older DBs lack
         # (fixes ProgrammingError on InvestmentCampaign after login → Ink Studio).
-        from .db_schema_patches import ensure_investment_campaign_milestone_schema
+        from .db_schema_patches import (
+            ensure_investment_campaign_milestone_schema,
+            ensure_digital_book_editions_schema,
+        )
         ensure_investment_campaign_milestone_schema(db)
+        ensure_digital_book_editions_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

@@ -29,7 +29,7 @@ from glconnect.book_platform_models import (
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
     ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
-    AudioGenerationTask, AudiobookChapter, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
+    AudioGenerationTask, AudiobookChapter, DigitalBookEdition, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
     AuthorCampaignPayoutRequest,
     RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, ReviewerPayoutRequest, AuthorSalesPayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
     ReviewStatus, ReviewRequest, ReviewRequestStatus, InvestmentStatus, CampaignStatus, DistributionType
@@ -41,6 +41,13 @@ from glconnect.digital_book_processor import digital_book_processor
 from glconnect.audiobook_text_segments import build_uploaded_book_audiobook_chapters
 from glconnect.book_cover_ai import generate_book_cover_bytes
 from glconnect.audio_book_generator import audio_book_generator
+from glconnect.book_language_tts import (
+    book_language_select_choices,
+    default_voice_for_language,
+    language_label,
+    TTS_BOOK_LANGUAGES,
+    tts_voice_list_prefix,
+)
 from glconnect.revenue_distribution_service import distribute_revenue
 from glconnect.stripe_utils import init_stripe, get_webhook_secret
 from glconnect.book_utils import is_book_published
@@ -52,6 +59,50 @@ book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+
+def _start_digital_edition_translation_thread(app, book_id: int, source_lang: str, full_text: str) -> None:
+    """Background: fill DigitalBookEdition rows (status=pending) with AI-translated .txt files."""
+
+    def worker():
+        from glconnect.ebook_translation import translate_plain_text
+
+        with app.app_context():
+            editions = (
+                DigitalBookEdition.query.filter_by(book_project_id=book_id, status="pending")
+                .order_by(DigitalBookEdition.language_code)
+                .all()
+            )
+            if not editions:
+                return
+            digital_books_dir = os.path.join(app.root_path, "static", "digital_books")
+            os.makedirs(digital_books_dir, exist_ok=True)
+            src = (source_lang or "en").lower()
+            for ed in editions:
+                lc = (ed.language_code or "").lower()
+                if lc == src:
+                    ed.status = "failed"
+                    ed.error_message = "Same as source language"
+                    db.session.commit()
+                    continue
+                try:
+                    translated = translate_plain_text(full_text or "", src, lc)
+                    fname = f"book_{book_id}_{lc}_{uuid.uuid4().hex[:10]}.txt"
+                    abs_path = os.path.join(digital_books_dir, fname)
+                    with open(abs_path, "w", encoding="utf-8") as out:
+                        out.write(translated)
+                    ed.digital_file_path = f"digital_books/{fname}"
+                    ed.file_format = "txt"
+                    ed.status = "ready"
+                    ed.error_message = None
+                except Exception as ex:
+                    logger.exception("Digital edition translation failed book=%s lang=%s", book_id, lc)
+                    ed.status = "failed"
+                    ed.error_message = (str(ex) or "Translation failed")[:2000]
+                db.session.commit()
+
+    threading.Thread(target=worker, daemon=True).start()
+
 
 # Image upload configuration
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
@@ -788,7 +839,7 @@ def create_book(user_profile, profile_type):
         else:
             return jsonify({
                 'success': False,
-                'error': 'Upload a cover image or enable “Generate cover with AI”.',
+                'error': 'Upload a cover image or turn on “Create cover with AI from my book details”.',
             }), 400
 
         book = BookProject(
@@ -822,7 +873,8 @@ def view_book(book_id, user_profile, profile_type):
         from glconnect.book_platform_models import InvestmentCampaign
         book = BookProject.query.options(
             joinedload(BookProject.author).joinedload(BookPlatformUser.user),
-            joinedload(BookProject.chapters)  # Also eager load chapters to avoid lazy loading issues
+            joinedload(BookProject.chapters),
+            joinedload(BookProject.digital_book_editions),
         ).get_or_404(book_id)
         
         # Get investment campaign directly to avoid relationship issues
@@ -912,6 +964,50 @@ def view_book(book_id, user_profile, profile_type):
         logger.error(f"Error checking investment readiness for book {book_id}: {readiness_error}", exc_info=True)
         investment_readiness = None  # Set to None if check fails
     
+    digital_download_options = []
+    if book.digital_file_path:
+        pl = (book.language or "en").lower()
+        digital_download_options.append(
+            {
+                "lang": pl,
+                "label": f"{language_label(pl)} — original ({(book.digital_file_type or 'file').upper()})",
+                "ready": True,
+                "url": url_for("book_platform.download_digital_book", book_id=book.id, lang=pl),
+            }
+        )
+        for ed in sorted(book.digital_book_editions or [], key=lambda x: x.language_code):
+            if ed.status == "ready" and ed.digital_file_path:
+                digital_download_options.append(
+                    {
+                        "lang": ed.language_code,
+                        "label": f"{language_label(ed.language_code)} — AI text (.txt)",
+                        "ready": True,
+                        "url": url_for(
+                            "book_platform.download_digital_book",
+                            book_id=book.id,
+                            lang=ed.language_code,
+                        ),
+                    }
+                )
+            elif ed.status == "pending":
+                digital_download_options.append(
+                    {
+                        "lang": ed.language_code,
+                        "label": f"{language_label(ed.language_code)} — generating…",
+                        "ready": False,
+                        "url": None,
+                    }
+                )
+            elif ed.status == "failed":
+                digital_download_options.append(
+                    {
+                        "lang": ed.language_code,
+                        "label": f"{language_label(ed.language_code)} — translation failed",
+                        "ready": False,
+                        "url": None,
+                    }
+                )
+
     try:
         return render_template('book_platform/view_book.html', 
                              book=book, 
@@ -920,7 +1016,8 @@ def view_book(book_id, user_profile, profile_type):
                              is_author=is_author,
                              is_collaborator=is_collaborator,
                              investment_readiness=investment_readiness,
-                             investment_campaign=campaign)
+                             investment_campaign=campaign,
+                             digital_download_options=digital_download_options)
     except Exception as template_error:
         logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
         flash('Error loading book view. Please try again.', 'error')
@@ -977,7 +1074,8 @@ def edit_book(book_id, user_profile, profile_type):
             book.title = data['title']
             book.description = data.get('description', '')
             book.genre = data.get('genre', '')
-            book.language = data.get('language', '')
+            if not book.digital_file_path:
+                book.language = data.get('language', '')
             book.target_audience = data.get('target_audience', '')
             book.price = float(data.get('price', 0)) if data.get('price') else None
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
@@ -1098,7 +1196,11 @@ def edit_book(book_id, user_profile, profile_type):
             print(f"Book edit error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
-    return render_template('book_platform/edit_book.html', book=book)
+    return render_template(
+        'book_platform/edit_book.html',
+        book=book,
+        ebook_language_label=language_label(book.language),
+    )
 
 # Chapter management routes
 @book_bp.route('/books/<int:book_id>/chapters')
@@ -1725,9 +1827,11 @@ def generate_audiobook_for_book(book_id):
 @book_bp.route('/audiobook/available-voices', methods=['GET'])
 @book_platform_required
 def get_available_voices_upload():
-    """Get available English voices for audiobook generation (for upload page)"""
+    """Get available TTS voices for audiobook generation (filtered by ebook language)."""
     try:
-        result = audio_book_generator.get_available_voices(language_filter='en')
+        lang = (request.args.get("lang") or "en").strip().lower()
+        prefix = tts_voice_list_prefix(lang)
+        result = audio_book_generator.get_available_voices(language_filter=prefix)
         
         if result['success']:
             return jsonify({
@@ -1750,9 +1854,12 @@ def get_available_voices_upload():
 @book_bp.route('/books/<int:book_id>/audiobook/available-voices', methods=['GET'])
 @book_platform_required
 def get_available_voices(book_id):
-    """Get available English voices for audiobook generation"""
+    """Get available TTS voices for audiobook generation (matches book language)."""
     try:
-        result = audio_book_generator.get_available_voices(language_filter='en')
+        book = BookProject.query.get_or_404(book_id)
+        lang = (book.language or "en").strip().lower()
+        prefix = tts_voice_list_prefix(lang)
+        result = audio_book_generator.get_available_voices(language_filter=prefix)
         
         if result['success']:
             return jsonify({
@@ -2547,6 +2654,33 @@ def api_marketplace_book_detail(book_id):
 
     inv = InvestmentCampaign.query.filter_by(book_project_id=book.id).first() if book.has_investment_campaign else None
 
+    primary_lc = (book.language or "en").lower()
+    digital_editions_payload = []
+    if book.digital_book_published and book.digital_file_path:
+        digital_editions_payload.append(
+            {
+                "language": primary_lc,
+                "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
+                "file_format": (book.digital_file_type or "").upper() or None,
+                "kind": "original",
+            }
+        )
+    for ed in (
+        DigitalBookEdition.query.filter_by(book_project_id=book.id, status="ready")
+        .order_by(DigitalBookEdition.language_code)
+        .all()
+    ):
+        digital_editions_payload.append(
+            {
+                "language": ed.language_code,
+                "language_label": lang_labels.get(
+                    (ed.language_code or "").lower(), language_label(ed.language_code)
+                ),
+                "file_format": (ed.file_format or "txt").upper(),
+                "kind": "translated_text",
+            }
+        )
+
     payload = {
         'success': True,
         'book': {
@@ -2568,6 +2702,7 @@ def api_marketplace_book_detail(book_id):
                 'audiobook': bool(book.audiobook_published and book.has_audiobook),
             },
             'digital_file_type': (book.digital_file_type or '').upper() if book.digital_file_type else None,
+            'digital_editions': digital_editions_payload,
             'audiobook_price': float(book.audiobook_price) if book.audiobook_price is not None else None,
             'total_sales': book.total_sales or 0,
             'author': {
@@ -4979,6 +5114,15 @@ def get_chapter_images(book_id, user_profile, profile_type):
     return jsonify({'images': images})
 
 # Digital Book Upload Routes
+
+def _render_upload_digital_book_form(form):
+    return render_template(
+        "book_platform/upload_digital_book.html",
+        form=form,
+        default_voices_by_lang={code: pair[1] for code, pair in TTS_BOOK_LANGUAGES.items()},
+    )
+
+
 @book_bp.route('/upload-digital-book', methods=['GET', 'POST'])
 @book_platform_required
 def upload_digital_book():
@@ -4987,7 +5131,10 @@ def upload_digital_book():
     logger.info(f"Upload digital book - Method: {request.method}, User: {current_user.user_id if current_user.is_authenticated else 'Not authenticated'}")
     
     form = DigitalBookUploadForm()
-    
+    _lang_choices = book_language_select_choices()
+    form.ebook_language.choices = _lang_choices
+    form.extra_digital_languages.choices = _lang_choices
+
     # In development, skip recaptcha validation
     import os
     if os.getenv('FLASK_ENV') == 'development':
@@ -5009,7 +5156,7 @@ def upload_digital_book():
                     # Don't show recaptcha errors to user in development
                     if field != 'recap' or os.getenv('FLASK_ENV') != 'development':
                         flash(f"{field}: {error}", "error")
-            return render_template('book_platform/upload_digital_book.html', form=form)
+            return _render_upload_digital_book_form(form)
         else:
             logger.info("Form validation passed")
     
@@ -5024,7 +5171,7 @@ def upload_digital_book():
             if not user_profile:
                 logger.error("No user profile found")
                 flash("Please ensure you have an Ink Studio or Writer profile.", "error")
-                return render_template('book_platform/upload_digital_book.html', form=form)
+                return _render_upload_digital_book_form(form)
             
             author_id = get_profile_id(user_profile, profile_type)
             logger.info(f"Author ID: {author_id}")
@@ -5032,7 +5179,7 @@ def upload_digital_book():
             if not author_id:
                 flash("Error: Could not determine author ID. Please ensure your profile is set up correctly.", "error")
                 logger.error(f"get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
-                return render_template('book_platform/upload_digital_book.html', form=form)
+                return _render_upload_digital_book_form(form)
             
             # Handle file uploads
             digital_file = form.digital_book_file.data
@@ -5064,7 +5211,7 @@ def upload_digital_book():
             
             if not extraction_result['success']:
                 flash(f"Failed to extract text from file: {extraction_result['error']}", "error")
-                return render_template('book_platform/upload_digital_book.html', form=form)
+                return _render_upload_digital_book_form(form)
 
             # Cover: author file, or optional AI (Gemini); at least one required for marketplace rules
             cover_path = None
@@ -5089,7 +5236,7 @@ def upload_digital_book():
                         or "Could not generate an AI cover. Upload an image or try again.",
                         "error",
                     )
-                    return render_template('book_platform/upload_digital_book.html', form=form)
+                    return _render_upload_digital_book_form(form)
                 unique_cover_filename = f"ai_cover_{uuid.uuid4().hex[:10]}.png"
                 abs_cover = os.path.join(covers_dir, unique_cover_filename)
                 with open(abs_cover, "wb") as out:
@@ -5100,7 +5247,24 @@ def upload_digital_book():
                     "Please upload a cover image or check “Generate cover with AI” so your listing has artwork.",
                     "error",
                 )
-                return render_template('book_platform/upload_digital_book.html', form=form)
+                return _render_upload_digital_book_form(form)
+
+            primary_lang = (form.ebook_language.data or "en").lower().strip()
+            if primary_lang not in TTS_BOOK_LANGUAGES:
+                flash("Choose a supported ebook language from the list.", "error")
+                return _render_upload_digital_book_form(form)
+
+            raw_extras = form.extra_digital_languages.data or []
+            extra_langs = []
+            seen = set()
+            for code in raw_extras:
+                if not code:
+                    continue
+                c = str(code).lower().strip()
+                if c == primary_lang or c not in TTS_BOOK_LANGUAGES or c in seen:
+                    continue
+                seen.add(c)
+                extra_langs.append(c)
             
             # Create book project
             logger.info(f"Creating book project: {form.title.data}")
@@ -5108,7 +5272,7 @@ def upload_digital_book():
                 title=form.title.data,
                 description=form.description.data,
                 genre=form.genre.data,
-                language='en',  # Default to English for uploaded books (audiobooks are English-only)
+                language=primary_lang,
                 author_id=author_id,
                 word_count=extraction_result['word_count'],
                 price=form.digital_price.data,
@@ -5123,8 +5287,27 @@ def upload_digital_book():
             db.session.add(book)
             db.session.flush()  # Flush to get book.id
             logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
+
+            for lc in extra_langs:
+                db.session.add(
+                    DigitalBookEdition(
+                        book_project_id=book.id,
+                        language_code=lc,
+                        status="pending",
+                        file_format="txt",
+                    )
+                )
+
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
+
+            if extra_langs:
+                _start_digital_edition_translation_thread(
+                    current_app._get_current_object(),
+                    book.id,
+                    primary_lang,
+                    extraction_result.get("text") or "",
+                )
             
             # Generate audiobook if requested
             logger.info(f"Generate audiobook checkbox: {form.generate_audiobook.data}")
@@ -5132,13 +5315,13 @@ def upload_digital_book():
             logger.info(f"Audiobook voice: {form.audiobook_voice.data}")
             
             if form.generate_audiobook.data:
-                # Get voice selection or use default
-                selected_voice = form.audiobook_voice.data or 'en-US-Standard-A'
+                # Voice from form, or default for the ebook's language (TTS-aligned)
+                selected_voice = (form.audiobook_voice.data or "").strip() or default_voice_for_language(primary_lang)
                 audiobook_price = form.audiobook_price.data or 0.0
                 
                 if not selected_voice:
                     flash("Please select a voice for your audiobook.", "error")
-                    return render_template('book_platform/upload_digital_book.html', form=form)
+                    return _render_upload_digital_book_form(form)
                 # Create audio generation task
                 audio_task = AudioGenerationTask(
                     book_project_id=book.id,
@@ -5214,9 +5397,15 @@ def upload_digital_book():
                 thread.daemon = True
                 thread.start()
                 
-                flash("Digital book uploaded successfully! Audiobook generation started in the background.", "success")
+                msg = "Digital book uploaded successfully! Audiobook generation started in the background."
+                if extra_langs:
+                    msg += " AI text editions for other languages are generating in the background."
+                flash(msg, "success")
             else:
-                flash("Digital book uploaded successfully!", "success")
+                msg = "Digital book uploaded successfully!"
+                if extra_langs:
+                    msg += " AI text editions for other languages are generating in the background."
+                flash(msg, "success")
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
             return redirect(url_for('book_platform.view_book', book_id=book.id))
@@ -5235,7 +5424,7 @@ def upload_digital_book():
     if request.method == 'GET':
         logger.info("Showing upload digital book form")
     
-    return render_template('book_platform/upload_digital_book.html', form=form)
+    return _render_upload_digital_book_form(form)
 
 @book_bp.route('/debug/check-upload', methods=['GET'])
 @book_platform_required
@@ -5323,22 +5512,41 @@ def download_digital_book(book_id):
             flash("You must purchase this book to download it.", "error")
             return redirect(url_for('book_platform.marketplace'))
     
-    if not book.digital_file_path:
-        flash("Digital file not available for this book.", "error")
-        return redirect(url_for('book_platform.marketplace'))
-    
-    # Serve the file
-    file_path = os.path.join(current_app.root_path, 'static', book.digital_file_path)
-    
+    primary = (book.language or "en").lower().strip()
+    req_lang = (request.args.get("lang") or primary).lower().strip()
+
+    rel_path = None
+    dl_ext = None
+    if req_lang == primary:
+        if not book.digital_file_path:
+            flash("Digital file not available for this book.", "error")
+            return redirect(url_for('book_platform.marketplace'))
+        rel_path = book.digital_file_path
+        dl_ext = book.digital_file_type or "bin"
+    else:
+        edition = DigitalBookEdition.query.filter_by(
+            book_project_id=book.id, language_code=req_lang
+        ).first()
+        if not edition or edition.status != "ready" or not edition.digital_file_path:
+            flash("That language edition is not available yet.", "error")
+            return redirect(url_for('book_platform.marketplace'))
+        rel_path = edition.digital_file_path
+        dl_ext = edition.file_format or "txt"
+
+    file_path = os.path.join(current_app.root_path, 'static', rel_path)
+
     if not os.path.exists(file_path):
         flash("Digital file not found.", "error")
         return redirect(url_for('book_platform.marketplace'))
-    
+
+    safe_ext = (dl_ext or "txt").lstrip(".").lower() or "txt"
+    download_basename = f"{book.title} ({language_label(req_lang)}).{safe_ext}"
+
     return send_from_directory(
         os.path.dirname(file_path),
         os.path.basename(file_path),
         as_attachment=True,
-        download_name=f"{book.title}.{book.digital_file_type}"
+        download_name=download_basename,
     )
 
 @book_bp.route('/audiobook/<int:book_id>/file')
