@@ -35,10 +35,10 @@
         </h2>
         <p class="text-muted">
             Paste a YouTube video or playlist URL <strong>only to download</strong>—the live channel never streams YouTube links.
-            Each item becomes a <strong>local MP4</strong> under <code>glconnect/static/ytautovid/</code>, is recorded in
-            <code>downloaded_videos</code>, and its <strong>file path</strong> (not a URL) is written into <code>video/videolist.m3u</code>
-            together with <code>video/videolist_extra.m3u</code> and any <code>*.mp4</code> already in <code>ytautovid/</code> when you use <strong>Sync TV playlist only</strong>.
-            Liquidsoap plays those paths only; it reloads when the M3U changes.
+            Each item becomes a <strong>local MP4</strong> under <code>glconnect/static/ytautovid/</code>. After rename, the job
+            <strong>writes <code>videolist.m3u</code> immediately</strong> from every <code>*.mp4</code> on disk (plus extras + DB),
+            then reconciles <code>downloaded_videos</code> (insert or fix <code>local_path</code>), then refreshes the M3U again.
+            <strong>Sync TV playlist only</strong> runs the same merge without downloading. Liquidsoap plays local paths only; it reloads when the M3U changes.
             Same admin-only, background idea as music downloads, but TV uses a separate playlist and DB table.
         </p>
 

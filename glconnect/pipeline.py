@@ -25,6 +25,17 @@ db.init_app(app)
 # Path to your output folder for music files
 output_folder = os.path.join(os.getcwd(), "glconnect/static/ytauto")
 
+# Bumpers in static/ytautovid/ (same dir as TV downloads); paths belong in tv_jingles.m3u only — not videolist.m3u.
+_TV_JINGLE_BASENAMES_LOWER = frozenset(("tvjingle.mp4", "tvjingle2.mp4"))
+
+
+def _is_tv_jingle_basename(path_or_name: str) -> bool:
+    if not path_or_name:
+        return False
+    bn = os.path.basename(path_or_name.replace("\\", "/")).lower()
+    return bn in _TV_JINGLE_BASENAMES_LOWER
+
+
 class AudioDownloader:
     def __init__(self, playlist_url=None, output_folder=None):
         self.playlist_url = playlist_url.strip() if playlist_url else None
@@ -301,36 +312,83 @@ class PlaylistIngestion:
 
     @staticmethod
     def _do_ingest_videos_from_folder(output_folder, source_url=None):
+        """
+        Align downloaded_videos with every *.mp4 on disk: insert new rows, or attach/update
+        local_path when a row matched title parse but had no path / wrong file (manual copies,
+        DB reset, renames). Skips only when this exact file is already catalogued.
+        """
         prefix_liq = "/liqfolder/glconnect/static/ytautovid/"
         if not os.path.isdir(output_folder):
             print(f"TV output folder does not exist: {output_folder}")
             return 0, 0
-        mp4_files = [f for f in os.listdir(output_folder) if f.lower().endswith(".mp4")]
+        try:
+            mp4_files = [f for f in os.listdir(output_folder) if f.lower().endswith(".mp4")]
+        except OSError as exc:
+            print(f"TV folder list failed {output_folder}: {exc}")
+            return 0, 0
         added_count = 0
+        updated_count = 0
         skipped_count = 0
         url_trim = (source_url or "").strip()[:500] or None
+
+        by_basename = {}
+        for row in DownloadedVideo.query.filter(
+            DownloadedVideo.local_path.isnot(None),
+            DownloadedVideo.local_path != "",
+        ).all():
+            lp = (row.local_path or "").strip().replace("\\", "/")
+            bn = os.path.basename(lp)
+            if bn.lower().endswith(".mp4"):
+                by_basename.setdefault(bn, row)
+
         for filename in sorted(mp4_files, key=lambda x: x.lower()):
+            if _is_tv_jingle_basename(filename):
+                skipped_count += 1
+                continue
+            liq_path = prefix_liq + filename
+            if filename in by_basename:
+                row = by_basename[filename]
+                if row.local_path != liq_path:
+                    row.local_path = liq_path
+                    if url_trim:
+                        row.source_url = url_trim
+                    updated_count += 1
+                    print(f"Updated TV path: {filename}")
+                else:
+                    skipped_count += 1
+                continue
+
             artist, title = _parse_video_title(filename)
             key_artist = (artist or "").strip() or None
             key_name = (title or "").strip() or "Unknown"
-            existing = DownloadedVideo.query.filter_by(artist=key_artist, name=key_name).first()
-            if existing:
-                print(f"Skipped duplicate TV: {artist} - {title}")
-                skipped_count += 1
+            twin = DownloadedVideo.query.filter_by(artist=key_artist, name=key_name).first()
+            if twin:
+                if twin.local_path != liq_path:
+                    twin.local_path = liq_path
+                    if url_trim:
+                        twin.source_url = url_trim
+                    updated_count += 1
+                    print(f"Updated TV row (title match): {artist} - {title} -> {filename}")
+                else:
+                    skipped_count += 1
+                by_basename[filename] = twin
                 continue
-            local_path = prefix_liq + filename
+
             row = DownloadedVideo(
                 name=key_name,
                 artist=key_artist,
-                local_path=local_path,
+                local_path=liq_path,
                 source_url=url_trim,
             )
             db.session.add(row)
+            by_basename[filename] = row
             print(f"Added TV: {artist} - {title} -> {filename}")
             added_count += 1
         db.session.commit()
-        print(f"TV folder ingestion: {added_count} added, {skipped_count} skipped.")
-        return added_count, skipped_count
+        print(
+            f"TV folder ingestion: {added_count} new, {updated_count} path updates, {skipped_count} unchanged."
+        )
+        return added_count + updated_count, skipped_count
 
 
 def _parse_artist_title(filename):
@@ -373,6 +431,8 @@ def sync_tv_videolist_from_db():
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#"):
+                    if _is_tv_jingle_basename(line):
+                        continue
                     paths.append(line)
     rows = (
         DownloadedVideo.query.filter(
@@ -384,15 +444,22 @@ def sync_tv_videolist_from_db():
     )
     for row in rows:
         p = (row.local_path or "").strip()
-        if p and p not in paths:
+        if p and p not in paths and not _is_tv_jingle_basename(p):
             paths.append(p)
     # Orphan MP4s in ytautovid (e.g. copied in or DB reset) — Liquidsoap only reads paths in this M3U.
     seen = set(paths)
     ytautovid_dir = os.path.join(glconnect_dir, "static", "ytautovid")
     liq_prefix = "/liqfolder/glconnect/static/ytautovid/"
     if os.path.isdir(ytautovid_dir):
-        for fn in sorted(os.listdir(ytautovid_dir)):
-            if not fn.lower().endswith(".mp4"):
+        try:
+            disk_mp4 = sorted(
+                f for f in os.listdir(ytautovid_dir) if f.lower().endswith(".mp4")
+            )
+        except OSError as exc:
+            print(f"TV sync: cannot list {ytautovid_dir}: {exc}")
+            disk_mp4 = []
+        for fn in disk_mp4:
+            if _is_tv_jingle_basename(fn):
                 continue
             liq_path = liq_prefix + fn
             if liq_path not in seen:

@@ -1,4 +1,5 @@
 #EXTM3U
-# Short bumpers after each program (container paths). mode=random in video.liq.
-/liqfolder/video/tvjingle.mp4
-/liqfolder/video/tvjingle2.mp4
+# Bumpers live next to TV downloads (static/ytautovid). mode=random in video.liq.
+# Same /liqfolder/ prefix as programs; these basenames are excluded from videolist.m3u merge.
+/liqfolder/glconnect/static/ytautovid/tvjingle.mp4
+/liqfolder/glconnect/static/ytautovid/tvjingle2.mp4

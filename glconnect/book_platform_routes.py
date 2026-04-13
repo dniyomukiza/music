@@ -9010,44 +9010,82 @@ def admin_tv_download():
                 _set_tv_download_status('renaming', 'Renaming finished.', url=url, step=current_step)
 
                 current_step = 'ingest'
-                _set_tv_download_status('ingesting', 'Saving to database…', url=url, step=current_step)
-                added, _ = PlaylistIngestion.ingest_videos_from_folder(output_folder, source_url=url)
                 _set_tv_download_status(
                     'ingesting',
-                    f'Saved to database. {added} new video(s).' if added > 0 else 'Saved (no new rows; duplicates or empty).',
+                    'Writing videolist.m3u from disk (ytautovid/*.mp4 + extra + DB)…',
+                    url=url,
+                    step=current_step,
+                )
+                n_disk = sync_tv_videolist_from_db()
+                _set_tv_download_status(
+                    'ingesting',
+                    f'Playlist pass 1: {n_disk} path(s) in videolist.m3u.',
+                    url=url,
+                    step=current_step,
+                )
+
+                _set_tv_download_status('ingesting', 'Saving to database…', url=url, step=current_step)
+                added, unchanged = PlaylistIngestion.ingest_videos_from_folder(
+                    output_folder, source_url=url
+                )
+                _set_tv_download_status(
+                    'ingesting',
+                    (
+                        f'DB reconciled: {added} new or updated row(s), {unchanged} unchanged.'
+                        if added > 0
+                        else f'DB unchanged ({unchanged} file(s) already catalogued).'
+                    ),
                     url=url,
                     step=current_step,
                 )
 
                 current_step = 'playlist'
-                _set_tv_download_status('ingesting', 'Writing TV playlist (videolist.m3u)…', url=url, step=current_step)
+                _set_tv_download_status(
+                    'ingesting',
+                    'Refreshing videolist.m3u after DB ingest…',
+                    url=url,
+                    step='playlist',
+                )
                 npaths = sync_tv_videolist_from_db()
                 _set_tv_download_status(
                     'ingesting',
-                    f'Playlist updated: {npaths} path(s) in videolist.m3u.',
+                    f'Playlist pass 2: {npaths} path(s) in videolist.m3u.',
                     url=url,
-                    step=current_step,
+                    step='playlist',
                 )
 
                 if added > 0:
                     _set_tv_download_status(
                         'completed',
-                        f'Done. {added} new video(s); TV playlist has {npaths} entr(y/ies). Liquidsoap will reload if watch mode is on.',
+                        f'Done. {added} DB change(s); videolist.m3u has {npaths} path(s). Liquidsoap reloads if watch mode is on.',
                         url=url,
                         completed=True,
                         step=None,
                     )
-                    logger.info("Admin TV download finished: %s new video(s), %s playlist paths", added, npaths)
+                    logger.info(
+                        "Admin TV download finished: %s DB change(s), %s playlist paths",
+                        added,
+                        npaths,
+                    )
                 else:
                     _set_tv_download_status(
                         'completed',
-                        'Completed but no new videos in DB (duplicates). Playlist refreshed.',
+                        f'Completed. No DB updates needed; videolist.m3u refreshed ({npaths} path(s)).',
                         url=url,
                         completed=True,
                         step=None,
                     )
             except Exception as e:
                 logger.exception("Admin TV download failed at step %s: %s", current_step, e)
+                try:
+                    from glconnect.pipeline import sync_tv_videolist_from_db as _sync_tv
+                    n_rec = _sync_tv()
+                    logger.info(
+                        "TV playlist refreshed after error: %s path(s) in videolist.m3u",
+                        n_rec,
+                    )
+                except Exception:
+                    logger.exception("TV playlist sync after failure failed")
                 step_label = {
                     'download': 'Download',
                     'rename': 'Renaming',

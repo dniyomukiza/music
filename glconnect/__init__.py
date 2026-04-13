@@ -229,6 +229,32 @@ def create_app():
             or os.path.join(os.path.dirname(__file__), "..", "hls-video")
         )
 
+    def _project_root() -> str:
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    def _count_m3u_media_lines(path: str) -> int:
+        if not os.path.isfile(path):
+            return 0
+        n = 0
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        n += 1
+        except OSError:
+            return 0
+        return n
+
+    def _count_ytautovid_mp4() -> int:
+        d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "ytautovid")
+        if not os.path.isdir(d):
+            return 0
+        try:
+            return sum(1 for x in os.listdir(d) if x.lower().endswith(".mp4"))
+        except OSError:
+            return 0
+
     try:
         os.makedirs(_hls_root(), mode=0o755, exist_ok=True)
     except OSError:
@@ -241,6 +267,16 @@ def create_app():
         from flask import jsonify
 
         root = _hls_root()
+        pr = _project_root()
+        videolist = os.path.join(pr, "video", "videolist.m3u")
+        jingles_m3u = os.path.join(pr, "video", "tv_jingles.m3u")
+        tv_diag = {
+            "videolist_media_lines": _count_m3u_media_lines(videolist),
+            "tv_jingles_media_lines": _count_m3u_media_lines(jingles_m3u),
+            "ytautovid_mp4_on_disk": _count_ytautovid_mp4(),
+            "videolist_path": videolist,
+            "tv_fix_hint": "If videolist_media_lines is 0, use Admin → Sync TV playlist (or add lines to video/videolist_extra.m3u). Live HLS needs: docker compose --profile video up -d",
+        }
         try:
             files = sorted(os.listdir(root)) if os.path.isdir(root) else []
         except OSError as exc:
@@ -251,6 +287,7 @@ def create_app():
                     hls_root_disk=root,
                     disk_error=str(exc),
                     files=[],
+                    **tv_diag,
                 ),
                 200,
             )
@@ -260,6 +297,7 @@ def create_app():
                 hint="Manifest/proxy: nginx /hls/ → liquidsoap_video:8920. If 404/502, start liquidsoap_video and check its logs.",
                 hls_root_disk=root,
                 disk_files=files[:200],
+                **tv_diag,
             ),
             200,
         )

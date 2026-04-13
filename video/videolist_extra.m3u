@@ -1,4 +1,4 @@
 #EXTM3U
 # Local file paths only (no http / YouTube URLs). Merged into videolist.m3u on admin TV sync.
-# Example: /liqfolder/video/myshow.mp4
+# Example: /liqfolder/glconnect/static/ytautovid/myshow.mp4
 # Bumpers belong only in tv_jingles.m3u
