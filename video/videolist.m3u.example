@@ -1,0 +1,8 @@
+#EXTM3U
+# Template only — not used by Liquidsoap. Copy to videolist.m3u or let Admin → Sync TV playlist build it.
+# Real videolist.m3u is gitignored so deploys do not overwrite prod with an empty local file.
+#
+# Local Docker (video profile): cp videolist.m3u.example videolist.m3u and add at least one line like:
+# /liqfolder/glconnect/static/ytautovid/YourFile.mp4
+#
+# Production: after a pull that stops tracking videolist.m3u, run Admin → Sync TV playlist once to recreate it.

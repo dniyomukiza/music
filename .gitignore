@@ -37,6 +37,9 @@ scripts/fix_ytauto_from_disk.py
 hls-video/*
 !hls-video/.gitkeep
 
+# TV program playlist: generated on prod by Admin → Sync TV playlist (local clone has no downloads)
+video/videolist.m3u
+
 # Media files - both audio and pictures are now tracked for remote server
 
 # Ignore large backup and archive files
