@@ -1848,6 +1848,239 @@ body.ink-marketplace .modal-header.bg-success {
     background: linear-gradient(145deg, #1e4d3a, #2d6a4f) !important;
 }
 
+/* --- Marketplace UX refresh (scoped) --- */
+body.ink-marketplace .ink-skip-link:focus {
+    position: fixed !important;
+    z-index: 1080;
+    clip: auto !important;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 0.75rem;
+}
+
+body.ink-marketplace .ink-marketplace-nav {
+    backdrop-filter: blur(12px);
+}
+
+body.ink-marketplace .ink-hero {
+    overflow: hidden;
+}
+
+body.ink-marketplace .ink-hero-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+body.ink-marketplace .ink-hero-eyebrow {
+    letter-spacing: 0.12em;
+    color: rgba(245, 215, 106, 0.95) !important;
+}
+
+body.ink-marketplace .ink-hero-lead {
+    max-width: 40rem;
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+
+body.ink-marketplace .ink-hero-tile {
+    background: rgba(6, 8, 7, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.ink-marketplace .ink-hero-tile:hover {
+    border-color: rgba(201, 162, 39, 0.45);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    transform: translateY(-2px);
+}
+
+body.ink-marketplace .ink-hero-tile-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 10px;
+    background: rgba(201, 162, 39, 0.2);
+    color: #f5d76a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+body.ink-marketplace .ink-hero-tile-title {
+    color: #fff !important;
+    font-weight: 700;
+}
+
+body.ink-marketplace .ink-hero-badge {
+    background: rgba(201, 162, 39, 0.22) !important;
+    color: #f5d76a !important;
+    border: 1px solid rgba(201, 162, 39, 0.4);
+}
+
+body.ink-marketplace .ink-hero-stats-card .ink-stat-circle {
+    width: 148px;
+    height: 148px;
+    margin: 0 auto;
+    background: linear-gradient(160deg, rgba(201, 162, 39, 0.25), rgba(6, 8, 7, 0.5));
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+body.ink-marketplace .ink-section-title {
+    color: #e0bc3a !important;
+}
+
+body.ink-marketplace .ink-category-strip {
+    padding: 0.75rem !important;
+    border-radius: 14px;
+}
+
+@media (max-width: 575.98px) {
+    body.ink-marketplace .ink-category-strip {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        gap: 0.5rem !important;
+        padding-bottom: 0.35rem;
+    }
+    body.ink-marketplace .ink-category-strip .category-btn {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+    }
+}
+
+body.ink-marketplace .ink-filters-column .ink-filter-card {
+    position: sticky;
+    top: 5.75rem;
+    z-index: 3;
+}
+
+@media (max-width: 991.98px) {
+    body.ink-marketplace .ink-filters-column .ink-filter-card {
+        position: static;
+    }
+}
+
+body.ink-marketplace .ink-filter-card,
+body.ink-marketplace .ink-stats-card,
+body.ink-marketplace .ink-results-toolbar {
+    border-radius: 16px !important;
+    border: 1px solid rgba(201, 162, 39, 0.18) !important;
+    background: rgba(12, 15, 14, 0.92) !important;
+}
+
+body.ink-marketplace .ink-btn-primary {
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-results-toolbar .input-group-text {
+    border-color: rgba(201, 162, 39, 0.28) !important;
+}
+
+body.ink-marketplace .ink-view-toggle .btn.active {
+    background: rgba(201, 162, 39, 0.22) !important;
+    border-color: #c9a227 !important;
+    color: #f5d76a !important;
+}
+
+body.ink-marketplace .ink-book-card-inner {
+    border-radius: 16px !important;
+    overflow: hidden;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+body.ink-marketplace .ink-book-card:hover .ink-book-card-inner {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35) !important;
+    border-color: rgba(201, 162, 39, 0.45) !important;
+}
+
+body.ink-marketplace .ink-book-cover-wrap {
+    aspect-ratio: 2 / 3;
+    background: #0a0c0b;
+}
+
+body.ink-marketplace .ink-book-cover-wrap .book-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+body.ink-marketplace .ink-book-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+}
+
+body.ink-marketplace .ink-btn-free {
+    background: transparent !important;
+    color: #e8ece9 !important;
+    border: 2px solid rgba(201, 162, 39, 0.5) !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-btn-free:hover {
+    background: rgba(201, 162, 39, 0.15) !important;
+    color: #f5d76a !important;
+    border-color: #e0bc3a !important;
+}
+
+body.ink-marketplace .ink-empty-state {
+    background: rgba(12, 15, 14, 0.75);
+    border-color: rgba(201, 162, 39, 0.22) !important;
+}
+
+body.ink-marketplace .ink-empty-icon {
+    font-size: 2.75rem;
+    color: rgba(201, 162, 39, 0.55);
+}
+
+body.ink-marketplace #booksGrid.ink-view-list .marketplace-card {
+    flex: 0 0 100%;
+    max-width: 100%;
+}
+
+body.ink-marketplace #booksGrid.ink-view-list .ink-book-card-inner {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+body.ink-marketplace #booksGrid.ink-view-list .book-cover-container {
+    width: min(140px, 38%);
+    max-width: 180px;
+    flex-shrink: 0;
+    aspect-ratio: 2 / 3;
+}
+
+body.ink-marketplace #booksGrid.ink-view-list .card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+body.ink-marketplace #booksGrid.ink-view-list .ink-card-actions {
+    max-width: 280px;
+}
+
+@media (max-width: 575.98px) {
+    body.ink-marketplace #booksGrid.ink-view-list .ink-book-card-inner {
+        flex-direction: column;
+    }
+    body.ink-marketplace #booksGrid.ink-view-list .book-cover-container {
+        width: 100%;
+        max-width: none;
+        aspect-ratio: 16 / 9;
+    }
+}
+
 /* =============================================================================
    My Books list + Create Book (/mybook/books, /mybook/books/create)
    ============================================================================= */
