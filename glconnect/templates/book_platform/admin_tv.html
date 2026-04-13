@@ -34,10 +34,12 @@
             <i class="fas fa-tv me-2"></i>YouTube TV (HLS) download
         </h2>
         <p class="text-muted">
-            Paste a YouTube video or playlist URL. Videos are saved as MP4 under <code>glconnect/static/ytautovid/</code>,
-            recorded in <code>downloaded_videos</code>, and merged into <code>video/videolist.m3u</code> with
-            <code>video/videolist_extra.m3u</code> (manual paths). Liquidsoap TV service reloads the playlist when the file changes.
-            Same admin-only, background workflow as music.
+            Paste a YouTube video or playlist URL <strong>only to download</strong>—the live channel never streams YouTube links.
+            Each item becomes a <strong>local MP4</strong> under <code>glconnect/static/ytautovid/</code>, is recorded in
+            <code>downloaded_videos</code>, and its <strong>file path</strong> (not a URL) is written into <code>video/videolist.m3u</code>
+            together with <code>video/videolist_extra.m3u</code> and any <code>*.mp4</code> already in <code>ytautovid/</code> when you use <strong>Sync TV playlist only</strong>.
+            Liquidsoap plays those paths only; it reloads when the M3U changes.
+            Same admin-only, background idea as music downloads, but TV uses a separate playlist and DB table.
         </p>
 
         <div class="card shadow-sm">
@@ -58,7 +60,7 @@
 
         <div class="card shadow-sm mt-4">
             <div class="card-body py-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="syncPlaylistBtn" title="Rebuild videolist.m3u from DB + videolist_extra.m3u">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="syncPlaylistBtn" title="Rebuild videolist.m3u from DB + videolist_extra.m3u + ytautovid/*.mp4">
                     <i class="fas fa-sync me-1"></i>Sync TV playlist only
                 </button>
                 <span class="ms-2 small text-muted" id="syncPlaylistResult"></span>
@@ -103,8 +105,9 @@
 
         <div class="alert alert-info mt-4" role="alert">
             <i class="fas fa-info-circle me-2"></i>
-            Ensure the <code>video</code> Docker volume is shared with the Liquidsoap container (<code>./:/liqfolder</code>).
-            After sync, TV plays entries in <code>videolist.m3u</code>; bumpers still come from <code>tv_jingles.m3u</code>.
+            Ensure the project root is mounted in the Liquidsoap TV container as <code>/liqfolder</code> (see <code>docker-compose.yml</code>).
+            M3U lines are always <strong>local paths</strong> such as <code>/liqfolder/glconnect/static/ytautovid/…mp4</code>—never https YouTube addresses.
+            Programs: <code>videolist.m3u</code>; bumpers: <code>tv_jingles.m3u</code>.
         </div>
     </div>
 
@@ -283,6 +286,5 @@
                 .finally(function() { btn.disabled = false; });
         });
     </script>
-    {% include 'book_platform/includes/live_radio_bar.html' %}
 </body>
 </html>

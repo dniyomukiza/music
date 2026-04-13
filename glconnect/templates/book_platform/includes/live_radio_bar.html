@@ -74,6 +74,7 @@ body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
         <source src="/station" type="audio/mpeg">
     </audio>
 </div>
-{% if not (ink_hide_live_tv is defined and ink_hide_live_tv) %}
+{# TV only on pages that set ink_show_live_tv=True (homepage, landing, content hub). Marketplace = radio only. #}
+{% if ink_show_live_tv is defined and ink_show_live_tv %}
 {% include 'book_platform/includes/live_tv_bar.html' %}
 {% endif %}

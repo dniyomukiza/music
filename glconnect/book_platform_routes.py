@@ -9074,7 +9074,7 @@ def admin_tv_download():
 @book_bp.route('/admin/tv/sync-playlist', methods=['POST'])
 @login_required
 def admin_tv_sync_playlist():
-    """Rewrite video/videolist.m3u from videolist_extra.m3u + downloaded_videos."""
+    """Rewrite video/videolist.m3u from videolist_extra.m3u + downloaded_videos + ytautovid/*.mp4."""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
     try:

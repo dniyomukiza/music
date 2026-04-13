@@ -1,4 +1,4 @@
 #EXTM3U
-# Manual TV paths (merged first into videolist.m3u on admin TV sync).
-# Put full programs here, e.g. /liqfolder/video/myshow.mp4
-# Do NOT list bumpers here — those belong only in tv_jingles.m3u
+# Local file paths only (no http / YouTube URLs). Merged into videolist.m3u on admin TV sync.
+# Example: /liqfolder/video/myshow.mp4
+# Bumpers belong only in tv_jingles.m3u

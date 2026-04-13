@@ -1,7 +1,10 @@
-# HLS via Liquidsoap harbor HTTP (no shared disk with Flask). Nginx proxies https://glc.cool/hls/ → this server.
+# HLS via Liquidsoap harbor HTTP. Nginx proxies https://glc.cool/hls/ → this server.
 # Enable: docker compose --profile video up -d
 #
 # Internal URL (compose network): http://liquidsoap_video:8920/hls/live.m3u8
+#
+# Playlists list LOCAL FILES ONLY (paths under /liqfolder/…). Liquidsoap does not read YouTube URLs;
+# admin TV download stores MP4s on disk, then sync writes those paths into videolist.m3u.
 #
 # Setup: media in ./video/
 #   - videolist.m3u = merged from videolist_extra.m3u + DB downloaded_videos (admin TV sync)
