@@ -39,6 +39,9 @@ hls-video/*
 
 # TV program playlist: generated on prod by Admin → Sync TV playlist (local clone has no downloads)
 video/videolist.m3u
+# Jingle playlists: maintained on prod (paths differ from local); see *.m3u.example
+jingles.m3u
+video/tv_jingles.m3u
 
 # Media files - both audio and pictures are now tracked for remote server
 

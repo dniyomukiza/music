@@ -1,0 +1,11 @@
+#EXTM3U
+# TV bumpers (scripts/video.liq → /liqfolder/video/tv_jingles.m3u).
+# Real tv_jingles.m3u is gitignored so deploys do not overwrite prod paths
+# (e.g. bumpers under ytautovid on the server).
+# After clone: cp tv_jingles.m3u.example tv_jingles.m3u and edit.
+#
+# Bumpers: MP4 paths. If files live in glconnect/static/ytautovid/, use e.g.:
+# /liqfolder/glconnect/static/ytautovid/tvjingle.mp4
+
+/liqfolder/video/tvjingle.mp4
+/liqfolder/video/tvjingle2.mp4

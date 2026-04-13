@@ -1,0 +1,6 @@
+# Radio Liquidsoap (scripts/main.liq) reads ./jingles.m3u at /liqfolder/jingles.m3u
+# Real jingles.m3u is gitignored so deploys do not overwrite prod.
+# After clone: cp jingles.m3u.example jingles.m3u and edit paths.
+
+/liqfolder/jingle.mp3
+/liqfolder/sweeper.mp3
