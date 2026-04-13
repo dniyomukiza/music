@@ -1966,6 +1966,14 @@ body.ink-marketplace .ink-filters-column .ink-filter-card {
     }
 }
 
+body.ink-marketplace .ink-marketplace-body {
+    max-width: none;
+}
+
+body.ink-marketplace .ink-results-column {
+    min-width: 0;
+}
+
 body.ink-marketplace .ink-filter-card,
 body.ink-marketplace .ink-stats-card,
 body.ink-marketplace .ink-results-toolbar {

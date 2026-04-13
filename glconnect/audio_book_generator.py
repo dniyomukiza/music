@@ -251,33 +251,52 @@ class AudioBookGenerator:
             chunks.append(current_chunk.strip())
         
         return chunks
+
+    def _language_code_from_voice_name(self, voice_name: str) -> str:
+        """BCP-47 prefix from API voice name (e.g. en-US-Chirp3-HD-Aoede -> en-US)."""
+        parts = voice_name.split("-")
+        if len(parts) >= 2 and len(parts[0]) == 2 and len(parts[1]) == 2:
+            return f"{parts[0]}-{parts[1]}"
+        return "en-US"
+
+    def _tts_model_name_for_voice(self, voice_name: str) -> str:
+        """
+        Google Cloud TTS now requires VoiceSelectionParams.model_name for most voice families.
+        See: https://cloud.google.com/text-to-speech/docs/list-voices-and-types
+        """
+        vn = voice_name.lower()
+        if "chirp3" in vn and "hd" in vn:
+            return "chirp3-hd"
+        if "chirp" in vn:
+            return "chirp3-hd"
+        if "gemini" in vn:
+            return "gemini-tts"
+        if "studio" in vn:
+            return "studio"
+        if "neural2" in vn:
+            return "neural2"
+        if "wavenet" in vn:
+            return "wavenet"
+        if "polyglot" in vn:
+            return "studio"
+        if "standard" in vn:
+            return "standard"
+        # Names that omit "Standard" but match en-US-Neutral-A style are rare; default safest GA model
+        return "neural2"
+
+    def _voice_selection_params(self, voice_name: str):
+        language_code = self._language_code_from_voice_name(voice_name)
+        model_name = self._tts_model_name_for_voice(voice_name)
+        return texttospeech.VoiceSelectionParams(
+            language_code=language_code,
+            name=voice_name,
+            model_name=model_name,
+        )
     
     def _generate_chunk_audio(self, text: str, book_id: int, chunk_index, voice_name: str) -> Dict[str, Any]:
         """Generate audio for a single text chunk"""
         try:
-            # Extract language code
-            parts = voice_name.split('-')
-            if len(parts) >= 2:
-                language_code = f"{parts[0]}-{parts[1]}"
-            else:
-                language_code = "en-US"  # Default fallback
-            
-            # Check if this is a Standard voice (requires model parameter)
-            is_standard_voice = 'standard' in voice_name.lower() and 'wavenet' not in voice_name.lower() and 'neural2' not in voice_name.lower() and 'studio' not in voice_name.lower() and 'chirp' not in voice_name.lower()
-            
-            # Set up voice selection
-            if is_standard_voice:
-                # Standard voices require a model parameter
-                voice = texttospeech.VoiceSelectionParams(
-                    language_code=language_code,
-                    name=voice_name,
-                    model='standard'
-                )
-            else:
-                voice = texttospeech.VoiceSelectionParams(
-                    language_code=language_code,
-                    name=voice_name
-                )
+            voice = self._voice_selection_params(voice_name)
             
             # Set up audio config
             audio_config = texttospeech.AudioConfig(
@@ -592,29 +611,7 @@ class AudioBookGenerator:
                     'cached': True
                 }
             
-            # Extract language code from voice name (e.g., "en-US-Standard-A" -> "en-US")
-            parts = voice_name.split('-')
-            if len(parts) >= 2:
-                language_code = f"{parts[0]}-{parts[1]}"
-            else:
-                language_code = "en-US"  # Default fallback
-            
-            # Check if this is a Standard voice (requires model parameter)
-            is_standard_voice = 'standard' in voice_name.lower() and 'wavenet' not in voice_name.lower() and 'neural2' not in voice_name.lower() and 'studio' not in voice_name.lower() and 'chirp' not in voice_name.lower()
-            
-            # Set up voice selection
-            if is_standard_voice:
-                # Standard voices require a model parameter
-                voice = texttospeech.VoiceSelectionParams(
-                    language_code=language_code,
-                    name=voice_name,
-                    model='standard'
-                )
-            else:
-                voice = texttospeech.VoiceSelectionParams(
-                    language_code=language_code,
-                    name=voice_name
-                )
+            voice = self._voice_selection_params(voice_name)
             
             # Set up audio config
             audio_config = texttospeech.AudioConfig(

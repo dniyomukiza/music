@@ -180,10 +180,10 @@
         </div>
     </div>
 
-    <div class="container pb-5 ink-marketplace-body">
-        <div class="row g-4">
+    <div class="container-fluid px-3 px-md-4 px-xl-5 pb-5 ink-marketplace-body">
+        <div class="row g-4 align-items-start">
             <!-- Sidebar Filters -->
-            <aside class="col-lg-3 ink-filters-column" aria-labelledby="filters-heading">
+            <aside class="col-12 col-lg-3 col-xl-2 ink-filters-column" aria-labelledby="filters-heading">
                 <div class="card shadow-sm border-0 mb-4 ink-filter-card">
                     <div class="card-header bg-white border-0 py-3">
                         <h2 id="filters-heading" class="h5 card-title text-primary mb-0">
@@ -323,8 +323,8 @@
                 </div>
             </div>
 
-            <!-- Results -->
-            <div class="col-lg-9 ink-results-column">
+            <!-- Results: fills remaining width; cards wrap below as more titles load -->
+            <div class="col-12 col-lg-9 col-xl-10 ink-results-column">
                 <div class="ink-results-toolbar card border-0 shadow-sm mb-4">
                     <div class="card-body py-3">
                         <div class="row g-3 align-items-center">
@@ -368,7 +368,7 @@
                 <div class="row g-4 ink-view-grid" id="booksGrid">
                     {% if books %}
                         {% for book in books %}
-                            <div class="col-lg-4 col-md-6 marketplace-card">
+                            <div class="col-12 col-sm-6 col-lg-4 col-xl-3 marketplace-card">
                                 <div class="book-card h-100 ink-book-card">
                                     <div class="card border-0 shadow-sm h-100 ink-book-card-inner">
                                         <div class="book-cover-container ink-book-cover-wrap">

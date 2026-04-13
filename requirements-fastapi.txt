@@ -19,7 +19,7 @@ psycopg2-binary==2.9.10
 alembic==1.15.2
 
 # Google Cloud Services
-google-cloud-texttospeech==2.23.0
+google-cloud-texttospeech==2.36.0
 google-api-core==2.24.0
 google-api-python-client>=2.157.0
 google-auth==2.37.0
