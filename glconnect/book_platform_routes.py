@@ -5134,6 +5134,7 @@ def upload_digital_book():
     _lang_choices = book_language_select_choices()
     form.ebook_language.choices = _lang_choices
     form.extra_digital_languages.choices = _lang_choices
+    form.audiobook_tts_language.choices = _lang_choices
 
     # In development, skip recaptcha validation
     import os
@@ -5315,8 +5316,12 @@ def upload_digital_book():
             logger.info(f"Audiobook voice: {form.audiobook_voice.data}")
             
             if form.generate_audiobook.data:
-                # Voice from form, or default for the ebook's language (TTS-aligned)
-                selected_voice = (form.audiobook_voice.data or "").strip() or default_voice_for_language(primary_lang)
+                tts_lang = (form.audiobook_tts_language.data or primary_lang or "en").lower().strip()
+                if tts_lang not in TTS_BOOK_LANGUAGES:
+                    flash("Choose a supported audiobook narration language (TTS) from the list.", "error")
+                    return _render_upload_digital_book_form(form)
+                # Voice from form, or default for the chosen TTS language (may differ from ebook language)
+                selected_voice = (form.audiobook_voice.data or "").strip() or default_voice_for_language(tts_lang)
                 audiobook_price = form.audiobook_price.data or 0.0
                 
                 if not selected_voice:

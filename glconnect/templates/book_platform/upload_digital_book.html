@@ -123,7 +123,7 @@
                                 <h5 class="text-primary mb-3">
                                     <i class="fas fa-headphones me-2"></i>Optional AI audiobook
                                 </h5>
-                                <p class="text-muted small mb-0">Turn your ebook text into a spoken audiobook. Voices come from the same professional catalog we use across the site—preview them below and pick what sounds best. You can also generate or change this later from <strong>Edit book</strong>.</p>
+                                <p class="text-muted small mb-0">Turn your ebook text into a spoken audiobook. Choose the <strong>narration language</strong> for TTS (any language we support), then <strong>preview voices</strong> and pick your favorite. That language should match your ebook text for natural results (or use an AI-translated edition in that language). Check “Generate audiobook now” when you want audio built on this submission.</p>
                             </div>
                             <div class="col-12 mt-3">
                                 <div class="form-check mb-2">
@@ -138,10 +138,20 @@
                                     <div class="form-text">Set to 0 for free audio with purchase, or match your pricing strategy.</div>
                                 </div>
                             </div>
-                            <div class="col-12 mt-2" id="audiobookVoiceSection" style="display: none;">
+                            <div class="col-12 mt-2" id="audiobookVoiceSection">
                                 <div class="border rounded p-3 bg-light">
+                                    <div class="row g-3 mb-2">
+                                        <div class="col-md-8">
+                                            <label class="form-label fw-semibold" for="audiobook_tts_language"><i class="fas fa-language me-2"></i>Audiobook narration language (TTS)</label>
+                                            {{ form.audiobook_tts_language(class="form-select", id="audiobook_tts_language") }}
+                                            <div class="form-text small">Voices below are filtered to this language. It can differ from <strong>Original language of the ebook</strong> if you change it here (we stop auto-matching once you do).</div>
+                                            {% if form.audiobook_tts_language.errors %}
+                                                <div class="text-danger small">{% for e in form.audiobook_tts_language.errors %}<div>{{ e }}</div>{% endfor %}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     <label class="form-label fw-semibold"><i class="fas fa-microphone me-2"></i>Choose narrator voice</label>
-                                    <p class="small text-muted mb-3">Open a category, tap <strong>Preview</strong> to hear a short sample, then <strong>Select</strong> your favorite. The list matches the <strong>original language</strong> you chose above.</p>
+                                    <p class="small text-muted mb-3">Open a category, tap <strong>Preview</strong> to hear a short sample (uses your description if you added one), then <strong>Select</strong> your favorite.</p>
                                     {{ form.audiobook_voice(class="d-none", id="audiobook_voice") }}
                                     <ul class="nav nav-tabs mb-3 flex-wrap" id="voiceTypeTabsUpload" role="tablist">
                                         <li class="nav-item" role="presentation">
@@ -253,12 +263,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateAudiobook = document.getElementById('generate_audiobook');
     const audiobookVoiceSection = document.getElementById('audiobookVoiceSection');
     const ebookLanguage = document.getElementById('ebook_language');
+    const ttsLanguageSelect = document.getElementById('audiobook_tts_language');
     const voiceInput = document.getElementById('audiobook_voice');
 
     let availableVoices = {};
     let selectedVoiceName = null;
     let voiceUserPicked = false;
     let voicesLoadedForLang = null;
+    /** Once user changes "Audiobook narration language", we no longer auto-copy ebook language into it. */
+    let ttsLangUserChanged = false;
+
+    function getTtsLang() {
+        if (ttsLanguageSelect && ttsLanguageSelect.value) return ttsLanguageSelect.value;
+        return ebookLanguage ? (ebookLanguage.value || 'en') : 'en';
+    }
 
     function syncCoverUi() {
         const ai = useAiCover && useAiCover.checked;
@@ -272,8 +290,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function applyDefaultVoiceFromLanguage() {
-        if (!voiceInput || !ebookLanguage) return;
-        const lang = ebookLanguage.value || 'en';
+        if (!voiceInput) return;
+        const lang = getTtsLang();
         const def = defaultVoicesByLang[lang] || defaultVoicesByLang['en'] || 'en-US-Standard-A';
         if (!voiceUserPicked) {
             voiceInput.value = def;
@@ -289,28 +307,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function syncAudiobookVoiceSection() {
-        if (!audiobookVoiceSection || !generateAudiobook) return;
-        const on = generateAudiobook.checked;
-        audiobookVoiceSection.style.display = on ? 'block' : 'none';
-        if (on) {
-            applyDefaultVoiceFromLanguage();
-            const lang = ebookLanguage ? ebookLanguage.value : 'en';
-            if (voicesLoadedForLang !== lang) {
-                loadAvailableVoicesUpload();
-            }
+        if (!audiobookVoiceSection) return;
+        audiobookVoiceSection.style.display = 'block';
+        applyDefaultVoiceFromLanguage();
+        const lang = getTtsLang();
+        if (voicesLoadedForLang !== lang || !availableVoices || !Object.keys(availableVoices).length) {
+            loadAvailableVoicesUpload();
         }
     }
     if (generateAudiobook) {
-        generateAudiobook.addEventListener('change', syncAudiobookVoiceSection);
+        generateAudiobook.addEventListener('change', function () {
+            applyDefaultVoiceFromLanguage();
+        });
     }
     if (ebookLanguage) {
         ebookLanguage.addEventListener('change', function() {
+            if (!ttsLangUserChanged && ttsLanguageSelect) {
+                ttsLanguageSelect.value = ebookLanguage.value;
+            }
             voiceUserPicked = false;
             voicesLoadedForLang = null;
             applyDefaultVoiceFromLanguage();
-            if (generateAudiobook && generateAudiobook.checked) {
-                loadAvailableVoicesUpload();
-            }
+            loadAvailableVoicesUpload();
+        });
+    }
+    if (ttsLanguageSelect) {
+        ttsLanguageSelect.addEventListener('change', function () {
+            ttsLangUserChanged = true;
+            voiceUserPicked = false;
+            voicesLoadedForLang = null;
+            applyDefaultVoiceFromLanguage();
+            loadAvailableVoicesUpload();
         });
     }
 
@@ -390,7 +417,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const sampleText = snippet.trim().slice(0, 400);
             const res = await fetch(PREVIEW_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({
                     voice_name: voiceName,
                     sample_text: sampleText || undefined,
@@ -411,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const loading = document.getElementById('voicesLoadingUpload');
         const container = document.getElementById('voiceSelectionContainerUpload');
         const errEl = document.getElementById('voiceErrorUpload');
-        const lang = ebookLanguage ? ebookLanguage.value : 'en';
+        const lang = getTtsLang();
         if (loading) loading.style.display = 'block';
         if (container) container.style.display = 'none';
         if (errEl) {
@@ -419,11 +447,17 @@ document.addEventListener('DOMContentLoaded', function() {
             errEl.textContent = '';
         }
         try {
-            const res = await fetch(VOICES_URL + '?lang=' + encodeURIComponent(lang));
+            const res = await fetch(VOICES_URL + '?lang=' + encodeURIComponent(lang), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            });
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Failed to load voices');
             availableVoices = data.voices || {};
             voicesLoadedForLang = lang;
+            if (voiceInput && voiceInput.value.trim()) {
+                selectedVoiceName = voiceInput.value.trim();
+            }
             renderVoicesUpload();
             if (loading) loading.style.display = 'none';
             if (container) container.style.display = 'block';
@@ -432,12 +466,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (loading) loading.style.display = 'none';
             if (errEl) {
                 errEl.textContent =
-                    'Voice list unavailable (check Text-to-Speech credentials on the server). You can still submit; a default voice may be used.';
+                    'Could not load voices. If you are logged in, the server may need Google Cloud TTS credentials, or the request was blocked. Try refreshing. You can still submit; a default voice may be used when you enable “Generate audiobook now”.';
                 errEl.style.display = 'block';
             }
         }
     }
 
+    if (ttsLanguageSelect && ebookLanguage && ttsLanguageSelect.value !== ebookLanguage.value) {
+        ttsLangUserChanged = true;
+    }
     applyDefaultVoiceFromLanguage();
     syncAudiobookVoiceSection();
     syncSelectedVoiceLabel();

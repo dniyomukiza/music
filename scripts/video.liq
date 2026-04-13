@@ -7,24 +7,20 @@
 # admin TV download stores MP4s on disk, then sync writes those paths into videolist.m3u.
 #
 # Setup: media in ./video/
-#   - videolist.m3u = merged from videolist_extra.m3u + DB + ytautovid/*.mp4 (admin TV sync)
-#   - tv_jingles.m3u = bumpers under glconnect/static/ytautovid/ (same folder as downloads)
+#   - videolist.m3u = merged (admin TV sync); lines point at glconnect/static/ytautovid/*.mp4
+#   - tv_jingles.m3u = bumper file paths (default: video/tvjingle*.mp4 next to these .m3u files)
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 # Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
-# append: after each resolved program track, play one jingle. fallback keeps bumpers on air
-# when videolist has no valid files (deleted shows, wrong paths).
+# Main programs only on air when videolist has tracks. Jingles are fallback when programs are
+# empty/unavailable — not after every song. (Append-after-each-track caused HLS/player glitches
+# when bumpers differed in codec/resolution from downloads.)
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
-# If videolist.m3u has no playable lines, `programs` never yields a track and `append(programs, …)`
-# can block the whole chain — then neither programs nor jingles reach the encoder. Fall back to
-# jingles inside the "program" slot so HLS always has a feed when jingle files exist.
 programs = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 jingles = playlist(mode="random", reload_mode="watch", "/liqfolder/video/tv_jingles.m3u")
-prog = fallback(track_sensitive=false, [programs, jingles])
-with_jingles = append(prog, fun (_) -> jingles)
-v = fallback(track_sensitive=false, [with_jingles, jingles])
+v = fallback(track_sensitive=false, [programs, jingles])
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)

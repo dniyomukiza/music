@@ -167,6 +167,13 @@ class DigitalBookUploadForm(FlaskForm):
     digital_price = FloatField('Digital Book Price (USD)', validators=[Optional()])
     generate_audiobook = BooleanField('Generate Audiobook Version')
     audiobook_price = FloatField('Audiobook Price (USD)', validators=[Optional()])
+    audiobook_tts_language = SelectField(
+        'Audiobook narration language (TTS)',
+        validators=[Optional()],
+        choices=[],
+        default='en',
+        description='Voices are listed for this language. Use a language that matches your ebook text for natural narration.',
+    )
     audiobook_voice = StringField('Audiobook Voice', validators=[Optional()], default='en-US-Standard-A')
     
     submit = SubmitField('List on marketplace')
