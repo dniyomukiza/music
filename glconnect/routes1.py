@@ -56,7 +56,7 @@ def get_role_based_redirect(user):
     elif user.role == "blogger":
         return redirect(url_for('blog.blogs'))
     
-    # All other users → content hub
+    # All other users → content page
     else:
         return redirect(url_for('book_platform.content_hub'))
 

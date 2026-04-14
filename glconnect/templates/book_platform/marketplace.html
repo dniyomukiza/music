@@ -28,7 +28,7 @@
                         <i class="fas fa-home me-1"></i>Dashboard
                     </a>
                     <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}" title="Music, podcasts, and more">
-                        <i class="fas fa-broadcast-tower me-1"></i>Content hub
+                        <i class="fas fa-broadcast-tower me-1"></i>Content
                     </a>
                 {% else %}
                     <a class="nav-link" href="{{ url_for('routes1.login', next=request.url) }}">Sign in</a>
@@ -149,148 +149,7 @@
     </div>
 
         <div class="row g-4 align-items-start pt-4 ink-marketplace-body">
-            <!-- Sidebar Filters -->
-            <aside class="col-12 col-lg-3 ink-filters-column" aria-labelledby="filters-heading">
-                <div class="card shadow-sm border-0 mb-4 ink-filter-card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h2 id="filters-heading" class="h5 card-title text-primary mb-0">
-                            <i class="fas fa-filter me-2" aria-hidden="true"></i>Refine results
-                        </h2>
-                        <p class="small text-muted mb-0 mt-2">Filters apply to the titles on the right. Checkout and book pages are unchanged.</p>
-                    </div>
-                    <div class="card-body pt-0">
-                        <form id="filterForm" method="get" action="{{ url_for('book_platform.marketplace') }}">
-                            <!-- Search -->
-                            <div class="mb-4">
-                                <label for="search" class="form-label fw-bold">Search Books</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-primary text-white">
-                                        <i class="fas fa-search"></i>
-                                    </span>
-                                    <input type="text" class="form-control" id="search" name="search" placeholder="Title, author, or description…" value="{{ search_term or '' }}" autocomplete="off">
-                                </div>
-                            </div>
-
-                            <!-- Genre Filter -->
-                            <div class="mb-4">
-                                <label for="genre" class="form-label fw-bold">Genre</label>
-                                <select class="form-select" id="genre" name="genre">
-                                    <option value="">All Genres</option>
-                                    <option value="fiction" {% if selected_genre == 'fiction' %}selected{% endif %}>Fiction</option>
-                                    <option value="non-fiction" {% if selected_genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
-                                    <option value="mystery" {% if selected_genre == 'mystery' %}selected{% endif %}>Mystery</option>
-                                    <option value="romance" {% if selected_genre == 'romance' %}selected{% endif %}>Romance</option>
-                                    <option value="sci-fi" {% if selected_genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
-                                    <option value="fantasy" {% if selected_genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
-                                    <option value="thriller" {% if selected_genre == 'thriller' %}selected{% endif %}>Thriller</option>
-                                    <option value="biography" {% if selected_genre == 'biography' %}selected{% endif %}>Biography</option>
-                                    <option value="self-help" {% if selected_genre == 'self-help' %}selected{% endif %}>Self-Help</option>
-                                    <option value="business" {% if selected_genre == 'business' %}selected{% endif %}>Business</option>
-                                    <option value="history" {% if selected_genre == 'history' %}selected{% endif %}>History</option>
-                                    <option value="poetry" {% if selected_genre == 'poetry' %}selected{% endif %}>Poetry</option>
-                                    <option value="children" {% if selected_genre == 'children' %}selected{% endif %}>Children's</option>
-                                    <option value="young-adult" {% if selected_genre == 'young-adult' %}selected{% endif %}>Young Adult</option>
-                                </select>
-                            </div>
-
-                            <!-- Language Filter -->
-                            <div class="mb-4">
-                                <label for="language" class="form-label fw-bold">Language</label>
-                                <select class="form-select" id="language" name="language">
-                                    <option value="">All Languages</option>
-                                    {% if available_languages %}
-                                        {% for lang_info in available_languages %}
-                                            {% set lang_names = {
-                                                'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-                                                'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
-                                                'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi',
-                                                'nl': 'Dutch', 'sv': 'Swedish', 'pl': 'Polish', 'tr': 'Turkish',
-                                                'vi': 'Vietnamese', 'th': 'Thai', 'id': 'Indonesian', 'cs': 'Czech',
-                                                'ro': 'Romanian', 'hu': 'Hungarian', 'fi': 'Finnish', 'da': 'Danish',
-                                                'no': 'Norwegian', 'he': 'Hebrew', 'uk': 'Ukrainian', 'el': 'Greek',
-                                                'bg': 'Bulgarian', 'hr': 'Croatian', 'sk': 'Slovak', 'sl': 'Slovenian',
-                                                'sr': 'Serbian', 'et': 'Estonian', 'lv': 'Latvian', 'lt': 'Lithuanian',
-                                                'mt': 'Maltese', 'ga': 'Irish', 'cy': 'Welsh', 'is': 'Icelandic',
-                                                'mk': 'Macedonian', 'sq': 'Albanian', 'bs': 'Bosnian', 'sw': 'Swahili',
-                                                'af': 'Afrikaans', 'zu': 'Zulu', 'xh': 'Xhosa', 'am': 'Amharic',
-                                                'bn': 'Bengali', 'ta': 'Tamil', 'te': 'Telugu', 'ml': 'Malayalam',
-                                                'kn': 'Kannada', 'gu': 'Gujarati', 'pa': 'Punjabi', 'ur': 'Urdu',
-                                                'fa': 'Persian', 'ms': 'Malay', 'tl': 'Tagalog', 'haw': 'Hawaiian',
-                                                'other': 'Other'
-                                            } %}
-                                            <option value="{{ lang_info.language }}" {% if selected_language == lang_info.language %}selected{% endif %}>
-                                                {{ lang_names.get(lang_info.language, lang_info.language|title) }} ({{ lang_info.count }})
-                                            </option>
-                                        {% endfor %}
-                                    {% else %}
-                                        <option value="en" {% if selected_language == 'en' %}selected{% endif %}>English</option>
-                                        <option value="es" {% if selected_language == 'es' %}selected{% endif %}>Spanish</option>
-                                        <option value="fr" {% if selected_language == 'fr' %}selected{% endif %}>French</option>
-                                        <option value="de" {% if selected_language == 'de' %}selected{% endif %}>German</option>
-                                        <option value="it" {% if selected_language == 'it' %}selected{% endif %}>Italian</option>
-                                        <option value="pt" {% if selected_language == 'pt' %}selected{% endif %}>Portuguese</option>
-                                        <option value="ru" {% if selected_language == 'ru' %}selected{% endif %}>Russian</option>
-                                        <option value="zh" {% if selected_language == 'zh' %}selected{% endif %}>Chinese</option>
-                                        <option value="ja" {% if selected_language == 'ja' %}selected{% endif %}>Japanese</option>
-                                        <option value="ko" {% if selected_language == 'ko' %}selected{% endif %}>Korean</option>
-                                    {% endif %}
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="priceRange" class="form-label">Price Range</label>
-                                <select class="form-select" id="priceRange" name="price_range">
-                                    <option value="" {% if not selected_price_range %}selected{% endif %}>Any price</option>
-                                    <option value="0-5" {% if selected_price_range == '0-5' %}selected{% endif %}>$0 – $5</option>
-                                    <option value="5-10" {% if selected_price_range == '5-10' %}selected{% endif %}>$5 – $10</option>
-                                    <option value="10-20" {% if selected_price_range == '10-20' %}selected{% endif %}>$10 – $20</option>
-                                    <option value="20+" {% if selected_price_range == '20+' %}selected{% endif %}>$20+</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="sortBy" class="form-label">Sort By</label>
-                                <select class="form-select" id="sortBy" name="sort_by">
-                                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest first</option>
-                                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest first</option>
-                                    <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
-                                    <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
-                                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title A–Z</option>
-                                    <option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>Bestselling</option>
-                                </select>
-                            </div>
-
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary btn-lg ink-btn-primary">
-                                    <i class="fas fa-search me-1" aria-hidden="true"></i> Apply filters
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card mt-3 border-0 shadow-sm ink-stats-card">
-                    <div class="card-header py-3 border-0">
-                        <h3 class="h6 mb-0 text-primary"><i class="fas fa-chart-bar me-2" aria-hidden="true"></i>At a glance</h3>
-                    </div>
-                    <div class="card-body pt-0">
-                        <div class="stat-item">
-                            <span class="stat-number">{{ list_stats.total }}</span>
-                            <span class="stat-label">Matching listings</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">{{ list_stats.paid }}</span>
-                            <span class="stat-label">Paid titles</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">{{ list_stats.free }}</span>
-                            <span class="stat-label">Free titles</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results: horizontal grid beside sidebar -->
+            <!-- Titles + grid (left on lg+) -->
             <div class="col-12 col-lg-9 ink-results-column">
                 <div class="ink-results-toolbar card border-0 shadow-sm mb-4">
                     <div class="card-body py-3">
@@ -478,6 +337,147 @@
                     </nav>
                 {% endif %}
             </div>
+
+            <!-- Refine results (right on lg+) -->
+            <aside class="col-12 col-lg-3 ink-filters-column" aria-labelledby="filters-heading">
+                <div class="card shadow-sm border-0 mb-4 ink-filter-card">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h2 id="filters-heading" class="h5 card-title text-primary mb-0">
+                            <i class="fas fa-filter me-2" aria-hidden="true"></i>Refine results
+                        </h2>
+                        <p class="small text-muted mb-0 mt-2">Filters apply to the marketplace catalog. Checkout and book pages are unchanged.</p>
+                    </div>
+                    <div class="card-body pt-0">
+                        <form id="filterForm" method="get" action="{{ url_for('book_platform.marketplace') }}">
+                            <!-- Search -->
+                            <div class="mb-4">
+                                <label for="search" class="form-label fw-bold">Search Books</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-primary text-white">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="search" name="search" placeholder="Title, author, or description…" value="{{ search_term or '' }}" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <!-- Genre Filter -->
+                            <div class="mb-4">
+                                <label for="genre" class="form-label fw-bold">Genre</label>
+                                <select class="form-select" id="genre" name="genre">
+                                    <option value="">All Genres</option>
+                                    <option value="fiction" {% if selected_genre == 'fiction' %}selected{% endif %}>Fiction</option>
+                                    <option value="non-fiction" {% if selected_genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                                    <option value="mystery" {% if selected_genre == 'mystery' %}selected{% endif %}>Mystery</option>
+                                    <option value="romance" {% if selected_genre == 'romance' %}selected{% endif %}>Romance</option>
+                                    <option value="sci-fi" {% if selected_genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
+                                    <option value="fantasy" {% if selected_genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
+                                    <option value="thriller" {% if selected_genre == 'thriller' %}selected{% endif %}>Thriller</option>
+                                    <option value="biography" {% if selected_genre == 'biography' %}selected{% endif %}>Biography</option>
+                                    <option value="self-help" {% if selected_genre == 'self-help' %}selected{% endif %}>Self-Help</option>
+                                    <option value="business" {% if selected_genre == 'business' %}selected{% endif %}>Business</option>
+                                    <option value="history" {% if selected_genre == 'history' %}selected{% endif %}>History</option>
+                                    <option value="poetry" {% if selected_genre == 'poetry' %}selected{% endif %}>Poetry</option>
+                                    <option value="children" {% if selected_genre == 'children' %}selected{% endif %}>Children's</option>
+                                    <option value="young-adult" {% if selected_genre == 'young-adult' %}selected{% endif %}>Young Adult</option>
+                                </select>
+                            </div>
+
+                            <!-- Language Filter -->
+                            <div class="mb-4">
+                                <label for="language" class="form-label fw-bold">Language</label>
+                                <select class="form-select" id="language" name="language">
+                                    <option value="">All Languages</option>
+                                    {% if available_languages %}
+                                        {% for lang_info in available_languages %}
+                                            {% set lang_names = {
+                                                'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+                                                'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
+                                                'ja': 'Japanese', 'ko': 'Korean', 'ar': 'Arabic', 'hi': 'Hindi',
+                                                'nl': 'Dutch', 'sv': 'Swedish', 'pl': 'Polish', 'tr': 'Turkish',
+                                                'vi': 'Vietnamese', 'th': 'Thai', 'id': 'Indonesian', 'cs': 'Czech',
+                                                'ro': 'Romanian', 'hu': 'Hungarian', 'fi': 'Finnish', 'da': 'Danish',
+                                                'no': 'Norwegian', 'he': 'Hebrew', 'uk': 'Ukrainian', 'el': 'Greek',
+                                                'bg': 'Bulgarian', 'hr': 'Croatian', 'sk': 'Slovak', 'sl': 'Slovenian',
+                                                'sr': 'Serbian', 'et': 'Estonian', 'lv': 'Latvian', 'lt': 'Lithuanian',
+                                                'mt': 'Maltese', 'ga': 'Irish', 'cy': 'Welsh', 'is': 'Icelandic',
+                                                'mk': 'Macedonian', 'sq': 'Albanian', 'bs': 'Bosnian', 'sw': 'Swahili',
+                                                'af': 'Afrikaans', 'zu': 'Zulu', 'xh': 'Xhosa', 'am': 'Amharic',
+                                                'bn': 'Bengali', 'ta': 'Tamil', 'te': 'Telugu', 'ml': 'Malayalam',
+                                                'kn': 'Kannada', 'gu': 'Gujarati', 'pa': 'Punjabi', 'ur': 'Urdu',
+                                                'fa': 'Persian', 'ms': 'Malay', 'tl': 'Tagalog', 'haw': 'Hawaiian',
+                                                'other': 'Other'
+                                            } %}
+                                            <option value="{{ lang_info.language }}" {% if selected_language == lang_info.language %}selected{% endif %}>
+                                                {{ lang_names.get(lang_info.language, lang_info.language|title) }} ({{ lang_info.count }})
+                                            </option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="en" {% if selected_language == 'en' %}selected{% endif %}>English</option>
+                                        <option value="es" {% if selected_language == 'es' %}selected{% endif %}>Spanish</option>
+                                        <option value="fr" {% if selected_language == 'fr' %}selected{% endif %}>French</option>
+                                        <option value="de" {% if selected_language == 'de' %}selected{% endif %}>German</option>
+                                        <option value="it" {% if selected_language == 'it' %}selected{% endif %}>Italian</option>
+                                        <option value="pt" {% if selected_language == 'pt' %}selected{% endif %}>Portuguese</option>
+                                        <option value="ru" {% if selected_language == 'ru' %}selected{% endif %}>Russian</option>
+                                        <option value="zh" {% if selected_language == 'zh' %}selected{% endif %}>Chinese</option>
+                                        <option value="ja" {% if selected_language == 'ja' %}selected{% endif %}>Japanese</option>
+                                        <option value="ko" {% if selected_language == 'ko' %}selected{% endif %}>Korean</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="priceRange" class="form-label">Price Range</label>
+                                <select class="form-select" id="priceRange" name="price_range">
+                                    <option value="" {% if not selected_price_range %}selected{% endif %}>Any price</option>
+                                    <option value="0-5" {% if selected_price_range == '0-5' %}selected{% endif %}>$0 – $5</option>
+                                    <option value="5-10" {% if selected_price_range == '5-10' %}selected{% endif %}>$5 – $10</option>
+                                    <option value="10-20" {% if selected_price_range == '10-20' %}selected{% endif %}>$10 – $20</option>
+                                    <option value="20+" {% if selected_price_range == '20+' %}selected{% endif %}>$20+</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="sortBy" class="form-label">Sort By</label>
+                                <select class="form-select" id="sortBy" name="sort_by">
+                                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest first</option>
+                                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest first</option>
+                                    <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
+                                    <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
+                                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title A–Z</option>
+                                    <option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>Bestselling</option>
+                                </select>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg ink-btn-primary">
+                                    <i class="fas fa-search me-1" aria-hidden="true"></i> Apply filters
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mt-3 border-0 shadow-sm ink-stats-card">
+                    <div class="card-header py-3 border-0">
+                        <h3 class="h6 mb-0 text-primary"><i class="fas fa-chart-bar me-2" aria-hidden="true"></i>At a glance</h3>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ list_stats.total }}</span>
+                            <span class="stat-label">Matching listings</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ list_stats.paid }}</span>
+                            <span class="stat-label">Paid titles</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">{{ list_stats.free }}</span>
+                            <span class="stat-label">Free titles</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
         </div>
     </div>
 

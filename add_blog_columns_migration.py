@@ -68,7 +68,7 @@ if __name__ == '__main__':
     
     if success:
         print("\n" + "=" * 60)
-        print("Migration completed! You can now use the Content Hub.")
+        print("Migration completed! You can now use Content.")
         print("=" * 60)
     else:
         print("\n" + "=" * 60)

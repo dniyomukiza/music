@@ -1,152 +1,90 @@
 {% extends "base.html" %}
 
+{% block title %}Your profile · GLC{% endblock %}
+
 {% block salutation %}
 {% include 'messages.html' %}
-<div class="profile-container">
-    <div class="profile-icon-container">
-        <div class="profile-dropdown">
-            <label for="fileInput">
-            </label>
-            <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="uploadImage(event)">
+<link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
+
+<div class="uprofile-page">
+    <div class="uprofile-card uprofile-card--hero">
+        <div class="uprofile-identity">
+            <div class="uprofile-avatar" aria-hidden="true">
+                {% if user.profile_picture %}
+                <img src="{{ url_for('static', filename='uploads/' + user.profile_picture) }}" alt="">
+                {% else %}
+                <span class="uprofile-avatar-placeholder"><i class="fas fa-user"></i></span>
+                {% endif %}
+            </div>
+            <div class="uprofile-meta">
+                <p class="uprofile-eyebrow">Account</p>
+                <h1 class="uprofile-name">{{ user.first_name or user.username }}</h1>
+                {% if user.first_name and user.username %}
+                <p class="uprofile-username">@{{ user.username }}</p>
+                {% endif %}
+                {% if user.email %}
+                <p class="uprofile-email"><i class="fas fa-envelope me-2 opacity-75" aria-hidden="true"></i>{{ user.email }}</p>
+                {% endif %}
+                <span class="uprofile-role-badge">{{ (user.role or 'member')|replace('_', ' ')|title }}</span>
+            </div>
+        </div>
+        <div class="uprofile-actions">
+            <a href="{{ url_for('prof.edit_profile') }}" class="uprofile-btn uprofile-btn--primary">
+                <i class="fas fa-pen-to-square me-2" aria-hidden="true"></i>Edit profile
+            </a>
+            <a href="{{ url_for('blog.logout') }}" class="uprofile-btn uprofile-btn--ghost">
+                <i class="fas fa-right-from-bracket me-2" aria-hidden="true"></i>Sign out
+            </a>
         </div>
     </div>
 
-    <h2>Welcome, {{ user.first_name }}!</h2>
-    <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
-    
-    <div class="profile-details">
-        <p><strong>User:</strong> {{ user.username }}</p>
-        <p><strong>Role:</strong> {{ user.role }}</p>
-        <p>You can view artist/authors and navigate their products </p>
-        
-    </div>
-
-    {% if user.role == "artist" %}
-    <div class="create-profile">
-        <div class="dropdown-content">
-            <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
-            <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
-        </div>
-
-        </div>
-    {% endif %}
-
-    {% if user.role == "writer" %}
-    <div class="create-profile">
-        <div class="dropdown-content">
-            <a href="{{ url_for('prof.edit_profile') }}">Edit Profile</a>
-            <a href="{{ url_for('blog.logout') }}" class="logout-btn">Logout</a>
-        </div>
-
-        </div>
-    {% endif %}
-    <div class="search-bar">
-        <input type="search" id="searchInput" placeholder="Search for an artist, author, a song or a book" oninput="toggleClearButton()">
-        <span class="clear-icon" onclick="clearSearch()">×</span>
-        <button class="btn" onclick="searchAll()">Search</button>
-      </div>
-      
-    
-    <div id="searchResults" class="results-container"></div>
-    
-    <script>
-    function searchAll() {
-        const query = document.getElementById("searchInput").value.trim().toLowerCase();
-        if (!query) return document.getElementById("searchResults").innerHTML = "";
-    
-        const resultsContainer = document.getElementById("searchResults");
-        resultsContainer.innerHTML = "";
-    
-        // First try searching artist or song
-        fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.redirect) {
-                    window.location.href = data.redirect;
-                    return;
-                }
-    
-                // If data contains song results (array), render them
-                if (Array.isArray(data) && data.length) {
-                    data.forEach(song => {
-                        const songDiv = document.createElement("div");
-                        songDiv.classList.add("song-item");
-    
-                        // Use song file serving route for reliable file access, fallback to path if available
-                        const songPath = song.id ? `/playlist2/song/${song.id}/file` : (song.path || `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
-                        const songName = (song.name && song.name.trim()) ? song.name : 'Untitled Track';
-                        const artistName = (song.artist && song.artist.trim()) ? song.artist : 'Unknown Artist';
-                        const safeName = songName.replace(/'/g, "\\'");
-    
-                        songDiv.innerHTML = `
-                            <p><strong>${songName}</strong> by ${artistName}</p>
-                            <audio controls>
-                                <source src="${songPath}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                            <button class="btn add-btn" onclick="addToPlaylist(${song.id}, '${safeName}', ${userId})">Add to Playlist</button>
-                        `;
-                        resultsContainer.appendChild(songDiv);
-                    });
-                    return;
-                }
-    
-                // If no match found in artist/song, try writer/book
-                fetch(`/writer/search-writer?q=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
-                    .then(data2 => {
-                        if (data2.redirect) {
-                            window.location.href = data2.redirect;
-                        } else if (Array.isArray(data2) && data2.length) {
-                            data2.forEach(book => {
-                                const bookDiv = document.createElement("div");
-                                bookDiv.classList.add("book-item");
-                                bookDiv.innerHTML = `
-                                    <p><strong>${book.title}</strong> by ${book.writer}</p>
-                                    <a class="btn" href="/books/${book.id}">View Book</a>
-                                `;
-                                resultsContainer.appendChild(bookDiv);
-                            });
-                        } else {
-                            resultsContainer.innerHTML = "<p>No results found.</p>";
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Writer/book search error:", err);
-                        resultsContainer.innerHTML = "<p>Error searching writer/book.</p>";
-                    });
-    
-            })
-            .catch(error => {
-                console.error("Artist/song search error:", error);
-                resultsContainer.innerHTML = "<p>Error searching artist/song.</p>";
-            });
-    }
-    document.getElementById("searchInput").addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-        searchAll();
-    }
-});
-
-function toggleClearButton() {
-  const input = document.getElementById("searchInput");
-  const clearIcon = document.querySelector(".clear-icon");
-  clearIcon.style.display = input.value ? "block" : "none";
-}
-
-function clearSearch() {
-  const input = document.getElementById("searchInput");
-  input.value = "";
-  toggleClearButton();
-  input.focus();
-}
-
-document.getElementById("searchInput").addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    searchAll();
-  }
-});
-
-    </script>
-
+    <section class="uprofile-card uprofile-card--discover" aria-labelledby="uprofile-discover-title">
+        <h2 id="uprofile-discover-title" class="uprofile-section-title">Explore GLC</h2>
+        <p class="uprofile-section-lead">
+            Your profile is for account details. Search and discovery live on the experiences below—same as the main site navigation.
+        </p>
+        <ul class="uprofile-tiles" role="list">
+            <li>
+                <a class="uprofile-tile" href="{{ url_for('book_platform.music_dashboard') }}">
+                    <span class="uprofile-tile-icon" aria-hidden="true"><i class="fas fa-music"></i></span>
+                    <span class="uprofile-tile-body">
+                        <span class="uprofile-tile-title">Music</span>
+                        <span class="uprofile-tile-desc">Artists, tracks, and playlists</span>
+                    </span>
+                    <span class="uprofile-tile-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                </a>
+            </li>
+            <li>
+                <a class="uprofile-tile" href="{{ url_for('book_platform.marketplace') }}">
+                    <span class="uprofile-tile-icon" aria-hidden="true"><i class="fas fa-store"></i></span>
+                    <span class="uprofile-tile-body">
+                        <span class="uprofile-tile-title">Marketplace</span>
+                        <span class="uprofile-tile-desc">Books and digital listings</span>
+                    </span>
+                    <span class="uprofile-tile-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                </a>
+            </li>
+            <li>
+                <a class="uprofile-tile" href="{{ url_for('book_platform.ink_studio_access') }}">
+                    <span class="uprofile-tile-icon" aria-hidden="true"><i class="fas fa-book-open"></i></span>
+                    <span class="uprofile-tile-body">
+                        <span class="uprofile-tile-title">Ink Studio</span>
+                        <span class="uprofile-tile-desc">Authors, dashboard, and publishing</span>
+                    </span>
+                    <span class="uprofile-tile-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                </a>
+            </li>
+            <li>
+                <a class="uprofile-tile" href="/writer/profile">
+                    <span class="uprofile-tile-icon" aria-hidden="true"><i class="fas fa-microscope"></i></span>
+                    <span class="uprofile-tile-body">
+                        <span class="uprofile-tile-title">Researchers</span>
+                        <span class="uprofile-tile-desc">Writer &amp; research tools</span>
+                    </span>
+                    <span class="uprofile-tile-chevron" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                </a>
+            </li>
+        </ul>
+    </section>
+</div>
 {% endblock %}

@@ -114,7 +114,7 @@
 </head>
 <body>
     {% include 'messages.html' %}
-    <!-- Content hub banner -->
+    <!-- Content banner -->
     <div style="background: linear-gradient(145deg, #1a221c 0%, #2a3d32 50%, #3d2f14 100%); border: 1px solid rgba(201, 162, 39, 0.35); color: #e8ece9; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
@@ -129,7 +129,7 @@
                 <a href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('book_platform.ink_studio_access') }}" 
                    style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; border: 1px solid rgba(255, 255, 255, 0.3); transition: background 0.3s;"
                    onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                    <i class="fas fa-th-large me-1"></i>Content Hub
+                    <i class="fas fa-th-large me-1"></i>Content
                 </a>
             </div>
         </div>

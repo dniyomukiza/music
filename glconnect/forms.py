@@ -150,10 +150,8 @@ class DigitalBookUploadForm(FlaskForm):
         'Also publish AI-translated editions (plain text)',
         validators=[Optional()],
         choices=[],
-        # form-select styles <select multiple> like a closed dropdown; use form-control + size for a visible list box.
         render_kw={
-            'class': 'form-control ink-multi-languages',
-            'size': '8',
+            'class': 'form-select ink-multi-languages',
             'aria-multiselectable': 'true',
         },
     )

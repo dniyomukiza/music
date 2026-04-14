@@ -452,7 +452,7 @@ def ink_studio_access():
     elif user_role == 'blogger':
         return redirect(url_for('blog.blogs'))
     
-    # All other users → content hub
+    # All other users → content page
     else:
         return redirect(url_for('book_platform.content_hub'))
 
@@ -7755,7 +7755,7 @@ def admin_process_refund(refund_id):
 @login_required
 def content_hub():
     """
-    Unified Content Hub - Access point for all content types:
+    Unified Content - Access point for all content types:
     - Stories & News (Blogs)
     - Podcasts & Audio (News broadcasts)
     - Freelance Journalism

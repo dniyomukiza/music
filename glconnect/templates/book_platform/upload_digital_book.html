@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>List your book | GLC</title>
+    <title>Digital listing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -15,7 +15,6 @@
 <a class="visually-hidden-focusable btn btn-sm btn-outline-secondary position-fixed top-0 start-0 m-2 z-3" href="#section-details" style="z-index: 1080;">Skip to form</a>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-upload-nav sticky-top">
     <div class="container-fluid px-3 px-md-4">
-        <a class="navbar-brand fw-bold" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>GLC</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#uploadNav" aria-controls="uploadNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -34,8 +33,7 @@
     <div class="container-fluid px-3 px-md-4 px-xl-5 py-4 py-md-5">
         <div class="row align-items-end g-4">
             <div class="col-lg-8">
-                <p class="ink-upload-eyebrow text-uppercase small fw-semibold mb-2">Publish · Digital listing</p>
-                <h1 class="ink-upload-title mb-3">List your book</h1>
+                <h1 class="ink-upload-title mb-3">Publish · Digital listing</h1>
                 <p class="ink-upload-lead mb-0">Upload your manuscript, add a cover (yours or AI), set pricing, and optionally generate an AI-narrated audiobook. You’ll finish publishing from <strong>Edit book</strong>.</p>
             </div>
             <div class="col-lg-4">
@@ -95,9 +93,17 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="extra_digital_languages" class="form-label">AI-translated editions <span class="badge bg-secondary bg-opacity-25 text-dark fw-normal">optional</span></label>
-                                    {{ form.extra_digital_languages(id="extra_digital_languages", class="form-control ink-upload-control ink-multi-languages") }}
-                                    <div class="form-text">Languages show in the list below—click to select. Hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> for several. Leave none selected to skip. Requires AI keys on the server.</div>
+                                    <label for="extra_digital_languages_gateway" class="form-label">AI-translated editions <span class="badge bg-secondary bg-opacity-25 text-dark fw-normal">optional</span></label>
+                                    <select class="form-select ink-upload-control" id="extra_digital_languages_gateway" autocomplete="off" aria-describedby="extra-digital-lang-help">
+                                        <option value="" selected>English — default (no extra AI translations)</option>
+                                        <option value="choose">Choose additional languages…</option>
+                                    </select>
+                                    <div id="extraDigitalLangListWrap" class="d-none mt-2">
+                                        <label for="extra_digital_languages" class="form-label small text-muted mb-1">Languages to translate into</label>
+                                        {{ form.extra_digital_languages(id="extra_digital_languages", class="form-select ink-upload-control ink-multi-languages", size="10") }}
+                                        <button type="button" class="btn btn-link btn-sm ps-0 mt-1" id="extraDigitalLangCollapseBtn">Back to English default (clear extras)</button>
+                                    </div>
+                                    <div class="form-text" id="extra-digital-lang-help">Starts on <strong>English</strong> like manuscript language. Open <em>Choose additional languages…</em> for the full list, then hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> to pick several. Requires AI keys on the server.</div>
                                 </div>
                             </div>
                         </div>
@@ -316,6 +322,72 @@ document.addEventListener('DOMContentLoaded', function() {
     const audiobookOptionalBlock = document.getElementById('audiobookOptionalBlock');
     const audiobookVoiceSection = document.getElementById('audiobookVoiceSection');
     const ebookLanguage = document.getElementById('ebook_language');
+    const extraLangGateway = document.getElementById('extra_digital_languages_gateway');
+    const extraLangMulti = document.getElementById('extra_digital_languages');
+    const extraLangWrap = document.getElementById('extraDigitalLangListWrap');
+    const extraLangCollapseBtn = document.getElementById('extraDigitalLangCollapseBtn');
+    const GATEWAY_EXTRA_LANG_CHOOSE = 'choose';
+
+    function updateExtraLangGatewayDefaultLabel() {
+        if (!extraLangGateway || !ebookLanguage) return;
+        const defOpt = extraLangGateway.querySelector('option[value=""]');
+        if (!defOpt) return;
+        const idx = ebookLanguage.selectedIndex;
+        const langLabel = idx >= 0 ? (ebookLanguage.options[idx].text || 'Manuscript').trim() : 'Manuscript';
+        const code = (ebookLanguage.value || '').toLowerCase();
+        if (code === 'en') {
+            defOpt.textContent = 'English — default (no extra AI translations)';
+        } else {
+            defOpt.textContent = langLabel + ' — default (no extra AI translations)';
+        }
+    }
+
+    function syncExtraLangPrimaryDisabled() {
+        if (!extraLangMulti || !ebookLanguage) return;
+        const primary = (ebookLanguage.value || '').toLowerCase();
+        Array.from(extraLangMulti.options).forEach(function (opt) {
+            const v = (opt.value || '').toLowerCase();
+            const dis = Boolean(v && v === primary);
+            opt.disabled = dis;
+            if (dis) opt.selected = false;
+        });
+    }
+
+    function extraLangMultiHasSelection() {
+        if (!extraLangMulti) return false;
+        return Array.from(extraLangMulti.selectedOptions).some(function (o) {
+            return o.value && !o.disabled;
+        });
+    }
+
+    function setExtraLangUiExpanded(expanded) {
+        if (!extraLangWrap || !extraLangGateway) return;
+        extraLangWrap.classList.toggle('d-none', !expanded);
+        if (!expanded) {
+            extraLangGateway.value = '';
+            if (extraLangMulti) {
+                Array.from(extraLangMulti.options).forEach(function (o) {
+                    o.selected = false;
+                });
+            }
+        } else {
+            extraLangGateway.value = GATEWAY_EXTRA_LANG_CHOOSE;
+        }
+    }
+
+    function initExtraDigitalLanguagesUi() {
+        if (!extraLangGateway || !extraLangMulti) return;
+        syncExtraLangPrimaryDisabled();
+        updateExtraLangGatewayDefaultLabel();
+        if (extraLangMultiHasSelection()) {
+            if (extraLangWrap) extraLangWrap.classList.remove('d-none');
+            extraLangGateway.value = GATEWAY_EXTRA_LANG_CHOOSE;
+        } else {
+            if (extraLangWrap) extraLangWrap.classList.add('d-none');
+            extraLangGateway.value = '';
+        }
+    }
+
     const ttsLanguageSelect = document.getElementById('audiobook_tts_language');
     const voiceInput = document.getElementById('audiobook_voice');
     const digitalFileInput = document.getElementById('digital_book_file_input');
@@ -395,10 +467,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             voiceUserPicked = false;
             voicesLoadedForLang = null;
+            syncExtraLangPrimaryDisabled();
+            updateExtraLangGatewayDefaultLabel();
             applyDefaultVoiceFromLanguage();
             if (generateAudiobook && generateAudiobook.checked) {
                 loadAvailableVoicesUpload();
             }
+        });
+    }
+
+    if (extraLangGateway) {
+        extraLangGateway.addEventListener('change', function () {
+            if (this.value === GATEWAY_EXTRA_LANG_CHOOSE) {
+                if (extraLangWrap) extraLangWrap.classList.remove('d-none');
+            } else {
+                setExtraLangUiExpanded(false);
+            }
+        });
+    }
+    if (extraLangCollapseBtn) {
+        extraLangCollapseBtn.addEventListener('click', function () {
+            setExtraLangUiExpanded(false);
         });
     }
     if (ttsLanguageSelect) {
@@ -588,6 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (ttsLanguageSelect && ebookLanguage && ttsLanguageSelect.value !== ebookLanguage.value) {
         ttsLangUserChanged = true;
     }
+    initExtraDigitalLanguagesUi();
     applyDefaultVoiceFromLanguage();
     syncSelectedVoiceLabel();
     syncAudiobookOptionalBlock();

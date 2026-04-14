@@ -11,7 +11,6 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand fw-semibold" href="{{ url_for('book_platform.dashboard') }}">My hub</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -24,7 +23,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
-                            <i class="fas fa-th-large"></i> Content Hub
+                            <i class="fas fa-th-large"></i> Content
                         </a>
                     </li>
                     {% if is_author %}
@@ -89,8 +88,8 @@
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     {% if is_author and current_user.role == 'author' %}
-                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ user_profile.pen_name or current_user.first_name or current_user.username }}!</h1>
-                    <p class="lead mb-4">Use this hub as your <strong>Amazon-style book store</strong> for indies: publish to the marketplace, add <strong>AI covers</strong> and <strong>TTS audiobooks</strong>, and reach readers worldwide. <strong>Live radio</strong> radio spotlights reviews and author interviews—listen from the player on most pages or explore the content hub.</p>
+                    <h1 class="display-4 fw-bold mb-3">{{ user_profile.pen_name or current_user.first_name or current_user.username }}</h1>
+                    <p class="lead mb-4">Use this hub as your <strong>Amazon-style book store</strong> for indies: publish to the marketplace, add <strong>AI covers</strong> and <strong>TTS audiobooks</strong>, and reach readers worldwide. <strong>Live radio</strong> radio spotlights reviews and author interviews—listen from the player on most pages or explore content.</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-plus-circle me-2"></i>Start Writing
@@ -106,25 +105,25 @@
                         </a>
                     </div>
                     {% elif is_freelancer or current_user.role == 'freelancer' %}
-                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ current_user.username }}!</h1>
-                    <p class="lead mb-4">Your freelance journalism platform - Create stories, access content hub, and browse the marketplace</p>
+                    <h1 class="display-4 fw-bold mb-3">{{ current_user.username }}</h1>
+                    <p class="lead mb-4">Your freelance journalism platform - Create stories, access content, and browse the marketplace</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('blog.blogpost') }}" class="btn btn-info btn-lg">
                             <i class="fas fa-pen me-2"></i>Write Story
                         </a>
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-th-large me-2"></i>Content Hub
+                            <i class="fas fa-th-large me-2"></i>Content
                         </a>
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary btn-lg">
                             <i class="fas fa-store me-2"></i>Marketplace
                         </a>
                     </div>
                     {% elif current_user.role == 'podcaster' %}
-                    <h1 class="display-4 fw-bold mb-3">Welcome, {{ current_user.username }}!</h1>
+                    <h1 class="display-4 fw-bold mb-3">{{ current_user.username }}</h1>
                     <p class="lead mb-4">Your podcasting platform - Upload podcasts, browse content, and manage your audio content</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-th-large me-2"></i>Content Hub
+                            <i class="fas fa-th-large me-2"></i>Content
                         </a>
                         <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-success btn-lg">
                             <i class="fas fa-podcast me-2"></i>Browse Podcasts
@@ -137,14 +136,14 @@
                         </a>
                     </div>
                     {% else %}
-                    <h1 class="display-4 fw-bold mb-3">Welcome</h1>
+                    <h1 class="display-4 fw-bold mb-3">{{ current_user.first_name or current_user.username }}</h1>
                     <p class="lead mb-4">Your all-in-one digital content platform: Books, Stories, News, Podcasts, and more</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-store me-2"></i>Browse Books
                         </a>
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-primary btn-lg">
-                            <i class="fas fa-th-large me-2"></i>Content Hub
+                            <i class="fas fa-th-large me-2"></i>Content
                         </a>
                         <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-success btn-lg">
                             <i class="fas fa-chart-line me-2"></i>Browse Investments
@@ -285,7 +284,7 @@
 
             <!-- Main Content -->
             <div class="col-lg-9">
-                <!-- Welcome Message -->
+                <!-- Profile summary -->
                 <div class="welcome-card bg-white rounded-3 shadow-sm p-4 mb-4 border-start border-primary border-4">
                     <div class="row align-items-center">
                         <div class="col-md-8">
