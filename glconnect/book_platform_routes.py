@@ -49,7 +49,7 @@ from glconnect.book_language_tts import (
     tts_voice_list_prefix,
 )
 from glconnect.revenue_distribution_service import distribute_revenue
-from glconnect.stripe_utils import init_stripe, get_webhook_secret
+from glconnect.stripe_utils import init_stripe, get_webhook_secret, marketplace_book_payment_intent_data
 from glconnect.book_utils import is_book_published
 import threading
 from werkzeug.utils import secure_filename
@@ -3194,6 +3194,21 @@ def purchase_book(book_id):
             payment_amount = base_price
             logger.info(f"Using base price for {purchase_type}: ${payment_amount:.2f}")
         
+        # Stripe Connect: require author connected account unless dev fallback is enabled
+        author_connect_id = (
+            (book.author.stripe_connect_account_id or "").strip()
+            if book.author
+            else ""
+        )
+        payment_intent_data, connect_checkout_error = marketplace_book_payment_intent_data(
+            book=book,
+            purchase_type=purchase_type,
+            payment_amount=payment_amount,
+            stripe_connect_account_id=author_connect_id or None,
+        )
+        if connect_checkout_error:
+            return jsonify({'error': connect_checkout_error}), 400
+        
         # Ensure currency is set
         if not book.currency:
             book.currency = 'USD'
@@ -3689,7 +3704,7 @@ def purchase_book(book_id):
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
                 domain_url = current_app.config.get('FRONTEND_BASE_URL') or request.url_root.rstrip('/')
-                checkout_session = stripe.checkout.Session.create(
+                checkout_kw = dict(
                     payment_method_types=['card'],
                     line_items=[{
                         'price_data': {
@@ -3712,6 +3727,9 @@ def purchase_book(book_id):
                         'purchase_type': purchase_type,
                     },
                 )
+                if payment_intent_data:
+                    checkout_kw['payment_intent_data'] = payment_intent_data
+                checkout_session = stripe.checkout.Session.create(**checkout_kw)
                 stripe_checkout_url = checkout_session.url
         except Exception as stripe_err:
             logger.warning(f"Could not create Stripe Checkout Session: {stripe_err}")
@@ -3824,9 +3842,19 @@ def purchase_book(book_id):
                 from datetime import datetime, timezone
                 
                 purchase_uuid = str(uuid_lib.uuid4())
-                book = BookProject.query.get(book_id)
+                book = BookProject.query.options(joinedload(BookProject.author)).get(book_id)
                 if not book:
                     return jsonify({'error': 'Book not found'}), 404
+                
+                _cid_fb = (book.author.stripe_connect_account_id or "").strip() if book.author else ""
+                _pi_fb, _connect_err_fb = marketplace_book_payment_intent_data(
+                    book=book,
+                    purchase_type=purchase_type,
+                    payment_amount=payment_amount,
+                    stripe_connect_account_id=_cid_fb or None,
+                )
+                if _connect_err_fb:
+                    return jsonify({'success': False, 'error': _connect_err_fb}), 400
                 
                 # Check which columns exist
                 from sqlalchemy import inspect as sql_inspect
@@ -3988,7 +4016,7 @@ def purchase_book(book_id):
                     stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
                     if stripe_api_key:
                         stripe.api_key = stripe_api_key
-                        checkout_session = stripe.checkout.Session.create(
+                        checkout_kw_fb = dict(
                             payment_method_types=['card'],
                             line_items=[{
                                 'price_data': {
@@ -4004,6 +4032,9 @@ def purchase_book(book_id):
                             client_reference_id=str(purchase.id),
                             metadata={'book_id': str(book_id), 'purchase_id': str(purchase.id), 'purchase_type': purchase_type},
                         )
+                        if _pi_fb:
+                            checkout_kw_fb['payment_intent_data'] = _pi_fb
+                        checkout_session = stripe.checkout.Session.create(**checkout_kw_fb)
                         stripe_checkout_url = checkout_session.url
                 except Exception as e:
                     logger.warning(f"Fallback Stripe checkout failed: {e}")
@@ -4363,6 +4394,67 @@ def purchase_success():
         logger.error(f"Error processing purchase success: {str(e)}", exc_info=True)
         flash('Error recording purchase. Please contact support with your payment confirmation.', 'error')
         return redirect(url_for('book_platform.marketplace'))
+
+
+@book_bp.route('/stripe/connect/onboard', methods=['POST'])
+@login_required
+def stripe_connect_onboard():
+    """Create a Stripe Express connected account (if needed) and return Account Link URL."""
+    try:
+        init_stripe()
+    except RuntimeError as e:
+        return jsonify({'success': False, 'error': str(e)}), 503
+
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not bp_user:
+        return jsonify({'success': False, 'error': 'Create your Ink Studio author profile first.'}), 400
+
+    import stripe
+
+    country = (os.getenv('STRIPE_CONNECT_DEFAULT_COUNTRY') or 'US').strip().upper()
+    try:
+        if not bp_user.stripe_connect_account_id:
+            create_kwargs = {
+                'type': 'express',
+                'country': country,
+                'capabilities': {
+                    'card_payments': {'requested': True},
+                    'transfers': {'requested': True},
+                },
+                'metadata': {'book_platform_user_id': str(bp_user.id)},
+            }
+            if getattr(current_user, 'email', None):
+                create_kwargs['email'] = current_user.email
+            acct = stripe.Account.create(**create_kwargs)
+            bp_user.stripe_connect_account_id = acct.id
+            db.session.commit()
+
+        base = (current_app.config.get('FRONTEND_BASE_URL') or request.url_root).rstrip('/')
+        refresh_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return')}?refresh=1"
+        return_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return')}"
+        link = stripe.AccountLink.create(
+            account=bp_user.stripe_connect_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type='account_onboarding',
+        )
+        return jsonify({'success': True, 'url': link.url})
+    except Exception as e:
+        logger.error('Stripe Connect onboarding failed: %s', e, exc_info=True)
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': 'Could not start payout setup. Please try again or contact support.',
+        }), 500
+
+
+@book_bp.route('/stripe/connect/onboard-return', methods=['GET'])
+@login_required
+def stripe_connect_onboard_return():
+    """Browser return URL after Stripe Connect onboarding."""
+    flash('Payout setup updated. When Stripe shows your account as ready, you can receive book sales.', 'info')
+    return redirect(url_for('book_platform.dashboard'))
+
 
 # Stripe Webhook Handler
 @book_bp.route('/stripe/webhook', methods=['POST'])

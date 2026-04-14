@@ -481,9 +481,11 @@ def create_app():
         from .db_schema_patches import (
             ensure_investment_campaign_milestone_schema,
             ensure_digital_book_editions_schema,
+            ensure_book_platform_stripe_connect_schema,
         )
         ensure_investment_campaign_milestone_schema(db)
         ensure_digital_book_editions_schema(db)
+        ensure_book_platform_stripe_connect_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

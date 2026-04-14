@@ -115,6 +115,8 @@ class BookPlatformUser(db.Model):
     writing_experience = db.Column(db.Text, nullable=True)
     genres = db.Column(JSON, nullable=True)  # Store preferred genres as JSON array
     payment_info = db.Column(JSON, nullable=True)  # Store payment details securely
+    # Stripe Connect: Express (or Custom) connected account id for marketplace payouts (acct_...)
+    stripe_connect_account_id = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     

@@ -141,3 +141,48 @@ CREATE TABLE digital_book_editions (
     except Exception as e:
         db.session.rollback()
         logger.error("Could not create digital_book_editions: %s", e, exc_info=True)
+
+
+def ensure_book_platform_stripe_connect_schema(db) -> None:
+    """Add stripe_connect_account_id to book_platform_users if missing."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("stripe_connect patch: dialect check failed: %s", e)
+        return
+
+    col = "stripe_connect_account_id"
+
+    try:
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_platform_users ADD COLUMN IF NOT EXISTS "
+                    "stripe_connect_account_id VARCHAR(255)"
+                )
+            )
+            db.session.commit()
+            return
+
+        if dialect == "sqlite":
+            rows = db.session.execute(text("PRAGMA table_info(book_platform_users)")).fetchall()
+            db.session.rollback()
+            names = {r[1] for r in rows}  # (cid, name, type, ...)
+            if col in names:
+                return
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_platform_users ADD COLUMN stripe_connect_account_id VARCHAR(255)"
+                )
+            )
+            db.session.commit()
+            logger.info("book_platform_users.%s column added (SQLite).", col)
+    except Exception as e:
+        db.session.rollback()
+        logger.error(
+            "Could not patch book_platform_users for Stripe Connect: %s",
+            e,
+            exc_info=True,
+        )
