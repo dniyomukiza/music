@@ -603,8 +603,12 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Book published successfully!');
-                        location.reload();
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            alert('Book published successfully!');
+                            location.reload();
+                        }
                     } else {
                         alert('Error publishing book: ' + (data.error || 'Unknown error'));
                     }

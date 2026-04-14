@@ -43,6 +43,16 @@ def stripe_connect_allow_platform_only() -> bool:
     )
 
 
+def author_needs_stripe_payout_setup(bp_user) -> bool:
+    """True when marketplace sales expect a Connect account but the author has none linked."""
+    if stripe_connect_allow_platform_only():
+        return False
+    if not bp_user:
+        return True
+    acct = getattr(bp_user, "stripe_connect_account_id", None) or ""
+    return not str(acct).strip()
+
+
 def _book_list_base_price_for_purchase_type(book: Any, purchase_type: str) -> float:
     """List/base price for the format (matches BookSale logic in purchase_book)."""
     pt = (purchase_type or "digital").lower()

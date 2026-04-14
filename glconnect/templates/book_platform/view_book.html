@@ -585,7 +585,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        location.reload();
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            location.reload();
+                        }
                     } else {
                         alert('Error publishing book: ' + (data.error || 'Unknown error'));
                     }

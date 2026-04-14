@@ -101,7 +101,12 @@ login_manager = LoginManager()
 
 # Use the same config loaded above
 
-def create_app():
+def create_app(config_overrides=None):
+    """Flask application factory.
+
+    :param config_overrides: Optional dict merged into ``app.config`` after defaults
+        (e.g. tests: ``SQLALCHEMY_DATABASE_URI``, ``WTF_CSRF_ENABLED``, ``TESTING``).
+    """
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
     CORS(app, origins=["https://glc.cool"], supports_credentials=True) # <-- ADD supports_credentials=True
@@ -180,6 +185,9 @@ def create_app():
         'connect_args': {'connect_timeout': 10},  # Don't hang when creating new connections
     }
     app.config["JWT_SECRET_KEY"] = "abarayon"
+
+    if config_overrides:
+        app.config.update(config_overrides)
 
     # Initialize extensions
     db.init_app(app)

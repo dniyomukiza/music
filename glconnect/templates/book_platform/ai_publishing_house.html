@@ -186,7 +186,11 @@
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
-                    window.location.href = `/mybook/books/${bookId}`;
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        window.location.href = `/mybook/books/${bookId}`;
+                    }
                 } else {
                     alert("Error: " + data.error);
                 }

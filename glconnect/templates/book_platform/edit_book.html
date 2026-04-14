@@ -653,13 +653,14 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Show success message
-                    showNotification('Book updated successfully!', 'success');
-                    
-                    // Redirect to book view
+                    const msg = result.payout_setup_required
+                        ? 'Listing saved. Connect your payout account with Stripe so readers can pay you.'
+                        : 'Book updated successfully!';
+                    showNotification(msg, 'success');
+                    const delay = result.payout_setup_required ? 900 : 1500;
                     setTimeout(() => {
                         window.location.href = result.redirect || '{{ url_for("book_platform.view_book", book_id=book.id) }}';
-                    }, 1500);
+                    }, delay);
                 } else {
                     showNotification(result.error || 'Failed to update book', 'error');
                 }

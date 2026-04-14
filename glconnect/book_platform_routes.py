@@ -49,7 +49,12 @@ from glconnect.book_language_tts import (
     tts_voice_list_prefix,
 )
 from glconnect.revenue_distribution_service import distribute_revenue
-from glconnect.stripe_utils import init_stripe, get_webhook_secret, marketplace_book_payment_intent_data
+from glconnect.stripe_utils import (
+    init_stripe,
+    get_webhook_secret,
+    marketplace_book_payment_intent_data,
+    author_needs_stripe_payout_setup,
+)
 from glconnect.book_utils import is_book_published
 import threading
 from werkzeug.utils import secure_filename
@@ -126,6 +131,18 @@ def book_has_listing_cover(book):
         return False
     c = getattr(book, 'cover_image', None)
     return bool(c and str(c).strip())
+
+
+def safe_mybook_next_path(candidate, default_path):
+    """Allow only same-site Ink Studio paths (mitigate open redirects)."""
+    if not candidate or not isinstance(candidate, str):
+        return default_path
+    c = candidate.strip()
+    if "://" in c or c.startswith("//"):
+        return default_path
+    if not c.startswith("/mybook"):
+        return default_path
+    return c
 
 
 def save_book_cover_file(file_storage):
@@ -1065,6 +1082,10 @@ def edit_book(book_id, user_profile, profile_type):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
+
+            _prev_digital_pub = book.digital_book_published
+            _prev_audiobook_pub = book.audiobook_published
+            _prev_status = book.status
             
             # Debug logging for publish checkbox
             logger.debug(f"Edit book {book_id} - Form data keys: {list(data.keys())}")
@@ -1185,11 +1206,29 @@ def edit_book(book_id, user_profile, profile_type):
                         logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
             
             db.session.commit()
+
+            view_path = url_for('book_platform.view_book', book_id=book_id)
+            just_published_digital = book.digital_book_published and not _prev_digital_pub
+            just_published_audiobook = book.audiobook_published and not _prev_audiobook_pub
+            just_published_chapter_book = (
+                book.status == BookStatus.PUBLISHED and _prev_status != BookStatus.PUBLISHED
+            )
+            just_published = (
+                just_published_digital or just_published_audiobook or just_published_chapter_book
+            )
+            resp = {'success': True, 'redirect': view_path}
+            if (
+                just_published
+                and book.author
+                and author_needs_stripe_payout_setup(book.author)
+            ):
+                resp['payout_setup_required'] = True
+                resp['redirect'] = url_for(
+                    'book_platform.author_payout_setup',
+                    next=view_path,
+                )
             
-            return jsonify({
-                'success': True,
-                'redirect': url_for('book_platform.view_book', book_id=book_id)
-            })
+            return jsonify(resp)
             
         except Exception as e:
             db.session.rollback()
@@ -2724,7 +2763,7 @@ def api_marketplace_book_detail(book_id):
 @book_platform_required
 def publish_book(book_id):
     """Publish a book to marketplace"""
-    book = BookProject.query.get_or_404(book_id)
+    book = BookProject.query.options(joinedload(BookProject.author)).get_or_404(book_id)
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     
     # Check if book_user exists
@@ -2741,6 +2780,7 @@ def publish_book(book_id):
     if not book_has_listing_cover(book):
         return jsonify({'error': 'Please add a cover image before publishing to the marketplace.'}), 400
 
+    was_already_published = book.status == BookStatus.PUBLISHED
     book.status = BookStatus.PUBLISHED
     book.published_at = datetime.now(timezone.utc)
     
@@ -2751,8 +2791,21 @@ def publish_book(book_id):
             book.investment_campaign.funded_at = datetime.now(timezone.utc)
     
     db.session.commit()
-    
-    return jsonify({'success': True})
+
+    resp = {'success': True}
+    author_is_current = (
+        book.author
+        and getattr(book.author, 'user_id', None) == current_user.user_id
+    )
+    if (
+        not was_already_published
+        and author_is_current
+        and author_needs_stripe_payout_setup(book.author)
+    ):
+        view_path = url_for('book_platform.view_book', book_id=book_id)
+        resp['payout_setup_required'] = True
+        resp['redirect'] = url_for('book_platform.author_payout_setup', next=view_path)
+    return jsonify(resp)
 
 @book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
 @writer_or_book_platform_required
@@ -4396,6 +4449,29 @@ def purchase_success():
         return redirect(url_for('book_platform.marketplace'))
 
 
+@book_bp.route('/payout-setup', methods=['GET'])
+@writer_or_book_platform_required
+def author_payout_setup(user_profile, profile_type):
+    """After publishing, prompt authors to complete Stripe Connect so buyers can pay them."""
+    author_id = get_profile_id(user_profile, profile_type)
+    if not author_id:
+        flash('Could not resolve your author profile.', 'error')
+        return redirect(url_for('book_platform.dashboard'))
+    bp_user = BookPlatformUser.query.get(author_id)
+    if not bp_user:
+        flash('Create your Ink Studio author profile first.', 'warning')
+        return redirect(url_for('book_platform.dashboard'))
+    default_next = url_for('book_platform.dashboard')
+    next_path = safe_mybook_next_path(request.args.get('next'), default_next)
+    if not author_needs_stripe_payout_setup(bp_user):
+        flash('Your payout account is already linked.', 'info')
+        return redirect(next_path)
+    return render_template(
+        'book_platform/author_payout_setup.html',
+        next_path=next_path,
+    )
+
+
 @book_bp.route('/stripe/connect/onboard', methods=['POST'])
 @login_required
 def stripe_connect_onboard():
@@ -4410,6 +4486,15 @@ def stripe_connect_onboard():
         return jsonify({'success': False, 'error': 'Create your Ink Studio author profile first.'}), 400
 
     import stripe
+
+    default_next = url_for('book_platform.dashboard')
+    next_path = default_next
+    if request.is_json:
+        body = request.get_json(silent=True) or {}
+        if body.get('next'):
+            next_path = safe_mybook_next_path(body.get('next'), default_next)
+    elif request.form.get('next'):
+        next_path = safe_mybook_next_path(request.form.get('next'), default_next)
 
     country = (os.getenv('STRIPE_CONNECT_DEFAULT_COUNTRY') or 'US').strip().upper()
     try:
@@ -4430,8 +4515,8 @@ def stripe_connect_onboard():
             db.session.commit()
 
         base = (current_app.config.get('FRONTEND_BASE_URL') or request.url_root).rstrip('/')
-        refresh_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return')}?refresh=1"
-        return_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return')}"
+        refresh_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return', refresh=1, next=next_path)}"
+        return_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return', next=next_path)}"
         link = stripe.AccountLink.create(
             account=bp_user.stripe_connect_account_id,
             refresh_url=refresh_url,
@@ -4453,7 +4538,9 @@ def stripe_connect_onboard():
 def stripe_connect_onboard_return():
     """Browser return URL after Stripe Connect onboarding."""
     flash('Payout setup updated. When Stripe shows your account as ready, you can receive book sales.', 'info')
-    return redirect(url_for('book_platform.dashboard'))
+    default_next = url_for('book_platform.dashboard')
+    dest = safe_mybook_next_path(request.args.get('next'), default_next)
+    return redirect(dest)
 
 
 # Stripe Webhook Handler
