@@ -4,10 +4,11 @@ Utility functions for handling user deletion with proper cascade cleanup
 from glconnect import db
 from glconnect.models import User, Writer, Book
 from glconnect.book_platform_models import (
-    BookPlatformUser, BookProject, BookChapter, BookCollaboration,
+    BookPlatformUser, BookProject, BookCollaboration,
     BookComment, CollaborationInvitation, BookPurchase, BookSale,
     RealtimeSession, BookAnalytics, BookNotification
 )
+from glconnect.book_utils import delete_book_chapter_version_graph_for_project
 import os
 
 
@@ -159,8 +160,7 @@ def cleanup_book_data(book_id):
         # Notifications
         BookNotification.query.filter_by(book_project_id=book_id).delete()
         
-        # Chapters (should cascade, but being explicit)
-        BookChapter.query.filter_by(book_project_id=book_id).delete()
+        delete_book_chapter_version_graph_for_project(book_id)
         
     except Exception as e:
         print(f"Error cleaning up book data for book {book_id}: {e}")

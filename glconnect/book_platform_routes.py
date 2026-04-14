@@ -55,7 +55,10 @@ from glconnect.stripe_utils import (
     marketplace_book_payment_intent_data,
     author_needs_stripe_payout_setup,
 )
-from glconnect.book_utils import is_book_published
+from glconnect.book_utils import (
+    delete_book_chapter_version_graph_for_project,
+    is_book_published,
+)
 import threading
 from werkzeug.utils import secure_filename
 
@@ -1593,8 +1596,8 @@ def delete_book(book_id, user_profile, profile_type):
         # 13. Clean up reviews (they reference book_project_id)
         BookReview.query.filter_by(book_project_id=book_id).delete()
         
-        # 14. Delete all chapters (cascade should handle this, but being explicit)
-        BookChapter.query.filter_by(book_project_id=book_id).delete()
+        # 14. Chapters + chapter_versions + book_versions (bulk delete bypasses ORM cascade)
+        delete_book_chapter_version_graph_for_project(book_id)
         
         # 15. Finally delete the book
         db.session.delete(book)
@@ -2894,7 +2897,7 @@ def admin_delete_test_books():
             BookNotification.query.filter_by(book_project_id=book_id).delete()
             BookReview.query.filter_by(book_project_id=book_id).delete()
             ReviewRequest.query.filter_by(book_project_id=book_id).delete()
-            BookChapter.query.filter_by(book_project_id=book_id).delete()
+            delete_book_chapter_version_graph_for_project(book_id)
             AudiobookChapter.query.filter_by(book_project_id=book_id).delete()
             db.session.delete(book)
             deleted.append(title)

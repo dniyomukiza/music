@@ -20,3 +20,52 @@ def is_book_published(book):
     if getattr(book, 'audiobook_published', False):
         return True
     return False
+
+
+def delete_book_chapter_version_graph_for_project(book_project_id: int) -> None:
+    """
+    Remove chapter rows and version-control rows for one book in FK-safe order.
+
+    SQLAlchemy relationship cascade does not run for Query.delete(); Postgres FKs on
+    chapter_versions.chapter_id are not CASCADE, so bulk-deleting book_chapters alone fails.
+    """
+    from glconnect import db
+    from glconnect.book_platform_models import (
+        BookChapter,
+        BookVersion,
+        ChapterSuggestion,
+        ChapterVersion,
+    )
+
+    chapter_ids = [
+        r[0]
+        for r in db.session.query(BookChapter.id)
+        .filter(BookChapter.book_project_id == book_project_id)
+        .all()
+    ]
+    if chapter_ids:
+        ChapterSuggestion.query.filter(
+            ChapterSuggestion.chapter_id.in_(chapter_ids)
+        ).delete(synchronize_session=False)
+        ChapterVersion.query.filter(
+            ChapterVersion.chapter_id.in_(chapter_ids)
+        ).delete(synchronize_session=False)
+
+    BookChapter.query.filter(
+        BookChapter.book_project_id == book_project_id
+    ).delete(synchronize_session=False)
+
+    version_ids = [
+        r[0]
+        for r in db.session.query(BookVersion.id)
+        .filter(BookVersion.book_project_id == book_project_id)
+        .all()
+    ]
+    if version_ids:
+        ChapterVersion.query.filter(
+            ChapterVersion.book_version_id.in_(version_ids)
+        ).delete(synchronize_session=False)
+
+    BookVersion.query.filter(
+        BookVersion.book_project_id == book_project_id
+    ).delete(synchronize_session=False)
