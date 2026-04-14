@@ -17,9 +17,13 @@
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
+# playlist() defaults to mode="randomize", which shuffles on reload — bumpers then
+# rarely appear early (or seem "missing" in short sessions). Use normal order for
+# the pre-interleaved videolist_hls.m3u (see glconnect/pipeline._write_videolist_hls_m3u).
 v = playlist(
   id="videolist_hls_m3u",
   reload_mode="watch",
+  mode="normal",
   "/liqfolder/video/videolist_hls.m3u"
 )
 v = mksafe(v)
