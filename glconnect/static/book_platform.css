@@ -1990,6 +1990,16 @@ body.ink-marketplace .ink-filters-column .ink-filter-card {
     }
 }
 
+body.ink-marketplace .ink-active-filters {
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(201, 162, 39, 0.22) !important;
+}
+
+body.ink-marketplace .ink-active-filters ul li + li {
+    margin-top: 0.2rem;
+}
+
 body.ink-marketplace .ink-marketplace-body {
     max-width: none;
 }

@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="description" content="GLC marketplace: browse and buy digital books and audiobooks from independents—AI covers, TTS audio, and tools to write and list. Live radio for reviews and author interviews.">
-    <title>Marketplace | GLC</title>
+    <title>Marketplace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -19,9 +19,6 @@
  <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#marketplace-catalog">Skip to catalog</a>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-marketplace-nav">
         <div class="container">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('book_platform.dashboard') }}{% else %}{{ url_for('book_platform.marketplace') }}{% endif %}">
-                <i class="fas fa-pen-fancy"></i> GLC
-            </a>
             <div class="navbar-nav ms-auto align-items-lg-center">
                 {% if current_user.is_authenticated %}
                     <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
@@ -43,10 +40,10 @@
         <div class="container-fluid px-3 px-md-4 px-xl-5 position-relative">
             <div class="row align-items-start g-4">
                 <div class="col-12">
-                    <p class="ink-hero-eyebrow text-uppercase small fw-semibold mb-2 opacity-90">Independent publishing · GLC</p>
-                    <div class="d-flex flex-column flex-lg-row flex-lg-wrap align-items-lg-end justify-content-lg-between gap-3 mb-3">
-                        <h1 class="ink-hero-title display-6 fw-bold mb-0">Marketplace</h1>
-                        <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2 align-self-start align-self-lg-center">
+                    <p class="ink-hero-eyebrow text-uppercase small fw-semibold mb-2 opacity-90">Independent publishing</p>
+                    <h1 class="visually-hidden">Marketplace</h1>
+                    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                        <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2">
                             <i class="fas fa-book-open me-2" aria-hidden="true"></i><strong>{{ total_books }}</strong> titles
                         </span>
                     </div>
@@ -87,68 +84,7 @@
     </header>
 
     <div class="container-fluid px-3 px-md-4 px-xl-5 pb-5 ink-marketplace-shell">
-    <!-- Categories: same horizontal padding as filters + grid -->
-    <div class="pt-3 pt-md-4 pb-2 border-bottom border-secondary border-opacity-25" id="marketplace-catalog">
-        <div class="d-flex flex-column flex-md-row flex-md-wrap align-items-md-center justify-content-md-between gap-2 gap-md-3 mb-3">
-            <h2 class="h5 mb-0 d-flex align-items-center gap-2 ink-section-title">
-                <i class="fas fa-tags text-primary" aria-hidden="true"></i>Shop by category
-            </h2>
-        </div>
-                <div class="category-container ink-category-strip d-flex flex-wrap gap-2 mb-0" role="navigation" aria-label="Browse by category">
-                    <a href="{{ url_for('book_platform.marketplace') }}" 
-                       class="btn btn-outline-primary category-btn {% if not selected_genre %}active{% endif %}"
-                       data-genre="">
-                        <i class="fas fa-th me-1"></i>All Books
-                        <span class="badge bg-primary ms-2">{{ total_books if not selected_genre else '' }}</span>
-                    </a>
-                    {% if available_genres %}
-                        {% for genre_info in available_genres %}
-                            <a href="{{ url_for('book_platform.marketplace', genre=genre_info.genre) }}" 
-                               class="btn btn-outline-primary category-btn {% if selected_genre == genre_info.genre %}active{% endif %}"
-                               data-genre="{{ genre_info.genre }}">
-                                <i class="fas fa-book me-1"></i>{{ genre_info.genre|title }}
-                                <span class="badge bg-primary ms-2">{{ genre_info.count }}</span>
-                            </a>
-                        {% endfor %}
-                    {% else %}
-                        <!-- Fallback to predefined genres if no books available yet -->
-                        <a href="{{ url_for('book_platform.marketplace', genre='romance') }}" 
-                           class="btn btn-outline-primary category-btn {% if selected_genre == 'romance' %}active{% endif %}"
-                           data-genre="romance">
-                            <i class="fas fa-heart me-1"></i>Romance
-                        </a>
-                        <a href="{{ url_for('book_platform.marketplace', genre='fiction') }}" 
-                           class="btn btn-outline-primary category-btn {% if selected_genre == 'fiction' %}active{% endif %}"
-                           data-genre="fiction">
-                            <i class="fas fa-book me-1"></i>Fiction
-                        </a>
-                        <a href="{{ url_for('book_platform.marketplace', genre='mystery') }}" 
-                           class="btn btn-outline-primary category-btn {% if selected_genre == 'mystery' %}active{% endif %}"
-                           data-genre="mystery">
-                            <i class="fas fa-search me-1"></i>Mystery
-                        </a>
-                        <a href="{{ url_for('book_platform.marketplace', genre='sci-fi') }}" 
-                           class="btn btn-outline-primary category-btn {% if selected_genre == 'sci-fi' %}active{% endif %}"
-                           data-genre="sci-fi">
-                            <i class="fas fa-rocket me-1"></i>Science Fiction
-                        </a>
-                        <a href="{{ url_for('book_platform.marketplace', genre='fantasy') }}" 
-                           class="btn btn-outline-primary category-btn {% if selected_genre == 'fantasy' %}active{% endif %}"
-                           data-genre="fantasy">
-                            <i class="fas fa-dragon me-1"></i>Fantasy
-                        </a>
-                    {% endif %}
-                </div>
-                {% if selected_genre %}
-                    <div class="alert alert-info d-flex align-items-center mt-3 mb-0 py-2">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <span>Showing <strong>{{ selected_genre|title }}</strong>.
-                        <a href="{{ url_for('book_platform.marketplace') }}" class="alert-link ms-1">View all</a></span>
-                    </div>
-                {% endif %}
-    </div>
-
-        <div class="row g-4 align-items-start pt-4 ink-marketplace-body">
+        <div class="row g-4 align-items-start pt-3 pt-md-4 ink-marketplace-body" id="marketplace-catalog">
             <!-- Titles + grid (left on lg+) -->
             <div class="col-12 col-lg-9 ink-results-column">
                 <div class="ink-results-toolbar card border-0 shadow-sm mb-4">
@@ -156,7 +92,7 @@
                         <div class="row g-3 align-items-center">
                             <div class="col-lg-5">
                                 <h3 class="h5 text-primary mb-1 d-flex align-items-center gap-2">
-                                    <i class="fas fa-book-open" aria-hidden="true"></i>Titles
+                                    <i class="fas fa-book-open" aria-hidden="true"></i>Catalog
                                 </h3>
                                 <p class="text-muted small mb-0" id="results-range">
                                     {% if total_books %}
@@ -299,7 +235,7 @@
                             <div class="text-center py-5 px-3 ink-empty-state rounded-3 border">
                                 <div class="ink-empty-icon mb-3" aria-hidden="true"><i class="fas fa-book-open"></i></div>
                                 <h4 class="text-primary mb-2">No books match</h4>
-                                <p class="text-muted mb-4 mx-auto" style="max-width: 420px;">Try clearing a filter, searching with fewer words, or browse <strong>All books</strong> above.</p>
+                                <p class="text-muted mb-4 mx-auto" style="max-width: 420px;">Try clearing filters in the sidebar, searching with fewer words, or open <strong>All categories</strong> in the genre menu.</p>
                                 <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary">View full catalog</a>
                             </div>
                         </div>
@@ -343,43 +279,68 @@
                 <div class="card shadow-sm border-0 mb-4 ink-filter-card">
                     <div class="card-header bg-white border-0 py-3">
                         <h2 id="filters-heading" class="h5 card-title text-primary mb-0">
-                            <i class="fas fa-filter me-2" aria-hidden="true"></i>Refine results
+                            <i class="fas fa-sliders-h me-2" aria-hidden="true"></i>Browse &amp; filters
                         </h2>
-                        <p class="small text-muted mb-0 mt-2">Filters apply to the marketplace catalog. Checkout and book pages are unchanged.</p>
+                        <p class="small text-muted mb-0 mt-2">Category and language reload as soon as you change them. Use <strong>Apply filters</strong> (or the grid <strong>Search</strong> button) after editing search, price, or sort.</p>
                     </div>
                     <div class="card-body pt-0">
+                        {% set genre_slugs = available_genres|map(attribute='genre')|list if available_genres else [] %}
+                        {% if selected_genre or search_term or selected_language or selected_price_range or (selected_sort and selected_sort != 'newest') %}
+                        <div class="ink-active-filters alert alert-light border py-2 px-3 small mb-3 mb-lg-4" role="status">
+                            <div class="fw-semibold text-dark mb-1"><i class="fas fa-check-circle text-primary me-1" aria-hidden="true"></i>Active</div>
+                            <ul class="list-unstyled mb-2 small text-muted">
+                                {% if selected_genre %}<li><span class="text-dark">Category:</span> {{ selected_genre|title }}</li>{% endif %}
+                                {% if search_term %}<li><span class="text-dark">Search:</span> {{ search_term }}</li>{% endif %}
+                                {% if selected_language %}<li><span class="text-dark">Language:</span> {{ selected_language|upper }}</li>{% endif %}
+                                {% if selected_price_range %}<li><span class="text-dark">Price:</span> {{ selected_price_range }}</li>{% endif %}
+                                {% if selected_sort and selected_sort != 'newest' %}<li><span class="text-dark">Sort:</span> {{ selected_sort|replace('_', ' ') }}</li>{% endif %}
+                            </ul>
+                            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-sm btn-outline-secondary">Clear all</a>
+                        </div>
+                        {% endif %}
                         <form id="filterForm" method="get" action="{{ url_for('book_platform.marketplace') }}">
+                            <!-- Category (same data as former “Shop by category” strip) -->
+                            <div class="mb-4">
+                                <label for="genre" class="form-label fw-bold"><i class="fas fa-tags me-1 text-primary" aria-hidden="true"></i>Category</label>
+                                <select class="form-select" id="genre" name="genre" aria-describedby="genre-help">
+                                    <option value="" {% if not selected_genre %}selected{% endif %}>All categories{% if total_books %} ({{ total_books }}){% endif %}</option>
+                                    {% if available_genres %}
+                                        {% for genre_info in available_genres %}
+                                            <option value="{{ genre_info.genre }}" {% if selected_genre == genre_info.genre %}selected{% endif %}>{{ genre_info.genre|title }} ({{ genre_info.count }})</option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="fiction" {% if selected_genre == 'fiction' %}selected{% endif %}>Fiction</option>
+                                        <option value="non-fiction" {% if selected_genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                                        <option value="mystery" {% if selected_genre == 'mystery' %}selected{% endif %}>Mystery</option>
+                                        <option value="romance" {% if selected_genre == 'romance' %}selected{% endif %}>Romance</option>
+                                        <option value="sci-fi" {% if selected_genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
+                                        <option value="fantasy" {% if selected_genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
+                                        <option value="thriller" {% if selected_genre == 'thriller' %}selected{% endif %}>Thriller</option>
+                                        <option value="biography" {% if selected_genre == 'biography' %}selected{% endif %}>Biography</option>
+                                        <option value="self-help" {% if selected_genre == 'self-help' %}selected{% endif %}>Self-Help</option>
+                                        <option value="business" {% if selected_genre == 'business' %}selected{% endif %}>Business</option>
+                                        <option value="history" {% if selected_genre == 'history' %}selected{% endif %}>History</option>
+                                        <option value="poetry" {% if selected_genre == 'poetry' %}selected{% endif %}>Poetry</option>
+                                        <option value="children" {% if selected_genre == 'children' %}selected{% endif %}>Children's</option>
+                                        <option value="young-adult" {% if selected_genre == 'young-adult' %}selected{% endif %}>Young Adult</option>
+                                    {% endif %}
+                                    {% if selected_genre and selected_genre not in genre_slugs %}
+                                        <option value="{{ selected_genre }}" selected>{{ selected_genre|title }}</option>
+                                    {% endif %}
+                                </select>
+                                <p id="genre-help" class="form-text small mb-0">Replaces the old category button row—counts match the catalog.</p>
+                            </div>
+
                             <!-- Search -->
                             <div class="mb-4">
-                                <label for="search" class="form-label fw-bold">Search Books</label>
+                                <label for="search" class="form-label fw-bold">Search titles</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-primary text-white">
                                         <i class="fas fa-search"></i>
                                     </span>
                                     <input type="text" class="form-control" id="search" name="search" placeholder="Title, author, or description…" value="{{ search_term or '' }}" autocomplete="off">
                                 </div>
-                            </div>
-
-                            <!-- Genre Filter -->
-                            <div class="mb-4">
-                                <label for="genre" class="form-label fw-bold">Genre</label>
-                                <select class="form-select" id="genre" name="genre">
-                                    <option value="">All Genres</option>
-                                    <option value="fiction" {% if selected_genre == 'fiction' %}selected{% endif %}>Fiction</option>
-                                    <option value="non-fiction" {% if selected_genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
-                                    <option value="mystery" {% if selected_genre == 'mystery' %}selected{% endif %}>Mystery</option>
-                                    <option value="romance" {% if selected_genre == 'romance' %}selected{% endif %}>Romance</option>
-                                    <option value="sci-fi" {% if selected_genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
-                                    <option value="fantasy" {% if selected_genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
-                                    <option value="thriller" {% if selected_genre == 'thriller' %}selected{% endif %}>Thriller</option>
-                                    <option value="biography" {% if selected_genre == 'biography' %}selected{% endif %}>Biography</option>
-                                    <option value="self-help" {% if selected_genre == 'self-help' %}selected{% endif %}>Self-Help</option>
-                                    <option value="business" {% if selected_genre == 'business' %}selected{% endif %}>Business</option>
-                                    <option value="history" {% if selected_genre == 'history' %}selected{% endif %}>History</option>
-                                    <option value="poetry" {% if selected_genre == 'poetry' %}selected{% endif %}>Poetry</option>
-                                    <option value="children" {% if selected_genre == 'children' %}selected{% endif %}>Children's</option>
-                                    <option value="young-adult" {% if selected_genre == 'young-adult' %}selected{% endif %}>Young Adult</option>
-                                </select>
+                                <p class="form-text small mb-0">Synced with the quick search above the grid.</p>
                             </div>
 
                             <!-- Language Filter -->
