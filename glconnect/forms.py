@@ -150,7 +150,12 @@ class DigitalBookUploadForm(FlaskForm):
         'Also publish AI-translated editions (plain text)',
         validators=[Optional()],
         choices=[],
-        render_kw={'class': 'form-select', 'size': '6'},
+        # form-select styles <select multiple> like a closed dropdown; use form-control + size for a visible list box.
+        render_kw={
+            'class': 'form-control ink-multi-languages',
+            'size': '8',
+            'aria-multiselectable': 'true',
+        },
     )
     digital_book_file = FileField('Digital Book File', validators=[
         DataRequired(),

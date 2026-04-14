@@ -11,9 +11,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-pen-fancy"></i> GLC
-            </a>
+            <a class="navbar-brand fw-semibold" href="{{ url_for('book_platform.dashboard') }}">My hub</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -139,7 +137,7 @@
                         </a>
                     </div>
                     {% else %}
-                    <h1 class="display-4 fw-bold mb-3">GLC</h1>
+                    <h1 class="display-4 fw-bold mb-3">Welcome</h1>
                     <p class="lead mb-4">Your all-in-one digital content platform: Books, Stories, News, Podcasts, and more</p>
                     <div class="d-flex gap-3 flex-wrap">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-primary btn-lg">
