@@ -11,6 +11,24 @@ from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
+# Image-capable Gemini models (text+image / native image). Preview IDs change; override with BOOK_COVER_AI_MODEL.
+_ENV_COVER_MODEL = "BOOK_COVER_AI_MODEL"
+_DEFAULT_COVER_IMAGE_MODELS = (
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.5-flash-image",
+    "gemini-2.0-flash-exp-image-generation",
+)
+
+
+def iter_book_cover_image_models():
+    """Model names to try for cover (and similar) image generation, newest stable first."""
+    env = (os.getenv(_ENV_COVER_MODEL) or "").strip()
+    if env:
+        yield env
+        return
+    for name in _DEFAULT_COVER_IMAGE_MODELS:
+        yield name
+
 
 def generate_book_cover_bytes(
     title: str,
@@ -51,12 +69,44 @@ Requirements:
 
     try:
         from google import genai
+        from google.genai import errors as genai_errors
 
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",
-            contents=[prompt],
-        )
+        response = None
+        last_model_error = None
+        for model_name in iter_book_cover_image_models():
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[prompt],
+                )
+                logger.info("book cover: used image model %s", model_name)
+                break
+            except genai_errors.ClientError as e:
+                last_model_error = e
+                msg = str(e)
+                if "404" in msg or "NOT_FOUND" in msg:
+                    logger.warning(
+                        "book cover: model %s not available (%s), trying fallback",
+                        model_name,
+                        msg[:120],
+                    )
+                    continue
+                raise
+            except Exception as e:
+                msg = str(e)
+                if "404" in msg or "NOT_FOUND" in msg:
+                    last_model_error = e
+                    logger.warning(
+                        "book cover: model %s not available (%s), trying fallback",
+                        model_name,
+                        msg[:120],
+                    )
+                    continue
+                raise
+        if response is None:
+            raise last_model_error or RuntimeError("No image model responded")
+
         if not response.candidates:
             return {
                 "success": False,

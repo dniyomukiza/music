@@ -1,8 +1,8 @@
 """
-Languages supported for uploaded ebooks: TTS voice defaults and translation targets.
+Languages supported for uploaded ebooks and TTS voice defaults.
 
-Only languages listed here appear on the list-ebook form so audiobook voice selection
-and optional AI-translated editions stay aligned with Google Cloud TTS coverage.
+Only languages listed here appear on listing forms so audiobook voice selection stays
+aligned with Google Cloud TTS coverage.
 """
 
 from typing import Dict, List, Tuple

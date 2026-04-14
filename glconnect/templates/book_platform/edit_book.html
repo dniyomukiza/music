@@ -88,7 +88,7 @@
                                         <select class="form-select" id="language" required disabled>
                                             <option selected>{{ ebook_language_label }} (original file)</option>
                                         </select>
-                                        <small class="form-text text-muted">This matches the language you chose when listing the ebook. Optional AI editions in other languages show up as extra downloads on the book page when ready.</small>
+                                        <small class="form-text text-muted">This matches the language you chose when listing the ebook.</small>
                                         {% else %}
                                         <select class="form-select" id="language" name="language" required>
                                             <option value="">Select language</option>
@@ -237,6 +237,20 @@
                                 <input type="url" class="form-control" id="cover_image" name="cover_image"
                                        value="{% if cov.startswith('http://') or cov.startswith('https://') %}{{ cov }}{% endif %}" placeholder="https://example.com/cover.jpg">
                                 <div class="form-text">Uploading a file replaces the stored cover. URL is optional if you already use an uploaded file path. Change either any time before publishing to the marketplace.</div>
+                                <hr class="my-3">
+                                <p class="small fw-semibold mb-1"><i class="fas fa-magic me-1 text-primary"></i>New AI cover</p>
+                                <p class="small text-muted mb-2">Generate a preview from the title, description, and genre on this page (and optional art direction below). <strong>Use this cover</strong> saves it as your marketplace cover and replaces the current setting. Previously uploaded file covers in our storage are removed; external URLs are overwritten by the new AI file path.</p>
+                                <div class="mb-2">
+                                    <label for="ai_cover_art_brief_edit" class="form-label small text-muted">Art direction for this generation (optional)</label>
+                                    <textarea class="form-control form-control-sm" id="ai_cover_art_brief_edit" rows="2" placeholder="e.g. moody sci-fi, amber glow, lone figure"></textarea>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnEditAiCoverGenerate"><i class="fas fa-magic me-1"></i>Generate preview</button>
+                                    <button type="button" class="btn btn-success btn-sm" id="btnEditAiCoverApply" disabled><i class="fas fa-check me-1"></i>Use this cover</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnEditAiCoverDiscard" disabled><i class="fas fa-times me-1"></i>Discard preview</button>
+                                </div>
+                                <div id="editAiCoverStatus" class="small text-muted mb-2" aria-live="polite"></div>
+                                <img id="editAiCoverPreviewImg" alt="AI cover preview" class="img-fluid rounded border d-none" style="max-height: 220px;">
                             </div>
 
                             {% if book.digital_file_path %}
@@ -458,7 +472,7 @@
                 <div class="card mt-4" id="audiobook-section">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="fas fa-headphones"></i> Audiobook Generation
+                            <i class="fas fa-headphones"></i> Audiobook <span class="badge bg-secondary fw-normal ms-1">separate step</span>
                         </h5>
                         {% if book.has_audiobook %}
                             <span class="badge bg-success">
@@ -513,9 +527,14 @@
                             <!-- Generate Audiobook -->
                             <div>
                                 <h6>Create Audiobook Version</h6>
+                                <div id="audiobookSummaryStrip" class="alert alert-light border py-2 px-3 mb-3 small" role="status">
+                                    <i class="fas fa-info-circle me-2 text-primary" aria-hidden="true"></i>
+                                    <strong class="me-1">Current status:</strong>
+                                    <span id="audiobookSummaryText">Checking…</span>
+                                </div>
                                     <div class="alert alert-info mb-3">
                                         <i class="fas fa-language me-2"></i>
-                                        <strong>Voice language:</strong> Pick a voice that matches your book’s language (listed as <strong>{{ ebook_language_label }}</strong> for uploaded files). Extra ebook languages you added at listing appear as separate text downloads first; audiobook stays one voice per generation.
+                                        <strong>Voice language:</strong> Pick a voice that matches your book’s language (listed as <strong>{{ ebook_language_label }}</strong> for uploaded files). One voice per generation.
                                     </div>
                                     <p class="text-muted mb-3">
                                         {% if book.digital_file_path %}
@@ -710,6 +729,22 @@
                 
                 const statusDisplay = document.getElementById('audiobookStatusDisplay');
                 const statusContent = document.getElementById('audiobookStatusContent');
+                const summaryText = document.getElementById('audiobookSummaryText');
+                if (summaryText) {
+                    if (result.has_audiobook) {
+                        summaryText.textContent = 'Ready — audiobook is on your book page.';
+                    } else if (!result.status || result.status === 'none') {
+                        summaryText.textContent = 'Not started — choose a voice below, then Generate Audiobook.';
+                    } else if (result.status === 'pending') {
+                        summaryText.textContent = 'Queued — the server will start synthesis shortly (this line updates automatically).';
+                    } else if (result.status === 'processing') {
+                        summaryText.textContent = 'Generating — about ' + (result.progress || 0) + '% reported. Long books can take many minutes; keep this tab open or check the book page checklist.';
+                    } else if (result.status === 'failed') {
+                        summaryText.textContent = 'Failed — ' + (result.error_message || 'see the red message below or try another voice.');
+                    } else {
+                        summaryText.textContent = 'Working…';
+                    }
+                }
                 
                 if (!statusDisplay || !statusContent) return;
                 
@@ -1160,6 +1195,105 @@
                 }
             }, 5000);
         }
+
+        (function editAiCoverPreview() {
+            const genUrl = '{{ url_for("book_platform.ai_cover_preview_for_book", book_id=book.id) }}';
+            const imgUrlBase = '{{ url_for("book_platform.ai_cover_preview_edit_image", book_id=book.id) }}';
+            const applyUrl = '{{ url_for("book_platform.ai_cover_preview_edit_accept", book_id=book.id) }}';
+            const discardUrl = '{{ url_for("book_platform.ai_cover_preview_edit_reject", book_id=book.id) }}';
+            const btnGen = document.getElementById('btnEditAiCoverGenerate');
+            const btnApply = document.getElementById('btnEditAiCoverApply');
+            const btnDiscard = document.getElementById('btnEditAiCoverDiscard');
+            const st = document.getElementById('editAiCoverStatus');
+            const img = document.getElementById('editAiCoverPreviewImg');
+
+            async function postJson(url, body) {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body !== undefined ? JSON.stringify(body) : '{}',
+                });
+                const data = await res.json().catch(function () { return {}; });
+                return { res: res, data: data };
+            }
+
+            function setUi(msg, showImg) {
+                if (st) st.textContent = msg || '';
+                if (img) {
+                    if (showImg) {
+                        img.classList.remove('d-none');
+                        img.src = imgUrlBase + '?t=' + Date.now();
+                    } else {
+                        img.classList.add('d-none');
+                        img.removeAttribute('src');
+                    }
+                }
+            }
+
+            function syncBtns() {
+                const has = img && !img.classList.contains('d-none') && img.src;
+                if (btnApply) btnApply.disabled = !has;
+                if (btnDiscard) btnDiscard.disabled = !has;
+            }
+
+            function readPayload() {
+                const title = document.getElementById('title');
+                const description = document.getElementById('description');
+                const genre = document.getElementById('genre');
+                const brief = document.getElementById('ai_cover_art_brief_edit');
+                return {
+                    title: (title && title.value) ? title.value.trim() : '',
+                    description: (description && description.value) ? description.value.trim() : '',
+                    genre: (genre && genre.value) ? genre.value.trim() : '',
+                    cover_art_brief: (brief && brief.value) ? brief.value.trim() : '',
+                };
+            }
+
+            if (btnGen) {
+                btnGen.addEventListener('click', async function () {
+                    const payload = readPayload();
+                    if (!payload.title) {
+                        showNotification('Add a book title before generating a cover.', 'error');
+                        return;
+                    }
+                    setUi('Generating…', false);
+                    btnGen.disabled = true;
+                    try {
+                        const { res, data } = await postJson(genUrl, payload);
+                        if (res.ok && data.success) {
+                            setUi('Preview ready. Use “Use this cover” to save it, or discard to try again.', true);
+                        } else {
+                            setUi(data.error || 'Could not generate preview.', false);
+                            showNotification(data.error || 'Could not generate preview.', 'error');
+                        }
+                    } catch (e) {
+                        setUi('Network error.', false);
+                        showNotification('Network error while generating cover.', 'error');
+                    }
+                    btnGen.disabled = false;
+                    syncBtns();
+                });
+            }
+            if (btnApply) {
+                btnApply.addEventListener('click', async function () {
+                    const { res, data } = await postJson(applyUrl, {});
+                    if (res.ok && data.success) {
+                        showNotification(data.message || 'Cover updated.', 'success');
+                        setTimeout(function () { window.location.reload(); }, 800);
+                    } else {
+                        showNotification(data.error || 'Could not apply cover.', 'error');
+                    }
+                });
+            }
+            if (btnDiscard) {
+                btnDiscard.addEventListener('click', async function () {
+                    await postJson(discardUrl, {});
+                    setUi('Preview discarded.', false);
+                    syncBtns();
+                });
+            }
+        })();
 
         // Auto-save functionality
         let autoSaveTimeout;

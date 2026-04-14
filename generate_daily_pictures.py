@@ -17,8 +17,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from glconnect import create_app
 from glconnect.models import db, PictureGameItem, WordsData
+from glconnect.book_cover_ai import iter_book_cover_image_models
 from google import genai
 from google.genai import types
+from google.genai import errors as genai_errors
 from PIL import Image
 from io import BytesIO
 
@@ -71,13 +73,32 @@ def generate_image_with_gemini(word, meaning):
         """
         
         print(f"Generating image for: {word} ({meaning})")
-        
-        # Generate content using the image generation model
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",
-            contents=[prompt],
-        )
-        
+
+        response = None
+        last_err = None
+        for model_name in iter_book_cover_image_models():
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[prompt],
+                )
+                print(f"  Using Gemini image model: {model_name}")
+                break
+            except genai_errors.ClientError as e:
+                last_err = e
+                if "404" in str(e) or "NOT_FOUND" in str(e):
+                    print(f"  Model {model_name} unavailable, trying next…")
+                    continue
+                raise
+            except Exception as e:
+                last_err = e
+                if "404" in str(e) or "NOT_FOUND" in str(e):
+                    print(f"  Model {model_name} unavailable, trying next…")
+                    continue
+                raise
+        if response is None:
+            raise last_err or RuntimeError("No image model available")
+
         # Extract image data from response
         image_data = None
         for part in response.candidates[0].content.parts:

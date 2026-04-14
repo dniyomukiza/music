@@ -228,7 +228,7 @@ class AudiobookChapter(db.Model):
     book_chapter = db.relationship('BookChapter', backref='audiobook_chapter')
 
 
-# Extra digital ebook editions (AI-translated plain text), in addition to the uploaded master file
+# Legacy table: AI-translated extra editions are no longer created; kept for DB compatibility & purge.
 class DigitalBookEdition(db.Model):
     __tablename__ = 'digital_book_editions'
     __table_args__ = (

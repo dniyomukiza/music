@@ -47,19 +47,29 @@
 
                             <div class="mb-3">
                                 <h6 class="text-secondary">Cover for the marketplace</h6>
+                                <div id="coverFileCreateWrap" class="mb-2">
+                                    <label for="cover_image" class="form-label">Upload your cover</label>
+                                    <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+                                    <div class="form-text small">Optional if you confirm an AI cover below. If you upload <em>and</em> confirm AI, the <strong>uploaded file</strong> is used. Change covers anytime in <strong>Edit book</strong> (including a new AI preview there).</div>
+                                </div>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="use_ai_cover" value="on" id="useAiCoverCreate">
-                                    <label class="form-check-label" for="useAiCoverCreate">Create cover with AI from my book details</label>
+                                    <label class="form-check-label" for="useAiCoverCreate">Also create a cover with AI (preview, then approve)</label>
                                 </div>
-                                <div class="form-text small mb-2">Uses your title, description, and genre. If that isn’t available here, upload an image below instead—no technical setup on your side.</div>
                                 <div class="mb-2" id="coverArtBriefCreateWrap" style="display: none;">
                                     <label for="cover_art_brief" class="form-label">Art direction for AI (optional)</label>
                                     <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="2" placeholder="e.g. warm literary fiction, soft watercolor, open road at sunset"></textarea>
                                 </div>
-                                <div id="coverFileCreateWrap">
-                                    <label for="cover_image" class="form-label">Upload your cover</label>
-                                    <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
-                                    <div class="form-text">Or use AI above. You can replace either option later in <strong>Edit book</strong>.</div>
+                                <div id="aiCreateCoverPreviewWrap" class="mb-2 border rounded p-3 bg-light" style="display: none;">
+                                    <p class="small fw-semibold mb-1">AI cover preview</p>
+                                    <p class="small text-muted mb-2">Generate a preview, then <strong>Use this cover</strong> if you want it for this book (required when you are not uploading a file). Discard to tweak your prompt and try again.</p>
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnCreateCoverGenerate">Generate preview</button>
+                                        <button type="button" class="btn btn-success btn-sm" id="btnCreateCoverAccept" disabled>Use this cover</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCreateCoverReject" disabled>Discard preview</button>
+                                    </div>
+                                    <div id="createCoverPreviewStatus" class="small text-muted mb-2" aria-live="polite"></div>
+                                    <img id="createCoverPreviewImg" alt="AI cover preview" class="img-fluid rounded border d-none" style="max-height: 260px;">
                                 </div>
                             </div>
 
@@ -220,13 +230,113 @@
         document.addEventListener('DOMContentLoaded', function() {
             const useAi = document.getElementById('useAiCoverCreate');
             const brief = document.getElementById('coverArtBriefCreateWrap');
-            const fileWrap = document.getElementById('coverFileCreateWrap');
             const coverInput = document.getElementById('cover_image');
+            const previewWrap = document.getElementById('aiCreateCoverPreviewWrap');
+            const btnGen = document.getElementById('btnCreateCoverGenerate');
+            const btnAcc = document.getElementById('btnCreateCoverAccept');
+            const btnRej = document.getElementById('btnCreateCoverReject');
+            const st = document.getElementById('createCoverPreviewStatus');
+            const img = document.getElementById('createCoverPreviewImg');
+            window.createCoverAccepted = false;
+
+            async function postJson(url, body) {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body ? JSON.stringify(body) : '{}',
+                });
+                const data = await res.json().catch(function () { return {}; });
+                return { res: res, data: data };
+            }
+
+            function setPreviewUi(msg, showImg) {
+                if (st) st.textContent = msg || '';
+                if (img) {
+                    if (showImg) {
+                        img.classList.remove('d-none');
+                        img.src = '{{ url_for("book_platform.ai_cover_preview_listing_image") }}?t=' + Date.now();
+                    } else {
+                        img.classList.add('d-none');
+                        img.removeAttribute('src');
+                    }
+                }
+            }
+
+            function syncBtns() {
+                const has = img && !img.classList.contains('d-none') && img.src;
+                if (btnAcc) btnAcc.disabled = !has || window.createCoverAccepted;
+                if (btnRej) btnRej.disabled = !has;
+            }
+
+            function readPayload() {
+                const title = document.getElementById('title');
+                const description = document.getElementById('description');
+                const genre = document.getElementById('genre');
+                const brief = document.getElementById('cover_art_brief');
+                return {
+                    title: (title && title.value) ? title.value.trim() : '',
+                    description: (description && description.value) ? description.value.trim() : '',
+                    genre: (genre && genre.value) ? genre.value.trim() : '',
+                    cover_art_brief: (brief && brief.value) ? brief.value.trim() : '',
+                };
+            }
+
+            if (btnGen) {
+                btnGen.addEventListener('click', async function () {
+                    const payload = readPayload();
+                    if (!payload.title) {
+                        alert('Please enter a book title first.');
+                        return;
+                    }
+                    window.createCoverAccepted = false;
+                    setPreviewUi('Generating…', false);
+                    btnGen.disabled = true;
+                    try {
+                        const { res, data } = await postJson('{{ url_for("book_platform.ai_cover_preview_listing") }}', payload);
+                        if (res.ok && data.success) {
+                            setPreviewUi('Preview ready. Use “Use this cover” to lock it in for this book.', true);
+                        } else {
+                            setPreviewUi(data.error || 'Could not generate preview.', false);
+                        }
+                    } catch (e) {
+                        setPreviewUi('Network error. Try again.', false);
+                    }
+                    btnGen.disabled = false;
+                    syncBtns();
+                });
+            }
+            if (btnAcc) {
+                btnAcc.addEventListener('click', async function () {
+                    const { res, data } = await postJson('{{ url_for("book_platform.ai_cover_preview_listing_accept") }}', null);
+                    if (res.ok && data.success) {
+                        window.createCoverAccepted = true;
+                        setPreviewUi('Cover selected. You can create the book.', true);
+                    } else {
+                        alert(data.error || 'Could not confirm cover.');
+                    }
+                    syncBtns();
+                });
+            }
+            if (btnRej) {
+                btnRej.addEventListener('click', async function () {
+                    await postJson('{{ url_for("book_platform.ai_cover_preview_listing_reject") }}', null);
+                    window.createCoverAccepted = false;
+                    setPreviewUi('Preview discarded.', false);
+                    syncBtns();
+                });
+            }
+
             function syncCoverCreate() {
                 const on = useAi && useAi.checked;
                 if (brief) brief.style.display = on ? 'block' : 'none';
-                if (fileWrap) fileWrap.style.display = on ? 'none' : 'block';
-                if (coverInput && on) coverInput.value = '';
+                if (previewWrap) previewWrap.style.display = on ? 'block' : 'none';
+                if (!on) {
+                    window.createCoverAccepted = false;
+                    postJson('{{ url_for("book_platform.ai_cover_preview_listing_reject") }}', null);
+                    setPreviewUi('', false);
+                    syncBtns();
+                }
             }
             if (useAi) {
                 useAi.addEventListener('change', syncCoverCreate);
@@ -255,8 +365,13 @@
                 return;
             }
 
-            if (!ai && !coverFile) {
-                alert('Upload a cover image, or turn on “Create cover with AI from my book details”.');
+            if (!coverFile && !ai) {
+                alert('Upload a cover image, or turn on AI and confirm a preview with “Use this cover”.');
+                return;
+            }
+
+            if (!coverFile && ai && !window.createCoverAccepted) {
+                alert('Upload a cover file, or generate an AI preview and tap “Use this cover” before creating the book.');
                 return;
             }
 
