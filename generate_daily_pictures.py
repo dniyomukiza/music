@@ -27,10 +27,10 @@ from io import BytesIO
 def generate_image_with_gemini(word, meaning):
     """Generate an image with interleaved text using Gemini API for a Kinyarwanda word"""
     try:
-        # Configure Gemini client
-        api_key = os.getenv("GOOGLE_API_KEY")
+        # Same key precedence as book covers: GEMINI_API_KEY first, then GOOGLE_API_KEY
+        api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
         if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in environment variables")
+            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found in environment variables")
         
         client = genai.Client(api_key=api_key)
         
