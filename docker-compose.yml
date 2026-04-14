@@ -134,7 +134,7 @@ services:
   # Optional video-only Liquidsoap: HLS (H.264/AAC) → ./hls-video, served at https://glc.cool/hls/
   # Enable: docker compose --profile video up -d
   # Disable: docker compose --profile video stop liquidsoap_video  (or never pass --profile video)
-  # Requires ./video/videolist.m3u with at least one valid path (see video/videolist.m3u.example).
+  # Requires ./video/videolist_hls.m3u (and bumpers/media at paths inside it). videolist.m3u is for Admin TV sync.
   liquidsoap_video:
     image: phasecorex/liquidsoap:latest
     container_name: liquidsoap_video_service

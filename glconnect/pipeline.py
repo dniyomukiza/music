@@ -26,7 +26,9 @@ db.init_app(app)
 output_folder = os.path.join(os.getcwd(), "glconnect/static/ytauto")
 
 # Bumpers in static/ytautovid/ (same dir as TV downloads); paths belong in tv_jingles.m3u only — not videolist.m3u.
-_TV_JINGLE_BASENAMES_LOWER = frozenset(("tvjingle.mp4", "tvjingle2.mp4"))
+_TV_JINGLE_BASENAMES_LOWER = frozenset(
+    ("tvjingle.mp4", "tvjingle2.mp4", "grojingle.mp4")
+)
 
 
 def _is_tv_jingle_basename(path_or_name: str) -> bool:
@@ -475,7 +477,69 @@ def sync_tv_videolist_from_db():
         for p in paths:
             f.write(p + "\n")
     print(f"TV videolist written: {len(paths)} paths -> {out_m3u}")
+    _write_videolist_hls_m3u(video_dir, paths)
     return len(paths)
+
+
+def _read_tv_jingle_paths(video_dir):
+    """Absolute /liqfolder/... paths from video/tv_jingles.m3u (non-comment lines)."""
+    jingle_m3u = os.path.join(video_dir, "tv_jingles.m3u")
+    jingle_paths = []
+    if not os.path.isfile(jingle_m3u):
+        return jingle_paths
+    with open(jingle_m3u, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                jingle_paths.append(line)
+    return jingle_paths
+
+
+def _interleave_jingles_two_programs(jingle_paths, program_paths):
+    """
+    Pattern: 1 bumper, 2 programs, repeat. If no jingles, returns program_paths only.
+    If no programs but jingles exist, returns jingles only (edge case).
+    """
+    if not jingle_paths:
+        return list(program_paths)
+    if not program_paths:
+        return list(jingle_paths)
+    out = []
+    j = 0
+    nj = len(jingle_paths)
+    i = 0
+    nprog = len(program_paths)
+    while i < nprog:
+        out.append(jingle_paths[j % nj])
+        j += 1
+        out.append(program_paths[i])
+        i += 1
+        if i < nprog:
+            out.append(program_paths[i])
+            i += 1
+    return out
+
+
+def _write_videolist_hls_m3u(video_dir, program_paths):
+    """
+    Write video/videolist_hls.m3u for Liquidsoap HLS (scripts/video.liq).
+    Interleaves tv_jingles.m3u entries as 1 bumper every 2 program tracks so a single
+    playlist() is used — avoids rotate() never selecting the jingle branch for video.
+    """
+    out_hls = os.path.join(video_dir, "videolist_hls.m3u")
+    jingle_paths = _read_tv_jingle_paths(video_dir)
+    interleaved = _interleave_jingles_two_programs(jingle_paths, program_paths)
+    os.makedirs(video_dir, exist_ok=True)
+    with open(out_hls, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n")
+        f.write(
+            "# Interleaved 1 bumper : 2 programs for Liquidsoap HLS. "
+            "Regenerated when videolist sync runs (Admin TV or sync_tv_videolist_from_db). "
+            "Edit tv_jingles.m3u + videolist sources, then sync — do not hand-edit paths here.\n"
+        )
+        for p in interleaved:
+            f.write(p + "\n")
+    print(f"TV HLS interleaved playlist: {len(interleaved)} paths -> {out_hls}")
 
 
 def create_or_append_m3u_playlist(output_folder, m3u_filename):

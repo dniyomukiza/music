@@ -3,27 +3,25 @@
 #
 # Internal URL (compose network): http://liquidsoap_video:8920/hls/live.m3u8
 #
-# Playlists list LOCAL FILES ONLY (paths under /liqfolder/…). Liquidsoap does not read YouTube URLs;
-# admin TV download stores MP4s on disk, then sync writes those paths into videolist.m3u.
+# IMPORTANT: Use video/videolist_hls.m3u (single playlist). It is regenerated when Admin TV
+# sync runs — interleaved 1 bumper : 2 program tracks from tv_jingles.m3u + videolist.m3u.
+# rotate([jingles, programs]) often never selected the jingle branch for video (no tv_jingles
+# lines in logs); one playlist makes every file a normal track with clear "Prepared" logs.
 #
 # Setup: media in ./video/
-#   - videolist.m3u = merged (admin TV sync); lines point at glconnect/static/ytautovid/*.mp4
-#   - tv_jingles.m3u = bumper file paths (default: video/tvjingle*.mp4 next to these .m3u files)
+#   - videolist.m3u = programs only (admin TV sync)
+#   - tv_jingles.m3u = bumper paths under /liqfolder/video/...
+#   - videolist_hls.m3u = merged order (auto; do not edit by hand)
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
-# Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
-#
-# Jingle cadence: rotate(weights=[1,2], [jingles, programs]) = 1 bumper, then 2 program tracks,
-# per cycle (~like random weights [1,2], but stable for video/HLS).
-# Avoid random([jingles, fallback([programs, jingles])]): the jingles playlist was wired twice;
-# random() only chooses among *ready* children, which often left jingles never selected (programs only).
-# main.liq still uses random(); TV uses rotate on purpose. Re-encode bumpers if HLS players glitch.
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
-programs = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
-jingles = playlist(mode="random", reload_mode="watch", "/liqfolder/video/tv_jingles.m3u")
-v = rotate(weights=[1, 2], [jingles, programs])
+v = playlist(
+  id="videolist_hls_m3u",
+  reload_mode="watch",
+  "/liqfolder/video/videolist_hls.m3u"
+)
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)
