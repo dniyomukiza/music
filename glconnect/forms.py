@@ -174,7 +174,7 @@ class DigitalBookUploadForm(FlaskForm):
         default='en',
         description='Voices are listed for this language. Use a language that matches your ebook text for natural narration.',
     )
-    audiobook_voice = StringField('Audiobook Voice', validators=[Optional()], default='en-US-Standard-A')
+    audiobook_voice = StringField('Audiobook Voice', validators=[Optional()], default='en-US-Neural2-A')
     
     submit = SubmitField('List on marketplace')
     recap = RecaptchaField(validators=[])  # Make optional - can be validated conditionally

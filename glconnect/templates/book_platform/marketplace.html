@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="GLC book store: browse and buy digital books and audiobooks like a bookstore for indies—plus AI covers, TTS audio, and tools to write and list your work. Tune in to live radio for reviews and author interviews.">
-    <title>Book store | GLC</title>
+    <meta name="description" content="GLC marketplace: browse and buy digital books and audiobooks from independents—AI covers, TTS audio, and tools to write and list. Live radio for reviews and author interviews.">
+    <title>Marketplace | GLC</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -38,93 +38,63 @@
         </div>
     </nav>
 
-    <!-- Hero -->
-    <header class="hero-section bg-gradient-primary text-white ink-hero py-5">
-        <div class="container position-relative">
-            <div class="row align-items-center g-4">
-                <div class="col-lg-8">
+    <!-- Hero: compact; main browsing is sidebar + grid below (aligned widths) -->
+    <header class="hero-section bg-gradient-primary text-white ink-hero ink-hero-compact py-4">
+        <div class="container-fluid px-3 px-md-4 px-xl-5 position-relative">
+            <div class="row align-items-start g-4">
+                <div class="col-12">
                     <p class="ink-hero-eyebrow text-uppercase small fw-semibold mb-2 opacity-90">Independent publishing · GLC</p>
-                    <h1 class="ink-hero-title display-5 fw-bold mb-3">Book store</h1>
-                    <p class="lead ink-hero-lead mb-4">Shop digital books and audiobooks with discovery, categories, secure checkout, and direct author support—built for independents and small presses.</p>
+                    <div class="d-flex flex-column flex-lg-row flex-lg-wrap align-items-lg-end justify-content-lg-between gap-3 mb-3">
+                        <h1 class="ink-hero-title display-6 fw-bold mb-0">Marketplace</h1>
+                        <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2 align-self-start align-self-lg-center">
+                            <i class="fas fa-book-open me-2" aria-hidden="true"></i><strong>{{ total_books }}</strong> titles
+                        </span>
+                    </div>
+                    <p class="ink-hero-lead mb-3 mb-lg-4">Digital books and audiobooks—discovery, categories, secure checkout, and direct author support for independents and small presses.</p>
 
-                    <div class="row g-3 mb-4 ink-hero-highlights">
-                        <div class="col-md-4">
-                            <div class="ink-hero-tile h-100">
-                                <div class="ink-hero-tile-icon"><i class="fas fa-magic" aria-hidden="true"></i></div>
-                                <h2 class="ink-hero-tile-title h6 mb-1">Creation stack</h2>
-                                <p class="ink-hero-tile-text small mb-0 opacity-90">Write or upload, add an <strong>AI cover</strong> or your art, publish <strong>AI-narrated audiobooks</strong>—one place for listing, audio, and visuals.</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="ink-hero-tile h-100">
-                                <div class="ink-hero-tile-icon"><i class="fas fa-headphones" aria-hidden="true"></i></div>
-                                <h2 class="ink-hero-tile-title h6 mb-1">Live radio</h2>
-                                <p class="ink-hero-tile-text small mb-0 opacity-90">Radio at the bottom of the page—reviews, interviews, community. {% if current_user.is_authenticated %}<a class="text-white fw-semibold text-decoration-underline" href="{{ url_for('book_platform.content_hub') }}">Open the content hub</a>.{% else %}<a class="text-white fw-semibold text-decoration-underline" href="{{ url_for('routes1.login', next=url_for('book_platform.content_hub')) }}">Sign in</a> for music, podcasts, and more.{% endif %}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="ink-hero-tile h-100">
-                                <div class="ink-hero-tile-icon"><i class="fas fa-globe" aria-hidden="true"></i></div>
-                                <h2 class="ink-hero-tile-title h6 mb-1">Community-funded</h2>
-                                <p class="ink-hero-tile-text small mb-0 opacity-90">Transparent revenue sharing so readers and investors back the work they believe in.</p>
-                            </div>
-                        </div>
+                    <div class="d-flex flex-wrap gap-2 ink-hero-pills mb-3 mb-lg-4" role="list" aria-label="Highlights">
+                        <span class="ink-hero-pill" role="listitem"><i class="fas fa-magic me-1" aria-hidden="true"></i>AI covers &amp; listing</span>
+                        <span class="ink-hero-pill" role="listitem"><i class="fas fa-headphones me-1" aria-hidden="true"></i>AI-narrated audio</span>
+                        <span class="ink-hero-pill" role="listitem"><i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Live radio below</span>
                     </div>
 
                     {% if can_list_book_on_marketplace %}
-                    <div class="ink-hero-authors-callout small opacity-95 mb-4 border border-light border-opacity-25 rounded-3 px-3 py-3 bg-white bg-opacity-10">
-                        <i class="fas fa-pen-fancy me-2"></i><strong>Authors:</strong> <strong>Start writing</strong> or <strong>List your book</strong> (PDF, EPUB, and more). <strong>AI cover</strong> or your upload; <strong>AI audiobook</strong> when you list or from <strong>Edit book</strong>.
+                    <div class="ink-hero-authors-callout small opacity-95 mb-3 border border-light border-opacity-25 rounded-3 px-3 py-2 bg-white bg-opacity-10">
+                        <i class="fas fa-pen-fancy me-2"></i><strong>Authors:</strong> Start writing, list a book (PDF, EPUB…), AI cover or your art, audiobook from listing or <strong>Edit book</strong>.
                     </div>
                     {% endif %}
-                    <div class="mb-4 d-flex flex-wrap gap-2 gap-md-3">
+                    <div class="d-flex flex-wrap gap-2">
                         {% if can_list_book_on_marketplace %}
-                        <a href="{{ url_for('book_platform.create_book') }}"
-                           class="btn btn-lg btn-outline-light border-2 fw-semibold">
-                            <i class="fas fa-pen-fancy me-2"></i>Start writing
+                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-outline-light border-2 fw-semibold btn-sm px-3 py-2">
+                            <i class="fas fa-pen-fancy me-1"></i>Start writing
                         </a>
-                        <a href="{{ url_for('book_platform.upload_digital_book') }}"
-                           class="btn btn-lg btn-light text-primary fw-semibold">
-                            <i class="fas fa-plus-circle me-2"></i>List your book
+                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-light text-primary fw-semibold btn-sm px-3 py-2">
+                            <i class="fas fa-plus-circle me-1"></i>List your book
                         </a>
                         {% endif %}
                         {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('book_platform.investments') }}" 
-                           class="btn btn-lg btn-success">
-                            <i class="fas fa-chart-line me-2"></i>Browse Investments
+                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-success btn-sm px-3 py-2">
+                            <i class="fas fa-chart-line me-1"></i>Investments
                         </a>
-                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" 
-                           class="btn btn-lg btn-warning">
-                            <i class="fas fa-dollar-sign me-2"></i>My Earnings
+                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-warning btn-sm px-3 py-2">
+                            <i class="fas fa-dollar-sign me-1"></i>Earnings
                         </a>
                         {% endif %}
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 align-items-center ink-hero-meta">
-                        <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2">
-                            <i class="fas fa-book me-2" aria-hidden="true"></i>{{ total_books }} in catalog
-                        </span>
-                    </div>
-                </div>
-                <div class="col-lg-4 text-center">
-                    <div class="hero-stats ink-hero-stats-card mx-auto">
-                        <div class="stat-circle ink-stat-circle">
-                            <i class="fas fa-book-open fa-2x" aria-hidden="true"></i>
-                            <div class="stat-number">{{ total_books }}</div>
-                            <div class="stat-label">Titles</div>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Categories -->
-    <div class="container py-4" id="marketplace-catalog">
-        <div class="row">
-            <div class="col-12">
-                <h2 class="h4 mb-3 d-flex align-items-center gap-2 ink-section-title">
-                    <i class="fas fa-tags text-primary" aria-hidden="true"></i>Browse the catalog
-                </h2>
-                <div class="category-container ink-category-strip d-flex flex-wrap gap-2 mb-3" role="navigation" aria-label="Browse by category">
+    <div class="container-fluid px-3 px-md-4 px-xl-5 pb-5 ink-marketplace-shell">
+    <!-- Categories: same horizontal padding as filters + grid -->
+    <div class="pt-3 pt-md-4 pb-2 border-bottom border-secondary border-opacity-25" id="marketplace-catalog">
+        <div class="d-flex flex-column flex-md-row flex-md-wrap align-items-md-center justify-content-md-between gap-2 gap-md-3 mb-3">
+            <h2 class="h5 mb-0 d-flex align-items-center gap-2 ink-section-title">
+                <i class="fas fa-tags text-primary" aria-hidden="true"></i>Shop by category
+            </h2>
+        </div>
+                <div class="category-container ink-category-strip d-flex flex-wrap gap-2 mb-0" role="navigation" aria-label="Browse by category">
                     <a href="{{ url_for('book_platform.marketplace') }}" 
                        class="btn btn-outline-primary category-btn {% if not selected_genre %}active{% endif %}"
                        data-genre="">
@@ -170,26 +140,23 @@
                     {% endif %}
                 </div>
                 {% if selected_genre %}
-                    <div class="alert alert-info d-flex align-items-center">
+                    <div class="alert alert-info d-flex align-items-center mt-3 mb-0 py-2">
                         <i class="fas fa-info-circle me-2"></i>
-                        <span>Showing books in <strong>{{ selected_genre|title }}</strong> category. 
-                        <a href="{{ url_for('book_platform.marketplace') }}" class="alert-link">View all books</a></span>
+                        <span>Showing <strong>{{ selected_genre|title }}</strong>.
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="alert-link ms-1">View all</a></span>
                     </div>
                 {% endif %}
-            </div>
-        </div>
     </div>
 
-    <div class="container-fluid px-3 px-md-4 px-xl-5 pb-5 ink-marketplace-body">
-        <div class="row g-4 align-items-start">
+        <div class="row g-4 align-items-start pt-4 ink-marketplace-body">
             <!-- Sidebar Filters -->
-            <aside class="col-12 col-lg-3 col-xl-2 ink-filters-column" aria-labelledby="filters-heading">
+            <aside class="col-12 col-lg-3 ink-filters-column" aria-labelledby="filters-heading">
                 <div class="card shadow-sm border-0 mb-4 ink-filter-card">
                     <div class="card-header bg-white border-0 py-3">
                         <h2 id="filters-heading" class="h5 card-title text-primary mb-0">
                             <i class="fas fa-filter me-2" aria-hidden="true"></i>Refine results
                         </h2>
-                        <p class="small text-muted mb-0 mt-2">Search and filters apply to the grid—same checkout and detail flow as before.</p>
+                        <p class="small text-muted mb-0 mt-2">Filters apply to the titles on the right. Checkout and book pages are unchanged.</p>
                     </div>
                     <div class="card-body pt-0">
                         <form id="filterForm" method="get" action="{{ url_for('book_platform.marketplace') }}">
@@ -304,7 +271,7 @@
 
                 <div class="card mt-3 border-0 shadow-sm ink-stats-card">
                     <div class="card-header py-3 border-0">
-                        <h3 class="h6 mb-0 text-primary"><i class="fas fa-chart-bar me-2" aria-hidden="true"></i>Marketplace stats</h3>
+                        <h3 class="h6 mb-0 text-primary"><i class="fas fa-chart-bar me-2" aria-hidden="true"></i>At a glance</h3>
                     </div>
                     <div class="card-body pt-0">
                         <div class="stat-item">
@@ -323,14 +290,14 @@
                 </div>
             </div>
 
-            <!-- Results: fills remaining width; cards wrap below as more titles load -->
-            <div class="col-12 col-lg-9 col-xl-10 ink-results-column">
+            <!-- Results: horizontal grid beside sidebar -->
+            <div class="col-12 col-lg-9 ink-results-column">
                 <div class="ink-results-toolbar card border-0 shadow-sm mb-4">
                     <div class="card-body py-3">
                         <div class="row g-3 align-items-center">
                             <div class="col-lg-5">
                                 <h3 class="h5 text-primary mb-1 d-flex align-items-center gap-2">
-                                    <i class="fas fa-book-open" aria-hidden="true"></i>Available books
+                                    <i class="fas fa-book-open" aria-hidden="true"></i>Titles
                                 </h3>
                                 <p class="text-muted small mb-0" id="results-range">
                                     {% if total_books %}
@@ -365,10 +332,10 @@
                     </div>
                 </div>
 
-                <div class="row g-4 ink-view-grid" id="booksGrid">
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3 g-lg-4 ink-view-grid" id="booksGrid">
                     {% if books %}
                         {% for book in books %}
-                            <div class="col-12 col-sm-6 col-lg-4 col-xl-3 marketplace-card">
+                            <div class="col marketplace-card">
                                 <div class="book-card h-100 ink-book-card">
                                     <div class="card border-0 shadow-sm h-100 ink-book-card-inner">
                                         <div class="book-cover-container ink-book-cover-wrap">

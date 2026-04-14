@@ -155,13 +155,7 @@
                                     {{ form.audiobook_voice(class="d-none", id="audiobook_voice") }}
                                     <ul class="nav nav-tabs mb-3 flex-wrap" id="voiceTypeTabsUpload" role="tablist">
                                         <li class="nav-item" role="presentation">
-                                            <button class="nav-link active" id="tab-upload-standard" data-bs-toggle="tab" data-bs-target="#upload-standard-voices" type="button" role="tab">Standard</button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="tab-upload-wavenet" data-bs-toggle="tab" data-bs-target="#upload-wavenet-voices" type="button" role="tab">WaveNet</button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="tab-upload-neural2" data-bs-toggle="tab" data-bs-target="#upload-neural2-voices" type="button" role="tab">Neural2</button>
+                                            <button class="nav-link active" id="tab-upload-neural2" data-bs-toggle="tab" data-bs-target="#upload-neural2-voices" type="button" role="tab">Neural2</button>
                                         </li>
                                         <li class="nav-item" role="presentation">
                                             <button class="nav-link" id="tab-upload-studio" data-bs-toggle="tab" data-bs-target="#upload-studio-voices" type="button" role="tab">Studio</button>
@@ -176,13 +170,7 @@
                                     </div>
                                     <div id="voiceSelectionContainerUpload" style="display: none;">
                                         <div class="tab-content" id="voiceTypeTabContentUpload">
-                                            <div class="tab-pane fade show active" id="upload-standard-voices" role="tabpanel">
-                                                <div id="uploadStandardVoicesList" class="row g-2"></div>
-                                            </div>
-                                            <div class="tab-pane fade" id="upload-wavenet-voices" role="tabpanel">
-                                                <div id="uploadWavenetVoicesList" class="row g-2"></div>
-                                            </div>
-                                            <div class="tab-pane fade" id="upload-neural2-voices" role="tabpanel">
+                                            <div class="tab-pane fade show active" id="upload-neural2-voices" role="tabpanel">
                                                 <div id="uploadNeural2VoicesList" class="row g-2"></div>
                                             </div>
                                             <div class="tab-pane fade" id="upload-studio-voices" role="tabpanel">
@@ -292,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyDefaultVoiceFromLanguage() {
         if (!voiceInput) return;
         const lang = getTtsLang();
-        const def = defaultVoicesByLang[lang] || defaultVoicesByLang['en'] || 'en-US-Standard-A';
+        const def = defaultVoicesByLang[lang] || defaultVoicesByLang['en'] || 'en-US-Neural2-A';
         if (!voiceUserPicked) {
             voiceInput.value = def;
         }
@@ -343,8 +331,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderVoicesUpload() {
         const map = [
-            { key: 'standard', types: ['Standard'], el: 'uploadStandardVoicesList' },
-            { key: 'wavenet', types: ['WaveNet'], el: 'uploadWavenetVoicesList' },
             { key: 'neural2', types: ['Neural2'], el: 'uploadNeural2VoicesList' },
             { key: 'studio', types: ['Studio'], el: 'uploadStudioVoicesList' },
             { key: 'chirp3', types: ['Chirp3'], el: 'uploadChirp3VoicesList' },

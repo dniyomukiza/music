@@ -1601,7 +1601,7 @@ def generate_audiobook_for_book(book_id):
         return jsonify({'success': False, 'error': 'Invalid JSON in request'}), 400
     
     audiobook_price = data.get('audiobook_price', 0.0)
-    voice_name = data.get('voice_name', 'en-US-Standard-A')
+    voice_name = data.get('voice_name', 'en-US-Neural2-A')
     
     if not voice_name:
         return jsonify({'success': False, 'error': 'Voice name is required'}), 400

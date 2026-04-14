@@ -1862,8 +1862,32 @@ body.ink-marketplace .ink-marketplace-nav {
     backdrop-filter: blur(12px);
 }
 
+body.ink-marketplace .ink-marketplace-shell {
+    max-width: none;
+}
+
 body.ink-marketplace .ink-hero {
     overflow: hidden;
+}
+
+body.ink-marketplace .ink-hero-compact .ink-hero-lead {
+    max-width: 48rem;
+}
+
+body.ink-marketplace .ink-hero-pills {
+    gap: 0.5rem;
+}
+
+body.ink-marketplace .ink-hero-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    background: rgba(6, 8, 7, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.95);
 }
 
 body.ink-marketplace .ink-hero-title {
@@ -1968,6 +1992,13 @@ body.ink-marketplace .ink-filters-column .ink-filter-card {
 
 body.ink-marketplace .ink-marketplace-body {
     max-width: none;
+}
+
+/* List view: one column full width despite row-cols-* on grid */
+body.ink-marketplace #booksGrid.ink-view-list > .marketplace-card.col {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
 }
 
 body.ink-marketplace .ink-results-column {

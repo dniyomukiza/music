@@ -44,7 +44,7 @@ class AudioBookGenerator:
             self.client = None
             logger.info("TTS available - client will be initialized on first use")
     
-    def generate_audiobook_by_chapters(self, chapters: list, book_id: int, voice_name: str = 'en-US-Standard-A') -> Dict[str, Any]:
+    def generate_audiobook_by_chapters(self, chapters: list, book_id: int, voice_name: str = 'en-US-Neural2-A') -> Dict[str, Any]:
         """
         Generate audiobook with one audio file per chapter. Listeners can pick and play any chapter.
         
@@ -132,7 +132,7 @@ class AudioBookGenerator:
             'duration': total_duration
         }
     
-    def generate_audiobook(self, text: str, book_id: int, voice_name: str = 'en-US-Standard-A') -> Dict[str, Any]:
+    def generate_audiobook(self, text: str, book_id: int, voice_name: str = 'en-US-Neural2-A') -> Dict[str, Any]:
         """
         Generate audio book from text
         
@@ -494,13 +494,11 @@ class AudioBookGenerator:
             # Fetch from API
             response = self.client.list_voices()
             
-            # Group voices by type and filter for English
+            # Group voices by type (Standard / WaveNet are legacy; omit from picker & previews)
             voices_by_type = {
-                'Standard': [],
-                'WaveNet': [],
                 'Neural2': [],
                 'Studio': [],
-                'Chirp3': []
+                'Chirp3': [],
             }
             
             for voice in response.voices:
@@ -516,10 +514,11 @@ class AudioBookGenerator:
                         'sample_rate': voice.natural_sample_rate_hertz
                     }
                     
-                    if voice_type in voices_by_type:
-                        voices_by_type[voice_type].append(voice_info)
-                    else:
-                        voices_by_type['Standard'].append(voice_info)  # Default fallback
+                    if voice_type in ('Standard', 'WaveNet'):
+                        continue
+                    if voice_type not in voices_by_type:
+                        voice_type = 'Neural2'
+                    voices_by_type[voice_type].append(voice_info)
             
             # Update cache
             self._voices_cache['data'] = voices_by_type
@@ -556,14 +555,14 @@ class AudioBookGenerator:
     def _filter_voices_by_language(self, voices_by_type: dict, language_filter: str) -> dict:
         """Filter cached voices by language"""
         filtered = {
-            'Standard': [],
-            'WaveNet': [],
             'Neural2': [],
             'Studio': [],
-            'Chirp3': []
+            'Chirp3': [],
         }
         
         for voice_type, voices in voices_by_type.items():
+            if voice_type not in filtered:
+                continue
             for voice in voices:
                 if any(lang.startswith(language_filter) for lang in voice.get('language_codes', [])):
                     filtered[voice_type].append(voice)

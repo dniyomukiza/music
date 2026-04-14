@@ -7,26 +7,26 @@ and optional AI-translated editions stay aligned with Google Cloud TTS coverage.
 
 from typing import Dict, List, Tuple
 
-# ISO 639-1 (or BCP-47 where needed) -> (human label, default Standard voice name)
+# ISO 639-1 (or BCP-47 where needed) -> (human label, default Neural2 voice name)
 TTS_BOOK_LANGUAGES: Dict[str, Tuple[str, str]] = {
-    "en": ("English", "en-US-Standard-A"),
-    "es": ("Spanish", "es-ES-Standard-A"),
-    "fr": ("French", "fr-FR-Standard-A"),
-    "de": ("German", "de-DE-Standard-A"),
-    "it": ("Italian", "it-IT-Standard-A"),
-    "pt": ("Portuguese", "pt-BR-Standard-A"),
-    "ru": ("Russian", "ru-RU-Standard-A"),
-    "ja": ("Japanese", "ja-JP-Standard-A"),
-    "ko": ("Korean", "ko-KR-Standard-A"),
-    "nl": ("Dutch", "nl-NL-Standard-A"),
-    "pl": ("Polish", "pl-PL-Standard-A"),
-    "sv": ("Swedish", "sv-SE-Standard-A"),
-    "da": ("Danish", "da-DK-Standard-A"),
-    "fi": ("Finnish", "fi-FI-Standard-A"),
-    "ar": ("Arabic", "ar-XA-Standard-A"),
-    "hi": ("Hindi", "hi-IN-Standard-A"),
-    "zh": ("Chinese (Mandarin)", "cmn-CN-Standard-A"),
-    "tr": ("Turkish", "tr-TR-Standard-A"),
+    "en": ("English", "en-US-Neural2-A"),
+    "es": ("Spanish", "es-ES-Neural2-A"),
+    "fr": ("French", "fr-FR-Neural2-A"),
+    "de": ("German", "de-DE-Neural2-A"),
+    "it": ("Italian", "it-IT-Neural2-A"),
+    "pt": ("Portuguese", "pt-BR-Neural2-A"),
+    "ru": ("Russian", "ru-RU-Neural2-A"),
+    "ja": ("Japanese", "ja-JP-Neural2-A"),
+    "ko": ("Korean", "ko-KR-Neural2-A"),
+    "nl": ("Dutch", "nl-NL-Neural2-A"),
+    "pl": ("Polish", "pl-PL-Neural2-A"),
+    "sv": ("Swedish", "sv-SE-Neural2-A"),
+    "da": ("Danish", "da-DK-Neural2-A"),
+    "fi": ("Finnish", "fi-FI-Neural2-A"),
+    "ar": ("Arabic", "ar-XA-Neural2-A"),
+    "hi": ("Hindi", "hi-IN-Neural2-A"),
+    "zh": ("Chinese (Mandarin)", "cmn-CN-Neural2-A"),
+    "tr": ("Turkish", "tr-TR-Neural2-A"),
 }
 
 
@@ -37,9 +37,9 @@ def book_language_select_choices() -> List[Tuple[str, str]]:
 
 def default_voice_for_language(code: str) -> str:
     if not code:
-        return "en-US-Standard-A"
+        return "en-US-Neural2-A"
     entry = TTS_BOOK_LANGUAGES.get((code or "").lower().strip())
-    return entry[1] if entry else "en-US-Standard-A"
+    return entry[1] if entry else "en-US-Neural2-A"
 
 
 def language_label(code: str) -> str:

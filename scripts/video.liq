@@ -12,20 +12,18 @@
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 # Transitions: https://www.liquidsoap.info/doc-2.2.5/video.html
 #
-# Jingle cadence matches scripts/main.liq (radio): random(weights=[1,2], [jingles, main]) so
-# bumpers are interleaved (~1 jingle every 2 program tracks), not only when programs are empty.
-# main.liq is audio-only; this file is video+HLS — same operator pattern, different playlists.
-# If players glitch on bumper vs program transitions, re-encode bumpers to match program
-# resolution and keyframe spacing, or soften weights (e.g. [1, 3]).
+# Jingle cadence: rotate(weights=[1,2], [jingles, programs]) = 1 bumper, then 2 program tracks,
+# per cycle (~like random weights [1,2], but stable for video/HLS).
+# Avoid random([jingles, fallback([programs, jingles])]): the jingles playlist was wired twice;
+# random() only chooses among *ready* children, which often left jingles never selected (programs only).
+# main.liq still uses random(); TV uses rotate on purpose. Re-encode bumpers if HLS players glitch.
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
 programs = playlist(reload_mode="watch", "/liqfolder/video/videolist.m3u")
 jingles = playlist(mode="random", reload_mode="watch", "/liqfolder/video/tv_jingles.m3u")
-# Same idea as main.liq: keep a sane main line if one playlist is empty, then interleave jingles.
-main_tv = fallback(track_sensitive=false, [programs, jingles])
-v = random(weights=[1, 2], [jingles, main_tv])
+v = rotate(weights=[1, 2], [jingles, programs])
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)

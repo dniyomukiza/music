@@ -483,7 +483,7 @@
                                     </p>
                                     <p class="text-muted mb-2">
                                         <i class="fas fa-microphone me-1"></i>
-                                        Voice: {{ book.audiobook_voice or 'en-US-Standard-A' }}
+                                        Voice: {{ book.audiobook_voice or 'en-US-Neural2-A' }}
                                     </p>
                                     <p class="text-muted mb-2">
                                         <i class="fas fa-dollar-sign me-1"></i>
@@ -542,12 +542,7 @@
                                         <!-- Voice Type Tabs -->
                                         <ul class="nav nav-tabs mb-3" id="voiceTypeTabs" role="tablist" style="border-bottom-color: #dee2e6;">
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link active" id="wavenet-tab" data-bs-toggle="tab" data-bs-target="#wavenet-voices" type="button" role="tab" style="color: #000 !important;">
-                                                    WaveNet
-                                                </button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="neural2-tab" data-bs-toggle="tab" data-bs-target="#neural2-voices" type="button" role="tab" style="color: #000 !important;">
+                                                <button class="nav-link active" id="neural2-tab" data-bs-toggle="tab" data-bs-target="#neural2-voices" type="button" role="tab" style="color: #000 !important;">
                                                     Neural2
                                                 </button>
                                             </li>
@@ -575,12 +570,7 @@
                                         <div id="voiceSelectionContainer" style="display: none;">
                                             <!-- Tab Content -->
                                             <div class="tab-content" id="voiceTypeTabContent">
-                                                <!-- WaveNet Voices -->
-                                                <div class="tab-pane fade show active" id="wavenet-voices" role="tabpanel">
-                                                    <div id="wavenetVoicesList" class="row g-2"></div>
-                                                </div>
-                                                <!-- Neural2 Voices -->
-                                                <div class="tab-pane fade" id="neural2-voices" role="tabpanel">
+                                                <div class="tab-pane fade show active" id="neural2-voices" role="tabpanel">
                                                     <div id="neural2VoicesList" class="row g-2"></div>
                                                 </div>
                                                 <!-- Studio Voices -->
@@ -824,7 +814,6 @@
         // Render voices in their respective tabs
         function renderVoices() {
             const voiceTypes = {
-                'wavenet': ['WaveNet'],
                 'neural2': ['Neural2'],
                 'studio': ['Studio'],
                 'chirp3': ['Chirp3']
@@ -908,7 +897,7 @@
         
         // Preload sample previews for each voice category
         async function preloadSamplePreviews() {
-            const categories = ['WaveNet', 'Neural2', 'Studio', 'Chirp3'];
+            const categories = ['Neural2', 'Studio', 'Chirp3'];
             const sampleVoices = {};
             
             // Get first voice from each category
@@ -1127,7 +1116,7 @@
                         },
                         body: JSON.stringify({
                             audiobook_price: {{ book.audiobook_price or 0 }},
-                            voice_name: '{{ book.audiobook_voice or "en-US-Standard-A" }}'
+                            voice_name: '{{ book.audiobook_voice or "en-US-Neural2-A" }}'
                         })
                     });
                     
