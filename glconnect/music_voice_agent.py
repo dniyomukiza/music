@@ -8,6 +8,8 @@ import os
 import json
 from typing import List, Dict, Any, Optional
 
+from glconnect.ai_config import AIConfig
+
 
 SYSTEM_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the UI buttons, but via voice commands.
 
@@ -220,7 +222,7 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
     from google.generativeai.types import content_types
     tools_list = [content_types.Tool(function_declarations=get_tools_for_gemini())]
     model = genai.GenerativeModel(
-        model_name=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+        model_name=AIConfig.GEMINI_MODEL,
         tools=tools_list,
         system_instruction=SYSTEM_INSTRUCTION,
     )

@@ -7,27 +7,66 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 # Image-capable Gemini models (text+image / native image). Preview IDs change; override with BOOK_COVER_AI_MODEL.
 _ENV_COVER_MODEL = "BOOK_COVER_AI_MODEL"
 _DEFAULT_COVER_IMAGE_MODELS = (
-    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.5-flash-image-preview",
     "gemini-2.5-flash-image",
+    "gemini-2.0-flash-preview-image-generation",
     "gemini-2.0-flash-exp-image-generation",
 )
 
 
 def iter_book_cover_image_models():
-    """Model names to try for cover (and similar) image generation, newest stable first."""
+    """
+    Model names to try for cover (and similar) image generation.
+    If BOOK_COVER_AI_MODEL is set, it is tried first; built-in fallbacks still run if that model
+    fails (404, quota, etc.) so one exhausted model does not block covers entirely.
+    """
     env = (os.getenv(_ENV_COVER_MODEL) or "").strip()
     if env:
         yield env
-        return
     for name in _DEFAULT_COVER_IMAGE_MODELS:
+        if env and name == env:
+            continue
         yield name
+
+
+def _should_try_next_image_model(err: Exception) -> bool:
+    """404 / unknown model, or rate/quota — try another model ID."""
+    code = getattr(err, "status_code", None)
+    if code in (404, 429):
+        return True
+    msg = str(err)
+    if "404" in msg or "NOT_FOUND" in msg:
+        return True
+    if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+        return True
+    return False
+
+
+def _all_models_failed_message(last_err: Optional[Exception]) -> str:
+    if not last_err:
+        return (
+            "No image model responded. Try again later or upload your own cover image."
+        )
+    msg = str(last_err)
+    if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+        return (
+            "Google AI rate or quota limit was reached for cover generation (all tried models). "
+            "Wait a minute and retry, review limits and billing for your API project "
+            "(https://ai.google.dev/gemini-api/docs/rate-limits), or upload your own cover. "
+            "If BOOK_COVER_AI_MODEL is set to a model with no quota, remove it or set another "
+            "image-capable model so fallbacks can run."
+        )
+    return (
+        "We could not generate a cover with the configured AI models. "
+        "Try again or upload your own cover image."
+    )
 
 
 def generate_book_cover_bytes(
@@ -73,7 +112,7 @@ Requirements:
 
         client = genai.Client(api_key=api_key)
         response = None
-        last_model_error = None
+        last_model_error: Optional[Exception] = None
         for model_name in iter_book_cover_image_models():
             try:
                 response = client.models.generate_content(
@@ -84,28 +123,30 @@ Requirements:
                 break
             except genai_errors.ClientError as e:
                 last_model_error = e
-                msg = str(e)
-                if "404" in msg or "NOT_FOUND" in msg:
+                if _should_try_next_image_model(e):
                     logger.warning(
-                        "book cover: model %s not available (%s), trying fallback",
+                        "book cover: model %s failed (%s), trying fallback",
                         model_name,
-                        msg[:120],
+                        str(e)[:200],
                     )
                     continue
                 raise
             except Exception as e:
-                msg = str(e)
-                if "404" in msg or "NOT_FOUND" in msg:
-                    last_model_error = e
+                last_model_error = e
+                if _should_try_next_image_model(e):
                     logger.warning(
-                        "book cover: model %s not available (%s), trying fallback",
+                        "book cover: model %s failed (%s), trying fallback",
                         model_name,
-                        msg[:120],
+                        str(e)[:200],
                     )
                     continue
                 raise
         if response is None:
-            raise last_model_error or RuntimeError("No image model responded")
+            return {
+                "success": False,
+                "error": _all_models_failed_message(last_model_error),
+                "image_bytes": None,
+            }
 
         if not response.candidates:
             return {
