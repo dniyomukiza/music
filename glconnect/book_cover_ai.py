@@ -26,8 +26,11 @@ def cover_image_api_key() -> str:
 
 
 # Native image via generateContent (generativelanguage.googleapis.com v1beta).
-# Gemini 3.1 Flash Image (API id is still *-preview* on v1beta for most keys; add a non-preview alias here when Google publishes one).
-_GEMINI_COVER_IMAGE_MODELS = ("gemini-3.1-flash-image-preview",)
+# Try 3.1 first; if 429/quota on 3.1, fall back to 2.5 (often a separate quota meter on Google’s side).
+_GEMINI_COVER_IMAGE_MODELS = (
+    "gemini-3.1-flash-image-preview",
+    "gemini-2.5-flash-image",
+)
 _ENV_IMAGEN_MODEL = "BOOK_COVER_IMAGEN_MODEL"
 _DEFAULT_IMAGEN_MODELS = ("imagen-4.0-fast-generate-001",)
 
@@ -92,7 +95,7 @@ def _try_imagen_book_cover(client: Any, prompt: str) -> Optional[bytes]:
 
 
 def iter_book_cover_image_models():
-    """Gemini 3.1 Flash Image (and fallbacks) for covers / picture-game images."""
+    """Gemini image models for covers: 3.1 first, then 2.5 if the prior hits quota/404."""
     for name in _GEMINI_COVER_IMAGE_MODELS:
         yield name
 

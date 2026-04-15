@@ -3,29 +3,32 @@
 #
 # Internal URL (compose network): http://liquidsoap_video:8920/hls/live.m3u8
 #
-# IMPORTANT: Use video/videolist_hls.m3u (single playlist). It is regenerated when Admin TV
-# sync runs — interleaved 1 bumper : 2 program tracks from tv_jingles.m3u + videolist.m3u.
-# rotate([jingles, programs]) often never selected the jingle branch for video (no tv_jingles
-# lines in logs); one playlist makes every file a normal track with clear "Prepared" logs.
+# Two playlists under ./video/ (container: /liqfolder/video/):
+#   - tv_jingles.m3u  = bumpers only
+#   - videolist.m3u   = programs only (songs)
+# rotate() cycles one track per child: jingle, song, song, repeat (1:2). For strict
+# 1:1 (jingle, song, jingle, song) use rotate([jingles, programs]) instead.
 #
-# Setup: media in ./video/
-#   - videolist.m3u = programs only (admin TV sync)
-#   - tv_jingles.m3u = bumper paths under /liqfolder/video/...
-#   - videolist_hls.m3u = merged order (auto; do not edit by hand)
+# If jingles rarely play in practice, fall back to a single pre-merged M3U.
 # Docs: https://www.liquidsoap.info/doc-2.2.5/hls_output.html (output.harbor.hls)
 
 log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
-# playlist() defaults to mode="randomize", which shuffles on reload — bumpers then
-# rarely appear early (or seem "missing" in short sessions). Use normal order for
-# the pre-interleaved videolist_hls.m3u (see glconnect/pipeline._write_videolist_hls_m3u).
-v = playlist(
-  id="videolist_hls_m3u",
+# mode="normal" + reload_mode="watch": stable order and pick up file/M3U changes.
+programs = playlist(
+  id="videolist_m3u",
   reload_mode="watch",
   mode="normal",
-  "/liqfolder/video/videolist_hls.m3u"
+  "/liqfolder/video/videolist.m3u"
 )
+jingles = playlist(
+  id="tv_jingles_m3u",
+  reload_mode="watch",
+  mode="normal",
+  "/liqfolder/video/tv_jingles.m3u"
+)
+v = rotate([jingles, programs, programs])
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)
 v = video.fade.out(transition="fade", duration=3., v)
