@@ -9110,7 +9110,7 @@ def admin_tv_status():
 @book_bp.route('/admin/tv/download', methods=['POST'])
 @login_required
 def admin_tv_download():
-    """yt-dlp → MP4 in static/ytautovid → DB → merge videolist.m3u for HLS TV."""
+    """yt-dlp → MP4 in project video/ → DB → merge video/videolist.m3u for HLS TV."""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
     data = request.get_json() or request.form
@@ -9142,8 +9142,8 @@ def admin_tv_download():
                     sync_tv_videolist_from_db,
                 )
                 glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
-                output_folder = os.path.join(glconnect_dir, 'static', 'ytautovid')
-                output_folder = os.path.normpath(output_folder)
+                project_root = os.path.dirname(glconnect_dir)
+                output_folder = os.path.normpath(os.path.join(project_root, 'video'))
 
                 current_step = 'download'
                 _set_tv_download_status(
@@ -9164,7 +9164,7 @@ def admin_tv_download():
                 current_step = 'ingest'
                 _set_tv_download_status(
                     'ingesting',
-                    'Writing videolist.m3u from disk (ytautovid/*.mp4 + extra + DB)…',
+                    'Writing videolist.m3u from disk (video/*.mp4 + extra + DB)…',
                     url=url,
                     step=current_step,
                 )
@@ -9264,7 +9264,7 @@ def admin_tv_download():
 @book_bp.route('/admin/tv/sync-playlist', methods=['POST'])
 @login_required
 def admin_tv_sync_playlist():
-    """Rewrite video/videolist.m3u from videolist_extra.m3u + downloaded_videos + ytautovid/*.mp4."""
+    """Rewrite video/videolist.m3u from videolist_extra.m3u + downloaded_videos + orphan *.mp4 on disk."""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
     try:

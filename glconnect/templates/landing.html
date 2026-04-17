@@ -347,6 +347,13 @@
             outline-offset: 2px;
         }
 
+        /* Placeholder CTAs — swap href when pages exist */
+        .cta-chip.cta-chip--soon {
+            cursor: default;
+            opacity: 0.72;
+            pointer-events: none;
+        }
+
         .hero-side {
             position: relative;
             opacity: 0;
@@ -596,6 +603,8 @@
                     <a class="cta-chip" href="{{ url_for('blog.blogs') }}">Read Stories</a>
                     <a class="cta-chip" href="{{ url_for('book_platform.music_dashboard') }}">Explore Music</a>
                     <a class="cta-chip" href="{{ url_for('news_bp.index') }}">Latest News</a>
+                    <span class="cta-chip cta-chip--soon" aria-disabled="true" title="Coming soon">Ink Studio</span>
+                    <span class="cta-chip cta-chip--soon" aria-disabled="true" title="Coming soon">Marketplace</span>
                 </div>
             </div>
             <div class="hero-side">

@@ -35,8 +35,8 @@
         </h2>
         <p class="text-muted">
             Paste a YouTube video or playlist URL <strong>only to download</strong>—the live channel never streams YouTube links.
-            Each item becomes a <strong>local MP4</strong> under <code>glconnect/static/ytautovid/</code>. After rename, the job
-            <strong>writes <code>videolist.m3u</code> immediately</strong> from every <code>*.mp4</code> on disk (plus extras + DB),
+            Each item becomes a <strong>local MP4</strong> under the project <code>video/</code> folder. After rename, the job
+            <strong>writes <code>video/videolist.m3u</code> immediately</strong> from every <code>*.mp4</code> on disk (plus extras + DB),
             then reconciles <code>downloaded_videos</code> (insert or fix <code>local_path</code>), then refreshes the M3U again.
             <strong>Sync TV playlist only</strong> runs the same merge without downloading. Liquidsoap plays local paths only; it reloads when the M3U changes.
             Same admin-only, background idea as music downloads, but TV uses a separate playlist and DB table.
@@ -60,7 +60,7 @@
 
         <div class="card shadow-sm mt-4">
             <div class="card-body py-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="syncPlaylistBtn" title="Rebuild videolist.m3u from DB + videolist_extra.m3u + ytautovid/*.mp4">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="syncPlaylistBtn" title="Rebuild video/videolist.m3u from DB + videolist_extra.m3u + orphan *.mp4 on disk">
                     <i class="fas fa-sync me-1"></i>Sync TV playlist only
                 </button>
                 <span class="ms-2 small text-muted" id="syncPlaylistResult"></span>
@@ -106,7 +106,7 @@
         <div class="alert alert-info mt-4" role="alert">
             <i class="fas fa-info-circle me-2"></i>
             Ensure the project root is mounted in the Liquidsoap TV container as <code>/liqfolder</code> (see <code>docker-compose.yml</code>).
-            Program paths in <code>videolist.m3u</code> look like <code>/liqfolder/glconnect/static/ytautovid/…mp4</code>.
+            Program paths in <code>video/videolist.m3u</code> look like <code>/liqfolder/video/…mp4</code> (legacy downloads may still list <code>…/static/ytautovid/</code> until you move files and sync).
             Bumpers in <code>tv_jingles.m3u</code> default to <code>/liqfolder/video/tvjingle*.mp4</code> (same folder as the <code>video/*.m3u</code> files)—edit that M3U if you move jingle MP4s elsewhere. Never use https YouTube URLs in M3Us.
             Bumpers air only when the main playlist is empty/unavailable (not between every song).
         </div>

@@ -263,6 +263,22 @@ def create_app(config_overrides=None):
         except OSError:
             return 0
 
+    def _count_video_program_mp4() -> int:
+        """MP4s in project video/ that are not TV bumper basenames (YouTube TV programs)."""
+        from glconnect.pipeline import _is_tv_jingle_basename
+
+        d = os.path.join(_project_root(), "video")
+        if not os.path.isdir(d):
+            return 0
+        try:
+            return sum(
+                1
+                for x in os.listdir(d)
+                if x.lower().endswith(".mp4") and not _is_tv_jingle_basename(x)
+            )
+        except OSError:
+            return 0
+
     try:
         os.makedirs(_hls_root(), mode=0o755, exist_ok=True)
     except OSError:
@@ -281,6 +297,7 @@ def create_app(config_overrides=None):
         tv_diag = {
             "videolist_media_lines": _count_m3u_media_lines(videolist),
             "tv_jingles_media_lines": _count_m3u_media_lines(jingles_m3u),
+            "video_tv_mp4_on_disk": _count_video_program_mp4(),
             "ytautovid_mp4_on_disk": _count_ytautovid_mp4(),
             "videolist_path": videolist,
             "tv_fix_hint": "If videolist_media_lines is 0, use Admin → Sync TV playlist (or add lines to video/videolist_extra.m3u). Live HLS needs: docker compose --profile video up -d",

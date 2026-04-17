@@ -1,6 +1,6 @@
 #EXTM3U
 # Reference only — Liquidsoap uses videolist_hls.m3u (new script). videolist.m3u in repo is the program list;
-# Admin → Sync TV playlist regenerates it from DB + videolist_extra + ytautovid. Copy this if you need a blank starter.
+# Admin → Sync TV playlist regenerates it from DB + videolist_extra + video/*.mp4 (and legacy ytautovid). Copy if you need a blank starter.
 #
 # Example program line:
-# /liqfolder/glconnect/static/ytautovid/YourFile.mp4
+# /liqfolder/video/YourFile.mp4
