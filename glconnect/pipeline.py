@@ -415,19 +415,83 @@ def _parse_video_title(filename):
     return (None, name or None)
 
 
+def _tv_resolve_playable_liq_path(glconnect_dir, video_dir, local_path):
+    """
+    Return a /liqfolder/... path only if that file exists on disk (or the same basename exists
+    under video/ or static/ytautovid/). Omits missing files so videolist.m3u stays playable.
+    """
+    p = (local_path or "").strip().replace("\\", "/")
+    if not p or _is_tv_jingle_basename(p):
+        return None
+    pref_video = "/liqfolder/video/"
+    pref_yt = "/liqfolder/glconnect/static/ytautovid/"
+    yt_root = os.path.join(glconnect_dir, "static", "ytautovid")
+
+    def _fs_for_liq(liq):
+        if liq.startswith(pref_video):
+            rel = liq[len(pref_video) :].lstrip("/")
+            if not rel or any(part == ".." for part in rel.split("/")):
+                return None
+            return os.path.normpath(os.path.join(video_dir, rel))
+        if liq.startswith(pref_yt):
+            rel = liq[len(pref_yt) :].lstrip("/")
+            if not rel or any(part == ".." for part in rel.split("/")):
+                return None
+            return os.path.normpath(os.path.join(yt_root, rel))
+        return None
+
+    fs = _fs_for_liq(p)
+    if fs and os.path.isfile(fs):
+        return p
+
+    bn = os.path.basename(p)
+    if not bn.lower().endswith(".mp4"):
+        return None
+    for disk_dir, prefix in ((video_dir, pref_video), (yt_root, pref_yt)):
+        if not os.path.isdir(disk_dir):
+            continue
+        cand = os.path.join(disk_dir, bn)
+        if os.path.isfile(cand):
+            return prefix + bn
+    return None
+
+
 def sync_tv_videolist_from_db():
     """
-    Merge video/videolist_extra.m3u (manual paths, optional) with downloaded_videos local_path
-    rows, plus orphan *.mp4 under project video/ (and legacy glconnect/static/ytautovid/), and
-    write video/videolist.m3u for Liquidsoap (reload_mode=watch).
-    Must run inside Flask app context. Returns path count written.
+    Preserve existing video/videolist.m3u contents and append any newly discovered paths from:
+    - video/videolist_extra.m3u (manual paths, optional)
+    - downloaded_videos.local_path rows (resolved only when playable)
+    - orphan *.mp4 under project video/ and legacy glconnect/static/ytautovid/
+    Existing lines are never removed or rewritten; only missing paths are appended.
+    Must run inside Flask app context. Returns non-comment path count in final playlist.
     """
     glconnect_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(glconnect_dir)
     video_dir = os.path.join(project_root, "video")
     extra_m3u = os.path.join(video_dir, "videolist_extra.m3u")
     out_m3u = os.path.join(video_dir, "videolist.m3u")
-    paths = []
+    existing_lines = []
+    existing_paths = []
+    seen = set()
+    appended_paths = []
+
+    if os.path.isfile(out_m3u):
+        with open(out_m3u, "r", encoding="utf-8", errors="replace") as f:
+            for raw in f:
+                existing_lines.append(raw.rstrip("\n"))
+                line = raw.strip()
+                if not line or line.startswith("#"):
+                    continue
+                existing_paths.append(line)
+                seen.add(line)
+
+    def append_path(pp):
+        pp = (pp or "").strip()
+        if not pp or pp in seen or _is_tv_jingle_basename(pp):
+            return
+        seen.add(pp)
+        appended_paths.append(pp)
+
     if os.path.isfile(extra_m3u):
         with open(extra_m3u, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -435,7 +499,7 @@ def sync_tv_videolist_from_db():
                 if line and not line.startswith("#"):
                     if _is_tv_jingle_basename(line):
                         continue
-                    paths.append(line)
+                    append_path(line)
     rows = (
         DownloadedVideo.query.filter(
             DownloadedVideo.local_path.isnot(None),
@@ -445,11 +509,12 @@ def sync_tv_videolist_from_db():
         .all()
     )
     for row in rows:
-        p = (row.local_path or "").strip()
-        if p and p not in paths and not _is_tv_jingle_basename(p):
-            paths.append(p)
-    # Orphan MP4s on disk (e.g. copied in or DB reset) — Liquidsoap only reads paths in this M3U.
-    seen = set(paths)
+        resolved = _tv_resolve_playable_liq_path(
+            glconnect_dir, video_dir, (row.local_path or "").strip()
+        )
+        if resolved:
+            append_path(resolved)
+    # Orphan MP4s on disk (e.g. copied in, DB reset, or download skipped) — add if not already listed.
     _orphan_dirs = (
         (video_dir, "/liqfolder/video/"),
         (
@@ -471,21 +536,25 @@ def sync_tv_videolist_from_db():
             if _is_tv_jingle_basename(fn):
                 continue
             liq_path = liq_prefix + fn
-            if liq_path not in seen:
-                paths.append(liq_path)
-                seen.add(liq_path)
+            append_path(liq_path)
     os.makedirs(video_dir, exist_ok=True)
+    if not os.path.isfile(out_m3u):
+        existing_lines = [
+            "#EXTM3U",
+            "# Preserved playlist. New TV paths are appended by admin TV download/sync.",
+        ]
+    final_lines = existing_lines + appended_paths
     with open(out_m3u, "w", encoding="utf-8") as f:
-        f.write("#EXTM3U\n")
-        f.write(
-            "# Merged: videolist_extra.m3u + downloaded_videos (DB) + orphan *.mp4 in video/ "
-            "(and legacy static/ytautovid/). Regenerated by admin TV download/sync.\n"
-        )
-        for p in paths:
-            f.write(p + "\n")
-    print(f"TV videolist written: {len(paths)} paths -> {out_m3u}")
-    _write_videolist_hls_m3u(video_dir, paths)
-    return len(paths)
+        for line in final_lines:
+            f.write(line + "\n")
+
+    final_paths = existing_paths + appended_paths
+    print(
+        f"TV videolist synced: kept {len(existing_paths)} existing path(s), "
+        f"appended {len(appended_paths)} new path(s) -> {out_m3u}"
+    )
+    _write_videolist_hls_m3u(video_dir, final_paths)
+    return len(final_paths)
 
 
 def _read_tv_jingle_paths(video_dir):

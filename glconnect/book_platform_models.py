@@ -224,7 +224,16 @@ class AudiobookChapter(db.Model):
     book_chapter_id = db.Column(db.Integer, db.ForeignKey('book_chapters.id', ondelete='SET NULL'), nullable=True)  # Link to source chapter if any
     
     # Relationships
-    book_project = db.relationship('BookProject', backref='audiobook_chapters')
+    # Ensure deleting a book deletes child audiobook chapters instead of trying to null FK.
+    book_project = db.relationship(
+        'BookProject',
+        backref=db.backref(
+            'audiobook_chapters',
+            lazy=True,
+            cascade='all, delete-orphan',
+            passive_deletes=True,
+        ),
+    )
     book_chapter = db.relationship('BookChapter', backref='audiobook_chapter')
 
 

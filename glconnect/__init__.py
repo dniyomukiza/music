@@ -142,6 +142,13 @@ def create_app(config_overrides=None):
         FRONTEND_BASE_URL=_fe.rstrip("/") if _fe else "",
     )
 
+    # Startup visibility for AI cover generation key setup.
+    _cover_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
+    if not _cover_key:
+        app.logger.warning(
+            "AI cover generation key missing: set GEMINI_API_KEY (preferred) or GOOGLE_API_KEY."
+        )
+
     # Secret key for sessions (use fixed key for local dev to maintain sessions across restarts)
     if is_local_dev:
         app.secret_key = "local-dev-secret-key-change-in-production"  # Fixed key for local dev

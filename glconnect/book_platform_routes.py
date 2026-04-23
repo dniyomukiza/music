@@ -158,6 +158,20 @@ def get_user_profile():
     
     return None, None
 
+def _profile_for_ink_permission_checks():
+    """Writer, BookPlatformUser, or freelancer stub — mirrors writer_or_book_platform_required (non-admin)."""
+    if current_user.role == 'freelancer':
+        class FreelancerProfile:
+            def __init__(self, user):
+                self.id = user.user_id
+                self.user_id = user.user_id
+                self.pen_name = user.username
+                self.bio = None
+                self.profile_picture = None
+
+        return FreelancerProfile(current_user), 'freelancer'
+    return get_user_profile()
+
 def get_profile_id(user_profile, profile_type):
     """Get the correct ID based on profile type - returns BookPlatformUser.id for consistency"""
     try:
@@ -1613,8 +1627,8 @@ def cleanup_orphaned_sessions():
         db.session.rollback()
 
 @book_bp.route('/books/<int:book_id>/delete', methods=['POST'])
-@writer_or_book_platform_required
-def delete_book(book_id, user_profile, profile_type):
+@login_required
+def delete_book(book_id):
     """Delete a book and all its chapters"""
     try:
         # Clean up any orphaned sessions first (don't let errors here break the flow)
@@ -1628,8 +1642,11 @@ def delete_book(book_id, user_profile, profile_type):
         if not book:
             return jsonify({'error': 'Book not found'}), 404
 
-        # Admins can delete any book; others must be the author
+        # Admins can delete any book without an Ink Studio author profile; authors need a resolved profile
         if current_user.role != 'admin':
+            user_profile, profile_type = _profile_for_ink_permission_checks()
+            if not user_profile:
+                return jsonify({'error': 'You need a Writer profile to manage books. Please create a Writer profile in Ink Studio.'}), 403
             author_id = get_profile_id(user_profile, profile_type)
             if author_id is None:
                 return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
@@ -1696,6 +1713,17 @@ def delete_book(book_id, user_profile, profile_type):
         return jsonify({'success': True, 'message': 'Book deleted successfully'})
     except Exception as e:
         db.session.rollback()
+        # Safety fallback: if hard delete fails, at least remove listing visibility
+        # so the book no longer appears in marketplace.
+        try:
+            book_fallback = BookProject.query.get(book_id)
+            if book_fallback:
+                book_fallback.status = BookStatus.DRAFT
+                book_fallback.digital_book_published = False
+                book_fallback.audiobook_published = False
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
         import traceback
         error_trace = traceback.format_exc()
         logger.error(f"Error deleting book {book_id}: {str(e)}\n{error_trace}")
@@ -2885,18 +2913,19 @@ def publish_book(book_id):
     return jsonify(resp)
 
 @book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
-@writer_or_book_platform_required
-def unpublish_book(book_id, user_profile, profile_type):
+@login_required
+def unpublish_book(book_id):
     """Unpublish a book from marketplace (change status to DRAFT)"""
     book = BookProject.query.get_or_404(book_id)
-    
-    # Get the correct author ID based on profile type
-    author_id = get_profile_id(user_profile, profile_type)
-    
-    # Check if user has permission (author or admin)
-    if book.author_id != author_id:
-        # Check if user is admin using existing admin system
-        if current_user.role != 'admin':
+
+    if current_user.role != 'admin':
+        user_profile, profile_type = _profile_for_ink_permission_checks()
+        if not user_profile:
+            return jsonify({'error': 'You need a Writer profile to manage books. Please create a Writer profile in Ink Studio.'}), 403
+        author_id = get_profile_id(user_profile, profile_type)
+        if author_id is None:
+            return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
+        if book.author_id != author_id:
             return jsonify({'error': 'Only the author or admin can unpublish the book'}), 403
     
     # Only unpublish if currently published
@@ -5558,18 +5587,19 @@ def upload_digital_book():
             logger.info(f"Book {book.id} committed to database successfully")
 
             flash(
-                "Listing saved: ebook file and cover are on your book. "
-                "Audiobook is a separate step—open Edit details → Audiobook when you’re ready.",
+                "Step 1 complete: ebook listing saved. "
+                "Next: choose a voice and generate audiobook (Step 2).",
                 "success",
             )
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
+            next_step_url = url_for("book_platform.edit_book", book_id=book.id) + "#audiobook-section"
             if _upload_digital_book_accepts_json():
                 return jsonify(
                     success=True,
-                    redirect=url_for("book_platform.view_book", book_id=book.id),
+                    redirect=next_step_url,
                 )
-            return redirect(url_for('book_platform.view_book', book_id=book.id))
+            return redirect(next_step_url)
             
         except Exception as e:
             db.session.rollback()
@@ -9144,6 +9174,13 @@ def admin_tv_download():
                 glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
                 project_root = os.path.dirname(glconnect_dir)
                 output_folder = os.path.normpath(os.path.join(project_root, 'video'))
+
+                # Pick up any MP4s already on disk (skipped re-download, manual copy, wrong DB path).
+                try:
+                    n_pre = sync_tv_videolist_from_db()
+                    logger.info('TV playlist pre-sync before yt-dlp: %s path(s)', n_pre)
+                except Exception as pre_exc:
+                    logger.warning('TV playlist pre-sync failed (continuing): %s', pre_exc)
 
                 current_step = 'download'
                 _set_tv_download_status(

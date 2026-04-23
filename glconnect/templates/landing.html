@@ -347,11 +347,15 @@
             outline-offset: 2px;
         }
 
-        /* Placeholder CTAs — swap href when pages exist */
+        /* Placeholder CTAs (no link yet) — same hover as real chips; swap for <a> when routes exist */
         .cta-chip.cta-chip--soon {
-            cursor: default;
-            opacity: 0.72;
-            pointer-events: none;
+            cursor: pointer;
+        }
+
+        .cta-chip.cta-chip--soon:hover {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+            transform: translateY(-2px);
         }
 
         .hero-side {

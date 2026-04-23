@@ -26,7 +26,7 @@ def cover_image_api_key() -> str:
 
 
 # Native image via generateContent (generativelanguage.googleapis.com v1beta).
-# Try 3.1 first; if 429/quota on 3.1, fall back to 2.5 (often a separate quota meter on Google’s side).
+# Prefer the currently recommended model first, then fallback.
 _GEMINI_COVER_IMAGE_MODELS = (
     "gemini-3.1-flash-image-preview",
     "gemini-2.5-flash-image",
@@ -95,7 +95,7 @@ def _try_imagen_book_cover(client: Any, prompt: str) -> Optional[bytes]:
 
 
 def iter_book_cover_image_models():
-    """Gemini image models for covers: 3.1 first, then 2.5 if the prior hits quota/404."""
+    """Gemini image models for covers in preferred order."""
     for name in _GEMINI_COVER_IMAGE_MODELS:
         yield name
 
