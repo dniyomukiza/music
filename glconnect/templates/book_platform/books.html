@@ -169,11 +169,11 @@
                                                 <i class="fas fa-list"></i> Chapters
                                             </a>
                                             {% if listing_live %}
-                                            <button class="btn btn-outline-warning btn-sm" onclick="confirmRemoveListing({{ book.id }}, '{{ book.title|replace(\"'\", \"\\\\'\") }}')" title="Remove from marketplace">
+                                            <button class="btn btn-outline-warning btn-sm" onclick='confirmRemoveListing({{ book.id }}, {{ book.title|tojson }})' title="Remove from marketplace">
                                                 <i class="fas fa-eye-slash"></i> Remove
                                             </button>
                                             {% endif %}
-                                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteBook({{ book.id }}, '{{ book.title }}')">
+                                            <button class="btn btn-outline-danger btn-sm" onclick='confirmDeleteBook({{ book.id }}, {{ book.title|tojson }})'>
                                                 <i class="fas fa-trash"></i> Delete
                                             </button>
                                         </div>

@@ -445,8 +445,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-3">Enter the amount you'd like to pay for this book. You can pay more than the minimum price to support the author!</p>
-                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital and audio content is delivered immediately after payment.</p>
+                    <p class="mb-2">Choose format and confirm payment amount.</p>
+                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
                     <div class="mb-3 d-none" id="purchaseTypeBlock">
                         <label class="form-label fw-bold d-block mb-2">Choose format</label>
                         <div class="form-check">
@@ -459,7 +459,7 @@
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="purchaseTypeOption" id="purchaseTypeBundle" value="bundle">
-                            <label class="form-check-label" for="purchaseTypeBundle">Both (bundle discount)</label>
+                            <label class="form-check-label" for="purchaseTypeBundle">Both (combined)</label>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -671,6 +671,16 @@
                         }
                     }
                     if (fmtAudio) {
+                        if (b.audiobook_preview_url) {
+                            const pbtn = document.createElement('button');
+                            pbtn.type = 'button';
+                            pbtn.className = 'btn btn-outline-info';
+                            pbtn.innerHTML = '<i class="fas fa-play me-1"></i>Preview 30s';
+                            pbtn.addEventListener('click', function () {
+                                window.open(b.audiobook_preview_url, '_blank');
+                            });
+                            actionsEl.appendChild(pbtn);
+                        }
                         if (priceAudio != null && priceAudio > 0 && !(fmtDigital && priceDigital != null && priceDigital > 0)) {
                             const btn = document.createElement('button');
                             btn.type = 'button';
@@ -679,15 +689,6 @@
                             btn.addEventListener('click', function () {
                                 closeModal();
                                 showPurchaseModal(b.id, priceAudio, true);
-                            });
-                            actionsEl.appendChild(btn);
-                        } else {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn btn-outline-warning';
-                            btn.innerHTML = '<i class="fas fa-headphones me-1"></i>Listen free';
-                            btn.addEventListener('click', function () {
-                                window.open('/mybook/audiobook/' + b.id + '/player', '_blank');
                             });
                             actionsEl.appendChild(btn);
                         }
@@ -825,11 +826,12 @@
         let currentMinAmount = 0;
         let currentPurchaseType = 'digital';
         let currentPurchaseOptions = null;
+        let lastPurchaseTypeApplied = null;
 
         function getBaseAmountForType(type, options) {
             if (!options) return 0;
             if (type === 'audiobook') return Number(options.audiobook || 0);
-            if (type === 'bundle') return Number((Number(options.digital || 0) + Number(options.audiobook || 0)) * 0.8);
+            if (type === 'bundle') return Number(Number(options.digital || 0) + Number(options.audiobook || 0));
             return Number(options.digital || 0);
         }
 
@@ -863,9 +865,12 @@
             currentMinAmount = baseAmount;
             minAmountEl.textContent = baseAmount.toFixed(2);
             amountInput.min = baseAmount.toFixed(2);
-            if (!amountInput.value || Number(amountInput.value) < baseAmount) {
+            if (lastPurchaseTypeApplied !== currentPurchaseType) {
+                amountInput.value = baseAmount.toFixed(2);
+            } else if (!amountInput.value || Number(amountInput.value) < baseAmount) {
                 amountInput.value = baseAmount.toFixed(2);
             }
+            lastPurchaseTypeApplied = currentPurchaseType;
         }
 
         function showPurchaseModal(bookId, minAmountOrOptions, audiobookPurchase = false) {
@@ -885,6 +890,7 @@
                     currentPurchaseType = audiobookPurchase ? 'audiobook' : 'digital';
                 }
                 currentMinAmount = getBaseAmountForType(currentPurchaseType, currentPurchaseOptions);
+                lastPurchaseTypeApplied = null;
                 
                 // Ensure modal exists in DOM - create it if missing
                 let modalEl = document.getElementById('customPaymentModal');
@@ -919,7 +925,7 @@
                                             </div>
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="purchaseTypeOption" id="purchaseTypeBundle" value="bundle">
-                                                <label class="form-check-label" for="purchaseTypeBundle">Both (bundle discount)</label>
+                                                <label class="form-check-label" for="purchaseTypeBundle">Both (combined)</label>
                                             </div>
                                         </div>
                                         <div class="mb-3">

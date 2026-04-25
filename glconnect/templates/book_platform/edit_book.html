@@ -46,7 +46,7 @@
                         </h4>
                         <small class="text-muted">
                             {% if listing_flow %}
-                            Generate audiobook, then publish digital only or both formats to marketplace.
+                            Audiobook step only: generate and publish now, or skip.
                             {% else %}
                             Update information for "{{ book.title }}"
                             {% endif %}
@@ -56,10 +56,27 @@
                         {% if listing_flow %}
                         <div class="alert alert-primary">
                             <i class="fas fa-info-circle me-2"></i>
-                            Fast workflow: check publish options and audiobook section below, then save once.
+                            Ebook is already live. Use this page only for audiobook actions.
                         </div>
                         {% endif %}
                         <form id="editBookForm" method="post" enctype="multipart/form-data">
+                            {% if listing_flow and book.digital_file_path %}
+                            <input type="hidden" name="title" value="{{ book.title }}">
+                            <input type="hidden" name="description" value="{{ book.description or '' }}">
+                            <input type="hidden" name="genre" value="{{ book.genre or '' }}">
+                            <input type="hidden" name="language" value="{{ book.language or 'en' }}">
+                            <input type="hidden" name="price" value="{{ book.price if book.price is not none else '0' }}">
+                            <input type="hidden" name="tags" value="{{ book.tags or '' }}">
+                            <input type="hidden" name="target_audience" value="{{ book.target_audience or '' }}">
+                            <input type="hidden" name="word_count_target" value="{{ book.word_count_target or '' }}">
+                            <input type="hidden" name="cover_image" value="{{ book.cover_image or '' }}">
+                            <input type="hidden" name="publish_digital_book" id="publish_digital_book" value="on">
+                            <input type="hidden" name="publish_audiobook" id="publish_audiobook" value="{% if book.audiobook_published %}on{% endif %}">
+                            <div class="alert alert-light border mb-3">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Ebook listing is already published. This page is only for audiobook generation and optional audiobook publishing.
+                            </div>
+                            {% else %}
                             <div class="mb-3">
                                 <label for="title" class="form-label">Book Title *</label>
                                 <input type="text" class="form-control" id="title" name="title" required
@@ -440,6 +457,7 @@
                 </div>
                 {% endif %}
 
+                            {% endif %}
                 <!-- Audiobook Generation -->
                 <div class="card mt-4" id="audiobook-section">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -506,15 +524,9 @@
                                 </div>
                                     <div class="alert alert-info mb-3">
                                         <i class="fas fa-language me-2"></i>
-                                        <strong>Voice language:</strong> Pick a voice that matches your book’s language (listed as <strong>{{ ebook_language_label }}</strong> for uploaded files). One voice per generation.
+                                        <strong>Voice language:</strong> choose a voice matching <strong>{{ ebook_language_label }}</strong>.
                                     </div>
-                                    <p class="text-muted mb-3">
-                                        {% if book.digital_file_path %}
-                                            Generate an audiobook from your uploaded digital book using AI voice synthesis.
-                                        {% else %}
-                                            Generate an audiobook from your published chapters using AI voice synthesis.
-                                        {% endif %}
-                                    </p>
+                                    <p class="text-muted mb-3">Generate audiobook with one click after selecting a voice.</p>
                                     
                                     <div class="mb-3">
                                         <label for="audiobookPrice" class="form-label">Audiobook Price (USD)</label>
@@ -616,28 +628,26 @@
                                 <strong>Language:</strong> The voice list matches your book’s language. Pick a voice that fits your text.
                             </div>
 
-                            {% if listing_flow and book.digital_file_path %}
-                            <div class="card border-primary mt-3">
-                                <div class="card-body">
-                                    <h6 class="mb-2"><i class="fas fa-rocket me-2 text-primary"></i>Ship to marketplace</h6>
-                                    <p class="small text-muted mb-3">After generating audio (optional), choose how to ship now. You can also go to your dashboard and publish later.</p>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickPublishDigitalOnly()">
-                                            <i class="fas fa-book me-1"></i>Ship digital now
-                                        </button>
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
-                                            <i class="fas fa-layer-group me-1"></i>Ship digital + audio
-                                        </button>
-                                        <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="fas fa-columns me-1"></i>Do this later in dashboard
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
+                {% if listing_flow and book.digital_file_path %}
+                <div class="card border-primary mt-3">
+                    <div class="card-body">
+                        <h6 class="mb-2"><i class="fas fa-rocket me-2 text-primary"></i>Step 2 actions</h6>
+                        <p class="small text-muted mb-3">Publish audiobook now, or skip and do it later from dashboard.</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
+                                <i class="fas fa-layer-group me-1"></i>Publish audiobook now
+                            </button>
+                            <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-columns me-1"></i>Skip audiobook for now
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-2">Ebook is already published from step 1.</small>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -782,23 +792,19 @@
                     }
                 } else {
                     statusDisplay.style.display = 'none';
-                    
-                    // If completed, reload page to show success (only once)
+
+                    // Completed: stop polling and update UI in-place (no forced reload/ghost scroll).
                     if (result.has_audiobook && result.status === 'completed' && !reloadTriggered) {
-                        reloadTriggered = true; // Prevent multiple reloads
-                        
-                        // Stop polling since we're done
+                        reloadTriggered = true;
                         if (statusCheckInterval) {
                             clearInterval(statusCheckInterval);
                             statusCheckInterval = null;
                         }
-                        
-                        // Add hash to URL to scroll to audiobook section after reload
-                        window.location.hash = 'audiobook-section';
-                        // Small delay to ensure status is updated before reload
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
+                        const summaryTextDone = document.getElementById('audiobookSummaryText');
+                        if (summaryTextDone) {
+                            summaryTextDone.textContent = 'Ready — audiobook is on your book page.';
+                        }
+                        showNotification('Audiobook generation complete.', 'success');
                     }
                 }
             } catch (error) {
@@ -809,8 +815,14 @@
         function quickPublishDigitalOnly() {
             const digital = document.getElementById('publish_digital_book');
             const audio = document.getElementById('publish_audiobook');
-            if (digital) digital.checked = true;
-            if (audio) audio.checked = false;
+            if (digital) {
+                if (digital.type === 'checkbox') digital.checked = true;
+                digital.value = 'on';
+            }
+            if (audio) {
+                if (audio.type === 'checkbox') audio.checked = false;
+                audio.value = '';
+            }
             const form = document.getElementById('editBookForm');
             if (form) form.requestSubmit();
         }
@@ -818,8 +830,14 @@
         function quickPublishBoth() {
             const digital = document.getElementById('publish_digital_book');
             const audio = document.getElementById('publish_audiobook');
-            if (digital) digital.checked = true;
-            if (audio) audio.checked = true;
+            if (digital) {
+                if (digital.type === 'checkbox') digital.checked = true;
+                digital.value = 'on';
+            }
+            if (audio) {
+                if (audio.type === 'checkbox') audio.checked = true;
+                audio.value = 'on';
+            }
             const form = document.getElementById('editBookForm');
             if (form) form.requestSubmit();
         }

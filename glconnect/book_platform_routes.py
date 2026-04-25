@@ -567,11 +567,20 @@ def dashboard(user_profile, profile_type):
     user_reviewer_profile = None
     user_investments = []
     if not is_author:
-        from glconnect.book_platform_models import AccreditedReviewer, BookInvestment, ReviewerStatus, InvestmentStatus
+        from glconnect.book_platform_models import AccreditedReviewer, BookInvestment, ReviewerStatus, InvestmentStatus, InvestmentCampaign, BookProject
         user_reviewer_profile = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
-        user_investments = BookInvestment.query.filter_by(
-            investor_id=get_profile_id(user_profile, profile_type)
-        ).filter(BookInvestment.status.in_([InvestmentStatus.ACTIVE, InvestmentStatus.CONFIRMED])).limit(5).all()
+        user_investments = (
+            BookInvestment.query
+            .join(InvestmentCampaign, BookInvestment.campaign_id == InvestmentCampaign.id)
+            .join(BookProject, BookInvestment.book_project_id == BookProject.id)
+            .filter(
+                BookInvestment.investor_id == get_profile_id(user_profile, profile_type),
+                BookInvestment.status.in_([InvestmentStatus.ACTIVE, InvestmentStatus.CONFIRMED]),
+            )
+            .order_by(BookInvestment.created_at.desc())
+            .limit(5)
+            .all()
+        )
     
     return render_template('book_platform/dashboard.html', 
                          authored_books=authored_books,
@@ -1642,7 +1651,8 @@ def delete_book(book_id):
         # Use get() instead of get_or_404() to return JSON error instead of HTML
         book = BookProject.query.get(book_id)
         if not book:
-            return jsonify({'error': 'Book not found'}), 404
+            # Idempotent delete: if already gone, treat as successful removal.
+            return jsonify({'success': True, 'message': 'Book already removed'}), 200
 
         # Admins can delete any book without an Ink Studio author profile; authors need a resolved profile
         if current_user.role != 'admin':
@@ -2850,6 +2860,11 @@ def api_marketplace_book_detail(book_id):
             'digital_file_type': (book.digital_file_type or '').upper() if book.digital_file_type else None,
             'digital_editions': digital_editions_payload,
             'audiobook_price': float(book.audiobook_price) if book.audiobook_price is not None else None,
+            'audiobook_preview_url': (
+                url_for('book_platform.serve_audiobook_preview', book_id=book.id)
+                if (book.audiobook_published and book.has_audiobook and book.audiobook_file_path)
+                else None
+            ),
             'total_sales': book.total_sales or 0,
             'author': {
                 'id': author.id if author else None,
@@ -5520,6 +5535,9 @@ def upload_digital_book():
                 digital_file_uploaded_at=datetime.now(timezone.utc),
                 status=BookStatus.DRAFT
             )
+            # Step 1 auto-publishes ebook listing; step 2 is audiobook-only tasks.
+            book.digital_book_published = True
+            book.digital_book_published_at = datetime.now(timezone.utc)
             
             db.session.add(book)
             db.session.flush()  # Flush to get book.id
@@ -5529,7 +5547,7 @@ def upload_digital_book():
             logger.info(f"Book {book.id} committed to database successfully")
 
             flash(
-                "Step 1 complete. Next: generate audiobook and publish (digital only or both).",
+                "Step 1 complete: ebook is now live. Next: generate audiobook or skip for now.",
                 "success",
             )
             
@@ -5723,6 +5741,59 @@ def serve_audiobook_file(book_id):
             as_attachment=False,
             mimetype='audio/mpeg'
         )
+
+
+@book_bp.route('/audiobook/<int:book_id>/preview')
+def serve_audiobook_preview(book_id):
+    """Serve a short public preview clip (first ~30s) for marketplace discovery."""
+    book = BookProject.query.get_or_404(book_id)
+
+    if not book.has_audiobook or not book.audiobook_published or not book.audiobook_file_path:
+        return "Audiobook preview not available", 404
+    if not os.path.exists(book.audiobook_file_path):
+        return "Audiobook preview file not found", 404
+
+    file_path = book.audiobook_file_path
+    file_size = os.path.getsize(file_path)
+    # Approximate 30 seconds at common audiobook bitrates.
+    preview_limit = min(file_size, 512 * 1024)
+
+    range_header = request.headers.get('Range', None)
+    if range_header:
+        range_match = re.search(r'bytes=(\d*)-(\d*)', range_header)
+        if range_match:
+            start_str, end_str = range_match.groups()
+            if start_str:
+                start = int(start_str)
+                end = int(end_str) if end_str else (preview_limit - 1)
+            else:
+                suffix = int(end_str) if end_str else 0
+                start = max(0, preview_limit - suffix)
+                end = preview_limit - 1
+            end = min(end, preview_limit - 1)
+            if start >= preview_limit or start > end:
+                return Response(status=416)
+            chunk_size = end - start + 1
+            with open(file_path, 'rb') as f:
+                f.seek(start)
+                chunk = f.read(chunk_size)
+            response = Response(chunk, status=206, mimetype='audio/mpeg')
+            response.headers['Content-Range'] = f'bytes {start}-{end}/{preview_limit}'
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Content-Length'] = str(chunk_size)
+            response.headers['Content-Disposition'] = 'inline; filename="audiobook-preview.mp3"'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            return response
+
+    with open(file_path, 'rb') as f:
+        chunk = f.read(preview_limit)
+    response = Response(chunk, status=206, mimetype='audio/mpeg')
+    response.headers['Content-Range'] = f'bytes 0-{preview_limit - 1}/{preview_limit}'
+    response.headers['Accept-Ranges'] = 'bytes'
+    response.headers['Content-Length'] = str(preview_limit)
+    response.headers['Content-Disposition'] = 'inline; filename="audiobook-preview.mp3"'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 def _user_has_audiobook_access(book, user_id):
