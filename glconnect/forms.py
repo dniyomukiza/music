@@ -4,7 +4,7 @@ from .models import User
 from flask_wtf.file import FileAllowed
 from flask_ckeditor import CKEditorField
 from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectField,SelectMultipleField,TextAreaField,FileField,IntegerField,FloatField
-from wtforms.validators import DataRequired, Email, EqualTo, Length,ValidationError,Optional
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, InputRequired, NumberRange
 import os
 
 class FileSize:
@@ -158,7 +158,10 @@ class DigitalBookUploadForm(FlaskForm):
     cover_art_brief = TextAreaField('Cover art direction (for AI)', validators=[Optional(), Length(max=2000)])
 
     # Pricing
-    digital_price = FloatField('Digital Book Price (USD)', validators=[Optional()])
+    digital_price = FloatField(
+        'Digital Book Price (USD)',
+        validators=[InputRequired(message='Price is required.'), NumberRange(min=0, message='Price cannot be negative.')],
+    )
 
     submit = SubmitField('List on marketplace')
     recap = RecaptchaField(validators=[])  # Make optional - can be validated conditionally

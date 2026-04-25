@@ -6,9 +6,119 @@
     <title>{{ campaign.title }} - Investment Campaign</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --ui-bg: #f4f7fb;
+            --ui-ink: #0f172a;
+            --ui-muted: #64748b;
+            --ui-primary: #2563eb;
+            --ui-success: #059669;
+            --ui-warning: #d97706;
+            --ui-card: #ffffff;
+            --ui-border: #e2e8f0;
+        }
+
+        body {
+            background: var(--ui-bg);
+            color: var(--ui-ink);
+        }
+
+        .campaign-nav {
+            background: linear-gradient(90deg, #0f172a, #1e293b);
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.2);
+        }
+
+        .page-wrap {
+            max-width: 1280px;
+        }
+
+        .hero-panel {
+            background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.2), transparent 40%), #0b1220;
+            color: #e2e8f0;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+        }
+
+        .hero-title {
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            color: #cbd5e1;
+        }
+
+        .stat-chip {
+            background: rgba(148, 163, 184, 0.16);
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 12px;
+            padding: 0.75rem 0.9rem;
+            min-width: 160px;
+        }
+
+        .stat-chip .label {
+            color: #94a3b8;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-chip .value {
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .platform-principles {
+            border-radius: 14px;
+            border: 1px solid #c7d2fe;
+            background: linear-gradient(180deg, #eef2ff, #f8faff);
+        }
+
+        .section-card {
+            border-radius: 14px;
+            border: 1px solid var(--ui-border);
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+        }
+
+        .section-card .card-header {
+            border-bottom: 1px solid var(--ui-border);
+            font-weight: 700;
+        }
+
+        .list-group-item {
+            border-color: var(--ui-border);
+        }
+
+        .sidebar-cta {
+            border-radius: 14px;
+            border: 1px solid var(--ui-border);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .mini-metric {
+            border: 1px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 0.7rem;
+            background: #fff;
+        }
+
+        .risk-note {
+            border-left: 4px solid #94a3b8;
+            background: #f8fafc;
+        }
+
+        .safe-note {
+            border-left: 4px solid #0ea5e9;
+            background: #f0f9ff;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark campaign-nav">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">GLC</a>
             <div class="navbar-nav ms-auto">
@@ -19,7 +129,7 @@
         </div>
     </nav>
 
-    <div class="container my-5">
+    <div class="container my-4 page-wrap">
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -32,8 +142,33 @@
             {% endif %}
         {% endwith %}
         
+        <section class="hero-panel mb-4">
+            <div class="row g-3 align-items-start">
+                <div class="col-lg-8">
+                    <h1 class="hero-title mb-2">{{ campaign.title }}</h1>
+                    <p class="hero-subtitle mb-0">for "{{ book.title if book else 'Unknown Book' }}"</p>
+                </div>
+                <div class="col-lg-4">
+                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                        <div class="stat-chip">
+                            <div class="label">Funded</div>
+                            <div class="value">{{ "%.1f"|format(progress_percentage) }}%</div>
+                        </div>
+                        <div class="stat-chip">
+                            <div class="label">Investors</div>
+                            <div class="value">{{ unique_investor_count }}</div>
+                        </div>
+                        <div class="stat-chip">
+                            <div class="label">Raised</div>
+                            <div class="value">${{ "%.2f"|format(campaign.current_funding) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Platform Ethos: Patient Capital -->
-        <div class="alert alert-primary mb-4 border-0">
+        <div class="alert mb-4 platform-principles">
             <h5 class="mb-2"><i class="fas fa-heart me-2"></i>Turning Social Alignment into Financial Reality</h5>
             <p class="mb-3 small">
                 This is a platform for <strong>patient investors</strong>. You may lose, break even, or profit—what matters is advancing impactful work and helping authors bring their vision to life. Invest because you believe in the project, not for guaranteed returns.
@@ -59,12 +194,9 @@
 
         <div class="row">
             <div class="col-md-8">
-                <h1>{{ campaign.title }}</h1>
-                <p class="text-muted">for "{{ book.title if book else 'Unknown Book' }}"</p>
-
                 <!-- Author Credibility Card -->
                 {% if author %}
-                <div class="card shadow mb-4 border-primary">
+                <div class="card section-card mb-4 border-primary">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>Author Credibility</h5>
                     </div>
@@ -104,7 +236,7 @@
 
                 <!-- Book Quality Indicators -->
                 {% if book %}
-                <div class="card shadow mb-4 border-success">
+                <div class="card section-card mb-4 border-success">
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0"><i class="fas fa-book-open me-2"></i>Book Quality Indicators</h5>
                     </div>
@@ -141,7 +273,7 @@
 
                 <!-- Sample Chapters Preview - KEY FOR DEBUT AUTHORS -->
                 {% if completed_chapters %}
-                <div class="card shadow mb-4 border-info">
+                <div class="card section-card mb-4 border-info">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Sample Chapters - Read the Content!</h5>
                         <small>Preview the actual writing quality</small>
@@ -204,7 +336,7 @@
                 <!-- Writing Progress Tracker -->
                 {% if chapters_count > 0 %}
                 {% set progress_pct = (completed_chapters_count / chapters_count * 100) if chapters_count > 0 else 0 %}
-                <div class="card shadow mb-4 border-primary">
+                <div class="card section-card mb-4 border-primary">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Writing Progress Tracker</h5>
                     </div>
@@ -310,7 +442,7 @@
 
                 <!-- Accredited Reviews -->
                 {% if accredited_reviews %}
-                <div class="card shadow mb-4 border-warning">
+                <div class="card section-card mb-4 border-warning">
                     <div class="card-header bg-warning text-dark">
                         <h5 class="mb-0"><i class="fas fa-star me-2"></i>Accredited Reviews ({{ accredited_reviews|length }})</h5>
                     </div>
@@ -345,7 +477,7 @@
                 </div>
                 {% endif %}
 
-                <div class="card shadow mb-4">
+                <div class="card section-card mb-4">
                     <div class="card-body">
                         <h5>Campaign Description</h5>
                         <div>{{ campaign.description|safe }}</div>
@@ -353,7 +485,7 @@
                 </div>
 
                 {% if campaign.pitch_video_url %}
-                <div class="card shadow mb-4">
+                <div class="card section-card mb-4">
                     <div class="card-body">
                         <h5>Pitch Video</h5>
                         <div class="ratio ratio-16x9">
@@ -364,7 +496,7 @@
                 {% endif %}
 
                 <!-- Social Proof: Investors -->
-                <div class="card shadow">
+                <div class="card section-card">
                     <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-users me-2"></i>Investors ({{ unique_investor_count }})</h5>
                     </div>
@@ -425,7 +557,7 @@
 
                 <!-- View Full Book Details -->
                 {% if book %}
-                <div class="card shadow mt-4">
+                <div class="card section-card mt-4">
                     <div class="card-body text-center">
                         <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
                            class="btn btn-outline-primary">
@@ -437,9 +569,9 @@
             </div>
 
             <div class="col-md-4">
-                <div class="card shadow sticky-top" style="top: 20px;">
+                <div class="card sidebar-cta sticky-top" style="top: 20px;">
                     <div class="card-body">
-                        <h5 class="card-title">Campaign Stats</h5>
+                        <h5 class="card-title mb-3">Campaign Stats</h5>
                         
                         <div class="mb-3">
                             <div class="d-flex justify-content-between mb-1">
@@ -451,6 +583,21 @@
                                      style="width: {{ progress_percentage }}%"></div>
                             </div>
                             <small class="text-muted">{{ "%.1f"|format(progress_percentage) }}% funded</small>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="mini-metric">
+                                    <small class="text-muted d-block">Investors</small>
+                                    <strong>{{ unique_investor_count }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mini-metric">
+                                    <small class="text-muted d-block">Raised</small>
+                                    <strong>${{ "%.0f"|format(campaign.current_funding) }}</strong>
+                                </div>
+                            </div>
                         </div>
 
                         <hr>
@@ -488,7 +635,7 @@
                         {% endif %}
 
                         <!-- Patient Investor: Outcomes Vary -->
-                        <div class="alert alert-secondary mt-3">
+                        <div class="alert mt-3 risk-note">
                             <small>
                                 <strong><i class="fas fa-seedling me-1"></i>Patient Investor:</strong><br>
                                 • Books may not sell—you could lose your investment<br>
@@ -497,7 +644,7 @@
                             </small>
                         </div>
                         <!-- Fund Release Safeguard -->
-                        <div class="alert alert-info mt-2">
+                        <div class="alert mt-2 safe-note">
                             <small>
                                 <strong><i class="fas fa-shield-alt me-1"></i>Your funds are protected:</strong> Author receives 50% when they complete a full first draft (25,000+ words), 50% when published. Reduces ghost-author risk.
                             </small>

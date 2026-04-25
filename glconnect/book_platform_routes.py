@@ -1342,10 +1342,12 @@ def edit_book(book_id, user_profile, profile_type):
             print(f"Book edit error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
+    listing_flow = (request.args.get('flow') or '').strip().lower() == 'listing'
     return render_template(
         'book_platform/edit_book.html',
         book=book,
         ebook_language_label=language_label(book.language),
+        listing_flow=listing_flow,
     )
 
 # Chapter management routes
@@ -2939,6 +2941,47 @@ def unpublish_book(book_id):
     try:
         db.session.commit()
         return jsonify({'success': True, 'message': 'Book unpublished successfully. It has been removed from the marketplace but can be republished anytime.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@book_bp.route('/books/<int:book_id>/remove-listing', methods=['POST'])
+@login_required
+def remove_listing(book_id):
+    """Remove marketplace visibility while keeping the book and relations."""
+    book = BookProject.query.get_or_404(book_id)
+
+    if current_user.role != 'admin':
+        user_profile, profile_type = _profile_for_ink_permission_checks()
+        if not user_profile:
+            return jsonify({'error': 'You need a Writer profile to manage books. Please create a Writer profile in Ink Studio.'}), 403
+        author_id = get_profile_id(user_profile, profile_type)
+        if author_id is None:
+            return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
+        if book.author_id != author_id:
+            return jsonify({'error': 'Only the author or admin can remove this listing'}), 403
+
+    listing_was_live = False
+    if book.digital_file_path:
+        if book.digital_book_published:
+            book.digital_book_published = False
+            listing_was_live = True
+        if book.audiobook_published:
+            book.audiobook_published = False
+            listing_was_live = True
+    else:
+        if book.status == BookStatus.PUBLISHED:
+            book.status = BookStatus.DRAFT
+            listing_was_live = True
+
+    if not listing_was_live:
+        return jsonify({'error': 'This book is not currently live in the marketplace'}), 400
+
+    book.updated_at = datetime.now(timezone.utc)
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Listing removed from marketplace. Your book and relationships are preserved.'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -5560,6 +5603,14 @@ def upload_digital_book():
                 return _upload_digital_book_error(
                     form, "Choose a supported ebook language from the list."
                 )
+            if form.digital_price.data is None:
+                return _upload_digital_book_error(
+                    form, "Set a digital ebook price before creating the listing."
+                )
+            if form.digital_price.data < 0:
+                return _upload_digital_book_error(
+                    form, "Price cannot be negative."
+                )
 
             # Create book project
             logger.info(f"Creating book project: {form.title.data}")
@@ -5587,13 +5638,12 @@ def upload_digital_book():
             logger.info(f"Book {book.id} committed to database successfully")
 
             flash(
-                "Step 1 complete: ebook listing saved. "
-                "Next: choose a voice and generate audiobook (Step 2).",
+                "Step 1 complete. Next: generate audiobook and publish (digital only or both).",
                 "success",
             )
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
-            next_step_url = url_for("book_platform.edit_book", book_id=book.id) + "#audiobook-section"
+            next_step_url = url_for("book_platform.edit_book", book_id=book.id, flow="listing") + "#audiobook-section"
             if _upload_digital_book_accepts_json():
                 return jsonify(
                     success=True,

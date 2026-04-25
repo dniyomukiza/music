@@ -70,7 +70,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h1><i class="fas fa-book"></i> My Books</h1>
-                            <p class="text-muted">Manage your book projects</p>
+                            <p class="text-muted">Central author dashboard: manage drafts and published listings, edit metadata, adjust covers, unpublish/remove from marketplace, and keep existing relationships intact.</p>
                         </div>
                         <div>
                             <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary">
@@ -86,12 +86,13 @@
                         {% for item in books_with_readiness %}
                             {% set book = item.book %}
                             {% set investment_readiness = item.investment_readiness %}
+                            {% set listing_live = (book.digital_book_published or book.audiobook_published) if book.digital_file_path else (book.status.value == 'published') %}
                             <div class="col-md-6 col-lg-4 mb-4">
                                 <div class="card book-card h-100">
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0">{{ book.title }}</h6>
-                                        <span class="badge badge-{{ 'success' if book.status.value == 'published' else 'warning' if book.status.value == 'draft' else 'info' }}">
-                                            {{ book.status.value.title() }}
+                                        <span class="badge badge-{{ 'success' if listing_live else 'warning' }}">
+                                            {{ 'Live in marketplace' if listing_live else 'Draft / private' }}
                                         </span>
                                     </div>
                                     <div class="card-body">
@@ -107,6 +108,17 @@
                                             {% endif %}
                                             {% if book.word_count %}
                                                 <span class="badge badge-info">{{ book.word_count }} words</span>
+                                            {% endif %}
+                                            {% if book.digital_file_path %}
+                                                <span class="badge badge-dark">Uploaded listing</span>
+                                                {% if book.digital_book_published %}
+                                                    <span class="badge badge-success">Digital live</span>
+                                                {% endif %}
+                                                {% if book.audiobook_published %}
+                                                    <span class="badge badge-success">Audiobook live</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge badge-primary">Written in platform</span>
                                             {% endif %}
                                         </div>
 
@@ -155,15 +167,15 @@
                                             <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-outline-primary btn-sm">
                                                 <i class="fas fa-eye"></i> View
                                             </a>
-                                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
-                                                <i class="fas fa-edit"></i> Edit
+                                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}{% if book.digital_file_path %}?flow=listing#audiobook-section{% endif %}" class="btn btn-outline-secondary btn-sm">
+                                                <i class="fas fa-edit"></i> Manage
                                             </a>
-                                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" class="btn btn-outline-info btn-sm">
+                                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" class="btn btn-outline-info btn-sm {% if book.digital_file_path %}disabled{% endif %}">
                                                 <i class="fas fa-list"></i> Chapters
                                             </a>
-                                            {% if book.status.value == 'published' %}
-                                            <button class="btn btn-outline-warning btn-sm" onclick="confirmUnpublishBook({{ book.id }}, '{{ book.title }}')" title="Remove from marketplace">
-                                                <i class="fas fa-eye-slash"></i> Unpublish
+                                            {% if listing_live %}
+                                            <button class="btn btn-outline-warning btn-sm" onclick="confirmRemoveListing({{ book.id }}, '{{ book.title|replace(\"'\", \"\\\\'\") }}')" title="Remove from marketplace">
+                                                <i class="fas fa-eye-slash"></i> Remove
                                             </button>
                                             {% endif %}
                                             <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteBook({{ book.id }}, '{{ book.title }}')">
@@ -244,10 +256,10 @@
             });
         });
 
-        // Function to confirm and unpublish a book (removes from marketplace but keeps it as draft)
-        function confirmUnpublishBook(bookId, bookTitle) {
-            if (confirm(`Are you sure you want to unpublish "${bookTitle}"? This will remove it from the marketplace but you can republish it anytime after fixing any issues.`)) {
-                fetch(`/mybook/books/${bookId}/unpublish`, {
+        // Remove listing from marketplace but keep the book and relations.
+        function confirmRemoveListing(bookId, bookTitle) {
+            if (confirm(`Remove "${bookTitle}" from marketplace? This keeps your book, chapters, collaborations, and history intact.`)) {
+                fetch(`/mybook/books/${bookId}/remove-listing`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -257,15 +269,15 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message || 'Book unpublished successfully! It has been removed from the marketplace.');
+                        alert(data.message || 'Listing removed from marketplace.');
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.error || 'Failed to unpublish book'));
+                        alert('Error: ' + (data.error || 'Failed to remove listing'));
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred while unpublishing the book');
+                    alert('An error occurred while removing the listing');
                 });
             }
         }

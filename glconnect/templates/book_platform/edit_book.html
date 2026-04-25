@@ -15,8 +15,8 @@
                 <i class="fas fa-pen-fancy"></i> GLC
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
-                    <i class="fas fa-arrow-left"></i> Back to Book
+                <a class="nav-link" href="{% if listing_flow %}{{ url_for('book_platform.books') }}{% else %}{{ url_for('book_platform.view_book', book_id=book.id) }}{% endif %}">
+                    <i class="fas fa-arrow-left"></i> {% if listing_flow %}Back to My books{% else %}Back to Book{% endif %}
                 </a>
             </div>
         </div>
@@ -41,11 +41,24 @@
                 <div class="card">
                     <div class="card-header">
                         <h4 class="mb-0">
-                            <i class="fas fa-edit"></i> Edit Book Details
+                            <i class="fas {% if listing_flow %}fa-rocket{% else %}fa-edit{% endif %}"></i>
+                            {% if listing_flow %}Step 2: Audiobook + Publish{% else %}Edit Book Details{% endif %}
                         </h4>
-                        <small class="text-muted">Update information for "{{ book.title }}"</small>
+                        <small class="text-muted">
+                            {% if listing_flow %}
+                            Generate audiobook, then publish digital only or both formats to marketplace.
+                            {% else %}
+                            Update information for "{{ book.title }}"
+                            {% endif %}
+                        </small>
                     </div>
                     <div class="card-body">
+                        {% if listing_flow %}
+                        <div class="alert alert-primary">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Fast workflow: check publish options and audiobook section below, then save once.
+                        </div>
+                        {% endif %}
                         <form id="editBookForm" method="post" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="title" class="form-label">Book Title *</label>
@@ -279,6 +292,17 @@
                                 </div>
                                 <small class="text-muted d-block">Audiobook will be available for purchase. Make sure you've set an audiobook price first.</small>
                                 {% endif %}
+                                {% if listing_flow %}
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickPublishDigitalOnly()">
+                                        <i class="fas fa-book me-1"></i>Publish digital only
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
+                                        <i class="fas fa-layer-group me-1"></i>Publish both
+                                    </button>
+                                </div>
+                                <small class="text-muted d-block mt-2">Use these shortcuts, then save automatically.</small>
+                                {% endif %}
                             </div>
                             {% else %}
                             <!-- Publishing option for platform-created books -->
@@ -307,65 +331,20 @@
                             {% endif %}
 
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                                <a href="{% if listing_flow %}{{ url_for('book_platform.books') }}{% else %}{{ url_for('book_platform.view_book', book_id=book.id) }}{% endif %}" 
                                    class="btn btn-secondary me-md-2">
-                                    <i class="fas fa-times"></i> Cancel
+                                    <i class="fas fa-times"></i> {% if listing_flow %}Go to My books{% else %}Cancel{% endif %}
                                 </a>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Update Book
+                                    <i class="fas fa-save"></i> {% if listing_flow %}Save Publishing Setup{% else %}Update Book{% endif %}
                                 </button>
+                                {% if not listing_flow %}
                                 <button type="button" class="btn btn-danger" onclick="confirmDeleteBook()">
                                     <i class="fas fa-trash"></i> Delete Book
                                 </button>
+                                {% endif %}
                             </div>
                         </form>
-                    </div>
-                </div>
-
-                <!-- Book Statistics -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-chart-bar"></i> Book Statistics
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            {% if not book.digital_file_path %}
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6 class="text-muted">Chapters</h6>
-                                    <h4 class="text-primary">{{ book.chapters|length }}</h4>
-                                </div>
-                            </div>
-                            {% endif %}
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6 class="text-muted">Word Count</h6>
-                                    <h4 class="text-success">{{ book.word_count or 0 }}</h4>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6 class="text-muted">Status</h6>
-                                    <h4 class="text-info">{{ book.status.value.title() if book.status else 'Draft' }}</h4>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6 class="text-muted">{% if book.digital_file_path %}Uploaded{% else %}Created{% endif %}</h6>
-                                    <h4 class="text-warning">{{ book.created_at.strftime('%m/%d/%Y') if book.created_at else 'N/A' }}</h4>
-                                </div>
-                            </div>
-                            {% if book.digital_file_path %}
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6 class="text-muted">File Type</h6>
-                                    <h4 class="text-primary">{{ book.digital_file_type.upper() if book.digital_file_type else 'N/A' }}</h4>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
                     </div>
                 </div>
 
@@ -674,11 +653,11 @@
                 if (result.success) {
                     const msg = result.payout_setup_required
                         ? 'Listing saved. Connect your payout account with Stripe so readers can pay you.'
-                        : 'Book updated successfully!';
+                        : '{% if listing_flow %}Publishing setup saved successfully!{% else %}Book updated successfully!{% endif %}';
                     showNotification(msg, 'success');
                     const delay = result.payout_setup_required ? 900 : 1500;
                     setTimeout(() => {
-                        window.location.href = result.redirect || '{{ url_for("book_platform.view_book", book_id=book.id) }}';
+                        window.location.href = result.redirect || '{% if listing_flow %}{{ url_for("book_platform.books") }}{% else %}{{ url_for("book_platform.view_book", book_id=book.id) }}{% endif %}';
                     }, delay);
                 } else {
                     showNotification(result.error || 'Failed to update book', 'error');
@@ -812,6 +791,24 @@
             } catch (error) {
                 console.error('Error checking audiobook status:', error);
             }
+        }
+
+        function quickPublishDigitalOnly() {
+            const digital = document.getElementById('publish_digital_book');
+            const audio = document.getElementById('publish_audiobook');
+            if (digital) digital.checked = true;
+            if (audio) audio.checked = false;
+            const form = document.getElementById('editBookForm');
+            if (form) form.requestSubmit();
+        }
+
+        function quickPublishBoth() {
+            const digital = document.getElementById('publish_digital_book');
+            const audio = document.getElementById('publish_audiobook');
+            if (digital) digital.checked = true;
+            if (audio) audio.checked = true;
+            const form = document.getElementById('editBookForm');
+            if (form) form.requestSubmit();
         }
         
         // Load available voices from API
