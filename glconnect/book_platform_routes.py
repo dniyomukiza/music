@@ -62,6 +62,7 @@ from glconnect.book_language_tts import (
 from glconnect.revenue_distribution_service import distribute_revenue
 from glconnect.stripe_utils import (
     init_stripe,
+    get_stripe_server_secret_key,
     get_webhook_secret,
     marketplace_book_payment_intent_data,
     author_needs_stripe_payout_setup,
@@ -3817,7 +3818,7 @@ def purchase_book(book_id):
         try:
             import stripe
 
-            stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+            stripe_api_key = get_stripe_server_secret_key(current_app)
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
                 domain_url = current_app.config.get('FRONTEND_BASE_URL') or request.url_root.rstrip('/')
@@ -4129,7 +4130,7 @@ def purchase_book(book_id):
                 stripe_fb_error = None
                 try:
                     import stripe
-                    stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+                    stripe_api_key = get_stripe_server_secret_key(current_app)
                     if stripe_api_key:
                         stripe.api_key = stripe_api_key
                         checkout_kw_fb = dict(
@@ -4653,7 +4654,7 @@ def stripe_webhook():
             event = json.loads(payload)
         
         # Set Stripe API key if available (for retrieving additional payment info if needed)
-        stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+        stripe_api_key = get_stripe_server_secret_key(current_app)
         if stripe_api_key and stripe_available:
             stripe.api_key = stripe_api_key
         
@@ -6577,7 +6578,7 @@ def make_investment(campaign_id):
         stripe_error = None
         try:
             import stripe
-            stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
+            stripe_api_key = get_stripe_server_secret_key(current_app)
             logger.info(f"Investment Stripe key check: stripe_api_key exists = {bool(stripe_api_key)}")
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
@@ -9363,7 +9364,7 @@ def admin_stripe_diagnostics():
     """
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin privileges required'}), 403
-    from glconnect.stripe_utils import stripe_secret_configured
+    from glconnect.stripe_utils import process_env_has_stripe_secret, stripe_secret_configured
 
     def classify(v):
         v = (v or "").strip()
@@ -9378,12 +9379,20 @@ def admin_stripe_diagnostics():
         return {'present': True, 'kind': 'unrecognized'}
 
     cfg = current_app.config
+    sk_meta = classify(cfg.get('STRIPE_SECRET_KEY'))
+    api_meta = classify(cfg.get('STRIPE_API_KEY'))
+    app_config_has_secret = sk_meta.get('kind') in ('secret_live', 'secret_test') or api_meta.get('kind') in (
+        'secret_live',
+        'secret_test',
+    )
     return jsonify({
-        'STRIPE_SECRET_KEY': classify(cfg.get('STRIPE_SECRET_KEY')),
-        'STRIPE_API_KEY': classify(cfg.get('STRIPE_API_KEY')),
+        'STRIPE_SECRET_KEY': sk_meta,
+        'STRIPE_API_KEY': api_meta,
+        'app_config_has_secret': app_config_has_secret,
+        'process_env_has_sk': process_env_has_stripe_secret(),
         'ready_for_checkout': stripe_secret_configured(current_app),
-        'hint': 'If ready_for_checkout is false, this process has no sk_ key. Set env on the server and restart. '
-                'If checkout still fails with STRIPE_CHECKOUT_FAILED, read error details in the API and full trace in server logs.',
+        'hint': 'If app_config_has_secret is false but process_env_has_sk is true, keys exist only in os.environ (e.g. Docker) — checkout should still work with the updated code. If both false, set STRIPE_SECRET_KEY on the host and restart. '
+                'For production, add the secret in your hosting dashboard, not only in a local .env file.',
     })
 
 

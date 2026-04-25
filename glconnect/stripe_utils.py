@@ -13,25 +13,16 @@ def init_stripe():
     Initialize Stripe with the secret key from configuration or environment.
     This should be called lazily (on-demand) to avoid import-time issues.
     """
-    secret_key = (
-        (
-            getattr(current_app, "config", {}).get("STRIPE_SECRET_KEY")
-            if hasattr(current_app, "config")
-            else None
-        )
-        or (
-            getattr(current_app, "config", {}).get("STRIPE_API_KEY")
-            if hasattr(current_app, "config")
-            else None
-        )
-        or os.getenv("STRIPE_SECRET_KEY")
-        or os.getenv("STRIPE_API_KEY")
-    )
+    from flask import has_app_context, current_app
 
-    if not secret_key:
+    if has_app_context():
+        sk = get_stripe_server_secret_key(current_app)
+    else:
+        sk = get_stripe_server_secret_key(None)
+    if not sk:
         raise RuntimeError("Stripe is not configured (set STRIPE_SECRET_KEY or STRIPE_API_KEY)")
 
-    stripe.api_key = secret_key
+    stripe.api_key = sk
     return stripe
 
 
@@ -65,15 +56,41 @@ def author_needs_stripe_payout_setup(bp_user) -> bool:
     return not str(acct).strip()
 
 
-def stripe_secret_configured(app) -> bool:
+def get_stripe_server_secret_key(app) -> Optional[str]:
     """
-    True if a server-side Secret key (sk_...) is in config. Publishable (pk_...) does not count.
+    Return the first valid Stripe **Secret** key (sk_...) for server API calls.
+    Checks Flask `app.config` and then `os.environ` (Docker/systemd/Render set vars here even if
+    `create_app` read empty — e.g. .env not found on the server but `env` was injected at boot).
+    Never returns a publishable (pk_...) key.
     """
-    for key in (
-        (app.config.get("STRIPE_SECRET_KEY") or "").strip(),
-        (app.config.get("STRIPE_API_KEY") or "").strip(),
+    if app is not None and hasattr(app, "config"):
+        for k in (
+            (app.config.get("STRIPE_SECRET_KEY") or "").strip(),
+            (app.config.get("STRIPE_API_KEY") or "").strip(),
+        ):
+            if k.startswith("sk_"):
+                return k
+    for k in (
+        (os.getenv("STRIPE_SECRET_KEY") or "").strip(),
+        (os.getenv("STRIPE_API_KEY") or "").strip(),
     ):
-        if key.startswith("sk_"):
+        if k.startswith("sk_"):
+            return k
+    return None
+
+
+def stripe_secret_configured(app) -> bool:
+    """True if a valid sk_... is available via get_stripe_server_secret_key."""
+    return get_stripe_server_secret_key(app) is not None
+
+
+def process_env_has_stripe_secret() -> bool:
+    """True if STRIPE_SECRET_KEY or STRIPE_API_KEY in os.environ is an sk_... (for diagnostics)."""
+    for k in (
+        (os.getenv("STRIPE_SECRET_KEY") or "").strip(),
+        (os.getenv("STRIPE_API_KEY") or "").strip(),
+    ):
+        if k.startswith("sk_"):
             return True
     return False
 
