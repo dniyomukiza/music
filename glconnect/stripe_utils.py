@@ -65,6 +65,93 @@ def author_needs_stripe_payout_setup(bp_user) -> bool:
     return not str(acct).strip()
 
 
+def stripe_secret_configured(app) -> bool:
+    """
+    True if a server-side Secret key (sk_...) is in config. Publishable (pk_...) does not count.
+    """
+    for key in (
+        (app.config.get("STRIPE_SECRET_KEY") or "").strip(),
+        (app.config.get("STRIPE_API_KEY") or "").strip(),
+    ):
+        if key.startswith("sk_"):
+            return True
+    return False
+
+
+def describe_stripe_checkout_error(exc: BaseException) -> Dict[str, Any]:
+    """
+    Non-secret details for API responses and logs when Session.create or Stripe calls fail.
+    """
+    d: Dict[str, Any] = {"exception": type(exc).__name__}
+    try:
+        import stripe as stripe_mod
+
+        if isinstance(exc, stripe_mod.error.StripeError):
+            if getattr(exc, "http_status", None):
+                d["http_status"] = exc.http_status
+            if getattr(exc, "code", None):
+                d["code"] = str(exc.code)
+        jb = getattr(exc, "json_body", None) or {}
+        if isinstance(jb, dict):
+            err = jb.get("error") or {}
+            if err.get("message"):
+                d["message"] = str(err["message"])[:600]
+            if err.get("type"):
+                d["type"] = err["type"]
+            if err.get("code") and "code" not in d:
+                d["code"] = err["code"]
+    except Exception:
+        pass
+    if "message" not in d:
+        d["message"] = str(exc)[:600]
+    return d
+
+
+def purchase_checkout_unavailable_response(app, exc: Optional[BaseException] = None):
+    """
+    503 JSON when Stripe Checkout URL could not be created.
+    Distinguishes missing/invalid key vs real Stripe API errors.
+    """
+    from flask import jsonify
+
+    if not stripe_secret_configured(app):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "No valid Stripe secret key (sk_...) in server configuration.",
+                    "error_code": "STRIPE_KEY_MISSING",
+                    "hint": "Set STRIPE_SECRET_KEY in the environment the app process actually loads, then restart. "
+                    "If you use Docker, set env in compose or the host; .env on your laptop is not used by the server unless mounted.",
+                }
+            ),
+            503,
+        )
+    if exc is not None:
+        logger.exception("Stripe Checkout Session.create failed: %s", exc)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Stripe did not create a checkout session. See 'details' and server logs.",
+                    "error_code": "STRIPE_CHECKOUT_FAILED",
+                    "details": describe_stripe_checkout_error(exc),
+                }
+            ),
+            503,
+        )
+    return (
+        jsonify(
+            {
+                "success": False,
+                "error": "Checkout URL not available. Check server logs.",
+                "error_code": "STRIPE_CHECKOUT_UNKNOWN",
+            }
+        ),
+        503,
+    )
+
+
 def _book_list_base_price_for_purchase_type(book: Any, purchase_type: str) -> float:
     """List/base price for the format (matches BookSale logic in purchase_book)."""
     pt = (purchase_type or "digital").lower()

@@ -3813,8 +3813,10 @@ def purchase_book(book_id):
         
         # Create Stripe Checkout Session and return redirect URL
         stripe_checkout_url = None
+        stripe_session_error = None
         try:
             import stripe
+
             stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
@@ -3847,7 +3849,7 @@ def purchase_book(book_id):
                 checkout_session = stripe.checkout.Session.create(**checkout_kw)
                 stripe_checkout_url = checkout_session.url
         except Exception as stripe_err:
-            logger.warning(f"Could not create Stripe Checkout Session: {stripe_err}")
+            stripe_session_error = stripe_err
         
         response_data = {
             'success': True,
@@ -3860,10 +3862,8 @@ def purchase_book(book_id):
         if stripe_checkout_url:
             response_data['stripe_checkout_url'] = stripe_checkout_url
         else:
-            return jsonify({
-                'success': False,
-                'error': 'Payment processing is not configured. Please set STRIPE_SECRET_KEY and try again.'
-            }), 503
+            from glconnect.stripe_utils import purchase_checkout_unavailable_response
+            return purchase_checkout_unavailable_response(current_app, stripe_session_error)
         logger.info(f"✅ Returning success response: {response_data}")
         return jsonify(response_data)
         
@@ -4126,6 +4126,7 @@ def purchase_book(book_id):
                 
                 # Create Stripe Checkout for fallback path
                 stripe_checkout_url = None
+                stripe_fb_error = None
                 try:
                     import stripe
                     stripe_api_key = current_app.config.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_API_KEY')
@@ -4152,7 +4153,8 @@ def purchase_book(book_id):
                         checkout_session = stripe.checkout.Session.create(**checkout_kw_fb)
                         stripe_checkout_url = checkout_session.url
                 except Exception as e:
-                    logger.warning(f"Fallback Stripe checkout failed: {e}")
+                    stripe_fb_error = e
+                    logger.warning("Fallback Stripe checkout failed: %s", e, exc_info=True)
                 
                 response_data = {
                     'success': True,
@@ -4165,7 +4167,8 @@ def purchase_book(book_id):
                 if stripe_checkout_url:
                     response_data['stripe_checkout_url'] = stripe_checkout_url
                     return jsonify(response_data)
-                return jsonify({'success': False, 'error': 'Payment processing is not configured.'}), 503
+                from glconnect.stripe_utils import purchase_checkout_unavailable_response
+                return purchase_checkout_unavailable_response(current_app, stripe_fb_error)
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
                 return jsonify({
@@ -9349,6 +9352,39 @@ def admin_tv_sync_playlist():
     except Exception as e:
         logger.exception("Admin TV sync-playlist failed: %s", e)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@book_bp.route('/admin/stripe-diagnostics', methods=['GET'])
+@login_required
+def admin_stripe_diagnostics():
+    """
+    Admin-only: whether this running app process sees a valid Stripe *secret* key (sk_...).
+    No key material is returned — only categories. Use to debug 'Payment processing is not configured'.
+    """
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Admin privileges required'}), 403
+    from glconnect.stripe_utils import stripe_secret_configured
+
+    def classify(v):
+        v = (v or "").strip()
+        if not v:
+            return {'present': False, 'kind': 'empty'}
+        if v.startswith('sk_live'):
+            return {'present': True, 'kind': 'secret_live'}
+        if v.startswith('sk_test'):
+            return {'present': True, 'kind': 'secret_test'}
+        if v.startswith('pk_'):
+            return {'present': True, 'kind': 'publishable_only_server_needs_sk'}
+        return {'present': True, 'kind': 'unrecognized'}
+
+    cfg = current_app.config
+    return jsonify({
+        'STRIPE_SECRET_KEY': classify(cfg.get('STRIPE_SECRET_KEY')),
+        'STRIPE_API_KEY': classify(cfg.get('STRIPE_API_KEY')),
+        'ready_for_checkout': stripe_secret_configured(current_app),
+        'hint': 'If ready_for_checkout is false, this process has no sk_ key. Set env on the server and restart. '
+                'If checkout still fails with STRIPE_CHECKOUT_FAILED, read error details in the API and full trace in server logs.',
+    })
 
 
 @book_bp.route('/podcasts/<int:podcast_id>/play')
