@@ -67,6 +67,7 @@ from glconnect.stripe_utils import (
     author_needs_stripe_payout_setup,
 )
 from glconnect.book_utils import (
+    audiobook_ready_for_marketplace_publish,
     delete_book_chapter_version_graph_for_project,
     is_book_published,
 )
@@ -1263,10 +1264,16 @@ def edit_book(book_id, user_profile, profile_type):
                 
                 # Handle audiobook publishing
                 if publish_audiobook:
-                    if not book.has_audiobook:
+                    ok_audio, audio_err = audiobook_ready_for_marketplace_publish(book)
+                    if not ok_audio:
+                        return jsonify({'success': False, 'error': audio_err}), 400
+                    if not book.audiobook_published and data.get('confirm_audiobook_publish') != 'on':
                         return jsonify({
-                            'success': False, 
-                            'error': 'Audiobook must be generated before it can be published.'
+                            'success': False,
+                            'error': (
+                                'Confirm that you have previewed the audiobook and approve '
+                                'publishing it to the marketplace.'
+                            ),
                         }), 400
                     audiobook_price_value = book.audiobook_price if book.audiobook_price else 0
                     if not audiobook_price_value or audiobook_price_value < 0:
@@ -6875,8 +6882,23 @@ def earnings_dashboard():
             if not sales_by_book[book_id]['book']:
                 sales_by_book[book_id]['book'] = sale.book_project
         earnings_data['author_sales_by_book'] = dict(sales_by_book)
+
+    bp_for_stripe = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    is_seller_profile = profile_type in ('writer', 'book_platform')
+    aid_earn = get_profile_id(user_profile, profile_type) if user_profile else None
+    has_author_books = bool(aid_earn and BookProject.query.filter_by(author_id=aid_earn).first())
+    author_payout_setup_needed = bool(
+        bp_for_stripe
+        and author_needs_stripe_payout_setup(bp_for_stripe)
+        and (is_seller_profile or has_author_books)
+    )
     
-    return render_template('book_platform/earnings.html', earnings_data=earnings_data, payout_minimum=PAYOUT_MINIMUM_AMOUNT)
+    return render_template(
+        'book_platform/earnings.html',
+        earnings_data=earnings_data,
+        payout_minimum=PAYOUT_MINIMUM_AMOUNT,
+        author_payout_setup_needed=author_payout_setup_needed,
+    )
 
 
 # Minimum amount to request payout (USD) - investors must reach this balance to cash out to bank

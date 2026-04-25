@@ -1,8 +1,11 @@
+import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 
 import stripe
 from flask import current_app
+
+logger = logging.getLogger(__name__)
 
 
 def init_stripe():
@@ -80,19 +83,25 @@ def marketplace_book_payment_intent_data(
     stripe_connect_account_id: Optional[str],
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """
-    Build Stripe Checkout ``payment_intent_data`` for a marketplace book purchase
-    (destination charge + application fee = platform share on list price only).
+    Build Stripe Checkout ``payment_intent_data`` for a marketplace book purchase.
+
+    When the author has a Stripe Connect account id, uses a destination charge with
+    ``application_fee_amount`` (platform share) and ``transfer_data.destination``.
+
+    When there is no linked account, returns (None, None) so Checkout uses a normal
+    charge to the platform; the buyer can complete payment and in-app sale records
+    still attribute revenue to the author for later payout / Connect linking.
 
     Returns (payment_intent_data or None, user-facing error or None).
     """
     acct = (stripe_connect_account_id or "").strip()
     if not acct:
-        if stripe_connect_allow_platform_only():
-            return None, None
-        return None, (
-            "This title is not available for purchase yet because the author has not "
-            "completed seller payout setup. Please try again later."
+        logger.info(
+            "Marketplace book checkout without Connect account (book_id=%s); "
+            "using platform charge (no destination transfer).",
+            getattr(book, "id", "?"),
         )
+        return None, None
 
     base = _book_list_base_price_for_purchase_type(book, purchase_type)
     platform_fee_usd = base * 0.3

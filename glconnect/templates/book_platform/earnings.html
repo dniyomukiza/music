@@ -11,16 +11,31 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <div class="navbar-nav ms-auto">
+            <div class="navbar-nav ms-auto flex-row flex-wrap align-items-center gap-1">
                 <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
+                {% if author_payout_setup_needed|default(false) %}
+                <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">
+                    <i class="fas fa-wallet"></i> Payout account
+                </a>
+                {% endif %}
             </div>
         </div>
     </nav>
 
     <div class="container my-5">
         <h1 class="visually-hidden">Earnings</h1>
+
+        {% if author_payout_setup_needed|default(false) %}
+        <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" role="status">
+            <div>
+                <strong><i class="fas fa-wallet me-1"></i>Link your payout account</strong>
+                <p class="mb-0 small">Connect Stripe so book sales can be paid to your bank (destination charges). You can complete this anytime—it’s also offered when you publish.</p>
+            </div>
+            <a class="btn btn-dark btn-sm text-nowrap" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Set up Stripe payouts</a>
+        </div>
+        {% endif %}
 
         <!-- Reviewer Earnings -->
         {% if earnings_data.reviewer_earnings %}

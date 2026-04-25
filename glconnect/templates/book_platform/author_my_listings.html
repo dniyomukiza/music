@@ -14,10 +14,11 @@
             <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
                 <i class="fas fa-pen-fancy"></i> GLC
             </a>
-            <div class="navbar-nav ms-auto">
+            <div class="navbar-nav ms-auto flex-row flex-wrap align-items-center gap-1">
                 <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
                 <a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book"></i> My Books</a>
                 <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}"><i class="fas fa-dollar-sign"></i> Earnings</a>
+                <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}"><i class="fas fa-wallet"></i> Payout account</a>
             </div>
         </div>
     </nav>

@@ -72,6 +72,7 @@
                             <input type="hidden" name="cover_image" value="{{ book.cover_image or '' }}">
                             <input type="hidden" name="publish_digital_book" id="publish_digital_book" value="on">
                             <input type="hidden" name="publish_audiobook" id="publish_audiobook" value="{% if book.audiobook_published %}on{% endif %}">
+                            <input type="hidden" name="confirm_audiobook_publish" id="confirm_audiobook_publish_field" value="">
                             <div class="alert alert-light border mb-3">
                                 <i class="fas fa-check-circle text-success me-2"></i>
                                 Ebook listing is already published. This page is only for audiobook generation and optional audiobook publishing.
@@ -312,6 +313,14 @@
                                     </label>
                                 </div>
                                 <small class="text-muted d-block">Audiobook will be available for purchase. Make sure you've set an audiobook price first.</small>
+                                {% if not book.audiobook_published %}
+                                <div class="form-check mb-2 ms-1">
+                                    <input class="form-check-input" type="checkbox" name="confirm_audiobook_publish" id="confirm_audiobook_publish_manage" value="on">
+                                    <label class="form-check-label small" for="confirm_audiobook_publish_manage">
+                                        I have previewed the audiobook and approve publishing it to the marketplace.
+                                    </label>
+                                </div>
+                                {% endif %}
                                 {% endif %}
                             </div>
                             {% else %}
@@ -636,8 +645,17 @@
                     <div class="card-body">
                         <h6 class="mb-2"><i class="fas fa-rocket me-2 text-primary"></i>Step 2 actions</h6>
                         <p class="small text-muted mb-3">Publish audiobook now, or skip and do it later from dashboard.</p>
+                        <p id="listingAudiobookPublishHint" class="small text-muted mb-3" role="status" aria-live="polite"></p>
+                        {% if not book.audiobook_published %}
+                        <div id="listingAudiobookConfirmWrap" class="form-check mb-3{% if not book.has_audiobook %} d-none{% endif %}">
+                            <input class="form-check-input" type="checkbox" id="confirm_audiobook_publish_cb" value="on">
+                            <label class="form-check-label small" for="confirm_audiobook_publish_cb">
+                                I have previewed the audiobook above and approve publishing it to the marketplace.
+                            </label>
+                        </div>
+                        {% endif %}
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnQuickPublishAudiobook" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
                                 <i class="fas fa-layer-group me-1"></i>Publish audiobook now
                             </button>
                             <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
@@ -662,6 +680,20 @@
         // Form submission
         document.getElementById('editBookForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            const pubAudioEl = document.getElementById('publish_audiobook');
+            let pubAudioOn = false;
+            if (pubAudioEl) {
+                pubAudioOn = pubAudioEl.type === 'checkbox' ? pubAudioEl.checked : (pubAudioEl.value === 'on');
+            }
+            const confirmManage = document.getElementById('confirm_audiobook_publish_manage');
+            if (pubAudioOn && confirmManage && !confirmManage.checked) {
+                showNotification(
+                    'Confirm that you previewed the audiobook and approve publishing it to the marketplace.',
+                    'error'
+                );
+                return;
+            }
             
             const formData = new FormData(this);
             
@@ -723,6 +755,45 @@
             }
         });
         
+        function updateListingStep2PublishUx(result) {
+            const hint = document.getElementById('listingAudiobookPublishHint');
+            const listingConfirmWrap = document.getElementById('listingAudiobookConfirmWrap');
+            const quickPubBtn = document.getElementById('btnQuickPublishAudiobook');
+            const confirmCb = document.getElementById('confirm_audiobook_publish_cb');
+
+            if (result.has_audiobook) {
+                if (listingConfirmWrap) listingConfirmWrap.classList.remove('d-none');
+                if (quickPubBtn) quickPubBtn.disabled = false;
+                if (hint) {
+                    hint.className = 'small text-muted mb-3';
+                    hint.textContent = '';
+                }
+                return;
+            }
+
+            if (quickPubBtn) quickPubBtn.disabled = true;
+            if (listingConfirmWrap) listingConfirmWrap.classList.add('d-none');
+            if (confirmCb) confirmCb.checked = false;
+
+            if (!hint) return;
+
+            if (result.status === 'failed') {
+                hint.className = 'small text-danger mb-3';
+                hint.innerHTML =
+                    '<strong>Publishing is blocked.</strong> Audiobook generation failed. ' +
+                    'Read the red <strong>Audiobook Generation Failed</strong> message above for details, then try again ' +
+                    '(e.g. another voice or reload). <strong>Publish</strong> only works after a successful generation.';
+            } else if (result.status === 'processing' || result.status === 'pending') {
+                hint.className = 'small text-warning mb-3';
+                hint.textContent =
+                    'Publishing is unavailable until generation finishes successfully. You can skip audiobook for now and return from My books later.';
+            } else {
+                hint.className = 'small text-muted mb-3';
+                hint.textContent =
+                    'Publish unlocks here after the audiobook is generated successfully. If something goes wrong, the Audiobook section above will show what to do next.';
+            }
+        }
+
         // Check audiobook generation status
         async function checkAudiobookStatus() {
             try {
@@ -747,6 +818,10 @@
                         summaryText.textContent = 'Working…';
                     }
                 }
+
+                {% if listing_flow and book.digital_file_path %}
+                updateListingStep2PublishUx(result);
+                {% endif %}
                 
                 if (!statusDisplay || !statusContent) return;
                 
@@ -815,6 +890,8 @@
         function quickPublishDigitalOnly() {
             const digital = document.getElementById('publish_digital_book');
             const audio = document.getElementById('publish_audiobook');
+            const hiddenConfirm = document.getElementById('confirm_audiobook_publish_field');
+            if (hiddenConfirm) hiddenConfirm.value = '';
             if (digital) {
                 if (digital.type === 'checkbox') digital.checked = true;
                 digital.value = 'on';
@@ -828,6 +905,18 @@
         }
 
         function quickPublishBoth() {
+            const cb = document.getElementById('confirm_audiobook_publish_cb');
+            if (cb && !cb.checked) {
+                showNotification(
+                    'Confirm that you previewed the audiobook and approve publishing it to the marketplace.',
+                    'error'
+                );
+                return;
+            }
+            const hiddenConfirm = document.getElementById('confirm_audiobook_publish_field');
+            if (hiddenConfirm) {
+                hiddenConfirm.value = (cb && cb.checked) ? 'on' : '';
+            }
             const digital = document.getElementById('publish_digital_book');
             const audio = document.getElementById('publish_audiobook');
             if (digital) {

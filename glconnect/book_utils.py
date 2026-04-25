@@ -3,6 +3,47 @@ Shared utilities for book platform - avoids circular imports.
 """
 
 
+def audiobook_ready_for_marketplace_publish(book):
+    """
+    Server-side guard: only allow audiobook publishing when generation finished
+    and at least one audio asset path exists (single file or per-chapter files).
+    Returns (ok: bool, error_message or None).
+    """
+    if not book or not getattr(book, 'has_audiobook', False):
+        return False, 'Audiobook must be generated before it can be published.'
+
+    from glconnect import db
+    from glconnect.book_platform_models import AudioGenerationTask, AudiobookChapter
+
+    task = (
+        AudioGenerationTask.query.filter_by(book_project_id=book.id)
+        .order_by(AudioGenerationTask.created_at.desc())
+        .first()
+    )
+    if task and task.status in ('pending', 'processing'):
+        return (
+            False,
+            'Audiobook generation is still in progress. Wait until it completes successfully before publishing.',
+        )
+
+    path = (getattr(book, 'audiobook_file_path', None) or '').strip()
+    if path:
+        return True, None
+
+    n = (
+        db.session.query(AudiobookChapter.id)
+        .filter(AudiobookChapter.book_project_id == book.id)
+        .count()
+    )
+    if n:
+        return True, None
+
+    return (
+        False,
+        'Audiobook audio files are missing. Regenerate the audiobook before publishing.',
+    )
+
+
 def is_book_published(book):
     """
     Unified check: book is published if:
