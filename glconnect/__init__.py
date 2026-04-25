@@ -31,6 +31,8 @@ else:
 
 # Load configuration: env vars first, then fallback to glconfig.json if present
 def _load_config():
+    from .stripe_utils import normalize_stripe_secret_candidate
+
     cfg = {
         "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
         "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
@@ -38,7 +40,10 @@ def _load_config():
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
         "DB_URL": os.getenv("DB_URL"),
         "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
-        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV")
+        "RECAPTCHAPRIV": os.getenv("RECAPTCHAPRIV"),
+        "STRIPE_SECRET_KEY": (os.getenv("STRIPE_SECRET_KEY") or "").strip() or None,
+        "STRIPE_API_KEY": (os.getenv("STRIPE_API_KEY") or "").strip() or None,
+        "STRIPE_WEBHOOK_SECRET": (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
     }
     # Fallback: load from glconfig.json if env vars are empty (e.g. /etc/glconfig.json in Docker)
     _gl_paths = ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]
@@ -63,6 +68,23 @@ def _load_config():
                     cfg["RECAPTCHAPUB"] = file_cfg["RECAPTCHAPUB"]
                 if not cfg.get("RECAPTCHAPRIV") and file_cfg.get("RECAPTCHAPRIV"):
                     cfg["RECAPTCHAPRIV"] = file_cfg["RECAPTCHAPRIV"]
+                # Stripe: prefer env; if unset, use glconfig (e.g. /etc/glconfig.json on the server)
+                if not cfg.get("STRIPE_SECRET_KEY") and file_cfg.get("STRIPE_SECRET_KEY"):
+                    sk = normalize_stripe_secret_candidate(str(file_cfg["STRIPE_SECRET_KEY"]))
+                    if sk.startswith("sk_"):
+                        cfg["STRIPE_SECRET_KEY"] = sk
+                if not cfg.get("STRIPE_API_KEY") and file_cfg.get("STRIPE_API_KEY"):
+                    s2 = normalize_stripe_secret_candidate(str(file_cfg["STRIPE_API_KEY"]))
+                    if s2:
+                        cfg["STRIPE_API_KEY"] = s2
+                if not cfg.get("STRIPE_SECRET_KEY") and file_cfg.get("STRIPE_KEY"):
+                    s3 = normalize_stripe_secret_candidate(str(file_cfg["STRIPE_KEY"]))
+                    if s3.startswith("sk_"):
+                        cfg["STRIPE_SECRET_KEY"] = s3
+                if not cfg.get("STRIPE_WEBHOOK_SECRET") and file_cfg.get("STRIPE_WEBHOOK_SECRET"):
+                    wh = (str(file_cfg["STRIPE_WEBHOOK_SECRET"]) or "").strip()
+                    if wh:
+                        cfg["STRIPE_WEBHOOK_SECRET"] = wh
                 break
             except Exception:
                 pass
@@ -87,6 +109,12 @@ if config.get("DB_URL") and not os.getenv("DB_URL"):
     os.environ["DB_URL"] = config["DB_URL"]
 if config.get("DB_URL") and not os.getenv("DATABASE_URL"):
     os.environ["DATABASE_URL"] = config["DB_URL"]
+if config.get("STRIPE_SECRET_KEY") and not os.getenv("STRIPE_SECRET_KEY"):
+    os.environ["STRIPE_SECRET_KEY"] = config["STRIPE_SECRET_KEY"]
+if config.get("STRIPE_API_KEY") and not os.getenv("STRIPE_API_KEY"):
+    os.environ["STRIPE_API_KEY"] = config["STRIPE_API_KEY"]
+if config.get("STRIPE_WEBHOOK_SECRET") and not (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip():
+    os.environ["STRIPE_WEBHOOK_SECRET"] = config["STRIPE_WEBHOOK_SECRET"]
 
 google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")

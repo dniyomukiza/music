@@ -56,6 +56,27 @@ def author_needs_stripe_payout_setup(bp_user) -> bool:
     return not str(acct).strip()
 
 
+def normalize_stripe_secret_candidate(val: Optional[str]) -> str:
+    """Strip whitespace, UTF-8 BOM, and a single layer of surrounding quotes (common in dashboards)."""
+    if not val or not isinstance(val, str):
+        return ""
+    s = val.strip()
+    s = s.lstrip("\ufeff")
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
+        s = s[1:-1].strip()
+    return s
+
+
+# Config keys (from create_app) then extra env-only aliases some hosts / docs use.
+_STRIPE_CONFIG_KEYS = ("STRIPE_SECRET_KEY", "STRIPE_API_KEY")
+_STRIPE_ENV_KEYS = (
+    "STRIPE_SECRET_KEY",
+    "STRIPE_API_KEY",
+    "STRIPE_KEY",
+    "STRIPE_PRIVATE_KEY",
+)
+
+
 def get_stripe_server_secret_key(app) -> Optional[str]:
     """
     Return the first valid Stripe **Secret** key (sk_...) for server API calls.
@@ -64,16 +85,12 @@ def get_stripe_server_secret_key(app) -> Optional[str]:
     Never returns a publishable (pk_...) key.
     """
     if app is not None and hasattr(app, "config"):
-        for k in (
-            (app.config.get("STRIPE_SECRET_KEY") or "").strip(),
-            (app.config.get("STRIPE_API_KEY") or "").strip(),
-        ):
+        for name in _STRIPE_CONFIG_KEYS:
+            k = normalize_stripe_secret_candidate(app.config.get(name))
             if k.startswith("sk_"):
                 return k
-    for k in (
-        (os.getenv("STRIPE_SECRET_KEY") or "").strip(),
-        (os.getenv("STRIPE_API_KEY") or "").strip(),
-    ):
+    for name in _STRIPE_ENV_KEYS:
+        k = normalize_stripe_secret_candidate(os.getenv(name))
         if k.startswith("sk_"):
             return k
     return None
@@ -85,11 +102,9 @@ def stripe_secret_configured(app) -> bool:
 
 
 def process_env_has_stripe_secret() -> bool:
-    """True if STRIPE_SECRET_KEY or STRIPE_API_KEY in os.environ is an sk_... (for diagnostics)."""
-    for k in (
-        (os.getenv("STRIPE_SECRET_KEY") or "").strip(),
-        (os.getenv("STRIPE_API_KEY") or "").strip(),
-    ):
+    """True if any known Stripe env var in os.environ normalizes to sk_... (for diagnostics)."""
+    for name in _STRIPE_ENV_KEYS:
+        k = normalize_stripe_secret_candidate(os.getenv(name))
         if k.startswith("sk_"):
             return True
     return False
@@ -138,8 +153,10 @@ def purchase_checkout_unavailable_response(app, exc: Optional[BaseException] = N
                     "success": False,
                     "error": "No valid Stripe secret key (sk_...) in server configuration.",
                     "error_code": "STRIPE_KEY_MISSING",
-                    "hint": "Set STRIPE_SECRET_KEY in the environment the app process actually loads, then restart. "
-                    "If you use Docker, set env in compose or the host; .env on your laptop is not used by the server unless mounted.",
+                    "hint": "Set a Stripe *secret* key (starts with sk_) in the server environment: "
+                    "STRIPE_SECRET_KEY, STRIPE_API_KEY, STRIPE_KEY, or STRIPE_PRIVATE_KEY — then restart the app. "
+                    "Use Dashboard → Developers → API keys → Secret key (not the publishable pk_). "
+                    "If you use Docker, set env in compose or the host; a local .env is not used unless mounted.",
                 }
             ),
             503,

@@ -9364,10 +9364,14 @@ def admin_stripe_diagnostics():
     """
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin privileges required'}), 403
-    from glconnect.stripe_utils import process_env_has_stripe_secret, stripe_secret_configured
+    from glconnect.stripe_utils import (
+        normalize_stripe_secret_candidate,
+        process_env_has_stripe_secret,
+        stripe_secret_configured,
+    )
 
     def classify(v):
-        v = (v or "").strip()
+        v = normalize_stripe_secret_candidate(v)
         if not v:
             return {'present': False, 'kind': 'empty'}
         if v.startswith('sk_live'):
@@ -9385,14 +9389,21 @@ def admin_stripe_diagnostics():
         'secret_live',
         'secret_test',
     )
+    # Env-only aliases (not duplicated into app.config)
+    env_extra = {
+        'STRIPE_KEY': classify(os.getenv('STRIPE_KEY')),
+        'STRIPE_PRIVATE_KEY': classify(os.getenv('STRIPE_PRIVATE_KEY')),
+    }
     return jsonify({
         'STRIPE_SECRET_KEY': sk_meta,
         'STRIPE_API_KEY': api_meta,
+        'env_keys_extra': env_extra,
         'app_config_has_secret': app_config_has_secret,
         'process_env_has_sk': process_env_has_stripe_secret(),
         'ready_for_checkout': stripe_secret_configured(current_app),
-        'hint': 'If app_config_has_secret is false but process_env_has_sk is true, keys exist only in os.environ (e.g. Docker) — checkout should still work with the updated code. If both false, set STRIPE_SECRET_KEY on the host and restart. '
-                'For production, add the secret in your hosting dashboard, not only in a local .env file.',
+        'hint': 'If app_config_has_secret is false but process_env_has_sk is true, keys may exist only in os.environ. '
+                'If ready_for_checkout is false, set a *secret* key (sk_...) in the production host environment '
+                '(e.g. STRIPE_SECRET_KEY) and restart — a local .env is not used by glc.cool unless the server loads it.',
     })
 
 
