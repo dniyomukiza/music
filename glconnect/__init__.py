@@ -45,8 +45,13 @@ def _load_config():
         "STRIPE_API_KEY": (os.getenv("STRIPE_API_KEY") or "").strip() or None,
         "STRIPE_WEBHOOK_SECRET": (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
     }
-    # Fallback: load from glconfig.json if env vars are empty (e.g. /etc/glconfig.json in Docker)
-    _gl_paths = ["/etc/glconfig.json", "glconfig.json", os.path.join(os.path.dirname(__file__), "..", "glconfig.json")]
+    # Fallback: load from glconfig if env vars are empty (e.g. /etc/glconfig.json or /etc/glconfig on Linux)
+    _gl_paths = [
+        "/etc/glconfig.json",
+        "/etc/glconfig",
+        "glconfig.json",
+        os.path.join(os.path.dirname(__file__), "..", "glconfig.json"),
+    ]
     for path in _gl_paths:
         if os.path.exists(path):
             try:

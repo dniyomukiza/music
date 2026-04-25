@@ -378,6 +378,36 @@ def cleanup_old_audio_files():
     except Exception as e:
         print(f"Error during audio cleanup: {e}")
 
+def _gemini_text_api_key() -> str:
+    """Same precedence as book covers: GEMINI_API_KEY first, then GOOGLE_API_KEY."""
+    return (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
+
+
+def _parse_gemini_yes_no(text: str) -> str:
+    """
+    Gemini often returns 'YES.' or 'YES — because...' instead of exactly 'YES'.
+    Returns 'YES', 'NO', or 'UNCLEAR'.
+    """
+    if text is None:
+        return "UNCLEAR"
+    raw = str(text).strip()
+    if not raw:
+        return "UNCLEAR"
+    first_line = raw.splitlines()[0].strip()
+    first_line = re.sub(r"^[\s\-*•\d\.\)]+", "", first_line)
+    u = first_line.upper()
+    if u.startswith("YES") or re.match(r"^Y[\s.,;:!?]*$", u):
+        return "YES"
+    if u.startswith("NO") or re.match(r"^N[\s.,;:!?]*$", u):
+        return "NO"
+    head = raw[:400].upper()
+    if re.search(r"\bYES\b", head) and not re.search(r"\bNO\b", head[:80]):
+        return "YES"
+    if re.search(r"\bNO\b", head) and not re.search(r"\bYES\b", head[:80]):
+        return "NO"
+    return "UNCLEAR"
+
+
 # --- Topic Relevance Filtering ---
 def is_relevant_topic(topic: str) -> tuple[bool, float, str]:
     """
@@ -742,12 +772,16 @@ class NewsTopicValidationAgent:
     """
     
     def __init__(self):
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self.api_key = _gemini_text_api_key()
         if not self.api_key:
-            raise ValueError("Google API key not found")
-        
+            raise ValueError(
+                "No Gemini key: set GEMINI_API_KEY (preferred) or GOOGLE_API_KEY in the environment or glconfig."
+            )
         from google import genai
         self.client = genai.Client(api_key=self.api_key)
+        # Default: widely available; override with NEWS_TOPIC_GEMINI_MODEL. Older “gemini-2.0-flash”
+        # can 404 for new API users (Google returns NOT_FOUND for deprecated model names).
+        self._validation_model = (os.getenv("NEWS_TOPIC_GEMINI_MODEL") or "gemini-2.5-flash").strip()
     
     def validate_topic(self, topic: str) -> tuple[bool, str]:
         """
@@ -762,7 +796,17 @@ class NewsTopicValidationAgent:
             
             if len(topic) < 3:
                 return False, "Topic must be at least 3 characters long"
-            
+
+            # Accept without calling Gemini when heuristics already match a news subject. The model
+            # often returns NO, UNCLEAR, or empty/blocked content for sensitive geopolitical/military
+            # topics (e.g. "war in Iran") even though they are valid news — same indicators as
+            # has_strong_news_indicators() used elsewhere in this module.
+            if has_strong_news_indicators(topic):
+                print(
+                    f"✅ NewsTopicValidationAgent: '{topic}' accepted via strong news indicators (skipped LLM)"
+                )
+                return True, ""
+
             # Call Gemini for validation
             prompt = f"""
             You are a news editor. Determine if this topic is suitable for news reporting.
@@ -796,26 +840,48 @@ class NewsTopicValidationAgent:
             """
             
             response = self.client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=self._validation_model,
                 contents=[prompt],
             )
+            if not getattr(response, "candidates", None):
+                return False, "No response from Gemini (check API key, quota, and NEWS_TOPIC_GEMINI_MODEL)."
+            cand = response.candidates[0]
+            fin = getattr(cand, "finish_reason", None)
+            if not getattr(cand, "content", None) or not getattr(cand.content, "parts", None):
+                return False, (
+                    f"Empty model response (finish_reason={fin}). If this persists, check API billing "
+                    f"or try NEWS_TOPIC_GEMINI_MODEL=gemini-2.5-flash."
+                )
+            raw_text = None
+            for p in cand.content.parts:
+                if hasattr(p, "text") and p.text:
+                    raw_text = p.text
+                    break
+            if not raw_text:
+                return False, f"No text in model response (finish_reason={fin})."
             
-            result = response.candidates[0].content.parts[0].text.strip().upper()
-            
+            result = _parse_gemini_yes_no(raw_text)
             if result == "YES":
                 print(f"✅ NewsTopicValidationAgent: '{topic}' is VALID")
                 return True, ""
-            elif result == "NO":
-                error_msg = f"This does not seem to be a valid topic"
-                print(f"❌ NewsTopicValidationAgent: '{topic}' is INVALID")
+            if result == "NO":
+                error_msg = "This does not seem to be a valid topic"
+                print(f"❌ NewsTopicValidationAgent: '{topic}' is INVALID (model said NO)")
                 return False, error_msg
-            else:
-                print(f"⚠️ NewsTopicValidationAgent: Unexpected response '{result}' for topic '{topic}'")
-                return False, f"Unable to validate topic. Please try a different topic."
+            snippet = (raw_text or "")[:120].replace("\n", " ")
+            print(
+                f"⚠️ NewsTopicValidationAgent: unclear YES/NO for '{topic}': {snippet!r}"
+            )
+            return False, (
+                "The model did not return a clear yes/no. Try a concrete news subject, "
+                "e.g. 'Middle East ceasefire' or 'US inflation data'."
+            )
                 
         except Exception as e:
+            import traceback
             print(f"🚨 NewsTopicValidationAgent error for '{topic}': {e}")
-            return False, f"Validation error. Please try again."
+            traceback.print_exc()
+            return False, f"Gemini API error: {e!s} (check keys, model name, and network)."
 
 # Global validation agent instance
 validation_agent = None

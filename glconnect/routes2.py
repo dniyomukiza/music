@@ -6,15 +6,17 @@ from glconnect.search import SongSearcher
 from google.cloud import texttospeech
 import google.generativeai as genai
 
-# Load Google API key from environment variables (lazy - no exit at import)
+# Load Gemini / Google API key (same precedence as book covers and news validation)
 def _get_google_api_key():
-    return os.getenv("GOOGLE_API_KEY")
+    return (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
 
 def _ensure_genai_configured():
     """Configure Gemini only when needed; raises if key missing."""
     key = _get_google_api_key()
     if not key:
-        raise ValueError("GOOGLE_API_KEY not set. Add it to .env or glconfig.json.")
+        raise ValueError(
+            "GEMINI_API_KEY or GOOGLE_API_KEY not set. Add one to .env or glconfig.json."
+        )
     genai.configure(api_key=key)
 
 bp2 = Blueprint('routes2', __name__)
