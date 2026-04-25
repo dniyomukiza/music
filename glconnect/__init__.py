@@ -132,19 +132,28 @@ def create_app(config_overrides=None):
         )
     
     _fe = os.getenv("FRONTEND_BASE_URL")
+    # Stripe: trim whitespace; only `sk_` keys work for server API (never use `pk_` publishable here).
+    _sk = (os.getenv("STRIPE_SECRET_KEY") or "").strip() or None
+    _sapi = (os.getenv("STRIPE_API_KEY") or "").strip() or None
+    if _sapi and _sapi.startswith("pk_"):
+        print(
+            "WARNING: STRIPE_API_KEY looks like a publishable key (pk_). "
+            "Remove it or set STRIPE_API_KEY to the same secret key (sk_...) as in the Stripe Dashboard; "
+            "publishable keys will make Checkout fail."
+        )
     app.config.update(
         JWT_SECRET_KEY="abarayon",
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
-        STRIPE_SECRET_KEY=os.getenv("STRIPE_SECRET_KEY"),
-        STRIPE_API_KEY=os.getenv("STRIPE_API_KEY"),
-        STRIPE_WEBHOOK_SECRET=os.getenv("STRIPE_WEBHOOK_SECRET"),
+        STRIPE_SECRET_KEY=_sk,
+        STRIPE_API_KEY=_sapi,
+        STRIPE_WEBHOOK_SECRET=(os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
         FRONTEND_BASE_URL=_fe.rstrip("/") if _fe else "",
     )
 
     # Startup visibility for Stripe payout/checkout setup (never log secret values).
-    _stripe_secret_present = bool((os.getenv("STRIPE_SECRET_KEY") or "").strip())
-    _stripe_api_present = bool((os.getenv("STRIPE_API_KEY") or "").strip())
+    _stripe_secret_present = bool(_sk)
+    _stripe_api_present = bool(_sapi and _sapi.startswith("sk_"))
     print(
         "DEBUG: Stripe key availability: "
         f"STRIPE_SECRET_KEY={'set' if _stripe_secret_present else 'NOT SET'}, "
