@@ -11,13 +11,22 @@ def init_stripe():
     This should be called lazily (on-demand) to avoid import-time issues.
     """
     secret_key = (
-        getattr(current_app, "config", {}).get("STRIPE_SECRET_KEY")
-        if hasattr(current_app, "config")
-        else None
-    ) or os.getenv("STRIPE_SECRET_KEY")
+        (
+            getattr(current_app, "config", {}).get("STRIPE_SECRET_KEY")
+            if hasattr(current_app, "config")
+            else None
+        )
+        or (
+            getattr(current_app, "config", {}).get("STRIPE_API_KEY")
+            if hasattr(current_app, "config")
+            else None
+        )
+        or os.getenv("STRIPE_SECRET_KEY")
+        or os.getenv("STRIPE_API_KEY")
+    )
 
     if not secret_key:
-        raise RuntimeError("STRIPE_SECRET_KEY is not configured")
+        raise RuntimeError("Stripe is not configured (set STRIPE_SECRET_KEY or STRIPE_API_KEY)")
 
     stripe.api_key = secret_key
     return stripe

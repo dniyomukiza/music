@@ -3064,142 +3064,33 @@ def admin_delete_test_books():
 @book_bp.route('/admin/reviewers')
 @login_required
 def admin_reviewers():
-    """Admin panel to manage reviewer accreditation"""
-    # Check if user is admin
+    """Deprecated: reviewer management removed from product."""
     if current_user.role != 'admin':
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('book_platform.marketplace'))
-    
-    status_filter = request.args.get('status', 'pending')
-    
-    query = AccreditedReviewer.query
-    
-    if status_filter == 'pending':
-        query = query.filter_by(accreditation_status=ReviewerStatus.PENDING)
-    elif status_filter == 'accredited':
-        query = query.filter_by(accreditation_status=ReviewerStatus.ACCREDITED)
-    elif status_filter == 'all':
-        pass  # Show all
-    
-    reviewers = query.order_by(AccreditedReviewer.created_at.desc()).all()
-    
-    return render_template('book_platform/admin_reviewers.html', 
-                         reviewers=reviewers,
-                         status_filter=status_filter)
+    flash('Reviewer management has been retired. Book reviewers are no longer part of the platform.', 'info')
+    return redirect(url_for('book_platform.admin_books'))
 
 @book_bp.route('/admin/reviewers/<int:reviewer_id>/approve', methods=['POST'])
 @login_required
 def approve_reviewer(reviewer_id):
-    """Approve a reviewer application"""
-    # Check if user is admin
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Access denied'}), 403
-    
-    try:
-        reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
-        
-        if reviewer.accreditation_status != ReviewerStatus.PENDING:
-            return jsonify({
-                'success': False, 
-                'message': f'Reviewer is already {reviewer.accreditation_status.value}'
-            }), 400
-        
-        # Approve the reviewer
-        reviewer.accreditation_status = ReviewerStatus.ACCREDITED
-        reviewer.accreditation_date = datetime.now(timezone.utc)
-        # Set expiration to 1 year from now
-        from datetime import timedelta
-        reviewer.accreditation_expires_at = datetime.now(timezone.utc) + timedelta(days=365)
-        
-        # Set initial level based on credentials (can be upgraded later)
-        if reviewer.credentials and len(reviewer.credentials) > 200:
-            reviewer.accreditation_level = ReviewerLevel.SILVER
-        else:
-            reviewer.accreditation_level = ReviewerLevel.BRONZE
-        
-        db.session.commit()
-        
-        logger.info(f"Reviewer {reviewer.reviewer_name} (ID: {reviewer_id}) approved by admin {current_user.username}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Reviewer "{reviewer.reviewer_name}" has been approved and accredited.'
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error approving reviewer {reviewer_id}: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'message': 'Error approving reviewer'}), 500
+    return jsonify({'success': False, 'message': 'Reviewer feature has been retired.'}), 410
 
 @book_bp.route('/admin/reviewers/<int:reviewer_id>/reject', methods=['POST'])
 @login_required
 def reject_reviewer(reviewer_id):
-    """Reject a reviewer application"""
-    # Check if user is admin
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Access denied'}), 403
-    
-    try:
-        reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
-        
-        if reviewer.accreditation_status != ReviewerStatus.PENDING:
-            return jsonify({
-                'success': False, 
-                'message': f'Reviewer is already {reviewer.accreditation_status.value}'
-            }), 400
-        
-        # Get rejection reason from request
-        rejection_reason = request.json.get('reason', '') if request.is_json else ''
-        
-        # Reject the reviewer (or revoke if already accredited)
-        reviewer.accreditation_status = ReviewerStatus.REVOKED
-        
-        db.session.commit()
-        
-        logger.info(f"Reviewer {reviewer.reviewer_name} (ID: {reviewer_id}) rejected by admin {current_user.username}. Reason: {rejection_reason}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Reviewer application for "{reviewer.reviewer_name}" has been rejected.'
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error rejecting reviewer {reviewer_id}: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'message': 'Error rejecting reviewer'}), 500
+    return jsonify({'success': False, 'message': 'Reviewer feature has been retired.'}), 410
 
 @book_bp.route('/admin/reviewers/<int:reviewer_id>/suspend', methods=['POST'])
 @login_required
 def suspend_reviewer(reviewer_id):
-    """Suspend an accredited reviewer"""
-    # Check if user is admin
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Access denied'}), 403
-    
-    try:
-        reviewer = AccreditedReviewer.query.get_or_404(reviewer_id)
-        
-        if reviewer.accreditation_status != ReviewerStatus.ACCREDITED:
-            return jsonify({
-                'success': False, 
-                'message': 'Can only suspend accredited reviewers'
-            }), 400
-        
-        reviewer.accreditation_status = ReviewerStatus.SUSPENDED
-        
-        db.session.commit()
-        
-        logger.info(f"Reviewer {reviewer.reviewer_name} (ID: {reviewer_id}) suspended by admin {current_user.username}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Reviewer "{reviewer.reviewer_name}" has been suspended.'
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error suspending reviewer {reviewer_id}: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'message': 'Error suspending reviewer'}), 500
+    return jsonify({'success': False, 'message': 'Reviewer feature has been retired.'}), 410
 
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required

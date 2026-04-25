@@ -142,6 +142,15 @@ def create_app(config_overrides=None):
         FRONTEND_BASE_URL=_fe.rstrip("/") if _fe else "",
     )
 
+    # Startup visibility for Stripe payout/checkout setup (never log secret values).
+    _stripe_secret_present = bool((os.getenv("STRIPE_SECRET_KEY") or "").strip())
+    _stripe_api_present = bool((os.getenv("STRIPE_API_KEY") or "").strip())
+    print(
+        "DEBUG: Stripe key availability: "
+        f"STRIPE_SECRET_KEY={'set' if _stripe_secret_present else 'NOT SET'}, "
+        f"STRIPE_API_KEY={'set' if _stripe_api_present else 'NOT SET'}"
+    )
+
     # Startup visibility for AI cover generation key setup.
     _cover_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
     if not _cover_key:

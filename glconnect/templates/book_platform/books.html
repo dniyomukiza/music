@@ -54,11 +54,6 @@
                             </a>
                         </li>
                         {% if current_user.role == 'admin' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.admin_reviewers') }}">
-                                <i class="fas fa-user-check"></i> Admin Reviewers
-                            </a>
-                        </li>
                         {% endif %}
                     </ul>
                 </nav>
