@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import stripe
 from flask import current_app
@@ -184,6 +184,30 @@ def purchase_checkout_unavailable_response(app, exc: Optional[BaseException] = N
         ),
         503,
     )
+
+
+# Presentment currencies Stripe documents for Amazon Pay (lowercase ISO codes).
+_AMAZON_PAY_CURRENCIES = frozenset(
+    ("aud", "gbp", "dkk", "eur", "hkd", "jpy", "nzd", "nok", "zar", "sek", "chf", "usd")
+)
+
+
+def checkout_payment_method_types_for_currency(currency: Optional[str]) -> List[str]:
+    """
+    Payment methods to pass to Checkout Session.create.
+
+    - ``card``: cards plus Apple Pay / Google Pay wallet buttons when the Dashboard,
+      domain registration, and customer device allow them (not separate API types).
+    - ``amazon_pay``: when the session currency is one Stripe supports for Amazon Pay.
+    - ``cashapp``: USD only (Cash App Pay presentment currency).
+    """
+    cur = (currency or "usd").strip().lower()
+    types: List[str] = ["card"]
+    if cur in _AMAZON_PAY_CURRENCIES:
+        types.append("amazon_pay")
+    if cur == "usd":
+        types.append("cashapp")
+    return types
 
 
 def _book_list_base_price_for_purchase_type(book: Any, purchase_type: str) -> float:

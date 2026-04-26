@@ -64,6 +64,7 @@ from glconnect.stripe_utils import (
     init_stripe,
     get_stripe_server_secret_key,
     get_webhook_secret,
+    checkout_payment_method_types_for_currency,
     marketplace_book_payment_intent_data,
     author_needs_stripe_payout_setup,
 )
@@ -3823,7 +3824,9 @@ def purchase_book(book_id):
                 stripe.api_key = stripe_api_key
                 domain_url = current_app.config.get('FRONTEND_BASE_URL') or request.url_root.rstrip('/')
                 checkout_kw = dict(
-                    payment_method_types=['card'],
+                    payment_method_types=checkout_payment_method_types_for_currency(
+                        book.currency or 'USD'
+                    ),
                     line_items=[{
                         'price_data': {
                             'currency': (book.currency or 'USD').lower(),
@@ -4134,7 +4137,9 @@ def purchase_book(book_id):
                     if stripe_api_key:
                         stripe.api_key = stripe_api_key
                         checkout_kw_fb = dict(
-                            payment_method_types=['card'],
+                            payment_method_types=checkout_payment_method_types_for_currency(
+                                book.currency or 'USD'
+                            ),
                             line_items=[{
                                 'price_data': {
                                     'currency': (book.currency or 'USD').lower(),
@@ -4581,6 +4586,10 @@ def stripe_connect_onboard():
             db.session.commit()
 
         base = (current_app.config.get('FRONTEND_BASE_URL') or request.url_root).rstrip('/')
+        # Stripe live mode requires HTTPS return/refresh URLs for Connect onboarding.
+        stripe_key = (get_stripe_server_secret_key(current_app) or "").strip()
+        if stripe_key.startswith("sk_live_") and base.startswith("http://"):
+            base = "https://" + base[len("http://") :]
         refresh_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return', refresh=1, next=next_path)}"
         return_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return', next=next_path)}"
         link = stripe.AccountLink.create(
@@ -6585,7 +6594,7 @@ def make_investment(campaign_id):
                 logger.info(f"Creating Stripe checkout session for investment {investment.id}, amount: ${amount}")
                 checkout_session = stripe.checkout.Session.create(
                     mode="payment",
-                    payment_method_types=["card"],
+                    payment_method_types=checkout_payment_method_types_for_currency("USD"),
                     line_items=[
                         {
                             "price_data": {
