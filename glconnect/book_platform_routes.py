@@ -2752,11 +2752,37 @@ def marketplace():
         # Authors can list finished digital/audio-ready titles without writing in Ink Studio (same flow as /upload-digital-book)
         can_list_book_on_marketplace = bool(has_writer_profile or has_book_platform_user)
 
+        # Fund-a-book strip: signed-in users only; authors never see their own campaign here.
+        active_investment_campaigns = []
+        if getattr(current_user, "is_authenticated", False):
+            _uid = current_user.user_id
+            try:
+                _camp_q = (
+                    InvestmentCampaign.query.options(
+                        joinedload(InvestmentCampaign.book_project).joinedload(BookProject.author),
+                    )
+                    .filter(InvestmentCampaign.status == CampaignStatus.ACTIVE)
+                    .order_by(InvestmentCampaign.current_funding.desc(), InvestmentCampaign.id.desc())
+                )
+                for _c in _camp_q.limit(80).all():
+                    _book = _c.book_project
+                    if not _book or is_book_published(_book):
+                        continue
+                    _auth = getattr(_book, "author", None)
+                    if _auth and getattr(_auth, "user_id", None) == _uid:
+                        continue
+                    active_investment_campaigns.append(_c)
+                    if len(active_investment_campaigns) >= 12:
+                        break
+            except Exception as _inv_err:
+                logger.warning("Marketplace: could not load investment campaigns: %s", _inv_err)
+
         return render_template(
             'book_platform/marketplace.html',
             books=books,
             has_writer_profile=has_writer_profile,
             can_list_book_on_marketplace=can_list_book_on_marketplace,
+            active_investment_campaigns=active_investment_campaigns,
             page=page,
             per_page=per_page,
             total_books=total_books,
@@ -2787,6 +2813,7 @@ def marketplace():
             books=[],
             has_writer_profile=False,
             can_list_book_on_marketplace=False,
+            active_investment_campaigns=[],
             page=1,
             per_page=20,
             total_books=0,
