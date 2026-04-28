@@ -33,8 +33,13 @@ def handle_connect():
     emit('connected', {'message': 'Connected to Ink Studio'})
 
 @socketio.on('disconnect')
-def handle_disconnect():
-    """Handle WebSocket disconnection"""
+def handle_disconnect(*args, **kwargs):
+    """Handle WebSocket disconnection.
+
+    python-socketio passes at least one argument (e.g. disconnect reason).
+    A zero-arg handler raises TypeError and can leave Werkzeug in a bad state
+    for the next HTTP request (write before start_response).
+    """
     if current_user.is_authenticated:
         print(f"User {current_user.username} disconnected")
         

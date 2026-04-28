@@ -268,12 +268,14 @@ def marketplace_book_payment_intent_data(
     """
     Build Stripe Checkout ``payment_intent_data`` for a marketplace book purchase.
 
-    When the author has a Stripe Connect account id, uses a destination charge with
-    ``application_fee_amount`` (platform share) and ``transfer_data.destination``.
+    When the author has a Stripe Connect account, uses a **direct charge** on that
+    account: ``application_fee_amount`` only (platform share). The caller must
+    create the Checkout Session with ``stripe_account=<author acct id>`` so the
+    charge settles on the connected account—receipts and Checkout show the
+    **author’s** Stripe business profile, not the platform’s.
 
     When there is no linked account, returns (None, None) so Checkout uses a normal
-    charge to the platform; the buyer can complete payment and in-app sale records
-    still attribute revenue to the author for later payout / Connect linking.
+    charge to the platform.
 
     Returns (payment_intent_data or None, user-facing error or None).
     """
@@ -297,9 +299,10 @@ def marketplace_book_payment_intent_data(
     if app_fee_cents >= total_cents:
         app_fee_cents = max(0, total_cents - 1)
 
+    # Direct charge on connected account: no transfer_data (caller passes stripe_account
+    # to Session.create). Platform fee via application_fee_amount only.
     data: Dict[str, Any] = {
         "application_fee_amount": app_fee_cents,
-        "transfer_data": {"destination": acct},
         "metadata": {
             "book_id": str(book.id),
             "purchase_type": (purchase_type or "digital").lower(),

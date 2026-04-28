@@ -33,6 +33,14 @@ else:
 def _load_config():
     from .stripe_utils import normalize_stripe_secret_candidate
 
+    def _gl_first_nonempty(mapping: dict, *key_names: str):
+        """First non-empty string value for keys in order (same pattern as live Stripe glconfig reads)."""
+        for name in key_names:
+            v = mapping.get(name)
+            if v is not None and str(v).strip():
+                return str(v).strip()
+        return None
+
     stripe_test_keys_from_glconfig = False
     cfg = {
         "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
@@ -93,40 +101,57 @@ def _load_config():
                         cfg["STRIPE_WEBHOOK_SECRET"] = wh
 
                 # Optional: Stripe *test* keys from glconfig only — override live/env secrets for the whole app.
-                # If STRIPE_TEST_SECRET is set (non-empty), it MUST be valid (sk_...); we never fall back to live keys.
-                # Keys: STRIPE_TEST_SECRET (sk_test_...), STRIPE_TEST_API (optional sk_test_...; not pk_).
-                # Optional: STRIPE_TEST_WEBHOOK_SECRET (whsec_... from test-mode webhook endpoint).
-                _tsec = file_cfg.get("STRIPE_TEST_SECRET")
-                if _tsec is not None and str(_tsec).strip():
-                    tsk = normalize_stripe_secret_candidate(str(_tsec))
+                # Same alias pattern as live keys: STRIPE_SECRET_KEY / STRIPE_KEY / STRIPE_PRIVATE_KEY maps to
+                # STRIPE_TEST_SECRET / STRIPE_TEST_KEY / STRIPE_TEST_PRIVATE_KEY; STRIPE_API_KEY → STRIPE_TEST_API
+                # or STRIPE_TEST_API_KEY. If any test secret is set (non-empty), it MUST normalize to sk_...
+                # Optional: STRIPE_TEST_WEBHOOK_SECRET or STRIPE_TEST_WEBHOOK (whsec_... from test-mode webhook).
+                _tsec_raw = _gl_first_nonempty(
+                    file_cfg,
+                    "STRIPE_TEST_SECRET",
+                    "STRIPE_TEST_KEY",
+                    "STRIPE_TEST_PRIVATE_KEY",
+                )
+                if _tsec_raw:
+                    tsk = normalize_stripe_secret_candidate(_tsec_raw)
                     if not tsk.startswith("sk_"):
                         raise RuntimeError(
-                            "STRIPE_TEST_SECRET in glconfig is set but is not a valid Stripe secret key (sk_...). "
-                            "Fix or remove STRIPE_TEST_SECRET — live credentials are not used as a fallback."
+                            "Stripe test secret in glconfig is set but is not a valid secret key (sk_...). "
+                            "Use STRIPE_TEST_SECRET, STRIPE_TEST_KEY, or STRIPE_TEST_PRIVATE_KEY with sk_test_... / sk_.... "
+                            "Live credentials are not used as a fallback."
                         )
                     cfg["STRIPE_SECRET_KEY"] = tsk
                     stripe_test_keys_from_glconfig = True
-                    _tapi = file_cfg.get("STRIPE_TEST_API")
-                    if _tapi is not None and str(_tapi).strip():
-                        ta = normalize_stripe_secret_candidate(str(_tapi))
+                    _tapi_raw = _gl_first_nonempty(
+                        file_cfg,
+                        "STRIPE_TEST_API",
+                        "STRIPE_TEST_API_KEY",
+                    )
+                    if _tapi_raw:
+                        ta = normalize_stripe_secret_candidate(_tapi_raw)
                         if not ta.startswith("sk_"):
                             raise RuntimeError(
-                                "STRIPE_TEST_API in glconfig must be a secret key (sk_...), not a publishable key. "
-                                "Fix or remove STRIPE_TEST_API — live credentials are not used as a fallback."
+                                "STRIPE_TEST_API / STRIPE_TEST_API_KEY in glconfig must be a secret key (sk_...), "
+                                "not a publishable key. Fix or remove — live credentials are not used as a fallback."
                             )
                         cfg["STRIPE_API_KEY"] = ta
                     else:
                         cfg["STRIPE_API_KEY"] = tsk
-                    _twh = file_cfg.get("STRIPE_TEST_WEBHOOK_SECRET")
-                    if _twh is not None and str(_twh).strip():
-                        tw = (str(_twh) or "").strip()
+                    _twh_raw = _gl_first_nonempty(
+                        file_cfg,
+                        "STRIPE_TEST_WEBHOOK_SECRET",
+                        "STRIPE_TEST_WEBHOOK",
+                    )
+                    if _twh_raw:
+                        tw = (str(_twh_raw) or "").strip()
                         if not tw.startswith("whsec_"):
                             raise RuntimeError(
-                                "STRIPE_TEST_WEBHOOK_SECRET in glconfig must start with whsec_. "
-                                "Fix or remove it."
+                                "Stripe test webhook secret in glconfig (STRIPE_TEST_WEBHOOK_SECRET "
+                                "or STRIPE_TEST_WEBHOOK) must start with whsec_. Fix or remove it."
                             )
                         cfg["STRIPE_WEBHOOK_SECRET"] = tw
                 break
+            except RuntimeError:
+                raise
             except Exception:
                 pass
     return cfg, stripe_test_keys_from_glconfig
@@ -163,8 +188,9 @@ if config.get("STRIPE_WEBHOOK_SECRET"):
 
 if STRIPE_TEST_KEYS_FROM_GLCONFIG:
     print(
-        "NOTICE: Stripe keys are overridden by STRIPE_TEST_SECRET in glconfig "
-        "(test mode). Remove it from /etc/glconfig.json to use live keys."
+        "NOTICE: Stripe keys are overridden by test credentials from glconfig "
+        "(STRIPE_TEST_SECRET / STRIPE_TEST_KEY / STRIPE_TEST_PRIVATE_KEY). "
+        "Remove them from /etc/glconfig.json to use live keys."
     )
 
 # Safe confirmation of which Stripe mode the process will use (never log full keys).

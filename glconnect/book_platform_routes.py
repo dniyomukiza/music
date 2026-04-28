@@ -3881,6 +3881,9 @@ def purchase_book(book_id):
                     checkout_kw['customer_email'] = _buyer_email
                 if payment_intent_data:
                     checkout_kw['payment_intent_data'] = payment_intent_data
+                    # Direct charge on author’s Connect account so receipts/checkout show seller, not platform.
+                    if author_connect_id:
+                        checkout_kw['stripe_account'] = author_connect_id
                 checkout_session = stripe.checkout.Session.create(**checkout_kw)
                 stripe_checkout_url = checkout_session.url
         except Exception as stripe_err:
@@ -4190,6 +4193,8 @@ def purchase_book(book_id):
                             checkout_kw_fb['customer_email'] = _buyer_email_fb
                         if _pi_fb:
                             checkout_kw_fb['payment_intent_data'] = _pi_fb
+                            if _cid_fb:
+                                checkout_kw_fb['stripe_account'] = _cid_fb
                         checkout_session = stripe.checkout.Session.create(**checkout_kw_fb)
                         stripe_checkout_url = checkout_session.url
                 except Exception as e:
