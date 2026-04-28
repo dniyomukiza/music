@@ -114,10 +114,17 @@ def _load_config():
                 if _tsec_raw:
                     tsk = normalize_stripe_secret_candidate(_tsec_raw)
                     if not tsk.startswith("sk_"):
+                        hint = ""
+                        if tsk.startswith("pk_"):
+                            hint = (
+                                " You pasted the Publishable key (pk_...). Copy the Secret key from "
+                                "Stripe Dashboard → Developers → API keys (starts with sk_test_...)."
+                            )
                         raise RuntimeError(
-                            "Stripe test secret in glconfig is set but is not a valid secret key (sk_...). "
-                            "Use STRIPE_TEST_SECRET, STRIPE_TEST_KEY, or STRIPE_TEST_PRIVATE_KEY with sk_test_... / sk_.... "
-                            "Live credentials are not used as a fallback."
+                            "Stripe test secret in glconfig is not a valid secret key (must start with sk_...)."
+                            + hint
+                            + " Use STRIPE_TEST_SECRET / STRIPE_TEST_KEY / STRIPE_TEST_PRIVATE_KEY."
+                            + " Live credentials are not used as a fallback."
                         )
                     cfg["STRIPE_SECRET_KEY"] = tsk
                     stripe_test_keys_from_glconfig = True
