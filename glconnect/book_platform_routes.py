@@ -65,6 +65,7 @@ from glconnect.stripe_utils import (
     get_stripe_server_secret_key,
     get_webhook_secret,
     checkout_payment_method_types_for_currency,
+    checkout_customer_email_for_user,
     marketplace_book_payment_intent_data,
     author_needs_stripe_payout_setup,
 )
@@ -3848,6 +3849,9 @@ def purchase_book(book_id):
                         'purchase_type': purchase_type,
                     },
                 )
+                _buyer_email = checkout_customer_email_for_user(current_user)
+                if _buyer_email:
+                    checkout_kw['customer_email'] = _buyer_email
                 if payment_intent_data:
                     checkout_kw['payment_intent_data'] = payment_intent_data
                 checkout_session = stripe.checkout.Session.create(**checkout_kw)
@@ -4154,6 +4158,9 @@ def purchase_book(book_id):
                             client_reference_id=str(purchase.id),
                             metadata={'book_id': str(book_id), 'purchase_id': str(purchase.id), 'purchase_type': purchase_type},
                         )
+                        _buyer_email_fb = checkout_customer_email_for_user(current_user)
+                        if _buyer_email_fb:
+                            checkout_kw_fb['customer_email'] = _buyer_email_fb
                         if _pi_fb:
                             checkout_kw_fb['payment_intent_data'] = _pi_fb
                         checkout_session = stripe.checkout.Session.create(**checkout_kw_fb)
@@ -6592,7 +6599,8 @@ def make_investment(campaign_id):
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
                 logger.info(f"Creating Stripe checkout session for investment {investment.id}, amount: ${amount}")
-                checkout_session = stripe.checkout.Session.create(
+                _investor_email = checkout_customer_email_for_user(current_user)
+                _inv_kw = dict(
                     mode="payment",
                     payment_method_types=checkout_payment_method_types_for_currency("USD"),
                     line_items=[
@@ -6617,6 +6625,9 @@ def make_investment(campaign_id):
                     success_url=success_url,
                     cancel_url=cancel_url,
                 )
+                if _investor_email:
+                    _inv_kw["customer_email"] = _investor_email
+                checkout_session = stripe.checkout.Session.create(**_inv_kw)
                 stripe_checkout_url = checkout_session.url
                 logger.info(f"Successfully created Stripe checkout session: {stripe_checkout_url}")
             else:

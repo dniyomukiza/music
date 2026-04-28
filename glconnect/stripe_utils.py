@@ -47,13 +47,40 @@ def stripe_connect_allow_platform_only() -> bool:
 
 
 def author_needs_stripe_payout_setup(bp_user) -> bool:
-    """True when marketplace sales expect a Connect account but the author has none linked."""
+    """True when the author must still complete Stripe Connect (no acct, or onboarding incomplete).
+
+    If we cannot **verify** completion with Stripe, we treat payout setup as required and keep
+    redirecting authors to onboarding—never assume "done" on errors or missing data.
+    """
     if stripe_connect_allow_platform_only():
         return False
     if not bp_user:
         return True
-    acct = getattr(bp_user, "stripe_connect_account_id", None) or ""
-    return not str(acct).strip()
+    acct_id = str(getattr(bp_user, "stripe_connect_account_id", None) or "").strip()
+    if not acct_id:
+        return True
+    try:
+        init_stripe()
+        acc = stripe.Account.retrieve(acct_id)
+        ready = bool(
+            getattr(acc, "charges_enabled", False)
+            and getattr(acc, "details_submitted", False)
+        )
+        return not ready
+    except stripe.error.InvalidRequestError as e:
+        logger.warning(
+            "Stripe Connect account id invalid or inaccessible (acct=%s): %s",
+            acct_id,
+            e,
+        )
+        return True
+    except Exception as e:
+        logger.warning(
+            "Could not verify Stripe Connect completion (acct=%s); requiring payout setup: %s",
+            acct_id,
+            e,
+        )
+        return True
 
 
 def normalize_stripe_secret_candidate(val: Optional[str]) -> str:
@@ -208,6 +235,17 @@ def checkout_payment_method_types_for_currency(currency: Optional[str]) -> List[
     if cur == "usd":
         types.append("cashapp")
     return types
+
+
+def checkout_customer_email_for_user(user: Any) -> Optional[str]:
+    """Email to pass as Checkout ``customer_email`` so Stripe prefills contact (hosted Checkout)."""
+    if user is None:
+        return None
+    email = getattr(user, "email", None)
+    if not email or not isinstance(email, str):
+        return None
+    e = email.strip()
+    return e if e else None
 
 
 def _book_list_base_price_for_purchase_type(book: Any, purchase_type: str) -> float:
