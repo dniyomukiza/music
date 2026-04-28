@@ -540,6 +540,23 @@ class BookPurchase(db.Model):
                 else:
                     self.buyer_full_name = user.username
 
+
+class BookCartItem(db.Model):
+    __tablename__ = 'book_cart_items'
+    __table_args__ = (
+        UniqueConstraint('buyer_user_id', 'book_project_id', 'purchase_format', name='uq_cart_buyer_book_format'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    buyer_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    purchase_format = db.Column(db.String(20), default='digital', nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    buyer_user = db.relationship('User', foreign_keys=[buyer_user_id], backref='book_cart_items', lazy=True)
+    book_project = db.relationship('BookProject', foreign_keys=[book_project_id], lazy=True)
+
 # Book Sale Model
 class BookSale(db.Model):
     __tablename__ = 'book_sales'

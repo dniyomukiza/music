@@ -552,6 +552,18 @@
         </div>
     </div>
 
+    <div id="marketCartPanel" class="position-fixed bottom-0 end-0 m-3 p-3 bg-white border rounded shadow" style="z-index: 1080; width: 340px; max-height: 70vh; overflow:auto;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0"><i class="fas fa-shopping-basket me-1"></i>Cart</h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshCartBtn">Refresh</button>
+        </div>
+        <div id="marketCartItems" class="small text-muted mb-2">Loading cart…</div>
+        <div class="small mb-2">
+            <strong>Total:</strong> $<span id="marketCartTotal">0.00</span>
+        </div>
+        <div id="marketCartGroups" class="d-grid gap-2"></div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         window.INK_MARKETPLACE_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
@@ -616,6 +628,71 @@
             const d = document.createElement('div');
             d.textContent = String(text);
             return d.innerHTML;
+        }
+
+        async function loadCartPanel() {
+            const itemsEl = document.getElementById('marketCartItems');
+            const totalEl = document.getElementById('marketCartTotal');
+            const groupsEl = document.getElementById('marketCartGroups');
+            if (!itemsEl || !totalEl || !groupsEl) return;
+            if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
+                itemsEl.innerHTML = 'Sign in to use cart.';
+                totalEl.textContent = '0.00';
+                groupsEl.innerHTML = '';
+                return;
+            }
+            try {
+                const res = await fetch('/mybook/cart', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Could not load cart.');
+                const items = data.items || [];
+                const groups = data.groups || [];
+                totalEl.textContent = Number((data.totals || {}).subtotal || 0).toFixed(2);
+                if (!items.length) {
+                    itemsEl.innerHTML = 'Cart is empty.';
+                    groupsEl.innerHTML = '';
+                    return;
+                }
+                itemsEl.innerHTML = items.map(function (it) {
+                    return (
+                        '<div class="border rounded p-2 mb-2">' +
+                        '<div class="fw-semibold">' + escapeHtml(it.book_title) + '</div>' +
+                        '<div class="text-muted">' + escapeHtml(it.purchase_type) + ' · $' + Number(it.price).toFixed(2) + '</div>' +
+                        '<div class="d-flex justify-content-between align-items-center mt-1">' +
+                        '<small>' + escapeHtml(it.author_name) + '</small>' +
+                        '<button class="btn btn-sm btn-outline-danger" data-cart-remove="' + it.id + '">Remove</button>' +
+                        '</div></div>'
+                    );
+                }).join('');
+                groupsEl.innerHTML = groups.map(function (g) {
+                    return (
+                        '<button type="button" class="btn btn-sm btn-primary text-start" data-cart-checkout="' + escapeHtml(g.group_key) + '">' +
+                        'Checkout ' + escapeHtml(g.author_name) + ' (' + Number(g.item_count || 0) + ') · $' + Number(g.subtotal || 0).toFixed(2) +
+                        '</button>'
+                    );
+                }).join('');
+            } catch (e) {
+                itemsEl.innerHTML = '<span class="text-danger">Could not load cart.</span>';
+            }
+        }
+
+        async function addToCart(bookId, purchaseType) {
+            try {
+                const res = await fetch('/mybook/cart/items', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ book_id: bookId, purchase_type: purchaseType || 'digital' }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'Could not add to cart.');
+                }
+                loadCartPanel();
+                alert('Added to cart.');
+            } catch (e) {
+                alert(e.message || 'Could not add to cart.');
+            }
         }
 
         function viewBook(bookId) {
@@ -713,6 +790,14 @@
                                 }
                             });
                             actionsEl.appendChild(btn);
+                            const cartBtn = document.createElement('button');
+                            cartBtn.type = 'button';
+                            cartBtn.className = 'btn btn-outline-success';
+                            cartBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Add ebook to cart';
+                            cartBtn.addEventListener('click', function () {
+                                addToCart(b.id, 'digital');
+                            });
+                            actionsEl.appendChild(cartBtn);
                         } else {
                             const btn = document.createElement('button');
                             btn.type = 'button';
@@ -745,6 +830,26 @@
                                 showPurchaseModal(b.id, priceAudio, true);
                             });
                             actionsEl.appendChild(btn);
+                        }
+                        if (priceAudio != null && priceAudio > 0) {
+                            const cartAudioBtn = document.createElement('button');
+                            cartAudioBtn.type = 'button';
+                            cartAudioBtn.className = 'btn btn-outline-warning';
+                            cartAudioBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Add audio to cart';
+                            cartAudioBtn.addEventListener('click', function () {
+                                addToCart(b.id, 'audiobook');
+                            });
+                            actionsEl.appendChild(cartAudioBtn);
+                        }
+                        if (fmtDigital && priceDigital != null && priceDigital > 0 && priceAudio != null && priceAudio > 0) {
+                            const cartBundleBtn = document.createElement('button');
+                            cartBundleBtn.type = 'button';
+                            cartBundleBtn.className = 'btn btn-outline-primary';
+                            cartBundleBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Add bundle to cart';
+                            cartBundleBtn.addEventListener('click', function () {
+                                addToCart(b.id, 'bundle');
+                            });
+                            actionsEl.appendChild(cartBundleBtn);
                         }
                     }
                 })
@@ -1326,6 +1431,56 @@
         // Check for completed purchases when page loads
         document.addEventListener('DOMContentLoaded', function() {
             checkForCompletedPurchases();
+            loadCartPanel();
+            const refreshBtn = document.getElementById('refreshCartBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function () { loadCartPanel(); });
+            }
+        });
+
+        document.addEventListener('click', async function (e) {
+            const removeBtn = e.target && (e.target.matches('[data-cart-remove]') ? e.target : e.target.closest('[data-cart-remove]'));
+            if (removeBtn) {
+                const itemId = removeBtn.getAttribute('data-cart-remove');
+                try {
+                    const res = await fetch('/mybook/cart/items/' + encodeURIComponent(itemId), {
+                        method: 'DELETE',
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.error || 'Could not remove item.');
+                    loadCartPanel();
+                } catch (err) {
+                    alert(err.message || 'Could not remove item.');
+                }
+                return;
+            }
+            const checkoutBtn = e.target && (e.target.matches('[data-cart-checkout]') ? e.target : e.target.closest('[data-cart-checkout]'));
+            if (checkoutBtn) {
+                const groupKey = checkoutBtn.getAttribute('data-cart-checkout');
+                checkoutBtn.disabled = true;
+                try {
+                    const res = await fetch('/mybook/cart/checkout', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({ group_key: groupKey }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.error || 'Could not start checkout.');
+                    if (data.stripe_checkout_url) {
+                        window.location.href = data.stripe_checkout_url;
+                        return;
+                    }
+                    throw new Error('Checkout URL not available.');
+                } catch (err) {
+                    checkoutBtn.disabled = false;
+                    alert(err.message || 'Could not start checkout.');
+                    loadCartPanel();
+                }
+                return;
+            }
         });
 
         /** Grid vs list layout (toolbar). Persists for the session. */

@@ -28,6 +28,7 @@ from glconnect.book_platform_models import (
     BookPlatformUser, BookProject, BookChapter, BookCollaboration, 
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
     ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
+    BookCartItem,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
     AudioGenerationTask, AudiobookChapter, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
     AuthorCampaignPayoutRequest,
@@ -1746,6 +1747,7 @@ def delete_book(book_id):
         # 5. Clean up purchases (they reference book_project_id)
         # Note: BookPurchase has book_project_id as NOT NULL, so we must delete, not update
         BookPurchase.query.filter_by(book_project_id=book_id).delete()
+        BookCartItem.query.filter_by(book_project_id=book_id).delete()
         
         # 6. Clean up audio generation tasks (they reference book_project_id)
         AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
@@ -3163,6 +3165,7 @@ def admin_delete_test_books():
                 db.session.delete(campaign)
             BookSale.query.filter_by(book_project_id=book_id).delete()
             BookPurchase.query.filter_by(book_project_id=book_id).delete()
+            BookCartItem.query.filter_by(book_project_id=book_id).delete()
             AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
             RealtimeSession.query.filter_by(book_project_id=book_id).delete()
             BookComment.query.filter_by(book_project_id=book_id).delete()
@@ -3221,6 +3224,392 @@ def suspend_reviewer(reviewer_id):
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Access denied'}), 403
     return jsonify({'success': False, 'message': 'Reviewer feature has been retired.'}), 410
+
+
+def _cart_price_for_purchase_type(book, purchase_type: str):
+    pt = (purchase_type or 'digital').lower().strip()
+    if pt == 'audiobook':
+        if not book.has_audiobook or not book.audiobook_published:
+            return None, 'This book does not have an audiobook available for purchase.'
+        if not book.audiobook_price or book.audiobook_price <= 0:
+            return None, 'Audiobook price is not set. Please contact the author.'
+        return float(book.audiobook_price), None
+    if pt == 'bundle':
+        if not book.has_audiobook or not book.audiobook_published:
+            return None, 'Bundle requires an audiobook. This book does not have one available.'
+        if not book.audiobook_price or book.audiobook_price <= 0:
+            return None, 'Audiobook price is not set. Cannot create bundle.'
+        return float((book.price + book.audiobook_price) * 0.8), None
+    if not book.price or book.price <= 0:
+        return None, 'This ebook is not available for purchase.'
+    return float(book.price), None
+
+
+def _cart_get_or_create_buyer_profile(user_id: int):
+    bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
+    if bp_user:
+        return bp_user
+    from glconnect.models import Writer
+    writer = Writer.query.filter_by(user_id=user_id).first()
+    bp_user = BookPlatformUser(
+        user_id=user_id,
+        pen_name=writer.writer_name if writer else (current_user.username if current_user.is_authenticated else f'user_{user_id}'),
+        bio=writer.bio if writer else "Reader",
+        profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
+    )
+    db.session.add(bp_user)
+    db.session.flush()
+    return bp_user
+
+
+@book_bp.route('/cart', methods=['GET'])
+@login_required
+def marketplace_cart():
+    items = (
+        BookCartItem.query
+        .filter_by(buyer_user_id=current_user.user_id)
+        .order_by(BookCartItem.created_at.asc())
+        .all()
+    )
+    payload_items = []
+    subtotal = 0.0
+    groups = {}
+    for ci in items:
+        book = BookProject.query.options(joinedload(BookProject.author).joinedload(BookPlatformUser.user)).get(ci.book_project_id)
+        if not book:
+            continue
+        price, err = _cart_price_for_purchase_type(book, ci.purchase_format)
+        if err or price is None:
+            continue
+        subtotal += float(price)
+        author_name = (book.author.pen_name or (book.author.user.username if book.author and book.author.user else 'Author')) if book.author else 'Author'
+        author_account = (book.author.stripe_connect_account_id or '').strip() if book.author else ''
+        group_key = f"author:{book.author_id}:{author_account or 'platform'}"
+        groups.setdefault(group_key, {
+            'group_key': group_key,
+            'author_id': book.author_id,
+            'author_name': author_name,
+            'author_account': author_account or None,
+            'item_count': 0,
+            'subtotal': 0.0,
+        })
+        groups[group_key]['item_count'] += 1
+        groups[group_key]['subtotal'] += float(price)
+        payload_items.append({
+            'id': ci.id,
+            'book_id': book.id,
+            'book_title': book.title,
+            'purchase_type': ci.purchase_format,
+            'price': float(price),
+            'currency': (book.currency or 'USD').upper(),
+            'author_id': book.author_id,
+            'author_name': author_name,
+            'group_key': group_key,
+        })
+    return jsonify({
+        'success': True,
+        'items': payload_items,
+        'groups': list(groups.values()),
+        'totals': {
+            'item_count': len(payload_items),
+            'subtotal': round(subtotal, 2),
+            'currency': 'USD',
+        }
+    })
+
+
+@book_bp.route('/cart/items', methods=['POST'])
+@login_required
+def marketplace_cart_add_item():
+    data = request.get_json(silent=True) or {}
+    book_id = data.get('book_id')
+    purchase_type = (data.get('purchase_type') or 'digital').lower().strip()
+    if purchase_type not in ('digital', 'audiobook', 'bundle'):
+        purchase_type = 'digital'
+    if not book_id:
+        return jsonify({'success': False, 'error': 'book_id is required'}), 400
+    book = BookProject.query.options(joinedload(BookProject.author).joinedload(BookPlatformUser.user)).get_or_404(int(book_id))
+    if book.author and book.author.user_id == current_user.user_id:
+        return jsonify({'success': False, 'error': 'You cannot purchase your own book.'}), 400
+    _, err = _cart_price_for_purchase_type(book, purchase_type)
+    if err:
+        return jsonify({'success': False, 'error': err}), 400
+    existing_completed = BookPurchase.query.filter(
+        BookPurchase.book_project_id == book.id,
+        BookPurchase.status == TransactionStatus.COMPLETED,
+        BookPurchase.buyer_user_id == current_user.user_id,
+        BookPurchase.purchase_format == purchase_type,
+    ).first()
+    if existing_completed:
+        return jsonify({'success': False, 'error': f'You already purchased this {purchase_type} item.'}), 400
+    cart_item = BookCartItem.query.filter_by(
+        buyer_user_id=current_user.user_id,
+        book_project_id=book.id,
+        purchase_format=purchase_type,
+    ).first()
+    if not cart_item:
+        cart_item = BookCartItem(
+            buyer_user_id=current_user.user_id,
+            book_project_id=book.id,
+            purchase_format=purchase_type,
+        )
+        db.session.add(cart_item)
+        db.session.commit()
+    return jsonify({'success': True, 'message': 'Added to cart.'})
+
+
+@book_bp.route('/cart/items/<int:item_id>', methods=['DELETE'])
+@login_required
+def marketplace_cart_remove_item(item_id):
+    cart_item = BookCartItem.query.filter_by(id=item_id, buyer_user_id=current_user.user_id).first()
+    if not cart_item:
+        return jsonify({'success': False, 'error': 'Cart item not found'}), 404
+    db.session.delete(cart_item)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@book_bp.route('/cart/checkout', methods=['POST'])
+@login_required
+def marketplace_cart_checkout():
+    data = request.get_json(silent=True) or {}
+    group_key = (data.get('group_key') or '').strip()
+    if not group_key:
+        return jsonify({'success': False, 'error': 'group_key is required'}), 400
+
+    cart_items = (
+        BookCartItem.query
+        .filter_by(buyer_user_id=current_user.user_id)
+        .order_by(BookCartItem.created_at.asc())
+        .all()
+    )
+    selected = []
+    group_author_account = None
+    for ci in cart_items:
+        book = BookProject.query.options(joinedload(BookProject.author).joinedload(BookPlatformUser.user)).get(ci.book_project_id)
+        if not book or not book.author:
+            continue
+        author_account = (book.author.stripe_connect_account_id or '').strip()
+        gk = f"author:{book.author_id}:{author_account or 'platform'}"
+        if gk != group_key:
+            continue
+        selected.append((ci, book))
+        if group_author_account is None:
+            group_author_account = author_account or None
+    if not selected:
+        return jsonify({'success': False, 'error': 'No cart items found for selected author group.'}), 400
+
+    try:
+        init_stripe()
+        import stripe
+    except RuntimeError as e:
+        return jsonify({'success': False, 'error': str(e)}), 503
+
+    buyer_profile = _cart_get_or_create_buyer_profile(current_user.user_id)
+
+    created_purchases = []
+    line_items = []
+    app_fee_cents_total = 0
+    now = datetime.now(timezone.utc)
+    for ci, book in selected:
+        purchase_type = (ci.purchase_format or 'digital').lower().strip()
+        price, err = _cart_price_for_purchase_type(book, purchase_type)
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
+        existing_completed = BookPurchase.query.filter(
+            BookPurchase.book_project_id == book.id,
+            BookPurchase.status == TransactionStatus.COMPLETED,
+            BookPurchase.buyer_user_id == current_user.user_id,
+            BookPurchase.purchase_format == purchase_type,
+        ).first()
+        if existing_completed:
+            return jsonify({'success': False, 'error': f'You already purchased "{book.title}" ({purchase_type}).'}), 400
+
+        purchase = BookPurchase(
+            buyer_id=buyer_profile.id,
+            buyer_user_id=current_user.user_id,
+            book_project_id=book.id,
+            amount=float(price),
+            currency=(book.currency or 'USD'),
+            status=TransactionStatus.PENDING,
+            purchase_format=purchase_type,
+            payment_method='stripe',
+        )
+        purchase.populate_buyer_info()
+        db.session.add(purchase)
+        db.session.flush()
+
+        base_price = float(book.price or 0.0)
+        if purchase_type == 'audiobook':
+            base_price = float(book.audiobook_price or book.price or 0.0)
+        elif purchase_type == 'bundle':
+            base_price = float((book.price or 0.0) + (book.audiobook_price or 0.0)) * 0.8
+        extra_amount = max(0.0, float(price) - base_price)
+        royalty_percentage = 0.7
+        base_royalty = base_price * royalty_percentage
+        base_platform_fee = base_price - base_royalty
+        royalty_amount = base_royalty + extra_amount
+        platform_fee = base_platform_fee
+        sale = BookSale(
+            seller_id=book.author_id,
+            book_project_id=book.id,
+            purchase_id=purchase.id,
+            royalty_amount=royalty_amount,
+            royalty_percentage=royalty_percentage,
+            platform_fee=platform_fee,
+            net_amount=royalty_amount,
+            currency=(book.currency or 'USD'),
+            status=TransactionStatus.PENDING,
+            paid_at=None,
+            sale_format=purchase_type,
+            created_at=now,
+        )
+        db.session.add(sale)
+        created_purchases.append((purchase, ci, book, purchase_type, float(price)))
+        app_fee_cents_total += int(round(max(0.0, platform_fee) * 100))
+        line_items.append({
+            'price_data': {
+                'currency': (book.currency or 'USD').lower(),
+                'product_data': {
+                    'name': book.title,
+                    'description': f'Purchase of "{book.title}" ({purchase_type})',
+                },
+                'unit_amount': int(round(float(price) * 100)),
+            },
+            'quantity': 1,
+        })
+
+    base = (current_app.config.get('FRONTEND_BASE_URL') or request.url_root).rstrip('/')
+    stripe_key = (get_stripe_server_secret_key(current_app) or "").strip()
+    if stripe_key.startswith("sk_live_") and base.startswith("http://"):
+        base = "https://" + base[len("http://") :]
+    purchase_ids = [str(p.id) for p, *_ in created_purchases]
+    purchase_ids_csv = ",".join(purchase_ids)
+    success_url = f"{base}{url_for('book_platform.purchase_success_cart')}?purchase_ids={purchase_ids_csv}"
+    cancel_url = f"{base}{url_for('book_platform.marketplace')}"
+    checkout_kw = dict(
+        payment_method_types=['card'],
+        line_items=line_items,
+        mode='payment',
+        success_url=success_url,
+        cancel_url=cancel_url,
+        client_reference_id=f"cart:{current_user.user_id}:{int(datetime.now(timezone.utc).timestamp())}",
+        metadata={
+            'cart_purchase_ids': purchase_ids_csv,
+            'cart_group_key': group_key,
+            'buyer_user_id': str(current_user.user_id),
+        },
+    )
+    _buyer_email = checkout_customer_email_for_user(current_user)
+    if _buyer_email:
+        checkout_kw['customer_email'] = _buyer_email
+    if group_author_account:
+        checkout_kw['stripe_account'] = group_author_account
+        checkout_kw['payment_intent_data'] = {'application_fee_amount': max(0, app_fee_cents_total)}
+    try:
+        checkout_session = stripe.checkout.Session.create(**checkout_kw)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f'Could not create checkout session: {e}'}), 400
+
+    # Remove checked-out items from cart and persist pending purchases/sales.
+    for _, ci, _, _, _ in created_purchases:
+        db.session.delete(ci)
+    db.session.commit()
+    return jsonify({'success': True, 'stripe_checkout_url': checkout_session.url, 'purchase_ids': purchase_ids})
+
+
+@book_bp.route('/purchase/success-cart', methods=['GET'])
+@login_required
+def purchase_success_cart():
+    purchase_ids_raw = (request.args.get('purchase_ids') or '').strip()
+    ids = []
+    for part in purchase_ids_raw.split(','):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            ids.append(int(part))
+        except Exception:
+            continue
+    if not ids:
+        flash('No cart purchases found to complete.', 'warning')
+        return redirect(url_for('book_platform.books'))
+    purchases = BookPurchase.query.filter(
+        BookPurchase.id.in_(ids),
+        BookPurchase.buyer_user_id == current_user.user_id
+    ).all()
+    if not purchases:
+        flash('We could not match these purchases to your account.', 'warning')
+        return redirect(url_for('book_platform.books'))
+
+    payment_intent_id = request.args.get('payment_intent') or request.args.get('session_id')
+    now = datetime.now(timezone.utc)
+    completed_count = 0
+    for p in purchases:
+        if p.status != TransactionStatus.COMPLETED:
+            p.status = TransactionStatus.COMPLETED
+            p.purchased_at = p.purchased_at or now
+            p.transaction_id = payment_intent_id or p.transaction_id
+            p.payment_method = p.payment_method or 'stripe'
+            sale = BookSale.query.filter_by(purchase_id=p.id).first()
+            if sale and sale.status != TransactionStatus.COMPLETED:
+                sale.status = TransactionStatus.COMPLETED
+                sale.paid_at = now
+            completed_count += 1
+    db.session.commit()
+    if completed_count:
+        flash(f'Payment successful. {completed_count} purchase(s) are now available in your library.', 'success')
+    else:
+        flash('Your purchases were already completed.', 'info')
+    return redirect(url_for('book_platform.my_library'))
+
+
+@book_bp.route('/library', methods=['GET'])
+@login_required
+def my_library():
+    """Buyer library: consume purchased ebooks/audiobooks in one place."""
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    buyer_id = bp_user.id if bp_user else None
+    purchases = BookPurchase.query.filter(
+        BookPurchase.status == TransactionStatus.COMPLETED,
+        db.or_(
+            BookPurchase.buyer_user_id == current_user.user_id,
+            (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false(),
+        ),
+    ).order_by(BookPurchase.purchased_at.desc(), BookPurchase.created_at.desc()).all()
+
+    by_book = {}
+    for p in purchases:
+        b = BookProject.query.options(joinedload(BookProject.author).joinedload(BookPlatformUser.user)).get(p.book_project_id)
+        if not b:
+            continue
+        row = by_book.get(b.id)
+        if not row:
+            row = {
+                'book': b,
+                'has_digital': False,
+                'has_audiobook': False,
+                'latest_purchase_at': p.purchased_at or p.created_at,
+            }
+            by_book[b.id] = row
+        fmt = (getattr(p, 'purchase_format', 'digital') or 'digital').lower()
+        if fmt in ('digital', 'bundle'):
+            row['has_digital'] = True
+        if fmt in ('audiobook', 'bundle'):
+            row['has_audiobook'] = True
+        if (p.purchased_at or p.created_at) and (row['latest_purchase_at'] is None or (p.purchased_at or p.created_at) > row['latest_purchase_at']):
+            row['latest_purchase_at'] = p.purchased_at or p.created_at
+
+    items = sorted(by_book.values(), key=lambda x: x['latest_purchase_at'] or datetime.now(timezone.utc), reverse=True)
+    highlight_book_id = request.args.get('book_id', type=int)
+    return render_template(
+        'book_platform/my_library.html',
+        items=items,
+        marketplace_cover_url=_marketplace_cover_url,
+        highlight_book_id=highlight_book_id,
+    )
+
 
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required
@@ -4408,12 +4797,8 @@ def purchase_success():
     try:
         notify_receipt = False
         def _post_purchase_redirect(book_id: int, purchase_format: str):
-            """Route buyers to the most relevant destination by purchased format."""
-            fmt = (purchase_format or "digital").lower().strip()
-            if fmt == "audiobook":
-                return redirect(url_for('book_platform.audiobook_player', book_id=book_id))
-            # bundle and digital both land on the main book page (read/download hub)
-            return redirect(url_for('book_platform.view_book', book_id=book_id))
+            """Route buyers to library consumption hub."""
+            return redirect(url_for('book_platform.my_library', book_id=book_id))
 
         # Get purchase info from query params or session
         book_id = request.args.get('book_id') or request.form.get('book_id')
@@ -5087,6 +5472,7 @@ def stripe_webhook():
                 # Handle book purchase payment
                 # Extract book_id from metadata
                 book_id = metadata.get('book_id')
+                cart_purchase_ids = (metadata.get('cart_purchase_ids') or '').strip()
                 # Extract purchase_id from client_reference_id (set by backend)
                 purchase_id = session.get('client_reference_id')
                 customer_email = session.get('customer_details', {}).get('email')
@@ -5094,6 +5480,26 @@ def stripe_webhook():
                 amount_total = session.get('amount_total', 0) / 100.0  # Stripe amounts are in cents
                 
                 try:
+                    if cart_purchase_ids:
+                        completed_any = False
+                        for pid_s in cart_purchase_ids.split(','):
+                            pid_s = (pid_s or '').strip()
+                            if not pid_s:
+                                continue
+                            try:
+                                pid = int(pid_s)
+                            except Exception:
+                                continue
+                            p = BookPurchase.query.get(pid)
+                            if p and p.status == TransactionStatus.PENDING:
+                                if complete_purchase(p, payment_intent_id, None):
+                                    completed_any = True
+                        if completed_any:
+                            logger.info("✅ Cart checkout completed from webhook (purchase_ids=%s)", cart_purchase_ids)
+                        else:
+                            logger.warning("⚠️ Cart webhook had no matching pending purchases (purchase_ids=%s)", cart_purchase_ids)
+                        return jsonify({'success': True}), 200
+
                     # First, try to find existing PENDING purchase by purchase_id
                     purchase = None
                     if purchase_id:
