@@ -204,12 +204,6 @@
                                             </p>
                                             <span class="book-price visually-hidden">{% if book.price and book.price > 0 %}${{ "%.2f"|format(book.price) }}{% else %}Free{% endif %}</span>
                                             
-                                            {% if book.description %}
-                                                <p class="card-text small text-muted mb-3 ink-book-desc">
-                                                    {{ book.description[:120] }}{% if book.description|length > 120 %}…{% endif %}
-                                                </p>
-                                            {% endif %}
-                                            
                                             <div class="book-meta mb-3">
                                                 <span class="badge bg-primary me-1 badge-info">{{ book.genre or 'No genre' }}</span>
                                                 {% if book.word_count %}
