@@ -238,17 +238,6 @@
                                     </label>
                                 </div>
                                 <div class="mb-2">
-                                    <label class="form-label small fw-semibold" for="listing_content_source">Source of content</label>
-                                    <select class="form-select form-select-sm" id="listing_content_source" name="listing_content_source">
-                                        <option value="">Select one</option>
-                                        <option value="original">Original</option>
-                                        <option value="licensed">Licensed</option>
-                                        <option value="public domain">Public domain</option>
-                                        <option value="ai-assisted">AI-assisted</option>
-                                        <option value="ghostwritten">Ghostwritten</option>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
                                     <label class="form-label small fw-semibold" for="listing_content_source_details">Required details (license/source/contributor info)</label>
                                     <textarea class="form-control form-control-sm" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
                                 </div>
@@ -518,7 +507,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const rights = document.getElementById('listing_terms_rights_warranty');
         const takedown = document.getElementById('listing_terms_takedown_consent');
-        const source = document.getElementById('listing_content_source');
         const details = document.getElementById('listing_content_source_details');
         const aiTools = document.getElementById('listing_ai_tools');
         const aiRights = document.getElementById('listing_ai_rights_confirm');
@@ -526,26 +514,20 @@ document.addEventListener('DOMContentLoaded', function() {
             openListingTermsPanelUpload();
             return { ok: false, focus: showListingTermsBtnUpload, msg: 'Review and accept terms in the Author listing terms section before listing.' };
         }
-        const sourceVal = String((source && source.value) || '').trim().toLowerCase();
         if (!rights || !rights.checked) {
             return { ok: false, focus: rights, msg: 'Accept the rights warranty before listing.' };
         }
         if (!takedown || !takedown.checked) {
             return { ok: false, focus: takedown, msg: 'Accept takedown consent before listing.' };
         }
-        if (!sourceVal) {
-            return { ok: false, focus: source, msg: 'Select source of content before listing.' };
-        }
-        if (['licensed', 'public domain', 'ghostwritten', 'ai-assisted'].includes(sourceVal) && !(details && details.value.trim())) {
+        if (!(details && details.value.trim())) {
             return { ok: false, focus: details, msg: 'Provide source details before listing.' };
         }
-        if (sourceVal === 'ai-assisted') {
-            if (!(aiTools && aiTools.value.trim())) {
-                return { ok: false, focus: aiTools, msg: 'Disclose AI tools/models used before listing AI-assisted content.' };
-            }
-            if (!aiRights || !aiRights.checked) {
-                return { ok: false, focus: aiRights, msg: 'Confirm AI commercial usage rights before listing.' };
-            }
+        if ((aiTools && aiTools.value.trim()) && (!aiRights || !aiRights.checked)) {
+            return { ok: false, focus: aiRights, msg: 'Confirm AI commercial usage rights before listing.' };
+        }
+        if (aiRights && aiRights.checked && !(aiTools && aiTools.value.trim())) {
+            return { ok: false, focus: aiTools, msg: 'Disclose AI tools/models used before confirming AI-assisted rights.' };
         }
         const aiSubmitSlow = ai && !hasCoverFile;
         return { ok: true, ai: aiSubmitSlow };

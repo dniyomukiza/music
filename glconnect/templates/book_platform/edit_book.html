@@ -60,6 +60,9 @@
                         </div>
                         {% endif %}
                         <form id="editBookForm" method="post" enctype="multipart/form-data">
+                            {% if listing_flow %}
+                            <input type="hidden" name="listing_flow" value="1">
+                            {% endif %}
                             {% if listing_flow and book.digital_file_path %}
                             <input type="hidden" name="title" value="{{ book.title }}">
                             <input type="hidden" name="description" value="{{ book.description or '' }}">
@@ -87,44 +90,41 @@
                                         Review and accept terms
                                     </button>
                                 </div>
-                                <div id="listingTermsPanel" class="mt-3 d-none">
+                                <div id="listingTermsPanel" class="mt-3 d-none text-dark">
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on">
-                                        <label class="form-check-label small" for="listing_terms_rights_warranty">
+                                        <label class="form-check-label small text-dark" for="listing_terms_rights_warranty">
                                             I confirm I own or hold all rights/licenses to publish and sell this work.
                                         </label>
                                     </div>
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on">
-                                        <label class="form-check-label small" for="listing_terms_takedown_consent">
+                                        <label class="form-check-label small text-dark" for="listing_terms_takedown_consent">
                                             I agree this listing may be removed immediately upon a credible infringement claim.
                                         </label>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label small fw-semibold" for="listing_content_source">Source of content</label>
-                                        <select class="form-select form-select-sm" id="listing_content_source" name="listing_content_source">
-                                            <option value="">Select one</option>
-                                            <option value="original">Original</option>
-                                            <option value="licensed">Licensed</option>
-                                            <option value="public domain">Public domain</option>
-                                            <option value="ai-assisted">AI-assisted</option>
-                                            <option value="ghostwritten">Ghostwritten</option>
-                                        </select>
+                                        <label class="form-label small fw-semibold text-dark" for="listing_content_source_details">Required details (license/source/contributor info)</label>
+                                        <textarea class="form-control form-control-sm bg-white text-dark" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label small fw-semibold" for="listing_content_source_details">Required details (license/source/contributor info)</label>
-                                        <textarea class="form-control form-control-sm" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold" for="listing_ai_tools">AI tools/models used (if any)</label>
-                                        <input type="text" class="form-control form-control-sm" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
+                                        <label class="form-label small fw-semibold text-dark" for="listing_ai_tools">AI tools/models used (if any)</label>
+                                        <input type="text" class="form-control form-control-sm bg-white text-dark" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on">
-                                        <label class="form-check-label small" for="listing_ai_rights_confirm">
+                                        <label class="form-check-label small text-dark" for="listing_ai_rights_confirm">
                                             If AI-assisted, I confirm I have commercial rights to use the generated output.
                                         </label>
                                     </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnConfirmListingTerms">
+                                            <i class="fas fa-check-circle me-1"></i>Agree to terms
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="listingTermsConfirmedNote" class="alert alert-success mt-3 d-none small mb-0">
+                                    <i class="fas fa-check me-1"></i>Terms accepted. Continue to publish your audiobook below.
                                 </div>
                             </div>
                             {% else %}
@@ -397,44 +397,41 @@
                                         Review and accept terms
                                     </button>
                                 </div>
-                                <div id="listingTermsPanel" class="mt-3 d-none">
+                                <div id="listingTermsPanel" class="mt-3 d-none text-dark">
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on">
-                                        <label class="form-check-label small" for="listing_terms_rights_warranty">
+                                        <label class="form-check-label small text-dark" for="listing_terms_rights_warranty">
                                             I confirm I own or hold all rights/licenses to publish and sell this work.
                                         </label>
                                     </div>
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on">
-                                        <label class="form-check-label small" for="listing_terms_takedown_consent">
+                                        <label class="form-check-label small text-dark" for="listing_terms_takedown_consent">
                                             I agree this listing may be removed immediately upon a credible infringement claim.
                                         </label>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label small fw-semibold" for="listing_content_source">Source of content</label>
-                                        <select class="form-select form-select-sm" id="listing_content_source" name="listing_content_source">
-                                            <option value="">Select one</option>
-                                            <option value="original">Original</option>
-                                            <option value="licensed">Licensed</option>
-                                            <option value="public domain">Public domain</option>
-                                            <option value="ai-assisted">AI-assisted</option>
-                                            <option value="ghostwritten">Ghostwritten</option>
-                                        </select>
+                                        <label class="form-label small fw-semibold text-dark" for="listing_content_source_details">Required details (license/source/contributor info)</label>
+                                        <textarea class="form-control form-control-sm bg-white text-dark" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label small fw-semibold" for="listing_content_source_details">Required details (license/source/contributor info)</label>
-                                        <textarea class="form-control form-control-sm" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold" for="listing_ai_tools">AI tools/models used (if any)</label>
-                                        <input type="text" class="form-control form-control-sm" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
+                                        <label class="form-label small fw-semibold text-dark" for="listing_ai_tools">AI tools/models used (if any)</label>
+                                        <input type="text" class="form-control form-control-sm bg-white text-dark" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on">
-                                        <label class="form-check-label small" for="listing_ai_rights_confirm">
+                                        <label class="form-check-label small text-dark" for="listing_ai_rights_confirm">
                                             If AI-assisted, I confirm I have commercial rights to use the generated output.
                                         </label>
                                     </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnConfirmListingTerms">
+                                            <i class="fas fa-check-circle me-1"></i>Agree to terms
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="listingTermsConfirmedNote" class="alert alert-success mt-3 d-none small mb-0">
+                                    <i class="fas fa-check me-1"></i>Terms accepted. Continue to publish your audiobook below.
                                 </div>
                             </div>
 
@@ -781,6 +778,16 @@
     <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.0"></script>
     {% endif %}
     <script>
+        let listingTermsConfirmed = false;
+
+        function setListingTermsConfirmed(confirmed) {
+            listingTermsConfirmed = !!confirmed;
+            const note = document.getElementById('listingTermsConfirmedNote');
+            if (note) {
+                note.classList.toggle('d-none', !listingTermsConfirmed);
+            }
+        }
+
         function shouldRequireListingTerms() {
             const digital = document.getElementById('publish_digital_book');
             const audio = document.getElementById('publish_audiobook');
@@ -801,6 +808,7 @@
             if (!panel) return false;
             panel.classList.remove('d-none');
             panel.style.display = 'block';
+            setListingTermsConfirmed(false);
             panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return true;
         }
@@ -808,7 +816,6 @@
         function validateListingTermsForm() {
             const rights = document.getElementById('listing_terms_rights_warranty');
             const takedown = document.getElementById('listing_terms_takedown_consent');
-            const source = document.getElementById('listing_content_source');
             const details = document.getElementById('listing_content_source_details');
             const aiTools = document.getElementById('listing_ai_tools');
             const aiRights = document.getElementById('listing_ai_rights_confirm');
@@ -819,7 +826,6 @@
                 showNotification('Review and accept terms in the Author listing terms section before listing.', 'error');
                 return false;
             }
-            const sourceVal = (source.value || '').trim().toLowerCase();
             if (!rights.checked) {
                 showNotification('Accept the rights warranty before listing.', 'error');
                 return false;
@@ -828,23 +834,17 @@
                 showNotification('Accept takedown consent before listing.', 'error');
                 return false;
             }
-            if (!sourceVal) {
-                showNotification('Select source of content before listing.', 'error');
-                return false;
-            }
-            if (['licensed', 'public domain', 'ghostwritten', 'ai-assisted'].includes(sourceVal) && !details.value.trim()) {
+            if (!details.value.trim()) {
                 showNotification('Provide source details before listing.', 'error');
                 return false;
             }
-            if (sourceVal === 'ai-assisted') {
-                if (!aiTools.value.trim()) {
-                    showNotification('Disclose AI tools/models used before listing AI-assisted content.', 'error');
-                    return false;
-                }
-                if (!aiRights.checked) {
-                    showNotification('Confirm AI commercial usage rights before listing.', 'error');
-                    return false;
-                }
+            if (aiTools.value.trim() && !aiRights.checked) {
+                showNotification('Confirm AI commercial usage rights before listing.', 'error');
+                return false;
+            }
+            if (aiRights.checked && !aiTools.value.trim()) {
+                showNotification('Disclose AI tools/models used before confirming AI-assisted rights.', 'error');
+                return false;
             }
             return true;
         }
@@ -853,6 +853,21 @@
         if (showListingTermsBtn) showListingTermsBtn.addEventListener('click', openListingTermsPanel);
         const showListingTermsBtnStep2 = document.getElementById('showListingTermsBtnStep2');
         if (showListingTermsBtnStep2) showListingTermsBtnStep2.addEventListener('click', openListingTermsPanel);
+        const btnConfirmListingTerms = document.getElementById('btnConfirmListingTerms');
+        if (btnConfirmListingTerms) {
+            btnConfirmListingTerms.addEventListener('click', function() {
+                if (!validateListingTermsForm()) return;
+                const panel = document.getElementById('listingTermsPanel');
+                if (panel) panel.classList.add('d-none');
+                setListingTermsConfirmed(true);
+                const publishTarget =
+                    document.getElementById('btnQuickPublishAudiobook') ||
+                    document.getElementById('audiobook-section') ||
+                    document.getElementById('editBookForm');
+                if (publishTarget) publishTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showNotification('Terms accepted. You can now publish.', 'success');
+            });
+        }
 
         // Form submission
         document.getElementById('editBookForm').addEventListener('submit', async function(e) {
@@ -871,8 +886,13 @@
                 );
                 return;
             }
-            if (shouldRequireListingTerms() && !validateListingTermsForm()) {
-                return;
+            if (shouldRequireListingTerms()) {
+                if (!listingTermsConfirmed) {
+                    openListingTermsPanel();
+                    showNotification('Agree to terms before listing.', 'error');
+                    return;
+                }
+                if (!validateListingTermsForm()) return;
             }
             
             const formData = new FormData(this);
@@ -1093,8 +1113,13 @@
                 );
                 return;
             }
-            if (shouldRequireListingTerms() && !validateListingTermsForm()) {
-                return;
+            if (shouldRequireListingTerms()) {
+                if (!listingTermsConfirmed) {
+                    openListingTermsPanel();
+                    showNotification('Agree to terms before listing.', 'error');
+                    return;
+                }
+                if (!validateListingTermsForm()) return;
             }
             const hiddenConfirm = document.getElementById('confirm_audiobook_publish_field');
             if (hiddenConfirm) {

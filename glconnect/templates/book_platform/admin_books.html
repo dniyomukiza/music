@@ -574,23 +574,15 @@
         function collectListingTermsPayload() {
             const rights = confirm('Rights warranty: confirm you own (or licensed) rights to publish/sell this work.');
             if (!rights) return null;
-            const source = (prompt('Source of content (type one): original, licensed, public domain, ai-assisted, ghostwritten', '') || '').trim().toLowerCase();
-            const valid = ['original', 'licensed', 'public domain', 'ai-assisted', 'ghostwritten'];
-            if (!valid.includes(source)) {
-                alert('Please enter a valid source-of-content option.');
+            const details = (prompt('Provide required details (license/source/contributor info):', '') || '').trim();
+            if (!details) {
+                alert('Source details are required.');
                 return null;
-            }
-            let details = '';
-            if (['licensed', 'public domain', 'ghostwritten', 'ai-assisted'].includes(source)) {
-                details = (prompt('Provide required source details (license/source/contributor info):', '') || '').trim();
-                if (!details) {
-                    alert('Source details are required for this selection.');
-                    return null;
-                }
             }
             let aiTools = '';
             let aiRights = false;
-            if (source === 'ai-assisted') {
+            const usesAi = confirm('Was AI used in creating this work?');
+            if (usesAi) {
                 aiTools = (prompt('List AI tools/models used:', '') || '').trim();
                 if (!aiTools) {
                     alert('AI tools/models are required for AI-assisted works.');
@@ -604,7 +596,6 @@
             return {
                 listing_terms_rights_warranty: true,
                 listing_terms_takedown_consent: true,
-                listing_content_source: source,
                 listing_content_source_details: details,
                 listing_ai_tools: aiTools,
                 listing_ai_rights_confirm: aiRights
