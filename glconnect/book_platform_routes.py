@@ -4329,6 +4329,14 @@ def purchase_success():
     """Handle successful Stripe payment and record purchase (signed-in buyer)."""
     try:
         notify_receipt = False
+        def _post_purchase_redirect(book_id: int, purchase_format: str):
+            """Route buyers to the most relevant destination by purchased format."""
+            fmt = (purchase_format or "digital").lower().strip()
+            if fmt == "audiobook":
+                return redirect(url_for('book_platform.audiobook_player', book_id=book_id))
+            # bundle and digital both land on the main book page (read/download hub)
+            return redirect(url_for('book_platform.view_book', book_id=book_id))
+
         # Get purchase info from query params or session
         book_id = request.args.get('book_id') or request.form.get('book_id')
         session_id = request.args.get('session_id') or request.form.get('session_id')
@@ -4382,7 +4390,8 @@ def purchase_success():
                     purchase = existing_purchase
                 else:
                     flash('Purchase already recorded!', 'info')
-                    return redirect(url_for('book_platform.view_book', book_id=book_id))
+                    existing_fmt = getattr(existing_purchase, 'purchase_format', None) or 'digital'
+                    return _post_purchase_redirect(book_id, existing_fmt)
         
         # If still not found, look for any purchase (COMPLETED or PENDING) for this book/user
         if not purchase and buyer_user_id is not None:
@@ -4550,7 +4559,8 @@ def purchase_success():
         logger.info(
             f"✅ Purchase {purchase.id} recorded from Stripe success for book {book_id}, sale id={getattr(sale, 'id', None)}"
         )
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
+        success_fmt = getattr(purchase, 'purchase_format', None) or 'digital'
+        return _post_purchase_redirect(book_id, success_fmt)
         
     except Exception as e:
         db.session.rollback()
