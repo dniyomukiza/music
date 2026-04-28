@@ -1236,12 +1236,50 @@ def edit_book(book_id, user_profile, profile_type):
                     book.cover_image = ci
             book.allow_collaboration = data.get('allow_collaboration') == 'on' or data.get('allow_collaboration') == True
             book.updated_at = datetime.now(timezone.utc)
+
+            def _as_bool(v):
+                if isinstance(v, bool):
+                    return v
+                if v is None:
+                    return False
+                return str(v).strip().lower() in ("1", "true", "yes", "on")
+
+            def _validate_listing_terms(payload):
+                source = str(payload.get('listing_content_source') or '').strip().lower()
+                details = str(payload.get('listing_content_source_details') or '').strip()
+                ai_tools = str(payload.get('listing_ai_tools') or '').strip()
+                rights_ok = _as_bool(payload.get('listing_terms_rights_warranty'))
+                takedown_ok = _as_bool(payload.get('listing_terms_takedown_consent'))
+                ai_rights_ok = _as_bool(payload.get('listing_ai_rights_confirm'))
+
+                allowed_sources = {"original", "licensed", "public domain", "ai-assisted", "ghostwritten"}
+                if not rights_ok:
+                    return 'Please confirm you own (or licensed) rights to list and sell this work.'
+                if not takedown_ok:
+                    return 'Please consent to immediate unlisting on credible infringement claims.'
+                if source not in allowed_sources:
+                    return 'Choose a valid source-of-content option before listing.'
+                if source in {"licensed", "public domain", "ghostwritten", "ai-assisted"} and not details:
+                    return 'Provide required source details before listing.'
+                if source == "ai-assisted":
+                    if not ai_tools:
+                        return 'Disclose AI tools/models used before listing AI-assisted content.'
+                    if not ai_rights_ok:
+                        return 'Confirm commercial rights to AI-assisted output before listing.'
+                return None
             
             # Handle publishing status - separate for digital book and audiobook
             if book.digital_file_path:
                 # For uploaded digital books, handle separate publishing
                 publish_digital = data.get('publish_digital_book') == 'on'
                 publish_audiobook = data.get('publish_audiobook') == 'on'
+                if (
+                    (publish_digital and not book.digital_book_published)
+                    or (publish_audiobook and not book.audiobook_published)
+                ):
+                    terms_error = _validate_listing_terms(data)
+                    if terms_error:
+                        return jsonify({'success': False, 'error': terms_error}), 400
                 
                 # Handle digital book publishing
                 if publish_digital:
@@ -1309,6 +1347,10 @@ def edit_book(book_id, user_profile, profile_type):
                 logger.info(f"Edit book {book_id} - is_published_flag: {is_published_flag}, price: {book.price}")
                 
                 if is_published_flag:
+                    if book.status != BookStatus.PUBLISHED:
+                        terms_error = _validate_listing_terms(data)
+                        if terms_error:
+                            return jsonify({'success': False, 'error': terms_error}), 400
                     price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
                     if not price_value or price_value <= 0:
                         return jsonify({
@@ -2933,6 +2975,42 @@ def publish_book(book_id):
     if book.author_id != book_user.id:
         return jsonify({'error': 'Only the author can publish the book'}), 403
     
+    def _as_bool(v):
+        if isinstance(v, bool):
+            return v
+        if v is None:
+            return False
+        return str(v).strip().lower() in ("1", "true", "yes", "on")
+
+    def _validate_listing_terms(payload):
+        source = str(payload.get('listing_content_source') or '').strip().lower()
+        details = str(payload.get('listing_content_source_details') or '').strip()
+        ai_tools = str(payload.get('listing_ai_tools') or '').strip()
+        rights_ok = _as_bool(payload.get('listing_terms_rights_warranty'))
+        takedown_ok = _as_bool(payload.get('listing_terms_takedown_consent'))
+        ai_rights_ok = _as_bool(payload.get('listing_ai_rights_confirm'))
+
+        allowed_sources = {"original", "licensed", "public domain", "ai-assisted", "ghostwritten"}
+        if not rights_ok:
+            return 'Please confirm you own (or licensed) rights to list and sell this work.'
+        if not takedown_ok:
+            return 'Please consent to immediate unlisting on credible infringement claims.'
+        if source not in allowed_sources:
+            return 'Choose a valid source-of-content option before listing.'
+        if source in {"licensed", "public domain", "ghostwritten", "ai-assisted"} and not details:
+            return 'Provide required source details before listing.'
+        if source == "ai-assisted":
+            if not ai_tools:
+                return 'Disclose AI tools/models used before listing AI-assisted content.'
+            if not ai_rights_ok:
+                return 'Confirm commercial rights to AI-assisted output before listing.'
+        return None
+
+    payload = request.get_json(silent=True) if request.is_json else request.form
+    terms_error = _validate_listing_terms(payload or {})
+    if terms_error:
+        return jsonify({'error': terms_error}), 400
+
     # Validate book is ready for publishing
     if not book.price or book.price <= 0:
         return jsonify({'error': 'Please set a price before publishing'}), 400
