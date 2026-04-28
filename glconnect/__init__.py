@@ -33,6 +33,7 @@ else:
 def _load_config():
     from .stripe_utils import normalize_stripe_secret_candidate
 
+    stripe_test_keys_from_glconfig = False
     cfg = {
         "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
         "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
@@ -90,12 +91,48 @@ def _load_config():
                     wh = (str(file_cfg["STRIPE_WEBHOOK_SECRET"]) or "").strip()
                     if wh:
                         cfg["STRIPE_WEBHOOK_SECRET"] = wh
+
+                # Optional: Stripe *test* keys from glconfig only — override live/env secrets for the whole app.
+                # If STRIPE_TEST_SECRET is set (non-empty), it MUST be valid (sk_...); we never fall back to live keys.
+                # Keys: STRIPE_TEST_SECRET (sk_test_...), STRIPE_TEST_API (optional sk_test_...; not pk_).
+                # Optional: STRIPE_TEST_WEBHOOK_SECRET (whsec_... from test-mode webhook endpoint).
+                _tsec = file_cfg.get("STRIPE_TEST_SECRET")
+                if _tsec is not None and str(_tsec).strip():
+                    tsk = normalize_stripe_secret_candidate(str(_tsec))
+                    if not tsk.startswith("sk_"):
+                        raise RuntimeError(
+                            "STRIPE_TEST_SECRET in glconfig is set but is not a valid Stripe secret key (sk_...). "
+                            "Fix or remove STRIPE_TEST_SECRET — live credentials are not used as a fallback."
+                        )
+                    cfg["STRIPE_SECRET_KEY"] = tsk
+                    stripe_test_keys_from_glconfig = True
+                    _tapi = file_cfg.get("STRIPE_TEST_API")
+                    if _tapi is not None and str(_tapi).strip():
+                        ta = normalize_stripe_secret_candidate(str(_tapi))
+                        if not ta.startswith("sk_"):
+                            raise RuntimeError(
+                                "STRIPE_TEST_API in glconfig must be a secret key (sk_...), not a publishable key. "
+                                "Fix or remove STRIPE_TEST_API — live credentials are not used as a fallback."
+                            )
+                        cfg["STRIPE_API_KEY"] = ta
+                    else:
+                        cfg["STRIPE_API_KEY"] = tsk
+                    _twh = file_cfg.get("STRIPE_TEST_WEBHOOK_SECRET")
+                    if _twh is not None and str(_twh).strip():
+                        tw = (str(_twh) or "").strip()
+                        if not tw.startswith("whsec_"):
+                            raise RuntimeError(
+                                "STRIPE_TEST_WEBHOOK_SECRET in glconfig must start with whsec_. "
+                                "Fix or remove it."
+                            )
+                        cfg["STRIPE_WEBHOOK_SECRET"] = tw
                 break
             except Exception:
                 pass
-    return cfg
+    return cfg, stripe_test_keys_from_glconfig
 
-config = _load_config()
+
+config, STRIPE_TEST_KEYS_FROM_GLCONFIG = _load_config()
 
 # Startup diagnostic: trace why keys might be missing
 _cwd = os.getcwd()
@@ -114,12 +151,32 @@ if config.get("DB_URL") and not os.getenv("DB_URL"):
     os.environ["DB_URL"] = config["DB_URL"]
 if config.get("DB_URL") and not os.getenv("DATABASE_URL"):
     os.environ["DATABASE_URL"] = config["DB_URL"]
-if config.get("STRIPE_SECRET_KEY") and not os.getenv("STRIPE_SECRET_KEY"):
-    os.environ["STRIPE_SECRET_KEY"] = config["STRIPE_SECRET_KEY"]
-if config.get("STRIPE_API_KEY") and not os.getenv("STRIPE_API_KEY"):
-    os.environ["STRIPE_API_KEY"] = config["STRIPE_API_KEY"]
-if config.get("STRIPE_WEBHOOK_SECRET") and not (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip():
-    os.environ["STRIPE_WEBHOOK_SECRET"] = config["STRIPE_WEBHOOK_SECRET"]
+if config.get("STRIPE_SECRET_KEY"):
+    if STRIPE_TEST_KEYS_FROM_GLCONFIG or not os.getenv("STRIPE_SECRET_KEY"):
+        os.environ["STRIPE_SECRET_KEY"] = config["STRIPE_SECRET_KEY"]
+if config.get("STRIPE_API_KEY"):
+    if STRIPE_TEST_KEYS_FROM_GLCONFIG or not os.getenv("STRIPE_API_KEY"):
+        os.environ["STRIPE_API_KEY"] = config["STRIPE_API_KEY"]
+if config.get("STRIPE_WEBHOOK_SECRET"):
+    if STRIPE_TEST_KEYS_FROM_GLCONFIG or not (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip():
+        os.environ["STRIPE_WEBHOOK_SECRET"] = config["STRIPE_WEBHOOK_SECRET"]
+
+if STRIPE_TEST_KEYS_FROM_GLCONFIG:
+    print(
+        "NOTICE: Stripe keys are overridden by STRIPE_TEST_SECRET in glconfig "
+        "(test mode). Remove it from /etc/glconfig.json to use live keys."
+    )
+
+# Safe confirmation of which Stripe mode the process will use (never log full keys).
+_sk_eff = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
+if _sk_eff.startswith("sk_test_"):
+    print("Stripe: effective server key is TEST (sk_test_...).")
+elif _sk_eff.startswith("sk_live_"):
+    print("Stripe: effective server key is LIVE (sk_live_...).")
+elif _sk_eff:
+    print("Stripe: STRIPE_SECRET_KEY is set but does not start with sk_test_ or sk_live_.")
+else:
+    print("Stripe: STRIPE_SECRET_KEY is not set.")
 
 google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")
