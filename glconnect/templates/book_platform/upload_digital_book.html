@@ -209,6 +209,63 @@
                         </div>
                     </section>
 
+                    <section class="ink-upload-card mb-4" id="section-terms" aria-labelledby="heading-terms">
+                        <div class="ink-upload-card-head">
+                            <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-scale-balanced"></i></span>
+                            <div>
+                                <h2 id="heading-terms" class="h5 mb-1">Author listing terms</h2>
+                                <p class="small text-muted mb-0">Required before listing your ebook.</p>
+                            </div>
+                        </div>
+                        <div class="ink-upload-card-body">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <small class="text-muted">Terms remain hidden until you click.</small>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtnUpload">
+                                    Review and accept terms
+                                </button>
+                            </div>
+                            <div id="listingTermsPanelUpload" class="d-none">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on">
+                                    <label class="form-check-label small" for="listing_terms_rights_warranty">
+                                        I confirm I own or hold all rights/licenses to publish and sell this work.
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on">
+                                    <label class="form-check-label small" for="listing_terms_takedown_consent">
+                                        I agree this listing may be removed immediately upon a credible infringement claim.
+                                    </label>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold" for="listing_content_source">Source of content</label>
+                                    <select class="form-select form-select-sm" id="listing_content_source" name="listing_content_source">
+                                        <option value="">Select one</option>
+                                        <option value="original">Original</option>
+                                        <option value="licensed">Licensed</option>
+                                        <option value="public domain">Public domain</option>
+                                        <option value="ai-assisted">AI-assisted</option>
+                                        <option value="ghostwritten">Ghostwritten</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold" for="listing_content_source_details">Required details (license/source/contributor info)</label>
+                                    <textarea class="form-control form-control-sm" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold" for="listing_ai_tools">AI tools/models used (if any)</label>
+                                    <input type="text" class="form-control form-control-sm" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on">
+                                    <label class="form-check-label small" for="listing_ai_rights_confirm">
+                                        If AI-assisted, I confirm I have commercial rights to use the generated output.
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <div class="ink-upload-mobile-hint d-xl-none rounded-3 p-3 mb-3 border" style="border-color: rgba(201, 162, 39, 0.25) !important; background: rgba(8, 10, 9, 0.5);">
                         <p class="small fw-semibold mb-2"><i class="fas fa-clipboard-check me-2 text-primary"></i>Before you submit (step 1 only)</p>
                         <ul class="small text-muted mb-0 ps-3">
@@ -283,6 +340,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const listingCoverPreviewStatus = document.getElementById('listingCoverPreviewStatus');
     const listingCoverPreviewImg = document.getElementById('listingCoverPreviewImg');
     let listingCoverAccepted = false;
+    const showListingTermsBtnUpload = document.getElementById('showListingTermsBtnUpload');
+    const listingTermsPanelUpload = document.getElementById('listingTermsPanelUpload');
+
+    function openListingTermsPanelUpload() {
+        if (!listingTermsPanelUpload) return false;
+        listingTermsPanelUpload.classList.remove('d-none');
+        listingTermsPanelUpload.style.display = 'block';
+        listingTermsPanelUpload.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return true;
+    }
+    if (showListingTermsBtnUpload) {
+        showListingTermsBtnUpload.addEventListener('click', openListingTermsPanelUpload);
+    }
 
     function setListingCoverPreviewUi(msg, imgVisible) {
         if (listingCoverPreviewStatus) listingCoverPreviewStatus.textContent = msg || '';
@@ -445,6 +515,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (parsedPrice < 0) {
             return { ok: false, focus: digitalPriceEl, msg: 'Price cannot be negative.' };
+        }
+        const rights = document.getElementById('listing_terms_rights_warranty');
+        const takedown = document.getElementById('listing_terms_takedown_consent');
+        const source = document.getElementById('listing_content_source');
+        const details = document.getElementById('listing_content_source_details');
+        const aiTools = document.getElementById('listing_ai_tools');
+        const aiRights = document.getElementById('listing_ai_rights_confirm');
+        if (!listingTermsPanelUpload || listingTermsPanelUpload.classList.contains('d-none')) {
+            openListingTermsPanelUpload();
+            return { ok: false, focus: showListingTermsBtnUpload, msg: 'Review and accept terms in the Author listing terms section before listing.' };
+        }
+        const sourceVal = String((source && source.value) || '').trim().toLowerCase();
+        if (!rights || !rights.checked) {
+            return { ok: false, focus: rights, msg: 'Accept the rights warranty before listing.' };
+        }
+        if (!takedown || !takedown.checked) {
+            return { ok: false, focus: takedown, msg: 'Accept takedown consent before listing.' };
+        }
+        if (!sourceVal) {
+            return { ok: false, focus: source, msg: 'Select source of content before listing.' };
+        }
+        if (['licensed', 'public domain', 'ghostwritten', 'ai-assisted'].includes(sourceVal) && !(details && details.value.trim())) {
+            return { ok: false, focus: details, msg: 'Provide source details before listing.' };
+        }
+        if (sourceVal === 'ai-assisted') {
+            if (!(aiTools && aiTools.value.trim())) {
+                return { ok: false, focus: aiTools, msg: 'Disclose AI tools/models used before listing AI-assisted content.' };
+            }
+            if (!aiRights || !aiRights.checked) {
+                return { ok: false, focus: aiRights, msg: 'Confirm AI commercial usage rights before listing.' };
+            }
         }
         const aiSubmitSlow = ai && !hasCoverFile;
         return { ok: true, ai: aiSubmitSlow };

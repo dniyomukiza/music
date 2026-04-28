@@ -4664,8 +4664,30 @@ def author_payout_setup(user_profile, profile_type):
     default_next = url_for('book_platform.dashboard')
     next_path = safe_mybook_next_path(request.args.get('next'), default_next)
     if not author_needs_stripe_payout_setup(bp_user):
-        flash('Your payout account is already linked.', 'info')
-        return redirect(next_path)
+        # Smart routing: if payouts are already set up, send authors to Stripe account management.
+        try:
+            init_stripe()
+            import stripe
+
+            base = (current_app.config.get('FRONTEND_BASE_URL') or request.url_root).rstrip('/')
+            stripe_key = (get_stripe_server_secret_key(current_app) or "").strip()
+            if stripe_key.startswith("sk_live_") and base.startswith("http://"):
+                base = "https://" + base[len("http://") :]
+            refresh_url = f"{base}{url_for('book_platform.author_payout_setup', next=next_path)}"
+            login = stripe.Account.create_login_link(
+                bp_user.stripe_connect_account_id,
+                redirect_url=refresh_url,
+            )
+            return redirect(login.url)
+        except Exception as e:
+            logger.warning(
+                "Could not create Stripe login link for author=%s account=%s: %s",
+                bp_user.id,
+                bp_user.stripe_connect_account_id,
+                e,
+            )
+            flash('Your payout account is connected. Could not open Stripe management right now; please try again.', 'warning')
+            return redirect(next_path)
     return render_template(
         'book_platform/author_payout_setup.html',
         next_path=next_path,
@@ -5599,6 +5621,37 @@ def upload_digital_book():
         else:
             logger.info("Form validation passed")
     
+    def _as_bool(v):
+        if isinstance(v, bool):
+            return v
+        if v is None:
+            return False
+        return str(v).strip().lower() in ("1", "true", "yes", "on")
+
+    def _validate_listing_terms(payload):
+        source = str(payload.get('listing_content_source') or '').strip().lower()
+        details = str(payload.get('listing_content_source_details') or '').strip()
+        ai_tools = str(payload.get('listing_ai_tools') or '').strip()
+        rights_ok = _as_bool(payload.get('listing_terms_rights_warranty'))
+        takedown_ok = _as_bool(payload.get('listing_terms_takedown_consent'))
+        ai_rights_ok = _as_bool(payload.get('listing_ai_rights_confirm'))
+
+        allowed_sources = {"original", "licensed", "public domain", "ai-assisted", "ghostwritten"}
+        if not rights_ok:
+            return 'Please confirm you own (or licensed) rights to list and sell this work.'
+        if not takedown_ok:
+            return 'Please consent to immediate unlisting on credible infringement claims.'
+        if source not in allowed_sources:
+            return 'Choose a valid source-of-content option before listing.'
+        if source in {"licensed", "public domain", "ghostwritten", "ai-assisted"} and not details:
+            return 'Provide required source details before listing.'
+        if source == "ai-assisted":
+            if not ai_tools:
+                return 'Disclose AI tools/models used before listing AI-assisted content.'
+            if not ai_rights_ok:
+                return 'Confirm commercial rights to AI-assisted output before listing.'
+        return None
+
     if form.validate_on_submit():
         try:
             logger.info("Starting digital book upload process")
@@ -5622,6 +5675,10 @@ def upload_digital_book():
                     form,
                     "Could not determine author ID. Please ensure your profile is set up correctly.",
                 )
+
+            terms_error = _validate_listing_terms(request.form or {})
+            if terms_error:
+                return _upload_digital_book_error(form, terms_error)
             
             # Handle file uploads
             digital_file = form.digital_book_file.data

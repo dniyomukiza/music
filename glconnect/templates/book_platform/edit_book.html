@@ -343,7 +343,7 @@
                                         <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author listing terms</h6>
                                         <small class="text-muted">Required before newly listing ebook or audiobook.</small>
                                     </div>
-                                    <button type="button" class="btn btn-outline-dark btn-sm" id="showListingTermsBtn">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(); return false;">
                                         Review and accept terms
                                     </button>
                                 </div>
@@ -709,7 +709,7 @@
                             <button type="button" class="btn btn-primary btn-sm" id="btnQuickPublishAudiobook" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
                                 <i class="fas fa-layer-group me-1"></i>Publish audiobook now
                             </button>
-                            <button type="button" class="btn btn-outline-dark btn-sm" id="showListingTermsBtnStep2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtnStep2" onclick="openListingTermsPanel(); return false;">
                                 <i class="fas fa-scale-balanced me-1"></i>Review and accept terms
                             </button>
                             <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
@@ -750,6 +750,7 @@
             const panel = document.getElementById('listingTermsPanel');
             if (!panel) return false;
             panel.classList.remove('d-none');
+            panel.style.display = 'block';
             panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return true;
         }
