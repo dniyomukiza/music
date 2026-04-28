@@ -4617,22 +4617,25 @@ def stripe_connect_onboard():
         next_path = safe_mybook_next_path(request.form.get('next'), default_next)
 
     country = (os.getenv('STRIPE_CONNECT_DEFAULT_COUNTRY') or 'US').strip().upper()
+
+    def _create_connect_account_and_store_id():
+        create_kwargs = {
+            'type': 'express',
+            'country': country,
+            'capabilities': {
+                'card_payments': {'requested': True},
+                'transfers': {'requested': True},
+            },
+            'metadata': {'book_platform_user_id': str(bp_user.id)},
+        }
+        if getattr(current_user, 'email', None):
+            create_kwargs['email'] = current_user.email
+        acct = stripe.Account.create(**create_kwargs)
+        bp_user.stripe_connect_account_id = acct.id
+        db.session.commit()
     try:
         if not bp_user.stripe_connect_account_id:
-            create_kwargs = {
-                'type': 'express',
-                'country': country,
-                'capabilities': {
-                    'card_payments': {'requested': True},
-                    'transfers': {'requested': True},
-                },
-                'metadata': {'book_platform_user_id': str(bp_user.id)},
-            }
-            if getattr(current_user, 'email', None):
-                create_kwargs['email'] = current_user.email
-            acct = stripe.Account.create(**create_kwargs)
-            bp_user.stripe_connect_account_id = acct.id
-            db.session.commit()
+            _create_connect_account_and_store_id()
 
         base = (current_app.config.get('FRONTEND_BASE_URL') or request.url_root).rstrip('/')
         # Stripe live mode requires HTTPS return/refresh URLs for Connect onboarding.
@@ -4641,12 +4644,37 @@ def stripe_connect_onboard():
             base = "https://" + base[len("http://") :]
         refresh_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return', refresh=1, next=next_path)}"
         return_url = f"{base}{url_for('book_platform.stripe_connect_onboard_return', next=next_path)}"
-        link = stripe.AccountLink.create(
-            account=bp_user.stripe_connect_account_id,
-            refresh_url=refresh_url,
-            return_url=return_url,
-            type='account_onboarding',
-        )
+        try:
+            link = stripe.AccountLink.create(
+                account=bp_user.stripe_connect_account_id,
+                refresh_url=refresh_url,
+                return_url=return_url,
+                type='account_onboarding',
+            )
+        except stripe.error.InvalidRequestError as e:
+            err_msg = str(e)
+            mode_mismatch = (
+                'test mode account link for an account that was created in live mode' in err_msg
+                or 'live mode account link for an account that was created in test mode' in err_msg
+            )
+            if not mode_mismatch:
+                raise
+
+            old_acct = bp_user.stripe_connect_account_id
+            logger.warning(
+                "Stripe Connect mode mismatch for user=%s account=%s. Recreating account in current mode.",
+                bp_user.id,
+                old_acct,
+            )
+            bp_user.stripe_connect_account_id = None
+            db.session.commit()
+            _create_connect_account_and_store_id()
+            link = stripe.AccountLink.create(
+                account=bp_user.stripe_connect_account_id,
+                refresh_url=refresh_url,
+                return_url=return_url,
+                type='account_onboarding',
+            )
         return jsonify({'success': True, 'url': link.url})
     except Exception as e:
         logger.error('Stripe Connect onboarding failed: %s', e, exc_info=True)
