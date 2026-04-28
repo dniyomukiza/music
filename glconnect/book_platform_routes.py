@@ -3568,15 +3568,21 @@ def purchase_success_cart():
 @book_bp.route('/library', methods=['GET'])
 @login_required
 def my_library():
-    """Buyer library: consume purchased ebooks/audiobooks in one place."""
-    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    buyer_id = bp_user.id if bp_user else None
+    """Library for the logged-in user: completed purchases (ebook / audiobook). Empty if none.
+
+    Purchases may reference the account as buyer_user_id (users.user_id) and/or buyer_id
+    (BookPlatformUser.id on older rows). Authors and readers use the same User row when
+    they buy; we OR those predicates so all completed sales for this login show up.
+    """
+    uid = current_user.user_id
+    bp_user = BookPlatformUser.query.filter_by(user_id=uid).first()
+    bp_pk = bp_user.id if bp_user else None
+    match_login = [BookPurchase.buyer_user_id == uid]
+    if bp_pk is not None:
+        match_login.append(BookPurchase.buyer_id == bp_pk)
     purchases = BookPurchase.query.filter(
         BookPurchase.status == TransactionStatus.COMPLETED,
-        db.or_(
-            BookPurchase.buyer_user_id == current_user.user_id,
-            (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false(),
-        ),
+        db.or_(*match_login),
     ).order_by(BookPurchase.purchased_at.desc(), BookPurchase.created_at.desc()).all()
 
     by_book = {}

@@ -254,3 +254,94 @@ CREATE TABLE book_cart_items (
         except Exception as e:
             db.session.rollback()
             logger.error("Could not patch book_cart_items (SQLite): %s", e, exc_info=True)
+
+
+def ensure_book_purchases_buyer_user_id_schema(db) -> None:
+    """
+    Add book_purchases.buyer_user_id if missing and backfill from book_platform_users.
+
+    Older DBs only stored buyer_id (BookPlatformUser.id). The ORM and my_library expect
+    buyer_user_id (users.user_id) so any logged-in account—including authors who buy—
+    can be matched without relying on an Ink Studio profile row.
+    """
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("book_purchases.buyer_user_id patch: dialect check failed: %s", e)
+        return
+
+    try:
+        if dialect == "postgresql":
+            col = db.session.execute(
+                text(
+                    "SELECT 1 FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'book_purchases' "
+                    "AND column_name = 'buyer_user_id'"
+                )
+            ).fetchone()
+            db.session.rollback()
+            if col:
+                return
+            logger.info("Adding book_purchases.buyer_user_id (PostgreSQL catch-up).")
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_purchases ADD COLUMN buyer_user_id INTEGER "
+                    "REFERENCES users(user_id)"
+                )
+            )
+            db.session.execute(
+                text(
+                    "UPDATE book_purchases bp SET buyer_user_id = bpu.user_id "
+                    "FROM book_platform_users bpu "
+                    "WHERE bp.buyer_id IS NOT NULL AND bp.buyer_user_id IS NULL "
+                    "AND bp.buyer_id = bpu.id"
+                )
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_book_purchases_buyer_user_id "
+                    "ON book_purchases(buyer_user_id)"
+                )
+            )
+            db.session.commit()
+            logger.info("book_purchases.buyer_user_id verified/patched (PostgreSQL).")
+            return
+
+        if dialect == "sqlite":
+            rows = db.session.execute(text("PRAGMA table_info(book_purchases)")).fetchall()
+            db.session.rollback()
+            names = {r[1] for r in rows}
+            if "buyer_user_id" in names:
+                return
+            logger.info("Adding book_purchases.buyer_user_id (SQLite catch-up).")
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_purchases ADD COLUMN buyer_user_id INTEGER "
+                    "REFERENCES users(user_id)"
+                )
+            )
+            db.session.execute(
+                text(
+                    "UPDATE book_purchases SET buyer_user_id = "
+                    "(SELECT user_id FROM book_platform_users "
+                    "WHERE book_platform_users.id = book_purchases.buyer_id) "
+                    "WHERE buyer_id IS NOT NULL AND buyer_user_id IS NULL"
+                )
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_book_purchases_buyer_user_id "
+                    "ON book_purchases(buyer_user_id)"
+                )
+            )
+            db.session.commit()
+            logger.info("book_purchases.buyer_user_id verified/patched (SQLite).")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(
+            "Could not patch book_purchases.buyer_user_id: %s",
+            e,
+            exc_info=True,
+        )
