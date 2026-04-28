@@ -487,7 +487,8 @@ def dashboard(user_profile, profile_type):
                              user_reviewer_profile=None,
                              user_investments=[],
                              freelancer_stories=freelancer_stories,
-                             is_freelancer=True)
+                             is_freelancer=True,
+                             marketplace_cover_url=_marketplace_cover_url)
     
     if profile_type == 'writer':
         # For writers, create a temporary BookPlatformUser-like object
@@ -598,7 +599,8 @@ def dashboard(user_profile, profile_type):
                          user_reviewer_profile=user_reviewer_profile,
                          user_investments=user_investments,
                          freelancer_stories=[],
-                         is_freelancer=False)
+                         is_freelancer=False,
+                         marketplace_cover_url=_marketplace_cover_url)
 
 
 @book_bp.route('/my-listings')

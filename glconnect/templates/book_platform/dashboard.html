@@ -429,7 +429,7 @@
                                             <div class="card border-0 shadow-sm h-100">
                                                 <div class="book-cover-container">
                                                     {% if book.cover_image %}
-                                                        <img src="{{ book.cover_image }}" class="book-cover-img" alt="{{ book.title }}">
+                                                        <img src="{{ marketplace_cover_url(book) }}" class="book-cover-img" alt="{{ book.title }}">
                                                     {% else %}
                                                         <div class="book-cover-placeholder">
                                                             <i class="fas fa-book fa-3x text-muted"></i>

@@ -709,6 +709,9 @@
                             <button type="button" class="btn btn-primary btn-sm" id="btnQuickPublishAudiobook" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
                                 <i class="fas fa-layer-group me-1"></i>Publish audiobook now
                             </button>
+                            <button type="button" class="btn btn-outline-dark btn-sm" id="showListingTermsBtnStep2">
+                                <i class="fas fa-scale-balanced me-1"></i>Review and accept terms
+                            </button>
                             <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-columns me-1"></i>Skip audiobook for now
                             </a>
@@ -743,6 +746,14 @@
             return digitalNew || audioNew || chapterNew;
         }
 
+        function openListingTermsPanel() {
+            const panel = document.getElementById('listingTermsPanel');
+            if (!panel) return false;
+            panel.classList.remove('d-none');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return true;
+        }
+
         function validateListingTermsForm() {
             const rights = document.getElementById('listing_terms_rights_warranty');
             const takedown = document.getElementById('listing_terms_takedown_consent');
@@ -753,7 +764,8 @@
             const panel = document.getElementById('listingTermsPanel');
 
             if (!panel || panel.classList.contains('d-none')) {
-                showNotification('Click "Review and accept terms" before listing to marketplace.', 'error');
+                openListingTermsPanel();
+                showNotification('Review and accept terms in the Author listing terms section before listing.', 'error');
                 return false;
             }
             const sourceVal = (source.value || '').trim().toLowerCase();
@@ -787,15 +799,9 @@
         }
 
         const showListingTermsBtn = document.getElementById('showListingTermsBtn');
-        if (showListingTermsBtn) {
-            showListingTermsBtn.addEventListener('click', function() {
-                const panel = document.getElementById('listingTermsPanel');
-                if (panel) {
-                    panel.classList.remove('d-none');
-                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            });
-        }
+        if (showListingTermsBtn) showListingTermsBtn.addEventListener('click', openListingTermsPanel);
+        const showListingTermsBtnStep2 = document.getElementById('showListingTermsBtnStep2');
+        if (showListingTermsBtnStep2) showListingTermsBtnStep2.addEventListener('click', openListingTermsPanel);
 
         // Form submission
         document.getElementById('editBookForm').addEventListener('submit', async function(e) {
@@ -1034,6 +1040,9 @@
                     'Confirm that you previewed the audiobook and approve publishing it to the marketplace.',
                     'error'
                 );
+                return;
+            }
+            if (shouldRequireListingTerms() && !validateListingTermsForm()) {
                 return;
             }
             const hiddenConfirm = document.getElementById('confirm_audiobook_publish_field');
