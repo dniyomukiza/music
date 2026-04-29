@@ -22,9 +22,9 @@ def get_stats():
         # Total page views
         total_views = PageAnalytics.query.count()
         
-        # Unique paths
-        unique_paths = PageAnalytics.query.with_entities(
-            func.count(distinct(PageAnalytics.path))
+        # Unique Flask endpoints (DB column legacy name: path)
+        unique_endpoints = PageAnalytics.query.with_entities(
+            func.count(distinct(PageAnalytics.endpoint))
         ).scalar()
         
         # Unique visitors (by IP)
@@ -35,14 +35,6 @@ def get_stats():
         # Authenticated vs anonymous views
         authenticated_views = PageAnalytics.query.filter_by(is_authenticated=True).count()
         anonymous_views = total_views - authenticated_views
-        
-        # Browser stats
-        browser_stats = db.session.query(
-            PageAnalytics.browser,
-            func.count(PageAnalytics.id).label('count')
-        ).group_by(PageAnalytics.browser).all()
-        
-        browser_data = {browser: count for browser, count in browser_stats if browser}
         
         # Device stats
         device_stats = db.session.query(
@@ -62,11 +54,11 @@ def get_stats():
             'success': True,
             'stats': {
                 'total_views': total_views,
-                'unique_paths': unique_paths,
+                'unique_endpoints': unique_endpoints,
+                'unique_paths': unique_endpoints,
                 'unique_visitors': unique_visitors,
                 'authenticated_views': authenticated_views,
                 'anonymous_views': anonymous_views,
-                'browser_stats': browser_data,
                 'device_stats': device_data,
                 'recent_views_24h': recent_views
             }
@@ -81,28 +73,29 @@ def get_stats():
 def get_page_stats():
     """Get statistics by page/path"""
     try:
-        # Get path parameter for filtering specific page
-        specific_path = request.args.get('path')
+        # Filter by Flask endpoint (accept ?endpoint= or legacy ?path=)
+        specific_endpoint = request.args.get('endpoint') or request.args.get('path')
         limit = int(request.args.get('limit', 20))
         
         # Build query
         query = db.session.query(
-            PageAnalytics.path,
+            PageAnalytics.endpoint,
             func.count(PageAnalytics.id).label('total_views'),
             func.count(distinct(PageAnalytics.ip_address)).label('unique_visitors'),
             func.max(PageAnalytics.timestamp).label('last_accessed')
         )
         
-        if specific_path:
-            query = query.filter(PageAnalytics.path == specific_path)
+        if specific_endpoint:
+            query = query.filter(PageAnalytics.endpoint == specific_endpoint)
         
-        # Group by path and order by total views
-        results = query.group_by(PageAnalytics.path).order_by(func.count(PageAnalytics.id).desc()).limit(limit).all()
+        # Group by endpoint and order by total views
+        results = query.group_by(PageAnalytics.endpoint).order_by(func.count(PageAnalytics.id).desc()).limit(limit).all()
         
         pages = []
-        for path, total_views, unique_visitors, last_accessed in results:
+        for endpoint, total_views, unique_visitors, last_accessed in results:
             pages.append({
-                'path': path,
+                'endpoint': endpoint,
+                'path': endpoint,
                 'total_views': total_views,
                 'unique_visitors': unique_visitors,
                 'last_accessed': last_accessed.isoformat() if last_accessed else None
@@ -133,15 +126,13 @@ def get_recent_activity():
         for activity in recent:
             activities.append({
                 'id': activity.id,
-                'path': activity.path,
-                'method': activity.method,
+                'endpoint': activity.endpoint,
+                'path': activity.endpoint,
                 'ip_address': activity.ip_address,
-                'browser': activity.browser,
                 'device': activity.device,
                 'is_authenticated': activity.is_authenticated,
                 'user_id': activity.user_id,
                 'timestamp': activity.timestamp.isoformat() if activity.timestamp else None,
-                'referer': activity.referer
             })
         
         return jsonify({
@@ -208,27 +199,29 @@ def get_top_paths():
     try:
         limit = int(request.args.get('limit', 10))
         
-        top_paths = db.session.query(
-            PageAnalytics.path,
+        top_q = db.session.query(
+            PageAnalytics.endpoint,
             func.count(PageAnalytics.id).label('views'),
             func.count(distinct(PageAnalytics.ip_address)).label('unique_visitors')
         ).group_by(
-            PageAnalytics.path
+            PageAnalytics.endpoint
         ).order_by(
             func.count(PageAnalytics.id).desc()
         ).limit(limit).all()
         
         paths = []
-        for path, views, unique_visitors in top_paths:
+        for endpoint, views, unique_visitors in top_q:
             paths.append({
-                'path': path,
+                'endpoint': endpoint,
+                'path': endpoint,
                 'views': views,
                 'unique_visitors': unique_visitors
             })
         
         return jsonify({
             'success': True,
-            'top_paths': paths
+            'top_paths': paths,
+            'top_endpoints': paths
         })
     except Exception as e:
         return jsonify({

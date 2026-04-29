@@ -8,6 +8,7 @@ from werkzeug.security import check_password_hash
 from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g,jsonify
 from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager,login_required,current_user
+from urllib.parse import urlparse
 
 # Load configuration from environment variables
 config = {
@@ -19,6 +20,8 @@ config = {
 bp1 = Blueprint('routes1', __name__)
 API_URL = "https://www.glc.cool/word/"
 login_manager = LoginManager()
+# Set when user opens login/register with next=/mybook/marketplace (fallback if query is lost on POST).
+SESSION_AUTH_ENTRY_MARKETPLACE = "auth_entry_marketplace"
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -27,6 +30,55 @@ def load_user(user_id):
 @bp1.before_app_request
 def load_logged_in_user():
     g.user_id = session.get('user_id')
+
+
+def safe_post_auth_next(candidate):
+    """Return a same-site path (with optional query) for post-login/register redirect, or None."""
+    if not candidate or not isinstance(candidate, str):
+        return None
+    c = candidate.strip()
+    if not c:
+        return None
+    if c.startswith("//"):
+        return None
+    if "://" in c:
+        try:
+            parsed = urlparse(c)
+        except Exception:
+            return None
+        req_host = (request.host or "").split(":")[0].lower()
+        netloc = (parsed.netloc or "").split(":")[0].lower()
+        if not netloc or netloc != req_host:
+            return None
+        path = parsed.path or "/"
+        c = path + (("?" + parsed.query) if parsed.query else "")
+    if not c.startswith("/") or c.startswith("//"):
+        return None
+    if "/ink-studio" in c:
+        return None
+    return c
+
+
+def _marketplace_auth_return_path():
+    return url_for("book_platform.marketplace")
+
+
+def _safe_redirect_path_key(path_with_qs):
+    if not path_with_qs:
+        return ""
+    p = path_with_qs.split("?")[0].rstrip("/")
+    return p if p else "/"
+
+
+def sync_auth_entry_marketplace_from_next(raw_next):
+    """If auth was entered from marketplace links, remember for post-login / post-confirm redirect."""
+    nxt = safe_post_auth_next(raw_next)
+    mp = _marketplace_auth_return_path()
+    if nxt and _safe_redirect_path_key(nxt) == _safe_redirect_path_key(mp):
+        session[SESSION_AUTH_ENTRY_MARKETPLACE] = True
+    else:
+        session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None)
+
 
 def get_role_based_redirect(user):
     """Helper function to get the appropriate redirect URL based on user role.
@@ -63,6 +115,12 @@ def get_role_based_redirect(user):
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
+    raw_next = (
+        request.form.get("next")
+        if request.method == "POST"
+        else request.args.get("next")
+    )
+    sync_auth_entry_marketplace_from_next(raw_next)
 
     if form.validate_on_submit():
         new_user_username = form.username.data
@@ -118,9 +176,21 @@ def register():
                 token = s.dumps(new_user.email, salt='email-confirm')
                 confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
 
-                # Send confirmation email
-                send_confirmation_email(new_user.email, confirm_url)
-                
+                # Send confirmation email (requires SENDER_MAIL + MAIL_TRAP in environment)
+                if not send_confirmation_email(new_user.email, confirm_url):
+                    flash(
+                        "Your account was created, but the confirmation email could not be sent. "
+                        "The server needs SENDER_MAIL and MAIL_TRAP (Mailtrap API token) set in the environment. "
+                        "Ask the administrator to configure email, or check server logs.",
+                        "error",
+                    )
+
+                nxt = safe_post_auth_next(
+                    request.args.get("next") or request.form.get("next")
+                )
+                if nxt:
+                    session["post_confirm_next"] = nxt
+
                 # Redirect to a page telling the user to check their email
                 return redirect(url_for('routes1.check_email'))
 
@@ -128,23 +198,30 @@ def register():
                 db.session.rollback()
                 flash("An error occurred while creating your account. Please try again.", 'error')
 
-    return render_template('register.html', title='Register', form=form)
+    register_next = safe_post_auth_next(
+        request.form.get("next") or request.args.get("next")
+    )
+    return render_template(
+        "register.html",
+        title="Register",
+        form=form,
+        register_next=register_next,
+    )
 
 def send_confirmation_email(to_email, confirm_url):
+    """Send verification email via Mailtrap. Returns True if sent, False if misconfigured or send failed."""
     sender = os.getenv("SENDER_MAIL")
     receiver = to_email
     api_key = config.get("MAIL_TRAP")
-    
-    # Validate configuration
+
     if not sender:
-        print("ERROR: SENDER_MAIL is not set in environment variables")
-        return
+        current_app.logger.error("SENDER_MAIL is not set; confirmation email not sent")
+        return False
     if not api_key:
-        print("ERROR: MAIL_TRAP API key is not set in environment variables")
-        return
-    
+        current_app.logger.error("MAIL_TRAP is not set; confirmation email not sent")
+        return False
+
     try:
-        # Create the Mail object
         mail = Mail(
             sender=Address(email=sender, name="Please verify your account"),
             to=[Address(email=receiver)],
@@ -154,12 +231,13 @@ def send_confirmation_email(to_email, confirm_url):
             ),
             category="Verify email"
         )
-        # Send email using Mailtrap API
-        client = MailtrapClient(token=api_key)
-        client.send(mail)
+        MailtrapClient(token=api_key).send(mail)
+        return True
     except Exception as e:
-        print(f"ERROR: error occurred while sending email: {e}")
-        print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
+        current_app.logger.exception(
+            "Confirmation email failed for %s: %s", receiver, e
+        )
+        return False
 
 
 @bp1.route('/confirm/<token>')
@@ -182,9 +260,17 @@ def confirm_email(token):
     # Automatically log the user in after email confirmation
     login_user(user)
     session['user_id'] = user.user_id
-    
+
+    pending = session.pop("post_confirm_next", None)
+    dest = safe_post_auth_next(pending) if pending else None
+    if dest:
+        session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None)
+        return redirect(dest)
+    if session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None):
+        return redirect(url_for("book_platform.marketplace"))
+
     # Use the same role-based redirect as login
-    return get_role_based_redirect(user)  
+    return get_role_based_redirect(user)
 
 @bp1.route('/check_email')
 def check_email():
@@ -193,6 +279,8 @@ def check_email():
 @bp1.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+    if request.method == "GET":
+        sync_auth_entry_marketplace_from_next(request.args.get("next"))
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
@@ -201,12 +289,14 @@ def login():
             login_user(user)
             session['user_id'] = user.user_id 
             flash('Login successful!', 'success')
-            
-            # Check for next parameter to redirect after login (but only if it's not Ink Studio)
-            next_page = request.args.get('next')
-            if next_page and next_page.startswith('/') and '/ink-studio' not in next_page:
+
+            next_page = safe_post_auth_next(request.args.get("next"))
+            if next_page:
+                session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None)
                 return redirect(next_page)
-            
+            if session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None):
+                return redirect(url_for("book_platform.marketplace"))
+
             # Use shared role-based redirect function
             return get_role_based_redirect(user)
         else:

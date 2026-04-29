@@ -2,7 +2,7 @@ import os
 import json
 import re
 from datetime import datetime, timezone
-from flask import Flask, request
+from flask import Flask, request, g
 from .models import db, User
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
@@ -53,6 +53,8 @@ def _load_config():
         "STRIPE_SECRET_KEY": (os.getenv("STRIPE_SECRET_KEY") or "").strip() or None,
         "STRIPE_API_KEY": (os.getenv("STRIPE_API_KEY") or "").strip() or None,
         "STRIPE_WEBHOOK_SECRET": (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
+        "SENDER_MAIL": (os.getenv("SENDER_MAIL") or "").strip() or None,
+        "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
     }
     # Fallback: load from glconfig if env vars are empty (e.g. /etc/glconfig.json or /etc/glconfig on Linux)
     _gl_paths = [
@@ -99,6 +101,18 @@ def _load_config():
                     wh = (str(file_cfg["STRIPE_WEBHOOK_SECRET"]) or "").strip()
                     if wh:
                         cfg["STRIPE_WEBHOOK_SECRET"] = wh
+
+                # Mailtrap (account confirmation, receipts, etc.) — same paths as DB/Stripe
+                if not cfg.get("SENDER_MAIL"):
+                    _sm = _gl_first_nonempty(file_cfg, "SENDER_MAIL", "SENDER_EMAIL")
+                    if _sm:
+                        cfg["SENDER_MAIL"] = _sm
+                if not cfg.get("MAIL_TRAP"):
+                    _mt = _gl_first_nonempty(
+                        file_cfg, "MAIL_TRAP", "MAILTRAP_API_TOKEN", "MAIL_TRAP_API_KEY"
+                    )
+                    if _mt:
+                        cfg["MAIL_TRAP"] = _mt
 
                 # Optional: Stripe *test* keys from glconfig only — override live/env secrets for the whole app.
                 # Same alias pattern as live keys: STRIPE_SECRET_KEY / STRIPE_KEY / STRIPE_PRIVATE_KEY maps to
@@ -192,6 +206,12 @@ if config.get("STRIPE_API_KEY"):
 if config.get("STRIPE_WEBHOOK_SECRET"):
     if STRIPE_TEST_KEYS_FROM_GLCONFIG or not (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip():
         os.environ["STRIPE_WEBHOOK_SECRET"] = config["STRIPE_WEBHOOK_SECRET"]
+
+# Mailtrap / confirmation email: expose glconfig values to os.getenv() for routes1, blog, book_platform, etc.
+if config.get("SENDER_MAIL") and not (os.getenv("SENDER_MAIL") or "").strip():
+    os.environ["SENDER_MAIL"] = config["SENDER_MAIL"]
+if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
+    os.environ["MAIL_TRAP"] = config["MAIL_TRAP"]
 
 if STRIPE_TEST_KEYS_FROM_GLCONFIG:
     print(
@@ -606,47 +626,49 @@ def create_app(config_overrides=None):
                 f.write(f"    Device: {device}\n")
                 f.write(f"    User-Agent: {user_agent}\n")
                 f.write("-" * 80 + "\n")
-            
-            # Database analytics logging (new)
-            try:
-                from .models import PageAnalytics, db
-                from flask_login import current_user
-                
-                # Skip static files and admin endpoints (including analytics)
-                if (
-                    not request.path.startswith('/static')
-                    and not request.path.startswith('/hls')
-                    and not request.path.startswith('/api/hls-status')
-                    and not request.path.startswith('/_analytics')
-                    and request.path != '/analytics'
-                ):
-                    # Only log non-static pages to avoid database bloat
-                    analytics = PageAnalytics(
-                        path=request.path,
-                        method=request.method,
-                        ip_address=request.remote_addr,
-                        browser=browser,
-                        device=device,
-                        user_agent=user_agent[:500] if len(user_agent) > 500 else user_agent,  # Limit length
-                        user_id=current_user.user_id if current_user.is_authenticated else None,
-                        is_authenticated=current_user.is_authenticated,
-                        referer=request.referrer[:500] if request.referrer and len(request.referrer) > 500 else request.referrer
-                    )
-                    db.session.add(analytics)
-                    
-                    # Commit all analytics (database handles performance)
-                    db.session.commit()
-            except Exception as db_ex:
-                # Don't fail the request if analytics fails
-                print(f"Analytics logging error: {db_ex}")
-                # Rollback on error
-                try:
-                    db.session.rollback()
-                except:
-                    pass
-                
+
+            # Stash for after_request (endpoint is reliable only after routing)
+            g._ink_page_analytics = {
+                "device": device,
+                "skip": (
+                    request.path.startswith("/static")
+                    or request.path.startswith("/hls")
+                    or request.path.startswith("/api/hls-status")
+                    or request.path.startswith("/_analytics")
+                    or request.path == "/analytics"
+                ),
+            }
+
         except Exception as ex:
             print("Exception occurred while logging: ", ex)
+
+    @app.after_request
+    def log_page_analytics_db(response):
+        """Record one row per request with Flask endpoint (not raw path)."""
+        info = getattr(g, "_ink_page_analytics", None)
+        if not info or info.get("skip"):
+            return response
+        try:
+            from .models import PageAnalytics, db
+            from flask_login import current_user
+
+            page_endpoint = request.endpoint or request.path or "_unknown"
+            analytics = PageAnalytics(
+                endpoint=page_endpoint,
+                ip_address=request.remote_addr,
+                device=info.get("device"),
+                user_id=current_user.user_id if current_user.is_authenticated else None,
+                is_authenticated=current_user.is_authenticated,
+            )
+            db.session.add(analytics)
+            db.session.commit()
+        except Exception as db_ex:
+            print(f"Analytics logging error: {db_ex}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+        return response
 
     with app.app_context():
         # Idempotent PostgreSQL DDL: model maps milestone columns that older DBs lack
@@ -660,6 +682,7 @@ def create_app(config_overrides=None):
             ensure_library_book_hides_schema,
             ensure_library_book_hides_format_columns,
             ensure_audiobook_segment_plan_schema,
+            ensure_page_analytics_slim_schema,
         )
         ensure_investment_campaign_milestone_schema(db)
         ensure_digital_book_editions_schema(db)
@@ -669,6 +692,7 @@ def create_app(config_overrides=None):
         ensure_book_purchases_schema(db)
         ensure_library_book_hides_schema(db)
         ensure_library_book_hides_format_columns(db)
+        ensure_page_analytics_slim_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

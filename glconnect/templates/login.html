@@ -15,7 +15,8 @@
         </div>
         {{ form.submit(class="btn") }}
     </form>
-    <p>Don't have an account? <a href="{{ url_for('routes1.register') }}">Register</a></p>
+    {% set login_next = request.args.get('next') %}
+    <p>Don't have an account? {% if login_next %}<a href="{{ url_for('routes1.register', next=login_next) }}">Register</a>{% else %}<a href="{{ url_for('routes1.register') }}">Register</a>{% endif %}</p>
     <p><a href="{{ url_for('routes1.reset_password_request') }}">Forgot Password?</a></p>
 
 </div>

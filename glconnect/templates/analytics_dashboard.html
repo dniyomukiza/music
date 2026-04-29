@@ -167,8 +167,8 @@
         </div>
         
         <div class="section">
-            <h2>🔝 Top Pages</h2>
-            <div id="top-pages" class="loading">Loading top pages...</div>
+            <h2>🔝 Top endpoints</h2>
+            <div id="top-pages" class="loading">Loading top endpoints...</div>
         </div>
         
         <div class="section">
@@ -176,15 +176,9 @@
             <div id="recent-activity" class="loading">Loading recent activity...</div>
         </div>
         
-        <div class="stats-grid">
-            <div class="section">
-                <h2>🌐 Browser Statistics</h2>
-                <div id="browser-stats" class="loading">Loading browser stats...</div>
-            </div>
-            <div class="section">
-                <h2>📱 Device Statistics</h2>
-                <div id="device-stats" class="loading">Loading device stats...</div>
-            </div>
+        <div class="section">
+            <h2>📱 Device statistics</h2>
+            <div id="device-stats" class="loading">Loading device stats...</div>
         </div>
     </div>
 
@@ -224,7 +218,7 @@
         }
 
         function setLoadingState(isLoading) {
-            const elements = ['stats-grid', 'top-pages', 'recent-activity', 'browser-stats', 'device-stats'];
+            const elements = ['stats-grid', 'top-pages', 'recent-activity', 'device-stats'];
             elements.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && isLoading) {
@@ -251,7 +245,6 @@
                 // Load stats
                 const statsData = await fetchAPI('/_analytics/api/stats');
                 displayStats(statsData.stats);
-                displayBrowserStats(statsData.stats.browser_stats);
                 displayDeviceStats(statsData.stats.device_stats);
                 
                 // Load top pages
@@ -292,8 +285,8 @@
                     <div class="value">${formatNumber(stats.unique_visitors)}</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Unique Pages</h3>
-                    <div class="value">${formatNumber(stats.unique_paths)}</div>
+                    <h3>Unique endpoints</h3>
+                    <div class="value">${formatNumber(stats.unique_endpoints != null ? stats.unique_endpoints : stats.unique_paths)}</div>
                 </div>
                 <div class="stat-card">
                     <h3>Views (24h)</h3>
@@ -308,19 +301,6 @@
                     <div class="value">${formatNumber(stats.anonymous_views)}</div>
                 </div>
             `;
-        }
-
-        function displayBrowserStats(browsers) {
-            const browserHTML = Object.entries(browsers)
-                .sort((a, b) => b[1] - a[1])
-                .map(([browser, count]) => `
-                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600;">${browser}</span>
-                        <span style="color: #7f8c8d;">${formatNumber(count)} views</span>
-                    </div>
-                `).join('');
-            
-            document.getElementById('browser-stats').innerHTML = browserHTML || '<p>No browser data available</p>';
         }
 
         function displayDeviceStats(devices) {
@@ -338,7 +318,7 @@
 
         function displayTopPages(pages) {
             if (!pages || pages.length === 0) {
-                document.getElementById('top-pages').innerHTML = '<p>No page data available</p>';
+                document.getElementById('top-pages').innerHTML = '<p>No endpoint data available</p>';
                 return;
             }
             
@@ -346,7 +326,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Path</th>
+                            <th>Endpoint</th>
                             <th>Total Views</th>
                             <th>Unique Visitors</th>
                         </tr>
@@ -354,7 +334,7 @@
                     <tbody>
                         ${pages.map(page => `
                             <tr>
-                                <td><code>${page.path}</code></td>
+                                <td><code>${page.endpoint != null ? page.endpoint : page.path}</code></td>
                                 <td>${formatNumber(page.views)}</td>
                                 <td>${formatNumber(page.unique_visitors)}</td>
                             </tr>
@@ -377,9 +357,7 @@
                     <thead>
                         <tr>
                             <th>Time</th>
-                            <th>Path</th>
-                            <th>Method</th>
-                            <th>Browser</th>
+                            <th>Endpoint</th>
                             <th>Device</th>
                             <th>IP</th>
                             <th>Auth</th>
@@ -392,9 +370,7 @@
                             return `
                                 <tr>
                                     <td>${timeStr}</td>
-                                    <td><code style="font-size: 12px;">${activity.path}</code></td>
-                                    <td>${activity.method}</td>
-                                    <td>${activity.browser || 'N/A'}</td>
+                                    <td><code style="font-size: 12px;">${activity.endpoint != null ? activity.endpoint : activity.path}</code></td>
                                     <td>${activity.device || 'N/A'}</td>
                                     <td style="font-size: 11px;">${activity.ip_address}</td>
                                     <td>

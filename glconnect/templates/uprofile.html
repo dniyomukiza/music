@@ -32,9 +32,11 @@
             <a href="{{ url_for('prof.edit_profile') }}" class="uprofile-btn uprofile-btn--primary">
                 <i class="fas fa-pen-to-square me-2" aria-hidden="true"></i>Edit profile
             </a>
+            {% if current_user.is_authenticated %}
             <a href="{{ url_for('blog.logout') }}" class="uprofile-btn uprofile-btn--ghost">
                 <i class="fas fa-right-from-bracket me-2" aria-hidden="true"></i>Sign out
             </a>
+            {% endif %}
         </div>
     </div>
 

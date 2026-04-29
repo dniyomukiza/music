@@ -390,16 +390,13 @@ class NewsTask(db.Model):
 class PageAnalytics(db.Model):
     __tablename__ = 'page_analytics'
     id = db.Column(db.Integer, primary_key=True)
-    path = db.Column(db.String(500), nullable=False)  # The URL path accessed
-    method = db.Column(db.String(10), nullable=False)  # GET, POST, etc.
+    # DB column remains "path" for compatibility; stores Flask endpoint (e.g. book_platform.marketplace).
+    endpoint = db.Column('path', db.String(500), nullable=False)
     ip_address = db.Column(db.String(50), nullable=True)
-    browser = db.Column(db.String(50), nullable=True)
     device = db.Column(db.String(50), nullable=True)
-    user_agent = db.Column(db.String(500), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
     is_authenticated = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    referer = db.Column(db.String(500), nullable=True)
     
     # Relationship
     user = db.relationship('User', backref='page_views')
@@ -407,7 +404,7 @@ class PageAnalytics(db.Model):
 class PageAnalyticsStats(db.Model):
     __tablename__ = 'page_analytics_stats'
     id = db.Column(db.Integer, primary_key=True)
-    path = db.Column(db.String(500), nullable=False)
+    endpoint = db.Column('path', db.String(500), nullable=False)
     total_views = db.Column(db.Integer, default=0)
     unique_visitors = db.Column(db.Integer, default=0)
     last_accessed = db.Column(db.DateTime, nullable=True)

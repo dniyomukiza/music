@@ -568,3 +568,32 @@ def ensure_book_purchases_schema(db) -> None:
             e,
             exc_info=True,
         )
+
+
+def ensure_page_analytics_slim_schema(db) -> None:
+    """Drop removed PageAnalytics columns (method, browser, user_agent, referer) if still present."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    legacy = ("method", "browser", "user_agent", "referer")
+    try:
+        dialect = db.engine.dialect.name
+    except Exception:
+        return
+    try:
+        if dialect == "postgresql":
+            for col in legacy:
+                db.session.execute(
+                    text(f"ALTER TABLE page_analytics DROP COLUMN IF EXISTS {col}")
+                )
+            db.session.commit()
+            logger.info("page_analytics: legacy columns dropped if present (PostgreSQL).")
+        elif dialect == "sqlite":
+            for col in legacy:
+                try:
+                    db.session.execute(text(f"ALTER TABLE page_analytics DROP COLUMN {col}"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+    except Exception as e:
+        db.session.rollback()
+        logger.warning("page_analytics slim schema: %s", e)

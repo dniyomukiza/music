@@ -57,22 +57,24 @@
                             <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
                         </a>
                     </li>
-                    <li class="nav-item d-none d-lg-block">
-                        <span class="navbar-text small text-white-50 py-lg-2 px-lg-2 mb-0" title="Signed in as {{ current_user.email }}">{{ current_user.username }}</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link rounded px-lg-2" href="{{ url_for('blog.logout') }}">
-                            <i class="fas fa-sign-out-alt me-1" aria-hidden="true"></i>Sign out
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle rounded px-lg-2" href="#" id="marketplaceNavAccount" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu, signed in as {{ current_user.username }}">
+                            <i class="fas fa-user-circle me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">{{ current_user.username }}</span><span class="d-inline d-sm-none">Account</span>
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10 mt-1" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="marketplaceNavAccount">
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
+                            <li><hr class="dropdown-divider border-white border-opacity-25"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}"><i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sign out</a></li>
+                        </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link rounded px-lg-2" href="{{ url_for('routes1.login', next=request.url) }}">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">
                             <i class="fas fa-sign-in-alt me-1" aria-hidden="true"></i>Sign in
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2 mt-2 mt-lg-0 d-grid d-lg-block">
-                        <a class="btn btn-sm btn-ink-ghost fw-semibold px-3" href="{{ url_for('routes1.register') }}">Create account</a>
+                        <a class="btn btn-sm btn-ink-ghost fw-semibold px-3" href="{{ url_for('routes1.register', next=url_for('book_platform.marketplace')) }}">Create account</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -105,8 +107,8 @@
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
                             <i class="fas fa-pen-fancy me-1"></i>Start writing
                         </a>
-                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2">
-                            <i class="fas fa-plus-circle me-1"></i>List your book
+                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2" aria-label="List a book on the marketplace">
+                            <i class="fas fa-file-upload me-1"></i>List
                         </a>
                         {% endif %}
                         {% if current_user.is_authenticated %}
@@ -542,7 +544,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2">Choose ebook, audiobook, or both, then add to your cart or pay for this title only. <strong>Your cart is stored on your account</strong>—it stays when you open other books, refresh, or sign out and back in, until you remove lines or pay for them.</p>
+                    <p class="mb-2">Choose ebook, audiobook, or both. Use <strong>Add to cart</strong> to keep shopping, or <strong>Buy now</strong> to check out this book on its own. <strong>Your cart is stored on your account</strong>—it stays when you open other books, refresh, or sign out and back in, until you remove lines or pay for them.</p>
                     <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
                     <div id="cartActionFlash" class="alert alert-success py-1 px-2 small mt-2 d-none" role="status"></div>
                     <div class="mb-3 d-none" id="purchaseTypeBlock">
@@ -569,7 +571,7 @@
                         <small class="form-text text-muted">Minimum amount: $<span id="minAmount">0.00</span></small>
                     </div>
                     <div id="checkoutAccountBlock" class="mb-0 {% if current_user.is_authenticated %}d-none{% endif %}">
-                        <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=request.url) }}">Sign in</a> or create one below (same email you’ll use at payment).</p>
+                        <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Sign in</a> or create one below (same email you’ll use at payment).</p>
                         <label for="checkoutSignupEmail" class="form-label fw-bold">Email</label>
                         <input type="email" class="form-control" id="checkoutSignupEmail" placeholder="you@example.com" autocomplete="email">
                         <div class="mt-3 pt-2 border-top">
@@ -604,8 +606,8 @@
                         </button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
-                    <button type="button" class="btn btn-success" id="confirmPurchaseBtn">
-                        <i class="fas fa-credit-card me-2"></i>Pay this title only
+                    <button type="button" class="btn btn-success" id="confirmPurchaseBtn" title="Pay for this book now without using your cart">
+                        <i class="fas fa-credit-card me-2" aria-hidden="true"></i>Buy now
                     </button>
                 </div>
             </div>
@@ -967,7 +969,7 @@
             .then(data => {
                 if (data.success) {
                     if (data.already_owned) {
-                        alert(data.message || 'You already own this title.');
+                        alert(data.message || 'You already own this book.');
                         if (data.library_url) window.location.href = data.library_url;
                         return;
                     }
@@ -1149,7 +1151,7 @@
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <p class="mb-2">Choose ebook, audiobook, or both, then add to your cart or pay for this title only. <strong>Your cart is stored on your account</strong>—it persists across books and visits until you remove items or pay.</p>
+                                        <p class="mb-2">Choose ebook, audiobook, or both. Use <strong>Add to cart</strong> to keep shopping, or <strong>Buy now</strong> to check out this book on its own. <strong>Your cart is stored on your account</strong>—it persists across books and visits until you remove items or pay.</p>
                                         <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
                                         <div id="cartActionFlash" class="alert alert-success py-1 px-2 small mb-2 d-none" role="status"></div>
                                         <div class="mb-3 d-none" id="purchaseTypeBlock">
@@ -1176,7 +1178,7 @@
                                             <small class="form-text text-muted">Minimum amount: $<span id="minAmount">0.00</span></small>
                                         </div>
                                         <div id="checkoutAccountBlock" class="mb-0">
-                                            <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=request.url) }}">Sign in</a> or create one below.</p>
+                                            <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Sign in</a> or create one below.</p>
                                             <label for="checkoutSignupEmail" class="form-label fw-bold">Email</label>
                                             <input type="email" class="form-control" id="checkoutSignupEmail" placeholder="you@example.com" autocomplete="email">
                                             <div class="mt-3 pt-2 border-top">
@@ -1207,8 +1209,8 @@
                                             </button>
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                         </div>
-                                        <button type="button" class="btn btn-success" id="confirmPurchaseBtn">
-                                            <i class="fas fa-credit-card me-2"></i>Pay this title only
+                                        <button type="button" class="btn btn-success" id="confirmPurchaseBtn" title="Pay for this book now without using your cart">
+                                            <i class="fas fa-credit-card me-2" aria-hidden="true"></i>Buy now
                                         </button>
                                     </div>
                                 </div>
@@ -1434,7 +1436,7 @@
             .then(data => {
                 if (data.success) {
                     if (data.already_owned) {
-                        alert(data.message || 'You already own this title.');
+                        alert(data.message || 'You already own this book.');
                         if (data.library_url) window.location.href = data.library_url;
                         return;
                     }
