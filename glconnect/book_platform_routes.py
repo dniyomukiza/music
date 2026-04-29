@@ -105,6 +105,69 @@ def allowed_image_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
+def _normalize_public_website(url):
+    """Return a safe https URL for public author links, or None if invalid/empty."""
+    from urllib.parse import urlparse, urlunparse
+
+    if not url or not str(url).strip():
+        return None
+    raw = str(url).strip()
+    lo = raw.lower()
+    if lo.startswith(('javascript:', 'data:', 'vbscript:', 'file:')):
+        return None
+    if '://' not in raw:
+        raw = 'https://' + raw.lstrip('/')
+    try:
+        parsed = urlparse(raw)
+    except Exception:
+        return None
+    if parsed.scheme not in ('http', 'https'):
+        return None
+    netloc = parsed.netloc
+    if not netloc:
+        return None
+    path = parsed.path or ''
+    return urlunparse(
+        ('https', netloc, path, parsed.params or '', parsed.query or '', parsed.fragment or '')
+    )
+
+
+def _public_website_label(https_url):
+    """Short label for link text (host + path)."""
+    from urllib.parse import urlparse
+
+    if not https_url:
+        return None
+    p = urlparse(https_url)
+    label = p.netloc + (p.path if p.path not in ('', '/') else '')
+    if len(label) > 52:
+        label = label[:49] + '…'
+    return label
+
+
+def _marketplace_author_bio(author, writer):
+    """Prefer Ink Studio (BookPlatformUser) bio when set; else Writer bio."""
+    if author and author.bio and str(author.bio).strip():
+        return str(author.bio).strip()
+    if writer and writer.bio and str(writer.bio).strip():
+        return str(writer.bio).strip()
+    return None
+
+
+def _marketplace_author_profile_picture(author, writer):
+    """Prefer Ink Studio photo when set and not default; else Writer photo."""
+    def _is_default(p):
+        return not p or str(p).strip() == 'static/uploads/default_writer.jpg'
+
+    if author:
+        bp = (author.profile_picture or '').strip()
+        if bp and not _is_default(bp):
+            return bp
+    if writer and writer.profile_picture and not _is_default(writer.profile_picture):
+        return str(writer.profile_picture).strip()
+    return None
+
+
 def book_has_listing_cover(book):
     """Whether the book has a cover path or URL set for marketplace display."""
     if not book:
@@ -692,46 +755,105 @@ def author_my_listings(user_profile, profile_type):
 @book_bp.route('/setup-profile', methods=['GET', 'POST'])
 @login_required
 def setup_profile():
-    """Setup Ink Studio profile"""
+    """Setup Ink Studio profile (optional bio, photo, website for marketplace author card)."""
     if request.method == 'POST':
         try:
-            data = request.get_json()
-            
-            # Check if user already has an Ink Studio profile
+            is_multipart = request.content_type and 'multipart/form-data' in request.content_type
+            profile_pic_file = None
+            if is_multipart:
+                pen_name = request.form.get('pen_name')
+                bio = request.form.get('bio')
+                website_raw = request.form.get('website')
+                writing_experience = request.form.get('writing_experience')
+                try:
+                    genres = json.loads(request.form.get('genres') or '[]')
+                except json.JSONDecodeError:
+                    genres = []
+                try:
+                    social_links = json.loads(request.form.get('social_links') or '{}')
+                except json.JSONDecodeError:
+                    social_links = {}
+                if not isinstance(genres, list):
+                    genres = []
+                if not isinstance(social_links, dict):
+                    social_links = {}
+                profile_pic_file = request.files.get('profile_picture')
+            else:
+                data = request.get_json() or {}
+                pen_name = data.get('pen_name')
+                bio = data.get('bio')
+                website_raw = data.get('website')
+                writing_experience = data.get('writing_experience')
+                genres = data.get('genres', [])
+                social_links = data.get('social_links', {})
+                if not isinstance(genres, list):
+                    genres = []
+                if not isinstance(social_links, dict):
+                    social_links = {}
+
+            website_norm = _normalize_public_website(website_raw)
+            if str(website_raw or '').strip() and website_norm is None:
+                return jsonify({
+                    'success': False,
+                    'error': 'Enter a valid website URL (e.g. yourname.com or https://yourname.com).',
+                }), 400
+
+            pen_name_clean = (pen_name or '').strip() or None
+            bio_clean = (bio or '').strip() or None
+            we_stored = website_norm
+
             existing_profile = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-            
+
+            if profile_pic_file and profile_pic_file.filename:
+                if not allowed_image_file(profile_pic_file.filename):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Profile picture must be PNG, JPG, JPEG, GIF, WebP, or SVG.',
+                    }), 400
+                upload_dir = os.path.join(current_app.root_path, 'static', 'writer_uploads')
+                os.makedirs(upload_dir, exist_ok=True)
+                base_fn = secure_filename(profile_pic_file.filename)
+                stem, ext = os.path.splitext(base_fn)
+                unique_fn = f"{stem}_{uuid.uuid4().hex[:8]}{ext}"
+                profile_pic_file.save(os.path.join(upload_dir, unique_fn))
+                pic_rel = f"writer_uploads/{unique_fn}"
+            else:
+                pic_rel = None
+
             if existing_profile:
-                # Update existing profile
-                existing_profile.pen_name = data.get('pen_name')
-                existing_profile.bio = data.get('bio')
-                existing_profile.website = data.get('website')
-                existing_profile.social_links = data.get('social_links', {})
-                existing_profile.writing_experience = data.get('writing_experience')
-                existing_profile.genres = data.get('genres', [])
+                existing_profile.pen_name = pen_name_clean
+                existing_profile.bio = bio_clean
+                existing_profile.website = we_stored
+                existing_profile.social_links = social_links
+                existing_profile.writing_experience = (writing_experience or '').strip() or None
+                existing_profile.genres = genres
+                if pic_rel:
+                    existing_profile.profile_picture = pic_rel
                 existing_profile.updated_at = datetime.now(timezone.utc)
             else:
-                # Create new Ink Studio user profile
                 book_user = BookPlatformUser(
                     user_id=current_user.user_id,
-                    pen_name=data.get('pen_name'),
-                    bio=data.get('bio'),
-                    website=data.get('website'),
-                    social_links=data.get('social_links', {}),
-                    writing_experience=data.get('writing_experience'),
-                    genres=data.get('genres', [])
+                    pen_name=pen_name_clean,
+                    bio=bio_clean,
+                    website=we_stored,
+                    social_links=social_links,
+                    writing_experience=(writing_experience or '').strip() or None,
+                    genres=genres,
+                    profile_picture=pic_rel,
                 )
                 db.session.add(book_user)
-            
+
             db.session.commit()
-            
+
             return jsonify({'success': True, 'redirect': url_for('book_platform.dashboard')})
-            
+
         except Exception as e:
             db.session.rollback()
             print(f"Profile setup error: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
-    
-    return render_template('book_platform/setup_profile.html')
+
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    return render_template('book_platform/setup_profile.html', book_user=book_user)
 
 # Book management routes
 @book_bp.route('/books')
@@ -6065,45 +6187,38 @@ def collaborators_api(book_id):
 @book_bp.route('/api/author/<int:author_id>/details', methods=['GET'])
 @login_required
 def get_author_details(author_id):
-    """Get author details for marketplace display"""
+    """Get author details for marketplace display (no email—photo, bio, https website only)."""
     try:
         # Ensure BookPlatformUser is accessible
         from glconnect.book_platform_models import BookPlatformUser, BookStatus
-        
+
         # Get the author (BookPlatformUser)
         author = BookPlatformUser.query.get_or_404(author_id)
-        
-        # Get Writer profile if it exists (for bio and profile picture)
+
         writer = Writer.query.filter_by(user_id=author.user_id).first()
-        
-        # Use Writer profile data if available, otherwise use BookPlatformUser data
-        author_name = author.pen_name or author.user.username
-        author_bio = None
-        author_profile_picture = None
-        
-        if writer:
-            # Writer profile takes precedence
-            author_bio = writer.bio
-            author_profile_picture = writer.profile_picture
-        else:
-            # Fall back to BookPlatformUser data
-            author_bio = author.bio
-            author_profile_picture = author.profile_picture
-        
+
+        author_name = author.pen_name or (author.user.username if author.user else 'Author')
+        author_bio = _marketplace_author_bio(author, writer)
+        author_profile_picture = _marketplace_author_profile_picture(author, writer)
+
+        website_href = _normalize_public_website((author.website or '').strip())
+        website_label = _public_website_label(website_href)
+
         # Count published books by this author
         books_count = BookProject.query.filter_by(
             author_id=author_id,
             status=BookStatus.PUBLISHED
         ).count()
-        
+
         return jsonify({
             'success': True,
             'author': {
                 'id': author.id,
                 'name': author_name,
-                'email': author.user.email if author.user else None,
                 'bio': author_bio,
                 'profile_picture': author_profile_picture,
+                'website_href': website_href,
+                'website_label': website_label,
                 'books_count': books_count
             }
         })

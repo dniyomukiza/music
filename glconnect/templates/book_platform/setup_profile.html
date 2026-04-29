@@ -22,25 +22,36 @@
             <div class="col-md-8 col-lg-6">
                 <div class="card">
                     <div class="card-header text-center">
-                        <h3><i class="fas fa-user-edit"></i> Setup Your Author Profile</h3>
-                        <p class="text-muted">Tell us about yourself as a writer</p>
+                        <h3><i class="fas fa-user-edit"></i> Your author profile</h3>
+                        <p class="text-muted mb-0">All fields are optional. What you add here can appear on your <strong>marketplace author card</strong> (photo, bio, website link). Your email is never shown to buyers.</p>
                     </div>
                     <div class="card-body">
-                        <form id="profileSetupForm">
+                        {% set sl = (book_user.social_links if book_user and book_user.social_links else {}) or {} %}
+                        {% set gset = (book_user.genres if book_user and book_user.genres else []) or [] %}
+                        <form id="profileSetupForm" enctype="multipart/form-data">
                             <div class="mb-3">
-                                <label for="penName" class="form-label">Pen Name</label>
-                                <input type="text" class="form-control" id="penName" name="pen_name" placeholder="Your author name">
-                                <div class="form-text">This will be displayed as your author name. Leave blank to use your username.</div>
+                                <label for="penName" class="form-label">Pen name <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" id="penName" name="pen_name" placeholder="Your author name"
+                                       value="{{ book_user.pen_name if book_user else '' }}">
+                                <div class="form-text">Shown on your book listings. Leave blank to use your account username.</div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="bio" class="form-label">Bio</label>
-                                <textarea class="form-control" id="bio" name="bio" rows="4" placeholder="Tell us about yourself as a writer..."></textarea>
+                                <label for="profilePicture" class="form-label">Profile photo <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="file" class="form-control" id="profilePicture" name="profile_picture" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
+                                <div class="form-text">PNG, JPG, GIF, WebP, or SVG. Used on the marketplace author details view.</div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="website" class="form-label">Website</label>
-                                <input type="url" class="form-control" id="website" name="website" placeholder="https://yourwebsite.com">
+                                <label for="bio" class="form-label">Bio <span class="text-muted fw-normal">(optional)</span></label>
+                                <textarea class="form-control" id="bio" name="bio" rows="4" placeholder="A short bio for readers…">{{ book_user.bio if book_user and book_user.bio else '' }}</textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="website" class="form-label">Website <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" id="website" name="website" placeholder="yoursite.com or https://yoursite.com"
+                                       value="{{ book_user.website if book_user and book_user.website else '' }}">
+                                <div class="form-text">We store and open links as secure <strong>https</strong>. Social profiles go in the fields below.</div>
                             </div>
 
                             <div class="mb-3">
@@ -49,71 +60,71 @@
                                     <div class="col-md-6">
                                         <div class="input-group mb-2">
                                             <span class="input-group-text"><i class="fab fa-twitter"></i></span>
-                                            <input type="url" class="form-control" name="twitter" placeholder="Twitter profile">
+                                            <input type="url" class="form-control" name="twitter" placeholder="Twitter profile" value="{{ sl.get('twitter', '') or '' }}">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="input-group mb-2">
                                             <span class="input-group-text"><i class="fab fa-instagram"></i></span>
-                                            <input type="url" class="form-control" name="instagram" placeholder="Instagram profile">
+                                            <input type="url" class="form-control" name="instagram" placeholder="Instagram profile" value="{{ sl.get('instagram', '') or '' }}">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="input-group mb-2">
                                             <span class="input-group-text"><i class="fab fa-facebook"></i></span>
-                                            <input type="url" class="form-control" name="facebook" placeholder="Facebook profile">
+                                            <input type="url" class="form-control" name="facebook" placeholder="Facebook profile" value="{{ sl.get('facebook', '') or '' }}">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="input-group mb-2">
                                             <span class="input-group-text"><i class="fab fa-linkedin"></i></span>
-                                            <input type="url" class="form-control" name="linkedin" placeholder="LinkedIn profile">
+                                            <input type="url" class="form-control" name="linkedin" placeholder="LinkedIn profile" value="{{ sl.get('linkedin', '') or '' }}">
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="writingExperience" class="form-label">Writing Experience</label>
-                                <textarea class="form-control" id="writingExperience" name="writing_experience" rows="3" placeholder="Describe your writing background and experience..."></textarea>
+                                <label for="writingExperience" class="form-label">Writing experience <span class="text-muted fw-normal">(optional)</span></label>
+                                <textarea class="form-control" id="writingExperience" name="writing_experience" rows="3" placeholder="Describe your writing background…">{{ book_user.writing_experience if book_user and book_user.writing_experience else '' }}</textarea>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Preferred Genres</label>
+                                <label class="form-label">Preferred genres <span class="text-muted fw-normal">(optional)</span></label>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="fiction" id="genre-fiction" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="fiction" id="genre-fiction" name="genres" {% if 'fiction' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-fiction">Fiction</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="non-fiction" id="genre-nonfiction" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="non-fiction" id="genre-nonfiction" name="genres" {% if 'non-fiction' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-nonfiction">Non-Fiction</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="mystery" id="genre-mystery" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="mystery" id="genre-mystery" name="genres" {% if 'mystery' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-mystery">Mystery</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="romance" id="genre-romance" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="romance" id="genre-romance" name="genres" {% if 'romance' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-romance">Romance</label>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="sci-fi" id="genre-scifi" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="sci-fi" id="genre-scifi" name="genres" {% if 'sci-fi' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-scifi">Science Fiction</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="fantasy" id="genre-fantasy" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="fantasy" id="genre-fantasy" name="genres" {% if 'fantasy' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-fantasy">Fantasy</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="thriller" id="genre-thriller" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="thriller" id="genre-thriller" name="genres" {% if 'thriller' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-thriller">Thriller</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="biography" id="genre-biography" name="genres">
+                                            <input class="form-check-input" type="checkbox" value="biography" id="genre-biography" name="genres" {% if 'biography' in gset %}checked{% endif %}>
                                             <label class="form-check-label" for="genre-biography">Biography</label>
                                         </div>
                                     </div>
@@ -137,37 +148,42 @@
     <script>
         document.getElementById('profileSetupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const formData = new FormData(this);
-            const data = {
-                pen_name: formData.get('pen_name'),
-                bio: formData.get('bio'),
-                website: formData.get('website'),
-                social_links: {
-                    twitter: formData.get('twitter'),
-                    instagram: formData.get('instagram'),
-                    facebook: formData.get('facebook'),
-                    linkedin: formData.get('linkedin')
-                },
-                writing_experience: formData.get('writing_experience'),
-                genres: Array.from(document.querySelectorAll('input[name="genres"]:checked')).map(cb => cb.value)
-            };
-            
+
+            const fd = new FormData();
+            fd.append('pen_name', document.getElementById('penName').value || '');
+            fd.append('bio', document.getElementById('bio').value || '');
+            fd.append('website', document.getElementById('website').value || '');
+            fd.append('writing_experience', document.getElementById('writingExperience').value || '');
+            function socialField(name) {
+                var el = document.querySelector('input[name="' + name + '"]');
+                return el ? el.value : '';
+            }
+            fd.append('social_links', JSON.stringify({
+                twitter: socialField('twitter'),
+                instagram: socialField('instagram'),
+                facebook: socialField('facebook'),
+                linkedin: socialField('linkedin')
+            }));
+            fd.append('genres', JSON.stringify(
+                Array.from(document.querySelectorAll('input[name="genres"]:checked')).map(function (cb) { return cb.value; })
+            ));
+            var picInput = document.getElementById('profilePicture');
+            if (picInput && picInput.files && picInput.files[0]) {
+                fd.append('profile_picture', picInput.files[0]);
+            }
+
             try {
                 const response = await fetch('{{ url_for("book_platform.setup_profile") }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
+                    body: fd
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     window.location.href = result.redirect;
                 } else {
-                    alert('Error setting up profile. Please try again.');
+                    alert(result.error || 'Could not save profile. Check your website URL and image type, then try again.');
                 }
             } catch (error) {
                 console.error('Error:', error);

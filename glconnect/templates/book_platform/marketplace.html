@@ -6,10 +6,10 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="GLC marketplace: browse and buy digital books and audiobooks from independents—AI covers, TTS audio, and tools to write and list.">
+    <meta name="description" content="Browse and buy indie ebooks and audiobooks—filter by category, preview audio, and check out securely.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Marketplace | GLC</title>
+    <title>Marketplace — Indie ebooks &amp; audiobooks</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -19,44 +19,71 @@
 </head>
 <body class="ink-marketplace">
  <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#marketplace-catalog">Skip to catalog</a>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-marketplace-nav ink-mp-sticky-nav">
-        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <a class="navbar-brand fw-bold ink-mp-nav-brand mb-0" href="{{ url_for('book_platform.marketplace') }}">
-                <i class="fas fa-store me-2" aria-hidden="true"></i>GLC
+    <nav class="navbar navbar-expand-lg navbar-dark ink-marketplace-nav ink-mp-sticky-nav ink-mp-topnav border-bottom border-white border-opacity-10" aria-label="Main">
+        <div class="container py-1">
+            <a class="navbar-brand ink-mp-nav-brand d-flex align-items-center gap-2 mb-0 py-1" href="{{ url_for('book_platform.marketplace') }}">
+                <span class="ink-mp-nav-logo d-inline-flex align-items-center justify-content-center flex-shrink-0 rounded-3" aria-hidden="true">
+                    <i class="fas fa-store"></i>
+                </span>
+                <span class="d-flex flex-column lh-sm text-start">
+                    <span class="ink-mp-nav-title">Book shop</span>
+                    <span class="ink-mp-nav-tagline small fw-normal text-white-50 d-none d-sm-block">Indie ebooks &amp; audiobooks</span>
+                </span>
             </a>
-            <div class="navbar-nav ms-auto align-items-lg-center flex-row flex-wrap gap-1 gap-lg-0">
-                {% if current_user.is_authenticated %}
-                    <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
-                        <i class="fas fa-home me-1"></i>Dashboard
-                    </a>
+            <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#marketplaceNavMain" aria-controls="marketplaceNavMain" aria-expanded="false" aria-label="Open menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="marketplaceNavMain">
+                <ul class="navbar-nav ms-auto align-items-lg-center pt-3 pt-lg-0">
+                    {% if current_user.is_authenticated %}
                     {% if ink_nav_show_my_library|default(false) %}
-                    <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
-                        <i class="fas fa-book-reader me-1"></i>My library
-                    </a>
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.my_library') }}">
+                            <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
+                        </a>
+                    </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.content_hub') }}" title="Music, podcasts, and more">
+                            <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content
+                        </a>
+                    </li>
                     {% if ink_nav_show_author_nav|default(false) %}
-                    <a class="nav-link" href="{{ url_for('book_platform.books') }}">
-                        <i class="fas fa-book-open me-1"></i>My books
-                    </a>
-                    <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
-                        <i class="fas fa-wallet me-1"></i>Payout account
-                    </a>
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.books') }}">
+                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
+                            <i class="fas fa-wallet me-1" aria-hidden="true"></i>Payouts
+                        </a>
+                    </li>
                     {% endif %}
-                    <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}" title="Music, podcasts, and more">
-                        <i class="fas fa-broadcast-tower me-1"></i>Content
-                    </a>
-                    <span class="navbar-text text-white-50 small px-2 d-none d-md-inline" title="Signed in as {{ current_user.email }}">
-                        {{ current_user.username }}
-                    </span>
-                    <a class="nav-link" href="{{ url_for('blog.logout') }}">
-                        <i class="fas fa-sign-out-alt me-1"></i>Sign out
-                    </a>
-                {% else %}
-                    <a class="nav-link" href="{{ url_for('routes1.login', next=request.url) }}">
-                        <i class="fas fa-sign-in-alt me-1"></i>Sign in
-                    </a>
-                    <a class="nav-link" href="{{ url_for('routes1.register') }}">Register</a>
-                {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.dashboard') }}">
+                            <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item d-none d-lg-block">
+                        <span class="nav-link disabled small py-lg-2 opacity-75 mb-0" title="Signed in as {{ current_user.email }}">{{ current_user.username }}</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('blog.logout') }}">
+                            <i class="fas fa-sign-out-alt me-1" aria-hidden="true"></i>Sign out
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('routes1.login', next=request.url) }}">
+                            <i class="fas fa-sign-in-alt me-1" aria-hidden="true"></i>Sign in
+                        </a>
+                    </li>
+                    <li class="nav-item ms-lg-2 mt-2 mt-lg-0 d-grid d-lg-block">
+                        <a class="btn btn-sm btn-outline-light fw-semibold px-3" href="{{ url_for('routes1.register') }}">Create account</a>
+                    </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
     </nav>
@@ -1685,6 +1712,15 @@
             });
         }
 
+        function escapeHtmlMarketplace(s) {
+            if (s == null || s === '') return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
         // Author Details Function
         function showAuthorDetails(authorId, event) {
             if (event) {
@@ -1729,7 +1765,7 @@
                             profilePictureHtml = `
                                 <div class="mb-4">
                                     <img src="${imagePath}" 
-                                         alt="${author.name}" 
+                                         alt="${escapeHtmlMarketplace(author.name)}" 
                                          class="img-fluid rounded-circle shadow" 
                                          style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #0d6efd;">
                                 </div>
@@ -1748,17 +1784,30 @@
                         let bioHtml = '';
                         if (author.bio && author.bio.trim()) {
                             bioHtml = `
-                                <div class="mt-4">
+                                <div class="mt-4 text-start">
                                     <h6 class="text-primary mb-3">
                                         <i class="fas fa-book-open me-2"></i>About the Author
                                     </h6>
-                                    <p class="text-muted" style="line-height: 1.8; white-space: pre-wrap;">${author.bio}</p>
+                                    <p class="text-muted" style="line-height: 1.8; white-space: pre-wrap;">${escapeHtmlMarketplace(author.bio)}</p>
                                 </div>
                             `;
                         } else {
                             bioHtml = `
-                                <div class="mt-4">
-                                    <p class="text-muted fst-italic">No bio available for this author.</p>
+                                <div class="mt-4 text-start">
+                                    <p class="text-muted fst-italic mb-0">This author has not added a bio yet.</p>
+                                </div>
+                            `;
+                        }
+
+                        let websiteHtml = '';
+                        if (author.website_href) {
+                            const href = escapeHtmlMarketplace(author.website_href);
+                            const label = escapeHtmlMarketplace(author.website_label || 'Website');
+                            websiteHtml = `
+                                <div class="mb-3">
+                                    <a href="${href}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-globe me-2" aria-hidden="true"></i>${label}
+                                    </a>
                                 </div>
                             `;
                         }
@@ -1766,10 +1815,8 @@
                         modalBody.innerHTML = `
                             <div class="text-center">
                                 ${profilePictureHtml}
-                                <h4 class="mb-2">${author.name}</h4>
-                                <p class="text-muted mb-3">
-                                    <i class="fas fa-envelope me-1"></i>${author.email || 'Email not available'}
-                                </p>
+                                <h4 class="mb-2">${escapeHtmlMarketplace(author.name)}</h4>
+                                ${websiteHtml}
                                 ${bioHtml}
                                 ${author.books_count > 0 ? `
                                     <div class="mt-4 pt-3 border-top">

@@ -1,2 +1,3 @@
-You are such an experience UX/UI desgner with 10 years of experience and you are hired by big tech to revamp this page so that company remains competitive in the market. Revamp it to enchance user's experience and engagement.
-Many book sites are catalog and carts. A deliberate audio layer says “we’re a cultural hub,” which justifies our existence.
+- You are such an ingenious UX/UI designer with 10 years of experience and you are hired by a big tech company to revamp this page so that company remains competitive in the market. Revamp the page to enchance user's experience and engagement.
+- Many book sites are catalog and carts. A deliberate audio layer says “we’re a cultural hub,” which justifies our existence.
+- Network is networth. Information makes network valuable. Many ways to convey info. One of those is storytelling.
