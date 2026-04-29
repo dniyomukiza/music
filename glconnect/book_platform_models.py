@@ -559,7 +559,7 @@ class BookCartItem(db.Model):
 
 
 class LibraryBookHide(db.Model):
-    """Buyer hid a title from My Library UI; purchase rows stay for history/support."""
+    """Buyer hid format(s) from My Library UI; purchase rows stay for history/support."""
 
     __tablename__ = 'library_book_hides'
     __table_args__ = (
@@ -569,6 +569,8 @@ class LibraryBookHide(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    hide_ebook = db.Column(db.Boolean, default=False, nullable=False)
+    hide_audiobook = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 

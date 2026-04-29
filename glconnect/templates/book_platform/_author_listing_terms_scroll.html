@@ -1,0 +1,15 @@
+{# expects: terms_scroll_id (str), terms_hint_id (str) #}
+<div class="border rounded p-3 mb-2 small listing-terms-scrollbox bg-white"
+     style="max-height: 220px; overflow-y: auto;"
+     id="{{ terms_scroll_id }}"
+     tabindex="0"
+     role="region"
+     aria-label="Author marketplace listing terms">
+    <p class="mb-2 fw-semibold">Author marketplace listing — please read</p>
+    <p class="mb-2">By listing on this marketplace you represent that you have the legal right to offer this work for sale (including text, cover art, and any bundled media), and that the listing does not infringe anyone else’s copyright, trademark, publicity, or other rights.</p>
+    <p class="mb-2">You are responsible for the accuracy of your listing (title, description, categories, and pricing). The platform may refuse, suspend, or remove listings that appear misleading, unsafe, or non-compliant.</p>
+    <p class="mb-2">If we receive a credible claim that your listing infringes third-party rights or violates applicable law, you agree that the listing may be taken down or restricted promptly while the matter is reviewed, without prior payment to you for that period.</p>
+    <p class="mb-2">If your work includes AI-generated or AI-assisted material, you confirm that you have the rights needed to commercialize that material under the platform’s rules and applicable law.</p>
+    <p class="mb-0">The checkboxes below restate key points you are confirming. They do not replace any broader terms of service that apply to your account.</p>
+</div>
+<p class="small text-muted mb-3" id="{{ terms_hint_id }}">Scroll through the terms above to enable the checkboxes below.</p>

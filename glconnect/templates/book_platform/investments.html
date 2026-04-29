@@ -3,132 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Investments</title>
+    <meta name="description" content="Browse community investment campaigns on GLC—support indie books before publication, review terms, and track funding progress.">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Investments | GLC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<body class="ink-invest">
+    <a class="visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#ink-inv-main">Skip to campaigns</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-mp-sticky-nav ink-invest-nav" aria-label="Ink Studio">
         <div class="container">
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </a>
+            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#invNavbar" aria-controls="invNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="invNavbar">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                            <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
+                            <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content
+                        </a>
+                    </li>
+                    {% if ink_nav_show_author_nav|default(false) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">
+                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
+                            <i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace
+                        </a>
+                    </li>
+                    {% if ink_nav_show_my_library|default(false) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
+                            <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('book_platform.investments') }}" aria-current="page">
+                            <i class="fas fa-chart-line me-1" aria-hidden="true"></i>Investments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
+                            <i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Earnings
+                        </a>
+                    </li>
+                    {% if ink_nav_show_author_nav|default(false) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
+                            <i class="fas fa-wallet me-1" aria-hidden="true"></i>Payout
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="invNavUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-1" aria-hidden="true"></i>{{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="invNavUser">
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Sign out</a></li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container my-5">
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h1 class="visually-hidden">Investments</h1>
-                <p class="lead text-muted mb-0">Turning Social Alignment into Financial Reality. Support impactful authors—patient capital for books that matter. Returns may vary (loss, break even, or profit); what matters is advancing meaningful work.</p>
+    <header class="hero-section bg-gradient-primary text-white ink-mp-hero py-4 py-md-5">
+        <div class="container">
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <h1 class="ink-mp-hero-title mb-0">Invest in books</h1>
+                <span class="badge rounded-pill px-3 py-2 ink-inv-results-badge">{{ campaigns|length }} listing{% if campaigns|length != 1 %}s{% endif %}</span>
             </div>
+            <p class="lead mb-3 ink-mp-hero-lead mb-md-4">Patient capital for indie authors—review each campaign’s terms, funding progress, and revenue share before you commit. Returns are not guaranteed; you may lose part or all of your investment.</p>
+            <p class="ink-inv-trust-note mb-0"><i class="fas fa-shield-alt me-2" aria-hidden="true"></i>Your own book campaigns are never listed here so you can focus on backing other creators.</p>
         </div>
+    </header>
 
-        <!-- Search -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="GET" class="row g-3">
+    <main id="ink-inv-main" class="container my-4 my-md-5" tabindex="-1">
+        <div class="card border-0 shadow-sm mb-4 ink-inv-toolbar">
+            <div class="card-body p-3 p-md-4">
+                <div class="d-flex flex-wrap align-items-center gap-2 ink-inv-pill-row mb-3">
+                    <span class="small text-white-50 me-1 d-none d-sm-inline">Status</span>
+                    <a href="{{ url_for('book_platform.investments', status='active', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'active' %}btn-inv-pill-active{% endif %}">Active</a>
+                    <a href="{{ url_for('book_platform.investments', status='funded', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'funded' %}btn-inv-pill-active{% endif %}">Funded</a>
+                    <a href="{{ url_for('book_platform.investments', status='draft', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'draft' %}btn-inv-pill-active{% endif %}">Draft</a>
+                    <a href="{{ url_for('book_platform.investments', status='all', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'all' %}btn-inv-pill-active{% endif %}">All</a>
+                </div>
+                <form method="GET" class="row g-3 align-items-end" role="search" aria-label="Search campaigns">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
                     <div class="col-md-8">
-                        <input type="text" name="q" class="form-control" placeholder="Search campaigns..." value="{{ search_query }}">
+                        <label class="form-label small text-white-50 mb-1" for="inv-search-q">Search</label>
+                        <input type="search" id="inv-search-q" name="q" class="form-control form-control-lg" placeholder="Campaign or book title…" value="{{ search_query }}" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
-                        <select name="status" class="form-select">
-                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Campaigns</option>
-                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-                            <option value="funded" {% if status_filter == 'funded' %}selected{% endif %}>Funded</option>
-                            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search"></i> Search
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-lg ink-mp-cta flex-grow-1">
+                            <i class="fas fa-search me-2" aria-hidden="true"></i>Apply
                         </button>
+                        {% if search_query %}
+                        <a href="{{ url_for('book_platform.investments', status=status_filter) }}" class="btn btn-lg btn-outline-light border-2">Clear</a>
+                        {% endif %}
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Campaigns List -->
         {% if campaigns %}
-        <div class="row">
+        <div class="row g-4">
             {% for campaign in campaigns %}
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ campaign.title }}</h5>
-                        <p class="text-muted small mb-3">
-                            <i class="fas fa-book me-1"></i>{{ campaign.book_project.title }}
+            <div class="col-md-6 col-xl-4">
+                <article class="card h-100 shadow-sm ink-inv-campaign-card">
+                    <div class="card-body d-flex flex-column">
+                        {% set st = campaign.status.value if campaign.status else '' %}
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <h3 class="h5 card-title mb-0">{{ campaign.title }}</h3>
+                            {% if st == 'active' %}
+                            <span class="badge rounded-pill bg-success flex-shrink-0">Active</span>
+                            {% elif st == 'funded' %}
+                            <span class="badge rounded-pill flex-shrink-0" style="background: rgba(201,162,39,0.25); color: #f5d76a; border: 1px solid rgba(201,162,39,0.4);">Funded</span>
+                            {% elif st == 'draft' %}
+                            <span class="badge rounded-pill bg-secondary flex-shrink-0">Draft</span>
+                            {% else %}
+                            <span class="badge rounded-pill bg-secondary flex-shrink-0">{{ st|replace('_', ' ')|title }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="small ink-inv-book-line mb-3">
+                            <i class="fas fa-book me-1" aria-hidden="true"></i>{{ campaign.book_project.title }}
                         </p>
-                        
-                        <div class="mb-3">
+
+                        <div class="mb-3 ink-inv-progress">
                             <div class="d-flex justify-content-between mb-1">
-                                <small class="text-muted">Funding Progress</small>
-                                <small class="fw-bold">${{ "%.2f"|format(campaign.current_funding) }} / ${{ "%.2f"|format(campaign.funding_goal) }}</small>
+                                <span class="small text-white-50">Funding</span>
+                                <span class="small fw-semibold">${{ "%.2f"|format(campaign.current_funding) }} <span class="text-white-50 fw-normal">/ ${{ "%.2f"|format(campaign.funding_goal) }}</span></span>
                             </div>
+                            {% set progress = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
                             <div class="progress" style="height: 10px;">
-                                {% set progress = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
-                                <div class="progress-bar {% if progress >= 100 %}bg-success{% else %}bg-primary{% endif %}" 
-                                     style="width: {{ progress }}%"></div>
+                                <div class="progress-bar {% if progress >= 100 or st == 'funded' %}bg-success{% endif %}" style="width: {{ progress }}%;" role="progressbar" aria-valuenow="{{ progress|round(1) }}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
-                            <small class="text-muted">{{ "%.1f"|format(progress) }}% funded</small>
+                            <span class="small text-white-50">{{ "%.1f"|format(progress) }}% funded</span>
                         </div>
 
-                        <div class="row text-center mb-3">
+                        <div class="row text-center g-2 mb-3">
                             <div class="col-6">
-                                <div class="fw-bold text-primary">{{ campaign.revenue_share_percentage }}%</div>
-                                <small class="text-muted">Revenue Share</small>
+                                <div class="ink-inv-stat-value">{{ campaign.revenue_share_percentage }}%</div>
+                                <div class="ink-inv-stat-label">Revenue share</div>
                             </div>
                             <div class="col-6">
-                                <div class="fw-bold text-success">{{ campaign.return_multiplier_cap }}x</div>
-                                <small class="text-muted">Max Return</small>
+                                <div class="ink-inv-stat-value">{{ campaign.return_multiplier_cap }}x</div>
+                                <div class="ink-inv-stat-label">Return cap</div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <small class="text-muted">
-                                <i class="fas fa-dollar-sign me-1"></i>Min: ${{ "%.2f"|format(campaign.minimum_investment) }}
-                                {% if campaign.maximum_investment %}
-                                | Max: ${{ "%.2f"|format(campaign.maximum_investment) }}
-                                {% endif %}
-                            </small>
-                        </div>
+                        <p class="small text-white-50 mb-3 mb-md-4">
+                            <i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Min ${{ "%.2f"|format(campaign.minimum_investment) }}
+                            {% if campaign.maximum_investment %}
+                            <span class="text-white-50"> · Max ${{ "%.2f"|format(campaign.maximum_investment) }}</span>
+                            {% endif %}
+                        </p>
 
-                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" 
-                           class="btn btn-primary w-100">
-                            <i class="fas fa-eye"></i> View Details
+                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta w-100 mt-auto">
+                            <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>View campaign
                         </a>
                     </div>
-                </div>
+                </article>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="alert alert-info text-center">
-            <i class="fas fa-info-circle fa-2x mb-3"></i>
-            <h4>No investment campaigns found</h4>
-            <p class="mb-3">Try adjusting your search criteria or check back later.</p>
+        <div class="ink-inv-empty text-center py-5 px-3">
+            <i class="fas fa-chart-line ink-inv-empty-icon fa-3x mb-3" aria-hidden="true"></i>
+            <h2 class="h4 mb-2">No campaigns match</h2>
+            <p class="text-white-50 mb-4 mx-auto" style="max-width: 28rem;">Try another status filter or search term. New campaigns appear as authors publish their funding rounds.</p>
             {% if status_filter == 'active' %}
-            <p class="mb-3">
-                <strong>To create a campaign:</strong><br>
-                1. Go to your book's page<br>
-                2. Click "Create Investment Campaign"<br>
-                3. Fill out the campaign details and submit
-            </p>
-            <p class="mb-0">
-                <a href="?status=all" class="btn btn-outline-primary">
-                    <i class="fas fa-list"></i> View All Campaigns (including drafts)
+            <p class="small text-white-50 mb-3 mx-auto" style="max-width: 32rem;">Authors create campaigns from a book’s page in Ink Studio. If you’re an author, open <strong>My books</strong> to set one up.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a href="{{ url_for('book_platform.investments', status='all') }}" class="btn ink-mp-cta">
+                    <i class="fas fa-list me-2" aria-hidden="true"></i>Show all statuses
                 </a>
-            </p>
+                <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-light border-2">
+                    <i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace
+                </a>
+            </div>
+            {% else %}
+            <a href="{{ url_for('book_platform.investments', status='active') }}" class="btn ink-mp-cta">
+                <i class="fas fa-filter me-2" aria-hidden="true"></i>View active only
+            </a>
             {% endif %}
         </div>
         {% endif %}
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-

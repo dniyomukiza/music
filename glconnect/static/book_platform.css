@@ -2130,6 +2130,370 @@ body.ink-marketplace #booksGrid.ink-view-list .ink-card-actions {
     }
 }
 
+/* --- Marketplace + Dashboard shared (hero, nav brand, CTA) --- */
+body.ink-marketplace .ink-mp-sticky-nav,
+body.ink-dashboard .ink-mp-sticky-nav,
+body.ink-invest .ink-mp-sticky-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(6, 8, 7, 0.92) !important;
+}
+
+body.ink-marketplace .ink-mp-nav-brand,
+body.ink-dashboard .ink-mp-nav-brand,
+body.ink-invest .ink-mp-nav-brand {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.02em;
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .ink-mp-nav-brand:hover,
+body.ink-dashboard .ink-mp-nav-brand:hover,
+body.ink-invest .ink-mp-nav-brand:hover {
+    color: #f5d76a !important;
+}
+
+body.ink-marketplace .ink-mp-hero-title,
+body.ink-dashboard .ink-mp-hero-title,
+body.ink-invest .ink-mp-hero-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: #fff !important;
+    margin: 0;
+}
+
+body.ink-marketplace .ink-mp-hero .ink-hero-lead,
+body.ink-marketplace .ink-mp-hero-lead,
+body.ink-dashboard .ink-mp-hero .ink-hero-lead,
+body.ink-dashboard .ink-mp-hero-lead,
+body.ink-invest .ink-mp-hero .ink-hero-lead,
+body.ink-invest .ink-mp-hero-lead {
+    max-width: 42rem;
+    font-size: 1.05rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+
+body.ink-marketplace .ink-mp-hero-badge-soft {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-mp-section-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+}
+
+body.ink-marketplace .ink-mp-toolbar {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+body.ink-marketplace .ink-mp-results-blurb {
+    color: #aeb4b0 !important;
+}
+
+body.ink-marketplace .ink-mp-card-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    line-height: 1.3 !important;
+    color: #fff !important;
+}
+
+body.ink-marketplace .ink-mp-price {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #f5d76a !important;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
+body.ink-marketplace .ink-mp-author-link {
+    color: #e0bc3a !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-mp-author-link:hover {
+    color: #f5d76a !important;
+    text-decoration: underline !important;
+}
+
+body.ink-marketplace .ink-mp-cta,
+body.ink-dashboard .ink-mp-cta,
+body.ink-invest .ink-mp-cta {
+    background: linear-gradient(145deg, #e0bc3a, #c9a227) !important;
+    border: none !important;
+    color: #060807 !important;
+    font-weight: 700 !important;
+    border-radius: 999px !important;
+    padding: 0.5rem 1rem !important;
+    box-shadow: 0 8px 24px rgba(201, 162, 39, 0.25);
+}
+
+body.ink-marketplace .ink-mp-cta:hover,
+body.ink-dashboard .ink-mp-cta:hover,
+body.ink-invest .ink-mp-cta:hover {
+    filter: brightness(1.06);
+    color: #060807 !important;
+}
+
+body.ink-marketplace .ink-mp-filter-hint {
+    color: #9aa8a0 !important;
+    line-height: 1.5;
+}
+
+body.ink-marketplace .ink-invest-strip h2,
+body.ink-marketplace .ink-invest-strip .h5 {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 700 !important;
+}
+
+/* --- Ink Studio dashboard (/mybook/) --- */
+body.ink-dashboard .ink-dash-kicker {
+    letter-spacing: 0.12em;
+    font-weight: 600;
+}
+
+body.ink-dashboard .ink-dash-cta-row {
+    gap: 0.65rem 0.75rem;
+}
+
+body.ink-dashboard .ink-dash-cta-row .btn-lg {
+    border-radius: 999px;
+    font-weight: 600;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+
+body.ink-dashboard .hero-stats .stat-circle {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+body.ink-dashboard .ink-dash-notify-item {
+    background: rgba(6, 8, 7, 0.65) !important;
+    border: 1px solid rgba(201, 162, 39, 0.2) !important;
+    border-left-width: 4px !important;
+    border-radius: 12px;
+}
+
+body.ink-dashboard .ink-dash-notify-item .notification-title {
+    color: #e8ece9 !important;
+}
+
+body.ink-dashboard .dropdown-menu {
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+body.ink-dashboard .dropdown-item {
+    color: #e8ece9;
+}
+
+body.ink-dashboard .dropdown-item:hover,
+body.ink-dashboard .dropdown-item:focus {
+    background: rgba(201, 162, 39, 0.12);
+    color: #f5d76a;
+}
+
+body.ink-dashboard .dropdown-divider {
+    border-color: rgba(42, 61, 50, 0.8);
+}
+
+body.ink-dashboard .table {
+    --bs-table-color: #e8ece9;
+    --bs-table-bg: transparent;
+    --bs-table-border-color: rgba(42, 61, 50, 0.65);
+}
+
+body.ink-dashboard .table thead th {
+    color: #9aa8a0;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+body.ink-dashboard .list-group-item {
+    background: rgba(6, 8, 7, 0.5);
+    border-color: rgba(42, 61, 50, 0.55);
+    color: #e8ece9;
+}
+
+body.ink-dashboard .book-card .card.border-0 {
+    background: rgba(12, 15, 14, 0.88);
+    border: 1px solid rgba(42, 61, 50, 0.55) !important;
+}
+
+body.ink-dashboard .book-card .card-title {
+    color: #fff !important;
+}
+
+body.ink-dashboard .card .card {
+    background: rgba(6, 8, 7, 0.55);
+    border-color: rgba(42, 61, 50, 0.6) !important;
+    color: #e8ece9;
+}
+
+body.ink-dashboard .card .card .card-title {
+    color: #fff !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    body.ink-dashboard .book-card .card {
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    body.ink-dashboard .book-card .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+    }
+}
+
+/* --- Investment browse (/mybook/investments) --- */
+body.ink-invest .ink-inv-trust-note {
+    color: rgba(255, 255, 255, 0.72) !important;
+    font-size: 0.95rem;
+    max-width: 40rem;
+}
+
+body.ink-invest .ink-inv-toolbar {
+    background: rgba(12, 15, 14, 0.92) !important;
+    border: 1px solid rgba(42, 61, 50, 0.55) !important;
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+body.ink-invest .ink-inv-toolbar .form-control,
+body.ink-invest .ink-inv-toolbar .form-select {
+    background: rgba(6, 8, 7, 0.65);
+    border-color: rgba(42, 61, 50, 0.75);
+    color: #e8ece9;
+}
+
+body.ink-invest .ink-inv-toolbar .form-control:focus,
+body.ink-invest .ink-inv-toolbar .form-select:focus {
+    background: rgba(6, 8, 7, 0.85);
+    border-color: rgba(201, 162, 39, 0.55);
+    color: #e8ece9;
+    box-shadow: 0 0 0 0.2rem rgba(201, 162, 39, 0.15);
+}
+
+body.ink-invest .ink-inv-pill-row .btn {
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+body.ink-invest .ink-inv-pill-row .btn-inv-pill-active {
+    background: linear-gradient(145deg, #e0bc3a, #c9a227) !important;
+    border: none !important;
+    color: #060807 !important;
+}
+
+body.ink-invest .ink-inv-results-badge {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.95) !important;
+    font-weight: 600;
+}
+
+body.ink-invest .ink-inv-campaign-card {
+    background: rgba(12, 15, 14, 0.92) !important;
+    border: 1px solid rgba(42, 61, 50, 0.55) !important;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.ink-invest .ink-inv-campaign-card .card-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 700;
+    color: #fff !important;
+    letter-spacing: -0.02em;
+}
+
+body.ink-invest .ink-inv-campaign-card .ink-inv-book-line {
+    color: #9aa8a0 !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    body.ink-invest .ink-inv-campaign-card:hover {
+        border-color: rgba(201, 162, 39, 0.35);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+}
+
+body.ink-invest .ink-inv-progress .progress {
+    background: rgba(6, 8, 7, 0.85);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+body.ink-invest .ink-inv-progress .progress-bar {
+    background: linear-gradient(90deg, #c9a227, #e0bc3a) !important;
+    max-width: 100%;
+}
+
+body.ink-invest .ink-inv-progress .progress-bar.bg-success {
+    background: linear-gradient(90deg, #2d6a4f, #40916c) !important;
+}
+
+body.ink-invest .ink-inv-stat-value {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #f5d76a !important;
+}
+
+body.ink-invest .ink-inv-stat-label {
+    color: #9aa8a0 !important;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+body.ink-invest .ink-inv-empty {
+    background: rgba(12, 15, 14, 0.88) !important;
+    border: 1px dashed rgba(201, 162, 39, 0.28) !important;
+    border-radius: 20px;
+    color: #e8ece9;
+}
+
+body.ink-invest .ink-inv-empty .ink-inv-empty-icon {
+    color: #c9a227;
+}
+
+body.ink-invest .dropdown-menu {
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+body.ink-invest .dropdown-item {
+    color: #e8ece9;
+}
+
+body.ink-invest .dropdown-item:hover,
+body.ink-invest .dropdown-item:focus {
+    background: rgba(201, 162, 39, 0.12);
+    color: #f5d76a;
+}
+
+body.ink-invest .dropdown-divider {
+    border-color: rgba(42, 61, 50, 0.8);
+}
+
 /* =============================================================================
    My Books list + Create Book (/mybook/books, /mybook/books/create)
    ============================================================================= */

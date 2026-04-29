@@ -658,6 +658,7 @@ def create_app(config_overrides=None):
             ensure_book_cart_schema,
             ensure_book_purchases_schema,
             ensure_library_book_hides_schema,
+            ensure_library_book_hides_format_columns,
         )
         ensure_investment_campaign_milestone_schema(db)
         ensure_digital_book_editions_schema(db)
@@ -665,6 +666,7 @@ def create_app(config_overrides=None):
         ensure_book_cart_schema(db)
         ensure_book_purchases_schema(db)
         ensure_library_book_hides_schema(db)
+        ensure_library_book_hides_format_columns(db)
 
         # Import and register blueprints
         from .routes import bp 

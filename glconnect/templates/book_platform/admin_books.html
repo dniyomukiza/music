@@ -574,30 +574,16 @@
         function collectListingTermsPayload() {
             const rights = confirm('Rights warranty: confirm you own (or licensed) rights to publish/sell this work.');
             if (!rights) return null;
-            const details = (prompt('Provide required details (license/source/contributor info):', '') || '').trim();
-            if (!details) {
-                alert('Source details are required.');
-                return null;
-            }
-            let aiTools = '';
+            const takedown = confirm('Takedown consent: agree this listing may be removed on credible infringement claims.');
+            if (!takedown) return null;
             let aiRights = false;
-            const usesAi = confirm('Was AI used in creating this work?');
-            if (usesAi) {
-                aiTools = (prompt('List AI tools/models used:', '') || '').trim();
-                if (!aiTools) {
-                    alert('AI tools/models are required for AI-assisted works.');
-                    return null;
-                }
+            if (confirm('Was AI used in creating this work? If yes, you will be asked to confirm commercial rights to that output.')) {
                 aiRights = confirm('Confirm you have commercial rights to AI-assisted output.');
                 if (!aiRights) return null;
             }
-            const takedown = confirm('Takedown consent: agree this listing may be removed on credible infringement claims.');
-            if (!takedown) return null;
             return {
                 listing_terms_rights_warranty: true,
                 listing_terms_takedown_consent: true,
-                listing_content_source_details: details,
-                listing_ai_tools: aiTools,
                 listing_ai_rights_confirm: aiRights
             };
         }

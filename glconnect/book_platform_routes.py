@@ -684,87 +684,8 @@ def dashboard(user_profile, profile_type):
 @book_bp.route('/my-listings')
 @writer_or_book_platform_required
 def author_my_listings(user_profile, profile_type):
-    """Author hub: marketplace listings, sales, and links to manage each title."""
-    if profile_type == 'freelancer':
-        flash('This page is for authors with book listings.', 'info')
-        return redirect(url_for('book_platform.dashboard'))
-
-    author_id = get_profile_id(user_profile, profile_type)
-    if not author_id:
-        flash('Complete your Ink Studio profile to manage listings.', 'warning')
-        return redirect(url_for('book_platform.setup_profile'))
-
-    from sqlalchemy import func as sa_func
-    from glconnect.book_utils import is_book_published
-
-    books = BookProject.query.options(
-        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-    ).filter_by(author_id=author_id).order_by(
-        BookProject.updated_at.desc(),
-        BookProject.created_at.desc(),
-    ).all()
-
-    book_ids = [b.id for b in books]
-    sale_by_book = {}
-    if book_ids:
-        sale_rows = db.session.query(
-            BookSale.book_project_id,
-            sa_func.count(BookSale.id),
-            sa_func.coalesce(sa_func.sum(BookSale.net_amount), 0.0),
-        ).filter(
-            BookSale.book_project_id.in_(book_ids),
-            BookSale.status == TransactionStatus.COMPLETED,
-        ).group_by(BookSale.book_project_id).all()
-        for row in sale_rows:
-            sale_by_book[row[0]] = {
-                'completed_units': int(row[1] or 0),
-                'author_net': float(row[2] or 0),
-            }
-
-    analytics_by_book = {}
-    if book_ids:
-        analytics_rows = db.session.query(
-            BookAnalytics.book_project_id,
-            sa_func.coalesce(sa_func.sum(BookAnalytics.views), 0),
-            sa_func.coalesce(sa_func.sum(BookAnalytics.downloads), 0),
-            sa_func.coalesce(sa_func.sum(BookAnalytics.purchases), 0),
-        ).filter(
-            BookAnalytics.book_project_id.in_(book_ids)
-        ).group_by(BookAnalytics.book_project_id).all()
-        for row in analytics_rows:
-            analytics_by_book[row[0]] = {
-                'views': int(row[1] or 0),
-                'downloads': int(row[2] or 0),
-                'purchases': int(row[3] or 0),
-            }
-
-    listing_rows = []
-    for book in books:
-        s = sale_by_book.get(book.id, {'completed_units': 0, 'author_net': 0.0})
-        a = analytics_by_book.get(book.id, {'views': 0, 'downloads': 0, 'purchases': 0})
-        listing_rows.append({
-            'book': book,
-            'live': is_book_published(book),
-            'completed_sales': s['completed_units'],
-            'author_earnings': s['author_net'],
-            'agg_views': a['views'],
-            'agg_downloads': a['downloads'],
-            'agg_purchases': a['purchases'],
-        })
-
-    n_live = sum(1 for r in listing_rows if r['live'])
-    total_units = sum(r['completed_sales'] for r in listing_rows)
-    total_earnings = sum(r['author_earnings'] for r in listing_rows)
-
-    return render_template(
-        'book_platform/author_my_listings.html',
-        listing_rows=listing_rows,
-        summary_live=n_live,
-        summary_total_books=len(listing_rows),
-        summary_units=total_units,
-        summary_earnings=total_earnings,
-        marketplace_cover_url=_marketplace_cover_url,
-    )
+    """Merged into /mybook/books; keep URL for bookmarks and external links."""
+    return redirect(url_for('book_platform.books'), code=301)
 
 
 # Profile setup
@@ -816,62 +737,122 @@ def setup_profile():
 @book_bp.route('/books')
 @writer_or_book_platform_required
 def books(user_profile, profile_type):
-    """List all user's books - Only accessible to authors (Writer profiles or users who have authored books)"""
-    # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
-    from glconnect.book_platform_models import BookPlatformUser
-    
-    # Get the correct author_id (BookPlatformUser.id for consistency)
+    """Author hub: all projects, marketplace listing status, sales, analytics, and investment tools."""
+    from glconnect.book_platform_models import BookPlatformUser, InvestmentCampaign
+
+    if profile_type == 'freelancer':
+        flash('This page is for authors with book projects.', 'info')
+        return redirect(url_for('book_platform.dashboard'))
+
     author_id = get_profile_id(user_profile, profile_type)
-    
-    # Check if user is actually an author
-    # Writer profiles are always authors, but BookPlatformUsers must have authored books
+    if not author_id:
+        flash('Complete your Ink Studio profile to manage books.', 'warning')
+        return redirect(url_for('book_platform.setup_profile'))
+
     if profile_type != 'writer':
         authored_books_count = BookProject.query.filter_by(author_id=author_id).count()
         if authored_books_count == 0:
             flash('You need to be an author to access this page. Create a Writer profile or start writing your first book.', 'warning')
             return redirect(url_for('book_platform.dashboard'))
-    
-    # Query books with eager loading of author information
-    from glconnect.book_platform_models import InvestmentCampaign
-    books = BookProject.query.options(
+
+    books_q = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-    ).filter_by(author_id=author_id).all()
-    
-    # Get investment campaigns for books that have them (to avoid relationship issues)
+    ).filter_by(author_id=author_id).order_by(
+        BookProject.updated_at.desc(),
+        BookProject.created_at.desc(),
+    ).all()
+
+    book_ids = [b.id for b in books_q]
+    sale_by_book = {}
+    if book_ids:
+        sale_rows = db.session.query(
+            BookSale.book_project_id,
+            func.count(BookSale.id),
+            func.coalesce(func.sum(BookSale.net_amount), 0.0),
+        ).filter(
+            BookSale.book_project_id.in_(book_ids),
+            BookSale.status == TransactionStatus.COMPLETED,
+        ).group_by(BookSale.book_project_id).all()
+        for row in sale_rows:
+            sale_by_book[row[0]] = {
+                'completed_units': int(row[1] or 0),
+                'author_net': float(row[2] or 0),
+            }
+
+    analytics_by_book = {}
+    if book_ids:
+        analytics_rows = db.session.query(
+            BookAnalytics.book_project_id,
+            func.coalesce(func.sum(BookAnalytics.views), 0),
+            func.coalesce(func.sum(BookAnalytics.downloads), 0),
+            func.coalesce(func.sum(BookAnalytics.purchases), 0),
+        ).filter(
+            BookAnalytics.book_project_id.in_(book_ids)
+        ).group_by(BookAnalytics.book_project_id).all()
+        for row in analytics_rows:
+            analytics_by_book[row[0]] = {
+                'views': int(row[1] or 0),
+                'downloads': int(row[2] or 0),
+                'purchases': int(row[3] or 0),
+            }
+
+    listing_stats = {}
+    for book in books_q:
+        s = sale_by_book.get(book.id, {'completed_units': 0, 'author_net': 0.0})
+        a = analytics_by_book.get(book.id, {'views': 0, 'downloads': 0, 'purchases': 0})
+        listing_stats[book.id] = {
+            'live': is_book_published(book),
+            'completed_sales': s['completed_units'],
+            'author_earnings': s['author_net'],
+            'agg_views': a['views'],
+            'agg_downloads': a['downloads'],
+            'agg_purchases': a['purchases'],
+        }
+
+    summary_live = sum(1 for b in books_q if listing_stats[b.id]['live'])
+    summary_units = sum(listing_stats[b.id]['completed_sales'] for b in books_q)
+    summary_earnings = sum(listing_stats[b.id]['author_earnings'] for b in books_q)
+
     book_campaigns = {}
-    for book in books:
+    for book in books_q:
         if book.has_investment_campaign:
             campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
             if campaign:
                 book_campaigns[book.id] = campaign
-    
-    # Calculate investment readiness for each book
+
     books_with_readiness = []
-    for book in books:
+    for book in books_q:
+        lst = listing_stats[book.id]
         try:
-            # The investment_campaign relationship uses uselist=False, so it should always be
-            # a single object or None. If there's a data inconsistency, we'll handle it in the template.
             readiness = check_investment_readiness(book)
             books_with_readiness.append({
                 'book': book,
-                'investment_readiness': readiness
+                'investment_readiness': readiness,
+                'listing': lst,
             })
         except Exception as e:
             logger.error(f"Error processing book {book.id} for investment readiness: {str(e)}", exc_info=True)
-            # Add book with default readiness to prevent complete failure
             books_with_readiness.append({
                 'book': book,
                 'investment_readiness': {
                     'is_ready': False,
                     'issues': [f'Error checking readiness: {str(e)}'],
                     'chapter_count': 0,
-                    'word_count': 0
-                }
+                    'word_count': 0,
+                },
+                'listing': lst,
             })
-    
-    return render_template('book_platform/books.html', 
-                         books_with_readiness=books_with_readiness,
-                         book_campaigns=book_campaigns)
+
+    return render_template(
+        'book_platform/books.html',
+        books_with_readiness=books_with_readiness,
+        book_campaigns=book_campaigns,
+        summary_live=summary_live,
+        summary_total_books=len(books_q),
+        summary_units=summary_units,
+        summary_earnings=summary_earnings,
+        marketplace_cover_url=_marketplace_cover_url,
+    )
 
 @book_bp.route('/books/create', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -1329,22 +1310,13 @@ def edit_book(book_id, user_profile, profile_type):
                 return str(v).strip().lower() in ("1", "true", "yes", "on")
 
             def _validate_listing_terms(payload):
-                details = str(payload.get('listing_content_source_details') or '').strip()
-                ai_tools = str(payload.get('listing_ai_tools') or '').strip()
                 rights_ok = _as_bool(payload.get('listing_terms_rights_warranty'))
                 takedown_ok = _as_bool(payload.get('listing_terms_takedown_consent'))
-                ai_rights_ok = _as_bool(payload.get('listing_ai_rights_confirm'))
 
                 if not rights_ok:
                     return 'Please confirm you own (or licensed) rights to list and sell this work.'
                 if not takedown_ok:
                     return 'Please consent to immediate unlisting on credible infringement claims.'
-                if not details:
-                    return 'Provide required source details before listing.'
-                if ai_tools and not ai_rights_ok:
-                    return 'Confirm commercial rights to AI-assisted output before listing.'
-                if ai_rights_ok and not ai_tools:
-                    return 'Disclose AI tools/models used before confirming AI-assisted rights.'
                 return None
             
             # Handle publishing status - separate for digital book and audiobook
@@ -3067,22 +3039,13 @@ def publish_book(book_id):
         return str(v).strip().lower() in ("1", "true", "yes", "on")
 
     def _validate_listing_terms(payload):
-        details = str(payload.get('listing_content_source_details') or '').strip()
-        ai_tools = str(payload.get('listing_ai_tools') or '').strip()
         rights_ok = _as_bool(payload.get('listing_terms_rights_warranty'))
         takedown_ok = _as_bool(payload.get('listing_terms_takedown_consent'))
-        ai_rights_ok = _as_bool(payload.get('listing_ai_rights_confirm'))
 
         if not rights_ok:
             return 'Please confirm you own (or licensed) rights to list and sell this work.'
         if not takedown_ok:
             return 'Please consent to immediate unlisting on credible infringement claims.'
-        if not details:
-            return 'Provide required source details before listing.'
-        if ai_tools and not ai_rights_ok:
-            return 'Confirm commercial rights to AI-assisted output before listing.'
-        if ai_rights_ok and not ai_tools:
-            return 'Disclose AI tools/models used before confirming AI-assisted rights.'
         return None
 
     payload = request.get_json(silent=True) if request.is_json else request.form
@@ -3339,6 +3302,45 @@ def _cart_get_or_create_buyer_profile(user_id: int):
     return bp_user
 
 
+def _book_purchase_buyer_match(user_id: int):
+    """Match BookPurchase rows the same way as My Library (buyer_user_id and/or legacy buyer_id)."""
+    bp = BookPlatformUser.query.filter_by(user_id=user_id).first()
+    parts = [BookPurchase.buyer_user_id == user_id]
+    if bp is not None:
+        parts.append(BookPurchase.buyer_id == bp.id)
+    return db.or_(*parts)
+
+
+def _restore_library_visibility_for_owned_format(user_id: int, book_id: int, purchase_format: str) -> bool:
+    """If this format was hidden from My Library, show it again. Returns True if DB state changed."""
+    rec = LibraryBookHide.query.filter_by(user_id=user_id, book_project_id=book_id).first()
+    if not rec:
+        return False
+    pf = (purchase_format or 'digital').lower().strip()
+    changed = False
+    if pf == 'digital':
+        if rec.hide_ebook:
+            rec.hide_ebook = False
+            changed = True
+    elif pf == 'audiobook':
+        if rec.hide_audiobook:
+            rec.hide_audiobook = False
+            changed = True
+    elif pf == 'bundle':
+        if rec.hide_ebook or rec.hide_audiobook:
+            rec.hide_ebook = False
+            rec.hide_audiobook = False
+            changed = True
+    else:
+        if rec.hide_ebook:
+            rec.hide_ebook = False
+            changed = True
+    if not rec.hide_ebook and not rec.hide_audiobook:
+        db.session.delete(rec)
+        changed = True
+    return changed
+
+
 @book_bp.route('/cart', methods=['GET'])
 @login_required
 def marketplace_cart():
@@ -3414,11 +3416,26 @@ def marketplace_cart_add_item():
     existing_completed = BookPurchase.query.filter(
         BookPurchase.book_project_id == book.id,
         BookPurchase.status == TransactionStatus.COMPLETED,
-        BookPurchase.buyer_user_id == current_user.user_id,
+        _book_purchase_buyer_match(current_user.user_id),
         BookPurchase.purchase_format == purchase_type,
     ).first()
     if existing_completed:
-        return jsonify({'success': False, 'error': f'You already purchased this {purchase_type} item.'}), 400
+        restored = _restore_library_visibility_for_owned_format(
+            current_user.user_id, book.id, purchase_type
+        )
+        if restored:
+            db.session.commit()
+        return jsonify({
+            'success': True,
+            'already_owned': True,
+            'restored_to_library': restored,
+            'message': (
+                'You already own this — no second charge. We put it back on My Library.'
+                if restored else
+                'You already own this. Open My Library to listen or read — removing from the list does not cancel your purchase.'
+            ),
+            'library_url': url_for('book_platform.my_library'),
+        })
     cart_item = BookCartItem.query.filter_by(
         buyer_user_id=current_user.user_id,
         book_project_id=book.id,
@@ -3482,12 +3499,9 @@ def marketplace_cart_checkout():
     except RuntimeError as e:
         return jsonify({'success': False, 'error': str(e)}), 503
 
-    buyer_profile = _cart_get_or_create_buyer_profile(current_user.user_id)
-
-    created_purchases = []
-    line_items = []
-    app_fee_cents_total = 0
-    now = datetime.now(timezone.utc)
+    uid = current_user.user_id
+    to_pay = []
+    skipped_already_owned = False
     for ci, book in selected:
         purchase_type = (ci.purchase_format or 'digital').lower().strip()
         price, err = _cart_price_for_purchase_type(book, purchase_type)
@@ -3496,11 +3510,39 @@ def marketplace_cart_checkout():
         existing_completed = BookPurchase.query.filter(
             BookPurchase.book_project_id == book.id,
             BookPurchase.status == TransactionStatus.COMPLETED,
-            BookPurchase.buyer_user_id == current_user.user_id,
+            _book_purchase_buyer_match(uid),
             BookPurchase.purchase_format == purchase_type,
         ).first()
         if existing_completed:
-            return jsonify({'success': False, 'error': f'You already purchased "{book.title}" ({purchase_type}).'}), 400
+            _restore_library_visibility_for_owned_format(uid, book.id, purchase_type)
+            db.session.delete(ci)
+            skipped_already_owned = True
+            continue
+        to_pay.append((ci, book))
+
+    if skipped_already_owned:
+        db.session.flush()
+
+    if not to_pay:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'already_owned_only': True,
+            'message': 'Those cart lines were already purchased. We restored any hidden titles on My Library — no charge.',
+            'library_url': url_for('book_platform.my_library'),
+        })
+
+    buyer_profile = _cart_get_or_create_buyer_profile(uid)
+
+    created_purchases = []
+    line_items = []
+    app_fee_cents_total = 0
+    now = datetime.now(timezone.utc)
+    for ci, book in to_pay:
+        purchase_type = (ci.purchase_format or 'digital').lower().strip()
+        price, err = _cart_price_for_purchase_type(book, purchase_type)
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
 
         purchase = BookPurchase(
             buyer_id=buyer_profile.id,
@@ -3662,19 +3704,33 @@ def my_library():
         db.or_(*match_login),
     ).order_by(BookPurchase.purchased_at.desc(), BookPurchase.created_at.desc()).all()
 
-    hidden_book_ids = {
-        h.book_project_id
-        for h in LibraryBookHide.query.filter_by(user_id=uid).all()
-    }
+    hidden_map = {h.book_project_id: h for h in LibraryBookHide.query.filter_by(user_id=uid).all()}
+
+    purchase_book_ids = {p.book_project_id for p in purchases}
+    books_by_id = {}
+    if purchase_book_ids:
+        books_by_id = {
+            b.id: b
+            for b in BookProject.query.options(
+                joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+            ).filter(BookProject.id.in_(purchase_book_ids)).all()
+        }
 
     by_book = {}
     for p in purchases:
-        if p.book_project_id in hidden_book_ids:
+        bid = p.book_project_id
+        hide = hidden_map.get(bid)
+        hide_e = bool(hide.hide_ebook) if hide else False
+        hide_a = bool(hide.hide_audiobook) if hide else False
+        fmt = (getattr(p, 'purchase_format', 'digital') or 'digital').lower()
+        from_digital = fmt in ('digital', 'bundle') and not hide_e
+        from_audio = fmt in ('audiobook', 'bundle') and not hide_a
+        if not from_digital and not from_audio:
             continue
-        b = BookProject.query.options(joinedload(BookProject.author).joinedload(BookPlatformUser.user)).get(p.book_project_id)
+        b = books_by_id.get(bid)
         if not b:
             continue
-        row = by_book.get(b.id)
+        row = by_book.get(bid)
         if not row:
             row = {
                 'book': b,
@@ -3682,14 +3738,14 @@ def my_library():
                 'has_audiobook': False,
                 'latest_purchase_at': p.purchased_at or p.created_at,
             }
-            by_book[b.id] = row
-        fmt = (getattr(p, 'purchase_format', 'digital') or 'digital').lower()
-        if fmt in ('digital', 'bundle'):
+            by_book[bid] = row
+        if from_digital:
             row['has_digital'] = True
-        if fmt in ('audiobook', 'bundle'):
+        if from_audio:
             row['has_audiobook'] = True
-        if (p.purchased_at or p.created_at) and (row['latest_purchase_at'] is None or (p.purchased_at or p.created_at) > row['latest_purchase_at']):
-            row['latest_purchase_at'] = p.purchased_at or p.created_at
+        pt = p.purchased_at or p.created_at
+        if pt and (row['latest_purchase_at'] is None or pt > row['latest_purchase_at']):
+            row['latest_purchase_at'] = pt
 
     items = sorted(by_book.values(), key=lambda x: x['latest_purchase_at'] or datetime.now(timezone.utc), reverse=True)
     highlight_book_id = request.args.get('book_id', type=int)
@@ -3704,25 +3760,60 @@ def my_library():
 @book_bp.route('/library/books/<int:book_id>/hide', methods=['POST'])
 @login_required
 def library_hide_book(book_id):
-    """Remove a title from My Library for this account (purchase history unchanged)."""
+    """Hide ebook and/or audiobook on My Library for this account (purchase history unchanged)."""
     uid = current_user.user_id
+    fmt = (request.form.get('format') or '').strip().lower()
     bp_user = BookPlatformUser.query.filter_by(user_id=uid).first()
     bp_pk = bp_user.id if bp_user else None
     match_login = [BookPurchase.buyer_user_id == uid]
     if bp_pk is not None:
         match_login.append(BookPurchase.buyer_id == bp_pk)
-    owns = BookPurchase.query.filter(
+    purchases = BookPurchase.query.filter(
         BookPurchase.book_project_id == book_id,
         BookPurchase.status == TransactionStatus.COMPLETED,
         db.or_(*match_login),
-    ).first()
-    if not owns:
+    ).all()
+    if not purchases:
         flash('That title is not in your library.', 'warning')
         return redirect(url_for('book_platform.my_library'))
-    if not LibraryBookHide.query.filter_by(user_id=uid, book_project_id=book_id).first():
-        db.session.add(LibraryBookHide(user_id=uid, book_project_id=book_id))
-        db.session.commit()
-    flash('Removed from My Library. Your purchase is still on file.', 'info')
+
+    owns_digital = False
+    owns_audiobook = False
+    for p in purchases:
+        pf = (getattr(p, 'purchase_format', 'digital') or 'digital').lower()
+        if pf in ('digital', 'bundle'):
+            owns_digital = True
+        if pf in ('audiobook', 'bundle'):
+            owns_audiobook = True
+
+    if fmt == 'ebook':
+        if not owns_digital:
+            flash('You do not have an ebook for that title.', 'warning')
+            return redirect(url_for('book_platform.my_library'))
+    elif fmt == 'audiobook':
+        if not owns_audiobook:
+            flash('You do not have an audiobook for that title.', 'warning')
+            return redirect(url_for('book_platform.my_library'))
+    else:
+        flash('Choose ebook or audiobook to remove from this list.', 'warning')
+        return redirect(url_for('book_platform.my_library'))
+
+    rec = LibraryBookHide.query.filter_by(user_id=uid, book_project_id=book_id).first()
+    if not rec:
+        rec = LibraryBookHide(
+            user_id=uid,
+            book_project_id=book_id,
+            hide_ebook=False,
+            hide_audiobook=False,
+        )
+        db.session.add(rec)
+    if fmt == 'ebook':
+        rec.hide_ebook = True
+    else:
+        rec.hide_audiobook = True
+    db.session.commit()
+    label = 'Ebook' if fmt == 'ebook' else 'Audiobook'
+    flash(f'{label} hidden from My Library. Your purchase is still on file.', 'info')
     return redirect(url_for('book_platform.my_library'))
 
 
@@ -3982,8 +4073,20 @@ def purchase_book(book_id):
         
         if existing_purchase:
             fmt_msg = {'digital': 'digital copy', 'audiobook': 'audiobook', 'bundle': 'bundle'}[purchase_type]
-            return jsonify({'error': f'You have already purchased this {fmt_msg}.'}), 400
-        
+            restored = _restore_library_visibility_for_owned_format(buyer_user_id, book_id, purchase_type)
+            if restored:
+                db.session.commit()
+            return jsonify({
+                'success': True,
+                'already_owned': True,
+                'restored_to_library': restored,
+                'message': (
+                    f'You already own this {fmt_msg}. '
+                    + ('It is back on My Library.' if restored else 'Open My Library — hiding a title does not remove your purchase.')
+                ),
+                'library_url': url_for('book_platform.my_library'),
+            })
+
         # Validate book has a price for the selected format
         if not base_price or base_price <= 0:
             return jsonify({'error': f'This {purchase_type} is not available for purchase. Please contact the author.'}), 400
@@ -6244,22 +6347,13 @@ def upload_digital_book():
         return str(v).strip().lower() in ("1", "true", "yes", "on")
 
     def _validate_listing_terms(payload):
-        details = str(payload.get('listing_content_source_details') or '').strip()
-        ai_tools = str(payload.get('listing_ai_tools') or '').strip()
         rights_ok = _as_bool(payload.get('listing_terms_rights_warranty'))
         takedown_ok = _as_bool(payload.get('listing_terms_takedown_consent'))
-        ai_rights_ok = _as_bool(payload.get('listing_ai_rights_confirm'))
 
         if not rights_ok:
             return 'Please confirm you own (or licensed) rights to list and sell this work.'
         if not takedown_ok:
             return 'Please consent to immediate unlisting on credible infringement claims.'
-        if not details:
-            return 'Provide required source details before listing.'
-        if ai_tools and not ai_rights_ok:
-            return 'Confirm commercial rights to AI-assisted output before listing.'
-        if ai_rights_ok and not ai_tools:
-            return 'Disclose AI tools/models used before confirming AI-assisted rights.'
         return None
 
     if form.validate_on_submit():

@@ -225,28 +225,23 @@
                                 </button>
                             </div>
                             <div id="listingTermsPanelUpload" class="d-none">
+                                {% set terms_scroll_id = 'listingTermsScrollUpload' %}
+                                {% set terms_hint_id = 'listingTermsScrollHintUpload' %}
+                                {% include 'book_platform/_author_listing_terms_scroll.html' %}
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on">
+                                    <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on" disabled>
                                     <label class="form-check-label small" for="listing_terms_rights_warranty">
                                         I confirm I own or hold all rights/licenses to publish and sell this work.
                                     </label>
                                 </div>
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on">
+                                    <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on" disabled>
                                     <label class="form-check-label small" for="listing_terms_takedown_consent">
                                         I agree this listing may be removed immediately upon a credible infringement claim.
                                     </label>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label small fw-semibold" for="listing_content_source_details">Required details (license/source/contributor info)</label>
-                                    <textarea class="form-control form-control-sm" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small fw-semibold" for="listing_ai_tools">AI tools/models used (if any)</label>
-                                    <input type="text" class="form-control form-control-sm" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
-                                </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on">
+                                    <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on" disabled>
                                     <label class="form-check-label small" for="listing_ai_rights_confirm">
                                         If AI-assisted, I confirm I have commercial rights to use the generated output.
                                     </label>
@@ -331,11 +326,47 @@ document.addEventListener('DOMContentLoaded', function() {
     let listingCoverAccepted = false;
     const showListingTermsBtnUpload = document.getElementById('showListingTermsBtnUpload');
     const listingTermsPanelUpload = document.getElementById('listingTermsPanelUpload');
+    const listingTermsScrollUpload = document.getElementById('listingTermsScrollUpload');
+    const listingTermsScrollHintUpload = document.getElementById('listingTermsScrollHintUpload');
+
+    function listingTermsCheckboxElsUpload() {
+        return [
+            document.getElementById('listing_terms_rights_warranty'),
+            document.getElementById('listing_terms_takedown_consent'),
+            document.getElementById('listing_ai_rights_confirm')
+        ].filter(Boolean);
+    }
+
+    function resetListingTermsScrollGateUpload() {
+        if (listingTermsScrollUpload) listingTermsScrollUpload.scrollTop = 0;
+        listingTermsCheckboxElsUpload().forEach(function (cb) {
+            cb.checked = false;
+            cb.disabled = true;
+        });
+        if (listingTermsScrollHintUpload) listingTermsScrollHintUpload.classList.remove('d-none');
+    }
+
+    function updateListingTermsScrollGateUpload() {
+        if (!listingTermsScrollUpload) return;
+        var needs = listingTermsScrollUpload.scrollHeight > listingTermsScrollUpload.clientHeight + 8;
+        var atBottom = !needs || (listingTermsScrollUpload.scrollTop + listingTermsScrollUpload.clientHeight >= listingTermsScrollUpload.scrollHeight - 8);
+        listingTermsCheckboxElsUpload().forEach(function (cb) { cb.disabled = !atBottom; });
+        if (listingTermsScrollHintUpload) listingTermsScrollHintUpload.classList.toggle('d-none', atBottom);
+    }
+
+    if (listingTermsScrollUpload) {
+        listingTermsScrollUpload.addEventListener('scroll', updateListingTermsScrollGateUpload);
+        if (window.ResizeObserver) {
+            new ResizeObserver(updateListingTermsScrollGateUpload).observe(listingTermsScrollUpload);
+        }
+    }
 
     function openListingTermsPanelUpload() {
         if (!listingTermsPanelUpload) return false;
         listingTermsPanelUpload.classList.remove('d-none');
         listingTermsPanelUpload.style.display = 'block';
+        resetListingTermsScrollGateUpload();
+        requestAnimationFrame(function () { updateListingTermsScrollGateUpload(); });
         listingTermsPanelUpload.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return true;
     }
@@ -507,27 +538,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const rights = document.getElementById('listing_terms_rights_warranty');
         const takedown = document.getElementById('listing_terms_takedown_consent');
-        const details = document.getElementById('listing_content_source_details');
-        const aiTools = document.getElementById('listing_ai_tools');
-        const aiRights = document.getElementById('listing_ai_rights_confirm');
         if (!listingTermsPanelUpload || listingTermsPanelUpload.classList.contains('d-none')) {
             openListingTermsPanelUpload();
             return { ok: false, focus: showListingTermsBtnUpload, msg: 'Review and accept terms in the Author listing terms section before listing.' };
         }
-        if (!rights || !rights.checked) {
-            return { ok: false, focus: rights, msg: 'Accept the rights warranty before listing.' };
+        if (!rights || rights.disabled || !rights.checked) {
+            return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms text, then accept the rights warranty before listing.' };
         }
-        if (!takedown || !takedown.checked) {
-            return { ok: false, focus: takedown, msg: 'Accept takedown consent before listing.' };
-        }
-        if (!(details && details.value.trim())) {
-            return { ok: false, focus: details, msg: 'Provide source details before listing.' };
-        }
-        if ((aiTools && aiTools.value.trim()) && (!aiRights || !aiRights.checked)) {
-            return { ok: false, focus: aiRights, msg: 'Confirm AI commercial usage rights before listing.' };
-        }
-        if (aiRights && aiRights.checked && !(aiTools && aiTools.value.trim())) {
-            return { ok: false, focus: aiTools, msg: 'Disclose AI tools/models used before confirming AI-assisted rights.' };
+        if (!takedown || takedown.disabled || !takedown.checked) {
+            return { ok: false, focus: listingTermsScrollUpload || takedown, msg: 'Scroll through the full terms text, then accept takedown consent before listing.' };
         }
         const aiSubmitSlow = ai && !hasCoverFile;
         return { ok: true, ai: aiSubmitSlow };

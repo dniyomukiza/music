@@ -7,7 +7,9 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="description" content="GLC marketplace: browse and buy digital books and audiobooks from independents—AI covers, TTS audio, and tools to write and list.">
-    <title>Marketplace</title>
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Marketplace | GLC</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -17,8 +19,11 @@
 </head>
 <body class="ink-marketplace">
  <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#marketplace-catalog">Skip to catalog</a>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-marketplace-nav">
-        <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-marketplace-nav ink-mp-sticky-nav">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <a class="navbar-brand fw-bold ink-mp-nav-brand mb-0" href="{{ url_for('book_platform.marketplace') }}">
+                <i class="fas fa-store me-2" aria-hidden="true"></i>GLC
+            </a>
             <div class="navbar-nav ms-auto align-items-lg-center flex-row flex-wrap gap-1 gap-lg-0">
                 {% if current_user.is_authenticated %}
                     <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
@@ -57,18 +62,23 @@
     </nav>
 
     <!-- Hero: compact; main browsing is sidebar + grid below (aligned widths) -->
-    <header class="hero-section bg-gradient-primary text-white ink-hero ink-hero-compact py-4">
+    <header class="hero-section bg-gradient-primary text-white ink-hero ink-hero-compact ink-mp-hero py-4 py-md-5">
         <div class="container-fluid px-3 px-md-4 px-xl-5 position-relative">
             <div class="row align-items-start g-4">
-                <div class="col-12">
+                <div class="col-12 col-xl-10">
                     <p class="ink-hero-eyebrow text-uppercase small fw-semibold mb-2 opacity-90">Independent publishing</p>
-                    <h1 class="visually-hidden">Marketplace</h1>
-                    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                    <h1 class="ink-mp-hero-title mb-3">Marketplace</h1>
+                    <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3 mb-3">
                         <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2">
                             <i class="fas fa-book-open me-2" aria-hidden="true"></i><strong>{{ total_books }}</strong> titles
                         </span>
+                        {% if current_user.is_authenticated %}
+                        <span class="badge rounded-pill px-3 py-2 ink-mp-hero-badge-soft">
+                            <i class="fas fa-user-check me-1" aria-hidden="true"></i>Signed in
+                        </span>
+                        {% endif %}
                     </div>
-                    <p class="ink-hero-lead mb-3 mb-lg-4">Digital books and audiobooks—discovery, categories, secure checkout, and direct author support for independents and small presses. <span class="d-block d-md-inline">When you are signed in, open investment campaigns appear above the catalog.</span></p>
+                    <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">Discover ebooks and audiobooks from indie authors—filter by category, listen where available, and check out securely. <span class="d-block mt-2 mt-md-0 d-md-inline">Signed-in readers may see open <strong>investment</strong> campaigns above the catalog.</span></p>
 
                     
                     <div class="d-flex flex-wrap gap-2">
@@ -150,14 +160,14 @@
                 </section>
                 {% endif %}
 
-                <div class="ink-results-toolbar card border-0 shadow-sm mb-4">
-                    <div class="card-body py-3">
+                <div class="ink-results-toolbar card border-0 shadow-sm mb-4 ink-mp-toolbar">
+                    <div class="card-body py-3 py-md-4">
                         <div class="row g-3 align-items-center">
                             <div class="col-lg-5">
-                                <h3 class="h5 text-primary mb-1 d-flex align-items-center gap-2">
-                                    <i class="fas fa-book-open" aria-hidden="true"></i>Catalog
-                                </h3>
-                                <p class="text-muted small mb-0" id="results-range">
+                                <h2 class="h5 text-primary mb-1 d-flex align-items-center gap-2 ink-mp-section-title">
+                                    <i class="fas fa-compass" aria-hidden="true"></i>Catalog
+                                </h2>
+                                <p class="text-muted small mb-0 ink-mp-results-blurb" id="results-range">
                                     {% if total_books %}
                                         Showing <strong>{{ (page - 1) * per_page + 1 }}–{{ (page - 1) * per_page + books|length }}</strong>
                                         of <strong>{{ total_books }}</strong>
@@ -206,17 +216,18 @@
                                                 </div>
                                             {% endif %}
                                         </div>
-                                        <div class="card-body d-flex flex-column">
-                                            <h5 class="card-title text-dark mb-2 book-title">{{ book.title }}</h5>
-                                            <p class="card-text text-muted small mb-2 book-author">
-                                                <i class="fas fa-user me-1"></i>by 
-                                                <a href="#" class="text-primary text-decoration-none author-link" 
-                                                   onclick="showAuthorDetails({{ book.author.id }}, event)">
-                                                    {{ book.author.pen_name or book.author.user.username }}
-                                                </a>
-                                            </p>
-                                            <span class="book-price visually-hidden">{% if book.price and book.price > 0 %}${{ "%.2f"|format(book.price) }}{% else %}Free{% endif %}</span>
-                                            
+                                        <div class="card-body d-flex flex-column ink-mp-card-body">
+                                            <h3 class="card-title mb-2 book-title ink-mp-card-title">{{ book.title }}</h3>
+                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                                <p class="card-text text-muted small mb-0 book-author flex-grow-1">
+                                                    <i class="fas fa-pen-fancy me-1 opacity-75" aria-hidden="true"></i>
+                                                    <a href="#" class="text-decoration-none author-link ink-mp-author-link"
+                                                       onclick="showAuthorDetails({{ book.author.id }}, event)">
+                                                        {{ book.author.pen_name or book.author.user.username }}
+                                                    </a>
+                                                </p>
+                                                <span class="book-price ink-mp-price" aria-label="Price">{% if book.price and book.price > 0 %}${{ "%.2f"|format(book.price) }}{% else %}Free{% endif %}</span>
+                                            </div>
                                             <div class="book-meta mb-3">
                                                 <span class="badge bg-primary me-1 badge-info">{{ book.genre or 'No genre' }}</span>
                                                 {% if book.word_count %}
@@ -235,8 +246,8 @@
                                             
                                             <div class="mt-auto">
                                                 <div class="d-grid gap-2 ink-card-actions">
-                                                    <button class="btn btn-outline-primary btn-sm" onclick="viewBook({{ book.id }})">
-                                                        <i class="fas fa-eye me-1" aria-hidden="true"></i>View details
+                                                    <button type="button" class="btn btn-primary btn-sm ink-mp-cta" onclick="viewBook({{ book.id }})">
+                                                        <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>View book
                                                     </button>
                                                 </div>
                                             </div>
@@ -293,10 +304,10 @@
             <aside class="col-12 col-lg-3 ink-filters-column" aria-labelledby="filters-heading">
                 <div class="card shadow-sm border-0 mb-4 ink-filter-card">
                     <div class="card-header bg-white border-0 py-3">
-                        <h2 id="filters-heading" class="h5 card-title text-primary mb-0">
-                            <i class="fas fa-sliders-h me-2" aria-hidden="true"></i>Browse &amp; filters
+                        <h2 id="filters-heading" class="h5 card-title text-primary mb-0 ink-mp-section-title">
+                            <i class="fas fa-sliders-h me-2" aria-hidden="true"></i>Refine
                         </h2>
-                        <p class="small text-muted mb-0 mt-2">Category and language reload as soon as you change them. Use <strong>Apply filters</strong> (or the grid <strong>Search</strong> button) after editing search, price, or sort.</p>
+                        <p class="small text-muted mb-0 mt-2 ink-mp-filter-hint">Category and language apply as soon as you change them. For search, price, or sort, use <strong>Apply filters</strong> or the catalog <strong>Search</strong> button.</p>
                     </div>
                     <div class="card-body pt-0">
                         {% set genre_slugs = available_genres|map(attribute='genre')|list if available_genres else [] %}
@@ -436,7 +447,7 @@
 
                 <div class="card mt-3 border-0 shadow-sm ink-stats-card">
                     <div class="card-header py-3 border-0">
-                        <h3 class="h6 mb-0 text-primary"><i class="fas fa-chart-bar me-2" aria-hidden="true"></i>At a glance</h3>
+                        <h3 class="h6 mb-0 text-primary ink-mp-section-title"><i class="fas fa-chart-pie me-2" aria-hidden="true"></i>This page</h3>
                     </div>
                     <div class="card-body pt-0">
                         <div class="stat-item">
@@ -750,6 +761,11 @@
                 if (!res.ok || !data.success) {
                     throw new Error(data.error || 'Could not add to cart.');
                 }
+                if (data.already_owned) {
+                    flashCartActionMessage(data.message || 'Already on your account — see My Library.');
+                    await updateMarketplaceCartUi();
+                    return;
+                }
                 await updateMarketplaceCartUi();
                 if (opts.quiet) {
                     flashCartActionMessage('Added to cart. Open Buy options on any book to pay or remove items.');
@@ -929,29 +945,34 @@
                     }
                     return response.json();
                 })
-                .then(data => {
-                    if (data.success) {
-                        // Store purchase info for success callback
-                        if (data.success_url) {
-                            localStorage.setItem('pendingPurchase', JSON.stringify({
-                                bookId: bookId,
-                                purchaseId: data.purchase_id,
-                                successUrl: data.success_url
-                            }));
-                        }
-                        
-                        // Redirect to Stripe payment link with success URL
-                        if (data.stripe_payment_link) {
-                            // Append success URL to Stripe link (if supported) or redirect after payment
-                            window.location.href = data.stripe_payment_link;
-                        } else {
-                            // Fallback: redirect to success page with instructions
-                            window.location.href = data.success_url + '?payment_completed=true';
-                        }
-                    } else {
-                        alert('Purchase failed: ' + (data.error || 'Unknown error'));
+            .then(data => {
+                if (data.success) {
+                    if (data.already_owned) {
+                        alert(data.message || 'You already own this title.');
+                        if (data.library_url) window.location.href = data.library_url;
+                        return;
                     }
-                })
+                    // Store purchase info for success callback
+                    if (data.success_url) {
+                        localStorage.setItem('pendingPurchase', JSON.stringify({
+                            bookId: bookId,
+                            purchaseId: data.purchase_id,
+                            successUrl: data.success_url
+                        }));
+                    }
+                    
+                    // Redirect to Stripe payment link with success URL
+                    if (data.stripe_payment_link) {
+                        // Append success URL to Stripe link (if supported) or redirect after payment
+                        window.location.href = data.stripe_payment_link;
+                    } else {
+                        // Fallback: redirect to success page with instructions
+                        window.location.href = data.success_url + '?payment_completed=true';
+                    }
+                } else {
+                    alert('Purchase failed: ' + (data.error || 'Unknown error'));
+                }
+            })
                 .catch(error => {
                     // Log technical details to console for debugging (not shown to user)
                     console.error('Purchase error:', error);
@@ -1393,6 +1414,11 @@
             })
             .then(data => {
                 if (data.success) {
+                    if (data.already_owned) {
+                        alert(data.message || 'You already own this title.');
+                        if (data.library_url) window.location.href = data.library_url;
+                        return;
+                    }
                     // Store purchase info for success callback
                     if (data.success_url) {
                         localStorage.setItem('pendingPurchase', JSON.stringify({
@@ -1541,6 +1567,13 @@
                     });
                     const data = await res.json();
                     if (!res.ok || !data.success) throw new Error(data.error || 'Could not start checkout.');
+                    if (data.already_owned_only) {
+                        checkoutBtn.disabled = false;
+                        alert(data.message || 'Those items were already yours. Check My Library.');
+                        if (data.library_url) window.location.href = data.library_url;
+                        updateMarketplaceCartUi();
+                        return;
+                    }
                     if (data.stripe_checkout_url) {
                         window.location.href = data.stripe_checkout_url;
                         return;

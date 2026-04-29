@@ -91,28 +91,23 @@
                                     </button>
                                 </div>
                                 <div id="listingTermsPanel" class="mt-3 d-none text-dark">
+                                    {% set terms_scroll_id = 'listingTermsScrollEdit' %}
+                                    {% set terms_hint_id = 'listingTermsScrollHintEdit' %}
+                                    {% include 'book_platform/_author_listing_terms_scroll.html' %}
                                     <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on">
+                                        <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_terms_rights_warranty">
                                             I confirm I own or hold all rights/licenses to publish and sell this work.
                                         </label>
                                     </div>
                                     <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on">
+                                        <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_terms_takedown_consent">
                                             I agree this listing may be removed immediately upon a credible infringement claim.
                                         </label>
                                     </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-dark" for="listing_content_source_details">Required details (license/source/contributor info)</label>
-                                        <textarea class="form-control form-control-sm bg-white text-dark" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-dark" for="listing_ai_tools">AI tools/models used (if any)</label>
-                                        <input type="text" class="form-control form-control-sm bg-white text-dark" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
-                                    </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on">
+                                        <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_ai_rights_confirm">
                                             If AI-assisted, I confirm I have commercial rights to use the generated output.
                                         </label>
@@ -398,28 +393,23 @@
                                     </button>
                                 </div>
                                 <div id="listingTermsPanel" class="mt-3 d-none text-dark">
+                                    {% set terms_scroll_id = 'listingTermsScrollEdit' %}
+                                    {% set terms_hint_id = 'listingTermsScrollHintEdit' %}
+                                    {% include 'book_platform/_author_listing_terms_scroll.html' %}
                                     <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on">
+                                        <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_terms_rights_warranty">
                                             I confirm I own or hold all rights/licenses to publish and sell this work.
                                         </label>
                                     </div>
                                     <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on">
+                                        <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_terms_takedown_consent">
                                             I agree this listing may be removed immediately upon a credible infringement claim.
                                         </label>
                                     </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-dark" for="listing_content_source_details">Required details (license/source/contributor info)</label>
-                                        <textarea class="form-control form-control-sm bg-white text-dark" id="listing_content_source_details" name="listing_content_source_details" rows="2" placeholder="Add rights/license/source details"></textarea>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-semibold text-dark" for="listing_ai_tools">AI tools/models used (if any)</label>
-                                        <input type="text" class="form-control form-control-sm bg-white text-dark" id="listing_ai_tools" name="listing_ai_tools" placeholder="e.g. GPT-4o, Midjourney, ElevenLabs">
-                                    </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on">
+                                        <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_ai_rights_confirm">
                                             If AI-assisted, I confirm I have commercial rights to use the generated output.
                                         </label>
@@ -803,12 +793,34 @@
             return digitalNew || audioNew || chapterNew;
         }
 
+        function updateListingTermsScrollGateEdit() {
+            const scrollEl = document.getElementById('listingTermsScrollEdit');
+            const hintEl = document.getElementById('listingTermsScrollHintEdit');
+            if (!scrollEl) return;
+            const boxes = ['listing_terms_rights_warranty', 'listing_terms_takedown_consent', 'listing_ai_rights_confirm']
+                .map(function (id) { return document.getElementById(id); })
+                .filter(Boolean);
+            const needs = scrollEl.scrollHeight > scrollEl.clientHeight + 8;
+            const atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
+            boxes.forEach(function (cb) { cb.disabled = !atBottom; });
+            if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+        }
+
         function openListingTermsPanel() {
             const panel = document.getElementById('listingTermsPanel');
             if (!panel) return false;
             panel.classList.remove('d-none');
             panel.style.display = 'block';
             setListingTermsConfirmed(false);
+            const scrollEl = document.getElementById('listingTermsScrollEdit');
+            const hintEl = document.getElementById('listingTermsScrollHintEdit');
+            if (scrollEl) scrollEl.scrollTop = 0;
+            ['listing_terms_rights_warranty', 'listing_terms_takedown_consent', 'listing_ai_rights_confirm'].forEach(function (id) {
+                const cb = document.getElementById(id);
+                if (cb) { cb.checked = false; cb.disabled = true; }
+            });
+            if (hintEl) hintEl.classList.remove('d-none');
+            requestAnimationFrame(function () { updateListingTermsScrollGateEdit(); });
             panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return true;
         }
@@ -816,34 +828,22 @@
         function validateListingTermsForm() {
             const rights = document.getElementById('listing_terms_rights_warranty');
             const takedown = document.getElementById('listing_terms_takedown_consent');
-            const details = document.getElementById('listing_content_source_details');
-            const aiTools = document.getElementById('listing_ai_tools');
-            const aiRights = document.getElementById('listing_ai_rights_confirm');
             const panel = document.getElementById('listingTermsPanel');
+            const scrollEl = document.getElementById('listingTermsScrollEdit');
 
             if (!panel || panel.classList.contains('d-none')) {
                 openListingTermsPanel();
                 showNotification('Review and accept terms in the Author listing terms section before listing.', 'error');
                 return false;
             }
-            if (!rights.checked) {
-                showNotification('Accept the rights warranty before listing.', 'error');
+            if (!rights || rights.disabled || !rights.checked) {
+                showNotification('Scroll through the full terms text, then accept the rights warranty before listing.', 'error');
+                if (scrollEl) scrollEl.focus();
                 return false;
             }
-            if (!takedown.checked) {
-                showNotification('Accept takedown consent before listing.', 'error');
-                return false;
-            }
-            if (!details.value.trim()) {
-                showNotification('Provide source details before listing.', 'error');
-                return false;
-            }
-            if (aiTools.value.trim() && !aiRights.checked) {
-                showNotification('Confirm AI commercial usage rights before listing.', 'error');
-                return false;
-            }
-            if (aiRights.checked && !aiTools.value.trim()) {
-                showNotification('Disclose AI tools/models used before confirming AI-assisted rights.', 'error');
+            if (!takedown || takedown.disabled || !takedown.checked) {
+                showNotification('Scroll through the full terms text, then accept takedown consent before listing.', 'error');
+                if (scrollEl) scrollEl.focus();
                 return false;
             }
             return true;
@@ -932,6 +932,13 @@
         
         // Load available voices on page load
         document.addEventListener('DOMContentLoaded', function() {
+            const listingTermsScrollEdit = document.getElementById('listingTermsScrollEdit');
+            if (listingTermsScrollEdit) {
+                listingTermsScrollEdit.addEventListener('scroll', updateListingTermsScrollGateEdit);
+                if (window.ResizeObserver) {
+                    new ResizeObserver(updateListingTermsScrollGateEdit).observe(listingTermsScrollEdit);
+                }
+            }
             {% if not book.has_audiobook %}
             loadAvailableVoices();
             {% endif %}

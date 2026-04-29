@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Books | GLC</title>
+    <title>My books &amp; listings | GLC</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -28,12 +28,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link active" href="{{ url_for('book_platform.books') }}">
-                                <i class="fas fa-book"></i> My Books
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.author_my_listings') }}">
-                                <i class="fas fa-chart-bar"></i> Listings &amp; performance
+                                <i class="fas fa-book"></i> My books &amp; listings
                             </a>
                         </li>
                         <li class="nav-item">
@@ -67,18 +62,61 @@
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10 main-content">
                 <div class="content-header">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                         <div>
-                            <h1><i class="fas fa-book"></i> My Books</h1>
-                            <p class="text-muted">Central author dashboard: manage drafts and published listings, edit metadata, adjust covers, unpublish/remove from marketplace, and keep existing relationships intact.</p>
+                            <h1><i class="fas fa-book"></i> My books &amp; listings</h1>
+                            <p class="text-muted mb-0">Manage every project in one place: writing, chapters, investment campaigns, marketplace listing, sales, and analytics.</p>
                         </div>
-                        <div>
+                        <div class="d-flex flex-wrap gap-2">
                             <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Create New Book
+                                <i class="fas fa-plus"></i> New book
+                            </a>
+                            <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-success">
+                                <i class="fas fa-file-upload"></i> List upload
+                            </a>
+                            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-store"></i> Marketplace
                             </a>
                         </div>
                     </div>
                 </div>
+
+                {% if books_with_readiness %}
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm h-100 text-center">
+                            <div class="card-body py-3">
+                                <div class="text-primary h3 mb-0">{{ summary_live }}</div>
+                                <div class="small text-muted">Live on marketplace</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm h-100 text-center">
+                            <div class="card-body py-3">
+                                <div class="text-dark h3 mb-0">{{ summary_total_books }}</div>
+                                <div class="small text-muted">Total projects</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm h-100 text-center">
+                            <div class="card-body py-3">
+                                <div class="text-success h3 mb-0">{{ summary_units }}</div>
+                                <div class="small text-muted">Completed sales (units)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm h-100 text-center">
+                            <div class="card-body py-3">
+                                <div class="text-success h3 mb-0">${{ "%.2f"|format(summary_earnings) }}</div>
+                                <div class="small text-muted">Your net (completed)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Books Grid -->
                 {% if books_with_readiness %}
@@ -86,7 +124,8 @@
                         {% for item in books_with_readiness %}
                             {% set book = item.book %}
                             {% set investment_readiness = item.investment_readiness %}
-                            {% set listing_live = (book.digital_book_published or book.audiobook_published) if book.digital_file_path else (book.status.value == 'published') %}
+                            {% set listing = item.listing %}
+                            {% set listing_live = listing.live %}
                             <div class="col-md-6 col-lg-4 mb-4">
                                 <div class="card book-card h-100">
                                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -139,13 +178,30 @@
                                         </div>
                                         {% endif %}
 
-                                        <div class="book-stats">
+                                        <div class="book-stats mb-2">
                                             <small class="text-muted">
                                                 <i class="fas fa-calendar"></i> Created: {{ book.created_at.strftime('%Y-%m-%d') }}
                                                 {% if book.published_at %}
                                                     <br><i class="fas fa-check-circle"></i> Published: {{ book.published_at.strftime('%Y-%m-%d') }}
                                                 {% endif %}
                                             </small>
+                                        </div>
+                                        <div class="border-top pt-2 mt-2">
+                                            <div class="small text-muted mb-1"><i class="fas fa-chart-line me-1"></i>Performance</div>
+                                            <div class="small">
+                                                <span class="text-nowrap"><strong>{{ listing.completed_sales }}</strong> sales</span>
+                                                · <span class="text-nowrap text-success"><strong>${{ "%.2f"|format(listing.author_earnings) }}</strong> net</span>
+                                                · <span class="text-nowrap"><strong>{{ listing.agg_views }}</strong> views</span>
+                                                · <span class="text-nowrap"><strong>{{ listing.agg_downloads }}</strong> dl</span>
+                                            </div>
+                                            <a href="{{ url_for('book_platform.book_analytics', book_id=book.id) }}" class="btn btn-outline-primary btn-sm mt-2">
+                                                <i class="fas fa-chart-area me-1"></i>Analytics
+                                            </a>
+                                            {% if listing_live %}
+                                            <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="btn btn-outline-success btn-sm mt-2 ms-1">
+                                                <i class="fas fa-eye me-1"></i>Store preview
+                                            </a>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     <div class="card-footer">
@@ -201,38 +257,38 @@
                     </div>
                 {% endif %}
 
-                <!-- Quick Stats -->
                 {% if books_with_readiness %}
-                <div class="row mt-5">
+                <p class="small text-muted mt-4 mb-0">
+                    <i class="fas fa-info-circle me-1"></i>Sales and net reflect completed checkout. Views/downloads use analytics when recorded. Payout detail: <a href="{{ url_for('book_platform.earnings_dashboard') }}">Earnings</a>.
+                </p>
+                {% endif %}
+
+                <!-- Writing stats (manuscript status — separate from marketplace “live”) -->
+                {% if books_with_readiness %}
+                <div class="row mt-4">
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="fas fa-chart-bar"></i> Writing Statistics</h5>
+                                <h5><i class="fas fa-pen-fancy"></i> Writing overview</h5>
                             </div>
                             <div class="card-body">
                                 <div class="row text-center">
-                                    <div class="col-md-3">
-                                        <div class="stat-item">
-                                            <h3 class="text-primary">{{ books_with_readiness|length }}</h3>
-                                            <p class="text-muted">Total Books</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <div class="stat-item">
                                             <h3 class="text-success">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'published')|list|length }}</h3>
-                                            <p class="text-muted">Published</p>
+                                            <p class="text-muted">Published (status)</p>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <div class="stat-item">
                                             <h3 class="text-warning">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'draft')|list|length }}</h3>
                                             <p class="text-muted">Drafts</p>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <div class="stat-item">
                                             <h3 class="text-info">{{ books_with_readiness|sum(attribute='book.word_count') }}</h3>
-                                            <p class="text-muted">Total Words</p>
+                                            <p class="text-muted">Total words</p>
                                         </div>
                                     </div>
                                 </div>

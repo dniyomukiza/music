@@ -273,6 +273,8 @@ CREATE TABLE IF NOT EXISTS library_book_hides (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+    hide_ebook BOOLEAN NOT NULL DEFAULT false,
+    hide_audiobook BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP,
     CONSTRAINT uq_library_hide_user_book UNIQUE (user_id, book_project_id)
 )
@@ -303,6 +305,8 @@ CREATE TABLE library_book_hides (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     book_project_id INTEGER NOT NULL,
+    hide_ebook BOOLEAN NOT NULL DEFAULT 0,
+    hide_audiobook BOOLEAN NOT NULL DEFAULT 0,
     created_at TIMESTAMP,
     UNIQUE (user_id, book_project_id),
     FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
@@ -323,6 +327,91 @@ CREATE TABLE library_book_hides (
         except Exception as e:
             db.session.rollback()
             logger.error("Could not patch library_book_hides (SQLite): %s", e, exc_info=True)
+
+
+def _library_book_hides_column_names_lowercase(db) -> set:
+    try:
+        dialect = db.engine.dialect.name
+    except Exception:
+        return set()
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'library_book_hides'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(library_book_hides)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows} if rows else set()
+    return set()
+
+
+def ensure_library_book_hides_format_columns(db) -> None:
+    """Add hide_ebook / hide_audiobook; legacy rows mean hide both formats."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("library_book_hides format patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+
+    exists = db.session.execute(
+        text(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'library_book_hides'"
+            if dialect == "postgresql"
+            else "SELECT name FROM sqlite_master WHERE type='table' AND name='library_book_hides'"
+        )
+    ).fetchone()
+    db.session.rollback()
+    if not exists:
+        return
+
+    cols = _library_book_hides_column_names_lowercase(db)
+    added_any = False
+    try:
+        if "hide_ebook" not in cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(
+                        "ALTER TABLE library_book_hides ADD COLUMN IF NOT EXISTS hide_ebook BOOLEAN NOT NULL DEFAULT false"
+                    )
+                )
+            else:
+                db.session.execute(
+                    text("ALTER TABLE library_book_hides ADD COLUMN hide_ebook BOOLEAN NOT NULL DEFAULT 0")
+                )
+            added_any = True
+        if "hide_audiobook" not in cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(
+                        "ALTER TABLE library_book_hides ADD COLUMN IF NOT EXISTS hide_audiobook BOOLEAN NOT NULL DEFAULT false"
+                    )
+                )
+            else:
+                db.session.execute(
+                    text("ALTER TABLE library_book_hides ADD COLUMN hide_audiobook BOOLEAN NOT NULL DEFAULT 0")
+                )
+            added_any = True
+        if added_any:
+            db.session.execute(
+                text(
+                    "UPDATE library_book_hides SET hide_ebook = true, hide_audiobook = true"
+                    if dialect == "postgresql"
+                    else "UPDATE library_book_hides SET hide_ebook = 1, hide_audiobook = 1"
+                )
+            )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch library_book_hides format columns: %s", e, exc_info=True)
 
 
 def _book_purchases_existing_columns(db, dialect: str) -> set:
