@@ -232,6 +232,28 @@ def get_profile_id(user_profile, profile_type):
         traceback.print_exc()
         return None
 
+
+def ink_studio_show_author_nav_links():
+    """My Books / Payout account in shared nav — same rules as dashboard ``is_author``."""
+    if not current_user.is_authenticated:
+        return False
+    excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
+    if current_user.role in excluded_roles:
+        return False
+    user_profile, profile_type = get_user_profile()
+    if profile_type not in ('writer', 'book_platform') or not user_profile:
+        return False
+    author_id = get_profile_id(user_profile, profile_type)
+    has_authored_books = (
+        BookProject.query.filter_by(author_id=author_id).count() > 0 if author_id else False
+    )
+    if current_user.role == 'author' and profile_type in ('writer', 'book_platform'):
+        return True
+    if has_authored_books:
+        return True
+    return False
+
+
 def count_words_from_html(html_content):
     """Count words from HTML content by stripping HTML tags first"""
     if not html_content:
@@ -3623,6 +3645,10 @@ def purchase_book(book_id):
     """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
     # Wrap entire function in try-except to ensure JSON responses
     try:
+        # Resolve app without referencing bare `current_app` — a nested `import current_app` in this
+        # function would shadow the name and break even this line (UnboundLocalError).
+        import flask as _flask_mod
+        flask_app = _flask_mod.current_app._get_current_object()
         # Get custom amount and purchase type from request
         request_data = request.get_json() or {}
         custom_amount = request_data.get('custom_amount')
@@ -4320,10 +4346,10 @@ def purchase_book(book_id):
         try:
             import stripe
 
-            stripe_api_key = get_stripe_server_secret_key(current_app)
+            stripe_api_key = get_stripe_server_secret_key(flask_app)
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
-                domain_url = current_app.config.get('FRONTEND_BASE_URL') or request.url_root.rstrip('/')
+                domain_url = flask_app.config.get('FRONTEND_BASE_URL') or request.url_root.rstrip('/')
                 checkout_kw = dict(
                     payment_method_types=checkout_payment_method_types_for_currency(
                         book.currency or 'USD'
@@ -4374,13 +4400,19 @@ def purchase_book(book_id):
             response_data['stripe_checkout_url'] = stripe_checkout_url
         else:
             from glconnect.stripe_utils import purchase_checkout_unavailable_response
-            return purchase_checkout_unavailable_response(current_app, stripe_session_error)
+            return purchase_checkout_unavailable_response(flask_app, stripe_session_error)
         logger.info(f"✅ Returning success response: {response_data}")
         return jsonify(response_data)
         
         
     except Exception as e:
         db.session.rollback()
+        # May be missing if the failure happened before `flask_app = ...` in the try block above.
+        try:
+            _purchase_app = flask_app
+        except NameError:
+            import flask as _flask_mod_ex
+            _purchase_app = _flask_mod_ex.current_app._get_current_object()
         error_msg = str(e)
         import traceback
         error_traceback = traceback.format_exc()
@@ -4416,9 +4448,8 @@ def purchase_book(book_id):
         
         # Check if we're in debug/development mode - include more details for debugging
         try:
-            from flask import current_app
-            is_debug = current_app.config.get('DEBUG', False) or current_app.config.get('FLASK_ENV') == 'development'
-        except:
+            is_debug = _purchase_app.config.get('DEBUG', False) or _purchase_app.config.get('FLASK_ENV') == 'development'
+        except Exception:
             is_debug = False
         
         # TEMPORARILY: Always show error details for debugging
@@ -4640,7 +4671,7 @@ def purchase_book(book_id):
                 stripe_fb_error = None
                 try:
                     import stripe
-                    stripe_api_key = get_stripe_server_secret_key(current_app)
+                    stripe_api_key = get_stripe_server_secret_key(_purchase_app)
                     if stripe_api_key:
                         stripe.api_key = stripe_api_key
                         checkout_kw_fb = dict(
@@ -4686,7 +4717,7 @@ def purchase_book(book_id):
                     response_data['stripe_checkout_url'] = stripe_checkout_url
                     return jsonify(response_data)
                 from glconnect.stripe_utils import purchase_checkout_unavailable_response
-                return purchase_checkout_unavailable_response(current_app, stripe_fb_error)
+                return purchase_checkout_unavailable_response(_purchase_app, stripe_fb_error)
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
                 return jsonify({

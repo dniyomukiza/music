@@ -23,7 +23,26 @@ def init_book_platform(app):
     Initialize Ink Studio with the Flask application.
     This function should be called from your main app initialization.
     """
-    
+
+    @app.context_processor
+    def inject_ink_studio_nav():
+        from flask_login import current_user
+
+        ctx = {
+            'ink_nav_show_my_library': False,
+            'ink_nav_show_author_nav': False,
+        }
+        if not getattr(current_user, 'is_authenticated', False):
+            return ctx
+        ctx['ink_nav_show_my_library'] = True
+        try:
+            from glconnect.book_platform_routes import ink_studio_show_author_nav_links
+
+            ctx['ink_nav_show_author_nav'] = ink_studio_show_author_nav_links()
+        except Exception:
+            ctx['ink_nav_show_author_nav'] = False
+        return ctx
+
     # Register the Ink Studio blueprints
     app.register_blueprint(book_bp)
     app.register_blueprint(gemini_bp)

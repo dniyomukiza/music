@@ -225,8 +225,12 @@
         <li><a href="https://glc.cool/home">Home</a></li>
         <li><a href="{{ url_for('book_platform.ink_studio_access') }}">GLC</a></li>
         <li><a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a></li>
-        {% if current_user.is_authenticated %}
+        {% if ink_nav_show_my_library|default(false) %}
         <li><a href="{{ url_for('book_platform.my_library') }}">My Library</a></li>
+        {% endif %}
+        {% if ink_nav_show_author_nav|default(false) %}
+        <li><a href="{{ url_for('book_platform.books') }}">My Books</a></li>
+        <li><a href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout account</a></li>
         {% endif %}
       </ul>
     </nav>
@@ -242,8 +246,14 @@
         <li><a href="/writer/profile"><i class="fas fa-microscope" style="margin-right:10px; width:20px; text-align:center;"></i> Researchers</a></li>
         <li><a href="/blog/blogs"><i class="fas fa-newspaper" style="margin-right:10px; width:20px; text-align:center;"></i> Stories & News</a></li>
         <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 5px 0;">
-        {% if current_user.is_authenticated %}
+        {% if ink_nav_show_my_library|default(false) %}
         <li><a href="{{ url_for('book_platform.my_library') }}"><i class="fas fa-book-reader" style="margin-right:10px; width:20px; text-align:center;"></i> My Library</a></li>
+        {% endif %}
+        {% if ink_nav_show_author_nav|default(false) %}
+        <li><a href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> My Books</a></li>
+        <li><a href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}"><i class="fas fa-wallet" style="margin-right:10px; width:20px; text-align:center;"></i> Payout account</a></li>
+        {% endif %}
+        {% if current_user.is_authenticated %}
         <li><a href="{{ url_for('book_platform.music_dashboard') }}"><i class="fas fa-compact-disc" style="margin-right:10px; width:20px; text-align:center;"></i> Music</a></li>
         {% else %}
         <li><a href="/prof/uprofile"><i class="fas fa-user" style="margin-right:10px; width:20px; text-align:center;"></i> Others</a></li>

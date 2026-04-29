@@ -24,9 +24,19 @@
                     <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
                         <i class="fas fa-home me-1"></i>Dashboard
                     </a>
+                    {% if ink_nav_show_my_library|default(false) %}
                     <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
                         <i class="fas fa-book-reader me-1"></i>My library
                     </a>
+                    {% endif %}
+                    {% if ink_nav_show_author_nav|default(false) %}
+                    <a class="nav-link" href="{{ url_for('book_platform.books') }}">
+                        <i class="fas fa-book-open me-1"></i>My books
+                    </a>
+                    <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
+                        <i class="fas fa-wallet me-1"></i>Payout account
+                    </a>
+                    {% endif %}
                     <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}" title="Music, podcasts, and more">
                         <i class="fas fa-broadcast-tower me-1"></i>Content
                     </a>
@@ -493,7 +503,7 @@
 
     <!-- Custom Payment Amount Modal -->
     <div class="modal fade" id="customPaymentModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">
@@ -502,8 +512,9 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2">Choose format and confirm payment amount.</p>
+                    <p class="mb-2">Choose ebook, audiobook, or both, then add to your cart or pay for this title only. Your cart is saved while you browse other books.</p>
                     <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
+                    <div id="cartActionFlash" class="alert alert-success py-1 px-2 small mt-2 d-none" role="status"></div>
                     <div class="mb-3 d-none" id="purchaseTypeBlock">
                         <label class="form-label fw-bold d-block mb-2">Choose format</label>
                         <div class="form-check">
@@ -544,21 +555,40 @@
                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="checkoutRegisterBtn">Create account</button>
                         </div>
                     </div>
+                    <div class="mt-3 pt-3 border-top" id="purchaseModalCartSection">
+                        <p class="small fw-bold text-muted mb-1"><i class="fas fa-shopping-basket me-1"></i>Your cart</p>
+                        <p class="small text-muted mb-2" id="purchaseModalCartHint">Use the format you selected above, then <strong>Add to cart</strong>. Open another book from the marketplace—items stay until you remove them or pay.</p>
+                        <div id="purchaseModalCartLines" class="small mb-2" style="max-height: 200px; overflow-y: auto;"></div>
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <strong>Grand total</strong>
+                            <strong class="text-success">$<span id="purchaseModalGrandTotal">0.00</span></strong>
+                        </div>
+                        <p class="small text-muted mb-1">Checkout once per author (Stripe). Grand total is the sum of all items below.</p>
+                        <div id="purchaseModalAuthorCheckouts" class="d-grid gap-2"></div>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer flex-wrap gap-2 justify-content-between">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-primary" id="addCurrentToCartBtn">
+                            <i class="fas fa-cart-plus me-1"></i>Add to cart
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
                     <button type="button" class="btn btn-success" id="confirmPurchaseBtn">
-                        <i class="fas fa-credit-card me-2"></i>Proceed to Payment
+                        <i class="fas fa-credit-card me-2"></i>Pay this title only
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="marketCartPanel" class="position-fixed bottom-0 end-0 m-3 p-3 bg-white border rounded shadow" style="z-index: 1080; width: 340px; max-height: 70vh; overflow:auto;">
+    <div id="marketCartPanel" class="d-none position-fixed bottom-0 end-0 m-3 p-3 bg-white border rounded shadow" style="z-index: 1080; width: 340px; max-height: 70vh; overflow:auto;">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h6 class="mb-0"><i class="fas fa-shopping-basket me-1"></i>Cart</h6>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshCartBtn">Refresh</button>
+            <div class="d-flex gap-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshCartBtn" title="Refresh">Refresh</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="marketCartHideBtn" title="Hide cart panel">Hide</button>
+            </div>
         </div>
         <div id="marketCartItems" class="small text-muted mb-2">Loading cart…</div>
         <div class="small mb-2">
@@ -633,66 +663,140 @@
             return d.innerHTML;
         }
 
-        async function loadCartPanel() {
-            const itemsEl = document.getElementById('marketCartItems');
-            const totalEl = document.getElementById('marketCartTotal');
-            const groupsEl = document.getElementById('marketCartGroups');
-            if (!itemsEl || !totalEl || !groupsEl) return;
+        function marketplacePurchaseTypeLabel(fmt) {
+            if (fmt === 'audiobook') return 'Audiobook';
+            if (fmt === 'bundle') return 'Bundle';
+            return 'Ebook';
+        }
+
+        function setMarketplaceCartDockVisible(show) {
+            var el = document.getElementById('marketCartPanel');
+            if (!el) return;
+            el.classList.toggle('d-none', !show);
+        }
+
+        function beginMarketplaceBuySession() {
+            try { sessionStorage.setItem('inkMarketBuy', '1'); } catch (err) { /* ignore */ }
+        }
+
+        function renderMarketplaceCartLinesHtml(items) {
+            if (!items || !items.length) {
+                return '<span class="text-muted">No items yet. Pick a format above and tap <strong>Add to cart</strong>.</span>';
+            }
+            return items.map(function (it) {
+                return (
+                    '<div class="border rounded p-2 mb-2">' +
+                    '<div class="fw-semibold">' + escapeHtml(it.book_title) + '</div>' +
+                    '<div class="text-muted">' + marketplacePurchaseTypeLabel(it.purchase_type) + ' · $' + Number(it.price).toFixed(2) + '</div>' +
+                    '<div class="d-flex justify-content-between align-items-center mt-1">' +
+                    '<small>' + escapeHtml(it.author_name) + '</small>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger" data-cart-remove="' + it.id + '">Remove</button>' +
+                    '</div></div>'
+                );
+            }).join('');
+        }
+
+        function renderMarketplaceCartGroupsHtml(groups) {
+            if (!groups || !groups.length) return '';
+            return groups.map(function (g) {
+                return (
+                    '<button type="button" class="btn btn-sm btn-primary text-start" data-cart-checkout="' + escapeHtml(g.group_key) + '">' +
+                    'Pay ' + escapeHtml(g.author_name) + ' · ' + Number(g.item_count || 0) + ' item(s) · $' + Number(g.subtotal || 0).toFixed(2) +
+                    '</button>'
+                );
+            }).join('');
+        }
+
+        function renderMarketplaceCartData(data) {
+            var itemsEl = document.getElementById('marketCartItems');
+            var totalEl = document.getElementById('marketCartTotal');
+            var groupsEl = document.getElementById('marketCartGroups');
+            var modalLines = document.getElementById('purchaseModalCartLines');
+            var modalTotal = document.getElementById('purchaseModalGrandTotal');
+            var modalGroups = document.getElementById('purchaseModalAuthorCheckouts');
+            var modalSection = document.getElementById('purchaseModalCartSection');
+
             if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
-                itemsEl.innerHTML = 'Sign in to use cart.';
-                totalEl.textContent = '0.00';
-                groupsEl.innerHTML = '';
+                if (itemsEl) itemsEl.innerHTML = 'Sign in to use cart.';
+                if (totalEl) totalEl.textContent = '0.00';
+                if (groupsEl) groupsEl.innerHTML = '';
+                if (modalLines) modalLines.innerHTML = '<p class="text-muted small mb-0">Sign in to build a cart.</p>';
+                if (modalTotal) modalTotal.textContent = '0.00';
+                if (modalGroups) modalGroups.innerHTML = '';
+                if (modalSection) modalSection.classList.add('opacity-50');
+                setMarketplaceCartDockVisible(false);
                 return;
             }
+            if (modalSection) modalSection.classList.remove('opacity-50');
+
+            var items = (data && data.items) || [];
+            var groups = (data && data.groups) || [];
+            var subtotal = Number(((data && data.totals) || {}).subtotal || 0).toFixed(2);
+            var linesH = renderMarketplaceCartLinesHtml(items);
+            var groupsH = renderMarketplaceCartGroupsHtml(groups);
+
+            if (itemsEl) itemsEl.innerHTML = items.length ? linesH : 'Cart is empty.';
+            if (totalEl) totalEl.textContent = subtotal;
+            if (groupsEl) groupsEl.innerHTML = items.length ? groupsH : '';
+
+            if (modalLines) modalLines.innerHTML = linesH;
+            if (modalTotal) modalTotal.textContent = subtotal;
+            if (modalGroups) modalGroups.innerHTML = groupsH;
+
+            var engaged = false;
+            try { engaged = sessionStorage.getItem('inkMarketBuy') === '1'; } catch (e2) { /* ignore */ }
+            setMarketplaceCartDockVisible(items.length > 0 || engaged);
+        }
+
+        async function fetchMarketplaceCartData() {
+            if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
+                return { success: true, items: [], groups: [], totals: { subtotal: 0 } };
+            }
+            var res = await fetch('/mybook/cart', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+            var data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Could not load cart.');
+            return data;
+        }
+
+        async function updateMarketplaceCartUi() {
             try {
-                const res = await fetch('/mybook/cart', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
-                const data = await res.json();
-                if (!res.ok || !data.success) throw new Error(data.error || 'Could not load cart.');
-                const items = data.items || [];
-                const groups = data.groups || [];
-                totalEl.textContent = Number((data.totals || {}).subtotal || 0).toFixed(2);
-                if (!items.length) {
-                    itemsEl.innerHTML = 'Cart is empty.';
-                    groupsEl.innerHTML = '';
-                    return;
-                }
-                itemsEl.innerHTML = items.map(function (it) {
-                    return (
-                        '<div class="border rounded p-2 mb-2">' +
-                        '<div class="fw-semibold">' + escapeHtml(it.book_title) + '</div>' +
-                        '<div class="text-muted">' + escapeHtml(it.purchase_type) + ' · $' + Number(it.price).toFixed(2) + '</div>' +
-                        '<div class="d-flex justify-content-between align-items-center mt-1">' +
-                        '<small>' + escapeHtml(it.author_name) + '</small>' +
-                        '<button class="btn btn-sm btn-outline-danger" data-cart-remove="' + it.id + '">Remove</button>' +
-                        '</div></div>'
-                    );
-                }).join('');
-                groupsEl.innerHTML = groups.map(function (g) {
-                    return (
-                        '<button type="button" class="btn btn-sm btn-primary text-start" data-cart-checkout="' + escapeHtml(g.group_key) + '">' +
-                        'Checkout ' + escapeHtml(g.author_name) + ' (' + Number(g.item_count || 0) + ') · $' + Number(g.subtotal || 0).toFixed(2) +
-                        '</button>'
-                    );
-                }).join('');
+                var data = await fetchMarketplaceCartData();
+                renderMarketplaceCartData(data);
             } catch (e) {
-                itemsEl.innerHTML = '<span class="text-danger">Could not load cart.</span>';
+                var itemsEl = document.getElementById('marketCartItems');
+                if (itemsEl) itemsEl.innerHTML = '<span class="text-danger">Could not load cart.</span>';
             }
         }
 
-        async function addToCart(bookId, purchaseType) {
+        function flashCartActionMessage(msg) {
+            var flash = document.getElementById('cartActionFlash');
+            if (!flash) return;
+            flash.textContent = msg;
+            flash.classList.remove('d-none');
+            window.clearTimeout(flash._t);
+            flash._t = window.setTimeout(function () { flash.classList.add('d-none'); }, 2600);
+        }
+
+        async function addToCart(bookId, purchaseType, opts) {
+            opts = opts || {};
             try {
-                const res = await fetch('/mybook/cart/items', {
+                var res = await fetch('/mybook/cart/items', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ book_id: bookId, purchase_type: purchaseType || 'digital' }),
                 });
-                const data = await res.json();
+                var data = await res.json();
                 if (!res.ok || !data.success) {
                     throw new Error(data.error || 'Could not add to cart.');
                 }
-                loadCartPanel();
-                alert('Added to cart.');
+                beginMarketplaceBuySession();
+                await updateMarketplaceCartUi();
+                if (opts.quiet) {
+                    flashCartActionMessage('Added to cart. You can close this window and open another book.');
+                } else {
+                    flashCartActionMessage('Added to cart.');
+                }
             } catch (e) {
                 alert(e.message || 'Could not add to cart.');
             }
@@ -793,14 +897,6 @@
                                 }
                             });
                             actionsEl.appendChild(btn);
-                            const cartBtn = document.createElement('button');
-                            cartBtn.type = 'button';
-                            cartBtn.className = 'btn btn-outline-success';
-                            cartBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Add ebook to cart';
-                            cartBtn.addEventListener('click', function () {
-                                addToCart(b.id, 'digital');
-                            });
-                            actionsEl.appendChild(cartBtn);
                         } else {
                             const btn = document.createElement('button');
                             btn.type = 'button';
@@ -834,27 +930,8 @@
                             });
                             actionsEl.appendChild(btn);
                         }
-                        if (priceAudio != null && priceAudio > 0) {
-                            const cartAudioBtn = document.createElement('button');
-                            cartAudioBtn.type = 'button';
-                            cartAudioBtn.className = 'btn btn-outline-warning';
-                            cartAudioBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Add audio to cart';
-                            cartAudioBtn.addEventListener('click', function () {
-                                addToCart(b.id, 'audiobook');
-                            });
-                            actionsEl.appendChild(cartAudioBtn);
-                        }
-                        if (fmtDigital && priceDigital != null && priceDigital > 0 && priceAudio != null && priceAudio > 0) {
-                            const cartBundleBtn = document.createElement('button');
-                            cartBundleBtn.type = 'button';
-                            cartBundleBtn.className = 'btn btn-outline-primary';
-                            cartBundleBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Add bundle to cart';
-                            cartBundleBtn.addEventListener('click', function () {
-                                addToCart(b.id, 'bundle');
-                            });
-                            actionsEl.appendChild(cartBundleBtn);
-                        }
                     }
+                    updateMarketplaceCartUi();
                 })
                 .catch(function (err) {
                     console.error(err);
@@ -1037,6 +1114,7 @@
 
         function showPurchaseModal(bookId, minAmountOrOptions, audiobookPurchase = false) {
             try {
+                beginMarketplaceBuySession();
                 currentBookId = bookId;
                 if (typeof minAmountOrOptions === 'object' && minAmountOrOptions !== null) {
                     currentPurchaseOptions = {
@@ -1064,7 +1142,7 @@
                     // Create modal HTML dynamically
                     const modalHTML = `
                         <div class="modal fade" id="customPaymentModal" tabindex="-1">
-                            <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                                 <div class="modal-content">
                                     <div class="modal-header bg-success text-white">
                                         <h5 class="modal-title">
@@ -1073,8 +1151,9 @@
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <p class="mb-3">Enter the amount you'd like to pay for this book. You can pay more than the minimum price to support the author!</p>
-                                        <p class="small text-muted mb-3"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital and audio content is delivered immediately after payment.</p>
+                                        <p class="mb-2">Choose format, add to cart, or pay for this title only. Your cart is saved while you browse.</p>
+                                        <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
+                                        <div id="cartActionFlash" class="alert alert-success py-1 px-2 small mb-2 d-none" role="status"></div>
                                         <div class="mb-3 d-none" id="purchaseTypeBlock">
                                             <label class="form-label fw-bold d-block mb-2">Choose format</label>
                                             <div class="form-check">
@@ -1111,11 +1190,27 @@
                                                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="checkoutRegisterBtn">Create account</button>
                                             </div>
                                         </div>
+                                        <div class="mt-3 pt-3 border-top" id="purchaseModalCartSection">
+                                            <p class="small fw-bold text-muted mb-1"><i class="fas fa-shopping-basket me-1"></i>Your cart</p>
+                                            <p class="small text-muted mb-2" id="purchaseModalCartHint">Add items with the button below. Browse other books—cart persists.</p>
+                                            <div id="purchaseModalCartLines" class="small mb-2" style="max-height: 200px; overflow-y: auto;"></div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                                <strong>Grand total</strong>
+                                                <strong class="text-success">$<span id="purchaseModalGrandTotal">0.00</span></strong>
+                                            </div>
+                                            <p class="small text-muted mb-1">Checkout once per author (Stripe).</p>
+                                            <div id="purchaseModalAuthorCheckouts" class="d-grid gap-2"></div>
+                                        </div>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <div class="modal-footer flex-wrap gap-2 justify-content-between">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-outline-primary" id="addCurrentToCartBtn">
+                                                <i class="fas fa-cart-plus me-1"></i>Add to cart
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
                                         <button type="button" class="btn btn-success" id="confirmPurchaseBtn">
-                                            <i class="fas fa-credit-card me-2"></i>Proceed to Payment
+                                            <i class="fas fa-credit-card me-2"></i>Pay this title only
                                         </button>
                                     </div>
                                 </div>
@@ -1158,6 +1253,7 @@
                             if (modalEl) {
                                 const modal = new bootstrap.Modal(modalEl);
                                 modal.show();
+                                updateMarketplaceCartUi();
                             }
                         }
                     }, 50);
@@ -1169,6 +1265,7 @@
                         if (modalEl) {
                             const modal = new bootstrap.Modal(modalEl);
                             modal.show();
+                            updateMarketplaceCartUi();
                         } else {
                             console.error('customPaymentModal not found');
                             alert('Payment modal not available. Please refresh the page and try again.');
@@ -1224,6 +1321,30 @@
                     // Proceed with purchase
                     buyWithStripeLink(currentBookId, customAmount, currentPurchaseType);
                 }
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            var addCartBtn = e.target && (e.target.id === 'addCurrentToCartBtn' ? e.target : e.target.closest('#addCurrentToCartBtn'));
+            if (addCartBtn) {
+                e.preventDefault();
+                if (!currentBookId) {
+                    alert('No book selected.');
+                    return;
+                }
+                if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
+                    alert('Sign in or create an account to use the cart.');
+                    return;
+                }
+                var fmt = currentPurchaseType || 'digital';
+                addToCart(currentBookId, fmt, { quiet: true });
+                return;
+            }
+            var hideDock = e.target && (e.target.id === 'marketCartHideBtn' ? e.target : e.target.closest('#marketCartHideBtn'));
+            if (hideDock) {
+                e.preventDefault();
+                try { sessionStorage.removeItem('inkMarketBuy'); } catch (x) { /* ignore */ }
+                updateMarketplaceCartUi();
             }
         });
 
@@ -1434,10 +1555,10 @@
         // Check for completed purchases when page loads
         document.addEventListener('DOMContentLoaded', function() {
             checkForCompletedPurchases();
-            loadCartPanel();
+            updateMarketplaceCartUi();
             const refreshBtn = document.getElementById('refreshCartBtn');
             if (refreshBtn) {
-                refreshBtn.addEventListener('click', function () { loadCartPanel(); });
+                refreshBtn.addEventListener('click', function () { updateMarketplaceCartUi(); });
             }
         });
 
@@ -1453,7 +1574,7 @@
                     });
                     const data = await res.json();
                     if (!res.ok || !data.success) throw new Error(data.error || 'Could not remove item.');
-                    loadCartPanel();
+                    updateMarketplaceCartUi();
                 } catch (err) {
                     alert(err.message || 'Could not remove item.');
                 }
@@ -1480,7 +1601,7 @@
                 } catch (err) {
                     checkoutBtn.disabled = false;
                     alert(err.message || 'Could not start checkout.');
-                    loadCartPanel();
+                    updateMarketplaceCartUi();
                 }
                 return;
             }
