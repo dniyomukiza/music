@@ -12,25 +12,17 @@
     <title>Marketplace — Indie ebooks &amp; audiobooks</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
 </head>
 <body class="ink-marketplace">
+    <div class="ink-mp-page-bg" aria-hidden="true"></div>
  <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#marketplace-catalog">Skip to catalog</a>
     <nav class="navbar navbar-expand-lg navbar-dark ink-marketplace-nav ink-mp-sticky-nav ink-mp-topnav border-bottom border-white border-opacity-10" aria-label="Main">
         <div class="container py-1">
-            <a class="navbar-brand ink-mp-nav-brand d-flex align-items-center gap-2 mb-0 py-1" href="{{ url_for('book_platform.marketplace') }}">
-                <span class="ink-mp-nav-logo d-inline-flex align-items-center justify-content-center flex-shrink-0 rounded-3" aria-hidden="true">
-                    <i class="fas fa-store"></i>
-                </span>
-                <span class="d-flex flex-column lh-sm text-start">
-                    <span class="ink-mp-nav-title">Book shop</span>
-                    <span class="ink-mp-nav-tagline small fw-normal text-white-50 d-none d-sm-block">Indie ebooks &amp; audiobooks</span>
-                </span>
-            </a>
-            <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#marketplaceNavMain" aria-controls="marketplaceNavMain" aria-expanded="false" aria-label="Open menu">
+            <button class="navbar-toggler ms-auto rounded-3 border shadow-none ink-mp-nav-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#marketplaceNavMain" aria-controls="marketplaceNavMain" aria-expanded="false" aria-label="Open menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="marketplaceNavMain">
@@ -66,7 +58,7 @@
                         </a>
                     </li>
                     <li class="nav-item d-none d-lg-block">
-                        <span class="nav-link disabled small py-lg-2 opacity-75 mb-0" title="Signed in as {{ current_user.email }}">{{ current_user.username }}</span>
+                        <span class="navbar-text small text-white-50 py-lg-2 px-lg-2 mb-0" title="Signed in as {{ current_user.email }}">{{ current_user.username }}</span>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('blog.logout') }}">
@@ -80,7 +72,7 @@
                         </a>
                     </li>
                     <li class="nav-item ms-lg-2 mt-2 mt-lg-0 d-grid d-lg-block">
-                        <a class="btn btn-sm btn-outline-light fw-semibold px-3" href="{{ url_for('routes1.register') }}">Create account</a>
+                        <a class="btn btn-sm btn-ink-ghost fw-semibold px-3" href="{{ url_for('routes1.register') }}">Create account</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -100,7 +92,7 @@
                             <i class="fas fa-book-open me-2" aria-hidden="true"></i><strong>{{ total_books }}</strong> titles
                         </span>
                         {% if current_user.is_authenticated %}
-                        <span class="badge rounded-pill px-3 py-2 ink-mp-hero-badge-soft">
+                        <span class="badge rounded-pill px-3 py-2 ink-mp-hero-badge-soft ink-mp-signed-status" role="status" aria-label="You are signed in">
                             <i class="fas fa-user-check me-1" aria-hidden="true"></i>Signed in
                         </span>
                         {% endif %}
@@ -110,18 +102,18 @@
                     
                     <div class="d-flex flex-wrap gap-2">
                         {% if can_list_book_on_marketplace %}
-                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-outline-light border-2 fw-semibold btn-sm px-3 py-2">
+                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
                             <i class="fas fa-pen-fancy me-1"></i>Start writing
                         </a>
-                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-light text-primary fw-semibold btn-sm px-3 py-2">
+                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2">
                             <i class="fas fa-plus-circle me-1"></i>List your book
                         </a>
                         {% endif %}
                         {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('book_platform.investments', status='active') }}" class="btn btn-success btn-sm px-3 py-2">
+                        <a href="{{ url_for('book_platform.investments', status='active') }}" class="btn btn-ink-sage btn-sm px-3 py-2">
                             <i class="fas fa-chart-line me-1"></i>All investments
                         </a>
-                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-warning btn-sm px-3 py-2">
+                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-ink-gold btn-sm px-3 py-2">
                             <i class="fas fa-dollar-sign me-1"></i>Earnings
                         </a>
                         {% endif %}

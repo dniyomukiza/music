@@ -3,55 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content | GLC (books, radio, music, podcasts)</title>
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Content hub | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
     <style>
         :root {
-          --bg-dark: #060807;
-          --bg-panel: rgba(12, 15, 14, 0.72);
+          --bg-dark: #0c0f0e;
+          --bg-panel: rgba(18, 22, 20, 0.92);
           --text-main: #e8ece9;
           --text-muted: #9aa8a0;
           --accent-primary: #c9a227;
           --accent-secondary: #e0bc3a;
-          --border-light: rgba(42, 61, 50, 0.45);
-          --glass-bg: rgba(6, 8, 7, 0.82);
+          --border-light: rgba(201, 162, 39, 0.22);
+          --glass-bg: rgba(12, 15, 14, 0.78);
           --gradient-accent: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
         }
 
-        body {
-            font-family: 'DM Sans', system-ui, sans-serif;
-            background: #060807;
-            background: radial-gradient(circle at top right, #1a221c, #060807 70%);
-            background-attachment: fixed;
-            color: var(--text-main);
-            min-height: 100vh;
-        }
-
-        h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif; color: #e8ece9; }
-
-        /* Navbar */
-        .navbar {
-            background: var(--glass-bg) !important;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 0;
-        }
-        
-        .navbar-brand {
+        .ink-content-hub h1, .ink-content-hub h2, .ink-content-hub h3, .ink-content-hub h4, .ink-content-hub h5, .ink-content-hub h6 {
             font-family: 'Syne', sans-serif;
-            font-weight: 600;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #e8ece9;
         }
-
-        .nav-link { color: var(--text-muted) !important; transition: 0.3s; font-weight: 500; }
-        .nav-link:hover, .nav-link.active { color: #fff !important; }
 
         /* User Profile Hero */
         .user-hero {
@@ -149,8 +126,8 @@
         }
         .btn-modern:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateY(-2px); }
         
-        .btn-modern-primary { background: var(--gradient-accent); border: none; }
-        .btn-modern-primary:hover { background: linear-gradient(135deg, #0284c7, #0f766e); box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4); }
+        .btn-modern-primary { background: linear-gradient(145deg, #c9a227, #a88416); border: none; color: #060807 !important; }
+        .btn-modern-primary:hover { filter: brightness(1.06); color: #060807 !important; box-shadow: 0 4px 15px rgba(201, 162, 39, 0.35); }
 
         .btn-modern-success { background: linear-gradient(135deg, #10b981, #059669); border: none; }
         .btn-modern-success:hover { background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
@@ -166,47 +143,88 @@
         .modal-header { border-bottom: 1px solid var(--border-light); background: var(--glass-bg); border-radius: 20px 20px 0 0; }
         .modal-footer { border-top: 1px solid var(--border-light); background: var(--glass-bg); border-radius: 0 0 20px 20px; }
         .form-control { background: rgba(255,255,255,0.05); border: 1px solid var(--border-light); color: #fff; border-radius: 10px; }
-        .form-control:focus { background: rgba(255,255,255,0.1); border-color: var(--accent-primary); color: #fff; box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25); }
+        .form-control:focus { background: rgba(255,255,255,0.1); border-color: var(--accent-primary); color: #fff; box-shadow: 0 0 0 0.25rem rgba(201, 162, 39, 0.2); }
         .form-control::placeholder { color: rgba(255,255,255,0.3); }
         .form-label { color: var(--text-muted); }
     </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-layer-group me-2"></i> GLC
+<body class="ink-content-hub">
+    <div class="ink-ch-page-bg" aria-hidden="true"></div>
+    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2 ink-ch-skip" href="#ink-ch-main">Skip to content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-ch-topnav border-bottom border-white border-opacity-10" aria-label="Content hub">
+        <div class="container py-1">
+            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
-                            <i class="fas fa-home me-1"></i> Dashboard
+                            <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('book_platform.content_hub') }}">
-                            <i class="fas fa-compass me-1"></i> Content
+                        <a class="nav-link active" href="{{ url_for('book_platform.content_hub') }}" aria-current="page">
+                            <i class="fas fa-compass me-1" aria-hidden="true"></i>Content
                         </a>
                     </li>
+                    {% if ink_nav_show_author_nav|default(false) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">
+                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books &amp; listings
+                        </a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
-                            <i class="fas fa-store me-1"></i> Store
+                            <i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace
                         </a>
                     </li>
+                    {% if ink_nav_show_my_library|default(false) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
+                            <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
+                            <i class="fas fa-chart-line me-1" aria-hidden="true"></i>Investments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
+                            <i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Earnings
+                        </a>
+                    </li>
+                    {% if ink_nav_show_author_nav|default(false) %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
+                            <i class="fas fa-wallet me-1" aria-hidden="true"></i>Payout
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">
+                            <i class="fas fa-cogs me-1" aria-hidden="true"></i>Admin
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i> {{ current_user.username }}
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1" aria-hidden="true"></i>{{ current_user.username }}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" style="background: var(--bg-panel); border: 1px solid var(--border-light); backdrop-filter: blur(10px);">
-                            <li><a class="dropdown-item text-light" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
-                            <li><hr class="dropdown-divider" style="border-color: var(--border-light);"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign Out</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end ink-ch-dropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign out</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -214,7 +232,7 @@
         </div>
     </nav>
 
-    <div class="container py-5">
+    <div class="container py-5 ink-ch-main" id="ink-ch-main" tabindex="-1">
         <!-- User Profile Section -->
         <div class="user-hero">
             <div class="row align-items-center">
