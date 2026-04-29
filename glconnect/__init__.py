@@ -677,9 +677,9 @@ def create_app(config_overrides=None):
             ensure_investment_campaign_milestone_schema,
             ensure_digital_book_editions_schema,
             ensure_book_platform_stripe_connect_schema,
-            ensure_book_cart_schema,
             ensure_book_purchases_schema,
             ensure_library_book_hides_schema,
+            ensure_reader_annotations_schema,
             ensure_library_book_hides_format_columns,
             ensure_audiobook_segment_plan_schema,
             ensure_page_analytics_slim_schema,
@@ -688,9 +688,9 @@ def create_app(config_overrides=None):
         ensure_digital_book_editions_schema(db)
         ensure_book_platform_stripe_connect_schema(db)
         ensure_audiobook_segment_plan_schema(db)
-        ensure_book_cart_schema(db)
         ensure_book_purchases_schema(db)
         ensure_library_book_hides_schema(db)
+        ensure_reader_annotations_schema(db)
         ensure_library_book_hides_format_columns(db)
         ensure_page_analytics_slim_schema(db)
 

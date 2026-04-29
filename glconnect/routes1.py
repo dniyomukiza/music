@@ -176,12 +176,11 @@ def register():
                 token = s.dumps(new_user.email, salt='email-confirm')
                 confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
 
-                # Send confirmation email (requires SENDER_MAIL + MAIL_TRAP in environment)
+                # Send confirmation email (Mailtrap; configured via env / glconfig at app startup)
                 if not send_confirmation_email(new_user.email, confirm_url):
                     flash(
-                        "Your account was created, but the confirmation email could not be sent. "
-                        "The server needs SENDER_MAIL and MAIL_TRAP (Mailtrap API token) set in the environment. "
-                        "Ask the administrator to configure email, or check server logs.",
+                        "Your account was created, but we couldn’t send the confirmation email. "
+                        "Please try again in a little while or contact support if this keeps happening.",
                         "error",
                     )
 

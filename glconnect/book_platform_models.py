@@ -541,24 +541,6 @@ class BookPurchase(db.Model):
                 else:
                     self.buyer_full_name = user.username
 
-
-class BookCartItem(db.Model):
-    __tablename__ = 'book_cart_items'
-    __table_args__ = (
-        UniqueConstraint('buyer_user_id', 'book_project_id', 'purchase_format', name='uq_cart_buyer_book_format'),
-    )
-
-    id = db.Column(db.Integer, primary_key=True)
-    buyer_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
-    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True)
-    purchase_format = db.Column(db.String(20), default='digital', nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-
-    buyer_user = db.relationship('User', foreign_keys=[buyer_user_id], backref='book_cart_items', lazy=True)
-    book_project = db.relationship('BookProject', foreign_keys=[book_project_id], lazy=True)
-
-
 class LibraryBookHide(db.Model):
     """Buyer hid format(s) from My Library UI; purchase rows stay for history/support."""
 
@@ -573,6 +555,27 @@ class LibraryBookHide(db.Model):
     hide_ebook = db.Column(db.Boolean, default=False, nullable=False)
     hide_audiobook = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ReaderAnnotation(db.Model):
+    """User highlights, section bookmarks, and optional notes on the in-browser library reader (synced per account)."""
+
+    __tablename__ = 'reader_annotations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    section_index = db.Column(db.Integer, nullable=False)
+    start_offset = db.Column(db.Integer, nullable=False, default=0)
+    end_offset = db.Column(db.Integer, nullable=False, default=0)
+    quote_text = db.Column(db.Text, nullable=True)
+    note_text = db.Column(db.Text, nullable=True)
+    kind = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', foreign_keys=[user_id], lazy=True)
+    book_project = db.relationship('BookProject', foreign_keys=[book_project_id], lazy=True)
 
 
 # Book Sale Model

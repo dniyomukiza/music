@@ -282,14 +282,11 @@ def contact():
     
     if form.validate_on_submit():
         # Validate required configuration
-        if not sender:
-            flash("Email configuration error: SENDER_MAIL is not set", "error")
-            return render_template("contact.html", form=form)
-        if not receiver:
-            flash("Email configuration error: RECEIVER_MAIL is not set", "error")
-            return render_template("contact.html", form=form)
-        if not api_key:
-            flash("Email configuration error: MAIL_TRAP API key is not set", "error")
+        if not sender or not receiver or not api_key:
+            flash(
+                "We can’t send messages from the contact form right now. Please try again later.",
+                "error",
+            )
             return render_template("contact.html", form=form)
         
         try:
@@ -313,7 +310,10 @@ def contact():
         except Exception as e:
             print("This is the error that occured: ", e)
             print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
-            flash(f"An error occurred while sending the email: {str(e)}", "error")
+            flash(
+                "We couldn’t send your message. Please try again in a moment.",
+                "error",
+            )
         else:
             flash("Thank you for reaching out. We will get back to you ASAP.", "success")
             return redirect(url_for("blog.contact"))

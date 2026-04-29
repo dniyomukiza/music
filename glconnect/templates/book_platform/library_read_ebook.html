@@ -1,90 +1,817 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="ink-reader-root" data-theme="light" data-width="medium">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
     <title>{{ book.title }} | Read</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Lexend:wght@400;600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        .library-reader-body { max-width: 48rem; margin: 0 auto; }
-        .library-reader-text { line-height: 1.75; font-size: 1.05rem; }
-        .library-reader-text pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; margin: 0; }
-        .library-reader-nav .btn { min-width: 7.5rem; }
+        /* Scoped reader: avoid global Ink Studio body styles fighting this page */
+        .ink-reader-root {
+            --ir-bg: #f4f1ea;
+            --ir-surface: #fffdf8;
+            --ir-text: #1a1a1a;
+            --ir-muted: #5c5c5c;
+            --ir-accent: #1e4d3a;
+            --ir-accent-soft: rgba(30, 77, 58, 0.12);
+            --ir-border: rgba(0,0,0,0.08);
+            --ir-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            --ir-font: 'Literata', 'Georgia', serif;
+            --ir-ui: 'Source Sans 3', system-ui, sans-serif;
+            --ir-size: 1.125rem;
+            --ir-leading: 1.8;
+            --ir-max: 40rem;
+        }
+        .ink-reader-root[data-theme="sepia"] {
+            --ir-bg: #e8dcc8;
+            --ir-surface: #f0e6d4;
+            --ir-text: #2b2118;
+            --ir-muted: #5e4d3d;
+            --ir-accent: #6b4c2a;
+            --ir-accent-soft: rgba(107, 76, 42, 0.15);
+        }
+        .ink-reader-root[data-theme="dark"] {
+            --ir-bg: #0d1012;
+            --ir-surface: #151a1e;
+            --ir-text: #e6e8ea;
+            --ir-muted: #9aa0a6;
+            --ir-accent: #6ee7b7;
+            --ir-accent-soft: rgba(110, 231, 183, 0.12);
+            --ir-border: rgba(255,255,255,0.08);
+            --ir-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        html, body.ink-reader-page {
+            margin: 0;
+            min-height: 100%;
+            background: var(--ir-bg);
+            color: var(--ir-text);
+            font-family: var(--ir-ui);
+        }
+        body.ink-reader-page {
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .ink-reader-skip {
+            position: absolute;
+            left: -9999px;
+            z-index: 10000;
+        }
+        .ink-reader-skip:focus {
+            left: 1rem;
+            top: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--ir-accent);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+        .ink-reader-top {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: color-mix(in srgb, var(--ir-surface) 88%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--ir-border);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .ink-reader-top-inner {
+            max-width: 72rem;
+            margin: 0 auto;
+            padding: 0.65rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .ink-reader-back {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--ir-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.35rem 0.5rem;
+            border-radius: 8px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .ink-reader-back:hover {
+            color: var(--ir-accent);
+            background: var(--ir-accent-soft);
+        }
+        .ink-reader-title-block {
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+        }
+        .ink-reader-title {
+            font-family: var(--ir-font);
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.02em;
+        }
+        .ink-reader-sub {
+            font-size: 0.75rem;
+            color: var(--ir-muted);
+            margin: 0;
+        }
+        .ink-reader-actions {
+            flex-shrink: 0;
+            display: flex;
+            gap: 0.35rem;
+            align-items: center;
+        }
+        .ink-reader-icon-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--ir-border);
+            background: var(--ir-surface);
+            color: var(--ir-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .ink-reader-icon-btn:hover {
+            background: var(--ir-accent-soft);
+            color: var(--ir-accent);
+        }
+        .ink-reader-icon-btn:active {
+            transform: scale(0.96);
+        }
+        .ink-reader-progress-track {
+            height: 3px;
+            background: var(--ir-border);
+            margin: 0;
+        }
+        .ink-reader-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--ir-accent), color-mix(in srgb, var(--ir-accent) 70%, transparent));
+            transition: width 0.35s ease;
+        }
+        .ink-reader-wrap {
+            max-width: calc(var(--ir-max) + 3rem);
+            margin: 0 auto;
+            padding: 1.25rem 1rem 6rem;
+        }
+        @media (min-width: 768px) {
+            .ink-reader-wrap { padding: 2rem 1.5rem 7rem; }
+        }
+        .ink-reader-hero {
+            margin-bottom: 1.5rem;
+        }
+        .ink-reader-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1rem;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--ir-muted);
+            margin-bottom: 1rem;
+        }
+        .ink-reader-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .ink-reader-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .ink-reader-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--ir-border);
+            background: var(--ir-surface);
+            color: var(--ir-text);
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .ink-reader-chip:hover {
+            border-color: var(--ir-accent);
+            color: var(--ir-accent);
+        }
+        .ink-reader-chip.primary {
+            background: var(--ir-accent);
+            color: #fff;
+            border-color: transparent;
+        }
+        .ink-reader-chip.primary:hover {
+            filter: brightness(1.05);
+            color: #fff;
+        }
+        .ink-reader-card {
+            background: var(--ir-surface);
+            border-radius: 16px;
+            border: 1px solid var(--ir-border);
+            box-shadow: var(--ir-shadow);
+            overflow: hidden;
+        }
+        .ink-reader-nav-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--ir-border);
+            background: color-mix(in srgb, var(--ir-surface) 96%, var(--ir-accent) 4%);
+        }
+        .ink-reader-position {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--ir-muted);
+        }
+        .ink-reader-position strong {
+            color: var(--ir-text);
+        }
+        .ink-reader-page-btn {
+            min-width: 7rem;
+            font-weight: 600;
+            border-radius: 10px !important;
+        }
+        .ink-reader-body-text {
+            font-family: var(--ir-font);
+            font-size: var(--ir-size);
+            line-height: var(--ir-leading);
+            padding: 1.75rem 1.25rem 2.25rem;
+            max-width: var(--ir-max);
+            margin: 0 auto;
+        }
+        .ink-reader-body-text pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: inherit;
+            margin: 0;
+        }
+        .ink-reader-body-text p {
+            margin-bottom: 1em;
+        }
+        .ink-reader-hint {
+            font-size: 0.8rem;
+            color: var(--ir-muted);
+            padding: 0 1.25rem 1rem;
+            text-align: center;
+        }
+        .ink-reader-hint kbd {
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: var(--ir-accent-soft);
+            color: var(--ir-accent);
+        }
+        .ink-reader-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 99;
+            padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom, 0));
+            background: color-mix(in srgb, var(--ir-surface) 92%, transparent);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-top: 1px solid var(--ir-border);
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .ink-reader-bottom .btn {
+            border-radius: 12px;
+            font-weight: 600;
+            padding-left: 1.15rem;
+            padding-right: 1.15rem;
+        }
+        .ink-reader-empty {
+            padding: 2rem 1.25rem;
+            text-align: center;
+            color: var(--ir-muted);
+        }
+        .ink-reader-empty strong {
+            color: var(--ir-text);
+        }
+        /* Search highlights */
+        .ink-reader-mark {
+            background: rgba(255, 214, 100, 0.55);
+            padding: 0 0.1em;
+            border-radius: 2px;
+        }
+        [data-theme="dark"] .ink-reader-mark {
+            background: rgba(250, 204, 21, 0.35);
+        }
+        /* Width presets */
+        .ink-reader-root[data-width="narrow"] { --ir-max: 32rem; }
+        .ink-reader-root[data-width="wide"] { --ir-max: 48rem; }
+        /* Focus mode */
+        body.ink-reader-focus .ink-reader-top,
+        body.ink-reader-focus .ink-reader-hero,
+        body.ink-reader-focus .ink-reader-nav-row,
+        body.ink-reader-focus .ink-reader-hint {
+            display: none !important;
+        }
+        body.ink-reader-focus .ink-reader-wrap {
+            padding-top: 1rem;
+        }
+        /* Offcanvas tuning */
+        .offcanvas-reader {
+            font-family: var(--ir-ui);
+            background: var(--ir-surface);
+            color: var(--ir-text);
+        }
+        .list-group-item-reader {
+            border-color: var(--ir-border);
+            color: var(--ir-text);
+            padding: 0.65rem 1rem;
+        }
+        .list-group-item-reader.active {
+            background: var(--ir-accent-soft);
+            border-color: var(--ir-accent);
+            color: var(--ir-accent);
+            font-weight: 600;
+        }
+        .ink-reader-root[data-reading-font="lexend"] {
+            --ir-font: 'Lexend', 'Source Sans 3', system-ui, sans-serif;
+        }
+        mark.ink-reader-hl {
+            background: rgba(255, 193, 7, 0.45);
+            padding: 0 0.08em;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        [data-theme="dark"] mark.ink-reader-hl {
+            background: rgba(250, 204, 21, 0.35);
+        }
+        mark.ink-reader-hl-note {
+            border-bottom: 2px dashed var(--ir-accent);
+        }
+        #readerSelToolbar {
+            position: fixed;
+            z-index: 1050;
+            display: none;
+            gap: 0.35rem;
+            padding: 0.4rem 0.5rem;
+            border-radius: 12px;
+            background: var(--ir-surface);
+            border: 1px solid var(--ir-border);
+            box-shadow: var(--ir-shadow);
+            align-items: center;
+        }
+        #readerSelToolbar button {
+            border: none;
+            background: var(--ir-accent-soft);
+            color: var(--ir-accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 0.65rem;
+            border-radius: 8px;
+        }
+        #readerSelToolbar button:hover {
+            filter: brightness(0.95);
+        }
+        .anno-note-badge {
+            font-size: 0.75rem;
+            color: var(--ir-muted);
+            margin-top: 0.25rem;
+            padding-left: 0.25rem;
+            border-left: 3px solid var(--ir-accent);
+        }
+        .global-search-snippet {
+            font-size: 0.85rem;
+            color: var(--ir-muted);
+            margin-bottom: 0;
+        }
+        .global-search-snippet mark {
+            background: rgba(255, 214, 100, 0.7);
+            padding: 0 0.1em;
+        }
     </style>
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-    <div class="container">
-        <a class="navbar-brand" href="{{ library_url }}"><i class="fas fa-arrow-left me-2"></i>My library</a>
-        <div class="navbar-nav ms-auto">
-            <a class="btn btn-light btn-sm" href="{{ download_url }}">
-                <i class="fas fa-download me-1"></i>Download ebook
-            </a>
-        </div>
-    </div>
-</nav>
+<body class="ink-reader-page">
+<a href="#reader-main" class="ink-reader-skip">Skip to content</a>
 
-<div class="container py-4 library-reader-body">
-    <header class="mb-3">
-        <h1 class="h3 mb-1">{{ book.title }}</h1>
-        {% if book.author %}
-        <p class="text-muted small mb-0">by {{ book.author.pen_name or (book.author.user.username if book.author.user else 'Author') }}</p>
-        {% endif %}
-        <a href="{{ download_url }}" class="btn btn-primary btn-sm mt-2">
-            <i class="fas fa-download me-1"></i>Download ebook
+{% set pct = ((page_idx + 1) / total_pages * 100) if total_pages else 0 %}
+
+<div class="ink-reader-top">
+    <div class="ink-reader-top-inner">
+        <a class="ink-reader-back" href="{{ library_url }}" aria-label="Back to library">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+            <span class="d-none d-sm-inline">Library</span>
         </a>
-    </header>
-
-    {% if total_pages and current_page %}
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 library-reader-nav">
-        <div class="text-muted small fw-semibold" id="readerPosition">
-            <i class="fas fa-bookmark me-1"></i>{{ page_idx + 1 }} / {{ total_pages }}
-            {% if current_page.title %} — {{ current_page.title }}{% endif %}
+        <div class="ink-reader-title-block">
+            <p class="ink-reader-title">{{ book.title }}</p>
+            {% if book.author %}
+            <p class="ink-reader-sub">{{ book.author.pen_name or (book.author.user.username if book.author.user else 'Author') }}</p>
+            {% endif %}
         </div>
-        <div class="btn-group" role="group" aria-label="Page navigation">
-            {% if page_idx > 0 %}
-            <a class="btn btn-outline-primary btn-sm" id="btnPrevPage" href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=page_idx - 1) }}">
-                <i class="fas fa-chevron-left me-1"></i>Previous
-            </a>
-            {% else %}
-            <button type="button" class="btn btn-outline-secondary btn-sm" disabled id="btnPrevPage">Previous</button>
+        <div class="ink-reader-actions">
+            <button type="button" class="ink-reader-icon-btn d-none d-md-inline-flex" id="btnFocusMode" title="Focus mode (F)" aria-pressed="false">
+                <i class="fas fa-expand" aria-hidden="true"></i>
+            </button>
+            {% if total_pages and current_page %}
+            <button type="button" class="ink-reader-icon-btn" id="btnReaderSearchBook" title="Search entire book">
+                <i class="fas fa-search" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="ink-reader-icon-btn" data-bs-toggle="offcanvas" data-bs-target="#readerAnnotationsPanel" title="Highlights & notes">
+                <i class="fas fa-highlighter" aria-hidden="true"></i>
+            </button>
             {% endif %}
-            {% if page_idx + 1 < total_pages %}
-            <a class="btn btn-outline-primary btn-sm" id="btnNextPage" href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=page_idx + 1) }}">
-                Next<i class="fas fa-chevron-right ms-1"></i>
-            </a>
-            {% else %}
-            <button type="button" class="btn btn-outline-secondary btn-sm" disabled id="btnNextPage">Next</button>
-            {% endif %}
+            <button type="button" class="ink-reader-icon-btn" data-bs-toggle="offcanvas" data-bs-target="#readerSettings" title="Reading settings">
+                <i class="fas fa-sliders" aria-hidden="true"></i>
+            </button>
         </div>
     </div>
-    <p class="small text-muted mb-3 d-none d-md-block"><kbd>←</kbd> previous · <kbd>→</kbd> next</p>
-
-    <article class="card shadow-sm border-0">
-        <div class="card-body library-reader-text p-4" id="readerBody">
-            {% if current_page.html %}
-            <div>{{ current_page.html|safe }}</div>
-            {% elif current_page.plain %}
-            <pre class="library-reader-text">{{ current_page.plain }}</pre>
-            {% endif %}
-        </div>
-    </article>
-    {% else %}
-    <article class="card shadow-sm border-0">
-        <div class="card-body library-reader-text p-4">
-            <p class="text-muted mb-0">No extractable text is available in the browser for this title. Use <strong>Download ebook</strong> to read the file on your device.</p>
-        </div>
-    </article>
+    {% if total_pages %}
+    <div class="ink-reader-progress-track" role="progressbar" aria-valuenow="{{ page_idx + 1 }}" aria-valuemin="1" aria-valuemax="{{ total_pages }}" aria-label="Reading progress">
+        <div class="ink-reader-progress-fill" style="width: {{ pct }}%;"></div>
+    </div>
     {% endif %}
 </div>
+
+<main id="reader-main" class="ink-reader-wrap">
+    <div class="ink-reader-hero">
+        <div class="ink-reader-meta">
+            {% if reading_minutes and reading_word_count %}
+            <span title="Approximate"><i class="fas fa-book-open" aria-hidden="true"></i> ~{{ reading_word_count }} words · ~{{ reading_minutes }} min</span>
+            {% endif %}
+            {% if total_pages %}
+            <span><i class="fas fa-layer-group" aria-hidden="true"></i> {{ total_pages }} section{% if total_pages != 1 %}s{% endif %}</span>
+            {% endif %}
+        </div>
+        <div class="ink-reader-chip-row">
+            {% if audiobook_player_url %}
+            <a class="ink-reader-chip" href="{{ audiobook_player_url }}"><i class="fas fa-headphones" aria-hidden="true"></i> Audiobook</a>
+            {% endif %}
+            <button type="button" class="ink-reader-chip" data-bs-toggle="offcanvas" data-bs-target="#readerToc" {% if not total_pages %}disabled{% endif %}>
+                <i class="fas fa-list-ul" aria-hidden="true"></i> Contents
+            </button>
+            {% if total_pages and current_page %}
+            <button type="button" class="ink-reader-chip" id="btnBookmarkSection" title="Save this section to your list">
+                <i class="fas fa-bookmark" aria-hidden="true"></i> Bookmark section
+            </button>
+            <button type="button" class="ink-reader-chip" id="btnListenSection" title="Read aloud (browser)">
+                <i class="fas fa-volume-up" aria-hidden="true"></i> Listen
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if total_pages and current_page %}
+    <div class="ink-reader-card">
+        <div class="ink-reader-nav-row library-reader-nav">
+            <div class="ink-reader-position" id="readerPosition">
+                <i class="fas fa-bookmark text-muted me-1" aria-hidden="true"></i>
+                Section <strong>{{ page_idx + 1 }}</strong> of {{ total_pages }}
+                {% if current_page.title %} — <span id="sectionTitle">{{ current_page.title }}</span>{% endif %}
+            </div>
+            <div class="btn-group" role="group" aria-label="Section navigation">
+                {% if page_idx > 0 %}
+                <a class="btn btn-outline-secondary btn-sm ink-reader-page-btn" id="btnPrevPage" href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=page_idx - 1) }}">
+                    <i class="fas fa-chevron-left me-1"></i>Prev
+                </a>
+                {% else %}
+                <button type="button" class="btn btn-outline-secondary btn-sm ink-reader-page-btn" disabled id="btnPrevPage">Prev</button>
+                {% endif %}
+                {% if page_idx + 1 < total_pages %}
+                <a class="btn btn-outline-secondary btn-sm ink-reader-page-btn" id="btnNextPage" href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=page_idx + 1) }}">
+                    Next<i class="fas fa-chevron-right ms-1"></i>
+                </a>
+                {% else %}
+                <button type="button" class="btn btn-outline-secondary btn-sm ink-reader-page-btn" disabled id="btnNextPage">Next</button>
+                {% endif %}
+            </div>
+        </div>
+        <p class="ink-reader-hint"><kbd>←</kbd> <kbd>→</kbd> sections · <kbd>F</kbd> focus · <kbd>/</kbd> section find · select text to highlight</p>
+
+        <article>
+            <div class="ink-reader-body-text library-reader-text" id="readerBody">
+                {% if current_page.html %}
+                <div class="reader-html-root">{{ current_page.html|safe }}</div>
+                {% elif current_page.plain %}
+                <pre>{{ current_page.plain }}</pre>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+    {% else %}
+    <div class="ink-reader-card">
+        <div class="ink-reader-empty">
+            <p class="mb-3"><i class="fas fa-file-circle-question fa-2x mb-3 opacity-50" aria-hidden="true"></i></p>
+            <p class="mb-0">No extractable text in the browser for this title.</p>
+            <p class="small mt-2 mb-3">Use <strong>Download</strong> to read with your favorite app.</p>
+            <a class="ink-reader-chip primary" href="{{ download_url }}"><i class="fas fa-download" aria-hidden="true"></i> Download ebook</a>
+        </div>
+    </div>
+    {% endif %}
+</main>
+
+<div id="readerSelToolbar" aria-live="polite">
+    <button type="button" id="readerHlBtn"><i class="fas fa-highlighter me-1"></i>Highlight</button>
+    <button type="button" id="readerNoteBtn">Note</button>
+    <button type="button" id="readerCopyBtn">Copy</button>
+</div>
+
 {% if total_pages and current_page %}
+<div class="ink-reader-bottom d-md-none">
+    {% if page_idx > 0 %}
+    <a class="btn btn-outline-secondary flex-grow-1" id="btnPrevMobile" href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=page_idx - 1) }}"><i class="fas fa-chevron-left me-1"></i>Prev</a>
+    {% else %}
+    <button type="button" class="btn btn-outline-secondary flex-grow-1" disabled>Prev</button>
+    {% endif %}
+    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#readerToc"><i class="fas fa-list-ul"></i></button>
+    {% if page_idx + 1 < total_pages %}
+    <a class="btn btn-dark flex-grow-1" id="btnNextMobile" href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=page_idx + 1) }}">Next<i class="fas fa-chevron-right ms-1"></i></a>
+    {% else %}
+    <button type="button" class="btn btn-outline-secondary flex-grow-1" disabled>Next</button>
+    {% endif %}
+</div>
+
+<!-- Table of contents -->
+<div class="offcanvas offcanvas-start offcanvas-reader" tabindex="-1" id="readerToc" aria-labelledby="readerTocLabel">
+    <div class="offcanvas-header border-bottom">
+        <h2 class="h5 mb-0" id="readerTocLabel">Contents</h2>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="list-group list-group-flush">
+            {% for p in reader_pages %}
+            <a class="list-group-item list-group-item-action list-group-item-reader {% if loop.index0 == page_idx %}active{% endif %}"
+               href="{{ url_for('book_platform.library_read_ebook', book_id=book.id, ch=loop.index0) }}">
+                <span class="text-muted small me-2">{{ loop.index }}</span>{{ p.title or ('Section ' ~ loop.index) }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Saved highlights & notes (persisted on your account) -->
+<div class="offcanvas offcanvas-end offcanvas-reader" tabindex="-1" id="readerAnnotationsPanel" aria-labelledby="readerAnnotationsLabel">
+    <div class="offcanvas-header border-bottom">
+        <h2 class="h5 mb-0" id="readerAnnotationsLabel">Highlights & notes</h2>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <p class="small text-muted">Saved to your account — available on any device when you’re signed in.</p>
+        <div id="readerAnnotationsList" class="d-grid gap-3"></div>
+        <p class="small text-muted mb-0 mt-3 d-none" id="readerAnnotationsEmpty">No highlights yet. Select text in the story and tap <strong>Highlight</strong>.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Settings -->
+<div class="offcanvas offcanvas-end offcanvas-reader" tabindex="-1" id="readerSettings" aria-labelledby="readerSettingsLabel">
+    <div class="offcanvas-header border-bottom">
+        <h2 class="h5 mb-0" id="readerSettingsLabel">Reading comfort</h2>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <p class="small text-muted">Saved on this device for all books.</p>
+        <div class="mb-4">
+            <label class="form-label fw-bold">Theme</label>
+            <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-theme="light">Light</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-theme="sepia">Sepia</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-theme="dark">Dark</button>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold" for="irFontRange">Text size <span class="text-muted fw-normal" id="irFontVal"></span></label>
+            <input type="range" class="form-range" id="irFontRange" min="90" max="160" step="5" value="112">
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold">Line spacing</label>
+            <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-lead="tight">Tight</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-lead="normal">Normal</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-lead="relaxed">Relaxed</button>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold">Column width</label>
+            <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-width="narrow">Narrow</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-width="medium">Medium</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-width="wide">Wide</button>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label fw-bold">Reading font</label>
+            <div class="btn-group w-100" role="group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-reading-font="literata">Literata</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-ir-reading-font="lexend">Lexend</button>
+            </div>
+            <p class="small text-muted mb-0 mt-1">Lexend is designed for comfortable extended reading.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Find in section -->
+<div class="modal fade" id="readerFindModal" tabindex="-1" aria-labelledby="readerFindLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--ir-surface);color:var(--ir-text);border-color:var(--ir-border);">
+            <div class="modal-header border-secondary">
+                <h2 class="modal-title h5" id="readerFindLabel">Find in this section</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="readerFindInput" class="visually-hidden">Search</label>
+                <input type="search" class="form-control" id="readerFindInput" placeholder="Type a word or phrase…" autocomplete="off">
+                <p class="small text-muted mt-2 mb-0" id="readerFindStatus"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search entire book -->
+<div class="modal fade" id="readerGlobalSearchModal" tabindex="-1" aria-labelledby="readerGlobalSearchLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="background:var(--ir-surface);color:var(--ir-text);border-color:var(--ir-border);max-height:85vh;">
+            <div class="modal-header border-secondary">
+                <h2 class="modal-title h5" id="readerGlobalSearchLabel">Search entire book</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="readerGlobalSearchInput" class="visually-hidden">Search all sections</label>
+                <input type="search" class="form-control mb-2" id="readerGlobalSearchInput" placeholder="Search across all sections…" autocomplete="off">
+                <p class="small text-muted mb-2" id="readerGlobalSearchStatus"></p>
+                <div class="list-group list-group-flush small" id="readerGlobalSearchResults"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-(function() {
+(function () {
+    var BOOK_ID = {{ book.id|tojson }};
+    var LS_PREFIX = 'inkReader.';
+    var PAGE_IDX = {{ page_idx|tojson }};
+    var ANNOTATIONS_URL = {{ (reader_annotations_url if total_pages and current_page else '')|tojson }};
+    var SEARCH_INDEX_URL = {{ (reader_search_index_url if total_pages and current_page else '')|tojson }};
+    var READ_URL_BASE = {{ reader_read_url_base|tojson }};
+    var root = document.documentElement;
+
+    function loadPrefs() {
+        try {
+            var t = localStorage.getItem(LS_PREFIX + 'theme');
+            if (t === 'light' || t === 'sepia' || t === 'dark') root.setAttribute('data-theme', t);
+            var fs = localStorage.getItem(LS_PREFIX + 'fontPct');
+            if (fs) applyFontPct(parseInt(fs, 10));
+            var ld = localStorage.getItem(LS_PREFIX + 'lead');
+            if (ld === 'tight' || ld === 'normal' || ld === 'relaxed') applyLeading(ld);
+            var wd = localStorage.getItem(LS_PREFIX + 'width');
+            if (wd === 'narrow' || wd === 'medium' || wd === 'wide') root.setAttribute('data-width', wd);
+        } catch (e) {}
+    }
+
+    function applyFontPct(pct) {
+        var base = 1.125 * (pct / 100);
+        root.style.setProperty('--ir-size', base.toFixed(3) + 'rem');
+        var el = document.getElementById('irFontRange');
+        var lab = document.getElementById('irFontVal');
+        if (el) el.value = String(pct);
+        if (lab) lab.textContent = '(' + pct + '%)';
+        try { localStorage.setItem(LS_PREFIX + 'fontPct', String(pct)); } catch (e) {}
+    }
+
+    function applyLeading(key) {
+        var map = { tight: 1.55, normal: 1.8, relaxed: 2.05 };
+        root.style.setProperty('--ir-leading', map[key] || 1.8);
+        try { localStorage.setItem(LS_PREFIX + 'lead', key); } catch (e) {}
+        document.querySelectorAll('[data-ir-lead]').forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-ir-lead') === key);
+        });
+    }
+
+    function saveTheme(t) {
+        root.setAttribute('data-theme', t);
+        try { localStorage.setItem(LS_PREFIX + 'theme', t); } catch (e) {}
+    }
+
+    function savePageIndex(idx) {
+        try { localStorage.setItem(LS_PREFIX + 'book.' + BOOK_ID + '.ch', String(idx)); } catch (e) {}
+    }
+
+    function maybeResume() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            if (params.has('ch')) return;
+            var saved = localStorage.getItem(LS_PREFIX + 'book.' + BOOK_ID + '.ch');
+            if (saved == null || saved === '') return;
+            var n = parseInt(saved, 10);
+            if (!isFinite(n) || n < 0) return;
+            var url = new URL(window.location.href);
+            url.searchParams.set('ch', String(n));
+            window.location.replace(url.toString());
+        } catch (e) {}
+    }
+
+    loadPrefs();
+    maybeResume();
+
+    document.querySelectorAll('[data-ir-theme]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            saveTheme(btn.getAttribute('data-ir-theme'));
+        });
+    });
+
+    var fontRange = document.getElementById('irFontRange');
+    if (fontRange) {
+        fontRange.addEventListener('input', function () {
+            applyFontPct(parseInt(fontRange.value, 10));
+        });
+    }
+
+    document.querySelectorAll('[data-ir-lead]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            applyLeading(btn.getAttribute('data-ir-lead'));
+        });
+    });
+
+    document.querySelectorAll('[data-ir-width]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var w = btn.getAttribute('data-ir-width');
+            root.setAttribute('data-width', w);
+            try { localStorage.setItem(LS_PREFIX + 'width', w); } catch (e) {}
+        });
+    });
+
+    /* Sync active theme buttons */
+    function syncThemeButtons() {
+        var cur = root.getAttribute('data-theme') || 'light';
+        document.querySelectorAll('[data-ir-theme]').forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-ir-theme') === cur);
+        });
+    }
+    syncThemeButtons();
+    document.querySelectorAll('[data-ir-theme]').forEach(function (b) {
+        b.addEventListener('click', syncThemeButtons);
+    });
+
+    /* Width buttons active state */
+    function syncWidthButtons() {
+        var cur = root.getAttribute('data-width') || 'medium';
+        document.querySelectorAll('[data-ir-width]').forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-ir-width') === cur);
+        });
+    }
+    syncWidthButtons();
+    document.querySelectorAll('[data-ir-width]').forEach(function (b) {
+        b.addEventListener('click', syncWidthButtons);
+    });
+
+    /* Leading initial active */
+    (function () {
+        var ld = 'normal';
+        try { ld = localStorage.getItem(LS_PREFIX + 'lead') || 'normal'; } catch (e) {}
+        applyLeading(ld);
+    })();
+
+    /* Focus mode */
+    var btnFocus = document.getElementById('btnFocusMode');
+    function setFocus(on) {
+        document.body.classList.toggle('ink-reader-focus', on);
+        if (btnFocus) {
+            btnFocus.setAttribute('aria-pressed', on ? 'true' : 'false');
+            btnFocus.title = on ? 'Exit focus mode (F)' : 'Focus mode (F)';
+            var i = btnFocus.querySelector('i');
+            if (i) i.className = on ? 'fas fa-compress' : 'fas fa-expand';
+        }
+        try { localStorage.setItem(LS_PREFIX + 'focus', on ? '1' : '0'); } catch (e) {}
+    }
+    try {
+        if (localStorage.getItem(LS_PREFIX + 'focus') === '1') setFocus(true);
+    } catch (e) {}
+    if (btnFocus) {
+        btnFocus.addEventListener('click', function () {
+            setFocus(!document.body.classList.contains('ink-reader-focus'));
+        });
+    }
+
+    /* Save reading position */
+    savePageIndex({{ page_idx|tojson }});
+
+    /* Keyboard nav */
     var prev = document.getElementById('btnPrevPage');
     var next = document.getElementById('btnNextPage');
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
         if (e.key === 'ArrowLeft' && prev && prev.getAttribute('href')) {
             e.preventDefault();
@@ -94,9 +821,461 @@
             e.preventDefault();
             window.location.href = next.getAttribute('href');
         }
+        if (e.key === 'f' || e.key === 'F') {
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            e.preventDefault();
+            setFocus(!document.body.classList.contains('ink-reader-focus'));
+        }
+        if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            var modal = new bootstrap.Modal(document.getElementById('readerFindModal'));
+            modal.show();
+            setTimeout(function () {
+                var inp = document.getElementById('readerFindInput');
+                if (inp) inp.focus();
+            }, 300);
+        }
     });
+
+    /* Simple find: highlight in plain text / innerText regions */
+    var findInput = document.getElementById('readerFindInput');
+    var findStatus = document.getElementById('readerFindStatus');
+    function stripMarks(container) {
+        container.querySelectorAll('.ink-reader-mark').forEach(function (mark) {
+            var parent = mark.parentNode;
+            while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+            parent.removeChild(mark);
+            parent.normalize();
+        });
+    }
+    function highlightText(container, query) {
+        stripMarks(container);
+        if (!query || query.length < 2) {
+            if (findStatus) findStatus.textContent = 'Enter at least 2 characters.';
+            return 0;
+        }
+        var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (node) {
+                if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                var p = node.parentElement;
+                if (p && (p.closest('.ink-reader-mark, .ink-reader-hl'))) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        var n = 0;
+        var lower = query.toLowerCase();
+        var nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(function (textNode) {
+            var val = textNode.nodeValue;
+            var idx = val.toLowerCase().indexOf(lower);
+            while (idx !== -1) {
+                var span = document.createElement('mark');
+                span.className = 'ink-reader-mark';
+                var matched = val.substr(idx, query.length);
+                var after = val.substr(idx + query.length);
+                textNode.nodeValue = val.substr(0, idx);
+                span.textContent = matched;
+                textNode.parentNode.insertBefore(span, textNode.nextSibling);
+                var tail = document.createTextNode(after);
+                textNode.parentNode.insertBefore(tail, span.nextSibling);
+                n++;
+                val = after;
+                idx = val.toLowerCase().indexOf(lower);
+                textNode = tail;
+            }
+        });
+        if (findStatus) findStatus.textContent = n ? (n + ' match' + (n === 1 ? '' : 'es')) : 'No matches in this section.';
+        if (n) {
+            var first = container.querySelector('.ink-reader-mark');
+            if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+        return n;
+    }
+    if (findInput) {
+        var debounce;
+        findInput.addEventListener('input', function () {
+            clearTimeout(debounce);
+            debounce = setTimeout(function () {
+                var body = document.getElementById('readerBody');
+                if (body) highlightText(body, findInput.value.trim());
+            }, 200);
+        });
+    }
+    document.getElementById('readerFindModal') && document.getElementById('readerFindModal').addEventListener('hidden.bs.modal', function () {
+        var body = document.getElementById('readerBody');
+        if (body) stripMarks(body);
+        if (findInput) findInput.value = '';
+        if (findStatus) findStatus.textContent = '';
+    });
+
+    /* Persisted highlights, bookmarks, full-book search, Lexend, read-aloud */
+    if (ANNOTATIONS_URL) {
+        function irEscapeHtml(s) {
+            if (s == null) return '';
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+        function getCsrf() {
+            var m = document.querySelector('meta[name="csrf-token"]');
+            return m ? m.getAttribute('content') : '';
+        }
+        function apiFetch(url, opts) {
+            opts = opts || {};
+            opts.credentials = 'same-origin';
+            opts.headers = opts.headers || {};
+            opts.headers['Accept'] = 'application/json';
+            var ct = getCsrf();
+            if (ct && (opts.method === 'POST' || opts.method === 'PATCH' || opts.method === 'DELETE')) {
+                opts.headers['X-CSRFToken'] = ct;
+                if (!opts.headers['Content-Type']) opts.headers['Content-Type'] = 'application/json';
+            }
+            return fetch(url, opts);
+        }
+
+        function collectTextNodes(root) {
+            var out = [];
+            var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                acceptNode: function (node) {
+                    if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
+                    var p = node.parentElement;
+                    if (!p) return NodeFilter.FILTER_REJECT;
+                    if (p.closest('script, style')) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            while (w.nextNode()) out.push(w.currentNode);
+            return out;
+        }
+
+        function offsetsForSelection(readerBody, range) {
+            var pre = document.createRange();
+            pre.selectNodeContents(readerBody);
+            pre.setEnd(range.startContainer, range.startOffset);
+            var start = pre.toString().length;
+            var quoteLen = range.toString().length;
+            return { start: start, end: start + quoteLen, quote: range.toString() };
+        }
+
+        function setRangeFromOffsets(readerBody, start, end) {
+            var nodes = collectTextNodes(readerBody);
+            var pos = 0;
+            var r = document.createRange();
+            var started = false;
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                var len = node.nodeValue.length;
+                if (!started && pos + len > start) {
+                    r.setStart(node, Math.max(0, Math.min(len, start - pos)));
+                    started = true;
+                }
+                if (started && pos + len >= end) {
+                    r.setEnd(node, Math.max(0, Math.min(len, end - pos)));
+                    return r;
+                }
+                pos += len;
+            }
+            return started ? r : null;
+        }
+
+        function wrapRangeWithMark(range, annoId, hasNote) {
+            var mark = document.createElement('mark');
+            mark.className = 'ink-reader-hl' + (hasNote ? ' ink-reader-hl-note' : '');
+            mark.setAttribute('data-anno-id', String(annoId));
+            try {
+                range.surroundContents(mark);
+            } catch (e) {
+                var frag = range.extractContents();
+                mark.appendChild(frag);
+                range.insertNode(mark);
+            }
+        }
+
+        function applyOneHighlight(readerBody, a) {
+            if (a.kind !== 'highlight' || a.section_index !== PAGE_IDX) return;
+            var plain = readerBody.innerText || '';
+            var start = a.start_offset;
+            var end = a.end_offset;
+            if (end > plain.length || start >= end) return;
+            if (a.quote_text && plain.slice(start, end) !== a.quote_text) {
+                var idx = plain.indexOf(a.quote_text);
+                if (idx !== -1) {
+                    start = idx;
+                    end = idx + a.quote_text.length;
+                }
+            }
+            var range = setRangeFromOffsets(readerBody, start, end);
+            if (!range || range.collapsed) return;
+            wrapRangeWithMark(range, a.id, !!(a.note_text && String(a.note_text).trim()));
+        }
+
+        function refreshPersistedMarks(readerBody, annotations) {
+            readerBody.querySelectorAll('mark.ink-reader-hl').forEach(function (m) {
+                var parent = m.parentNode;
+                while (m.firstChild) parent.insertBefore(m.firstChild, m);
+                parent.removeChild(m);
+                parent.normalize();
+            });
+            var onPage = annotations.filter(function (x) {
+                return x.kind === 'highlight' && x.section_index === PAGE_IDX;
+            });
+            onPage.sort(function (a, b) { return b.start_offset - a.start_offset; });
+            onPage.forEach(function (a) { applyOneHighlight(readerBody, a); });
+        }
+
+        function renderAnnotationsList(annotations) {
+            var list = document.getElementById('readerAnnotationsList');
+            var empty = document.getElementById('readerAnnotationsEmpty');
+            if (!list) return;
+            list.innerHTML = '';
+            var has = annotations.length > 0;
+            if (empty) empty.classList.toggle('d-none', has);
+            annotations.forEach(function (a) {
+                var card = document.createElement('div');
+                card.className = 'border rounded p-2';
+                card.style.borderColor = 'var(--ir-border)';
+                var title = document.createElement('div');
+                title.className = 'fw-semibold small';
+                title.textContent = 'Section ' + (a.section_index + 1) + (a.kind === 'bookmark' ? ' · Bookmark' : ' · Highlight');
+                card.appendChild(title);
+                if (a.quote_text) {
+                    var q = document.createElement('div');
+                    q.className = 'small mt-1';
+                    q.style.fontFamily = 'var(--ir-font)';
+                    q.textContent = '"' + (a.quote_text.length > 220 ? a.quote_text.slice(0, 217) + '…' : a.quote_text) + '"';
+                    card.appendChild(q);
+                }
+                if (a.note_text) {
+                    var note = document.createElement('div');
+                    note.className = 'anno-note-badge';
+                    note.textContent = a.note_text;
+                    card.appendChild(note);
+                }
+                var actions = document.createElement('div');
+                actions.className = 'd-flex gap-2 mt-2 flex-wrap';
+                var go = document.createElement('a');
+                go.className = 'btn btn-sm btn-outline-primary';
+                go.href = READ_URL_BASE + '?ch=' + a.section_index;
+                go.textContent = 'Go';
+                actions.appendChild(go);
+                var del = document.createElement('button');
+                del.className = 'btn btn-sm btn-outline-danger';
+                del.type = 'button';
+                del.textContent = 'Remove';
+                del.addEventListener('click', function () {
+                    if (!confirm('Remove this saved item?')) return;
+                    apiFetch(ANNOTATIONS_URL + '/' + a.id, { method: 'DELETE' }).then(function (res) {
+                        return res.json();
+                    }).then(function (data) {
+                        if (data.success) loadAnnotations();
+                    });
+                });
+                actions.appendChild(del);
+                card.appendChild(actions);
+                list.appendChild(card);
+            });
+        }
+
+        function loadAnnotations() {
+            apiFetch(ANNOTATIONS_URL).then(function (r) { return r.json(); }).then(function (data) {
+                if (!data.success) return;
+                var arr = data.annotations || [];
+                renderAnnotationsList(arr);
+                var body = document.getElementById('readerBody');
+                if (body) refreshPersistedMarks(body, arr);
+            }).catch(function () {});
+        }
+
+        loadAnnotations();
+
+        var readerBodyEl = document.getElementById('readerBody');
+        var selToolbar = document.getElementById('readerSelToolbar');
+
+        function hideSelToolbar() {
+            if (selToolbar) selToolbar.style.display = 'none';
+        }
+
+        document.addEventListener('selectionchange', function () {
+            if (!selToolbar || !readerBodyEl) return;
+            var sel = window.getSelection();
+            if (!sel.rangeCount || sel.isCollapsed) {
+                hideSelToolbar();
+                return;
+            }
+            var range = sel.getRangeAt(0);
+            if (!readerBodyEl.contains(range.commonAncestorContainer)) {
+                hideSelToolbar();
+                return;
+            }
+            var txt = sel.toString().trim();
+            if (txt.length < 2) {
+                hideSelToolbar();
+                return;
+            }
+            var rect = range.getBoundingClientRect();
+            selToolbar.style.display = 'flex';
+            var tw = selToolbar.offsetWidth || 200;
+            selToolbar.style.left = Math.min(window.innerWidth - tw - 8, Math.max(8, rect.left + rect.width / 2 - tw / 2 + window.scrollX)) + 'px';
+            selToolbar.style.top = Math.max(8, rect.top + window.scrollY - (selToolbar.offsetHeight || 40) - 8) + 'px';
+        });
+
+        document.addEventListener('mousedown', function (e) {
+            if (selToolbar && e.target && !selToolbar.contains(e.target)) setTimeout(hideSelToolbar, 250);
+        });
+
+        function saveHighlight(noteText) {
+            var sel = window.getSelection();
+            if (!sel.rangeCount || !readerBodyEl) return;
+            var range = sel.getRangeAt(0);
+            var o = offsetsForSelection(readerBodyEl, range);
+            if (o.end <= o.start || !o.quote.trim()) return;
+            apiFetch(ANNOTATIONS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    kind: 'highlight',
+                    section_index: PAGE_IDX,
+                    start_offset: o.start,
+                    end_offset: o.end,
+                    quote_text: o.quote,
+                    note_text: noteText || null
+                })
+            }).then(function (r) { return r.json(); }).then(function (data) {
+                if (data.success) {
+                    sel.removeAllRanges();
+                    hideSelToolbar();
+                    loadAnnotations();
+                } else {
+                    alert(data.error || 'Could not save');
+                }
+            }).catch(function () { alert('Could not save highlight'); });
+        }
+
+        var hlBtn = document.getElementById('readerHlBtn');
+        if (hlBtn) hlBtn.addEventListener('click', function () { saveHighlight(null); });
+        var noteBtn = document.getElementById('readerNoteBtn');
+        if (noteBtn) noteBtn.addEventListener('click', function () {
+            var t = prompt('Note (optional):');
+            if (t === null) return;
+            saveHighlight(t);
+        });
+        var copyBtn = document.getElementById('readerCopyBtn');
+        if (copyBtn) copyBtn.addEventListener('click', function () {
+            var sel = window.getSelection();
+            if (sel.toString()) {
+                navigator.clipboard.writeText(sel.toString());
+                hideSelToolbar();
+            }
+        });
+
+        var bmBtn = document.getElementById('btnBookmarkSection');
+        if (bmBtn) bmBtn.addEventListener('click', function () {
+            apiFetch(ANNOTATIONS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ kind: 'bookmark', section_index: PAGE_IDX })
+            }).then(function (r) { return r.json(); }).then(function (data) {
+                if (data.success) {
+                    loadAnnotations();
+                    bmBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Saved';
+                    setTimeout(function () {
+                        bmBtn.innerHTML = '<i class="fas fa-bookmark" aria-hidden="true"></i> Bookmark section';
+                    }, 1600);
+                } else alert(data.error || 'Could not save');
+            });
+        });
+
+        var listenBtn = document.getElementById('btnListenSection');
+        if (listenBtn) listenBtn.addEventListener('click', function () {
+            if (!readerBodyEl) return;
+            speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance(readerBodyEl.innerText || '');
+            u.rate = 1;
+            speechSynthesis.speak(u);
+        });
+
+        var btnGlobSearch = document.getElementById('btnReaderSearchBook');
+        var globModalEl = document.getElementById('readerGlobalSearchModal');
+        var searchCache = null;
+        if (btnGlobSearch && globModalEl && SEARCH_INDEX_URL) {
+            btnGlobSearch.addEventListener('click', function () {
+                new bootstrap.Modal(globModalEl).show();
+                setTimeout(function () {
+                    var inp = document.getElementById('readerGlobalSearchInput');
+                    if (inp) inp.focus();
+                }, 400);
+            });
+            globModalEl.addEventListener('shown.bs.modal', function () {
+                if (searchCache) return;
+                apiFetch(SEARCH_INDEX_URL).then(function (r) { return r.json(); }).then(function (data) {
+                    if (data.success) searchCache = data.sections || [];
+                    var st = document.getElementById('readerGlobalSearchStatus');
+                    if (st) st.textContent = searchCache.length ? 'Search across ' + searchCache.length + ' sections.' : 'No text index.';
+                }).catch(function () {});
+            });
+            var gInp = document.getElementById('readerGlobalSearchInput');
+            var gRes = document.getElementById('readerGlobalSearchResults');
+            var gStat = document.getElementById('readerGlobalSearchStatus');
+            if (gInp && gRes) {
+                var gdeb;
+                gInp.addEventListener('input', function () {
+                    clearTimeout(gdeb);
+                    gdeb = setTimeout(function () {
+                        var q = gInp.value.trim().toLowerCase();
+                        gRes.innerHTML = '';
+                        if (!q || q.length < 2) {
+                            if (gStat) gStat.textContent = 'Type at least 2 characters.';
+                            return;
+                        }
+                        if (!searchCache) {
+                            if (gStat) gStat.textContent = 'Loading index…';
+                            return;
+                        }
+                        var n = 0;
+                        searchCache.forEach(function (sec) {
+                            var p = (sec.plain || '').toLowerCase();
+                            var idx = p.indexOf(q);
+                            if (idx === -1) return;
+                            n++;
+                            var before = sec.plain.slice(Math.max(0, idx - 40), idx);
+                            var mid = sec.plain.slice(idx, idx + q.length);
+                            var after = sec.plain.slice(idx + q.length, idx + q.length + 60);
+                            var a = document.createElement('a');
+                            a.className = 'list-group-item list-group-item-action';
+                            a.href = READ_URL_BASE + '?ch=' + sec.index;
+                            a.innerHTML = '<div class="fw-semibold">' + irEscapeHtml(sec.title) + '</div><p class="global-search-snippet mb-0">' +
+                                irEscapeHtml(before) + '<mark>' + irEscapeHtml(mid) + '</mark>' + irEscapeHtml(after) + '</p>';
+                            gRes.appendChild(a);
+                        });
+                        if (gStat) gStat.textContent = n ? (n + ' section(s) match') : 'No matches.';
+                    }, 200);
+                });
+            }
+        }
+
+        function applyReadingFont(key) {
+            root.setAttribute('data-reading-font', key === 'lexend' ? 'lexend' : 'literata');
+            try { localStorage.setItem(LS_PREFIX + 'readingFont', key); } catch (e) {}
+            document.querySelectorAll('[data-ir-reading-font]').forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-ir-reading-font') === key);
+            });
+        }
+        try {
+            var rf = localStorage.getItem(LS_PREFIX + 'readingFont');
+            if (rf === 'lexend' || rf === 'literata') applyReadingFont(rf);
+            else applyReadingFont('literata');
+        } catch (e) {
+            applyReadingFont('literata');
+        }
+        document.querySelectorAll('[data-ir-reading-font]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                applyReadingFont(b.getAttribute('data-ir-reading-font'));
+            });
+        });
+    }
 })();
 </script>
+{% else %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 {% endif %}
 </body>
 </html>

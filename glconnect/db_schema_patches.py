@@ -230,72 +230,91 @@ def ensure_audiobook_segment_plan_schema(db) -> None:
         )
 
 
-def ensure_book_cart_schema(db) -> None:
-    """Create marketplace cart table if missing."""
+def ensure_reader_annotations_schema(db) -> None:
+    """Persisted highlights / bookmarks / notes for the library ebook reader."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
         return
     try:
         dialect = db.engine.dialect.name
     except Exception as e:
-        logger.warning("book_cart patch: dialect check failed: %s", e)
+        logger.warning("reader_annotations patch: dialect check failed: %s", e)
         return
 
     if dialect == "postgresql":
         stmts = [
             """
-CREATE TABLE IF NOT EXISTS book_cart_items (
+CREATE TABLE IF NOT EXISTS reader_annotations (
     id SERIAL PRIMARY KEY,
-    buyer_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
-    purchase_format VARCHAR(20) NOT NULL DEFAULT 'digital',
+    section_index INTEGER NOT NULL,
+    start_offset INTEGER NOT NULL DEFAULT 0,
+    end_offset INTEGER NOT NULL DEFAULT 0,
+    quote_text TEXT,
+    note_text TEXT,
+    kind VARCHAR(20) NOT NULL,
     created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    CONSTRAINT uq_cart_buyer_book_format UNIQUE (buyer_user_id, book_project_id, purchase_format)
+    updated_at TIMESTAMP
 )
 """.strip(),
-            "CREATE INDEX IF NOT EXISTS ix_book_cart_items_buyer_user_id ON book_cart_items(buyer_user_id)",
-            "CREATE INDEX IF NOT EXISTS ix_book_cart_items_book_project_id ON book_cart_items(book_project_id)",
+            "CREATE INDEX IF NOT EXISTS ix_reader_annotations_user_id ON reader_annotations(user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_reader_annotations_book_project_id ON reader_annotations(book_project_id)",
+            "CREATE INDEX IF NOT EXISTS ix_reader_annotations_user_book ON reader_annotations(user_id, book_project_id)",
         ]
         try:
             for stmt in stmts:
                 db.session.execute(text(stmt))
             db.session.commit()
-            return
         except Exception as e:
             db.session.rollback()
-            logger.error("Could not patch book_cart_items (PostgreSQL): %s", e, exc_info=True)
-            return
+            logger.error("Could not patch reader_annotations (PostgreSQL): %s", e, exc_info=True)
+        return
 
     if dialect == "sqlite":
         try:
             exists = db.session.execute(
-                text("SELECT name FROM sqlite_master WHERE type='table' AND name='book_cart_items'")
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='reader_annotations'")
             ).fetchone()
             db.session.rollback()
             if not exists:
                 db.session.execute(
                     text(
                         """
-CREATE TABLE book_cart_items (
+CREATE TABLE reader_annotations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    buyer_user_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     book_project_id INTEGER NOT NULL,
-    purchase_format VARCHAR(20) NOT NULL DEFAULT 'digital',
+    section_index INTEGER NOT NULL,
+    start_offset INTEGER NOT NULL DEFAULT 0,
+    end_offset INTEGER NOT NULL DEFAULT 0,
+    quote_text TEXT,
+    note_text TEXT,
+    kind VARCHAR(20) NOT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
-    UNIQUE (buyer_user_id, book_project_id, purchase_format),
-    FOREIGN KEY(buyer_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY(book_project_id) REFERENCES book_projects(id) ON DELETE CASCADE
 )
 """
                     )
                 )
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_book_cart_items_buyer_user_id ON book_cart_items(buyer_user_id)"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_book_cart_items_book_project_id ON book_cart_items(book_project_id)"))
+            db.session.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_reader_annotations_user_id ON reader_annotations(user_id)")
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_reader_annotations_book_project_id ON reader_annotations(book_project_id)"
+                )
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_reader_annotations_user_book ON reader_annotations(user_id, book_project_id)"
+                )
+            )
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            logger.error("Could not patch book_cart_items (SQLite): %s", e, exc_info=True)
+            logger.error("Could not patch reader_annotations (SQLite): %s", e, exc_info=True)
 
 
 def ensure_library_book_hides_schema(db) -> None:

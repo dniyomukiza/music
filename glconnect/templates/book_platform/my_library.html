@@ -473,16 +473,15 @@
             </div>
             {% endif %}
 
+            {% if items %}
             <div class="ink-lib-toolbar">
-                {% if items %}
                 <div class="ink-lib-search-wrap">
                     <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
                     <label for="librarySearch" class="visually-hidden">Filter by title or author</label>
                     <input type="search" id="librarySearch" class="ink-lib-search" placeholder="Search your library…" autocomplete="off">
                 </div>
-                {% endif %}
-                <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-lib-primary"><i class="fas fa-store me-2" aria-hidden="true"></i>Browse marketplace</a>
             </div>
+            {% endif %}
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
