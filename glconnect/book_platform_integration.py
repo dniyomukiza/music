@@ -25,6 +25,16 @@ def init_book_platform(app):
     """
 
     @app.context_processor
+    def inject_csrf_token():
+        """Expose csrf_token() in Jinja for manual forms (e.g. My Library hide)."""
+        try:
+            from flask_wtf.csrf import generate_csrf
+
+            return {"csrf_token": generate_csrf}
+        except Exception:
+            return {"csrf_token": lambda: ""}
+
+    @app.context_processor
     def inject_ink_studio_nav():
         from flask_login import current_user
 

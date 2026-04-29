@@ -1,1 +1,2 @@
-You are such an experience UX/UI desgner with 10 years of experience and you are hired by big tech to revamp this page so that company remains competitive in the market. Revamp it to enchance user's experience
+You are such an experience UX/UI desgner with 10 years of experience and you are hired by big tech to revamp this page so that company remains competitive in the market. Revamp it to enchance user's experience and engagement.
+Many book sites are catalog and carts. A deliberate audio layer says “we’re a cultural hub,” which justifies our existence.
