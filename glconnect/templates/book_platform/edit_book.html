@@ -84,7 +84,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-pen-fancy"></i> GLC
+                <i class="fas fa-pen-fancy"></i> Ink Studio
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="{% if listing_flow %}{{ url_for('book_platform.books') }}{% else %}{{ url_for('book_platform.view_book', book_id=book.id) }}{% endif %}">
@@ -692,11 +692,32 @@
                                     <strong class="me-1">Current status:</strong>
                                     <span id="audiobookSummaryText">Checking…</span>
                                 </div>
+                                    <div class="alert alert-secondary border mb-3 small">
+                                        <strong>Ebook vs. audiobook.</strong>
+                                        Your <strong>marketplace ebook</strong> stays full fidelity—footnotes, index, tables, and appendix remain part of the file buyers download.
+                                        On this page you only <strong>normalize for listening</strong>: choose which parts are read aloud. That does not remove those sections from the ebook listing.
+                                    </div>
                                     <div class="alert alert-info mb-3">
                                         <i class="fas fa-language me-2"></i>
                                         <strong>Voice language:</strong> choose a voice matching <strong>{{ ebook_language_label }}</strong>.
                                     </div>
-                                    <p class="text-muted mb-3">Generate audiobook with one click after selecting a voice.</p>
+                                    <p class="text-muted mb-3">
+                                        <strong>Step 1:</strong> Review sections (suggestions often skip index, appendix, notes blocks, or table-heavy parts that are poor for audio).
+                                        <strong>Step 2:</strong> Choose a voice, then generate.
+                                    </p>
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-primary" id="btnPrepareAudiobookSegments" onclick="prepareAudiobookSegments()">
+                                            <i class="fas fa-list-check me-1"></i> Review sections for audiobook
+                                        </button>
+                                        <span id="audiobookPrepareStatus" class="small text-muted ms-2" role="status"></span>
+                                    </div>
+                                    <div id="audiobookSegmentsPanel" class="mb-3 d-none">
+                                        <div class="alert alert-secondary py-2 px-3 small mb-2">
+                                            <strong>Included in audio only</strong> — uncheck index, appendix, endnotes, or other blocks that should not be spoken. Your ebook file for sale is unchanged.
+                                            <span id="audiobookClassifierBadge" class="badge bg-light text-dark border ms-2 d-none"></span>
+                                        </div>
+                                        <div id="audiobookSegmentsList" class="border rounded p-2 bg-light" style="max-height: 320px; overflow-y: auto;"></div>
+                                    </div>
                                     
                                     <div class="mb-3">
                                         <label for="audiobookPrice" class="form-label">Audiobook Price (USD)</label>
@@ -788,7 +809,7 @@
                                 <i class="fas fa-info-circle me-2"></i>
                                 <strong>Requirements:</strong> 
                                 {% if book.digital_file_path %}
-                                    Your uploaded digital book will be used to generate the audiobook.
+                                    Text is taken from your uploaded digital book for narration. The same file remains the complete ebook for buyers.
                                 {% else %}
                                     You need at least one published chapter to generate an audiobook.
                                 {% endif %}
@@ -805,7 +826,7 @@
                 <div class="card border-primary mt-3">
                     <div class="card-body">
                         <h6 class="mb-2"><i class="fas fa-rocket me-2 text-primary"></i>Step 2 actions</h6>
-                        <p class="small text-muted mb-3">Publish audiobook now, or skip and do it later from dashboard.</p>
+                        <p class="small text-muted mb-3">Your ebook listing already includes the full text. After you normalize sections above and generation finishes, publish the audiobook here or skip and return later.</p>
                         <p id="listingAudiobookPublishHint" class="small text-muted mb-3" role="status" aria-live="polite"></p>
                         {% if not book.audiobook_published %}
                         <div id="listingAudiobookConfirmWrap" class="form-check mb-3{% if not book.has_audiobook %} d-none{% endif %}">
@@ -1490,6 +1511,76 @@
             });
         });
 
+        function _escapeHtmlAudiobook(s) {
+            if (!s) return '';
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        window._audiobookSegmentState = window._audiobookSegmentState || null;
+
+        async function prepareAudiobookSegments() {
+            const btn = document.getElementById('btnPrepareAudiobookSegments');
+            const statusEl = document.getElementById('audiobookPrepareStatus');
+            const panel = document.getElementById('audiobookSegmentsPanel');
+            const badge = document.getElementById('audiobookClassifierBadge');
+            if (!btn) return;
+            btn.disabled = true;
+            if (statusEl) statusEl.textContent = 'Loading…';
+            try {
+                const response = await fetch('{{ url_for("book_platform.prepare_audiobook_segments", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    showNotification(result.error || 'Could not prepare sections', 'error');
+                    if (statusEl) statusEl.textContent = '';
+                    return;
+                }
+                window._audiobookSegmentState = {
+                    sourceHash: result.source_hash,
+                    segments: result.segments || []
+                };
+                const list = document.getElementById('audiobookSegmentsList');
+                if (list && result.segments) {
+                    list.innerHTML = result.segments.map(function (seg) {
+                        const prev = (seg.preview || '').slice(0, 320);
+                        const dots = (seg.preview || '').length > 320 ? '…' : '';
+                        const checked = seg.include ? ' checked' : '';
+                        const aiNote = _escapeHtmlAudiobook((seg.ai_reason || '').slice(0, 200));
+                        const aiLabel = seg.ai_include ? 'suggested include' : 'suggested skip';
+                        return (
+                            '<div class="card mb-2 border-0 shadow-sm">' +
+                            '<div class="card-body py-2 px-3">' +
+                            '<div class="form-check">' +
+                            '<input class="form-check-input audiobook-seg-include" type="checkbox" data-index="' + seg.index + '" id="audiobook-seg-' + seg.index + '"' + checked + '>' +
+                            '<label class="form-check-label fw-semibold" for="audiobook-seg-' + seg.index + '">' + _escapeHtmlAudiobook(seg.title) + '</label>' +
+                            '</div>' +
+                            '<p class="small text-muted mb-1 mt-1">' + _escapeHtmlAudiobook(prev) + dots + '</p>' +
+                            '<small class="text-secondary">AI: ' + aiLabel + (aiNote ? (' — ' + aiNote) : '') + '</small>' +
+                            '</div></div>'
+                        );
+                    }).join('');
+                }
+                if (panel) panel.classList.remove('d-none');
+                if (badge) {
+                    badge.classList.remove('d-none');
+                    badge.textContent = result.classifier === 'gemini' ? 'Suggestions: Gemini' : 'Suggestions: title rules (set GEMINI_API_KEY or GOOGLE_API_KEY for Gemini)';
+                }
+                if (statusEl) statusEl.textContent = result.segment_count + ' section(s) — adjust toggles, then generate.';
+                showNotification('Sections loaded. Adjust checkboxes if needed, then generate.', 'success');
+            } catch (e) {
+                console.error(e);
+                showNotification('Failed to load sections', 'error');
+                if (statusEl) statusEl.textContent = '';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         // Audiobook generation functions
         async function generateAudiobook() {
             const price = document.getElementById('audiobookPrice').value;
@@ -1506,6 +1597,17 @@
                 showNotification('Please select a voice for your audiobook', 'error');
                 return;
             }
+
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.sourceHash) {
+                showNotification('Click "Review sections for audiobook" first, then generate.', 'error');
+                return;
+            }
+            const n = window._audiobookSegmentState.segments.length;
+            const segment_includes = [];
+            for (let i = 0; i < n; i++) {
+                const cb = document.getElementById('audiobook-seg-' + i);
+                segment_includes.push(cb ? cb.checked : !!(window._audiobookSegmentState.segments[i] && window._audiobookSegmentState.segments[i].include));
+            }
             
             // Disable button and show loading
             generateBtn.disabled = true;
@@ -1519,11 +1621,21 @@
                     },
                     body: JSON.stringify({
                         audiobook_price: parseFloat(price),
-                        voice_name: voice
+                        voice_name: voice,
+                        source_hash: window._audiobookSegmentState.sourceHash,
+                        segment_includes: segment_includes
                     })
                 });
                 
                 const result = await response.json();
+
+                if (response.status === 409 && result && result.stale_segment_plan) {
+                    window._audiobookSegmentState = null;
+                    var segPanel = document.getElementById('audiobookSegmentsPanel');
+                    if (segPanel) segPanel.classList.add('d-none');
+                    var prepSt = document.getElementById('audiobookPrepareStatus');
+                    if (prepSt) prepSt.textContent = '';
+                }
                 
                 if (result.success) {
                     showNotification(result.message, 'success');

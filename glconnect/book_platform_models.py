@@ -167,6 +167,7 @@ class BookProject(db.Model):
     audiobook_voice = db.Column(db.String(100), nullable=True)  # TTS voice used
     audiobook_published = db.Column(db.Boolean, default=False)  # Whether audiobook is published to marketplace
     audiobook_published_at = db.Column(db.DateTime, nullable=True)  # When audiobook was published
+    audiobook_segment_plan = db.Column(db.JSON, nullable=True)  # Section include/exclude draft for TTS prep
     
     # Investment & Sales Tracking
     has_investment_campaign = db.Column(db.Boolean, default=False)

@@ -44,6 +44,8 @@ from glconnect.book_platform_models import (
 from glconnect.forms import DigitalBookUploadForm, ReviewerRegistrationForm, BookReviewForm, InvestmentCampaignForm, InvestmentForm
 from glconnect.digital_book_processor import digital_book_processor
 from glconnect.audiobook_text_segments import build_uploaded_book_audiobook_chapters
+from glconnect.audiobook_generation_helpers import build_audiobook_source, filter_and_renumber_chapters
+from glconnect.audiobook_segment_classifier import suggest_includes_for_chapters
 from glconnect.book_cover_ai import generate_book_cover_bytes
 from glconnect.book_cover_preview import (
     clear_edit_preview,
@@ -1971,6 +1973,57 @@ def delete_book(book_id):
         logger.error(f"Error deleting book {book_id}: {str(e)}\n{error_trace}")
         return jsonify({'error': f'Failed to delete book: {str(e)}'}), 500
 
+@book_bp.route('/books/<int:book_id>/prepare-audiobook-segments', methods=['POST'])
+@book_platform_required
+def prepare_audiobook_segments(book_id):
+    """
+    Build section list from the current book text, run AI/heuristic include suggestions,
+    persist draft on BookProject for the author to confirm before TTS.
+    """
+    book = BookProject.query.get(book_id)
+    if not book:
+        return jsonify({'success': False, 'error': 'Book not found'}), 404
+    if not current_user or not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user or book.author_id != book_user.id:
+        return jsonify({'success': False, 'error': 'You can only prepare audiobooks for your own books'}), 403
+    if book.has_audiobook:
+        return jsonify({'success': False, 'error': 'This book already has an audiobook version'}), 400
+
+    src = build_audiobook_source(book, current_app.root_path)
+    if not src['success']:
+        return jsonify({'success': False, 'error': src['error']}), 400
+
+    chapters_for_audio = src['chapters_for_audio']
+    if not chapters_for_audio:
+        return jsonify({'success': False, 'error': 'No sections found to narrate.'}), 400
+
+    classifier, segments = suggest_includes_for_chapters(chapters_for_audio)
+    plan = {
+        'source_hash': src['source_hash'],
+        'classifier': classifier,
+        'prepared_at': datetime.now(timezone.utc).isoformat(),
+        'segment_count': len(segments),
+        'segments': segments,
+    }
+    book.audiobook_segment_plan = plan
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'source_hash': src['source_hash'],
+        'classifier': classifier,
+        'segment_count': len(segments),
+        'segments': segments,
+        'notice': (
+            'Your ebook listing is unchanged—footnotes, index, tables, and appendix stay in the digital edition. '
+            'Here you only choose what is read for the audiobook. Uncheck sections you do not want narrated. '
+            'Suggestions use Gemini when GEMINI_API_KEY or GOOGLE_API_KEY is set (same as news), '
+            'otherwise title-based rules only.'
+        ),
+    })
+
 @book_bp.route('/books/<int:book_id>/generate-audiobook', methods=['POST'])
 @book_platform_required
 def generate_audiobook_for_book(book_id):
@@ -2009,99 +2062,49 @@ def generate_audiobook_for_book(book_id):
         return jsonify({'success': False, 'error': 'Voice name is required'}), 400
     
     try:
-        full_text = ""
-        
-        # Check if this is an uploaded digital book
-        if book.digital_file_path:
-            # Extract text from uploaded digital file
-            digital_file_path = os.path.join(current_app.root_path, 'static', book.digital_file_path)
-            
-            if not os.path.exists(digital_file_path):
-                return jsonify({'success': False, 'error': 'Digital book file not found. Please re-upload the book.'}), 400
-            
-            # Get file type from book model or infer from extension
-            file_type = book.digital_file_type or os.path.splitext(digital_file_path)[1].lstrip('.')
-            
-            # Extract text from digital file
-            extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
-            
-            if not extraction_result['success']:
-                return jsonify({'success': False, 'error': f'Failed to extract text from digital book: {extraction_result.get("error", "Unknown error")}'}), 400
-            
-            full_text = extraction_result.get('text', '')
-            
-            if not full_text.strip():
-                return jsonify({'success': False, 'error': 'No text content found in the uploaded digital book file.'}), 400
-        else:
-            # For books created in the platform, extract text from published chapters
-            # First check if there are any chapters at all
-            all_chapters = BookChapter.query.filter_by(book_project_id=book_id).order_by(BookChapter.chapter_number).all()
-            
-            if not all_chapters:
+        src = build_audiobook_source(book, current_app.root_path)
+        if not src['success']:
+            return jsonify({'success': False, 'error': src['error']}), 400
+
+        full_text = src['full_text']
+        chapters_for_audio = src['chapters_for_audio']
+        source_hash = src['source_hash']
+
+        source_hash_payload = data.get('source_hash')
+        segment_includes_payload = data.get('segment_includes')
+
+        if source_hash_payload:
+            if source_hash_payload != source_hash:
                 return jsonify({
-                    'success': False, 
-                    'error': 'No chapters found. Please create at least one chapter before generating an audiobook.'
+                    'success': False,
+                    'error': 'Your book text changed since you reviewed sections. Please click Review sections again.',
+                    'stale_segment_plan': True,
+                }), 409
+            if not isinstance(segment_includes_payload, list):
+                return jsonify({
+                    'success': False,
+                    'error': 'segment_includes must be a list of booleans, one per section.',
                 }), 400
-            
-            # Check for published chapters first
-            chapters = [ch for ch in all_chapters if ch.is_published]
-            
-            # If no published chapters but book is published and chapters have content, use those chapters
-            if not chapters:
-                # Check if book is published and chapters have content
-                chapters_with_content = [ch for ch in all_chapters if (ch.content or ch.summary)]
-                
-                if is_book_published(book) and chapters_with_content:
-                    # Use chapters with content if book is published (they're effectively published)
-                    logger.info(f"Book {book_id} is published but chapters not individually marked. Using chapters with content.")
-                    chapters = chapters_with_content
+            segment_bools = []
+            for x in segment_includes_payload:
+                if isinstance(x, bool):
+                    segment_bools.append(x)
+                elif isinstance(x, (int, float)) and int(x) in (0, 1):
+                    segment_bools.append(bool(int(x)))
+                elif isinstance(x, str) and x.strip().lower() in ('true', 'false', '1', '0', 'yes', 'no'):
+                    segment_bools.append(x.strip().lower() in ('true', '1', 'yes'))
                 else:
-                    # Get list of unpublished chapters with content for better error message
-                    unpublished_with_content = [ch for ch in all_chapters if not ch.is_published and (ch.content or ch.summary)]
-                    unpublished_count = len(unpublished_with_content)
-                    total_unpublished = len([ch for ch in all_chapters if not ch.is_published])
-                    
-                    error_msg = f'No published chapters found. You have {len(all_chapters)} chapter(s) total, but none are published. '
-                    if unpublished_with_content:
-                        error_msg += f'You have {unpublished_count} unpublished chapter(s) with content. '
-                    error_msg += 'Please go to each chapter and check the "Publish this chapter" checkbox before generating an audiobook.'
-                    
-                    logger.warning(f"Book {book_id}: {len(all_chapters)} chapters found, {total_unpublished} unpublished, {len(chapters)} published")
-                    
-                    return jsonify({'success': False, 'error': error_msg}), 400
-            
-            # Build per-chapter data for chapter-based audiobook (listeners can pick any chapter)
-            chapters_for_audio = []
-            for chapter in chapters:
-                chapter_text = ""
-                chapter_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n"
-                if chapter.summary:
-                    import re
-                    clean_summary = re.sub(r'<[^>]+>', '', chapter.summary)
-                    clean_summary = re.sub(r'\s+', ' ', clean_summary).strip()
-                    if clean_summary:
-                        chapter_text += f"Summary: {clean_summary}\n\n"
-                if chapter.content:
-                    import re
-                    clean_content = re.sub(r'<[^>]+>', '', chapter.content)
-                    clean_content = re.sub(r'\s+', ' ', clean_content).strip()
-                    if clean_content:
-                        chapter_text += f"{clean_content}\n\n"
-                if chapter_text.strip():
-                    chapters_for_audio.append({
-                        'title': f"Chapter {chapter.chapter_number}: {chapter.title}",
-                        'text': chapter_text,
-                        'chapter_number': chapter.chapter_number,
-                        'book_chapter_id': chapter.id
-                    })
-                    full_text += chapter_text
-            
-            if not full_text.strip():
-                return jsonify({
-                    'success': False, 
-                    'error': 'Published chapters found but they contain no text content. Please add content to your chapters before generating an audiobook.'
-                }), 400
-        
+                    return jsonify({
+                        'success': False,
+                        'error': 'segment_includes entries must be true/false for each section.',
+                    }), 400
+            filtered, ferr = filter_and_renumber_chapters(chapters_for_audio, segment_bools)
+            if ferr:
+                return jsonify({'success': False, 'error': ferr}), 400
+            chapters_for_audio_thread = filtered
+        else:
+            chapters_for_audio_thread = list(chapters_for_audio)
+
         # Create audio generation task
         audio_task = AudioGenerationTask(
             book_project_id=book.id,
@@ -2116,11 +2119,6 @@ def generate_audiobook_for_book(book_id):
         full_text_for_thread = full_text
         voice_name_for_thread = voice_name
         audiobook_price_for_thread = audiobook_price
-        # Per-chapter audio: platform books use real chapters; uploads use detected headings or word-based parts
-        if not book.digital_file_path:
-            chapters_for_audio_thread = chapters_for_audio
-        else:
-            chapters_for_audio_thread = build_uploaded_book_audiobook_chapters(full_text)
         
         app = current_app._get_current_object()
 

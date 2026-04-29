@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ink Studio on GLC—your hub for books, marketplace, investments, and creator tools.">
+    <meta name="description" content="Ink Studio—your hub for books, marketplace, investments, and creator tools.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Ink Studio | GLC</title>
+    <title>Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -109,7 +109,7 @@
                     <p class="small text-white-50 text-uppercase ink-dash-kicker mb-2 mb-md-3">Welcome back</p>
                     {% if is_author and current_user.role == 'author' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ user_profile.pen_name or current_user.first_name or current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Your indie publishing hub: ship to the <strong>marketplace</strong>, add <strong>AI covers</strong> and <strong>TTS audiobooks</strong>, and grow readers worldwide. Live radio on GLC spotlights reviews and interviews—open <strong>Content</strong> anytime.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">Your indie publishing hub: ship to the <strong>marketplace</strong>, add <strong>AI covers</strong> and <strong>TTS audiobooks</strong>, and grow readers worldwide. Live radio spotlights reviews and interviews—open <strong>Content</strong> anytime.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row">
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-lg ink-mp-cta">
                             <i class="fas fa-plus-circle me-2" aria-hidden="true"></i>Start writing
@@ -140,7 +140,7 @@
                     </div>
                     {% elif current_user.role == 'podcaster' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Upload episodes, send listeners to your catalog, and browse books &amp; investments without leaving GLC.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">Upload episodes, send listeners to your catalog, and browse books &amp; investments in one place.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row">
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-lg ink-mp-cta">
                             <i class="fas fa-broadcast-tower me-2" aria-hidden="true"></i>Content hub

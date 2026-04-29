@@ -188,6 +188,48 @@ def ensure_book_platform_stripe_connect_schema(db) -> None:
         )
 
 
+def ensure_audiobook_segment_plan_schema(db) -> None:
+    """Add audiobook_segment_plan JSON column to book_projects if missing."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("audiobook_segment_plan patch: dialect check failed: %s", e)
+        return
+
+    col = "audiobook_segment_plan"
+    try:
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS audiobook_segment_plan JSONB"
+                )
+            )
+            db.session.commit()
+            logger.info("book_projects.%s verified (PostgreSQL).", col)
+            return
+
+        if dialect == "sqlite":
+            rows = db.session.execute(text("PRAGMA table_info(book_projects)")).fetchall()
+            db.session.rollback()
+            names = {r[1] for r in rows}
+            if col in names:
+                return
+            db.session.execute(
+                text("ALTER TABLE book_projects ADD COLUMN audiobook_segment_plan JSON")
+            )
+            db.session.commit()
+            logger.info("book_projects.%s column added (SQLite).", col)
+    except Exception as e:
+        db.session.rollback()
+        logger.error(
+            "Could not patch book_projects for audiobook_segment_plan: %s",
+            e,
+            exc_info=True,
+        )
+
+
 def ensure_book_cart_schema(db) -> None:
     """Create marketplace cart table if missing."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":

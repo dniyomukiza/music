@@ -19,7 +19,7 @@
     --gradient-secondary: linear-gradient(135deg, #1a221c 0%, #0c0f0e 100%);
 }
 
-/* General Styles — GLC void + legible text */
+/* General Styles — Ink Studio / dark canvas + legible text */
 body {
     font-family: 'DM Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #060807;
@@ -1653,7 +1653,7 @@ a:hover {
 }
 
 /* =============================================================================
-   Ink Marketplace (/mybook/marketplace) — full GLC void + bronze
+   Ink Marketplace (/mybook/marketplace) — dark canvas + bronze
    Scoped to body.ink-marketplace so aggressive legacy .book-card / .card rules
    elsewhere in this file do not stay “white Bootstrap” on this page.
    Parity with My Library: same tokens, page canvas, topbar, typography.

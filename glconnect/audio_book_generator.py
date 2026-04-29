@@ -18,7 +18,10 @@ try:
 except ImportError:
     TTS_AVAILABLE = False
 
+from glconnect.audiobook_text_clean import clean_chapter_dict_for_tts, clean_for_tts, validate_for_tts
+
 logger = logging.getLogger(__name__)
+
 
 class AudioBookGenerator:
     """Generates audio books from text using Google Cloud Text-to-Speech"""
@@ -77,12 +80,23 @@ class AudioBookGenerator:
         
         for i, ch in enumerate(chapters):
             title = ch.get('title', f'Chapter {i+1}')
-            text = ch.get('text', '').strip()
             chapter_number = ch.get('chapter_number', i + 1)
-            
+            ch_clean, tts_val = clean_chapter_dict_for_tts(ch, min_letters=5)
+            for w in tts_val.warnings:
+                logger.warning("Audiobook TTS: %s", w)
+            text = ch_clean.get('text', '').strip()
             if not text:
                 logger.warning(f"Skipping empty chapter {chapter_number}: {title}")
                 continue
+            if not tts_val.ok:
+                err = "; ".join(tts_val.errors) or "Text failed validation before TTS."
+                logger.error("Audiobook TTS validation failed for chapter %s: %s", chapter_number, err)
+                return {
+                    'success': False,
+                    'error': err,
+                    'chapter_results': chapter_results,
+                    'duration': total_duration
+                }
             
             # Split long chapter text into TTS chunks
             chunks = self._split_text_into_chunks(text)
@@ -153,6 +167,18 @@ class AudioBookGenerator:
             }
         
         try:
+            text = clean_for_tts(text)
+            tts_val = validate_for_tts(text, min_letters=20, context="Full audiobook")
+            for w in tts_val.warnings:
+                logger.warning("Audiobook TTS: %s", w)
+            if not tts_val.ok:
+                err = "; ".join(tts_val.errors) or "Text failed validation before TTS."
+                return {
+                    'success': False,
+                    'error': err,
+                    'audio_file_path': None,
+                    'duration': 0
+                }
             # Split text into manageable chunks
             chunks = self._split_text_into_chunks(text)
             
@@ -591,6 +617,7 @@ class AudioBookGenerator:
         if not sample_text:
             sample_text = "This is a sample of how your audiobook will sound with this voice. Listen carefully to the tone, pace, and clarity."
         
+        sample_text = clean_for_tts(sample_text)
         # Limit sample text length
         if len(sample_text) > 500:
             sample_text = sample_text[:500] + "..."
