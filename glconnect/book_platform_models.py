@@ -557,6 +557,21 @@ class BookCartItem(db.Model):
     buyer_user = db.relationship('User', foreign_keys=[buyer_user_id], backref='book_cart_items', lazy=True)
     book_project = db.relationship('BookProject', foreign_keys=[book_project_id], lazy=True)
 
+
+class LibraryBookHide(db.Model):
+    """Buyer hid a title from My Library UI; purchase rows stay for history/support."""
+
+    __tablename__ = 'library_book_hides'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'book_project_id', name='uq_library_hide_user_book'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 # Book Sale Model
 class BookSale(db.Model):
     __tablename__ = 'book_sales'

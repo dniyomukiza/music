@@ -18,6 +18,9 @@ import json
 import logging
 import re
 from functools import wraps
+import zipfile
+from tempfile import SpooledTemporaryFile
+from typing import List, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from mailtrap import MailtrapClient, Mail, Address
@@ -29,6 +32,7 @@ from glconnect.book_platform_models import (
     CollaborationInvitation, BookComment, BookVersion, ChapterVersion,
     ChapterSuggestion, BookPurchase, BookSale, RealtimeSession, BookAnalytics, BookNotification,
     BookCartItem,
+    LibraryBookHide,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
     AudioGenerationTask, AudiobookChapter, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
     AuthorCampaignPayoutRequest,
@@ -119,6 +123,57 @@ def safe_mybook_next_path(candidate, default_path):
     if not c.startswith("/mybook"):
         return default_path
     return c
+
+
+def library_reader_split_plain_pages(text: str, max_chars: int = 12000) -> List[str]:
+    """Split extracted plain text into pages for library prev/next navigation."""
+    if not text or not str(text).strip():
+        return []
+    text = str(text).strip()
+    if len(text) <= max_chars:
+        return [text]
+    chunks: List[str] = []
+    paras = re.split(r"\n\s*\n", text)
+    buf: List[str] = []
+    size = 0
+    for para in paras:
+        plen = len(para) + 2
+        if size + plen > max_chars and buf:
+            chunks.append("\n\n".join(buf))
+            buf = [para]
+            size = len(para)
+        else:
+            buf.append(para)
+            size += plen
+    if buf:
+        chunks.append("\n\n".join(buf))
+    out: List[str] = []
+    for pg in chunks:
+        if len(pg) <= max_chars:
+            out.append(pg)
+        else:
+            for i in range(0, len(pg), max_chars):
+                out.append(pg[i : i + max_chars])
+    return out
+
+
+def resolved_audiobook_chapter_disk_path(chapter) -> Optional[str]:
+    """Resolve AudiobookChapter.audio_file_path to an existing filesystem path."""
+    p = (getattr(chapter, "audio_file_path", None) or "").strip()
+    if not p:
+        return None
+    if os.path.isabs(p) and os.path.exists(p):
+        return p
+    static_root = os.path.join(current_app.root_path, "static")
+    if p.startswith(static_root) and os.path.exists(p):
+        return p
+    rel = p.lstrip("/")
+    cand = os.path.join(static_root, rel)
+    if os.path.exists(cand):
+        return cand
+    if os.path.exists(p):
+        return p
+    return None
 
 
 def save_book_cover_file(file_storage):
@@ -3607,8 +3662,15 @@ def my_library():
         db.or_(*match_login),
     ).order_by(BookPurchase.purchased_at.desc(), BookPurchase.created_at.desc()).all()
 
+    hidden_book_ids = {
+        h.book_project_id
+        for h in LibraryBookHide.query.filter_by(user_id=uid).all()
+    }
+
     by_book = {}
     for p in purchases:
+        if p.book_project_id in hidden_book_ids:
+            continue
         b = BookProject.query.options(joinedload(BookProject.author).joinedload(BookPlatformUser.user)).get(p.book_project_id)
         if not b:
             continue
@@ -3636,6 +3698,118 @@ def my_library():
         items=items,
         marketplace_cover_url=_marketplace_cover_url,
         highlight_book_id=highlight_book_id,
+    )
+
+
+@book_bp.route('/library/books/<int:book_id>/hide', methods=['POST'])
+@login_required
+def library_hide_book(book_id):
+    """Remove a title from My Library for this account (purchase history unchanged)."""
+    uid = current_user.user_id
+    bp_user = BookPlatformUser.query.filter_by(user_id=uid).first()
+    bp_pk = bp_user.id if bp_user else None
+    match_login = [BookPurchase.buyer_user_id == uid]
+    if bp_pk is not None:
+        match_login.append(BookPurchase.buyer_id == bp_pk)
+    owns = BookPurchase.query.filter(
+        BookPurchase.book_project_id == book_id,
+        BookPurchase.status == TransactionStatus.COMPLETED,
+        db.or_(*match_login),
+    ).first()
+    if not owns:
+        flash('That title is not in your library.', 'warning')
+        return redirect(url_for('book_platform.my_library'))
+    if not LibraryBookHide.query.filter_by(user_id=uid, book_project_id=book_id).first():
+        db.session.add(LibraryBookHide(user_id=uid, book_project_id=book_id))
+        db.session.commit()
+    flash('Removed from My Library. Your purchase is still on file.', 'info')
+    return redirect(url_for('book_platform.my_library'))
+
+
+@book_bp.route('/library/books/<int:book_id>/read', methods=['GET'])
+@login_required
+def library_read_ebook(book_id):
+    """Minimal reader for buyers (and authors): full manuscript text + download only."""
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user),
+    ).get_or_404(book_id)
+
+    user_id = current_user.user_id
+    is_author = bool(book.author and book.author.user_id == user_id)
+    if not is_author:
+        bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
+        buyer_id = bp_user.id if bp_user else None
+        purchases = BookPurchase.query.filter(
+            db.or_(
+                BookPurchase.buyer_user_id == user_id,
+                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false(),
+            ),
+            BookPurchase.book_project_id == book_id,
+            BookPurchase.status == TransactionStatus.COMPLETED,
+        ).all()
+        has_digital_access = any(
+            getattr(p, 'purchase_format', 'digital') in ('digital', 'bundle') for p in purchases
+        )
+        if not has_digital_access:
+            flash('You must purchase this ebook to read it here.', 'error')
+            return redirect(url_for('book_platform.marketplace'))
+
+    chapters = (
+        BookChapter.query.filter_by(book_project_id=book_id)
+        .order_by(BookChapter.chapter_number)
+        .all()
+    )
+    chapter_blocks = []
+    for ch in chapters:
+        body = (ch.content or '').strip()
+        if body:
+            chapter_blocks.append({'title': ch.title or f'Chapter {ch.chapter_number}', 'html': ch.content})
+
+    plain_text = None
+    if not chapter_blocks and book.digital_file_path:
+        rel_path = book.digital_file_path
+        file_path = os.path.join(current_app.root_path, 'static', rel_path)
+        if os.path.exists(file_path):
+            file_type = (book.digital_file_type or 'txt').lower().lstrip('.') or 'txt'
+            try:
+                extraction = digital_book_processor.extract_text(file_path, file_type)
+                if extraction.get('success') and extraction.get('text'):
+                    plain_text = extraction['text']
+            except Exception as ex:
+                logger.warning('library_read_ebook extract failed for book %s: %s', book_id, ex)
+
+    reader_pages: List[dict] = []
+    for block in chapter_blocks:
+        reader_pages.append({'title': block['title'], 'html': block['html'], 'plain': None})
+    if not reader_pages and plain_text:
+        parts = library_reader_split_plain_pages(plain_text)
+        n = len(parts)
+        for i, chunk in enumerate(parts):
+            reader_pages.append({
+                'title': f'Part {i + 1} of {n}' if n > 1 else 'Full text',
+                'html': None,
+                'plain': chunk,
+            })
+
+    total_pages = len(reader_pages)
+    page_idx = request.args.get('ch', type=int)
+    if page_idx is None:
+        page_idx = 0
+    if total_pages:
+        page_idx = max(0, min(page_idx, total_pages - 1))
+    else:
+        page_idx = 0
+    current_page = reader_pages[page_idx] if total_pages else None
+
+    return render_template(
+        'book_platform/library_read_ebook.html',
+        book=book,
+        reader_pages=reader_pages,
+        current_page=current_page,
+        page_idx=page_idx,
+        total_pages=total_pages,
+        download_url=url_for('book_platform.download_digital_book', book_id=book.id),
+        library_url=url_for('book_platform.my_library'),
     )
 
 
@@ -6522,7 +6696,9 @@ def serve_audiobook_chapter_file(book_id, chapter_id):
 @login_required
 def audiobook_player(book_id):
     """Audiobook player page with chapter list - listeners can pick and play any chapter."""
-    book = BookProject.query.get_or_404(book_id)
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user),
+    ).get_or_404(book_id)
     
     if not book.has_audiobook:
         flash("Audiobook not available for this book.", "error")
@@ -6550,36 +6726,38 @@ def audiobook_player(book_id):
     if not chapter_tracklist:
         single_audiobook_src = url_for('book_platform.serve_audiobook_file', book_id=book.id)
 
+    author_label = 'Author'
+    if book.author:
+        author_label = book.author.pen_name or (
+            book.author.user.username if book.author.user else author_label
+        )
+
     return render_template(
         'book_platform/audiobook_player.html',
         book=book,
         chapters=chapters,
         chapter_tracklist=chapter_tracklist,
         single_audiobook_src=single_audiobook_src,
+        cover_url=_marketplace_cover_url(book),
+        author_label=author_label,
+        audio_download_url=url_for('book_platform.download_audio_book', book_id=book.id),
     )
 
 
 @book_bp.route('/books/<int:book_id>/download-audio')
 @login_required
 def download_audio_book(book_id):
-    """Download audio book file"""
+    """Download audiobook as one MP3, or a ZIP of chapter MP3s when no single file exists."""
     book = BookProject.query.get_or_404(book_id)
-    
-    if not book.has_audiobook or not book.audiobook_file_path:
+
+    if not book.has_audiobook:
         flash("Audiobook not available for this book.", "error")
         return redirect(url_for('book_platform.marketplace'))
-    
-    # Check if user has purchased this book (same logic as digital download)
-    # No profile required - just user account
+
     user_id = current_user.user_id
-    
-    # Check if user is the author (by comparing user_id directly)
-    is_author = False
-    if book.author and book.author.user_id == user_id:
-        is_author = True
-    
+    is_author = bool(book.author and book.author.user_id == user_id)
+
     if not is_author:
-        # Check if user has purchased audiobook or bundle (grants audiobook download access)
         bp_user = BookPlatformUser.query.filter_by(user_id=user_id).first()
         buyer_id = bp_user.id if bp_user else None
         purchases = BookPurchase.query.filter(
@@ -6596,29 +6774,61 @@ def download_audio_book(book_id):
         if not has_audiobook_access:
             flash("You must purchase the audiobook to download it.", "error")
             return redirect(url_for('book_platform.marketplace'))
-    
-    # Serve the audio file
-    if not os.path.exists(book.audiobook_file_path):
-        flash("Audiobook file not found.", "error")
-        return redirect(url_for('book_platform.marketplace'))
-    
-    # Convert full path to relative path for serving
-    static_path = os.path.join(current_app.root_path, 'static')
-    if book.audiobook_file_path.startswith(static_path):
-        relative_path = os.path.relpath(book.audiobook_file_path, static_path)
+
+    safe_title = secure_filename((book.title or "audiobook").replace(" ", "_")) or "audiobook"
+
+    single_path = (book.audiobook_file_path or "").strip()
+    if single_path and os.path.exists(single_path):
+        static_path = os.path.join(current_app.root_path, 'static')
+        if single_path.startswith(static_path):
+            relative_path = os.path.relpath(single_path, static_path)
+            return send_from_directory(
+                os.path.join(current_app.root_path, 'static'),
+                relative_path,
+                as_attachment=True,
+                download_name=f"{safe_title}_audiobook.mp3",
+            )
         return send_from_directory(
-            os.path.join(current_app.root_path, 'static'),
-            relative_path,
+            os.path.dirname(single_path),
+            os.path.basename(single_path),
             as_attachment=True,
-            download_name=f"{book.title}_audiobook.mp3"
+            download_name=f"{safe_title}_audiobook.mp3",
         )
-    else:
-        return send_from_directory(
-            os.path.dirname(book.audiobook_file_path),
-            os.path.basename(book.audiobook_file_path),
+
+    ab_chapters = (
+        AudiobookChapter.query.filter_by(book_project_id=book_id)
+        .order_by(AudiobookChapter.chapter_number)
+        .all()
+    )
+    zip_members = []
+    for ch in ab_chapters:
+        disk_path = resolved_audiobook_chapter_disk_path(ch)
+        if not disk_path:
+            continue
+        slug = secure_filename((ch.title or f"chapter_{ch.chapter_number}")[:120]) or f"chapter_{ch.chapter_number}"
+        arcname = f"{ch.chapter_number:03d}_{slug}.mp3"
+        zip_members.append((disk_path, arcname))
+
+    if not zip_members:
+        flash("Downloadable audio files are not available for this title yet.", "error")
+        return redirect(url_for('book_platform.my_library'))
+
+    buf = SpooledTemporaryFile(max_size=80 * 1024 * 1024, mode="w+b")
+    try:
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for disk_path, arcname in zip_members:
+                zf.write(disk_path, arcname=arcname)
+        buf.seek(0)
+        return send_file(
+            buf,
             as_attachment=True,
-            download_name=f"{book.title}_audiobook.mp3"
+            download_name=f"{safe_title}_audiobook_chapters.zip",
+            mimetype="application/zip",
         )
+    except Exception as e:
+        logger.error("download_audio_book zip failed for book %s: %s", book_id, e, exc_info=True)
+        flash("Could not build audiobook download.", "error")
+        return redirect(url_for('book_platform.my_library'))
 
 # ============================================================================
 # REVIEWER & INVESTMENT SYSTEM ROUTES

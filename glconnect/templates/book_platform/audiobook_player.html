@@ -2,175 +2,779 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.title }} - Audiobook | GLC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>{{ book.title }} · Audiobook | GLC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
     <style>
-        .player-container { max-width: 900px; margin: 0 auto; padding: 2rem; }
-        .chapter-list { max-height: 50vh; overflow-y: auto; }
-        .chapter-item {
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
+        :root {
+            --ab-bg: #0c0f0e;
+            --ab-surface: rgba(18, 22, 20, 0.92);
+            --ab-elevated: rgba(28, 34, 31, 0.95);
+            --ab-border: rgba(201, 162, 39, 0.22);
+            --ab-accent: #c9a227;
+            --ab-accent-soft: rgba(201, 162, 39, 0.18);
+            --ab-text: #e8ece9;
+            --ab-muted: #9aa8a0;
+            --ab-radius: 16px;
+            --ab-radius-sm: 12px;
+            --ab-safe-b: env(safe-area-inset-bottom, 0px);
+        }
+
+        * { box-sizing: border-box; }
+
+        body.ab-player-page {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: var(--ab-bg);
+            color: var(--ab-text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .ab-player-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201, 162, 39, 0.12), transparent 55%),
+                radial-gradient(ellipse 60% 40% at 100% 50%, rgba(42, 61, 50, 0.35), transparent 50%),
+                linear-gradient(180deg, #0c0f0e 0%, #060807 100%);
+            pointer-events: none;
+        }
+
+        .ab-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            background: rgba(12, 15, 14, 0.75);
+            border-bottom: 1px solid var(--ab-border);
+        }
+
+        .ab-topbar .container-fluid {
+            max-width: 1100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.65rem 1rem;
+        }
+
+        .ab-brand {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            color: var(--ab-text);
+            text-decoration: none;
+            font-size: 1.05rem;
+        }
+        .ab-brand:hover { color: var(--ab-accent); }
+
+        .ab-nav-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            justify-content: flex-end;
+        }
+
+        .ab-nav-actions .btn {
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            padding: 0.4rem 0.9rem;
+        }
+
+        .btn-ab-ghost {
+            background: transparent;
+            border: 1px solid rgba(232, 236, 233, 0.2);
+            color: var(--ab-text);
+        }
+        .btn-ab-ghost:hover {
+            background: var(--ab-accent-soft);
+            border-color: var(--ab-accent);
+            color: #fff;
+        }
+
+        .btn-ab-primary {
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            border: none;
+            color: #060807;
+        }
+        .btn-ab-primary:hover {
+            filter: brightness(1.06);
+            color: #060807;
+        }
+
+        .ab-main {
+            position: relative;
+            z-index: 1;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 1.25rem 1rem calc(2rem + var(--ab-safe-b));
+        }
+
+        .ab-hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 1.75rem;
+        }
+
+        @media (min-width: 576px) {
+            .ab-hero {
+                flex-direction: row;
+                align-items: flex-end;
+                text-align: left;
+                gap: 1.5rem;
+            }
+        }
+
+        .ab-cover {
+            width: 168px;
+            height: 252px;
+            border-radius: var(--ab-radius-sm);
+            object-fit: cover;
+            box-shadow:
+                0 24px 48px rgba(0, 0, 0, 0.45),
+                0 0 0 1px var(--ab-border);
+            flex-shrink: 0;
+        }
+
+        .ab-cover-placeholder {
+            width: 168px;
+            height: 252px;
+            border-radius: var(--ab-radius-sm);
+            background: linear-gradient(145deg, #1a221c, #2a3d32);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ab-accent);
+            font-size: 3rem;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--ab-border);
+            flex-shrink: 0;
+        }
+
+        .ab-eyebrow {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ab-accent);
+            margin-bottom: 0.35rem;
+        }
+
+        .ab-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: clamp(1.35rem, 4vw, 1.85rem);
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin: 0 0 0.35rem;
+            color: #fff;
+        }
+
+        .ab-author {
+            margin: 0;
+            color: var(--ab-muted);
+            font-size: 0.95rem;
+        }
+
+        .ab-panel {
+            background: var(--ab-surface);
+            border: 1px solid var(--ab-border);
+            border-radius: var(--ab-radius);
+            padding: 1.25rem 1.15rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .ab-now-label {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 0 0 1rem;
+            line-height: 1.4;
+            min-height: 2.75rem;
+        }
+
+        .ab-time-row {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            font-variant-numeric: tabular-nums;
+            font-size: 0.75rem;
+            color: var(--ab-muted);
+            margin-bottom: 0.65rem;
+        }
+
+        .ab-progress {
+            flex: 1;
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
             cursor: pointer;
-            transition: background 0.2s;
+            position: relative;
+            touch-action: none;
+        }
+
+        .ab-progress:focus-visible {
+            outline: 2px solid var(--ab-accent);
+            outline-offset: 3px;
+        }
+
+        .ab-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            width: 0%;
+            background: linear-gradient(90deg, #e0bc3a, #c9a227);
+            pointer-events: none;
+            transition: width 0.08s linear;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ab-progress-fill { transition: none; }
+        }
+
+        .ab-transport {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1.15rem 0 1rem;
+        }
+
+        .ab-skip {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: var(--ab-elevated);
+            color: var(--ab-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+        }
+
+        .ab-skip:hover:not(:disabled) {
+            background: var(--ab-accent-soft);
+            border-color: var(--ab-accent);
+            color: #fff;
+        }
+
+        .ab-skip:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .ab-skip:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+
+        .ab-play {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(145deg, #e0bc3a, #c9a227);
+            color: #060807;
+            font-size: 1.35rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 28px rgba(201, 162, 39, 0.35);
+            transition: transform 0.12s, filter 0.12s;
+        }
+
+        .ab-play:hover {
+            filter: brightness(1.05);
+            transform: scale(1.03);
+        }
+
+        .ab-play:active {
+            transform: scale(0.98);
+        }
+
+        .ab-utils {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ab-utils label {
+            font-size: 0.75rem;
+            color: var(--ab-muted);
+            margin: 0;
+        }
+
+        .ab-utils .form-select {
+            background-color: var(--ab-elevated);
+            border: 1px solid var(--ab-border);
+            color: var(--ab-text);
+            border-radius: var(--ab-radius-sm);
+            font-size: 0.8125rem;
+            max-width: 7rem;
+        }
+
+        .ab-utils .form-check-input {
+            background-color: var(--ab-elevated);
+            border-color: var(--ab-border);
+        }
+
+        .ab-utils .form-check-input:checked {
+            background-color: var(--ab-accent);
+            border-color: var(--ab-accent);
+        }
+
+        .ab-chapter-meta {
+            font-size: 0.8125rem;
+            color: var(--ab-muted);
+            margin: 0;
+        }
+
+        .ab-audio-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .ab-chapters-head {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        @media (min-width: 480px) {
+            .ab-chapters-head {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .ab-chapters-head h2 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin: 0;
+            color: #fff;
+        }
+
+        .ab-search {
+            background: var(--ab-elevated);
+            border: 1px solid var(--ab-border);
+            border-radius: 999px;
+            color: var(--ab-text);
+            padding: 0.45rem 1rem;
+            font-size: 0.875rem;
+            width: 100%;
+            max-width: 240px;
+        }
+
+        .ab-search::placeholder {
+            color: var(--ab-muted);
+        }
+
+        .ab-search:focus {
+            outline: none;
+            border-color: var(--ab-accent);
+            box-shadow: 0 0 0 3px var(--ab-accent-soft);
+        }
+
+        .ab-chapter-list {
+            max-height: min(48vh, 420px);
+            overflow-y: auto;
+            border-radius: var(--ab-radius-sm);
+            background: rgba(6, 8, 7, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ab-chapter-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .ab-chapter-list::-webkit-scrollbar-thumb {
+            background: rgba(201, 162, 39, 0.35);
+            border-radius: 999px;
+        }
+
+        .ab-chapter-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.85rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
             border-left: 3px solid transparent;
+            transition: background 0.15s, border-color 0.15s;
         }
-        .chapter-item:hover { background: rgba(13, 110, 253, 0.08); }
-        .chapter-item.playing {
-            background: rgba(13, 110, 253, 0.12);
-            border-left-color: #0d6efd;
+
+        .ab-chapter-item:last-child {
+            border-bottom: none;
         }
-        .chapter-item .duration { font-size: 0.85rem; color: #6c757d; }
-        .audio-player { width: 100%; height: 54px; border-radius: 8px; }
-        .transport .btn { min-width: 2.75rem; }
+
+        .ab-chapter-item:hover {
+            background: rgba(201, 162, 39, 0.08);
+        }
+
+        .ab-chapter-item.playing {
+            background: rgba(201, 162, 39, 0.14);
+            border-left-color: var(--ab-accent);
+        }
+
+        .ab-chapter-item:focus-visible {
+            outline: 2px solid var(--ab-accent);
+            outline-offset: -2px;
+        }
+
+        .ab-ch-num {
+            font-variant-numeric: tabular-nums;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--ab-muted);
+            width: 1.5rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .ab-chapter-item.playing .ab-ch-num {
+            color: var(--ab-accent);
+        }
+
+        .ab-ch-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ab-ch-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #fff;
+            margin: 0;
+            line-height: 1.35;
+        }
+
+        .ab-ch-dur {
+            font-size: 0.75rem;
+            color: var(--ab-muted);
+            margin-top: 0.15rem;
+        }
+
+        .ab-ch-play-icon {
+            color: var(--ab-muted);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .ab-chapter-item.playing .ab-ch-play-icon {
+            color: var(--ab-accent);
+        }
+
+        .ab-info-banner {
+            background: rgba(201, 162, 39, 0.1);
+            border: 1px solid var(--ab-border);
+            border-radius: var(--ab-radius-sm);
+            padding: 1rem 1.1rem;
+            font-size: 0.875rem;
+            color: var(--ab-muted);
+            margin-bottom: 1.25rem;
+        }
+
+        .ab-footer-actions {
+            text-align: center;
+            padding-top: 0.5rem;
+        }
+
+        .ab-kbd-hint {
+            text-align: center;
+            font-size: 0.7rem;
+            color: rgba(154, 168, 160, 0.65);
+            margin-top: 1rem;
+        }
+
+        .ab-kbd-hint kbd {
+            background: var(--ab-elevated);
+            border: 1px solid var(--ab-border);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            font-size: 0.65rem;
+        }
     </style>
 </head>
-<body>
+<body class="ab-player-page">
     {% include 'messages.html' %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-pen-fancy"></i> GLC
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Marketplace
+    <div class="ab-player-bg" aria-hidden="true"></div>
+
+    <header class="ab-topbar">
+        <div class="container-fluid">
+            <a class="ab-brand" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>GLC</a>
+            <div class="ab-nav-actions">
+                <a class="btn btn-ab-ghost btn-sm" href="{{ audio_download_url }}" title="MP3 or ZIP of chapters">
+                    <i class="fas fa-download me-1" aria-hidden="true"></i>Download
+                </a>
+                <a class="btn btn-ab-ghost btn-sm" href="{{ url_for('book_platform.my_library') }}">
+                    <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
+                </a>
+                <a class="btn btn-ab-primary btn-sm" href="{{ url_for('book_platform.marketplace') }}">
+                    <i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace
                 </a>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <div class="player-container">
-        <div class="text-center mb-4">
-            <h1 class="display-6 fw-bold mb-2">
-                <i class="fas fa-headphones text-warning me-2"></i>{{ book.title }}
-            </h1>
-            <p class="text-muted mb-0" id="nowPlayingLabel">
-                {% if chapters %}
-                Listen by chapter — tap a track or use Next / Previous
-                {% else %}
-                Full audiobook — continuous playback
-                {% endif %}
-            </p>
+    <main class="ab-main">
+        <div class="ab-hero">
+            {% if cover_url %}
+            <img class="ab-cover" src="{{ cover_url }}" alt="" width="168" height="252">
+            {% else %}
+            <div class="ab-cover-placeholder" aria-hidden="true"><i class="fas fa-headphones"></i></div>
+            {% endif %}
+            <div class="ab-hero-text flex-grow-1">
+                <p class="ab-eyebrow">Audiobook</p>
+                <h1 class="ab-title">{{ book.title }}</h1>
+                <p class="ab-author"><i class="fas fa-user-pen me-1 opacity-75" aria-hidden="true"></i>{{ author_label }}</p>
+            </div>
         </div>
 
-        <div class="card shadow-lg border-0 mb-3">
-            <div class="card-body p-4">
-                <audio id="audioPlayer" class="audio-player" controls preload="metadata" playsinline>
-                    {% if chapter_tracklist %}
-                    <source id="audioSource" src="{{ chapter_tracklist[0].src }}" type="audio/mpeg">
-                    {% elif single_audiobook_src %}
-                    <source id="audioSource" src="{{ single_audiobook_src }}" type="audio/mpeg">
-                    {% endif %}
-                    Your browser does not support the audio element.
-                </audio>
-                {% if chapter_tracklist %}
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 transport">
-                    <div class="btn-group" role="group" aria-label="Chapter navigation">
-                        <button type="button" class="btn btn-outline-primary" id="btnPrevChapter" title="Previous chapter">
-                            <i class="fas fa-step-backward"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" id="btnNextChapter" title="Next chapter">
-                            <i class="fas fa-step-forward"></i>
-                        </button>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="playbackSpeed" class="small text-muted mb-0">Speed</label>
-                        <select id="playbackSpeed" class="form-select form-select-sm" style="width: auto;">
-                            <option value="0.75">0.75×</option>
-                            <option value="1" selected>1×</option>
-                            <option value="1.25">1.25×</option>
-                            <option value="1.5">1.5×</option>
-                            <option value="2">2×</option>
-                        </select>
-                    </div>
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="autoAdvance" checked>
-                        <label class="form-check-label small" for="autoAdvance">Auto-play next chapter</label>
-                    </div>
+        <section class="ab-panel" aria-labelledby="ab-player-heading">
+            <h2 id="ab-player-heading" class="visually-hidden">Playback controls</h2>
+            <p class="ab-now-label" id="nowPlayingLabel">
+                {% if chapters %}
+                Select a chapter or press play to start
+                {% else %}
+                Continuous audiobook — press play to start
+                {% endif %}
+            </p>
+
+            <div class="ab-time-row">
+                <span id="timeCurrent" aria-hidden="true">0:00</span>
+                <div class="ab-progress" id="progressBar" role="slider" tabindex="0" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="ab-progress-fill" id="progressFill"></div>
                 </div>
-                <p class="small text-muted mt-2 mb-0" id="chapterPosition">
-                    Chapter <span id="chapterIndexDisplay">1</span> of {{ chapter_tracklist|length }}
-                </p>
-                {% elif single_audiobook_src %}
-                <div class="d-flex align-items-center gap-2 mt-3">
-                    <label for="playbackSpeed" class="small text-muted mb-0">Speed</label>
-                    <select id="playbackSpeed" class="form-select form-select-sm" style="width: auto;">
+                <span id="timeDuration" aria-hidden="true">—</span>
+            </div>
+
+            <div class="ab-transport">
+                <button type="button" class="ab-skip" id="btnPrevChapter" title="Previous chapter" aria-label="Previous chapter">
+                    <i class="fas fa-step-backward" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="ab-play" id="btnPlayPause" aria-label="Play">
+                    <i class="fas fa-play ms-1" id="iconPlayPause" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="ab-skip" id="btnNextChapter" title="Next chapter" aria-label="Next chapter">
+                    <i class="fas fa-step-forward" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="ab-utils">
+                <div class="d-flex align-items-center gap-2">
+                    <label for="playbackSpeed">Speed</label>
+                    <select id="playbackSpeed" class="form-select form-select-sm" aria-label="Playback speed">
                         <option value="0.75">0.75×</option>
                         <option value="1" selected>1×</option>
                         <option value="1.25">1.25×</option>
                         <option value="1.5">1.5×</option>
+                        <option value="1.75">1.75×</option>
                         <option value="2">2×</option>
                     </select>
                 </div>
+                {% if chapter_tracklist|length > 1 %}
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" id="autoAdvance" checked>
+                    <label class="form-check-label small" for="autoAdvance">Auto-play next chapter</label>
+                </div>
                 {% endif %}
             </div>
-        </div>
+
+            {% if chapter_tracklist|length > 1 %}
+            <p class="ab-chapter-meta mt-3 mb-0" id="chapterPosition">
+                Chapter <span id="chapterIndexDisplay">1</span> of {{ chapter_tracklist|length }}
+            </p>
+            {% endif %}
+        </section>
+
+        <audio id="audioPlayer" class="ab-audio-hidden" preload="metadata" playsinline>
+            {% if chapter_tracklist %}
+            <source id="audioSource" src="{{ chapter_tracklist[0].src }}" type="audio/mpeg">
+            {% elif single_audiobook_src %}
+            <source id="audioSource" src="{{ single_audiobook_src }}" type="audio/mpeg">
+            {% endif %}
+        </audio>
 
         {% if chapters %}
-        <div class="card shadow border-0">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Chapters</h5>
-                <small class="text-muted">Click any chapter to listen</small>
+        <section class="ab-panel" aria-labelledby="ab-chapters-heading">
+            <div class="ab-chapters-head">
+                <h2 id="ab-chapters-heading">Chapters</h2>
+                <input type="search" class="ab-search" id="chapterSearch" placeholder="Find a chapter…" autocomplete="off" aria-label="Filter chapters">
             </div>
-            <div class="card-body p-0">
-                <div class="chapter-list">
-                    {% for ch in chapters %}
-                    <div class="chapter-item d-flex justify-content-between align-items-center"
-                         data-chapter-idx="{{ loop.index0 }}"
-                         data-src="{{ url_for('book_platform.serve_audiobook_chapter_file', book_id=book.id, chapter_id=ch.id) }}">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-play-circle text-primary me-3 fa-lg"></i>
-                            <div>
-                                <strong>{{ ch.title }}</strong>
-                                <div class="duration">
-                                    {% if ch.duration_seconds %}
-                                    {{ (ch.duration_seconds // 60) }}:{{ "%02d"|format(ch.duration_seconds % 60) }}
-                                    {% endif %}
-                                </div>
-                            </div>
+            <div class="ab-chapter-list" role="list">
+                {% for ch in chapters %}
+                <div class="ab-chapter-item"
+                     role="listitem"
+                     tabindex="0"
+                     data-chapter-idx="{{ loop.index0 }}"
+                     data-src="{{ url_for('book_platform.serve_audiobook_chapter_file', book_id=book.id, chapter_id=ch.id) }}">
+                    <span class="ab-ch-num">{{ loop.index }}</span>
+                    <div class="ab-ch-body">
+                        <p class="ab-ch-title chapter-title">{{ ch.title }}</p>
+                        <div class="ab-ch-dur">
+                            {% if ch.duration_seconds %}
+                            {{ (ch.duration_seconds // 60) }}:{{ "%02d"|format(ch.duration_seconds % 60) }}
+                            {% else %}
+                            —
+                            {% endif %}
                         </div>
                     </div>
-                    {% endfor %}
+                    <i class="fas fa-play-circle ab-ch-play-icon" aria-hidden="true"></i>
                 </div>
+                {% endfor %}
             </div>
-        </div>
-        {% else %}
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            This title uses a single audio file. New uploads are split into chapter-style tracks when possible.
-            {% if book.audiobook_duration %}
-            Total duration: about {{ (book.audiobook_duration // 60) }} minutes.
-            {% endif %}
-        </div>
+        </section>
         {% endif %}
 
-        <div class="mt-4 text-center">
-            <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-outline-primary">
-                <i class="fas fa-download me-1"></i>Download current audiobook file
+        <div class="ab-footer-actions">
+            <a href="{{ audio_download_url }}" class="btn btn-ab-ghost">
+                <i class="fas fa-download me-2" aria-hidden="true"></i>Download audio
             </a>
-            {% if chapter_tracklist|length > 1 %}
-            <p class="small text-muted mt-2 mb-0">Download is the first chapter file; listen in-app for all chapters.</p>
-            {% endif %}
+            <p class="small mt-2 mb-0" style="color: var(--ab-muted);">One MP3 when available, otherwise a ZIP of chapter files.</p>
         </div>
-    </div>
+
+        <p class="ab-kbd-hint">
+            <kbd>Space</kbd> play/pause
+            {% if chapter_tracklist|length > 1 %}· <kbd>←</kbd> <kbd>→</kbd> previous/next chapter{% endif %}
+        </p>
+    </main>
 
     <script type="application/json" id="audiobook-tracklist-data">{{ (chapter_tracklist or [])|tojson }}</script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         (function() {
             const bookId = {{ book.id|int }};
             const storageKeyIdx = 'ink_audiobook_' + bookId + '_chapter_idx';
             const storageKeyTime = 'ink_audiobook_' + bookId + '_time';
+
             const player = document.getElementById('audioPlayer');
             const speedSel = document.getElementById('playbackSpeed');
+            const btnPlay = document.getElementById('btnPlayPause');
+            const iconPlay = document.getElementById('iconPlayPause');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const timeCurrent = document.getElementById('timeCurrent');
+            const timeDuration = document.getElementById('timeDuration');
+
             const raw = document.getElementById('audiobook-tracklist-data');
             let tracklist = [];
             try {
                 tracklist = raw ? JSON.parse(raw.textContent || '[]') : [];
             } catch (e) { tracklist = []; }
+
+            function formatTime(sec) {
+                if (sec == null || !isFinite(sec) || sec < 0) return '0:00';
+                const m = Math.floor(sec / 60);
+                const s = Math.floor(sec % 60);
+                return m + ':' + (s < 10 ? '0' : '') + s;
+            }
+
+            function setProgressUi() {
+                if (!player || !progressFill || !progressBar) return;
+                const d = player.duration;
+                const c = player.currentTime;
+                if (d && isFinite(d) && d > 0) {
+                    const pct = Math.min(100, (c / d) * 100);
+                    progressFill.style.width = pct + '%';
+                    const aria = Math.round(pct);
+                    progressBar.setAttribute('aria-valuenow', String(aria));
+                    progressBar.setAttribute('aria-valuemax', '100');
+                    if (timeDuration) timeDuration.textContent = formatTime(d);
+                } else {
+                    progressFill.style.width = '0%';
+                    if (timeDuration && (!d || !isFinite(d))) timeDuration.textContent = '—';
+                }
+                if (timeCurrent) timeCurrent.textContent = formatTime(c);
+            }
+
+            function seekFromClientX(clientX) {
+                if (!player || !progressBar || !player.duration || !isFinite(player.duration)) return;
+                const rect = progressBar.getBoundingClientRect();
+                const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                player.currentTime = pct * player.duration;
+            }
+
+            if (progressBar) {
+                progressBar.addEventListener('click', function(e) { seekFromClientX(e.clientX); });
+                let drag = false;
+                progressBar.addEventListener('pointerdown', function(e) {
+                    drag = true;
+                    progressBar.setPointerCapture(e.pointerId);
+                    seekFromClientX(e.clientX);
+                });
+                progressBar.addEventListener('pointermove', function(e) {
+                    if (drag) seekFromClientX(e.clientX);
+                });
+                progressBar.addEventListener('pointerup', function() { drag = false; });
+                progressBar.addEventListener('pointercancel', function() { drag = false; });
+                progressBar.addEventListener('keydown', function(e) {
+                    if (!player.duration || !isFinite(player.duration)) return;
+                    const step = player.duration * 0.05;
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        player.currentTime = Math.max(0, player.currentTime - step);
+                    } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        player.currentTime = Math.min(player.duration, player.currentTime + step);
+                    }
+                });
+            }
+
+            function syncPlayButton() {
+                if (!btnPlay || !iconPlay || !player) return;
+                const paused = player.paused;
+                btnPlay.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+                iconPlay.className = paused ? 'fas fa-play ms-1' : 'fas fa-pause';
+            }
+
+            if (player) {
+                player.addEventListener('play', syncPlayButton);
+                player.addEventListener('pause', syncPlayButton);
+                player.addEventListener('timeupdate', function() {
+                    setProgressUi();
+                    if (player.currentTime > 1) {
+                        localStorage.setItem(storageKeyTime, String(player.currentTime));
+                    }
+                });
+                player.addEventListener('loadedmetadata', setProgressUi);
+                player.addEventListener('durationchange', setProgressUi);
+            }
+
+            if (btnPlay && player) {
+                btnPlay.addEventListener('click', function() {
+                    if (player.paused) {
+                        player.play().catch(function() {});
+                    } else {
+                        player.pause();
+                    }
+                });
+            }
 
             function formatTitle(t) {
                 const el = document.getElementById('nowPlayingLabel');
@@ -187,27 +791,41 @@
                 setSpeed();
             }
 
+            const btnPrev = document.getElementById('btnPrevChapter');
+            const btnNext = document.getElementById('btnNextChapter');
+
+            function setNavDisabled(idx, len) {
+                if (btnPrev) btnPrev.disabled = len <= 1 || idx <= 0;
+                if (btnNext) btnNext.disabled = len <= 1 || idx >= len - 1;
+            }
+
             if (!tracklist.length) {
+                setNavDisabled(0, 0);
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
                 if (player) {
                     player.addEventListener('loadedmetadata', function tryResume() {
                         const t = parseFloat(localStorage.getItem(storageKeyTime) || '0', 10);
                         if (t > 2 && t < player.duration - 2) {
                             player.currentTime = t;
                         }
-                    });
-                    player.addEventListener('timeupdate', function() {
-                        if (player.currentTime > 1) {
-                            localStorage.setItem(storageKeyTime, String(player.currentTime));
-                        }
+                        syncPlayButton();
+                        setProgressUi();
                     });
                 }
+                syncPlayButton();
+                document.addEventListener('keydown', function(e) {
+                    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        if (player.paused) player.play().catch(function() {}); else player.pause();
+                    }
+                });
                 return;
             }
 
             let currentIdx = 0;
-            const items = document.querySelectorAll('.chapter-item');
-            const btnPrev = document.getElementById('btnPrevChapter');
-            const btnNext = document.getElementById('btnNextChapter');
+            const items = document.querySelectorAll('.ab-chapter-item');
             const autoAdvance = document.getElementById('autoAdvance');
             const idxDisplay = document.getElementById('chapterIndexDisplay');
 
@@ -216,6 +834,7 @@
                     i.classList.toggle('playing', j === idx);
                 });
                 if (idxDisplay) idxDisplay.textContent = String(idx + 1);
+                setNavDisabled(idx, tracklist.length);
             }
 
             function loadChapter(idx, autoplay, resumeSeconds) {
@@ -231,14 +850,18 @@
                         player.currentTime = t;
                     }
                     player.removeEventListener('loadedmetadata', onMeta);
+                    syncPlayButton();
+                    setProgressUi();
                 }
                 player.addEventListener('loadedmetadata', onMeta);
                 player.load();
-                formatTitle('Now playing: ' + (tr.title || ('Chapter ' + (idx + 1))));
+                formatTitle(tr.title || ('Chapter ' + (idx + 1)));
                 highlight(idx);
                 localStorage.setItem(storageKeyIdx, String(idx));
                 if (autoplay) {
                     player.play().catch(function() {});
+                } else {
+                    syncPlayButton();
                 }
             }
 
@@ -248,26 +871,32 @@
                 loadChapter(savedIdx, false, savedTime);
             } else {
                 highlight(0);
-                formatTitle('Now playing: ' + (tracklist[0].title || 'Chapter 1'));
+                formatTitle(tracklist[0].title || 'Chapter 1');
+                setNavDisabled(0, tracklist.length);
             }
 
-            player.addEventListener('timeupdate', function() {
-                if (player.currentTime > 1) {
-                    localStorage.setItem(storageKeyTime, String(player.currentTime));
-                }
-            });
+            syncPlayButton();
 
             player.addEventListener('ended', function() {
                 if (!autoAdvance || !autoAdvance.checked) return;
                 if (currentIdx + 1 < tracklist.length) {
+                    localStorage.removeItem(storageKeyTime);
                     loadChapter(currentIdx + 1, true);
                 }
             });
 
+            function activateChapter(j) {
+                localStorage.removeItem(storageKeyTime);
+                loadChapter(j, true);
+            }
+
             items.forEach(function(item, j) {
-                item.addEventListener('click', function() {
-                    localStorage.removeItem(storageKeyTime);
-                    loadChapter(j, true);
+                item.addEventListener('click', function() { activateChapter(j); });
+                item.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        activateChapter(j);
+                    }
                 });
             });
 
@@ -281,6 +910,41 @@
                 if (currentIdx + 1 < tracklist.length) {
                     localStorage.removeItem(storageKeyTime);
                     loadChapter(currentIdx + 1, true);
+                }
+            });
+
+            const chapterSearch = document.getElementById('chapterSearch');
+            if (chapterSearch) {
+                chapterSearch.addEventListener('input', function() {
+                    const q = (chapterSearch.value || '').toLowerCase().trim();
+                    items.forEach(function(item) {
+                        const t = item.querySelector('.chapter-title');
+                        const txt = (t && t.textContent) ? t.textContent.toLowerCase() : '';
+                        item.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
+                    });
+                });
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (player.paused) player.play().catch(function() {}); else player.pause();
+                    return;
+                }
+                if (tracklist.length > 1 && e.key === 'ArrowLeft' && !(e.target && e.target.id === 'progressBar')) {
+                    e.preventDefault();
+                    if (currentIdx > 0) {
+                        localStorage.removeItem(storageKeyTime);
+                        loadChapter(currentIdx - 1, true);
+                    }
+                }
+                if (tracklist.length > 1 && e.key === 'ArrowRight' && !(e.target && e.target.id === 'progressBar')) {
+                    e.preventDefault();
+                    if (currentIdx + 1 < tracklist.length) {
+                        localStorage.removeItem(storageKeyTime);
+                        loadChapter(currentIdx + 1, true);
+                    }
                 }
             });
         })();

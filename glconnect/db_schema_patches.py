@@ -256,6 +256,75 @@ CREATE TABLE book_cart_items (
             logger.error("Could not patch book_cart_items (SQLite): %s", e, exc_info=True)
 
 
+def ensure_library_book_hides_schema(db) -> None:
+    """Create library_book_hides for optional My Library row removal (UI hide only)."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("library_book_hides patch: dialect check failed: %s", e)
+        return
+
+    if dialect == "postgresql":
+        stmts = [
+            """
+CREATE TABLE IF NOT EXISTS library_book_hides (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    CONSTRAINT uq_library_hide_user_book UNIQUE (user_id, book_project_id)
+)
+""".strip(),
+            "CREATE INDEX IF NOT EXISTS ix_library_book_hides_user_id ON library_book_hides(user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_library_book_hides_book_project_id ON library_book_hides(book_project_id)",
+        ]
+        try:
+            for stmt in stmts:
+                db.session.execute(text(stmt))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Could not patch library_book_hides (PostgreSQL): %s", e, exc_info=True)
+        return
+
+    if dialect == "sqlite":
+        try:
+            exists = db.session.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='library_book_hides'")
+            ).fetchone()
+            db.session.rollback()
+            if not exists:
+                db.session.execute(
+                    text(
+                        """
+CREATE TABLE library_book_hides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    book_project_id INTEGER NOT NULL,
+    created_at TIMESTAMP,
+    UNIQUE (user_id, book_project_id),
+    FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY(book_project_id) REFERENCES book_projects(id) ON DELETE CASCADE
+)
+"""
+                    )
+                )
+            db.session.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_library_book_hides_user_id ON library_book_hides(user_id)")
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_library_book_hides_book_project_id ON library_book_hides(book_project_id)"
+                )
+            )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error("Could not patch library_book_hides (SQLite): %s", e, exc_info=True)
+
+
 def _book_purchases_existing_columns(db, dialect: str) -> set:
     """Return lowercase column names for book_purchases."""
     if dialect == "postgresql":
