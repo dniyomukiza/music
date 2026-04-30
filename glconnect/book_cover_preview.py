@@ -54,6 +54,7 @@ def clear_listing_preview() -> None:
 def save_listing_preview(image_bytes: bytes) -> str:
     """Write preview bytes; returns static-relative path (e.g. book_covers_previews/...)."""
     clear_listing_preview()
+    _preview_dir()  # ensure glconnect/static/book_covers_previews exists (e.g. fresh deploy)
     fn = f"listing_{uuid.uuid4().hex[:12]}.png"
     rel = f"{PREVIEW_SUBDIR}/{fn}"
     path = _abs_static_rel(rel)
@@ -124,6 +125,7 @@ def clear_edit_preview(book_id: int) -> None:
 
 def save_edit_preview(book_id: int, image_bytes: bytes) -> str:
     clear_edit_preview(book_id)
+    _preview_dir()
     fn = f"edit_{int(book_id)}_{uuid.uuid4().hex[:10]}.png"
     rel = f"{PREVIEW_SUBDIR}/{fn}"
     path = _abs_static_rel(rel)
