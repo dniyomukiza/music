@@ -296,6 +296,19 @@ def _reader_annotation_to_dict(a: ReaderAnnotation) -> dict:
     }
 
 
+def _delete_reader_annotations_for_user_book(user_id: int, book_project_id: int) -> None:
+    """Remove persisted library-reader highlights/bookmarks for one buyer + title."""
+    ReaderAnnotation.query.filter_by(
+        user_id=user_id,
+        book_project_id=book_project_id,
+    ).delete(synchronize_session=False)
+
+
+def _delete_reader_annotations_for_book(book_project_id: int) -> None:
+    """Remove all reader annotations when a book is deleted (all buyers)."""
+    ReaderAnnotation.query.filter_by(book_project_id=book_project_id).delete(synchronize_session=False)
+
+
 def resolved_audiobook_chapter_disk_path(chapter) -> Optional[str]:
     """Resolve AudiobookChapter.audio_file_path to an existing filesystem path."""
     p = (getattr(chapter, "audio_file_path", None) or "").strip()
@@ -2008,7 +2021,8 @@ def delete_book(book_id):
         # Note: BookPurchase has book_project_id as NOT NULL, so we must delete, not update
         BookPurchase.query.filter_by(book_project_id=book_id).delete()
         _delete_legacy_book_cart_rows(book_id)
-        
+        _delete_reader_annotations_for_book(book_id)
+
         # 6. Clean up audio generation tasks (they reference book_project_id)
         AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
         
@@ -3413,6 +3427,7 @@ def admin_delete_test_books():
             BookSale.query.filter_by(book_project_id=book_id).delete()
             BookPurchase.query.filter_by(book_project_id=book_id).delete()
             _delete_legacy_book_cart_rows(book_id)
+            _delete_reader_annotations_for_book(book_id)
             AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
             RealtimeSession.query.filter_by(book_project_id=book_id).delete()
             BookComment.query.filter_by(book_project_id=book_id).delete()
@@ -3628,6 +3643,7 @@ def library_hide_book(book_id):
         db.session.add(rec)
     if fmt == 'ebook':
         rec.hide_ebook = True
+        _delete_reader_annotations_for_user_book(uid, book_id)
     else:
         rec.hide_audiobook = True
     db.session.commit()

@@ -44,7 +44,9 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
         DigitalBookEdition,
         InvestmentCampaign,
         InvestmentPayout,
+        LibraryBookHide,
         PayoutRequest,
+        ReaderAnnotation,
         RealtimeSession,
         RefundRequest,
         RevenueDistribution,
@@ -188,6 +190,8 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
 
     # --- Misc per-book ---
     for model, key in (
+        (ReaderAnnotation, "reader_annotations_deleted"),
+        (LibraryBookHide, "library_book_hides_deleted"),
         (AudioGenerationTask, "audio_generation_tasks_deleted"),
         (RealtimeSession, "realtime_sessions_deleted"),
         (BookComment, "book_comments_deleted"),

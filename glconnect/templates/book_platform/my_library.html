@@ -93,6 +93,51 @@
         .ink-lib-nav .nav-link:hover { color: #fff; background: var(--lib-accent-soft); }
         .ink-lib-nav .nav-link.active { color: #060807; background: linear-gradient(145deg, #e0bc3a, #c9a227); }
 
+        /* Account menu: global book_platform.css uses dark .dropdown-item on our dark menu — fix contrast */
+        .ink-lib-topbar .dropdown-menu {
+            background: var(--lib-elevated) !important;
+            border: 1px solid var(--lib-border) !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 0.4rem 0;
+            min-width: 12rem;
+        }
+        .ink-lib-topbar .dropdown-item {
+            color: var(--lib-text) !important;
+            background: transparent !important;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.5rem 1.1rem;
+        }
+        .ink-lib-topbar .dropdown-item:hover,
+        .ink-lib-topbar .dropdown-item:focus {
+            color: #fff !important;
+            background: var(--lib-accent-soft) !important;
+        }
+        .ink-lib-topbar .dropdown-item.text-danger {
+            color: #f0a8a8 !important;
+        }
+        .ink-lib-topbar .dropdown-item.text-danger:hover,
+        .ink-lib-topbar .dropdown-item.text-danger:focus {
+            color: #fff !important;
+            background: rgba(201, 76, 76, 0.25) !important;
+        }
+        .ink-lib-topbar .dropdown-divider {
+            border-color: var(--lib-border) !important;
+            opacity: 1;
+        }
+        .ink-lib-topbar .nav-link.dropdown-toggle {
+            color: var(--lib-text) !important;
+            border: 1px solid transparent;
+        }
+        .ink-lib-topbar .nav-link.dropdown-toggle:hover,
+        .ink-lib-topbar .nav-link.dropdown-toggle:focus,
+        .ink-lib-topbar .nav-link.dropdown-toggle.show {
+            color: #fff !important;
+            background: var(--lib-accent-soft) !important;
+            border-color: rgba(201, 162, 39, 0.35);
+        }
+
         .ink-lib-main {
             position: relative;
             z-index: 1;
@@ -439,7 +484,7 @@
                     <a class="nav-link dropdown-toggle py-2" href="#" id="libraryNavAccount" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu, signed in as {{ current_user.username }}" data-bs-display="static">
                         <i class="fas fa-user-circle me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">{{ current_user.username }}</span><span class="d-inline d-sm-none">Account</span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="libraryNavAccount">
+                    <ul class="dropdown-menu dropdown-menu-end ink-lib-account-menu" aria-labelledby="libraryNavAccount">
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                         <li><hr class="dropdown-divider border-white border-opacity-25"></li>
                         <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}"><i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sign out</a></li>

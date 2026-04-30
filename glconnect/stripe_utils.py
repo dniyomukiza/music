@@ -163,6 +163,20 @@ def describe_stripe_checkout_error(exc: BaseException) -> Dict[str, Any]:
         pass
     if "message" not in d:
         d["message"] = str(exc)[:600]
+
+    msg = (d.get("message") or "").lower()
+    # Stripe blocks Checkout until the platform (and sometimes Connect accounts) have a display/business name.
+    if "account or business name" in msg or (
+        "checkout" in msg and "business name" in msg and "dashboard.stripe.com" in msg
+    ):
+        d["hint"] = (
+            "Open https://dashboard.stripe.com/settings/account (Settings → Business / Account details) "
+            "and set your business or account name; complete any onboarding prompts. "
+            "If this purchase uses Stripe Connect (paying an author), the connected seller account may also need "
+            "its profile completed in the Connect Dashboard."
+        )
+        d["operator_error_code"] = "STRIPE_BUSINESS_NAME_REQUIRED"
+
     return d
 
 
@@ -190,17 +204,18 @@ def purchase_checkout_unavailable_response(app, exc: Optional[BaseException] = N
         )
     if exc is not None:
         logger.exception("Stripe Checkout Session.create failed: %s", exc)
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "error": "Stripe did not create a checkout session. See 'details' and server logs.",
-                    "error_code": "STRIPE_CHECKOUT_FAILED",
-                    "details": describe_stripe_checkout_error(exc),
-                }
-            ),
-            503,
-        )
+        details = describe_stripe_checkout_error(exc)
+        payload = {
+            "success": False,
+            "error": "Stripe did not create a checkout session. See 'details' and server logs.",
+            "error_code": "STRIPE_CHECKOUT_FAILED",
+            "details": details,
+        }
+        if details.get("hint"):
+            payload["hint"] = details["hint"]
+        if details.get("operator_error_code"):
+            payload["operator_error_code"] = details["operator_error_code"]
+        return jsonify(payload), 503
     return (
         jsonify(
             {

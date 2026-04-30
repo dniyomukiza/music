@@ -466,9 +466,6 @@
             <button type="button" class="ink-reader-chip" id="btnBookmarkSection" title="Save this section to your list">
                 <i class="fas fa-bookmark" aria-hidden="true"></i> Bookmark section
             </button>
-            <button type="button" class="ink-reader-chip" id="btnListenSection" title="Read aloud (browser)">
-                <i class="fas fa-volume-up" aria-hidden="true"></i> Listen
-            </button>
             {% endif %}
         </div>
     </div>
@@ -909,7 +906,7 @@
         if (findStatus) findStatus.textContent = '';
     });
 
-    /* Persisted highlights, bookmarks, full-book search, Lexend, read-aloud */
+    /* Persisted highlights, bookmarks, full-book search, Lexend */
     if (ANNOTATIONS_URL) {
         function irEscapeHtml(s) {
             if (s == null) return '';
@@ -1182,15 +1179,6 @@
                     }, 1600);
                 } else alert(data.error || 'Could not save');
             });
-        });
-
-        var listenBtn = document.getElementById('btnListenSection');
-        if (listenBtn) listenBtn.addEventListener('click', function () {
-            if (!readerBodyEl) return;
-            speechSynthesis.cancel();
-            var u = new SpeechSynthesisUtterance(readerBodyEl.innerText || '');
-            u.rate = 1;
-            speechSynthesis.speak(u);
         });
 
         var btnGlobSearch = document.getElementById('btnReaderSearchBook');
