@@ -25,12 +25,35 @@ def cover_image_api_key() -> str:
     )
 
 
+def cover_genai_http_timeout_ms() -> int:
+    """
+    HTTP timeout for Gemini / Imagen image calls (milliseconds), same idea as JS
+    GoogleGenAI httpOptions.timeout. Override with BOOK_COVER_GENAI_TIMEOUT_MS.
+    """
+    raw = (os.getenv("BOOK_COVER_GENAI_TIMEOUT_MS") or "").strip()
+    default_ms = 300_000  # 5 minutes — image generation is often slow
+    if not raw:
+        return default_ms
+    try:
+        n = int(raw)
+    except ValueError:
+        return default_ms
+    return max(10_000, min(n, 900_000))  # clamp 10s … 15m
+
+
+def make_cover_genai_client(api_key: str):
+    """google.genai Client with extended timeout for cover / Imagen requests."""
+    from google import genai
+    from google.genai import types as genai_types
+
+    return genai.Client(
+        api_key=api_key,
+        http_options=genai_types.HttpOptions(timeout=cover_genai_http_timeout_ms()),
+    )
+
+
 # Native image via generateContent (generativelanguage.googleapis.com v1beta).
-# Prefer the currently recommended model first, then fallback.
-_GEMINI_COVER_IMAGE_MODELS = (
-    "gemini-3.1-flash-image-preview",
-    "gemini-2.5-flash-image",
-)
+_GEMINI_COVER_IMAGE_MODELS = ("gemini-2.5-flash-image",)
 _ENV_IMAGEN_MODEL = "BOOK_COVER_IMAGEN_MODEL"
 _DEFAULT_IMAGEN_MODELS = ("imagen-4.0-fast-generate-001",)
 
@@ -223,10 +246,9 @@ Requirements:
 """
 
     try:
-        from google import genai
         from google.genai import errors as genai_errors
 
-        client = genai.Client(api_key=api_key)
+        client = make_cover_genai_client(api_key)
         response = None
         last_model_error: Optional[Exception] = None
         for model_name in iter_book_cover_image_models():

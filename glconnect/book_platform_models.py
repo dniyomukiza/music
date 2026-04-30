@@ -113,10 +113,11 @@ class BookPlatformUser(db.Model):
     website = db.Column(db.String(200), nullable=True)
     social_links = db.Column(JSON, nullable=True)  # Store social media links as JSON
     writing_experience = db.Column(db.Text, nullable=True)
-    genres = db.Column(JSON, nullable=True)  # Store preferred genres as JSON array
     payment_info = db.Column(JSON, nullable=True)  # Store payment details securely
     # Stripe Connect: Express (or Custom) connected account id for marketplace payouts (acct_...)
     stripe_connect_account_id = db.Column(db.String(255), nullable=True)
+    # Set True after author saves /mybook/setup-profile once; required before My Books / Create book.
+    author_card_setup_completed = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     

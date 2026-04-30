@@ -107,6 +107,32 @@ def allowed_image_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
+def _author_needs_marketplace_profile_step() -> bool:
+    """True until the author saves Ink Studio author card once at /mybook/setup-profile."""
+    if not current_user.is_authenticated:
+        return False
+    bu = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not bu:
+        return True
+    return not bool(getattr(bu, "author_card_setup_completed", False))
+
+
+def _safe_next_url_for_profile_setup(req) -> str:
+    """After setup-profile save: only same-site paths under /mybook (open-redirect safe)."""
+    n = (req.values.get("next") or "").strip()
+    if n.startswith("/mybook") and not n.startswith("//") and ".." not in n and "\n" not in n:
+        return n
+    return url_for("book_platform.dashboard")
+
+
+def _setup_profile_next_query_param() -> str:
+    """Optional ?next= from GET /setup-profile; only allow internal /mybook paths."""
+    n = (request.args.get("next") or "").strip()
+    if n.startswith("/mybook") and not n.startswith("//") and ".." not in n and "\n" not in n:
+        return n
+    return ""
+
+
 def _normalize_public_website(url):
     """Return a safe https URL for public author links, or None if invalid/empty."""
     from urllib.parse import urlparse, urlunparse
@@ -855,15 +881,9 @@ def setup_profile():
                 website_raw = request.form.get('website')
                 writing_experience = request.form.get('writing_experience')
                 try:
-                    genres = json.loads(request.form.get('genres') or '[]')
-                except json.JSONDecodeError:
-                    genres = []
-                try:
                     social_links = json.loads(request.form.get('social_links') or '{}')
                 except json.JSONDecodeError:
                     social_links = {}
-                if not isinstance(genres, list):
-                    genres = []
                 if not isinstance(social_links, dict):
                     social_links = {}
                 profile_pic_file = request.files.get('profile_picture')
@@ -873,10 +893,7 @@ def setup_profile():
                 bio = data.get('bio')
                 website_raw = data.get('website')
                 writing_experience = data.get('writing_experience')
-                genres = data.get('genres', [])
                 social_links = data.get('social_links', {})
-                if not isinstance(genres, list):
-                    genres = []
                 if not isinstance(social_links, dict):
                     social_links = {}
 
@@ -915,10 +932,10 @@ def setup_profile():
                 existing_profile.website = we_stored
                 existing_profile.social_links = social_links
                 existing_profile.writing_experience = (writing_experience or '').strip() or None
-                existing_profile.genres = genres
                 if pic_rel:
                     existing_profile.profile_picture = pic_rel
                 existing_profile.updated_at = datetime.now(timezone.utc)
+                existing_profile.author_card_setup_completed = True
             else:
                 book_user = BookPlatformUser(
                     user_id=current_user.user_id,
@@ -927,14 +944,14 @@ def setup_profile():
                     website=we_stored,
                     social_links=social_links,
                     writing_experience=(writing_experience or '').strip() or None,
-                    genres=genres,
                     profile_picture=pic_rel,
+                    author_card_setup_completed=True,
                 )
                 db.session.add(book_user)
 
             db.session.commit()
 
-            return jsonify({'success': True, 'redirect': url_for('book_platform.dashboard')})
+            return jsonify({'success': True, 'redirect': _safe_next_url_for_profile_setup(request)})
 
         except Exception as e:
             db.session.rollback()
@@ -942,7 +959,11 @@ def setup_profile():
             return jsonify({'success': False, 'error': str(e)}), 500
 
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    return render_template('book_platform/setup_profile.html', book_user=book_user)
+    return render_template(
+        'book_platform/setup_profile.html',
+        book_user=book_user,
+        next_after_setup=_setup_profile_next_query_param(),
+    )
 
 # Book management routes
 @book_bp.route('/books')
@@ -955,10 +976,17 @@ def books(user_profile, profile_type):
         flash('This page is for authors with book projects.', 'info')
         return redirect(url_for('book_platform.dashboard'))
 
+    if _author_needs_marketplace_profile_step():
+        flash(
+            'Complete your author profile (Ink Studio author card) before managing or listing books.',
+            'warning',
+        )
+        return redirect(url_for('book_platform.setup_profile', next=request.path))
+
     author_id = get_profile_id(user_profile, profile_type)
     if not author_id:
         flash('Complete your Ink Studio profile to manage books.', 'warning')
-        return redirect(url_for('book_platform.setup_profile'))
+        return redirect(url_for('book_platform.setup_profile', next=request.path))
 
     if profile_type != 'writer':
         authored_books_count = BookProject.query.filter_by(author_id=author_id).count()
@@ -1072,6 +1100,23 @@ def create_book(user_profile, profile_type):
     # Note: We allow access here to enable first-time book creation
     # The dashboard template will hide the "Start Writing" button for non-authors
     # This allows Writer profiles to create books immediately
+    if profile_type == 'freelancer':
+        flash('This page is for authors with book projects.', 'info')
+        return redirect(url_for('book_platform.dashboard'))
+
+    if _author_needs_marketplace_profile_step():
+        flash(
+            'Complete your author profile (Ink Studio author card) before creating a new book.',
+            'warning',
+        )
+        if request.method == 'POST':
+            return jsonify({
+                'success': False,
+                'error': 'Complete your author profile first.',
+                'redirect': url_for('book_platform.setup_profile', next=request.path),
+            }), 403
+        return redirect(url_for('book_platform.setup_profile', next=request.path))
+
     if request.method == 'POST':
         author_id = get_profile_id(user_profile, profile_type)
         if not author_id:
@@ -4604,7 +4649,11 @@ def purchase_book(book_id):
             response_data['stripe_checkout_url'] = stripe_checkout_url
         else:
             from glconnect.stripe_utils import purchase_checkout_unavailable_response
-            return purchase_checkout_unavailable_response(flask_app, stripe_session_error)
+            return purchase_checkout_unavailable_response(
+                flask_app,
+                stripe_session_error,
+                stripe_connect_account_id=author_connect_id or None,
+            )
         logger.info(f"✅ Returning success response: {response_data}")
         return jsonify(response_data)
         
@@ -4921,7 +4970,11 @@ def purchase_book(book_id):
                     response_data['stripe_checkout_url'] = stripe_checkout_url
                     return jsonify(response_data)
                 from glconnect.stripe_utils import purchase_checkout_unavailable_response
-                return purchase_checkout_unavailable_response(_purchase_app, stripe_fb_error)
+                return purchase_checkout_unavailable_response(
+                    _purchase_app,
+                    stripe_fb_error,
+                    stripe_connect_account_id=_cid_fb or None,
+                )
             except Exception as fallback_error:
                 logger.error(f"❌ Fallback also failed: {str(fallback_error)}", exc_info=True)
                 return jsonify({

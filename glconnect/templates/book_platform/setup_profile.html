@@ -3,193 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Profile | Ink Studio</title>
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Set up your Ink Studio author profile for the marketplace.">
+    <title>Author profile | Ink Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<body class="ink-dashboard ink-setup-profile">
+    <div class="ink-dash-page-bg" aria-hidden="true"></div>
+    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#ink-setup-main">Skip to form</a>
+
+    <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-dashboard-nav ink-dash-topnav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-pen-fancy"></i> Ink Studio
+            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
             </a>
+            <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#inkSetupNav" aria-controls="inkSetupNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="inkSetupNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-arrow-left me-1" aria-hidden="true"></i>Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card">
-                    <div class="card-header text-center">
-                        <h3><i class="fas fa-user-edit"></i> Your author profile</h3>
-                        <p class="text-muted mb-0">All fields are optional. What you add here can appear on your <strong>marketplace author card</strong> (photo, bio, website link). Your email is never shown to buyers.</p>
+    <main id="ink-setup-main" class="py-4 py-md-5" tabindex="-1">
+        <div class="container ink-setup-layout px-3 px-md-4">
+            {% set sl = (book_user.social_links if book_user and book_user.social_links else {}) or {} %}
+            {% set avatar_src = url_for('static', filename=book_user.profile_picture) if book_user and book_user.profile_picture else None %}
+            {% set preview_name = (book_user.pen_name if book_user and book_user.pen_name else None) or current_user.username %}
+
+            <header class="ink-setup-hero">
+                <p class="ink-setup-eyebrow mb-0">Author onboarding</p>
+                <h1 class="ink-setup-title">Introduce yourself to readers</h1>
+                <p class="ink-setup-lead">
+                    <strong>Save once</strong> to unlock <strong>My books</strong> and creating new projects. Everything below is optional—add what you want on your public author card. Your email stays private.
+                </p>
+                <div class="ink-setup-trust" role="list">
+                    <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-id-card" aria-hidden="true"></i> Richer marketplace presence</span>
+                    <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-lock" aria-hidden="true"></i> Email never shown to buyers</span>
+                    <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-bolt" aria-hidden="true"></i> About two minutes</span>
+                </div>
+            </header>
+
+            <div id="inkSetupAlert" class="ink-setup-alert mb-3" role="alert" aria-live="polite" tabindex="-1"></div>
+
+            <div class="row g-4 align-items-start">
+                <aside class="col-lg-4 ink-setup-side">
+                    <div class="ink-setup-preview-card">
+                        <div class="ink-setup-avatar-wrap">
+                            {% if avatar_src %}
+                            <img src="{{ avatar_src }}" alt="" class="ink-setup-avatar" width="120" height="120" id="inkSetupAvatarImg">
+                            {% else %}
+                            <div class="ink-setup-avatar ink-setup-avatar-ph" id="inkSetupAvatarPh" aria-hidden="true"><i class="fas fa-user"></i></div>
+                            <img src="" alt="" class="ink-setup-avatar d-none" width="120" height="120" id="inkSetupAvatarImg">
+                            {% endif %}
+                        </div>
+                        <p class="ink-setup-preview-name" id="inkSetupPreviewName">{{ preview_name }}</p>
+                        <p class="ink-setup-preview-hint">Live preview of how your name can appear</p>
+                        <div class="mt-3 pt-3 border-top border-white border-opacity-10">
+                            <div class="ink-setup-meter-label">
+                                <span>Profile richness</span>
+                                <span id="inkSetupMeterPct">0%</span>
+                            </div>
+                            <div class="ink-setup-meter-bar" aria-hidden="true">
+                                <div class="ink-setup-meter-fill" id="inkSetupMeterFill"></div>
+                            </div>
+                            <p class="small mt-2 mb-0 text-white-50">Filling optional fields increases reader trust—not required to save.</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        {% set sl = (book_user.social_links if book_user and book_user.social_links else {}) or {} %}
-                        {% set gset = (book_user.genres if book_user and book_user.genres else []) or [] %}
-                        <form id="profileSetupForm" enctype="multipart/form-data">
+                </aside>
+
+                <div class="col-lg-8">
+                    <form id="profileSetupForm" enctype="multipart/form-data" novalidate>
+                        <input type="hidden" name="next" id="setupNextUrl" value="{{ next_after_setup | default('', true) | e }}">
+
+                        <section class="ink-setup-section" aria-labelledby="ink-sec-identity">
+                            <div class="ink-setup-section-head">
+                                <div class="ink-setup-section-icon" aria-hidden="true"><i class="fas fa-signature"></i></div>
+                                <div>
+                                    <h2 class="ink-setup-section-title" id="ink-sec-identity">Name &amp; photo</h2>
+                                    <p class="ink-setup-section-blurb">How you appear on listings and your author page.</p>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
-                                <label for="penName" class="form-label">Pen name <span class="text-muted fw-normal">(optional)</span></label>
-                                <input type="text" class="form-control" id="penName" name="pen_name" placeholder="Your author name"
+                                <label for="penName" class="form-label">Pen name <span class="text-white-50 fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" id="penName" name="pen_name" autocomplete="nickname" placeholder="Your author name"
                                        value="{{ book_user.pen_name if book_user else '' }}">
-                                <div class="form-text">Shown on your book listings. Leave blank to use your account username.</div>
+                                <div class="form-text">Leave blank to use your account username.</div>
+                            </div>
+
+                            <div class="mb-0">
+                                <span class="form-label d-block mb-2">Profile photo <span class="text-white-50 fw-normal">(optional)</span></span>
+                                <label class="ink-setup-drop mb-0" for="profilePicture">
+                                    <input type="file" id="profilePicture" name="profile_picture" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
+                                    <i class="fas fa-cloud-arrow-up fa-2x mb-2" style="color: var(--primary-color);" aria-hidden="true"></i>
+                                    <p class="mb-1"><strong>Tap to upload</strong> — PNG, JPG, WebP, GIF, or SVG</p>
+                                    <p class="small mb-0 text-white-50">Shown on your marketplace author details.</p>
+                                </label>
+                            </div>
+                        </section>
+
+                        <section class="ink-setup-section" aria-labelledby="ink-sec-story">
+                            <div class="ink-setup-section-head">
+                                <div class="ink-setup-section-icon" aria-hidden="true"><i class="fas fa-book-open"></i></div>
+                                <div>
+                                    <h2 class="ink-setup-section-title" id="ink-sec-story">Story &amp; links</h2>
+                                    <p class="ink-setup-section-blurb">Help readers discover you—website opens as secure HTTPS.</p>
+                                </div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="profilePicture" class="form-label">Profile photo <span class="text-muted fw-normal">(optional)</span></label>
-                                <input type="file" class="form-control" id="profilePicture" name="profile_picture" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
-                                <div class="form-text">PNG, JPG, GIF, WebP, or SVG. Used on the marketplace author details view.</div>
+                                <label for="bio" class="form-label">Bio <span class="text-white-50 fw-normal">(optional)</span></label>
+                                <textarea class="form-control" id="bio" name="bio" rows="4" maxlength="2000" placeholder="A short bio for readers…">{{ book_user.bio if book_user and book_user.bio else '' }}</textarea>
+                                <div class="d-flex justify-content-end mt-1">
+                                    <span class="ink-setup-char"><span id="inkBioCount">0</span> / 2000</span>
+                                </div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="bio" class="form-label">Bio <span class="text-muted fw-normal">(optional)</span></label>
-                                <textarea class="form-control" id="bio" name="bio" rows="4" placeholder="A short bio for readers…">{{ book_user.bio if book_user and book_user.bio else '' }}</textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="website" class="form-label">Website <span class="text-muted fw-normal">(optional)</span></label>
-                                <input type="text" class="form-control" id="website" name="website" placeholder="yoursite.com or https://yoursite.com"
+                                <label for="website" class="form-label">Website <span class="text-white-50 fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" id="website" name="website" inputmode="url" autocomplete="url" placeholder="yoursite.com or https://yoursite.com"
                                        value="{{ book_user.website if book_user and book_user.website else '' }}">
-                                <div class="form-text">We store and open links as secure <strong>https</strong>. Social profiles go in the fields below.</div>
+                                <div class="form-text">Social profiles use the fields below.</div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Social Media Links</label>
-                                <div class="row">
+                            <fieldset class="mb-0">
+                                <legend class="form-label">Social <span class="text-white-50 fw-normal">(optional)</span></legend>
+                                <div class="row g-2">
                                     <div class="col-md-6">
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text"><i class="fab fa-twitter"></i></span>
-                                            <input type="url" class="form-control" name="twitter" placeholder="Twitter profile" value="{{ sl.get('twitter', '') or '' }}">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fab fa-twitter" aria-hidden="true"></i></span>
+                                            <input type="url" class="form-control" name="twitter" placeholder="Twitter / X" value="{{ sl.get('twitter', '') or '' }}" autocomplete="off">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text"><i class="fab fa-instagram"></i></span>
-                                            <input type="url" class="form-control" name="instagram" placeholder="Instagram profile" value="{{ sl.get('instagram', '') or '' }}">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fab fa-instagram" aria-hidden="true"></i></span>
+                                            <input type="url" class="form-control" name="instagram" placeholder="Instagram" value="{{ sl.get('instagram', '') or '' }}" autocomplete="off">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text"><i class="fab fa-facebook"></i></span>
-                                            <input type="url" class="form-control" name="facebook" placeholder="Facebook profile" value="{{ sl.get('facebook', '') or '' }}">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fab fa-facebook" aria-hidden="true"></i></span>
+                                            <input type="url" class="form-control" name="facebook" placeholder="Facebook" value="{{ sl.get('facebook', '') or '' }}" autocomplete="off">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text"><i class="fab fa-linkedin"></i></span>
-                                            <input type="url" class="form-control" name="linkedin" placeholder="LinkedIn profile" value="{{ sl.get('linkedin', '') or '' }}">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fab fa-linkedin" aria-hidden="true"></i></span>
+                                            <input type="url" class="form-control" name="linkedin" placeholder="LinkedIn" value="{{ sl.get('linkedin', '') or '' }}" autocomplete="off">
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </fieldset>
+                        </section>
 
-                            <div class="mb-3">
-                                <label for="writingExperience" class="form-label">Writing experience <span class="text-muted fw-normal">(optional)</span></label>
-                                <textarea class="form-control" id="writingExperience" name="writing_experience" rows="3" placeholder="Describe your writing background…">{{ book_user.writing_experience if book_user and book_user.writing_experience else '' }}</textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Preferred genres <span class="text-muted fw-normal">(optional)</span></label>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="fiction" id="genre-fiction" name="genres" {% if 'fiction' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-fiction">Fiction</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="non-fiction" id="genre-nonfiction" name="genres" {% if 'non-fiction' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-nonfiction">Non-Fiction</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="mystery" id="genre-mystery" name="genres" {% if 'mystery' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-mystery">Mystery</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="romance" id="genre-romance" name="genres" {% if 'romance' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-romance">Romance</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="sci-fi" id="genre-scifi" name="genres" {% if 'sci-fi' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-scifi">Science Fiction</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="fantasy" id="genre-fantasy" name="genres" {% if 'fantasy' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-fantasy">Fantasy</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="thriller" id="genre-thriller" name="genres" {% if 'thriller' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-thriller">Thriller</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="biography" id="genre-biography" name="genres" {% if 'biography' in gset %}checked{% endif %}>
-                                            <label class="form-check-label" for="genre-biography">Biography</label>
-                                        </div>
-                                    </div>
+                        <section class="ink-setup-section" aria-labelledby="ink-sec-writing">
+                            <div class="ink-setup-section-head">
+                                <div class="ink-setup-section-icon" aria-hidden="true"><i class="fas fa-feather-pointed"></i></div>
+                                <div>
+                                    <h2 class="ink-setup-section-title" id="ink-sec-writing">Writing</h2>
+                                    <p class="ink-setup-section-blurb">Optional context for readers.</p>
                                 </div>
                             </div>
 
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-save"></i> Save Profile & Continue
-                                </button>
+                            <div class="mb-0">
+                                <label for="writingExperience" class="form-label">Writing experience <span class="text-white-50 fw-normal">(optional)</span></label>
+                                <textarea class="form-control" id="writingExperience" name="writing_experience" rows="3" placeholder="Background, awards, themes you love…">{{ book_user.writing_experience if book_user and book_user.writing_experience else '' }}</textarea>
                             </div>
-                        </form>
-                    </div>
+                        </section>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-lg ink-setup-cta" id="inkSetupSubmit">
+                                <span class="ink-setup-spinner" aria-hidden="true"></span>
+                                <span class="ink-setup-cta-label"><i class="fas fa-check me-2" aria-hidden="true"></i>Save &amp; continue to Ink Studio</span>
+                            </button>
+                            <p class="text-center small text-white-50 mb-0">You can change this profile anytime from your dashboard.</p>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        document.getElementById('profileSetupForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+(function () {
+    var form = document.getElementById('profileSetupForm');
+    var penInput = document.getElementById('penName');
+    var bio = document.getElementById('bio');
+    var website = document.getElementById('website');
+    var writingExp = document.getElementById('writingExperience');
+    var picInput = document.getElementById('profilePicture');
+    var previewNameEl = document.getElementById('inkSetupPreviewName');
+    var avatarImg = document.getElementById('inkSetupAvatarImg');
+    var avatarPh = document.getElementById('inkSetupAvatarPh');
+    var meterFill = document.getElementById('inkSetupMeterFill');
+    var meterPct = document.getElementById('inkSetupMeterPct');
+    var bioCount = document.getElementById('inkBioCount');
+    var alertEl = document.getElementById('inkSetupAlert');
+    var submitBtn = document.getElementById('inkSetupSubmit');
+    var defaultName = {{ (preview_name | tojson) }};
 
-            const fd = new FormData();
-            fd.append('pen_name', document.getElementById('penName').value || '');
-            fd.append('bio', document.getElementById('bio').value || '');
-            fd.append('website', document.getElementById('website').value || '');
-            fd.append('writing_experience', document.getElementById('writingExperience').value || '');
-            function socialField(name) {
-                var el = document.querySelector('input[name="' + name + '"]');
-                return el ? el.value : '';
+    function showAlert(msg) {
+        alertEl.textContent = msg || '';
+        alertEl.classList.toggle('ink-setup-alert--show', !!msg);
+        if (msg) alertEl.focus();
+    }
+
+    function socialField(name) {
+        var el = document.querySelector('input[name="' + name + '"]');
+        return el ? el.value : '';
+    }
+
+    function filled(v) {
+        return !!(v && String(v).trim());
+    }
+
+    function updatePreviewName() {
+        var v = (penInput.value || '').trim();
+        previewNameEl.textContent = v || defaultName;
+    }
+
+    function updateBioCount() {
+        bioCount.textContent = String((bio.value || '').length);
+    }
+
+    function updateMeter() {
+        var hasPhoto = {% if avatar_src %}true{% else %}false{% endif %} || (picInput && picInput.files && picInput.files[0]);
+        var slots = [
+            filled(penInput.value),
+            hasPhoto,
+            filled(bio.value),
+            filled(website.value),
+            filled(socialField('twitter')) || filled(socialField('instagram')) || filled(socialField('facebook')) || filled(socialField('linkedin')),
+            filled(writingExp.value)
+        ];
+        var n = slots.filter(Boolean).length;
+        var pct = Math.round((n / slots.length) * 100);
+        meterFill.style.width = pct + '%';
+        meterPct.textContent = pct + '%';
+    }
+
+    penInput.addEventListener('input', function () { updatePreviewName(); updateMeter(); });
+    bio.addEventListener('input', function () { updateBioCount(); updateMeter(); });
+    website.addEventListener('input', updateMeter);
+    writingExp.addEventListener('input', updateMeter);
+    ['twitter', 'instagram', 'facebook', 'linkedin'].forEach(function (name) {
+        var el = document.querySelector('input[name="' + name + '"]');
+        if (el) el.addEventListener('input', updateMeter);
+    });
+    if (picInput) {
+        picInput.addEventListener('change', function () {
+            var f = picInput.files && picInput.files[0];
+            if (!f || !avatarImg) {
+                updateMeter();
+                return;
             }
-            fd.append('social_links', JSON.stringify({
-                twitter: socialField('twitter'),
-                instagram: socialField('instagram'),
-                facebook: socialField('facebook'),
-                linkedin: socialField('linkedin')
-            }));
-            fd.append('genres', JSON.stringify(
-                Array.from(document.querySelectorAll('input[name="genres"]:checked')).map(function (cb) { return cb.value; })
-            ));
-            var picInput = document.getElementById('profilePicture');
-            if (picInput && picInput.files && picInput.files[0]) {
-                fd.append('profile_picture', picInput.files[0]);
-            }
-
-            try {
-                const response = await fetch('{{ url_for("book_platform.setup_profile") }}', {
-                    method: 'POST',
-                    body: fd
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    window.location.href = result.redirect;
-                } else {
-                    alert(result.error || 'Could not save profile. Check your website URL and image type, then try again.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error setting up profile. Please try again.');
-            }
+            var url = URL.createObjectURL(f);
+            avatarImg.onload = function () { URL.revokeObjectURL(url); };
+            avatarImg.src = url;
+            avatarImg.classList.remove('d-none');
+            if (avatarPh) avatarPh.classList.add('d-none');
+            avatarImg.alt = 'Profile preview';
+            updateMeter();
         });
+    }
+
+    updatePreviewName();
+    updateBioCount();
+    updateMeter();
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        showAlert('');
+        submitBtn.disabled = true;
+        submitBtn.classList.add('is-loading');
+
+        var fd = new FormData();
+        fd.append('pen_name', penInput.value || '');
+        fd.append('bio', bio.value || '');
+        fd.append('website', website.value || '');
+        fd.append('writing_experience', writingExp.value || '');
+        fd.append('social_links', JSON.stringify({
+            twitter: socialField('twitter'),
+            instagram: socialField('instagram'),
+            facebook: socialField('facebook'),
+            linkedin: socialField('linkedin')
+        }));
+        var nextEl = document.getElementById('setupNextUrl');
+        fd.append('next', nextEl && nextEl.value ? nextEl.value : '');
+        if (picInput && picInput.files && picInput.files[0]) {
+            fd.append('profile_picture', picInput.files[0]);
+        }
+
+        try {
+            var response = await fetch('{{ url_for("book_platform.setup_profile") }}', {
+                method: 'POST',
+                body: fd
+            });
+            var result = await response.json();
+            if (result.success) {
+                window.location.href = result.redirect;
+                return;
+            }
+            showAlert(result.error || 'Could not save. Check your website URL and image type, then try again.');
+        } catch (err) {
+            console.error(err);
+            showAlert('Something went wrong. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('is-loading');
+        }
+    });
+})();
     </script>
 </body>
 </html>

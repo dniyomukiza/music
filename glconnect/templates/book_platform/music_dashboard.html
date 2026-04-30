@@ -3,185 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Ink Studio music dashboard — search, queue, and voice DJ.">
     <title>Music Dashboard | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
-    <style>
-        :root {
-          --bg-dark: #060807;
-          --bg-panel: rgba(17, 24, 39, 0.6);
-          --text-main: #e8ece9;
-          --text-muted: #9aa8a0;
-          --accent-primary: #c9a227;
-          --accent-secondary: #e0bc3a;
-          --border-light: rgba(42, 61, 50, 0.45);
-          --glass-bg: rgba(6, 8, 7, 0.82);
-          --gradient-accent: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        }
-
-        body {
-            font-family: 'DM Sans', system-ui, sans-serif;
-            background: radial-gradient(circle at top right, #1a221c, #060807 70%);
-            background-attachment: fixed;
-            color: var(--text-main);
-            min-height: 100vh;
-        }
-
-        h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif; color: #e8ece9; }
-
-        .navbar {
-            background: var(--glass-bg) !important;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 0;
-        }
-        .navbar-brand {
-            font-family: 'Syne', sans-serif;
-            font-weight: 600;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .nav-link { color: var(--text-muted) !important; transition: 0.3s; font-weight: 500; }
-        .nav-link:hover { color: #fff !important; }
-        
-        /* Cards */
-        .music-card {
-            background: var(--bg-panel) !important;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border-light) !important;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            overflow: visible !important;
-        }
-        
-        .card-header {
-            background: transparent !important;
-            border-bottom: 1px solid var(--border-light);
-            padding: 1.5rem;
-            color: #fff !important;
-        }
-        .card-header.bg-warning, .card-header.bg-success, .card-header.bg-info, .card-header.bg-primary, .card-header.bg-dark {
-            background: rgba(255,255,255,0.02) !important; 
-        }
-        .card-body {
-            overflow: visible !important;
-            padding: 1.5rem;
-            color: var(--text-main);
-        }
-
-        /* Song Audio & Titles */
-        .song-audio { width: 100%; max-width: 400px; height: 40px; border-radius: 20px; }
-        .song-title { color: #fff !important; font-family: 'Syne', sans-serif; letter-spacing: 0.5px; }
-
-        /* Form Controls */
-        .form-control, .input-group .form-control {
-            background: rgba(15, 23, 42, 0.8) !important;
-            border: 1px solid var(--border-light) !important;
-            color: #fff !important;
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
-        }
-        .form-control::placeholder { color: rgba(255,255,255,0.3); }
-        .form-control:focus { box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25) !important; border-color: var(--accent-primary) !important; }
-
-        /* Buttons */
-        .btn-primary, .btn-success {
-            background: var(--gradient-accent) !important;
-            border: none; border-radius: 50px; font-weight: 500; font-family: 'Syne', sans-serif;
-            transition: all 0.3s;
-        }
-        .btn-primary:hover, .btn-success:hover {
-            transform: translateY(-2px); box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
-        }
-        .btn-outline-light {
-            border-color: rgba(255,255,255,0.2) !important; border-radius: 50px;
-        }
-        .btn-outline-light:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; }
-
-        .btn-outline-danger {
-            border-color: rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 50px;
-        }
-        .btn-outline-danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-        /* Autocomplete */
-        .autocomplete-container { position: relative; }
-        .autocomplete-suggestions {
-            position: fixed !important;
-            background: var(--bg-panel) !important;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-light) !important;
-            border-radius: 16px !important;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.5) !important;
-            max-height: 400px; overflow-y: auto; z-index: 999999 !important;
-            display: none !important; visibility: hidden;
-            color: #fff !important;
-        }
-        .autocomplete-suggestions.show { display: block !important; visibility: visible !important; }
-        .suggestion-item {
-            padding: 12px 20px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);
-            display: flex; align-items: center; transition: 0.2s;
-        }
-        .suggestion-item:hover, .suggestion-item[style*="background-color"] {
-            background-color: rgba(255,255,255,0.05) !important;
-        }
-        .suggestion-item:last-child { border-bottom: none; }
-        .suggestion-name { font-weight: 600; color: #fff; }
-        .suggestion-artist { color: var(--text-muted); font-size: 0.85em; }
-        .suggestion-icon { color: var(--accent-primary); margin-right: 15px; font-size: 1.25em; }
-
-        /* Playlist container adjustments */
-        #playlistContainer .card { background: rgba(255,255,255,0.02) !important; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; }
-        .playlist-badge { background: rgba(14, 165, 233, 0.1); color: var(--accent-primary); padding: 5px 15px; border-radius: 50px; font-weight: 600; font-size: 0.85rem;}
-
-        /* Transcript Modal overwrites to match dark mode */
-        .modal-content { background: var(--bg-dark); border: 1px solid var(--border-light); border-radius: 20px; color: #fff; }
-        .modal-header { background: var(--glass-bg) !important; border-bottom: 1px solid var(--border-light); border-radius: 20px 20px 0 0; }
-        .modal-footer { background: var(--glass-bg); border-top: 1px solid var(--border-light); border-radius: 0 0 20px 20px; }
-        .modal-header .text-dark, .modal-header .text-white { color: #fff !important; }
-        .text-dark { color: #fff !important; }
-        .alert-warning { background: rgba(245, 158, 11, 0.1); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.2); }
-        .alert-info { background: rgba(14, 165, 233, 0.1); color: #7dd3fc; border: 1px solid rgba(14, 165, 233, 0.2); }
-        .alert-success { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.2); }
-    </style>
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
 </head>
-<body>
+<body class="ink-dashboard ink-music-dashboard">
+    <div class="ink-dash-page-bg" aria-hidden="true"></div>
+    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#ink-music-main">Skip to player</a>
     {% include 'messages.html' %}
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-dashboard-nav ink-dash-topnav border-bottom border-white border-opacity-10" aria-label="Ink Studio Music">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') if current_user.is_authenticated else url_for('routes.index') }}">
-                <i class="fas fa-layer-group me-2"></i> Ink Studio 
+            <a class="navbar-brand ink-mp-nav-brand" href="{{ url_for('book_platform.dashboard') if current_user.is_authenticated else url_for('routes.index') }}">
+                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('routes.index') }}">
-                            <i class="fas fa-arrow-left me-1"></i>{{ 'Back to Content' if current_user.is_authenticated else 'Home' }}
-                        </a>
+                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('book_platform.music_dashboard') }}" aria-current="page"><i class="fas fa-compact-disc me-1" aria-hidden="true"></i>Music</a>
+                    </li>
+                    {% if not current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('routes.index') }}"><i class="fas fa-arrow-left me-1" aria-hidden="true"></i>Home</a>
+                    </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i> {{ current_user.username if current_user.is_authenticated else 'Guest' }}
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMusic" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1" aria-hidden="true"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" style="background: var(--bg-panel); border: 1px solid var(--border-light); backdrop-filter: blur(10px);">
+                        <ul class="dropdown-menu dropdown-menu-end">
                             {% if current_user.is_authenticated %}
-                            <li><a class="dropdown-item text-light" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
-                            <li><hr class="dropdown-divider" style="border-color: var(--border-light);"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign Out</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign out</a></li>
                             {% else %}
-                            <li><a class="dropdown-item text-light" href="{{ url_for('routes1.login') }}">Login</a></li>
-                            <li><a class="dropdown-item text-light" href="{{ url_for('routes1.register') }}">Register</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('routes1.login') }}">Login</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('routes1.register') }}">Register</a></li>
                             {% endif %}
                         </ul>
                     </li>
@@ -190,42 +70,49 @@
         </div>
     </nav>
 
-    <div class="container py-5">
-        <div class="row mb-5 text-center">
-            <div class="col-12">
-                <h1 class="page-title fw-bold display-5 mb-3" style="background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                    Artist Dashboard
-                </h1>
-                <p class="text-muted" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Stream infinite high-fidelity tracks, manage your dynamic queue, or command our intelligent Voice Agent.</p>
+    <main id="ink-music-main" class="pb-5" tabindex="-1">
+    <div class="container py-4 py-md-5 px-3 px-md-4">
+        <header class="ink-music-hero mb-4 mb-lg-5">
+            <p class="ink-music-eyebrow mb-0">Ink Studio · Music</p>
+            <h1 class="ink-music-title">Artist dashboard</h1>
+            <p class="ink-music-lead">Search the catalog, build your queue, and use the voice agent to DJ hands-free—optimized for focus and flow.</p>
+            <div class="ink-music-pills" role="list">
+                <span class="ink-music-pill" role="listitem"><i class="fas fa-wave-square me-1" aria-hidden="true"></i>High-fidelity stream</span>
+                <span class="ink-music-pill" role="listitem"><i class="fas fa-list-ol me-1" aria-hidden="true"></i>Smart queue</span>
+                <span class="ink-music-pill" role="listitem"><i class="fas fa-microphone-alt me-1" aria-hidden="true"></i>Voice DJ</span>
             </div>
-        </div>
+        </header>
 
         {% if not has_artist_profile %}
-        <div class="row mb-5">
+        <div class="row mb-4 mb-lg-5">
             <div class="col-12">
                 {% if is_artist_account %}
-                <div class="card music-card">
-                    <div class="card-header d-flex align-items-center">
-                        <i class="fas fa-star text-warning me-3 fa-2x"></i>
-                        <h5 class="mb-0">Claim Your Stage</h5>
+                <div class="card music-card ink-music-panel">
+                    <div class="card-header d-flex align-items-center gap-3 flex-wrap border-0 pb-0">
+                        <div class="ink-music-status-icon" aria-hidden="true"><i class="fas fa-star"></i></div>
+                        <div>
+                            <h2 class="h5 mb-1">Claim your stage</h2>
+                            <p class="text-muted small mb-0">Create your artist profile to upload tracks and reach listeners.</p>
+                        </div>
                     </div>
-                    <div class="card-body pt-0">
-                        <p class="text-muted mb-4">Complete your artist profile to upload music and distribute your masters globally.</p>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createArtistModal">
-                            <i class="fas fa-user-plus me-2"></i>Setup Artist Profile
+                    <div class="card-body pt-3">
+                        <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createArtistModal">
+                            <i class="fas fa-user-plus me-2" aria-hidden="true"></i>Set up artist profile
                         </button>
                     </div>
                 </div>
                 {% else %}
-                <div class="card music-card">
-                    <div class="card-header d-flex align-items-center">
-                        <i class="fas fa-lock text-info me-3 fa-2x"></i>
-                        <h5 class="mb-0">Upload Access Locked</h5>
+                <div class="card music-card ink-music-panel">
+                    <div class="card-header d-flex align-items-center gap-3 flex-wrap border-0 pb-0">
+                        <div class="ink-music-status-icon" aria-hidden="true"><i class="fas fa-lock"></i></div>
+                        <div>
+                            <h2 class="h5 mb-1">Upload access locked</h2>
+                            <p class="text-muted small mb-0">Listener accounts can browse and queue music. Register as an artist to distribute your own tracks.</p>
+                        </div>
                     </div>
-                    <div class="card-body pt-0">
-                        <p class="text-muted mb-4">You are currently on a listener account. Please register an artist account to distribute your music.</p>
-                        <a href="{{ url_for('routes1.register') }}" class="btn btn-outline-light">
-                            Switch to Artist
+                    <div class="card-body pt-3">
+                        <a href="{{ url_for('routes1.register') }}" class="btn btn-outline-light rounded-pill px-4">
+                            Switch to artist
                         </a>
                     </div>
                 </div>
@@ -233,21 +120,21 @@
             </div>
         </div>
         {% else %}
-        <div class="row mb-5">
+        <div class="row mb-4 mb-lg-5">
             <div class="col-12">
-                <div class="card music-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div d-flex align-items-center>
-                            <span class="badge bg-success me-2 px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i> Verified</span>
-                            <h5 class="mb-0 d-inline-block">{{ artist_profile.artist_name }}</h5>
+                <div class="card music-card ink-music-panel">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3 border-0 pb-0">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(45, 106, 79, 0.35); color: #b8e0ce; border: 1px solid rgba(45, 106, 79, 0.5);"><i class="fas fa-check-circle me-1" aria-hidden="true"></i> Verified</span>
+                            <h2 class="h5 mb-0">{{ artist_profile.artist_name }}</h2>
                         </div>
-                        <div>
-                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-outline-light me-2 rounded-pill px-3">
-                                View Profile
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                                View profile
                             </a>
                             {% if is_artist_account %}
-                            <button class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
-                                <i class="fas fa-upload me-1"></i>Release Track
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
+                                <i class="fas fa-upload me-1" aria-hidden="true"></i>Release track
                             </button>
                             {% endif %}
                         </div>
@@ -257,83 +144,81 @@
         </div>
         {% endif %}
 
-        <div class="row mb-5" id="searchCardRow">
+        <div class="row mb-4 mb-lg-5" id="searchCardRow">
             <div class="col-12">
                 <div class="card music-card" id="searchMusicCard">
-                    <div class="card-header d-flex justify-content-between align-items-center border-bottom border-light">
-                        <h5 class="mb-0"><i class="fas fa-search me-2 text-info"></i>Discover</h5>
-                        <span class="playlist-badge"><i class="fas fa-headphones me-1"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h2 class="h5 mb-0"><i class="fas fa-search me-2" style="color: var(--primary-color);" aria-hidden="true"></i>Discover</h2>
+                        <span class="playlist-badge rounded-pill"><i class="fas fa-headphones me-1" aria-hidden="true"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
                     </div>
                     <div class="card-body p-4" style="overflow: visible !important; position: relative;">
                         <div class="row g-3 align-items-center" style="overflow: visible !important;">
                             <div class="col-lg-10" style="position: relative; overflow: visible !important;">
                                 <div class="autocomplete-container" style="position: relative; z-index: 1;">
+                                    <label for="musicSearchInput" class="visually-hidden">Search artists or tracks</label>
                                     <div class="input-group input-group-lg">
-                                        <span class="input-group-text bg-transparent border-end-0 border-light text-muted" style="border-radius: 12px 0 0 12px;"><i class="fas fa-search"></i></span>
-                                        <input type="text" id="musicSearchInput" class="form-control border-start-0 ps-0" style="border-radius: 0 12px 12px 0;" placeholder="Search for artists or tracks..." autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
-                                        <button class="btn btn-primary px-4 ms-2 rounded-pill" onclick="searchMusic()">Search</button>
+                                        <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fas fa-search" aria-hidden="true"></i></span>
+                                        <input type="text" id="musicSearchInput" class="form-control border-start-0 ps-0" placeholder="Search artists or tracks…" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                                        <button type="button" class="btn btn-primary px-4 ms-2 rounded-pill" onclick="searchMusic()">Search</button>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-lg-2 text-lg-end">
-                                <button class="btn btn-outline-light btn-lg w-100 rounded-pill" onclick="loadPlaylist()">
-                                    <i class="fas fa-sync me-1"></i>Sync Queue
+                                <button type="button" class="btn btn-outline-light btn-lg w-100 rounded-pill" onclick="loadPlaylist()">
+                                    <i class="fas fa-sync me-1" aria-hidden="true"></i>Sync queue
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- AI Co-Pilot / Voice Agent -->
-                        <div class="d-flex align-items-center justify-content-between flex-wrap p-3 mt-4" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div class="d-flex align-items-center gap-3">
-                                <div><button class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 border-0" style="background: rgba(14, 165, 233, 0.1);" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Click to speak">
-                                    <i class="fas fa-microphone-alt me-2"></i>Virtual DJ
-                                </button></div>
-                                <div><button type="button" class="btn btn-link text-muted text-decoration-none btn-sm" onclick="showVoiceTranscript()">
-                                    <i class="fas fa-stream me-1"></i>Log
-                                </button></div>
+
+                        <div class="ink-music-voice-strip">
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Speak to control playback">
+                                    <i class="fas fa-microphone-alt me-2" aria-hidden="true"></i>Virtual DJ
+                                </button>
+                                <button type="button" class="btn btn-link text-muted text-decoration-none btn-sm p-0" onclick="showVoiceTranscript()">
+                                    <i class="fas fa-stream me-1" aria-hidden="true"></i>Conversation log
+                                </button>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-volume-down text-muted small"></i>
-                                <input type="range" id="voiceVolumeSlider" class="form-range custom-range" min="0.01" max="1" step="0.01" value="0.15" style="width: 100px;">
-                                <span id="voiceVolumeLabel" class="text-muted small" style="min-width: 35px;">15%</span>
+                                <i class="fas fa-volume-down text-muted small" aria-hidden="true"></i>
+                                <input type="range" id="voiceVolumeSlider" class="form-range custom-range" min="0.01" max="1" step="0.01" value="0.15" style="width: 100px;" aria-label="Voice assistant volume">
+                                <span id="voiceVolumeLabel" class="text-muted small" style="min-width: 2.25rem;">15%</span>
                             </div>
                         </div>
                         <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
-                        <div id="voiceAgentResponse" class="mt-2 text-center text-info small" style="min-height: 20px;"></div>
+                        <div id="voiceAgentResponse" class="mt-2 text-center small text-white-50" style="min-height: 1.25rem;"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="autocompleteSuggestions" class="autocomplete-suggestions"></div>
+        <div id="autocompleteSuggestions" class="autocomplete-suggestions" role="listbox" aria-label="Search suggestions"></div>
 
-        <div class="row g-5">
-            <!-- Search Results -->
-            <div class="col-lg-7">
-                <h4 class="mb-4 text-white" style="font-family: 'Syne'; border-bottom: 2px solid var(--border-light); padding-bottom: 1rem;">Browsing</h4>
+        <div class="row g-4 g-lg-5">
+            <div class="col-lg-7" id="inkMusicResultsCol">
+                <h2 class="ink-music-section-title"><span class="ink-music-section-icon" aria-hidden="true"><i class="fas fa-compact-disc"></i></span>Browsing</h2>
                 <div class="card music-card bg-transparent border-0 shadow-none">
                     <div class="card-body p-0">
                         <div id="searchResultsContainer" class="row g-3">
-                            <div class="col-12 text-center py-5">
-                                <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-panel); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; border: 1px solid var(--border-light);">
+                            <div class="col-12 ink-music-empty">
+                                <div class="ink-music-empty-visual" aria-hidden="true">
                                     <i class="fas fa-headphones-alt fa-2x text-muted"></i>
                                 </div>
-                                <h6 class="text-light">Start Exploring</h6>
-                                <p class="text-muted small">Type an artist name to bring up their discography</p>
+                                <h3 class="h6 text-light mb-2">Start exploring</h3>
+                                <p class="text-muted small mb-0">Type an artist or song to load results here.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Playlist -->
             <div class="col-lg-5">
-                 <h4 class="mb-4 text-white" style="font-family: 'Syne'; border-bottom: 2px solid var(--border-light); padding-bottom: 1rem;">Up Next Queue</h4>
+                <h2 class="ink-music-section-title"><span class="ink-music-section-icon" aria-hidden="true"><i class="fas fa-forward"></i></span>Up next</h2>
                 <div class="card music-card h-100">
                     <div class="card-body" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
                         <div id="playlistContainer" class="playlist-container">
                             <div class="text-center py-5">
-                                <i class="fas fa-spinner fa-spin text-muted me-2"></i>Loading queue...
+                                <i class="fas fa-spinner fa-spin text-muted me-2" aria-hidden="true"></i><span class="text-muted">Loading queue…</span>
                             </div>
                         </div>
                     </div>
@@ -341,6 +226,7 @@
             </div>
         </div>
     </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -451,7 +337,7 @@
         // Position suggestions container - extracted to reusable function
         function positionSuggestionsContainer(suggestionsContainer, input) {
             const searchCard = document.getElementById('searchMusicCard');
-            const searchResultsContainer = document.querySelector('.row.g-4 .col-lg-7');
+            const searchResultsContainer = document.getElementById('inkMusicResultsCol');
             
             if (searchCard && searchResultsContainer) {
                 const cardRect = searchCard.getBoundingClientRect();
@@ -1615,8 +1501,8 @@
     <div class="modal fade" id="voiceTranscriptModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i>Conversation Transcript</h5>
+                <div class="modal-header ink-music-modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-file-alt me-2" aria-hidden="true"></i>Conversation transcript</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="voiceTranscriptModalBody" style="max-height: 70vh; overflow-y: auto;">
@@ -1630,9 +1516,9 @@
     <div class="modal fade" id="createArtistModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Artist Profile</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header ink-music-modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2" aria-hidden="true"></i>Create artist profile</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1654,8 +1540,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" onclick="createArtistProfile()">
-                        <i class="fas fa-check me-1"></i>Create Profile
+                    <button type="button" class="btn btn-primary" onclick="createArtistProfile()">
+                        <i class="fas fa-check me-1" aria-hidden="true"></i>Create profile
                     </button>
                 </div>
             </div>
@@ -1666,8 +1552,8 @@
     <div class="modal fade" id="uploadSongModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Upload Song</h5>
+                <div class="modal-header ink-music-modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-upload me-2" aria-hidden="true"></i>Upload song</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -1709,8 +1595,8 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-success" id="uploadSongBtn" onclick="uploadSong()">
-                        <i class="fas fa-upload me-1"></i>Upload Song
+                    <button type="button" class="btn btn-primary" id="uploadSongBtn" onclick="uploadSong()">
+                        <i class="fas fa-upload me-1" aria-hidden="true"></i>Upload song
                     </button>
                 </div>
             </div>

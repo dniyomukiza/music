@@ -676,6 +676,8 @@ def create_app(config_overrides=None):
         from .db_schema_patches import (
             ensure_investment_campaign_milestone_schema,
             ensure_digital_book_editions_schema,
+            ensure_author_card_setup_schema,
+            ensure_book_platform_user_genres_removed,
             ensure_book_platform_stripe_connect_schema,
             ensure_book_purchases_schema,
             ensure_library_book_hides_schema,
@@ -686,6 +688,8 @@ def create_app(config_overrides=None):
         )
         ensure_investment_campaign_milestone_schema(db)
         ensure_digital_book_editions_schema(db)
+        ensure_author_card_setup_schema(db)
+        ensure_book_platform_user_genres_removed(db)
         ensure_book_platform_stripe_connect_schema(db)
         ensure_audiobook_segment_plan_schema(db)
         ensure_book_purchases_schema(db)

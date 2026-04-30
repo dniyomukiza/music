@@ -38,7 +38,6 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    from google import genai
     from google.genai import errors as genai_errors
 
     # Load book_cover_ai without importing glconnect package (avoids Flask app init / debug noise).
@@ -52,6 +51,7 @@ def main() -> None:
     _spec.loader.exec_module(_bc)
     iter_book_cover_image_models = _bc.iter_book_cover_image_models
     iter_imagen_cover_models = _bc.iter_imagen_cover_models
+    make_cover_genai_client = _bc.make_cover_genai_client
 
     api_key = _bc.cover_image_api_key()
     if not api_key:
@@ -61,7 +61,7 @@ def main() -> None:
         )
         sys.exit(1)
 
-    client = genai.Client(api_key=api_key)
+    client = make_cover_genai_client(api_key)
 
     print("models.get() — checks project can see each model (no image generation):\n")
 

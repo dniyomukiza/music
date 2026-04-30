@@ -137,9 +137,16 @@ def process_env_has_stripe_secret() -> bool:
     return False
 
 
-def describe_stripe_checkout_error(exc: BaseException) -> Dict[str, Any]:
+def describe_stripe_checkout_error(
+    exc: BaseException,
+    *,
+    stripe_connect_account_id: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Non-secret details for API responses and logs when Session.create or Stripe calls fail.
+
+    When marketplace checkout uses Connect (direct charge), Stripe often enforces business
+    profile on the **connected account**, not only the platform.
     """
     d: Dict[str, Any] = {"exception": type(exc).__name__}
     try:
@@ -165,22 +172,37 @@ def describe_stripe_checkout_error(exc: BaseException) -> Dict[str, Any]:
         d["message"] = str(exc)[:600]
 
     msg = (d.get("message") or "").lower()
-    # Stripe blocks Checkout until the platform (and sometimes Connect accounts) have a display/business name.
+    # Stripe blocks Checkout until the account that hosts the session has a display/business name.
     if "account or business name" in msg or (
         "checkout" in msg and "business name" in msg and "dashboard.stripe.com" in msg
     ):
-        d["hint"] = (
-            "Open https://dashboard.stripe.com/settings/account (Settings → Business / Account details) "
-            "and set your business or account name; complete any onboarding prompts. "
-            "If this purchase uses Stripe Connect (paying an author), the connected seller account may also need "
-            "its profile completed in the Connect Dashboard."
-        )
+        acct = (stripe_connect_account_id or "").strip()
+        if acct:
+            d["checkout_on"] = "connected_account"
+            d["hint"] = (
+                "Checkout runs on the author's Stripe Connect account. A public business name is usually "
+                "collected in Stripe Express onboarding (Ink Studio → Payout account → continue to Stripe). "
+                "If the author skipped steps or closed onboarding early, the account can still be incomplete—"
+                "they should complete payout setup again, or you open Dashboard → Connect → Accounts → that "
+                "seller → Business settings. https://dashboard.stripe.com/connect/accounts"
+            )
+        else:
+            d["checkout_on"] = "platform"
+            d["hint"] = (
+                "Open https://dashboard.stripe.com/settings/account (Settings → Business / Account details) "
+                "and set your platform business or account name; complete any onboarding prompts."
+            )
         d["operator_error_code"] = "STRIPE_BUSINESS_NAME_REQUIRED"
 
     return d
 
 
-def purchase_checkout_unavailable_response(app, exc: Optional[BaseException] = None):
+def purchase_checkout_unavailable_response(
+    app,
+    exc: Optional[BaseException] = None,
+    *,
+    stripe_connect_account_id: Optional[str] = None,
+):
     """
     503 JSON when Stripe Checkout URL could not be created.
     Distinguishes missing/invalid key vs real Stripe API errors.
@@ -203,8 +225,19 @@ def purchase_checkout_unavailable_response(app, exc: Optional[BaseException] = N
             503,
         )
     if exc is not None:
-        logger.exception("Stripe Checkout Session.create failed: %s", exc)
-        details = describe_stripe_checkout_error(exc)
+        acct = (stripe_connect_account_id or "").strip()
+        if acct:
+            logger.error(
+                "Stripe Checkout Session.create failed (stripe_account=%s): %s",
+                acct,
+                exc,
+                exc_info=True,
+            )
+        else:
+            logger.exception("Stripe Checkout Session.create failed (platform charge): %s", exc)
+        details = describe_stripe_checkout_error(
+            exc, stripe_connect_account_id=stripe_connect_account_id
+        )
         payload = {
             "success": False,
             "error": "Stripe did not create a checkout session. See 'details' and server logs.",

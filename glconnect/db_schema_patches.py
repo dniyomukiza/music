@@ -143,6 +143,102 @@ CREATE TABLE digital_book_editions (
         logger.error("Could not create digital_book_editions: %s", e, exc_info=True)
 
 
+def ensure_author_card_setup_schema(db) -> None:
+    """Add author_card_setup_completed to book_platform_users; backfill for existing authors with books."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("author_card_setup patch: dialect check failed: %s", e)
+        return
+
+    col = "author_card_setup_completed"
+
+    try:
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_platform_users ADD COLUMN IF NOT EXISTS "
+                    "author_card_setup_completed BOOLEAN NOT NULL DEFAULT false"
+                )
+            )
+            db.session.execute(
+                text(
+                    "UPDATE book_platform_users SET author_card_setup_completed = true "
+                    "WHERE id IN (SELECT DISTINCT author_id FROM book_projects)"
+                )
+            )
+            db.session.commit()
+            logger.info("book_platform_users.%s ready (PostgreSQL).", col)
+            return
+
+        if dialect == "sqlite":
+            rows = db.session.execute(text("PRAGMA table_info(book_platform_users)")).fetchall()
+            db.session.rollback()
+            names = {r[1] for r in rows}
+            if col not in names:
+                db.session.execute(
+                    text(
+                        "ALTER TABLE book_platform_users ADD COLUMN author_card_setup_completed "
+                        "BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                )
+                db.session.commit()
+                logger.info("book_platform_users.%s column added (SQLite).", col)
+            db.session.execute(
+                text(
+                    "UPDATE book_platform_users SET author_card_setup_completed = 1 "
+                    "WHERE id IN (SELECT DISTINCT author_id FROM book_projects)"
+                )
+            )
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(
+            "Could not patch book_platform_users for author card setup: %s",
+            e,
+            exc_info=True,
+        )
+
+
+def ensure_book_platform_user_genres_removed(db) -> None:
+    """Remove deprecated preferred-genres JSON column from author profiles."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("drop book_platform_users.genres: dialect check failed: %s", e)
+        return
+
+    try:
+        if dialect == "postgresql":
+            db.session.execute(
+                text("ALTER TABLE book_platform_users DROP COLUMN IF EXISTS genres")
+            )
+            db.session.commit()
+            logger.info("book_platform_users.genres dropped if present (PostgreSQL).")
+            return
+
+        if dialect == "sqlite":
+            rows = db.session.execute(text("PRAGMA table_info(book_platform_users)")).fetchall()
+            db.session.rollback()
+            names = {r[1] for r in rows}
+            if "genres" not in names:
+                return
+            db.session.execute(text("ALTER TABLE book_platform_users DROP COLUMN genres"))
+            db.session.commit()
+            logger.info("book_platform_users.genres dropped (SQLite).")
+    except Exception as e:
+        db.session.rollback()
+        logger.warning(
+            "Could not drop book_platform_users.genres: %s",
+            e,
+            exc_info=True,
+        )
+
+
 def ensure_book_platform_stripe_connect_schema(db) -> None:
     """Add stripe_connect_account_id to book_platform_users if missing."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":

@@ -1893,7 +1893,10 @@ body.ink-content-hub .ink-skip-link:focus,
 body.ink-invest .ink-skip-link:focus,
 body.ink-earnings .ink-skip-link:focus,
 body.ink-books-ui .ink-skip-link:focus,
-body.ink-upload-book .ink-skip-link:focus {
+body.ink-upload-book .ink-skip-link:focus,
+body.ink-setup-profile .ink-skip-link:focus,
+body.ink-music-dashboard .ink-skip-link:focus,
+body.ink-edit-book-listing .ink-skip-link:focus {
     position: fixed !important;
     z-index: 1080;
     clip: auto !important;
@@ -1933,7 +1936,9 @@ body.ink-content-hub .ink-mp-nav-toggler,
 body.ink-invest .ink-mp-nav-toggler,
 body.ink-earnings .ink-mp-nav-toggler,
 body.ink-books-ui .ink-mp-nav-toggler,
-body.ink-upload-book .ink-mp-nav-toggler {
+body.ink-upload-book .ink-mp-nav-toggler,
+body.ink-setup-profile .ink-mp-nav-toggler,
+body.ink-music-dashboard .ink-mp-nav-toggler {
     border-color: rgba(255, 255, 255, 0.28) !important;
     padding: 0.45rem 0.65rem;
 }
@@ -2212,7 +2217,9 @@ body.ink-dashboard .ink-mp-sticky-nav,
 body.ink-invest .ink-mp-sticky-nav,
 body.ink-earnings .ink-mp-sticky-nav,
 body.ink-books-ui .ink-mp-sticky-nav,
-body.ink-upload-book .ink-mp-sticky-nav {
+body.ink-upload-book .ink-mp-sticky-nav,
+body.ink-setup-profile .ink-mp-sticky-nav,
+body.ink-music-dashboard .ink-mp-sticky-nav {
     position: sticky;
     top: 0;
     z-index: 1030;
@@ -2230,7 +2237,9 @@ body.ink-marketplace .ink-marketplace-nav.ink-mp-sticky-nav.ink-mp-topnav {
 }
 
 /* Dashboard (/mybook/): same topbar treatment */
-body.ink-dashboard .ink-dashboard-nav.ink-mp-sticky-nav.ink-dash-topnav {
+body.ink-dashboard .ink-dashboard-nav.ink-mp-sticky-nav.ink-dash-topnav,
+body.ink-setup-profile .ink-dashboard-nav.ink-mp-sticky-nav.ink-dash-topnav,
+body.ink-music-dashboard .ink-dashboard-nav.ink-mp-sticky-nav.ink-dash-topnav {
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     background: rgba(12, 15, 14, 0.78) !important;
@@ -2313,7 +2322,9 @@ body.ink-content-hub .ink-mp-nav-brand,
 body.ink-invest .ink-mp-nav-brand,
 body.ink-earnings .ink-mp-nav-brand,
 body.ink-books-ui .ink-mp-nav-brand,
-body.ink-upload-book .ink-mp-nav-brand {
+body.ink-upload-book .ink-mp-nav-brand,
+body.ink-setup-profile .ink-mp-nav-brand,
+body.ink-music-dashboard .ink-mp-nav-brand {
     font-family: 'Syne', 'DM Sans', sans-serif;
     font-weight: 700;
     font-size: 1.15rem;
@@ -2327,7 +2338,9 @@ body.ink-content-hub .ink-mp-nav-brand:hover,
 body.ink-invest .ink-mp-nav-brand:hover,
 body.ink-earnings .ink-mp-nav-brand:hover,
 body.ink-books-ui .ink-mp-nav-brand:hover,
-body.ink-upload-book .ink-mp-nav-brand:hover {
+body.ink-upload-book .ink-mp-nav-brand:hover,
+body.ink-setup-profile .ink-mp-nav-brand:hover,
+body.ink-music-dashboard .ink-mp-nav-brand:hover {
     color: #f5d76a !important;
 }
 
@@ -4093,5 +4106,715 @@ body.ink-edit-book-listing .edit-book .btn-success {
 body.ink-edit-book-listing .edit-book hr {
     border-color: rgba(42, 61, 50, 0.65);
     opacity: 1;
+}
+
+/* --- Author profile setup (scoped) --- */
+body.ink-setup-profile {
+    min-height: 100vh;
+}
+
+body.ink-setup-profile .ink-setup-hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, #0c0f0e 0%, #1a221c 45%, #0c0f0e 100%);
+    border: 1px solid rgba(201, 162, 39, 0.2);
+    border-radius: var(--border-radius);
+    padding: 1.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+body.ink-setup-profile .ink-setup-hero::after {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -15%;
+    width: 55%;
+    height: 180%;
+    background: radial-gradient(ellipse, rgba(201, 162, 39, 0.12), transparent 70%);
+    pointer-events: none;
+}
+
+body.ink-setup-profile .ink-setup-eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(201, 162, 39, 0.95);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+body.ink-setup-profile .ink-setup-title {
+    font-family: "Syne", "DM Sans", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: #f2f5f3;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    margin-bottom: 0.75rem;
+}
+
+body.ink-setup-profile .ink-setup-lead {
+    color: rgba(232, 236, 233, 0.88);
+    max-width: 40rem;
+    margin-bottom: 0;
+    font-size: 0.95rem;
+}
+
+body.ink-setup-profile .ink-setup-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.ink-setup-profile .ink-setup-trust-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: rgba(232, 236, 233, 0.8);
+}
+
+body.ink-setup-profile .ink-setup-trust-item i {
+    color: var(--primary-color);
+    opacity: 0.95;
+}
+
+body.ink-setup-profile .ink-setup-layout {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+body.ink-setup-profile .ink-setup-side {
+    position: sticky;
+    top: 5.5rem;
+}
+
+body.ink-setup-profile .ink-setup-preview-card {
+    background: rgba(12, 15, 14, 0.95);
+    border: 1px solid rgba(42, 61, 50, 0.55);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    text-align: center;
+}
+
+body.ink-setup-profile .ink-setup-avatar-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1rem;
+}
+
+body.ink-setup-profile .ink-setup-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(201, 162, 39, 0.45);
+    background: rgba(6, 8, 7, 0.9);
+}
+
+body.ink-setup-profile .ink-setup-avatar-ph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: rgba(232, 236, 233, 0.35);
+}
+
+body.ink-setup-profile .ink-setup-preview-name {
+    font-family: "Syne", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #f2f5f3;
+    margin-bottom: 0.25rem;
+}
+
+body.ink-setup-profile .ink-setup-preview-hint {
+    font-size: 0.8rem;
+    color: rgba(232, 236, 233, 0.55);
+}
+
+body.ink-setup-profile .ink-setup-meter-label {
+    font-size: 0.75rem;
+    color: rgba(232, 236, 233, 0.55);
+    margin-bottom: 0.35rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+body.ink-setup-profile .ink-setup-meter-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+body.ink-setup-profile .ink-setup-meter-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #5c7a6e, #c9a227);
+    width: 0%;
+    transition: width 0.35s ease;
+}
+
+body.ink-setup-profile .ink-setup-section {
+    background: rgba(12, 15, 14, 0.92);
+    border: 1px solid rgba(42, 61, 50, 0.5);
+    border-radius: var(--border-radius);
+    padding: 1.35rem 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+body.ink-setup-profile .ink-setup-section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body.ink-setup-profile .ink-setup-section-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201, 162, 39, 0.12);
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+body.ink-setup-profile .ink-setup-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f2f5f3;
+    margin: 0;
+}
+
+body.ink-setup-profile .ink-setup-section-blurb {
+    font-size: 0.8125rem;
+    color: rgba(232, 236, 233, 0.55);
+    margin: 0.2rem 0 0;
+    line-height: 1.45;
+}
+
+body.ink-setup-profile .form-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: rgba(232, 236, 233, 0.92);
+}
+
+body.ink-setup-profile .form-control,
+body.ink-setup-profile .form-select {
+    background: rgba(6, 8, 7, 0.85) !important;
+    border: 1px solid rgba(42, 61, 50, 0.65) !important;
+    color: #e8ece9 !important;
+    border-radius: 10px !important;
+}
+
+body.ink-setup-profile .form-control:focus,
+body.ink-setup-profile .form-select:focus {
+    border-color: rgba(201, 162, 39, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+}
+
+body.ink-setup-profile .form-text {
+    color: rgba(232, 236, 233, 0.5) !important;
+    font-size: 0.8rem;
+}
+
+body.ink-setup-profile .input-group-text {
+    background: rgba(6, 8, 7, 0.9) !important;
+    border-color: rgba(42, 61, 50, 0.65) !important;
+    color: rgba(232, 236, 233, 0.75) !important;
+}
+
+body.ink-setup-profile .ink-setup-drop {
+    border: 2px dashed rgba(201, 162, 39, 0.35);
+    border-radius: 14px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    background: rgba(201, 162, 39, 0.04);
+}
+
+body.ink-setup-profile .ink-setup-drop:hover,
+body.ink-setup-profile .ink-setup-drop:focus-within {
+    border-color: rgba(201, 162, 39, 0.6);
+    background: rgba(201, 162, 39, 0.08);
+}
+
+body.ink-setup-profile .ink-setup-drop strong {
+    color: var(--primary-color);
+}
+
+body.ink-setup-profile .ink-setup-drop input[type="file"] {
+    position: absolute;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+body.ink-setup-profile .ink-setup-alert {
+    border-radius: 12px;
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    background: rgba(201, 162, 39, 0.1);
+    color: rgba(255, 248, 220, 0.98);
+    padding: 0.85rem 1rem;
+    font-size: 0.875rem;
+    display: none;
+}
+
+body.ink-setup-profile .ink-setup-alert.ink-setup-alert--show {
+    display: block;
+}
+
+body.ink-setup-profile .ink-setup-cta {
+    border-radius: 999px !important;
+    font-weight: 700;
+    padding: 0.85rem 1.5rem;
+    background: linear-gradient(145deg, #e0bc3a, #c9a227) !important;
+    border: none !important;
+    color: #060807 !important;
+    box-shadow: 0 4px 20px rgba(201, 162, 39, 0.35);
+}
+
+body.ink-setup-profile .ink-setup-cta:hover:not(:disabled) {
+    filter: brightness(1.05);
+    color: #060807 !important;
+}
+
+body.ink-setup-profile .ink-setup-cta:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+body.ink-setup-profile .ink-setup-cta .ink-setup-spinner {
+    display: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid rgba(6, 8, 7, 0.25);
+    border-top-color: #060807;
+    border-radius: 50%;
+    animation: ink-setup-spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.35rem;
+}
+
+body.ink-setup-profile .ink-setup-cta.is-loading .ink-setup-spinner {
+    display: inline-block;
+}
+
+body.ink-setup-profile .ink-setup-cta.is-loading .ink-setup-cta-label {
+    opacity: 0.85;
+}
+
+@keyframes ink-setup-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+body.ink-setup-profile .ink-setup-char {
+    font-size: 0.75rem;
+    color: rgba(232, 236, 233, 0.45);
+}
+
+@media (max-width: 991.98px) {
+    body.ink-setup-profile .ink-setup-side {
+        position: relative;
+        top: auto;
+        margin-bottom: 1.5rem;
+    }
+}
+
+body.ink-setup-profile main#ink-setup-main,
+body.ink-setup-profile .ink-setup-layout {
+    position: relative;
+    z-index: 1;
+}
+
+body.ink-setup-profile .ink-dash-page-bg ~ nav,
+body.ink-setup-profile nav.ink-dashboard-nav {
+    position: relative;
+    z-index: 2;
+}
+
+/* --- Music dashboard (/mybook/music) --- */
+body.ink-music-dashboard main#ink-music-main,
+body.ink-music-dashboard .container {
+    position: relative;
+    z-index: 1;
+}
+
+body.ink-music-dashboard .ink-dash-page-bg ~ nav,
+body.ink-music-dashboard nav.ink-dashboard-nav {
+    position: relative;
+    z-index: 2;
+}
+
+body.ink-music-dashboard .ink-music-hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, #0c0f0e 0%, #1a221c 48%, #0c0f0e 100%);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    border-radius: var(--border-radius);
+    padding: 1.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+body.ink-music-dashboard .ink-music-hero::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 60%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(201, 162, 39, 0.1), transparent 65%);
+    pointer-events: none;
+}
+
+body.ink-music-dashboard .ink-music-eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(201, 162, 39, 0.95);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+body.ink-music-dashboard .ink-music-title {
+    font-family: "Syne", "DM Sans", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: #f2f5f3;
+    font-size: clamp(1.65rem, 4vw, 2.35rem);
+    margin-bottom: 0.65rem;
+}
+
+body.ink-music-dashboard .ink-music-lead {
+    color: rgba(232, 236, 233, 0.88);
+    font-size: 1rem;
+    max-width: 38rem;
+    margin-bottom: 0;
+    line-height: 1.55;
+}
+
+body.ink-music-dashboard .ink-music-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+body.ink-music-dashboard .ink-music-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    background: rgba(6, 8, 7, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(232, 236, 233, 0.92);
+}
+
+body.ink-music-dashboard .ink-music-pill i {
+    color: var(--primary-color);
+    opacity: 0.95;
+}
+
+body.ink-music-dashboard .music-card,
+body.ink-music-dashboard .ink-music-panel {
+    background: rgba(12, 15, 14, 0.92) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(42, 61, 50, 0.55) !important;
+    border-radius: 16px;
+    box-shadow: var(--box-shadow);
+    overflow: visible !important;
+}
+
+body.ink-music-dashboard .music-card .card-header {
+    background: rgba(6, 8, 7, 0.35) !important;
+    border-bottom: 1px solid rgba(42, 61, 50, 0.5);
+    color: #e8ece9 !important;
+}
+
+body.ink-music-dashboard .music-card .card-body {
+    color: #e8ece9;
+}
+
+body.ink-music-dashboard .ink-music-status-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201, 162, 39, 0.12);
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+body.ink-music-dashboard .ink-music-voice-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    margin-top: 1.25rem;
+    background: rgba(6, 8, 7, 0.55);
+    border-radius: 14px;
+    border: 1px solid rgba(42, 61, 50, 0.55);
+}
+
+body.ink-music-dashboard .ink-music-voice-strip .btn-outline-info {
+    border: 1px solid rgba(201, 162, 39, 0.35) !important;
+    color: #e8ece9 !important;
+    background: rgba(201, 162, 39, 0.1) !important;
+}
+
+body.ink-music-dashboard .ink-music-voice-strip .btn-outline-info:hover {
+    background: rgba(201, 162, 39, 0.2) !important;
+    border-color: rgba(201, 162, 39, 0.55) !important;
+    color: #fff !important;
+}
+
+body.ink-music-dashboard .ink-music-section-title {
+    font-family: "Syne", sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #f2f5f3;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(42, 61, 50, 0.65);
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+body.ink-music-dashboard .ink-music-section-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201, 162, 39, 0.12);
+    color: var(--primary-color);
+    font-size: 0.95rem;
+}
+
+body.ink-music-dashboard .ink-music-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+}
+
+body.ink-music-dashboard .ink-music-empty-visual {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: rgba(12, 15, 14, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    border: 1px solid rgba(42, 61, 50, 0.65);
+}
+
+body.ink-music-dashboard .playlist-badge {
+    background: rgba(201, 162, 39, 0.15) !important;
+    color: var(--primary-color) !important;
+    border: 1px solid rgba(201, 162, 39, 0.25);
+}
+
+body.ink-music-dashboard .form-control,
+body.ink-music-dashboard .input-group-text {
+    background: rgba(6, 8, 7, 0.85) !important;
+    border-color: rgba(42, 61, 50, 0.65) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-music-dashboard .form-control:focus {
+    border-color: rgba(201, 162, 39, 0.45) !important;
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+}
+
+body.ink-music-dashboard .btn-primary {
+    background: linear-gradient(145deg, #e0bc3a, #c9a227) !important;
+    border: none !important;
+    color: #060807 !important;
+    font-weight: 600;
+}
+
+body.ink-music-dashboard .btn-primary:hover {
+    filter: brightness(1.06);
+    color: #060807 !important;
+}
+
+body.ink-music-dashboard .btn-outline-light {
+    border-color: rgba(232, 236, 233, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-music-dashboard .btn-outline-light:hover {
+    background: rgba(201, 162, 39, 0.12) !important;
+    border-color: rgba(201, 162, 39, 0.45) !important;
+    color: #fff !important;
+}
+
+body.ink-music-dashboard .autocomplete-container {
+    position: relative;
+}
+
+body.ink-music-dashboard .autocomplete-suggestions {
+    position: fixed !important;
+    background: rgba(12, 15, 14, 0.98) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(42, 61, 50, 0.65) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45) !important;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 999999 !important;
+    display: none !important;
+    visibility: hidden;
+    color: #e8ece9 !important;
+}
+
+body.ink-music-dashboard .autocomplete-suggestions.show {
+    display: block !important;
+    visibility: visible !important;
+}
+
+body.ink-music-dashboard .suggestion-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    transition: background 0.2s ease;
+}
+
+body.ink-music-dashboard .suggestion-item:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.ink-music-dashboard .suggestion-item:last-child {
+    border-bottom: none;
+}
+
+body.ink-music-dashboard .suggestion-name {
+    font-weight: 600;
+    color: #f2f5f3;
+}
+
+body.ink-music-dashboard .suggestion-artist {
+    color: rgba(232, 236, 233, 0.55);
+    font-size: 0.85em;
+}
+
+body.ink-music-dashboard .suggestion-icon {
+    margin-right: 15px;
+    font-size: 1.25em;
+    color: var(--primary-color) !important;
+}
+
+body.ink-music-dashboard .modal-content {
+    background: rgba(12, 15, 14, 0.98) !important;
+    border: 1px solid rgba(42, 61, 50, 0.55) !important;
+    color: #e8ece9 !important;
+    border-radius: 16px !important;
+}
+
+body.ink-music-dashboard .ink-music-modal-header {
+    background: rgba(6, 8, 7, 0.9) !important;
+    border-bottom: 1px solid rgba(42, 61, 50, 0.55) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-music-dashboard .ink-music-modal-header .modal-title {
+    font-family: "Syne", sans-serif;
+    font-weight: 700;
+}
+
+body.ink-music-dashboard .modal-footer {
+    border-top-color: rgba(42, 61, 50, 0.55) !important;
+    background: rgba(6, 8, 7, 0.6) !important;
+}
+
+body.ink-music-dashboard .dropdown-menu {
+    background: rgba(12, 15, 14, 0.98) !important;
+    border: 1px solid rgba(42, 61, 50, 0.55) !important;
+}
+
+body.ink-music-dashboard .dropdown-item {
+    color: #e8ece9 !important;
+}
+
+body.ink-music-dashboard .dropdown-item:hover {
+    background: rgba(201, 162, 39, 0.12) !important;
+    color: #fff !important;
+}
+
+body.ink-music-dashboard .dropdown-divider {
+    border-color: rgba(42, 61, 50, 0.65) !important;
+}
+
+body.ink-music-dashboard .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+body.ink-music-dashboard .text-muted {
+    color: rgba(232, 236, 233, 0.55) !important;
+}
+
+body.ink-music-dashboard .song-title {
+    color: #f2f5f3 !important;
+}
+
+body.ink-music-dashboard #playlistContainer .card {
+    background: rgba(6, 8, 7, 0.55) !important;
+    border: 1px solid rgba(42, 61, 50, 0.45) !important;
+    border-radius: 12px !important;
+}
+
+body.ink-music-dashboard .song-audio {
+    width: 100%;
+    max-width: 400px;
+    height: 40px;
+    border-radius: 20px;
+}
+
+body.ink-music-dashboard .alert-warning {
+    background: rgba(224, 188, 58, 0.12);
+    color: #f5e6a6;
+    border: 1px solid rgba(224, 188, 58, 0.25);
+}
+
+body.ink-music-dashboard .alert-info {
+    background: rgba(92, 122, 110, 0.15);
+    color: #c5ddd4;
+    border: 1px solid rgba(92, 122, 110, 0.35);
+}
+
+body.ink-music-dashboard .alert-success {
+    background: rgba(45, 106, 79, 0.2);
+    color: #b8e0ce;
+    border: 1px solid rgba(45, 106, 79, 0.4);
 }
 
