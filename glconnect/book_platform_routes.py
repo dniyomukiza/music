@@ -828,7 +828,6 @@ def dashboard(user_profile, profile_type):
     user_reviewer_profile = None
     user_investments = []
     if not is_author:
-        from glconnect.book_platform_models import AccreditedReviewer, BookInvestment, ReviewerStatus, InvestmentStatus, InvestmentCampaign, BookProject
         user_reviewer_profile = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
         user_investments = (
             BookInvestment.query
