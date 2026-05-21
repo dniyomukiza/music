@@ -68,16 +68,7 @@ def check_author_accountability(book_id, db):
             elif is_draft and days_since_funding > (MAX_BOOK_COMPLETION_DAYS + MAX_PUBLICATION_DAYS):
                 warnings.append(f"Book completed but not published after {days_since_funding} days")
         
-        # Check reviewer payments
-        reviews = [r for r in book.accredited_reviews if r.status == ReviewStatus.PUBLISHED]
-        if reviews:
-            # Check if reviewers should be paid even if book isn't selling
-            for review in reviews:
-                if not is_book_published(book):
-                    # Book not published - check if reviewer should get guaranteed payment
-                    guarantee_result = process_reviewer_guarantee(review.id, db)
-                    if guarantee_result.get('success'):
-                        actions_taken.append(f"Processed guarantee payment for reviewer {review.reviewer_id}")
+        # Accredited reviewer guarantees retired — no new reviewer payouts from accountability checks
         
         return {
             'success': True,

@@ -2,22 +2,26 @@
 Revenue Distribution Service
 Handles automatic distribution of revenue from book sales to:
 - Authors
-- Accredited Reviewers
-- Investors
+- Investors (legacy; see Book Campaign v2 spec)
 - Platform
+
+Accredited reviewer revenue share is retired (REVIEWER_POOL_PERCENTAGE = 0).
+Book campaign patronage mode sets the funder pool to 0% (see book_campaign_patronage.py).
 """
 
 from datetime import datetime, timezone
 from sqlalchemy.orm import joinedload
 import logging
 
+from glconnect.book_campaign_patronage import effective_investor_pool_percentage
+
 logger = logging.getLogger(__name__)
 
 # Revenue distribution percentages (configurable)
 PLATFORM_FEE_PERCENTAGE = 15.0  # 15% to platform
-AUTHOR_BASE_PERCENTAGE = 50.0   # 50% base to author
-REVIEWER_POOL_PERCENTAGE = 10.0  # 10% pool for reviewers
-INVESTOR_POOL_PERCENTAGE = 25.0  # 25% pool for investors
+AUTHOR_BASE_PERCENTAGE = 50.0   # 50% base to author (author also receives remainder pools)
+REVIEWER_POOL_PERCENTAGE = 0.0  # Accredited reviewers retired
+INVESTOR_POOL_PERCENTAGE = 25.0  # Legacy default when BOOK_CAMPAIGN_PATRONAGE=0
 
 
 def distribute_revenue(book_sale, db):
@@ -75,12 +79,10 @@ def distribute_revenue(book_sale, db):
         db.session.add(platform_dist)
         distributions.append(('platform', platform_amount))
         
-        # 2. Reviewer Distributions (from 10% pool)
+        # 2. Reviewer Distributions — retired (no new payouts from sales)
         reviewer_total = 0.0
-        published_reviews = [r for r in book.accredited_reviews 
-                           if r.status == ReviewStatus.PUBLISHED]
-        
-        if published_reviews:
+        published_reviews = []
+        if REVIEWER_POOL_PERCENTAGE > 0 and published_reviews:
             reviewer_pool = sale_amount * (REVIEWER_POOL_PERCENTAGE / 100)
             
             for review in published_reviews:
@@ -127,15 +129,20 @@ def distribute_revenue(book_sale, db):
                     reviewer_total += reviewer_share
                     distributions.append(('reviewer', reviewer_share))
         
-        # 3. Investor Distributions (from 25% pool)
+        # 3. Funder / investor distributions (0% in patronage mode)
         investor_total = 0.0
+        investor_pool_pct = effective_investor_pool_percentage()
         campaign = book.investment_campaign
         
         # Handle case where investment_campaign might be a list (if relationship is misconfigured)
         if isinstance(campaign, list):
             campaign = campaign[0] if len(campaign) > 0 else None
         
-        if not campaign:
+        if investor_pool_pct <= 0:
+            logger.debug(
+                f"Patronage mode: no funder pool on sale {book_sale.id} for book {book.id}"
+            )
+        elif not campaign:
             logger.info(f"No investment campaign found for book {book.id} - skipping investor distributions")
         elif campaign.status not in [CampaignStatus.FUNDED, CampaignStatus.ACTIVE]:
             logger.info(f"Campaign {campaign.id} for book {book.id} is not FUNDED or ACTIVE (status: {campaign.status.value}) - skipping investor distributions")
@@ -148,7 +155,7 @@ def distribute_revenue(book_sale, db):
             if not active_investments:
                 logger.info(f"No active investments found for book {book.id} (campaign {campaign.id}) - skipping investor distributions")
             else:
-                investor_pool = sale_amount * (INVESTOR_POOL_PERCENTAGE / 100)
+                investor_pool = sale_amount * (investor_pool_pct / 100)
                 total_investment_amount = sum(inv.amount for inv in active_investments)
                 
                 for investment in active_investments:

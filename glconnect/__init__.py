@@ -284,6 +284,12 @@ def create_app(config_overrides=None):
             "Remove it or set STRIPE_API_KEY to the same secret key (sk_...) as in the Stripe Dashboard; "
             "publishable keys will make Checkout fail."
         )
+    _patronage_raw = os.getenv("BOOK_CAMPAIGN_PATRONAGE")
+    _book_campaign_patronage = (
+        str(_patronage_raw).strip().lower() not in ("0", "false", "no", "off")
+        if _patronage_raw is not None
+        else True
+    )
     app.config.update(
         JWT_SECRET_KEY="abarayon",
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
@@ -292,6 +298,8 @@ def create_app(config_overrides=None):
         STRIPE_API_KEY=_sapi,
         STRIPE_WEBHOOK_SECRET=(os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
         FRONTEND_BASE_URL=_fe.rstrip("/") if _fe else "",
+        # Book campaigns: patronage (no sale returns to funders). Set BOOK_CAMPAIGN_PATRONAGE=0 for legacy.
+        BOOK_CAMPAIGN_PATRONAGE=_book_campaign_patronage,
     )
 
     # Startup visibility for Stripe payout/checkout setup (never log secret values).

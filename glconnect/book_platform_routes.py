@@ -811,24 +811,18 @@ def dashboard(user_profile, profile_type):
     investment_campaigns = []
     review_requests = []
     if is_author:
-        from glconnect.book_platform_models import InvestmentCampaign, BookReview, CampaignStatus, ReviewStatus
+        from glconnect.book_platform_models import InvestmentCampaign, CampaignStatus
         author_id = get_profile_id(user_profile, profile_type)
         books_with_ids = [book.id for book in authored_books]
         if books_with_ids:
             investment_campaigns = InvestmentCampaign.query.filter(
                 InvestmentCampaign.book_project_id.in_(books_with_ids)
             ).all()
-            # Get books with pending review requests
-            review_requests = BookReview.query.filter(
-                BookReview.book_project_id.in_(books_with_ids),
-                BookReview.status == ReviewStatus.SUBMITTED
-            ).all()
     
-    # Get data for regular users (reviewers/investors)
+    # Get data for regular users (investors / supporters)
     user_reviewer_profile = None
     user_investments = []
     if not is_author:
-        user_reviewer_profile = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
         user_investments = (
             BookInvestment.query
             .join(InvestmentCampaign, BookInvestment.campaign_id == InvestmentCampaign.id)
@@ -5738,6 +5732,13 @@ def stripe_webhook():
                         payment_intent_id = session.get('payment_intent')
                         if payment_intent_id:
                             investment.stripe_payment_intent_id = payment_intent_id
+                        from glconnect.book_campaign_patronage import (
+                            is_book_campaign_patronage_mode,
+                            apply_patronage_terms_to_investment,
+                        )
+                        patronage = is_book_campaign_patronage_mode()
+                        if patronage:
+                            apply_patronage_terms_to_investment(investment)
                         # Update campaign funding on successful payment
                         campaign.current_funding += investment.amount
                         
@@ -5748,12 +5749,14 @@ def stripe_webhook():
                             # Activate all confirmed investments
                             for inv in campaign.investments:
                                 if inv.status == InvestmentStatus.CONFIRMED:
-                                    if not inv.return_start_date:
+                                    if patronage:
+                                        apply_patronage_terms_to_investment(inv)
+                                    elif not inv.return_start_date:
                                         inv.return_start_date = datetime.now(timezone.utc)
                                     inv.status = InvestmentStatus.ACTIVE
                         else:
-                            # Activate this investment for returns even if goal not reached
-                            investment.return_start_date = datetime.now(timezone.utc)
+                            if not patronage:
+                                investment.return_start_date = datetime.now(timezone.utc)
                             investment.status = InvestmentStatus.ACTIVE
                         
                         db.session.commit()
@@ -7027,6 +7030,10 @@ def submit_review(book_id):
 @writer_or_book_platform_required
 def publish_review(book_id, review_id, user_profile, profile_type):
     """Author approves and publishes a submitted review; if agreed_fee set, creates task earning for reviewer."""
+    return jsonify({
+        'success': False,
+        'error': 'Accredited book reviews are no longer available.',
+    }), 410
     book = BookProject.query.get_or_404(book_id)
     author_id = get_profile_id(user_profile, profile_type)
     if book.author_id != author_id:
@@ -7068,6 +7075,10 @@ def publish_review(book_id, review_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def pay_review_task(book_id, review_id, user_profile, profile_type):
     """Author marks the agreed fixed fee as paid for this review."""
+    return jsonify({
+        'success': False,
+        'error': 'Accredited book reviews are no longer available.',
+    }), 410
     book = BookProject.query.get_or_404(book_id)
     author_id = get_profile_id(user_profile, profile_type)
     if book.author_id != author_id:
@@ -7125,6 +7136,12 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     
     if form.validate_on_submit():
         try:
+            from glconnect.book_campaign_patronage import (
+                is_book_campaign_patronage_mode,
+                patronage_campaign_terms,
+            )
+            patronage = is_book_campaign_patronage_mode()
+            patronage_terms = patronage_campaign_terms() if patronage else {}
             # Create timezone-aware datetimes in UTC
             start_date = datetime.now(timezone.utc)
             end_date = start_date + timedelta(days=form.investment_period_days.data)
@@ -7137,8 +7154,12 @@ def create_investment_campaign(book_id, user_profile, profile_type):
                 funding_goal=form.funding_goal.data,
                 minimum_investment=form.minimum_investment.data,
                 maximum_investment=form.maximum_investment.data if form.maximum_investment.data else None,
-                revenue_share_percentage=form.revenue_share_percentage.data,
-                return_multiplier_cap=form.return_multiplier_cap.data,
+                revenue_share_percentage=patronage_terms.get(
+                    "revenue_share_percentage", form.revenue_share_percentage.data
+                ),
+                return_multiplier_cap=patronage_terms.get(
+                    "return_multiplier_cap", form.return_multiplier_cap.data
+                ),
                 investment_period_days=form.investment_period_days.data,
                 status=CampaignStatus.ACTIVE,
                 start_date=start_date,
@@ -7277,17 +7298,8 @@ def investment_campaign(campaign_id):
     # Get author information
     author = book.author if book else None
     
-    # Get book reviews (accredited reviews)
-    from glconnect.book_platform_models import BookReview, ReviewStatus
     accredited_reviews = []
-    if book and hasattr(book, 'id'):
-        accredited_reviews = BookReview.query.filter_by(
-            book_project_id=book.id,
-            status=ReviewStatus.PUBLISHED
-        ).all()
-    
-    # Calculate average rating
-    avg_rating = sum(r.rating for r in accredited_reviews) / len(accredited_reviews) if accredited_reviews else 0
+    avg_rating = 0
     
     # Get book chapters count and completed chapters
     chapters_count = 0
@@ -7462,6 +7474,13 @@ def make_investment(campaign_id):
         return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
     
     try:
+        from glconnect.book_campaign_patronage import (
+            is_book_campaign_patronage_mode,
+            patronage_campaign_terms,
+            apply_patronage_terms_to_investment,
+        )
+        patronage = is_book_campaign_patronage_mode()
+        patronage_terms = patronage_campaign_terms() if patronage else {}
         # Calculate investment percentage
         investment_percentage = (amount / campaign.funding_goal) * 100
         
@@ -7473,11 +7492,17 @@ def make_investment(campaign_id):
             amount=amount,
             currency='USD',
             investment_percentage=investment_percentage,
-            revenue_share_percentage=campaign.revenue_share_percentage,
-            return_multiplier=campaign.return_multiplier_cap,
+            revenue_share_percentage=patronage_terms.get(
+                "revenue_share_percentage", campaign.revenue_share_percentage
+            ),
+            return_multiplier=patronage_terms.get(
+                "return_multiplier_cap", campaign.return_multiplier_cap
+            ),
             status=InvestmentStatus.PENDING,
             payment_status=TransactionStatus.PENDING
         )
+        if patronage:
+            apply_patronage_terms_to_investment(investment)
         
         db.session.add(investment)
         db.session.commit()
@@ -7646,33 +7671,7 @@ def earnings_dashboard():
         'author_sales_by_book': {}
     }
     
-    # Reviewer earnings
-    reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
-    if reviewer:
-        earnings_data['reviewer_earnings'] = ReviewerEarning.query.filter_by(
-            reviewer_id=reviewer.id
-        ).order_by(ReviewerEarning.created_at.desc()).limit(50).all()
-        earnings_data['total_reviewer_earnings'] = reviewer.total_earnings
-        # Available = sum of PENDING earnings (for payout request)
-        earnings_data['reviewer_available_balance'] = sum(
-            e.amount for e in ReviewerEarning.query.filter_by(
-                reviewer_id=reviewer.id, status=TransactionStatus.PENDING
-            ).all()
-        )
-        earnings_data['reviewer_pending_payout_requests'] = ReviewerPayoutRequest.query.filter_by(
-            reviewer_id=reviewer.id, status='PENDING'
-        ).all()
-        
-        # Group earnings by book
-        from collections import defaultdict
-        earnings_by_book = defaultdict(lambda: {'earnings': [], 'total': 0.0, 'book': None})
-        for earning in earnings_data['reviewer_earnings']:
-            book_id = earning.review.book_project_id
-            earnings_by_book[book_id]['earnings'].append(earning)
-            earnings_by_book[book_id]['total'] += earning.amount
-            if not earnings_by_book[book_id]['book']:
-                earnings_by_book[book_id]['book'] = earning.review.book_project
-        earnings_data['reviewer_earnings_by_book'] = dict(earnings_by_book)
+    # Accredited reviewer earnings retired — no reviewer section on dashboard
     
     # Investment returns - accessible to all users who have invested
     # IMPORTANT: Authors can only invest in books that are NOT their own
@@ -7857,6 +7856,13 @@ def request_payout():
     if not investment:
         return jsonify({'error': 'Investment not found or you do not own it'}), 404
     
+    from glconnect.book_campaign_patronage import is_book_campaign_patronage_mode
+    if is_book_campaign_patronage_mode() and (investment.revenue_share_percentage or 0) <= 0:
+        return jsonify({
+            'error': 'Campaign support does not include earnings from book sales. '
+                     'Thank you for helping fund this story.',
+        }), 410
+    
     available = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
     if amount > available:
         return jsonify({'error': f'Amount exceeds available balance (${available:.2f})'}), 400
@@ -7889,6 +7895,9 @@ def request_payout():
 @login_required
 def request_reviewer_payout():
     """Reviewer requests payout of available earnings (min $50, mirrors investor flow)"""
+    return jsonify({
+        'error': 'Accredited reviewer payouts are no longer available.',
+    }), 410
     data = request.get_json() or {}
     amount = data.get('amount')
     
@@ -8157,6 +8166,8 @@ def admin_reviewer_payout_requests():
     if current_user.role != 'admin':
         flash('Admin access required.', 'error')
         return redirect(url_for('book_platform.dashboard'))
+    flash('Reviewer payouts are retired. Process any legacy requests outside the app if needed.', 'info')
+    return redirect(url_for('book_platform.admin_books'))
     
     pending = ReviewerPayoutRequest.query.filter_by(status='PENDING').options(
         joinedload(ReviewerPayoutRequest.reviewer).joinedload(AccreditedReviewer.user)
@@ -8485,6 +8496,8 @@ def reconcile_sales():
 @login_required
 def reviewer_earnings_by_book(book_id):
     """Reviewer view of their earnings for a specific book"""
+    _accredited_book_reviews_disabled_flash()
+    return redirect(url_for('book_platform.earnings_dashboard'))
     book = BookProject.query.get_or_404(book_id)
     reviewer = AccreditedReviewer.query.filter_by(user_id=current_user.user_id).first()
     

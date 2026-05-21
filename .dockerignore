@@ -76,7 +76,6 @@ glconnect/static/satmix/
 # Database files
 *.db
 *.sqlite
-
 # Environment files
 .env
 .env.local
@@ -87,6 +86,7 @@ certbot/
 *.pem
 *.crt
 *.key
-
 # Scripts
 scripts/
+
+

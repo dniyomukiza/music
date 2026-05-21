@@ -58,8 +58,10 @@ RUN apt-get update \
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy the rest of the application code
+# Application code only; .dockerignore excludes .venv/, media, etc. (runtime bind-mounts supply media).
 COPY . .
+# Safety: never keep a host virtualenv in the image (deps come from /opt/venv above).
+RUN rm -rf /usr/src/appdir/.venv /usr/src/appdir/venv /usr/src/appdir/myenv
 
 # Create a non-root user for security and memory efficiency
 RUN useradd --create-home --shell /bin/bash appuser && \

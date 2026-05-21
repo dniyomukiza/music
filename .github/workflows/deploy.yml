@@ -16,8 +16,8 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 167.172.224.239
-          username: nididier
+          host: 34.168.111.175
+          username: didyom1
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script_stop: true
           command_timeout: 120m

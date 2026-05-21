@@ -3,6 +3,8 @@ music/
 
 .env
 myenv
+.venv/
+venv/
 __pycache__
 .DS_Store
 /glconnect/static/ytauto
