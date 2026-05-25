@@ -54,6 +54,7 @@ def _load_config():
         "STRIPE_API_KEY": (os.getenv("STRIPE_API_KEY") or "").strip() or None,
         "STRIPE_WEBHOOK_SECRET": (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
         "SENDER_MAIL": (os.getenv("SENDER_MAIL") or "").strip() or None,
+        "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
         "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
     }
     # Fallback: load from glconfig if env vars are empty (e.g. /etc/glconfig.json or /etc/glconfig on Linux)
@@ -113,6 +114,12 @@ def _load_config():
                     )
                     if _mt:
                         cfg["MAIL_TRAP"] = _mt
+                if not cfg.get("RECEIVER_MAIL"):
+                    _rm = _gl_first_nonempty(
+                        file_cfg, "RECEIVER_MAIL", "RECEIVER_EMAIL", "CONTACT_RECEIVER_MAIL"
+                    )
+                    if _rm:
+                        cfg["RECEIVER_MAIL"] = _rm
 
                 # Optional: Stripe *test* keys from glconfig only — override live/env secrets for the whole app.
                 # Same alias pattern as live keys: STRIPE_SECRET_KEY / STRIPE_KEY / STRIPE_PRIVATE_KEY maps to
@@ -212,6 +219,8 @@ if config.get("SENDER_MAIL") and not (os.getenv("SENDER_MAIL") or "").strip():
     os.environ["SENDER_MAIL"] = config["SENDER_MAIL"]
 if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
     os.environ["MAIL_TRAP"] = config["MAIL_TRAP"]
+if config.get("RECEIVER_MAIL") and not (os.getenv("RECEIVER_MAIL") or "").strip():
+    os.environ["RECEIVER_MAIL"] = config["RECEIVER_MAIL"]
 
 if STRIPE_TEST_KEYS_FROM_GLCONFIG:
     print(

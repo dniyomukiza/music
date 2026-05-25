@@ -276,21 +276,25 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
-    sender = os.getenv("SENDER_MAIL")
-    receiver = config.get("RECEIVER_MAIL")
-    api_key = config.get("MAIL_TRAP")
-    
+    sender = (os.getenv("SENDER_MAIL") or config.get("SENDER_MAIL") or "").strip()
+    receiver = (os.getenv("RECEIVER_MAIL") or config.get("RECEIVER_MAIL") or "").strip()
+    api_key = (os.getenv("MAIL_TRAP") or config.get("MAIL_TRAP") or "").strip()
+
     if form.validate_on_submit():
-        # Validate required configuration
         if not sender or not receiver or not api_key:
+            logger.warning(
+                "Contact form mail not configured (sender=%s receiver=%s api_key=%s)",
+                bool(sender),
+                bool(receiver),
+                bool(api_key),
+            )
             flash(
                 "We can’t send messages from the contact form right now. Please try again later.",
                 "error",
             )
             return render_template("contact.html", form=form)
-        
+
         try:
-            # Create the Mail object
             mail = Mail(
                 sender=Address(email=sender, name="Message form GLC user"),
                 to=[Address(email=receiver)],
@@ -301,22 +305,19 @@ def contact():
                     f"Email: {form.email.data}\n"
                     f"Message: {form.message.data}"
                 ),
-                category="User Contact"
+                category="User Contact",
             )
-            # Send email using Mailtrap API
-            client = MailtrapClient(token=api_key)
-            client.send(mail)
-
-        except Exception as e:
-            print("This is the error that occured: ", e)
-            print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
+            MailtrapClient(token=api_key).send(mail)
+        except Exception:
+            logger.exception("Contact form Mailtrap send failed")
             flash(
                 "We couldn’t send your message. Please try again in a moment.",
                 "error",
             )
-        else:
-            flash("Thank you for reaching out. We will get back to you ASAP.", "success")
-            return redirect(url_for("blog.contact"))
+            return render_template("contact.html", form=form)
+
+        flash("Thank you for reaching out. We will get back to you ASAP.", "success")
+        return redirect(url_for("blog.contact"))
 
     return render_template("contact.html", form=form)
 

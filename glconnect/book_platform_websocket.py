@@ -7,7 +7,10 @@ from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 from flask_login import current_user
 import json
+import logging
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 # Import models
 from glconnect.models import db, User
@@ -37,18 +40,24 @@ def handle_disconnect(*args, **kwargs):
     """Handle WebSocket disconnection.
 
     python-socketio passes at least one argument (e.g. disconnect reason).
-    A zero-arg handler raises TypeError and can leave Werkzeug in a bad state
-    for the next HTTP request (write before start_response).
+    Any exception here can leave Werkzeug in a bad state for the next HTTP
+    request (AssertionError: write() before start_response) — e.g. contact form POST.
     """
-    if current_user.is_authenticated:
-        print(f"User {current_user.username} disconnected")
-        
-        # Clean up active sessions
-        user_sessions = [session_id for session_id, session_data in active_sessions.items() 
-                       if session_data.get('user_id') == current_user.user_id]
-        
-        for session_id in user_sessions:
-            cleanup_session(session_id)
+    try:
+        if current_user.is_authenticated:
+            logger.info("User %s disconnected", current_user.username)
+            user_sessions = [
+                session_id
+                for session_id, session_data in active_sessions.items()
+                if session_data.get('user_id') == current_user.user_id
+            ]
+            for session_id in user_sessions:
+                try:
+                    cleanup_session(session_id)
+                except Exception:
+                    logger.exception("cleanup_session failed for %s", session_id)
+    except Exception:
+        logger.exception("disconnect handler failed")
 
 @socketio.on('join_book')
 def handle_join_book(data):

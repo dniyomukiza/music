@@ -58,7 +58,12 @@ def init_book_platform(app):
     app.register_blueprint(gemini_bp)
     
     # Initialize SocketIO with the app
-    socketio.init_app(app, cors_allowed_origins=["https://glc.cool", "http://localhost:5000"], supports_credentials=True)
+    socketio.init_app(
+        app,
+        cors_allowed_origins=["https://glc.cool", "http://localhost:5000"],
+        supports_credentials=True,
+        async_mode="threading",
+    )
     
     # Import WebSocket handlers to register them
     import glconnect.book_platform_websocket
