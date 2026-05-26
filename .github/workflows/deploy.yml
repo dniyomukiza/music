@@ -64,3 +64,48 @@ jobs:
 
       - name: Done
         run: echo "Deploy finished."
+
+  rollback_on_failure:
+    name: Roll back to last known good deploy
+    needs: deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify PUSH_TO_GCP secret (rollback)
+        env:
+          PUSH_TO_GCP: ${{ secrets.PUSH_TO_GCP }}
+        run: |
+          if [ -z "$PUSH_TO_GCP" ]; then
+            echo "::error::PUSH_TO_GCP is missing or empty. Repo → Settings → Secrets → Actions."
+            exit 1
+          fi
+          if ! printf '%s' "$PUSH_TO_GCP" | grep -q 'BEGIN.*PRIVATE KEY'; then
+            echo "::error::PUSH_TO_GCP does not look like a private key (expected BEGIN … PRIVATE KEY)."
+            exit 1
+          fi
+          echo "PUSH_TO_GCP is set for rollback."
+
+      - name: Write deploy SSH key file (rollback)
+        env:
+          PUSH_TO_GCP: ${{ secrets.PUSH_TO_GCP }}
+        run: |
+          umask 077
+          printf '%s\n' "$PUSH_TO_GCP" > .deploy_ssh_key
+          chmod 600 .deploy_ssh_key
+          ssh-keygen -y -f .deploy_ssh_key >/dev/null
+
+      - name: Roll back via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 34.168.111.175
+          username: didyom1
+          key_path: .deploy_ssh_key
+          script_stop: true
+          command_timeout: 60m
+          script: |
+            set -e
+            cd /home/didyom1/music
+            chmod +x scripts/deploy-rollback.sh
+            bash scripts/deploy-rollback.sh

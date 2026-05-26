@@ -7156,12 +7156,8 @@ def create_investment_campaign(book_id, user_profile, profile_type):
                 funding_goal=form.funding_goal.data,
                 minimum_investment=form.minimum_investment.data,
                 maximum_investment=form.maximum_investment.data if form.maximum_investment.data else None,
-                revenue_share_percentage=patronage_terms.get(
-                    "revenue_share_percentage", form.revenue_share_percentage.data
-                ),
-                return_multiplier_cap=patronage_terms.get(
-                    "return_multiplier_cap", form.return_multiplier_cap.data
-                ),
+                revenue_share_percentage=patronage_terms["revenue_share_percentage"],
+                return_multiplier_cap=patronage_terms["return_multiplier_cap"],
                 investment_period_days=form.investment_period_days.data,
                 status=CampaignStatus.ACTIVE,
                 start_date=start_date,
@@ -7631,11 +7627,6 @@ def earnings_dashboard():
                 try:
                     # Refresh sale to get latest data
                     db.session.refresh(sale)
-                    # Also refresh related investments to get latest total_returns before distribution
-                    investments = BookInvestment.query.filter_by(book_project_id=sale.book_project_id).all()
-                    for inv in investments:
-                        db.session.refresh(inv)
-                    
                     result = distribute_revenue(sale, db)
                     if result and result.get('success'):
                         success_count += 1
@@ -7652,11 +7643,6 @@ def earnings_dashboard():
                 db.session.commit()
                 logger.info(f"✅ Committed {success_count} revenue distributions")
                 
-                # Refresh all investments after distribution to ensure UI shows latest data
-                all_investments = BookInvestment.query.all()
-                for inv in all_investments:
-                    db.session.refresh(inv)
-                logger.info(f"✅ Refreshed {len(all_investments)} investments with latest returns")
             else:
                 db.session.rollback()
                 logger.warning(f"⚠️  No distributions were successful, rolled back")
@@ -7666,60 +7652,32 @@ def earnings_dashboard():
     
     earnings_data = {
         'reviewer_earnings': [],
-        'investment_returns': [],
+        'patron_contributions': [],
         'author_sales': [],
         'reviewer_earnings_by_book': {},
-        'investment_returns_by_book': {},
         'author_sales_by_book': {}
     }
     
     # Accredited reviewer earnings retired — no reviewer section on dashboard
     
-    # Investment returns - accessible to all users who have invested
-    # IMPORTANT: Authors can only invest in books that are NOT their own
-    # Find investments by user_id through BookPlatformUser (investments are linked via investor_id = book_platform_users.id)
+    # Patron contributions (no sale-linked returns)
     book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if book_platform_user:
         investor_id = book_platform_user.id
-        # Get all investments for this investor, but EXCLUDE investments in books where they are the author
-        # Join with BookProject to filter out self-investments
         all_investments = BookInvestment.query.join(
             BookProject, BookInvestment.book_project_id == BookProject.id
         ).filter(
             BookInvestment.investor_id == investor_id,
-            BookProject.author_id != investor_id  # Exclude investments in own books
-        ).all()
-        
-        # Only show investments that are confirmed or active (pending investments don't have returns yet)
-        investments = [inv for inv in all_investments if inv.status.value in ['confirmed', 'active']]
-        
-        # IMPORTANT: Refresh investments AFTER processing distributions to get latest returns
-        for investment in investments:
-            db.session.refresh(investment)
-        
-        earnings_data['investments'] = investments
-        earnings_data['total_investment_returns'] = sum(inv.total_returns for inv in investments)
-        logger.info(f"Earnings dashboard - Total investment returns: ${earnings_data['total_investment_returns']:.2f} from {len(investments)} investments (excluding own books)")
-        
-        # Get payout history and available balance for each investment
-        for investment in investments:
-            payouts = InvestmentPayout.query.filter_by(
-                investment_id=investment.id
-            ).order_by(InvestmentPayout.created_at.desc()).limit(20).all()
-            investment.payouts_list = payouts
-            investment.available_balance = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
-            investment.pending_payout_requests = PayoutRequest.query.filter_by(
-                investment_id=investment.id, status='PENDING'
-            ).all()
-            # Verify total_returns matches sum of payouts (for debugging)
-            calculated_returns = sum(p.amount for p in payouts)
-            if abs((investment.total_returns or 0) - calculated_returns) > 0.01:
-                logger.warning(f"Investment {investment.id} total_returns (${investment.total_returns}) doesn't match sum of payouts (${calculated_returns})")
+            BookProject.author_id != investor_id,
+        ).order_by(BookInvestment.invested_at.desc()).all()
+        earnings_data['patron_contributions'] = [
+            inv for inv in all_investments
+            if inv.status.value in ('confirmed', 'active', 'pending')
+        ]
+        earnings_data['total_contributed'] = sum(inv.amount for inv in earnings_data['patron_contributions'])
     else:
-        # User doesn't have a BookPlatformUser profile yet, but might have investments
-        # This shouldn't happen if they invested (investment requires profile), but check anyway
-        earnings_data['investments'] = []
-        earnings_data['total_investment_returns'] = 0.0
+        earnings_data['patron_contributions'] = []
+        earnings_data['total_contributed'] = 0.0
     
     # Author sales - only for users who are authors
     # Try multiple methods to find the user's sales
@@ -7824,73 +7782,17 @@ def earnings_dashboard():
     )
 
 
-# Minimum amount to request payout (USD) - investors must reach this balance to cash out to bank
+# Minimum amount to request author sales payout (USD)
 PAYOUT_MINIMUM_AMOUNT = 50.0
 
 
 @book_bp.route('/earnings/request-payout', methods=['POST'])
 @login_required
 def request_payout():
-    """Investor requests payout of available earnings"""
-    data = request.get_json() or {}
-    investment_id = data.get('investment_id')
-    amount = data.get('amount')
-    
-    if not investment_id or amount is None:
-        return jsonify({'error': 'Missing investment_id or amount'}), 400
-    
-    try:
-        investment_id = int(investment_id)
-        amount = float(amount)
-    except (ValueError, TypeError):
-        return jsonify({'error': 'Invalid investment_id or amount'}), 400
-    
-    if amount < PAYOUT_MINIMUM_AMOUNT:
-        return jsonify({'error': f'Minimum payout amount is ${PAYOUT_MINIMUM_AMOUNT:.2f}'}), 400
-    
-    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    if not bp_user:
-        return jsonify({'error': 'Investor profile not found'}), 403
-    
-    investment = BookInvestment.query.filter_by(
-        id=investment_id, investor_id=bp_user.id
-    ).first()
-    if not investment:
-        return jsonify({'error': 'Investment not found or you do not own it'}), 404
-    
-    from glconnect.book_campaign_patronage import is_book_campaign_patronage_mode
-    if is_book_campaign_patronage_mode() and (investment.revenue_share_percentage or 0) <= 0:
-        return jsonify({
-            'error': 'Campaign support does not include earnings from book sales. '
-                     'Thank you for helping fund this story.',
-        }), 410
-    
-    available = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
-    if amount > available:
-        return jsonify({'error': f'Amount exceeds available balance (${available:.2f})'}), 400
-    
-    # Check for existing pending request
-    pending = PayoutRequest.query.filter_by(
-        investment_id=investment_id, status='PENDING'
-    ).first()
-    if pending:
-        return jsonify({'error': 'You already have a pending payout request for this investment'}), 400
-    
-    payout_request = PayoutRequest(
-        investment_id=investment_id,
-        amount=amount,
-        currency=investment.currency or 'USD',
-        status='PENDING'
-    )
-    db.session.add(payout_request)
-    db.session.commit()
-    
-    logger.info(f"Payout request {payout_request.id} created: investment={investment_id}, amount=${amount}")
+    """Retired: patrons do not receive sale-linked returns."""
     return jsonify({
-        'success': True,
-        'message': f'Payout request of ${amount:.2f} submitted. Admin will process it shortly.',
-        'payout_request_id': payout_request.id
-    })
+        'error': 'Campaign contributions do not include earnings from book sales.',
+    }), 410
 
 
 @book_bp.route('/earnings/request-reviewer-payout', methods=['POST'])
@@ -8012,67 +7914,32 @@ def request_author_sales_payout():
 @book_bp.route('/admin/payout-requests')
 @login_required
 def admin_payout_requests():
-    """Admin view of pending payout requests"""
+    """Retired funder-return payouts; redirect to author sales payouts."""
     if current_user.role != 'admin':
         flash('Admin access required.', 'error')
         return redirect(url_for('book_platform.dashboard'))
-    
-    pending = PayoutRequest.query.filter_by(status='PENDING').order_by(
-        PayoutRequest.requested_at.asc()
-    ).all()
-    paid = PayoutRequest.query.filter_by(status='PAID').order_by(
-        PayoutRequest.paid_at.desc()
-    ).limit(50).all()
-    
-    return render_template('book_platform/admin_payout_requests.html',
-        pending=pending, paid=paid
-    )
+    flash('Funder return payouts are retired. Use Author sales payouts instead.', 'info')
+    return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
 
 
 @book_bp.route('/admin/payout-requests/<int:request_id>/mark-paid', methods=['POST'])
 @login_required
 def admin_mark_payout_paid(request_id):
-    """Admin marks a payout request as paid (after bank transfer)"""
+    """Retired funder-return payouts."""
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
-    
-    payout_request = PayoutRequest.query.get_or_404(request_id)
-    if payout_request.status != 'PENDING':
-        return jsonify({'error': 'Payout request is not pending'}), 400
-    
-    investment = payout_request.investment
-    available = (investment.total_returns or 0) - (getattr(investment, 'paid_out_amount', 0) or 0)
-    if payout_request.amount > available:
-        return jsonify({'error': f'Amount (${payout_request.amount:.2f}) exceeds available balance (${available:.2f})'}), 400
-    
-    payout_request.status = 'PAID'
-    payout_request.paid_at = datetime.now(timezone.utc)
-    payout_request.admin_notes = (request.get_json() or {}).get('admin_notes', '')
-    
-    investment.paid_out_amount = (getattr(investment, 'paid_out_amount', 0) or 0) + payout_request.amount
-    db.session.commit()
-    
-    logger.info(f"Payout request {payout_request.id} marked paid by admin {current_user.username}")
-    flash(f'Payout of ${payout_request.amount:.2f} marked as paid.', 'success')
-    return redirect(url_for('book_platform.admin_payout_requests'))
+    flash('Funder return payouts are retired.', 'info')
+    return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
 
 
 @book_bp.route('/admin/payout-requests/<int:request_id>/cancel', methods=['POST'])
 @login_required
 def admin_cancel_payout_request(request_id):
-    """Admin cancels a payout request"""
+    """Retired funder-return payouts."""
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
-    
-    payout_request = PayoutRequest.query.get_or_404(request_id)
-    if payout_request.status != 'PENDING':
-        return jsonify({'error': 'Payout request is not pending'}), 400
-    
-    payout_request.status = 'CANCELLED'
-    db.session.commit()
-    
-    flash('Payout request cancelled.', 'info')
-    return redirect(url_for('book_platform.admin_payout_requests'))
+    flash('Funder return payouts are retired.', 'info')
+    return redirect(url_for('book_platform.admin_author_sales_payout_requests'))
 
 
 # Author Campaign Fund Release (50% first draft, 50% publication - investor safeguard)
@@ -8357,7 +8224,7 @@ def book_sales_transparency(book_id):
         ).first()
         if investment:
             has_access = True
-            user_role = 'investor'
+            user_role = 'patron'
     
     if not has_access:
         flash('You do not have access to view sales data for this book.', 'error')
@@ -8413,19 +8280,16 @@ def book_sales_transparency(book_id):
             user_earnings['total'] = sum(e.amount for e in earnings)
             user_earnings['per_sale'] = earnings
     
-    elif user_role == 'investor' and user_profile:
+    elif user_role == 'patron' and user_profile:
         investor_id = get_profile_id(user_profile, profile_type)
         investment = BookInvestment.query.filter_by(
             book_project_id=book_id,
             investor_id=investor_id
         ).first()
         if investment:
-            payouts = InvestmentPayout.query.filter_by(
-                investment_id=investment.id
-            ).order_by(InvestmentPayout.created_at.desc()).all()
-            user_earnings['total'] = investment.total_returns
-            user_earnings['per_sale'] = payouts
-    
+            user_earnings['total'] = investment.amount
+            user_earnings['per_sale'] = []
+
     elif user_role == 'author':
         user_earnings['total'] = total_author
         user_earnings['per_sale'] = [s['author'] for s in sales_data if s['author']]
@@ -8538,60 +8402,20 @@ def reviewer_earnings_by_book(book_id):
                          earnings_by_sale=earnings_by_sale,
                          total_earnings=sum(e.amount for e in earnings))
 
-# Investor Returns by Book
+# Retired: sale-linked funder returns
 @book_bp.route('/investments/my-returns/<int:book_id>', methods=['GET'])
 @login_required
 def investor_returns_by_book(book_id):
-    """Investor view of their returns for a specific book"""
-    book = BookProject.query.get_or_404(book_id)
-    user_profile, profile_type = get_user_profile()
-    
-    if not user_profile:
-        flash('You need a profile to view investment returns.', 'error')
-        return redirect(url_for('book_platform.setup_profile'))
-    
-    investor_id = get_profile_id(user_profile, profile_type)
-    investment = BookInvestment.query.filter_by(
-        book_project_id=book_id,
-        investor_id=investor_id
-    ).first_or_404()
-    
-    # Refresh investment to get latest total_returns
-    db.session.refresh(investment)
-    
-    # Get all payouts for this investment
-    payouts = InvestmentPayout.query.filter_by(
-        investment_id=investment.id
-    ).order_by(InvestmentPayout.created_at.desc()).all()
-    
-    logger.info(f"Investment returns page - Investment {investment.id}: status={investment.status.value}, total_returns=${investment.total_returns}, payouts={len(payouts)}")
-    
-    # Get sales data
-    sales = BookSale.query.filter_by(
-        book_project_id=book_id
-    ).order_by(BookSale.created_at.desc()).all()
-    
-    # Match payouts to sales
-    payouts_by_sale = {}
-    for payout in payouts:
-        if payout.distribution:
-            sale_id = payout.distribution.source_sale_id
-            payouts_by_sale[sale_id] = payout
-    
-    # Calculate ROI
-    roi_percentage = (investment.total_returns / investment.amount * 100) if investment.amount > 0 else 0
-    max_possible_return = investment.amount * investment.return_multiplier
-    progress_to_cap = (investment.total_returns / max_possible_return * 100) if max_possible_return > 0 else 0
-    
-    return render_template('book_platform/investor_returns_book.html',
-                         book=book,
-                         investment=investment,
-                         payouts=payouts,
-                         sales=sales,
-                         payouts_by_sale=payouts_by_sale,
-                         roi_percentage=roi_percentage,
-                         max_possible_return=max_possible_return,
-                         progress_to_cap=progress_to_cap)
+    """Redirect legacy returns URL to campaign discovery."""
+    flash('Contributions do not include financial returns from book sales.', 'info')
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if bp_user:
+        investment = BookInvestment.query.filter_by(
+            book_project_id=book_id, investor_id=bp_user.id
+        ).first()
+        if investment and investment.campaign_id:
+            return redirect(url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id))
+    return redirect(url_for('book_platform.investments'))
 
 # Accountability & Refund Routes
 @book_bp.route('/books/<int:book_id>/accountability', methods=['GET'])

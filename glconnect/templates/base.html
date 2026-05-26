@@ -245,10 +245,17 @@
     
     <div id="verticalMenu" class="vertical-menu">
       <ul>
-        <li><a href="/music/artist_profile"><i class="fas fa-music" style="margin-right:10px; width:20px; text-align:center;"></i> For artists</a></li>
-        <li><a href="{{ url_for('book_platform.ink_studio_access') }}"><i class="fas fa-book" style="margin-right:10px; width:20px; text-align:center;"></i> For authors</a></li>
-        <li><a href="/writer/profile"><i class="fas fa-microscope" style="margin-right:10px; width:20px; text-align:center;"></i> Researchers</a></li>
-        <li><a href="/blog/blogs"><i class="fas fa-newspaper" style="margin-right:10px; width:20px; text-align:center;"></i> Stories & News</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store" style="margin-right:10px; width:20px; text-align:center;"></i> Marketplace</a></li>
+        <li><a href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
+        <li><a href="{{ url_for('book_platform.investments') }}"><i class="fas fa-seedling" style="margin-right:10px; width:20px; text-align:center;"></i> Campaigns</a></li>
+        <li><a href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> Authors</a></li>
+        {% else %}
+        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}"><i class="fas fa-store" style="margin-right:10px; width:20px; text-align:center;"></i> Marketplace</a></li>
+        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.content_hub')) }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
+        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.investments')) }}"><i class="fas fa-seedling" style="margin-right:10px; width:20px; text-align:center;"></i> Campaigns</a></li>
+        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.books')) }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> Authors</a></li>
+        {% endif %}
         <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 5px 0;">
         {% if ink_nav_show_my_library|default(false) %}
         <li><a href="{{ url_for('book_platform.my_library') }}"><i class="fas fa-book-reader" style="margin-right:10px; width:20px; text-align:center;"></i> My Library</a></li>

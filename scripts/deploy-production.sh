@@ -10,6 +10,9 @@ DEPLOY_START=$(date +%s)
 CACHE_DIR=".deploy-cache"
 mkdir -p "$CACHE_DIR"
 
+# Track last known good commit so rollback can restore it.
+LAST_GOOD_COMMIT_FILE="$CACHE_DIR/last_good_commit"
+
 COMPOSE=(docker compose --profile video)
 COMPOSE_UP=("${COMPOSE[@]}" up -d)
 
@@ -182,3 +185,6 @@ docker image prune -f >/dev/null 2>&1 || true
 
 ELAPSED=$(( $(date +%s) - DEPLOY_START ))
 echo "Deploy finished in ${ELAPSED}s ($(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s). Mode: $([ "$FAST_DEPLOY" = 1 ] && echo FAST || echo BUILD:${BUILD_SERVICES[*]})."
+
+# Mark this commit as last known good so rollback can use it.
+git rev-parse HEAD > "$LAST_GOOD_COMMIT_FILE"

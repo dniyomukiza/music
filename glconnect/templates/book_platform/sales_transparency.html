@@ -77,53 +77,50 @@
             </div>
             <div class="card-body">
                 <div class="row text-center">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <div class="h4 text-danger">${{ "%.2f"|format(total_platform) }}</div>
                             <small class="text-muted">Platform (15%)</small>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <div class="h4 text-warning">${{ "%.2f"|format(total_reviewers) }}</div>
-                            <small class="text-muted">Reviewers (10%)</small>
+                            <small class="text-muted">Reviewers</small>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <div class="h4 text-success">${{ "%.2f"|format(total_investors) }}</div>
-                            <small class="text-muted">Investors (25%)</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <div class="h4 text-info">${{ "%.2f"|format(total_author) }}</div>
-                            <small class="text-muted">Author (50%+)</small>
+                            <small class="text-muted">Author (remainder)</small>
                         </div>
                     </div>
                 </div>
                 <div class="progress" style="height: 30px;">
                     {% set platform_pct = (total_platform / total_revenue * 100) if total_revenue > 0 else 0 %}
                     {% set reviewers_pct = (total_reviewers / total_revenue * 100) if total_revenue > 0 else 0 %}
-                    {% set investors_pct = (total_investors / total_revenue * 100) if total_revenue > 0 else 0 %}
                     {% set author_pct = (total_author / total_revenue * 100) if total_revenue > 0 else 0 %}
                     <div class="progress-bar bg-danger" style="width: {{ platform_pct }}%"></div>
                     <div class="progress-bar bg-warning" style="width: {{ reviewers_pct }}%"></div>
-                    <div class="progress-bar bg-success" style="width: {{ investors_pct }}%"></div>
                     <div class="progress-bar bg-info" style="width: {{ author_pct }}%"></div>
                 </div>
             </div>
         </div>
 
         <!-- Your Earnings Summary -->
-        <div class="card shadow mb-4 border-{% if user_role == 'author' %}info{% elif user_role == 'reviewer' %}primary{% else %}success{% endif %}">
-            <div class="card-header bg-{% if user_role == 'author' %}info{% elif user_role == 'reviewer' %}primary{% else %}success{% endif %} text-white">
-                <h4 class="mb-0"><i class="fas fa-user me-2"></i>Your Earnings from This Book</h4>
+        <div class="card shadow mb-4 border-{% if user_role == 'author' %}info{% elif user_role == 'reviewer' %}primary{% else %}secondary{% endif %}">
+            <div class="card-header bg-{% if user_role == 'author' %}info{% elif user_role == 'reviewer' %}primary{% else %}secondary{% endif %} text-white">
+                <h4 class="mb-0"><i class="fas fa-user me-2"></i>{% if user_role == 'patron' %}Your contribution{% else %}Your earnings from this book{% endif %}</h4>
             </div>
             <div class="card-body">
-                <div class="alert alert-{% if user_role == 'author' %}info{% elif user_role == 'reviewer' %}primary{% else %}success{% endif %}">
+                <div class="alert alert-{% if user_role == 'author' %}info{% elif user_role == 'reviewer' %}primary{% else %}light{% endif %}">
+                    {% if user_role == 'patron' %}
+                    <h3>${{ "%.2f"|format(user_earnings.total) }} contributed</h3>
+                    <p class="mb-0">Patron contributions are not tied to book sale revenue.</p>
+                    {% else %}
                     <h3>Total: ${{ "%.2f"|format(user_earnings.total) }}</h3>
                     <p class="mb-0">From {{ user_earnings.per_sale|length }} sale{{ 's' if user_earnings.per_sale|length != 1 else '' }}</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -144,7 +141,6 @@
                                 <th>Sale Amount</th>
                                 <th>Platform</th>
                                 <th>Reviewers</th>
-                                <th>Investors</th>
                                 <th>Author</th>
                                 <th>Your Earnings</th>
                             </tr>
@@ -172,15 +168,6 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if sale_info.investors %}
-                                    {% for inv_dist in sale_info.investors %}
-                                    <small class="d-block">${{ "%.2f"|format(inv_dist.amount) }}</small>
-                                    {% endfor %}
-                                    {% else %}
-                                    <small class="text-muted">$0.00</small>
-                                    {% endif %}
-                                </td>
-                                <td>
                                     {% if sale_info.author %}
                                     <strong class="text-info">${{ "%.2f"|format(sale_info.author.amount) }}</strong>
                                     {% else %}
@@ -197,13 +184,8 @@
                                     {% else %}
                                     <small class="text-muted">$0.00</small>
                                     {% endif %}
-                                    {% elif user_role == 'investor' %}
-                                    {% set user_inv_dist = sale_info.investors|selectattr('recipient_id', 'equalto', investor_id)|first if user_profile else None %}
-                                    {% if user_inv_dist %}
-                                    <strong class="text-success">${{ "%.2f"|format(user_inv_dist.amount) }}</strong>
-                                    {% else %}
-                                    <small class="text-muted">$0.00</small>
-                                    {% endif %}
+                                    {% elif user_role == 'patron' %}
+                                    <small class="text-muted">—</small>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -215,7 +197,6 @@
                                 <th>${{ "%.2f"|format(total_revenue) }}</th>
                                 <th>${{ "%.2f"|format(total_platform) }}</th>
                                 <th>${{ "%.2f"|format(total_reviewers) }}</th>
-                                <th>${{ "%.2f"|format(total_investors) }}</th>
                                 <th>${{ "%.2f"|format(total_author) }}</th>
                                 <th><strong>${{ "%.2f"|format(user_earnings.total) }}</strong></th>
                             </tr>

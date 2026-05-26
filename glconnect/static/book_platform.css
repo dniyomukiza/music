@@ -2219,7 +2219,8 @@ body.ink-earnings .ink-mp-sticky-nav,
 body.ink-books-ui .ink-mp-sticky-nav,
 body.ink-upload-book .ink-mp-sticky-nav,
 body.ink-setup-profile .ink-mp-sticky-nav,
-body.ink-music-dashboard .ink-mp-sticky-nav {
+body.ink-music-dashboard .ink-mp-sticky-nav,
+body.ink-content-hub .ink-mp-sticky-nav {
     position: sticky;
     top: 0;
     z-index: 1030;
@@ -2614,17 +2615,23 @@ body.ink-content-hub .ink-ch-page-bg {
 }
 
 body.ink-content-hub .ink-ch-skip,
-body.ink-content-hub .ink-ch-topnav,
 body.ink-content-hub .ink-ch-main {
     position: relative;
     z-index: 1;
 }
 
 body.ink-content-hub .ink-ch-topnav.ink-mp-sticky-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     background: rgba(12, 15, 14, 0.78) !important;
     border-bottom: 1px solid var(--lib-border) !important;
+}
+
+body.ink-content-hub .ink-ch-topnav .dropdown-menu {
+    z-index: 1040;
 }
 
 body.ink-content-hub .ink-ch-topnav .navbar-nav .nav-link {

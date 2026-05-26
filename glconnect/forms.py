@@ -232,10 +232,6 @@ class InvestmentCampaignForm(FlaskForm):
                                    render_kw={"placeholder": "e.g., 50.00", "step": "0.01"})
     maximum_investment = FloatField('Maximum Contribution (USD)', validators=[Optional()],
                                    render_kw={"placeholder": "e.g., 1000.00 (leave empty for no limit)", "step": "0.01"})
-    revenue_share_percentage = FloatField('Revenue Share % (legacy)', validators=[DataRequired()], default=0.0,
-                                         render_kw={"placeholder": "Patronage mode: leave at 0"})
-    return_multiplier_cap = FloatField('Return Multiplier Cap (legacy)', validators=[DataRequired()], default=1.0,
-                                      render_kw={"placeholder": "Patronage mode: leave at 1"})
     investment_period_days = IntegerField('Campaign Duration (Days)', validators=[DataRequired()], default=30,
                                          render_kw={"placeholder": "e.g., 30"})
     submit = SubmitField('Launch Campaign')

@@ -118,13 +118,23 @@ def careers_apply():
                 positions=CAREER_POSITIONS,
             )
 
-        flash("Thank you — your application was sent. We’ll be in touch.", "success")
-        return redirect(url_for("routes.careers"))
+        return redirect(
+            url_for(
+                "routes.careers_apply",
+                position=position,
+                applied="1",
+            )
+        )
+
+    applied = (request.args.get("applied") or "").strip() == "1"
+    applied_position = position_q if applied and position_q in CAREER_POSITIONS else None
 
     return render_template(
         "careers_apply.html",
         form=form,
         positions=CAREER_POSITIONS,
+        applied=applied,
+        applied_position=applied_position,
     )
 
 

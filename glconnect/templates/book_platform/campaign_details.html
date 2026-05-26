@@ -565,19 +565,6 @@
 
                         <hr>
 
-                        {% if not bcp_patronage|default(true) %}
-                        <!-- Legacy investment terms (only when patronage mode is off) -->
-                        <div class="mb-3">
-                            <strong><i class="fas fa-percentage me-2"></i>Revenue share:</strong> 
-                            <span class="badge bg-primary">{{ campaign.revenue_share_percentage }}%</span>
-                            <small class="d-block text-muted mt-1">of sales shared with backers (legacy)</small>
-                        </div>
-                        <div class="mb-3">
-                            <strong><i class="fas fa-chart-line me-2"></i>Max return:</strong> 
-                            <span class="badge bg-success">{{ campaign.return_multiplier_cap }}x</span>
-                            <small class="d-block text-muted mt-1">Maximum return on contribution (legacy)</small>
-                        </div>
-                        {% endif %}
                         <div class="mb-3">
                             <strong><i class="fas fa-dollar-sign me-2"></i>Min contribution:</strong> 
                             ${{ "%.2f"|format(campaign.minimum_investment) }}

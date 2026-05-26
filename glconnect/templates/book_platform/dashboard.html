@@ -745,9 +745,6 @@
                                     <div class="card-body">
                                         <h6 class="card-title">{{ investment.book_project.title }}</h6>
                                         <p class="text-muted small mb-2">Contributed: ${{ "%.2f"|format(investment.amount) }}</p>
-                                        {% if investment.total_returns and investment.total_returns > 0 %}
-                                        <p class="text-muted small mb-2">Legacy returns: ${{ "%.2f"|format(investment.total_returns) }}</p>
-                                        {% endif %}
                                         <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id) }}" class="btn btn-sm btn-outline-primary">
                                             View Details
                                         </a>

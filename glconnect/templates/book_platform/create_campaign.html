@@ -79,31 +79,10 @@
                                 </div>
                             </div>
 
-                            {% if not bcp_patronage|default(true) %}
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    {{ form.revenue_share_percentage.label(class="form-label") }}
-                                    {{ form.revenue_share_percentage(class="form-control") }}
-                                    <small class="form-text text-muted">Total % of sales shared with all backers (legacy mode)</small>
-                                    {% if form.revenue_share_percentage.errors %}
-                                        <div class="text-danger small">{{ form.revenue_share_percentage.errors[0] }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    {{ form.return_multiplier_cap.label(class="form-label") }}
-                                    {{ form.return_multiplier_cap(class="form-control") }}
-                                    <small class="form-text text-muted">Maximum return multiplier (legacy mode)</small>
-                                    {% if form.return_multiplier_cap.errors %}
-                                        <div class="text-danger small">{{ form.return_multiplier_cap.errors[0] }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% else %}
                             <p class="small text-muted border rounded p-3 mb-3">
                                 <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
                                 <strong>Patronage campaign:</strong> Supporters contribute to help publish this book. They do not receive a share of marketplace sales or financial returns.
                             </p>
-                            {% endif %}
 
                             <div class="mb-3">
                                 {{ form.investment_period_days.label(class="form-label") }}

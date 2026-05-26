@@ -81,7 +81,19 @@
     </div>
     <div class="container">
         <h1>Apply at GLC</h1>
+        {% if applied and applied_position %}
+        <ul class="flashes">
+            <li class="success">
+                Thank you — your application for <strong>{{ applied_position }}</strong> was sent. We’ll be in touch.
+                <span style="display: block; margin-top: 0.5rem; font-weight: 400; font-size: 0.95rem;">
+                    Applying for another role? Choose a position below and submit a new application.
+                </span>
+            </li>
+        </ul>
+        <p class="lede">You can apply for additional roles using the form below.</p>
+        {% else %}
         <p class="lede">Submit your application below. We’ll receive it at our hiring inbox.</p>
+        {% endif %}
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
