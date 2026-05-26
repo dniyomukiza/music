@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ink Studio—your hub for books, marketplace, investments, and creator tools.">
+    <meta name="description" content="Ink Studio—your hub for books, marketplace, book campaigns, and creator tools.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <title>Ink Studio</title>
@@ -58,7 +58,7 @@
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
-                            <i class="fas fa-chart-line me-1" aria-hidden="true"></i>Investments
+                            <i class="fas fa-seedling me-1" aria-hidden="true"></i>Discover campaigns
                         </a>
                     </li>
                     <li class="nav-item">
@@ -142,7 +142,7 @@
                     </div>
                     {% elif current_user.role == 'podcaster' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Upload episodes, send listeners to your catalog, and browse books &amp; investments in one place.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">Upload episodes, send listeners to your catalog, and browse books &amp; campaigns in one place.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row">
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-lg ink-mp-cta">
                             <i class="fas fa-broadcast-tower me-2" aria-hidden="true"></i>Content hub
@@ -154,7 +154,7 @@
                             <i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace
                         </a>
                         <a href="{{ url_for('book_platform.investments') }}" class="btn btn-ink-ghost btn-lg">
-                            <i class="fas fa-chart-line me-2" aria-hidden="true"></i>Investments
+                            <i class="fas fa-seedling me-2" aria-hidden="true"></i>Discover campaigns
                         </a>
                     </div>
                     {% else %}
@@ -168,7 +168,7 @@
                             <i class="fas fa-broadcast-tower me-2" aria-hidden="true"></i>Content hub
                         </a>
                         <a href="{{ url_for('book_platform.investments') }}" class="btn btn-ink-ghost btn-lg">
-                            <i class="fas fa-chart-line me-2" aria-hidden="true"></i>Investments
+                            <i class="fas fa-seedling me-2" aria-hidden="true"></i>Discover campaigns
                         </a>
                     </div>
                     {% endif %}
@@ -209,7 +209,7 @@
                         <div class="stat-circle">
                             <i class="fas fa-user-circle fa-2x"></i>
                             <div class="stat-number">{{ user_investments|length if user_investments else 0 }}</div>
-                            <div class="stat-label">My Investments</div>
+                            <div class="stat-label">My contributions</div>
                         </div>
                         {% endif %}
                     </div>
@@ -324,7 +324,7 @@
                             {% elif current_user.role == 'artist' %}
                             <p class="text-muted mb-0">Showcase your art and connect with your audience.</p>
                             {% else %}
-                            <p class="text-muted mb-0">Explore content, invest in books, and discover new opportunities.</p>
+                            <p class="text-muted mb-0">Explore content, back book campaigns, and discover new voices.</p>
                             {% endif %}
                         </div>
                       
@@ -606,12 +606,12 @@
                 </div>
                 {% endif %}
 
-                <!-- Investment Campaigns Section (Authors Only) -->
+                <!-- Book campaigns (authors only) -->
                 {% if investment_campaigns and is_author %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header border-0">
                         <h5 class="card-title text-primary mb-0">
-                            <i class="fas fa-chart-line me-2" aria-hidden="true"></i>My investment campaigns
+                            <i class="fas fa-seedling me-2" aria-hidden="true"></i>My book campaigns
                         </h5>
                     </div>
                     <div class="card-body">
@@ -728,13 +728,13 @@
                 {% if not is_author %}
                 <!-- Regular User Content (Non-Authors) -->
                 
-                <!-- My Investments Section (Not for podcasters, freelancers, bloggers, artists) -->
+                <!-- My contributions (not for podcasters, freelancers, bloggers, artists) -->
                 {% if current_user.role not in ['podcaster', 'freelancer', 'blogger', 'artist'] %}
                 {% if user_investments %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header border-0">
                         <h5 class="card-title text-primary mb-0">
-                            <i class="fas fa-chart-line me-2" aria-hidden="true"></i>My investments
+                            <i class="fas fa-seedling me-2" aria-hidden="true"></i>My contributions
                         </h5>
                     </div>
                     <div class="card-body">
@@ -744,8 +744,10 @@
                                 <div class="card border">
                                     <div class="card-body">
                                         <h6 class="card-title">{{ investment.book_project.title }}</h6>
-                                        <p class="text-muted small mb-2">Investment: ${{ "%.2f"|format(investment.amount) }}</p>
-                                        <p class="text-muted small mb-2">Returns: ${{ "%.2f"|format(investment.total_returns) }}</p>
+                                        <p class="text-muted small mb-2">Contributed: ${{ "%.2f"|format(investment.amount) }}</p>
+                                        {% if investment.total_returns and investment.total_returns > 0 %}
+                                        <p class="text-muted small mb-2">Legacy returns: ${{ "%.2f"|format(investment.total_returns) }}</p>
+                                        {% endif %}
                                         <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id) }}" class="btn btn-sm btn-outline-primary">
                                             View Details
                                         </a>
@@ -756,7 +758,7 @@
                         </div>
                         <div class="text-center mt-3">
                             <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-primary">
-                                View All Investments
+                                View all contributions
                             </a>
                         </div>
                     </div>
@@ -765,15 +767,15 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header border-0">
                         <h5 class="card-title text-primary mb-0">
-                            <i class="fas fa-chart-line me-2" aria-hidden="true"></i>Invest in books
+                            <i class="fas fa-seedling me-2" aria-hidden="true"></i>Back a book
                         </h5>
                     </div>
                     <div class="card-body text-center py-4">
                         <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted mb-3">Start Investing in Books</h5>
-                        <p class="text-muted mb-4">Support authors and earn returns when their books sell.</p>
+                        <h5 class="text-muted mb-3">Back overlooked stories</h5>
+                        <p class="text-muted mb-4">Help authors finish and publish stories that might not get a traditional deal—contributions are patron gifts, not investments.</p>
                         <a href="{{ url_for('book_platform.investments') }}" class="btn btn-primary">
-                            <i class="fas fa-search me-2"></i>Browse Investment Opportunities
+                            <i class="fas fa-search me-2"></i>Browse book campaigns
                         </a>
                     </div>
                 </div>

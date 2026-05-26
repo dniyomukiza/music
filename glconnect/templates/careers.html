@@ -274,7 +274,38 @@
                 <div class="job-card">
                     <h3>Co-founder CTO</h3>
                     <span class="job-type">Leadership</span>
-                    <a href="mailto:info@ndotonic.com?subject=Application: Co-founder CTO" class="apply-button">Apply Now</a>
+                    <a href="{{ url_for('routes.careers_apply', position='Co-founder CTO') }}" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="board-member">
+                    <h3 onclick="toggleJobDetails(this)">Board Member</h3>
+                    <span class="job-type">Leadership</span>
+                    <p>Join GLC’s board to guide strategy, governance, and growth as we build a platform where creators connect with their audiences through music, storytelling, and publishing tools.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Advise on company vision, product direction, and long-term positioning in the creator economy.</li>
+                            <li>Support governance, risk oversight, and ethical standards as the platform scales.</li>
+                            <li>Help shape partnerships, fundraising, and go-to-market strategy with founders and leadership.</li>
+                            <li>Bring an independent perspective on finance, operations, technology, media, or community building as relevant to your background.</li>
+                            <li>Participate in periodic board meetings and strategic reviews (remote-friendly).</li>
+                        </ul>
+                        <h4>About You</h4>
+                        <ul>
+                            <li>Senior experience in technology, media, publishing, startups, or nonprofit/cultural leadership.</li>
+                            <li>Track record of strategic judgment—scaling products, building teams, or advising early-stage ventures.</li>
+                            <li>Genuine interest in empowering independent creators and underserved voices.</li>
+                            <li>Ability to commit time for board duties alongside other professional obligations.</li>
+                            <li>Integrity, discretion, and a collaborative working style with founders and stakeholders.</li>
+                        </ul>
+                        <h4>Nice-to-haves</h4>
+                        <ul>
+                            <li>Prior board or advisory experience at a startup or growth-stage company</li>
+                            <li>Network in music, publishing, education, or creator platforms</li>
+                            <li>Experience with fundraising, M&amp;A, or international expansion</li>
+                        </ul>
+                    </div>
+                    <a href="{{ url_for('routes.careers_apply', position='Board Member') }}" class="apply-button">Apply Now</a>
                 </div>
 
                 <div class="job-card" data-job="ai-engineer">
@@ -304,7 +335,7 @@
                             <li>Certifications in cloud platforms such as AWS, Google Cloud, or Azure a plus</li>
                         </ul>
                     </div>
-                    <a href="mailto:info@ndotonic.com?subject=Application: AI Agent Engineer" class="apply-button">Apply Now</a>
+                    <a href="{{ url_for('routes.careers_apply', position='AI Agent Engineer') }}" class="apply-button">Apply Now</a>
                 </div>
 
                 <div class="job-card" data-job="qa-engineer">
@@ -327,7 +358,7 @@
                             <li>Version controlling with Git</li>
                         </ul>
                     </div>
-                    <a href="mailto:info@ndotonic.com?subject=Application: Quality Testing" class="apply-button">Apply Now</a>
+                    <a href="{{ url_for('routes.careers_apply', position='Quality Testing') }}" class="apply-button">Apply Now</a>
                 </div>
 
                 <div class="job-card" data-job="penetration-tester">
@@ -351,7 +382,7 @@
                             <li>Solid understanding of Linux and Unix operating systems and networking fundamentals.</li>
                         </ul>
                     </div>
-                    <a href="mailto:info@ndotonic.com?subject=Application: Penetration Tester" class="apply-button">Apply Now</a>
+                    <a href="{{ url_for('routes.careers_apply', position='Penetration Tester') }}" class="apply-button">Apply Now</a>
                 </div>
             </div>
         </div>

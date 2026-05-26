@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="GLC — Where creators meet their audience through storytelling, art, and music.">
+    <meta name="description" content="GLC — Overlooked, undiscovered stories. Write, fund, and publish with Ink Studio, patron campaigns, and our marketplace.">
     <title>GLC | Premium Content</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -283,6 +283,14 @@
             width: 2rem;
             height: 2px;
             background: linear-gradient(90deg, var(--accent), var(--accent-hot));
+        }
+
+        .eyebrow--mission {
+            text-transform: none;
+            letter-spacing: 0.04em;
+            font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+            font-weight: 600;
+            line-height: 1.35;
         }
 
         .display {
@@ -600,9 +608,9 @@
     <main class="hero-wrap">
         <div class="hero-grid">
             <div class="hero-copy">
-                <p class="eyebrow">Dynamic multimedia</p>
+                <p class="eyebrow eyebrow--mission">Overlooked, undiscovered stories.</p>
                 <h1 class="display">The epicenter of <em>premium</em> content.</h1>
-                <p class="lede">We connect talented creators to their niche audience through storytelling, art, and music — intentionally built, not algorithmically flattened.</p>
+                <p class="lede">We don’t just host books—we steer forward the voices that wouldn’t get a deal. One platform for storytelling, art, and music—intentionally built, not algorithmically flattened.</p>
                 <div class="cta-row">
                     <a class="cta-chip" href="{{ url_for('blog.blogs') }}">Read Stories</a>
                     <a class="cta-chip" href="{{ url_for('book_platform.music_dashboard') }}">Explore Music</a>
@@ -634,7 +642,7 @@
                         </div>
                     </div>
                     <p style="position:relative;z-index:1;margin:1.5rem 0 0;font-size:0.88rem;line-height:1.65;color:var(--text-muted);">
-                        Built for undiscovered voices: one platform where brand depth and cultural craft still matter.
+                        Overlooked, undiscovered stories—written, funded by patrons, and heard here.
                     </p>
                 </div>
             </div>

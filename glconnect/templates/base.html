@@ -224,7 +224,11 @@
         <li><a href="https://glc.cool/about">About</a></li>
         <li><a href="https://glc.cool/home">Home</a></li>
         <li><a href="{{ url_for('book_platform.ink_studio_access') }}">GLC</a></li>
+        {% if current_user.is_authenticated %}
         <li><a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a></li>
+        {% else %}
+        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Marketplace</a></li>
+        {% endif %}
         {% if ink_nav_show_my_library|default(false) %}
         <li><a href="{{ url_for('book_platform.my_library') }}">My Library</a></li>
         {% endif %}

@@ -46,7 +46,7 @@
                                 </span>
                             </div>
                             <div class="col-md-4">
-                                <p><strong>Has Investment Campaign:</strong></p>
+                                <p><strong>Has book campaign:</strong></p>
                                 <span class="badge bg-{% if status.has_campaign %}primary{% else %}secondary{% endif %} fs-6">
                                     {{ 'Yes' if status.has_campaign else 'No' }}
                                 </span>
@@ -146,7 +146,7 @@
                 <div class="card border-primary">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="fas fa-lock-open me-2"></i>Campaign Funds Release</h5>
-                        <small class="opacity-75">Investor safeguard: 50% at full first draft, 50% at publication</small>
+                        <small class="opacity-75">Patron safeguard: 50% at full first draft, 50% at publication</small>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
@@ -192,7 +192,7 @@
                         </div>
                         <div class="alert alert-info mb-0 small">
                             <i class="fas fa-shield-alt me-1"></i>
-                            <strong>Investor safeguard:</strong> You cannot withdraw campaign funds until you deliver. 50% when you complete a full first draft ({{ "{:,}".format(fund_release.first_draft_min_words) }}+ words), 50% when you publish to the marketplace.
+                            <strong>Patron safeguard:</strong> You cannot withdraw campaign funds until you deliver. 50% when you complete a full first draft ({{ "{:,}".format(fund_release.first_draft_min_words) }}+ words), 50% when you publish to the marketplace.
                         </div>
                     </div>
                 </div>
@@ -225,11 +225,11 @@
                     </div>
                     <div class="card-body">
                         <ul>
-                            <li><strong>Campaign Fund Release:</strong> You receive 50% of campaign funds when you complete a full first draft (25,000+ words), and the remaining 50% when you publish to the marketplace. This protects investors from ghost authors.</li>
+                            <li><strong>Campaign fund release:</strong> You receive 50% of campaign funds when you complete a full first draft (25,000+ words), and the remaining 50% when you publish to the marketplace. This protects patrons from ghost authors.</li>
                             <li><strong>Completion Deadline:</strong> You have 180 days (6 months) to complete your book after funding.</li>
                             <li><strong>Publication Deadline:</strong> Once completed, you have 30 days to publish your book.</li>
-                            <li><strong>Consequences:</strong> If you fail to complete the first draft in time, investors may request refunds. After first draft, all sales are final.</li>
-                            <li><strong>Transparency:</strong> All deadlines and progress are visible to investors and reviewers.</li>
+                            <li><strong>Consequences:</strong> If you fail to complete the first draft in time, supporters may request refunds. After first draft, all sales are final.</li>
+                            <li><strong>Transparency:</strong> All deadlines and progress are visible to supporters and reviewers.</li>
                         </ul>
                     </div>
                 </div>

@@ -66,6 +66,22 @@ class ContactForm(FlaskForm):
     submit = SubmitField('Submit')
     recap=RecaptchaField()
 
+
+class CareerApplicationForm(FlaskForm):
+    position = SelectField(
+        'Position',
+        choices=[],
+        validators=[DataRequired()],
+    )
+    FirstName = StringField('First Name', validators=[DataRequired(), Length(max=50)])
+    LastName = StringField('Last Name', validators=[DataRequired(), Length(max=50)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    portfolio_url = StringField('Portfolio or LinkedIn (optional)', validators=[Optional(), Length(max=300)])
+    message = TextAreaField('Cover letter / message', validators=[DataRequired(), Length(max=3000)])
+    submit = SubmitField('Submit application')
+    recap = RecaptchaField()
+
+
 class PostForm(FlaskForm):
     title=StringField("Title",validators=[DataRequired()],render_kw={"placeholder":"Blog Title"})
     content = CKEditorField('Content')
@@ -202,32 +218,32 @@ class BookReviewForm(FlaskForm):
     is_public = BooleanField('Make Review Public', default=True)
     submit = SubmitField('Submit Review')
 
-# Investment Campaign Form
+# Book campaign form (patronage / community funding)
 class InvestmentCampaignForm(FlaskForm):
     title = StringField('Campaign Title', validators=[DataRequired(), Length(min=5, max=200)],
                        render_kw={"placeholder": "e.g., Help publish my debut novel"})
     description = CKEditorField('Campaign Description', validators=[DataRequired()],
-                               render_kw={"placeholder": "Tell investors why they should invest in your book"})
+                               render_kw={"placeholder": "Tell supporters why they should back your book"})
     pitch_video_url = StringField('Pitch Video URL (Optional)', validators=[Optional(), Length(max=500)],
                                  render_kw={"placeholder": "YouTube, Vimeo, or other video link"})
     funding_goal = FloatField('Funding Goal (USD)', validators=[DataRequired()],
                              render_kw={"placeholder": "e.g., 5000.00", "step": "0.01"})
-    minimum_investment = FloatField('Minimum Investment (USD)', validators=[DataRequired()],
+    minimum_investment = FloatField('Minimum Contribution (USD)', validators=[DataRequired()],
                                    render_kw={"placeholder": "e.g., 50.00", "step": "0.01"})
-    maximum_investment = FloatField('Maximum Investment (USD)', validators=[Optional()],
+    maximum_investment = FloatField('Maximum Contribution (USD)', validators=[Optional()],
                                    render_kw={"placeholder": "e.g., 1000.00 (leave empty for no limit)", "step": "0.01"})
-    revenue_share_percentage = FloatField('Revenue Share % for Investors', validators=[DataRequired()], default=25.0,
-                                         render_kw={"placeholder": "Total % of sales shared with all investors (e.g., 25)"})
-    return_multiplier_cap = FloatField('Return Multiplier Cap', validators=[DataRequired()], default=3.0,
-                                      render_kw={"placeholder": "Maximum return (e.g., 3.0 = 3x investment)"})
+    revenue_share_percentage = FloatField('Revenue Share % (legacy)', validators=[DataRequired()], default=0.0,
+                                         render_kw={"placeholder": "Patronage mode: leave at 0"})
+    return_multiplier_cap = FloatField('Return Multiplier Cap (legacy)', validators=[DataRequired()], default=1.0,
+                                      render_kw={"placeholder": "Patronage mode: leave at 1"})
     investment_period_days = IntegerField('Campaign Duration (Days)', validators=[DataRequired()], default=30,
                                          render_kw={"placeholder": "e.g., 30"})
-    submit = SubmitField('Create Campaign')
+    submit = SubmitField('Launch Campaign')
     recap = RecaptchaField()
 
-# Investment Form
+# Contribution / back-a-campaign form
 class InvestmentForm(FlaskForm):
-    amount = FloatField('Investment Amount (USD)', validators=[DataRequired()],
+    amount = FloatField('Contribution Amount (USD)', validators=[DataRequired()],
                        render_kw={"placeholder": "Enter amount", "step": "0.01"})
-    submit = SubmitField('Invest Now')
+    submit = SubmitField('Contribute Now')
     recap = RecaptchaField()

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Make Investment - {{ campaign.title }}</title>
+    <title>Back this book — {{ campaign.title }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -24,27 +24,24 @@
             <div class="col-md-6 mx-auto">
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
-                        <h3 class="mb-0">Invest in "{{ campaign.title }}"</h3>
+                        <h3 class="mb-0">Back "{{ campaign.title }}"</h3>
                     </div>
                     <div class="card-body">
                         <div class="alert alert-light border mb-3">
                             <small>
                                 <i class="fas fa-heart text-primary me-1"></i>
-                                <strong>Patient capital:</strong> You invest because you believe in this work. Returns may vary—loss, break even, or profit. What matters is helping authors advance impactful ideas.
+                                <strong>Patron contribution:</strong> You are helping this book get written and published. This is not an investment and does not entitle you to financial returns or a share of sales.
                             </small>
                         </div>
                         <div class="alert alert-info">
-                            <strong>Campaign Terms:</strong><br>
-                            Revenue Share: {{ campaign.revenue_share_percentage }}%<br>
-                            Max Return: {{ campaign.return_multiplier_cap }}x<br>
-                            Min Investment: ${{ "%.2f"|format(campaign.minimum_investment) }}<br>
+                            <strong>Campaign:</strong><br>
+                            Min contribution: ${{ "%.2f"|format(campaign.minimum_investment) }}<br>
                             {% if campaign.maximum_investment %}
-                            Max Investment: ${{ "%.2f"|format(campaign.maximum_investment) }}<br>
+                            Max contribution: ${{ "%.2f"|format(campaign.maximum_investment) }}<br>
                             {% endif %}
-                            Remaining: ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }}
+                            Remaining to goal: ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }}
                         </div>
 
-                        <!-- Flash Messages -->
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
                                 {% for category, message in messages %}
@@ -83,7 +80,7 @@
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-                                    <i class="fas fa-dollar-sign"></i> Proceed to Payment
+                                    <i class="fas fa-heart"></i> Proceed to Payment
                                 </button>
                             </div>
                         </form>
@@ -99,7 +96,6 @@
                                 
                                 const amount = document.getElementById('investmentAmount').value;
                                 
-                                // Send AJAX request (same pattern as book purchase)
                                 fetch('{{ url_for("book_platform.make_investment", campaign_id=campaign.id) }}', {
                                     method: 'POST',
                                     headers: {
@@ -126,14 +122,12 @@
                                 })
                                 .then(data => {
                                     if (data.success) {
-                                        // Store investment info for success callback
                                         localStorage.setItem('pendingInvestment', JSON.stringify({
                                             investmentId: data.investment_id,
                                             campaignId: {{ campaign.id }},
                                             successUrl: data.success_url
                                         }));
                                         
-                                        // Redirect to Stripe payment link or checkout session (same as book purchase)
                                         if (data.stripe_checkout_url) {
                                             window.location.href = data.stripe_checkout_url;
                                         } else if (data.stripe_payment_link) {
@@ -144,14 +138,14 @@
                                             submitBtn.innerHTML = originalText;
                                         }
                                     } else {
-                                        alert('Investment failed: ' + (data.error || 'Unknown error'));
+                                        alert('Contribution failed: ' + (data.error || 'Unknown error'));
                                         submitBtn.disabled = false;
                                         submitBtn.innerHTML = originalText;
                                     }
                                 })
                                 .catch(error => {
-                                    console.error('Investment error:', error);
-                                    alert('Investment failed: ' + error.message);
+                                    console.error('Contribution error:', error);
+                                    alert('Contribution failed: ' + error.message);
                                     submitBtn.disabled = false;
                                     submitBtn.innerHTML = originalText;
                                 });
@@ -164,5 +158,3 @@
     </div>
 </body>
 </html>
-
-

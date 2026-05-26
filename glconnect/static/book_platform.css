@@ -2371,6 +2371,17 @@ body.ink-invest .ink-mp-hero-lead {
     color: rgba(255, 255, 255, 0.92) !important;
 }
 
+body.ink-marketplace .ink-mp-mission {
+    max-width: 44rem;
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+    color: #e0bc3a !important;
+    margin: 0 0 1rem;
+}
+
 body.ink-marketplace .ink-mp-hero-badge-soft {
     background: rgba(255, 255, 255, 0.1) !important;
     border: 1px solid rgba(255, 255, 255, 0.2);

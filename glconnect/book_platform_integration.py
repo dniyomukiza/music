@@ -53,6 +53,17 @@ def init_book_platform(app):
             ctx['ink_nav_show_author_nav'] = False
         return ctx
 
+    @app.context_processor
+    def inject_book_campaign_patronage_ui():
+        """Patronage vs legacy investment wording for Ink Studio campaign UI."""
+        try:
+            from glconnect.book_campaign_patronage import is_book_campaign_patronage_mode
+
+            patronage = is_book_campaign_patronage_mode(app)
+        except Exception:
+            patronage = True
+        return {"bcp_patronage": patronage}
+
     # Register the Ink Studio blueprints
     app.register_blueprint(book_bp)
     app.register_blueprint(gemini_bp)

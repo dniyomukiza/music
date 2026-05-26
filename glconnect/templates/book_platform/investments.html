@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Browse community investment campaigns—support indie books before publication, review terms, and track funding progress.">
+    <meta name="description" content="Discover book campaigns—back indie authors before publication and follow funding progress.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Investments | Ink Studio</title>
+    <title>Discover campaigns | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -58,7 +58,7 @@
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link active" href="{{ url_for('book_platform.investments') }}" aria-current="page">
-                            <i class="fas fa-chart-line me-1" aria-hidden="true"></i>Investments
+                            <i class="fas fa-seedling me-1" aria-hidden="true"></i>Discover campaigns
                         </a>
                     </li>
                     <li class="nav-item">
@@ -103,10 +103,10 @@
     <header class="hero-section bg-gradient-primary text-white ink-mp-hero ink-invest-hero py-4 py-md-5">
         <div class="container">
             <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-                <h1 class="ink-mp-hero-title mb-0">Invest in books</h1>
+                <h1 class="ink-mp-hero-title mb-0">Discover book campaigns</h1>
                 <span class="badge rounded-pill px-3 py-2 ink-inv-results-badge">{{ campaigns|length }} listing{% if campaigns|length != 1 %}s{% endif %}</span>
             </div>
-            <p class="lead mb-3 ink-mp-hero-lead mb-md-4">Patient capital for indie authors—review each campaign’s terms, funding progress, and revenue share before you commit. Returns are not guaranteed; you may lose part or all of your investment.</p>
+            <p class="lead mb-3 ink-mp-hero-lead mb-md-4">Back overlooked stories before they hit the marketplace—review each campaign, funding progress, and the author’s pitch. Contributions are not investments and do not entitle you to financial returns.</p>
             <p class="ink-inv-trust-note mb-0"><i class="fas fa-shield-alt me-2" aria-hidden="true"></i>Your own book campaigns are never listed here so you can focus on backing other creators.</p>
         </div>
     </header>

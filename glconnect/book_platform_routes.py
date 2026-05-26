@@ -578,7 +578,7 @@ def check_investment_readiness(book):
         chapter_count = 0
     
     if has_digital_file and chapter_count == 0:
-        issues.append("Investment campaigns are only available for books created on the platform (with chapters), not for uploaded digital books.")
+        issues.append("Book campaigns are only available for books created on the platform (with chapters), not for uploaded digital books.")
     elif chapter_count == 0:
         issues.append("Book must have at least one chapter")
     
@@ -3063,8 +3063,9 @@ def send_book_purchase_receipt_email(book, purchase):
 
 # Marketplace routes
 @book_bp.route('/marketplace')
+@login_required
 def marketplace():
-    """Browse published books in the marketplace (anonymous or signed-in)."""
+    """Browse published books in the marketplace (signed-in users only)."""
     try:
         page = max(1, request.args.get('page', 1, type=int) or 1)
         per_page = 20
@@ -3188,6 +3189,7 @@ def marketplace():
 
 
 @book_bp.route('/api/marketplace/books/<int:book_id>', methods=['GET'])
+@login_required
 def api_marketplace_book_detail(book_id):
     """JSON detail for marketplace modal / future PDP (published books only)."""
     lang_labels = {
@@ -7114,20 +7116,20 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     
     # Uploaded books (PDF/EPUB/DOCX) can never have campaigns—only selling digital/audio
     if book.digital_file_path:
-        flash('Investment campaigns are not available for uploaded books. Uploaded books can only be sold (digital/audio) in the marketplace.', 'error')
+        flash('Book campaigns are not available for uploaded books. Uploaded books can only be sold (digital/audio) in the marketplace.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Check if campaign already exists
     existing_campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
     if existing_campaign:
-        flash('An investment campaign already exists for this book.', 'info')
+        flash('A book campaign already exists for this title.', 'info')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=existing_campaign.id))
     
     # Check if book is ready for investment
     investment_readiness = check_investment_readiness(book)
     
     if not investment_readiness['is_ready']:
-        flash('Your book is not ready for investment yet. Please complete the following requirements:', 'warning')
+        flash('Your book is not ready for a campaign yet. Please complete the following requirements:', 'warning')
         for issue in investment_readiness['issues']:
             flash(f'• {issue}', 'info')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
@@ -7170,7 +7172,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
             book.has_investment_campaign = True
             db.session.commit()
             
-            flash('Investment campaign created successfully!', 'success')
+            flash('Book campaign launched successfully!', 'success')
             return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign.id))
             
         except Exception as e:
@@ -7369,16 +7371,16 @@ def make_investment(campaign_id):
     # Stop new investments if book is published OR goal has been reached
     if book and is_book_published(book):
         logger.warning(f"Investment blocked - Book {book.id} is already published")
-        flash('This campaign is no longer accepting investments because the book is already published.', 'error')
+        flash('This campaign is closed because the book is already published.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Campaign must be ACTIVE to accept investments (FUNDED means goal reached, no more investments)
     if campaign.status != CampaignStatus.ACTIVE:
         logger.warning(f"Investment blocked - Campaign {campaign_id} status is {campaign.status.value}, not ACTIVE")
         if campaign.status == CampaignStatus.FUNDED:
-            flash('This campaign has reached its funding goal and is no longer accepting new investments.', 'error')
+            flash('This campaign has reached its funding goal and is no longer accepting contributions.', 'error')
         else:
-            flash('This campaign is not currently accepting investments.', 'error')
+            flash('This campaign is not currently accepting contributions.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # All users can invest - ensure they have a BookPlatformUser profile for investment tracking
@@ -7394,10 +7396,10 @@ def make_investment(campaign_id):
         # Check both user_id and author_id to be thorough
         if book.author.user_id == investor_user_id:
             logger.warning(f"Investment blocked - User {investor_user_id} is the author of book {book.id}")
-            flash('You cannot invest in your own book.', 'error')
+            flash('You cannot contribute to your own book campaign.', 'error')
             return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
-    # Get or create BookPlatformUser profile for investment
+    # Get or create BookPlatformUser profile for contributions
     bp_user = BookPlatformUser.query.filter_by(user_id=investor_user_id).first()
     
     if not bp_user:
@@ -7409,7 +7411,7 @@ def make_investment(campaign_id):
             bp_user = BookPlatformUser(
                 user_id=investor_user_id,
                 pen_name=writer.writer_name if writer else current_user.username,
-                bio=writer.bio if writer else "Investor",
+                bio=writer.bio if writer else "Patron",
                 profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
             )
             db.session.add(bp_user)
@@ -7418,7 +7420,7 @@ def make_investment(campaign_id):
         except Exception as e:
             db.session.rollback()
             logger.error(f"Failed to create BookPlatformUser for investor: {str(e)}", exc_info=True)
-            flash('Failed to set up investor profile. Please try again.', 'error')
+            flash('Failed to set up your supporter profile. Please try again.', 'error')
             return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     investor_id = bp_user.id
@@ -7426,7 +7428,7 @@ def make_investment(campaign_id):
     # Double-check: Prevent investing in own book using investor_id
     if book and book.author_id == investor_id:
         logger.warning(f"Investment blocked - Investor {investor_id} is the author_id of book {book.id}")
-        flash('You cannot invest in your own book.', 'error')
+        flash('You cannot contribute to your own book campaign.', 'error')
         return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
     
     # Handle both JSON (AJAX) and form submissions (like book purchase)
@@ -7439,9 +7441,9 @@ def make_investment(campaign_id):
         try:
             amount = float(request_data.get('amount', 0))
             if amount <= 0:
-                return jsonify({'error': 'Invalid investment amount'}), 400
+                return jsonify({'error': 'Invalid contribution amount'}), 400
         except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid investment amount'}), 400
+            return jsonify({'error': 'Invalid contribution amount'}), 400
     else:
         # Form submission - use form validation
         form = InvestmentForm()
@@ -7451,14 +7453,14 @@ def make_investment(campaign_id):
     
     # Validate amount (same for both JSON and form)
     if amount < campaign.minimum_investment:
-        error_msg = f'Minimum investment is ${campaign.minimum_investment:.2f}'
+        error_msg = f'Minimum contribution is ${campaign.minimum_investment:.2f}'
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
         return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
     
     if campaign.maximum_investment and amount > campaign.maximum_investment:
-        error_msg = f'Maximum investment is ${campaign.maximum_investment:.2f}'
+        error_msg = f'Maximum contribution is ${campaign.maximum_investment:.2f}'
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
@@ -7467,7 +7469,7 @@ def make_investment(campaign_id):
     # Check if goal would be exceeded
     if campaign.current_funding + amount > campaign.funding_goal:
         max_remaining = campaign.funding_goal - campaign.current_funding
-        error_msg = f'Investment would exceed the funding goal. Maximum remaining: ${max_remaining:.2f}'
+        error_msg = f'This contribution would exceed the funding goal. Maximum remaining: ${max_remaining:.2f}'
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
@@ -7532,8 +7534,8 @@ def make_investment(campaign_id):
                                 "currency": "usd",
                                 "unit_amount": int(amount * 100),
                                 "product_data": {
-                                    "name": f"Investment in '{book.title}'",
-                                    "description": f"Campaign #{campaign.id} on Ink Studio",
+                                    "name": f"Patron contribution to '{book.title}'",
+                                    "description": f"Book campaign #{campaign.id} on Ink Studio — not an investment",
                                 },
                             },
                             "quantity": 1,
@@ -7566,7 +7568,7 @@ def make_investment(campaign_id):
                 'success': True,
                 'investment_id': investment.id,
                 'status': 'pending',
-                'message': 'Investment created. Redirecting to payment...',
+                'message': 'Contribution recorded. Redirecting to payment...',
                 'success_url': success_url,
                 'cancel_url': cancel_url,
             }

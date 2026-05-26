@@ -149,24 +149,24 @@
                     </div>
                 </div>
 
-                <!-- Investment Readiness Status (Only for books created in platform) -->
+                <!-- Campaign readiness (platform-created books only) -->
                 {% if is_author and investment_readiness and not book.digital_file_path %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <h5 class="card-title text-primary mb-0">
-                            <i class="fas fa-chart-line me-2"></i>Investment Readiness
+                            <i class="fas fa-seedling me-2"></i>Campaign readiness
                         </h5>
                     </div>
                     <div class="card-body">
                         {% if investment_readiness.is_ready %}
                             <div class="alert alert-success mb-3">
                                 <i class="fas fa-check-circle me-2"></i>
-                                <strong>Ready for Investment!</strong>
-                                <p class="mb-0 small mt-2">Your book meets all requirements to create an investment campaign.</p>
+                                <strong>Ready to launch a campaign!</strong>
+                                <p class="mb-0 small mt-2">Your book meets all requirements to open patron funding.</p>
                             </div>
                             {% if not book.has_investment_campaign or not investment_campaign %}
                             <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-success w-100">
-                                <i class="fas fa-plus-circle me-2"></i>Create Investment Campaign
+                                <i class="fas fa-plus-circle me-2"></i>Launch book campaign
                             </a>
                             {% else %}
                             <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100">
@@ -177,7 +177,7 @@
                             <div class="alert alert-warning mb-3">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
                                 <strong>Not Ready Yet</strong>
-                                <p class="mb-2 small mt-2">Complete these requirements to make your book investment-ready:</p>
+                                <p class="mb-2 small mt-2">Complete these requirements before you can launch a campaign:</p>
                                 <ul class="small mb-0 ps-3">
                                     {% for issue in investment_readiness.issues %}
                                     <li>{{ issue }}</li>
