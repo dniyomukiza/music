@@ -59,6 +59,9 @@ jobs:
           script: |
             set -e
             cd /home/didyom1/music
+            # Ensure the server working tree has the latest code BEFORE calling deploy scripts.
+            git fetch origin
+            git reset --hard origin/enhancements
             chmod +x scripts/deploy-production.sh
             FORCE_REBUILD="${FORCE_REBUILD:-0}" bash scripts/deploy-production.sh
 
@@ -107,5 +110,36 @@ jobs:
           script: |
             set -e
             cd /home/didyom1/music
-            chmod +x scripts/deploy-rollback.sh
-            bash scripts/deploy-rollback.sh
+            git fetch origin
+            git reset --hard origin/enhancements
+            CACHE_DIR=".deploy-cache"
+            LAST_GOOD_COMMIT_FILE="$CACHE_DIR/last_good_commit"
+
+            if [ ! -f "$LAST_GOOD_COMMIT_FILE" ]; then
+              echo "No last known good commit recorded at $LAST_GOOD_COMMIT_FILE; cannot rollback automatically."
+              exit 1
+            fi
+
+            LAST_GOOD_COMMIT="$(cat "$LAST_GOOD_COMMIT_FILE" | tr -d '\n' | tr -d '\r')"
+            if [ -z "$LAST_GOOD_COMMIT" ]; then
+              echo "last_good_commit file is empty; cannot rollback automatically."
+              exit 1
+            fi
+
+            echo "--- Rolling back to last known good commit: $LAST_GOOD_COMMIT ---"
+            git fetch origin || true
+            git reset --hard "$LAST_GOOD_COMMIT"
+
+            docker compose --profile video up -d --no-build
+            docker compose --profile video restart app fastapi || true
+            docker compose --profile video restart liquidsoap liquidsoap_video 2>/dev/null || true
+
+            echo "--- Post-rollback health checks ---"
+            for i in $(seq 1 18); do
+              if curl -sf --max-time 8 http://localhost:5000/health >/dev/null; then
+                echo "App is up after rollback (${i}/18)."
+                break
+              fi
+              echo "app health after rollback... ($i/18)"
+              sleep 5
+            done
