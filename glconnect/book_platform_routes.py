@@ -87,6 +87,16 @@ from werkzeug.utils import secure_filename
 # Create blueprint
 book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
+
+@book_bp.after_request
+def _ink_studio_disable_page_cache(response):
+    """Prevent browser back-cache from showing authenticated Ink Studio after logout."""
+    if response.content_type and 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 # Initialize logger
 logger = logging.getLogger(__name__)
 
@@ -606,7 +616,7 @@ def writer_or_book_platform_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            return redirect(url_for('routes1.login'))
+            return redirect(url_for('routes1.login', next=request.path))
         
         # Allow freelancers to access with a temporary profile
         if current_user.role == 'freelancer':
@@ -644,7 +654,7 @@ def book_platform_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            return redirect(url_for('routes1.login'))
+            return redirect(url_for('routes1.login', next=request.path))
         
         # Check if user has Ink Studio profile
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()

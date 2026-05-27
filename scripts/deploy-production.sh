@@ -80,8 +80,8 @@ if [ "${FORCE_REBUILD:-0}" = "1" ]; then
   BUILD_SERVICES=(app fastapi nginx)
   REBUILD_REASON="FORCE_REBUILD=1"
 elif ! docker image inspect myapp:latest >/dev/null 2>&1; then
-  BUILD_SERVICES=(app fastapi nginx)
-  REBUILD_REASON="myapp:latest missing"
+  BUILD_SERVICES=(app)
+  REBUILD_REASON="myapp:latest missing (app only)"
 else
   if file_changed requirements.txt || file_changed Dockerfile; then
     BUILD_SERVICES+=(app)
@@ -121,9 +121,16 @@ if [ "${#BUILD_SERVICES[@]}" -eq 0 ]; then
 else
   echo "--- Building Docker images: ${BUILD_SERVICES[*]} (${REBUILD_REASON}) ---"
   echo "--- Tip: routine code-only pushes should show 'Fast deploy' above ---"
-  "${COMPOSE[@]}" build "${BUILD_SERVICES[@]}"
-  save_all_hashes
-  "${COMPOSE_UP[@]}"
+  if ! "${COMPOSE[@]}" build "${BUILD_SERVICES[@]}"; then
+    echo "--- Build failed; keeping site up with existing images (fast fallback) ---"
+    FAST_DEPLOY=1
+    "${COMPOSE_UP[@]}" --no-build
+    "${COMPOSE[@]}" restart app fastapi || true
+    "${COMPOSE[@]}" restart liquidsoap liquidsoap_video 2>/dev/null || true
+  else
+    save_all_hashes
+    "${COMPOSE_UP[@]}"
+  fi
 fi
 
 if file_changed nginx.conf; then
@@ -181,10 +188,20 @@ for i in $(seq 1 8); do
   sleep 5
 done
 
-docker image prune -f >/dev/null 2>&1 || true
+# Only prune on explicit full rebuild — avoids deleting images the next fast deploy needs.
+if [ "${FORCE_REBUILD:-0}" = "1" ]; then
+  docker image prune -f >/dev/null 2>&1 || true
+fi
 
 ELAPSED=$(( $(date +%s) - DEPLOY_START ))
 echo "Deploy finished in ${ELAPSED}s ($(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s). Mode: $([ "$FAST_DEPLOY" = 1 ] && echo FAST || echo BUILD:${BUILD_SERVICES[*]})."
 
-# Mark this commit as last known good so rollback can use it.
-git rev-parse HEAD > "$LAST_GOOD_COMMIT_FILE"
+# Mark last known good only when core health checks pass (rollback target stays reliable).
+APP_OK=0
+curl -sf --max-time 8 http://localhost:5000/health >/dev/null && APP_OK=1
+if [ "$APP_OK" = 1 ]; then
+  git rev-parse HEAD > "$LAST_GOOD_COMMIT_FILE"
+  echo "Recorded last known good commit: $(cat "$LAST_GOOD_COMMIT_FILE")"
+else
+  echo "--- Warning: app /health not OK; last_good_commit not updated (rollback unchanged) ---"
+fi

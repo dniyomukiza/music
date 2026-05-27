@@ -2252,7 +2252,8 @@ body.ink-dashboard .btn-ink-gold,
 body.ink-invest .btn-ink-gold,
 body.ink-earnings .btn-ink-gold,
 body.ink-books-ui .btn-ink-gold,
-body.ink-upload-book .btn-ink-gold {
+body.ink-upload-book .btn-ink-gold,
+body.ink-book-studio .btn-ink-gold {
     background: linear-gradient(145deg, #c9a227, #a88416) !important;
     border: none !important;
     color: #060807 !important;
@@ -2265,7 +2266,8 @@ body.ink-dashboard .btn-ink-gold:hover,
 body.ink-invest .btn-ink-gold:hover,
 body.ink-earnings .btn-ink-gold:hover,
 body.ink-books-ui .btn-ink-gold:hover,
-body.ink-upload-book .btn-ink-gold:hover {
+body.ink-upload-book .btn-ink-gold:hover,
+body.ink-book-studio .btn-ink-gold:hover {
     filter: brightness(1.06);
     color: #060807 !important;
 }
@@ -2275,7 +2277,8 @@ body.ink-dashboard .btn-ink-ghost,
 body.ink-invest .btn-ink-ghost,
 body.ink-earnings .btn-ink-ghost,
 body.ink-books-ui .btn-ink-ghost,
-body.ink-upload-book .btn-ink-ghost {
+body.ink-upload-book .btn-ink-ghost,
+body.ink-book-studio .btn-ink-ghost {
     background: transparent !important;
     border: 1px solid rgba(232, 236, 233, 0.2) !important;
     color: var(--lib-text) !important;
@@ -4834,5 +4837,358 @@ body.ink-music-dashboard .alert-success {
     background: rgba(45, 106, 79, 0.2);
     color: #b8e0ce;
     border: 1px solid rgba(45, 106, 79, 0.4);
+}
+
+/* —— Ink Studio: single-book workspace —— */
+body.ink-book-studio {
+    --studio-accent: #c9a227;
+    --studio-panel: rgba(18, 22, 20, 0.92);
+    --studio-border: rgba(201, 162, 39, 0.22);
+    --studio-muted: #9aa8a0;
+}
+
+body.ink-book-studio .ink-studio-page-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 80% 50% at 0% 0%, rgba(201, 162, 39, 0.08), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 20%, rgba(42, 61, 50, 0.35), transparent 50%);
+}
+
+body.ink-book-studio h1,
+body.ink-book-studio h2,
+body.ink-book-studio h3,
+body.ink-book-studio .ink-studio-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    color: #e8ece9;
+}
+
+body.ink-book-studio .navbar.bg-primary {
+    background: rgba(12, 15, 14, 0.88) !important;
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--studio-border);
+}
+
+body.ink-book-studio .ink-studio-breadcrumb {
+    font-size: 0.875rem;
+    color: var(--studio-muted);
+}
+
+body.ink-book-studio .ink-studio-breadcrumb a {
+    color: var(--studio-accent);
+    text-decoration: none;
+}
+
+body.ink-book-studio .ink-studio-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+body.ink-book-studio .ink-studio-hero {
+    background: var(--studio-panel);
+    border: 1px solid var(--studio-border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+body.ink-book-studio .ink-studio-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #c9a227, #e0bc3a, #c9a227);
+}
+
+body.ink-book-studio .ink-studio-cover {
+    width: 140px;
+    aspect-ratio: 2/3;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--studio-border);
+}
+
+body.ink-book-studio .ink-studio-cover-placeholder {
+    width: 140px;
+    aspect-ratio: 2/3;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #1a221c, #0c0f0e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--studio-border);
+    color: var(--studio-muted);
+}
+
+body.ink-book-studio .ink-studio-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+body.ink-book-studio .ink-studio-status-pill.is-published {
+    background: rgba(45, 106, 79, 0.25);
+    color: #b8e0ce;
+    border: 1px solid rgba(45, 106, 79, 0.45);
+}
+
+body.ink-book-studio .ink-studio-status-pill.is-draft {
+    background: rgba(224, 188, 58, 0.15);
+    color: #f5e6a6;
+    border: 1px solid rgba(224, 188, 58, 0.35);
+}
+
+body.ink-book-studio .ink-studio-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--studio-muted);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.ink-book-studio .ink-studio-journey {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+}
+
+@media (max-width: 991px) {
+    body.ink-book-studio .ink-studio-journey {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 575px) {
+    body.ink-book-studio .ink-studio-journey {
+        grid-template-columns: 1fr;
+    }
+}
+
+body.ink-book-studio .ink-journey-step {
+    background: var(--studio-panel);
+    border: 1px solid rgba(42, 61, 50, 0.55);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+body.ink-book-studio .ink-journey-step.is-done {
+    border-color: rgba(45, 106, 79, 0.5);
+}
+
+body.ink-book-studio .ink-journey-step.is-active {
+    border-color: var(--studio-accent);
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.2);
+}
+
+body.ink-book-studio .ink-journey-step.is-issue {
+    border-color: rgba(201, 76, 76, 0.45);
+}
+
+body.ink-book-studio .ink-journey-step .step-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+body.ink-book-studio .ink-journey-step.is-done .step-icon {
+    background: rgba(45, 106, 79, 0.2);
+    color: #7dcea0;
+}
+
+body.ink-book-studio .ink-journey-step.is-active .step-icon {
+    background: rgba(201, 162, 39, 0.2);
+    color: var(--studio-accent);
+}
+
+body.ink-book-studio .ink-journey-step.is-issue .step-icon {
+    background: rgba(201, 76, 76, 0.15);
+    color: #f0a0a0;
+}
+
+body.ink-book-studio .ink-journey-step .step-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.15rem;
+}
+
+body.ink-book-studio .ink-journey-step .step-hint {
+    font-size: 0.75rem;
+    color: var(--studio-muted);
+    margin: 0;
+    line-height: 1.35;
+}
+
+body.ink-book-studio .ink-studio-panel {
+    background: var(--studio-panel);
+    border: 1px solid rgba(42, 61, 50, 0.55);
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+}
+
+body.ink-book-studio .ink-studio-panel-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(42, 61, 50, 0.45);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+body.ink-book-studio .ink-studio-panel-header h2,
+body.ink-book-studio .ink-studio-panel-header h3 {
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 700;
+}
+
+body.ink-book-studio .ink-studio-panel-body {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+body.ink-book-studio .ink-resume-banner {
+    background: linear-gradient(135deg, rgba(201, 162, 39, 0.12), rgba(42, 61, 50, 0.2));
+    border: 1px solid var(--studio-border);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+body.ink-book-studio .ink-chapter-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+body.ink-book-studio .ink-chapter-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(201, 162, 39, 0.15);
+}
+
+body.ink-book-studio .ink-chapter-num {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: rgba(201, 162, 39, 0.15);
+    color: var(--studio-accent);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+
+body.ink-book-studio .ink-chapter-row.is-draft-chapter .ink-chapter-num {
+    background: rgba(224, 188, 58, 0.12);
+    color: #e0bc3a;
+}
+
+body.ink-book-studio .ink-chapter-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+body.ink-book-studio .ink-chapter-meta .chapter-title {
+    font-weight: 600;
+    margin: 0 0 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.ink-book-studio .ink-chapter-meta .chapter-sub {
+    font-size: 0.8rem;
+    color: var(--studio-muted);
+    margin: 0;
+}
+
+body.ink-book-studio .ink-studio-rail {
+    position: sticky;
+    top: 1rem;
+}
+
+body.ink-book-studio .ink-rail-actions .btn {
+    border-radius: 12px;
+    text-align: left;
+    justify-content: flex-start;
+}
+
+body.ink-book-studio .ink-audio-spotlight {
+    background: linear-gradient(145deg, rgba(42, 61, 50, 0.5), rgba(12, 15, 14, 0.9));
+    border: 1px solid rgba(92, 122, 110, 0.4);
+    border-radius: 16px;
+    padding: 1.25rem;
+}
+
+body.ink-book-studio .ink-audio-spotlight .audio-wave-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(201, 162, 39, 0.2);
+    color: var(--studio-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+body.ink-book-studio .ink-empty-manuscript {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+}
+
+body.ink-book-studio .ink-empty-manuscript .empty-icon-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: rgba(201, 162, 39, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--studio-accent);
+    font-size: 1.75rem;
+}
+
+body.ink-book-studio .card:hover {
+    transform: none;
+}
+
+body.ink-book-studio .hero-section {
+    display: none;
 }
 

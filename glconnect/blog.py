@@ -321,22 +321,50 @@ def contact():
 
     return render_template("contact.html", form=form)
 
-@blog.route('/logout')
-@login_required
+def _clear_auth_cookies(response):
+    """Delete session cookies with the same flags Flask used when setting them."""
+    cookie_name = current_app.config.get('SESSION_COOKIE_NAME', 'session')
+    cookie_path = current_app.config.get('SESSION_COOKIE_PATH') or '/'
+    cookie_domain = current_app.config.get('SESSION_COOKIE_DOMAIN')
+    cookie_secure = bool(current_app.config.get('SESSION_COOKIE_SECURE', False))
+    cookie_httponly = bool(current_app.config.get('SESSION_COOKIE_HTTPONLY', True))
+    cookie_samesite = current_app.config.get('SESSION_COOKIE_SAMESITE') or 'Lax'
+
+    response.delete_cookie(
+        cookie_name,
+        path=cookie_path,
+        domain=cookie_domain,
+        secure=cookie_secure,
+        httponly=cookie_httponly,
+        samesite=cookie_samesite,
+    )
+    remember_name = current_app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
+    response.delete_cookie(
+        remember_name,
+        path=current_app.config.get('REMEMBER_COOKIE_PATH', cookie_path),
+        domain=current_app.config.get('REMEMBER_COOKIE_DOMAIN', cookie_domain),
+        secure=bool(current_app.config.get('REMEMBER_COOKIE_SECURE', cookie_secure)),
+        httponly=bool(current_app.config.get('REMEMBER_COOKIE_HTTPONLY', True)),
+        samesite=current_app.config.get('REMEMBER_COOKIE_SAMESITE', cookie_samesite),
+    )
+    return response
+
+
+@blog.route('/logout', methods=['GET', 'POST'])
 def logout():
-    logout_user()
+    """Always clear server session and auth cookies, then send user to login."""
+    if current_user.is_authenticated:
+        logout_user()
     session.clear()
 
-    # Clear session cookie
     response = redirect(url_for('routes1.login'))
-    response.set_cookie('session', '', expires=0)
+    _clear_auth_cookies(response)
 
-    # Disable caching
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
 
-    flash("You are logged out", "success")
+    flash("You are logged out", 'success')
     return response
 
 @blog.route('/curr')
