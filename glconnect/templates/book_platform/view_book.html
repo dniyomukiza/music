@@ -167,7 +167,7 @@
                         {% if is_author|default(True) %}
                         <div class="d-flex gap-2 flex-wrap">
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-sm btn-outline-light">
-                                <i class="fas fa-plus me-1"></i>New chapter
+                                <i class="fas fa-plus me-1"></i>Add section
                             </a>
                         </div>
                         {% endif %}
@@ -182,7 +182,7 @@
                                     <p class="chapter-title">{{ chapter.title }}</p>
                                     <p class="chapter-sub">
                                         {{ chapter.word_count or 0 }} words
-                                        · {% if chapter.is_published %}<span class="text-success">Published</span>{% else %}<span class="text-warning">Draft</span>{% endif %}
+                                        · {% if chapter.is_published %}<span class="text-success">Complete</span>{% else %}<span class="text-warning">In progress</span>{% endif %}
                                         {% if chapter.updated_at %} · {{ chapter.updated_at.strftime('%b %d') }}{% endif %}
                                     </p>
                                 </div>
@@ -199,7 +199,7 @@
                             <p class="text-muted mb-3">Chapters live in Ink Studio — write, revise, and publish one piece at a time.</p>
                             {% if is_author|default(True) %}
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-ink-gold">
-                                <i class="fas fa-plus me-2"></i>Create first chapter
+                                <i class="fas fa-plus me-2"></i>Add first section
                             </a>
                             {% endif %}
                         </div>
@@ -358,7 +358,7 @@
                                 <i class="fas fa-pen-nib me-2"></i>Continue writing
                             </a>
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-outline-light">
-                                <i class="fas fa-plus me-2"></i>New chapter
+                                <i class="fas fa-plus me-2"></i>Add section
                             </a>
                             {% else %}
                             <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-light">

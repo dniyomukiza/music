@@ -40,9 +40,9 @@
                         </div>
                         <div>
                             {% if chapter.is_published %}
-                                <span class="badge bg-success">Published</span>
+                                <span class="badge bg-success">Complete</span>
                             {% else %}
-                                <span class="badge bg-warning">Draft</span>
+                                <span class="badge bg-warning">In progress</span>
                             {% endif %}
                         </div>
                     </div>
@@ -128,9 +128,9 @@
                             <div class="col-6"><strong>Status:</strong></div>
                             <div class="col-6">
                                 {% if chapter.is_published %}
-                                    <span class="badge bg-success">Published</span>
+                                    <span class="badge bg-success">Complete</span>
                                 {% else %}
-                                    <span class="badge bg-warning">Draft</span>
+                                    <span class="badge bg-warning">In progress</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -157,10 +157,10 @@
                         <div class="d-grid gap-2">
                             {% if chapter.is_published %}
                                 <button id="unpublishBtn" class="btn btn-warning" onclick="unpublishChapter()">
-                                    <i class="fas fa-undo"></i> Unpublish Chapter
+                                    <i class="fas fa-undo"></i> Reopen for editing
                                 </button>
                                 <div class="alert alert-info py-2 mb-0">
-                                    <small><i class="fas fa-lock"></i> Published chapters are locked for editing</small>
+                                    <small><i class="fas fa-lock"></i> Complete chapters are locked for editing</small>
                                 </div>
                             {% else %}
                                 <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
@@ -210,10 +210,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function unpublishChapter() {
-            if (confirm('Are you sure you want to unpublish this chapter? This will allow you to edit it again.')) {
+            if (confirm('Reopen this chapter for editing? It will no longer be marked complete.')) {
                 const unpublishBtn = document.getElementById('unpublishBtn');
                 unpublishBtn.disabled = true;
-                unpublishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Unpublishing...';
+                unpublishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reopening...';
                 
                 fetch('{{ url_for("book_platform.unpublish_chapter", book_id=book.id, chapter_id=chapter.id) }}', {
                     method: 'POST',
@@ -232,16 +232,16 @@
                             window.location.reload();
                         }, 1500);
                     } else {
-                        showNotification(data.error || 'Failed to unpublish chapter', 'error');
+                        showNotification(data.error || 'Could not reopen chapter', 'error');
                         unpublishBtn.disabled = false;
-                        unpublishBtn.innerHTML = '<i class="fas fa-undo"></i> Unpublish Chapter';
+                        unpublishBtn.innerHTML = '<i class="fas fa-undo"></i> Reopen for editing';
                     }
                 })
                 .catch(error => {
-                    console.error('Error unpublishing chapter:', error);
-                    showNotification('An error occurred while unpublishing the chapter', 'error');
+                    console.error('Error reopening chapter:', error);
+                    showNotification('An error occurred while reopening the chapter', 'error');
                     unpublishBtn.disabled = false;
-                    unpublishBtn.innerHTML = '<i class="fas fa-undo"></i> Unpublish Chapter';
+                    unpublishBtn.innerHTML = '<i class="fas fa-undo"></i> Reopen for editing';
                 });
             }
         }

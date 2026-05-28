@@ -90,16 +90,15 @@ def build_audiobook_source(
                 ]
                 unpublished_count = len(unpublished_with_content)
                 error_msg = (
-                    f"No published chapters found. You have {len(all_chapters)} chapter(s) total, "
-                    "but none are published. "
+                    f"No complete sections found. You have {len(all_chapters)} section(s) total, "
+                    "but none are marked complete. "
                 )
                 if unpublished_with_content:
                     error_msg += (
-                        f"You have {unpublished_count} unpublished chapter(s) with content. "
+                        f"You have {unpublished_count} in-progress section(s) with content. "
                     )
                 error_msg += (
-                    'Please go to each chapter and check the "Publish this chapter" checkbox '
-                    "before generating an audiobook."
+                    'Mark each section you want in audio as "Chapter complete" before generating an audiobook.'
                 )
                 return {
                     "success": False,

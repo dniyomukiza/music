@@ -1833,7 +1833,7 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
     
     # Check if chapter is published - if so, prevent editing
     if chapter.is_published:
-        flash('This chapter is published and cannot be edited. Unpublish it first to make changes.', 'warning')
+        flash('This chapter is marked complete and cannot be edited. Reopen it first to make changes.', 'warning')
         return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
     
     if chapter.book_project_id != book_id:

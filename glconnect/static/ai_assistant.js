@@ -9,13 +9,17 @@ class AIWritingAssistant {
         this.apiKey = null;
         this.currentChapter = null;
         this.aiProvider = 'Gemini'; // Using Google's Gemini AI
+        this.chatHistory = [];
+        this.chatSending = false;
+        this.activeTab = 'writing';
         this.aiFeatures = {
             generateContent: true,
             improveText: true,
             analyzeText: true,
             proofread: true,
             generateIdeas: true,
-            suggestImprovements: true
+            suggestImprovements: true,
+            chat: true
         };
     }
 
@@ -98,42 +102,60 @@ class AIWritingAssistant {
                     ${this.isEnabled ? 'Enabled' : 'Disabled'}
                 </div>
             </div>
+            <div class="ai-toolbar-tabs" role="tablist">
+                <button type="button" class="ai-tab active" data-ai-tab="writing" role="tab" aria-selected="true">Writing</button>
+                <button type="button" class="ai-tab" data-ai-tab="chat" role="tab" aria-selected="false">Chat</button>
+            </div>
             <div class="ai-toolbar-content">
-                <div class="ai-help-text">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> 
-                        Select text in the editor to improve it, or leave unselected to generate new content
-                    </small>
+                <div class="ai-panel-writing" data-ai-panel="writing">
+                    <div class="ai-help-text">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Select text in the editor to improve it, or leave unselected to generate new content
+                        </small>
+                    </div>
+                    <div class="ai-section">
+                        <h6>Content Generation</h6>
+                        <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-content">
+                            <i class="fas fa-magic"></i> Generate Content
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-ideas">
+                            <i class="fas fa-lightbulb"></i> Story Ideas
+                        </button>
+                    </div>
+                    <div class="ai-section">
+                        <h6>Text Improvement</h6>
+                        <button class="btn btn-sm btn-outline-success" data-ai-action="improve-text">
+                            <i class="fas fa-edit"></i> Improve Text
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" data-ai-action="proofread">
+                            <i class="fas fa-spell-check"></i> Proofread
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" data-ai-action="suggest-improvements">
+                            <i class="fas fa-tools"></i> Suggestions
+                        </button>
+                    </div>
+                    <div class="ai-section">
+                        <h6>Analysis</h6>
+                        <button class="btn btn-sm btn-outline-info" data-ai-action="analyze-text">
+                            <i class="fas fa-chart-line"></i> Analyze Text
+                        </button>
+                    </div>
                 </div>
-                
-                <div class="ai-section">
-                    <h6>Content Generation</h6>
-                    <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-content">
-                        <i class="fas fa-magic"></i> Generate Content
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-ideas">
-                        <i class="fas fa-lightbulb"></i> Story Ideas
-                    </button>
-                </div>
-                
-                <div class="ai-section">
-                    <h6>Text Improvement</h6>
-                    <button class="btn btn-sm btn-outline-success" data-ai-action="improve-text">
-                        <i class="fas fa-edit"></i> Improve Text
-                    </button>
-                    <button class="btn btn-sm btn-outline-success" data-ai-action="proofread">
-                        <i class="fas fa-spell-check"></i> Proofread
-                    </button>
-                    <button class="btn btn-sm btn-outline-success" data-ai-action="suggest-improvements">
-                        <i class="fas fa-tools"></i> Suggestions
-                    </button>
-                </div>
-                
-                <div class="ai-section">
-                    <h6>Analysis</h6>
-                    <button class="btn btn-sm btn-outline-info" data-ai-action="analyze-text">
-                        <i class="fas fa-chart-line"></i> Analyze Text
-                    </button>
+                <div class="ai-panel-chat hidden" data-ai-panel="chat" hidden>
+                    <p class="ai-chat-intro small text-muted">
+                        Ask anything — research, grammar, ideas, or topics unrelated to this book.
+                    </p>
+                    <div class="ai-chat-messages" id="ai-chat-messages" aria-live="polite"></div>
+                    <div class="ai-chat-compose">
+                        <textarea id="ai-chat-input" class="form-control form-control-sm" rows="3" placeholder="Type your question…" aria-label="Chat message"></textarea>
+                        <div class="ai-chat-actions">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="ai-chat-clear" title="Clear conversation">Clear</button>
+                            <button type="button" class="btn btn-sm btn-primary" id="ai-chat-send">
+                                <i class="fas fa-paper-plane"></i> Send
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -141,6 +163,9 @@ class AIWritingAssistant {
         // Add to page
         const editorContainer = document.querySelector('.editor-container') || document.body;
         editorContainer.appendChild(toolbar);
+
+        this.setupToolbarTabs(toolbar);
+        this.setupChatPanel(toolbar);
 
         // Add CSS
         this.addAIStyles();
@@ -157,14 +182,118 @@ class AIWritingAssistant {
                 right: 20px;
                 top: 50%;
                 transform: translateY(-50%);
-                width: 280px;
+                width: 300px;
                 background: white;
                 border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.1);
                 z-index: 1000;
-                max-height: 80vh;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .ai-toolbar-tabs {
+                display: flex;
+                gap: 4px;
+                padding: 8px 12px 0;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            .ai-tab {
+                flex: 1;
+                border: none;
+                background: #f1f5f9;
+                color: #475569;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 8px 10px;
+                border-radius: 6px 6px 0 0;
+                cursor: pointer;
+            }
+
+            .ai-tab.active {
+                background: #fff;
+                color: #1e293b;
+                box-shadow: 0 -1px 0 #fff;
+            }
+
+            .ai-toolbar-content {
+                flex: 1;
                 overflow-y: auto;
+                min-height: 0;
+            }
+
+            .ai-panel-chat.hidden,
+            .ai-panel-writing.hidden {
+                display: none !important;
+            }
+
+            .ai-chat-intro {
+                margin-bottom: 8px;
+                line-height: 1.35;
+            }
+
+            .ai-chat-messages {
+                min-height: 160px;
+                max-height: 280px;
+                overflow-y: auto;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 8px;
+                margin-bottom: 8px;
+                background: #f8fafc;
+            }
+
+            .ai-chat-bubble {
+                margin-bottom: 10px;
+                padding: 8px 10px;
+                border-radius: 10px;
+                font-size: 12px;
+                line-height: 1.45;
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+
+            .ai-chat-bubble.user {
+                background: #e0f2fe;
+                color: #0c4a6e;
+                margin-left: 12px;
+            }
+
+            .ai-chat-bubble.assistant {
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                color: #334155;
+                margin-right: 8px;
+            }
+
+            .ai-chat-bubble.error {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+
+            .ai-chat-bubble.thinking {
+                color: #64748b;
+                font-style: italic;
+            }
+
+            .ai-chat-compose textarea {
+                resize: vertical;
+                min-height: 56px;
+                font-size: 13px;
+            }
+
+            .ai-chat-actions {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            .ai-chat-actions .btn-primary {
+                flex: 1;
             }
             
             .ai-toolbar-header {
@@ -201,7 +330,7 @@ class AIWritingAssistant {
                 padding: 12px;
                 color: #333;
             }
-            
+
             .ai-help-text {
                 margin-bottom: 12px;
                 padding: 8px;
@@ -439,6 +568,152 @@ class AIWritingAssistant {
             }
         `;
         document.head.appendChild(style);
+    }
+
+    setupToolbarTabs(toolbar) {
+        const tabs = toolbar.querySelectorAll('[data-ai-tab]');
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const name = tab.getAttribute('data-ai-tab');
+                this.switchAITab(name, toolbar);
+            });
+        });
+    }
+
+    switchAITab(name, toolbar) {
+        if (!toolbar) toolbar = document.getElementById('ai-toolbar');
+        if (!toolbar) return;
+        this.activeTab = name;
+        toolbar.querySelectorAll('[data-ai-tab]').forEach((t) => {
+            const active = t.getAttribute('data-ai-tab') === name;
+            t.classList.toggle('active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        toolbar.querySelectorAll('[data-ai-panel]').forEach((panel) => {
+            const show = panel.getAttribute('data-ai-panel') === name;
+            panel.classList.toggle('hidden', !show);
+            panel.hidden = !show;
+        });
+    }
+
+    setupChatPanel(toolbar) {
+        const sendBtn = toolbar.querySelector('#ai-chat-send');
+        const clearBtn = toolbar.querySelector('#ai-chat-clear');
+        const input = toolbar.querySelector('#ai-chat-input');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => this.sendChatMessage());
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearChat());
+        }
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendChatMessage();
+                }
+            });
+        }
+        this.renderChatMessages();
+    }
+
+    renderChatMessages() {
+        const container = document.getElementById('ai-chat-messages');
+        if (!container) return;
+        if (!this.chatHistory.length) {
+            container.innerHTML = '<div class="ai-chat-bubble assistant">Hi — ask me anything. I can help with writing, research, or general questions, not just this chapter.</div>';
+            return;
+        }
+        container.innerHTML = this.chatHistory.map((m) => {
+            const role = m.role === 'user' ? 'user' : 'assistant';
+            const safe = this.escapeHtml(m.content);
+            return `<div class="ai-chat-bubble ${role}">${safe}</div>`;
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text || '';
+        return d.innerHTML;
+    }
+
+    appendChatBubble(role, content, extraClass = '') {
+        const container = document.getElementById('ai-chat-messages');
+        if (!container) return;
+        if (!this.chatHistory.length && role !== 'user') {
+            container.innerHTML = '';
+        }
+        const div = document.createElement('div');
+        div.className = `ai-chat-bubble ${role} ${extraClass}`.trim();
+        div.textContent = content;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    clearChat() {
+        this.chatHistory = [];
+        this.renderChatMessages();
+        const input = document.getElementById('ai-chat-input');
+        if (input) input.value = '';
+    }
+
+    async sendChatMessage() {
+        if (!this.isEnabled) {
+            this.showNotification('AI features are not enabled', 'error');
+            return;
+        }
+        if (this.chatSending) return;
+        const input = document.getElementById('ai-chat-input');
+        const message = input ? input.value.trim() : '';
+        if (!message) {
+            this.showNotification('Enter a message to send', 'warning');
+            return;
+        }
+
+        this.chatSending = true;
+        const sendBtn = document.getElementById('ai-chat-send');
+        if (sendBtn) sendBtn.disabled = true;
+        if (input) input.value = '';
+
+        this.chatHistory.push({ role: 'user', content: message });
+        this.renderChatMessages();
+        this.appendChatBubble('assistant', 'Thinking…', 'thinking');
+
+        try {
+            const response = await fetch('/mybook/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    message,
+                    history: this.chatHistory.slice(0, -1),
+                }),
+            });
+
+            const container = document.getElementById('ai-chat-messages');
+            const thinking = container ? container.querySelector('.thinking') : null;
+            if (thinking) thinking.remove();
+
+            const result = await this.handleAIResponse(response, 'Chat error');
+            if (!result) return;
+
+            if (result.success && result.content) {
+                this.chatHistory.push({ role: 'assistant', content: result.content });
+                this.renderChatMessages();
+            } else {
+                this.appendChatBubble('assistant', result.error || 'Could not get a reply.', 'error');
+            }
+        } catch (error) {
+            const container = document.getElementById('ai-chat-messages');
+            const thinking = container ? container.querySelector('.thinking') : null;
+            if (thinking) thinking.remove();
+            this.appendChatBubble('assistant', error.message || 'Request failed.', 'error');
+        } finally {
+            this.chatSending = false;
+            if (sendBtn) sendBtn.disabled = false;
+            if (input) input.focus();
+        }
     }
 
     /**

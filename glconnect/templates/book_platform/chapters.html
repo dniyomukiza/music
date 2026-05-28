@@ -247,7 +247,7 @@
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0 text-muted" style="font-family: 'DM Sans', sans-serif;">CH {{ chapter.chapter_number }}</h6>
                                         {% if chapter.is_published %}
-                                            <span class="badge badge-success"><i class="fas fa-check-circle me-1"></i>Published</span>
+                                            <span class="badge badge-success"><i class="fas fa-check-circle me-1"></i>Complete</span>
                                         {% else %}
                                             <span class="badge badge-warning"><i class="fas fa-pen me-1"></i>Draft</span>
                                         {% endif %}
@@ -342,13 +342,13 @@
                                     <div class="col-6 col-md-3 mb-3 mb-md-0">
                                         <div class="stat-item h-100">
                                             <h3 class="text-success">{{ chapters|selectattr('is_published')|list|length }}</h3>
-                                            <p class="text-muted mb-0">Published</p>
+                                            <p class="text-muted mb-0">Complete</p>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <div class="stat-item h-100">
                                             <h3 class="text-warning">{{ chapters|rejectattr('is_published')|list|length }}</h3>
-                                            <p class="text-muted mb-0">Drafts</p>
+                                            <p class="text-muted mb-0">In progress</p>
                                         </div>
                                     </div>
                                     <div class="col-6 col-md-3">

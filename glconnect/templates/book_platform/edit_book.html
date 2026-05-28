@@ -555,7 +555,7 @@
                                         <div class="card-header d-flex justify-content-between align-items-center">
                                             <h6 class="mb-0">Chapter {{ chapter.chapter_number }}</h6>
                                             {% if chapter.is_published %}
-                                                <span class="badge bg-success">Published</span>
+                                                <span class="badge bg-success">Complete</span>
                                             {% else %}
                                                 <span class="badge bg-warning">Draft</span>
                                             {% endif %}
@@ -594,7 +594,7 @@
                                            <i class="fas fa-eye"></i> View
                                        </a>
                                        {% if chapter.is_published %}
-                                           <button class="btn btn-outline-warning btn-sm" disabled title="Published chapters are locked for editing">
+                                           <button class="btn btn-outline-warning btn-sm" disabled title="Complete chapters are locked for editing">
                                                <i class="fas fa-lock"></i> Locked
                                            </button>
                                        {% else %}
@@ -813,7 +813,7 @@
                                 {% if book.digital_file_path %}
                                     Text is taken from your uploaded digital book for narration. The same file remains the complete ebook for buyers.
                                 {% else %}
-                                    You need at least one published chapter to generate an audiobook.
+                                    You need at least one complete chapter to generate an audiobook.
                                 {% endif %}
                                 The process may take several minutes depending on your book's length.
                                 <br><br>
@@ -861,7 +861,7 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     {% if not book.digital_file_path %}
     {# Only show AI Assistant for manually created books, not uploaded digital books #}
-    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.0"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.1"></script>
     {% endif %}
     <script>
         let listingTermsConfirmed = false;

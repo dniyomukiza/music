@@ -415,6 +415,59 @@ Suggestions:"""
             print(f"DEBUG: Exception in suggest_improvements: {e}")
             return {"success": False, "error": str(e)}
 
+    def chat(self, message: str, history: Optional[List[Dict]] = None) -> Dict:
+        """Open-ended chat — general questions, not tied to the current book."""
+        message = (message or "").strip()
+        if not message:
+            return {"success": False, "error": "Message is required"}
+
+        history = history or []
+        gemini_history = []
+        for turn in history[-24:]:
+            role = turn.get("role")
+            content = (turn.get("content") or "").strip()
+            if not content:
+                continue
+            if role == "user":
+                gemini_history.append({"role": "user", "parts": [content]})
+            elif role in ("assistant", "model"):
+                gemini_history.append({"role": "model", "parts": [content]})
+
+        system_instruction = (
+            "You are a friendly, knowledgeable assistant in Ink Studio, a platform for authors. "
+            "The author may ask you anything: writing craft, research, brainstorming, grammar, "
+            "publishing, productivity, or completely unrelated topics. "
+            "Answer clearly and helpfully. You are not limited to their current book or chapter. "
+            "If they need book-specific edits, suggest using the writing tools in the sidebar."
+        )
+
+        try:
+            model = genai.GenerativeModel(
+                "gemini-2.5-flash",
+                system_instruction=system_instruction,
+            )
+            chat_session = model.start_chat(history=gemini_history)
+            response = chat_session.send_message(
+                message,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=2048,
+                    temperature=0.7,
+                    top_p=0.9,
+                    top_k=40,
+                ),
+            )
+            if response.parts and len(response.parts) > 0:
+                content = response.text
+                return {"success": True, "content": content}
+            finish = (
+                response.candidates[0].finish_reason
+                if response.candidates
+                else "Unknown"
+            )
+            return {"success": False, "error": f"No reply generated (finish: {finish})"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 # Initialize Gemini assistant
 def get_gemini_assistant():
     """Get Gemini assistant instance"""
@@ -458,7 +511,8 @@ def ai_status():
                 'idea_generation': True,
                 'dialogue_generation': True,
                 'scene_expansion': True,
-                'suggestions': True
+                'suggestions': True,
+                'chat': True,
             }
         })
         
@@ -597,6 +651,30 @@ def suggest_improvements():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@gemini_bp.route('/chat', methods=['POST'])
+@login_required
+def chat():
+    """General-purpose chat (not limited to the current book)."""
+    try:
+        data = request.get_json() or {}
+        message = data.get("message")
+        history = data.get("history") or []
+
+        if not message or not str(message).strip():
+            return jsonify({"success": False, "error": "Message is required"}), 400
+
+        if not isinstance(history, list):
+            history = []
+
+        assistant = get_gemini_assistant()
+        if not assistant:
+            return jsonify({"success": False, "error": "Gemini AI service not configured"}), 500
+
+        result = assistant.chat(str(message).strip(), history)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # Export the blueprint
 __all__ = ['gemini_bp', 'GeminiWritingAssistant']
