@@ -52,6 +52,10 @@ docker-compose*.yml
 README.md
 *.md
 
+# Ndotonic governance (not needed in container)
+docs/NONPROFIT_MISSION_AND_PLATFORM.md
+docs/NDOTONIC_*.md
+
 # Logs
 *.log
 logs/

@@ -48,3 +48,9 @@ jingles.m3u
 # Ignore large backup and archive files
 *.zip
 *.sql
+
+# Ndotonic nonprofit governance (local / counsel review; not in repo)
+docs/NONPROFIT_MISSION_AND_PLATFORM.md
+docs/NDOTONIC_BYLAWS.md
+docs/NDOTONIC_ARTICLES_OF_INCORPORATION.md
+docs/NDOTONIC_INTELLECTUAL_PROPERTY_POLICY.md

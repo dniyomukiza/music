@@ -145,6 +145,8 @@ class BookProject(db.Model):
     status = db.Column(db.Enum(BookStatus), default=BookStatus.DRAFT)
     cover_image = db.Column(db.String(500), nullable=True)
     isbn = db.Column(db.String(20), nullable=True)
+    publisher_name = db.Column(db.String(200), nullable=True)  # Platform imprint when listed
+    isbn_assigned_at = db.Column(db.DateTime, nullable=True)
     price = db.Column(db.Float, nullable=True)  # Price in USD
     currency = db.Column(db.String(3), default='USD')
     published_at = db.Column(db.DateTime, nullable=True)
@@ -1072,4 +1074,28 @@ class AuthorCampaignPayoutRequest(db.Model):
     
     campaign = db.relationship('InvestmentCampaign', backref='author_payout_requests')
     approved_by = db.relationship('BookPlatformUser', foreign_keys=[approved_by_id])
+
+
+class IsbnPoolStatus(PyEnum):
+    AVAILABLE = "available"
+    ASSIGNED = "assigned"
+    RESERVED = "reserved"
+
+
+class IsbnPoolEntry(db.Model):
+    """Platform-owned ISBN inventory; one ISBN per listed book title (all formats)."""
+
+    __tablename__ = "isbn_pool"
+
+    id = db.Column(db.Integer, primary_key=True)
+    isbn = db.Column(db.String(20), unique=True, nullable=False)
+    status = db.Column(db.Enum(IsbnPoolStatus), default=IsbnPoolStatus.AVAILABLE, nullable=False)
+    book_project_id = db.Column(
+        db.Integer, db.ForeignKey("book_projects.id", ondelete="SET NULL"), nullable=True
+    )
+    assigned_at = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    book_project = db.relationship("BookProject", backref=db.backref("isbn_pool_entry", uselist=False))
 

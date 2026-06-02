@@ -111,11 +111,11 @@ class AIWritingAssistant {
                     <div class="ai-help-text">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i>
-                            Select text in the editor to improve it, or leave unselected to generate new content
+                            <strong>Developmental:</strong> structure &amp; new prose. <strong>Copy edit:</strong> select text, then Improve or Proofread.
                         </small>
                     </div>
                     <div class="ai-section">
-                        <h6>Content Generation</h6>
+                        <h6>Developmental</h6>
                         <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-content">
                             <i class="fas fa-magic"></i> Generate Content
                         </button>
@@ -124,7 +124,7 @@ class AIWritingAssistant {
                         </button>
                     </div>
                     <div class="ai-section">
-                        <h6>Text Improvement</h6>
+                        <h6>Copyediting &amp; proofreading</h6>
                         <button class="btn btn-sm btn-outline-success" data-ai-action="improve-text">
                             <i class="fas fa-edit"></i> Improve Text
                         </button>

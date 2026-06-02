@@ -28,6 +28,8 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home me-1"></i>Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book me-1"></i>My books</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.publishing_pipeline') }}"><i class="fas fa-route me-1"></i>Publishing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.publicity_promotion') }}"><i class="fas fa-bullhorn me-1"></i>Publicity</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower me-1"></i>Content</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1"></i>Marketplace</a></li>
                 </ul>
@@ -365,9 +367,20 @@
                                 <i class="fas fa-sliders-h me-2"></i>Book settings
                             </a>
                             {% endif %}
+                            <a href="{{ url_for('book_platform.publishing_pipeline') }}" class="btn btn-outline-light">
+                                <i class="fas fa-route me-2"></i>Publishing pipeline
+                            </a>
+                            <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-outline-light">
+                                <i class="fas fa-bullhorn me-2"></i>Publicity &amp; media
+                            </a>
                             <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}#audiobook-section" class="btn btn-outline-light">
                                 <i class="fas fa-headphones me-2"></i>Audiobook studio
                             </a>
+                            {% if not book.digital_file_path %}
+                            <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-light">
+                                <i class="fas fa-users me-2"></i>Editors &amp; beta readers
+                            </a>
+                            {% endif %}
                             {% if investment_campaign and investment_campaign.status.value == 'funded' %}
                             <a href="{{ url_for('book_platform.book_accountability_status', book_id=book.id) }}" class="btn btn-outline-info">
                                 <i class="fas fa-seedling me-2"></i>Campaign funds
@@ -384,6 +397,39 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    {% if not book.digital_file_path %}
+                    <div class="ink-studio-panel">
+                        <div class="ink-studio-panel-header">
+                            <h3 class="mb-0 h6"><i class="fas fa-users me-2 text-info"></i>Editors &amp; beta readers</h3>
+                        </div>
+                        <div class="ink-studio-panel-body">
+                            <p class="small text-muted mb-3">
+                                Invite editors or beta readers by email. They can comment, edit (by role), and help before you publish—not the same as listing on the marketplace.
+                            </p>
+                            {% if collaborations %}
+                            <ul class="list-unstyled small mb-3">
+                                {% for collab in collaborations %}
+                                <li class="mb-2 d-flex justify-content-between align-items-start gap-2">
+                                    <span>{{ collab.collaborator.pen_name or collab.collaborator.user.username }}</span>
+                                    <span class="badge bg-secondary">{{ collab.role.value.replace('_', ' ').title() }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="small text-muted mb-3 mb-md-2">No one invited yet.</p>
+                            {% endif %}
+                            {% if pending_invitation_count|default(0) > 0 %}
+                            <p class="small text-warning mb-2">
+                                <i class="fas fa-envelope me-1"></i>{{ pending_invitation_count }} pending invitation(s)
+                            </p>
+                            {% endif %}
+                            <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-user-plus me-1"></i>Invite &amp; manage
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     {% if investment_readiness and not book.digital_file_path %}
                     <div class="ink-studio-panel">
@@ -428,6 +474,12 @@
                             <h3 class="mb-0 h6">About this book</h3>
                         </div>
                         <div class="ink-studio-panel-body small text-muted">
+                            {% if book.isbn or book.publisher_name %}
+                            <p class="mb-2"><strong class="text-light">Listing</strong><br>
+                                {% if book.publisher_name %}Publisher: {{ book.publisher_name }}<br>{% endif %}
+                                {% if book.isbn %}ISBN: {{ book.isbn }}{% if book.has_audiobook or book.digital_file_path %} <span class="text-muted">(ebook &amp; audiobook)</span>{% endif %}{% endif %}
+                            </p>
+                            {% endif %}
                             <p class="mb-2"><strong class="text-light">Genre</strong><br>{{ book.genre or 'Not set' }}</p>
                             <p class="mb-2"><strong class="text-light">Audience</strong><br>{{ book.target_audience or 'Not set' }}</p>
                             {% if book.language %}<p class="mb-2"><strong class="text-light">Language</strong><br>{{ book.language|upper }}</p>{% endif %}

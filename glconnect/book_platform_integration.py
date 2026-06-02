@@ -17,6 +17,7 @@ from glconnect.book_platform_models import *
 from glconnect.book_platform_routes import book_bp
 from glconnect.book_platform_websocket import socketio
 from glconnect.gemini_integration import gemini_bp
+from glconnect.book_agent_routes import book_agents_bp
 
 def init_book_platform(app):
     """
@@ -67,6 +68,7 @@ def init_book_platform(app):
     # Register the Ink Studio blueprints
     app.register_blueprint(book_bp)
     app.register_blueprint(gemini_bp)
+    app.register_blueprint(book_agents_bp, url_prefix='/api/agents')
     
     # Initialize SocketIO with the app
     socketio.init_app(

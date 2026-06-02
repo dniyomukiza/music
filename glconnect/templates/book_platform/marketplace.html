@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="Overlooked, undiscovered stories—indie ebooks and audiobooks from voices that wouldn't get a deal. Browse, fund campaigns, and check out securely.">
+    <meta name="description" content="Ndotonic connects the world to knowledge about Africa—indie ebooks and audiobooks. Browse, fund campaigns, and check out securely.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <title>Marketplace — Indie ebooks &amp; audiobooks</title>
@@ -89,7 +89,7 @@
                 <div class="col-12 col-xl-10">
                     <p class="ink-hero-eyebrow text-uppercase small fw-semibold mb-2 opacity-90">Overlooked, undiscovered stories</p>
                     <h1 class="ink-mp-hero-title mb-3">Marketplace</h1>
-                    <p class="ink-mp-mission">We don’t just host books—we steer forward the voices that wouldn’t get a deal.</p>
+                    <p class="ink-mp-mission">Ndotonic connects the world to knowledge about Africa.</p>
                     <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3 mb-3">
                         <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2">
                             <i class="fas fa-book-open me-2" aria-hidden="true"></i><strong>{{ total_books }}</strong> titles
@@ -719,6 +719,8 @@
                         '<p class="text-muted mb-2"><i class="fas fa-user-edit me-1"></i>by <strong>' + escapeHtml(b.author.name) + '</strong>' +
                         (b.author.marketplace_book_count > 1 ? ' <span class="small">(' + b.author.marketplace_book_count + ' titles)</span>' : '') +
                         '</p>' +
+                        (b.publisher_name ? '<p class="small text-muted mb-2"><i class="fas fa-building me-1"></i>Publisher: <strong>' + escapeHtml(b.publisher_name) + '</strong></p>' : '') +
+                        (b.isbn_display || b.isbn ? '<p class="small text-muted mb-2"><i class="fas fa-barcode me-1"></i>ISBN: <strong>' + escapeHtml(b.isbn_display || b.isbn) + '</strong> <span class="text-muted">(ebook &amp; audiobook)</span></p>' : '') +
                         '<div class="d-flex flex-wrap gap-1 mb-3">' +
                         (b.genre ? '<span class="badge bg-primary">' + escapeHtml(b.genre) + '</span>' : '') +
                         '<span class="badge bg-secondary">' + escapeHtml(b.language_label || b.language || '') + '</span>' +

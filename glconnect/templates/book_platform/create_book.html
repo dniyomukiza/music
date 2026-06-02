@@ -113,6 +113,7 @@
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="use_ai_cover" value="on" id="useAiCoverCreate">
                                     <label class="form-check-label" for="useAiCoverCreate">Also create a cover with AI (preview, then approve)</label>
+                                    <div class="mt-2">{% include 'book_platform/_platform_content_liability_notice.html' with brief=true %}</div>
                                 </div>
                                 <div class="mb-2" id="coverArtBriefCreateWrap" style="display: none;">
                                     <label for="cover_art_brief" class="form-label">Art direction for AI (optional)</label>
@@ -260,7 +261,11 @@
 
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
-                                <strong>Writing in Ink Studio:</strong> Chapters you publish here can go to the marketplace with optional AI audiobook. Already have a PDF or EPUB? Use <a href="{{ url_for('book_platform.upload_digital_book') }}" aria-label="List a book on the marketplace">List</a> instead—no need to retype your manuscript.
+                                <strong>Writing in Ink Studio:</strong> Sections you write here can go to the marketplace with optional AI audiobook. Already have a PDF or EPUB? Use <a href="{{ url_for('book_platform.upload_digital_book') }}" aria-label="List a book on the marketplace">List</a> instead—no need to retype your manuscript.
+                            </div>
+                            <div class="alert alert-light border small mb-0">
+                                <i class="fas fa-users me-1 text-info"></i>
+                                <strong>Editors &amp; beta readers:</strong> After your book is created, open it in Ink Studio and use <strong>Editors &amp; beta readers</strong> to invite people by email (editor, beta reader, or co-author roles).
                             </div>
 
                             <div class="d-grid gap-2">

@@ -1456,11 +1456,20 @@ def view_book(book_id, user_profile, profile_type):
 
     latest_audio_task = None
     has_listing_cover = book_has_listing_cover(book)
+    pending_invitation_count = 0
     if is_author:
         latest_audio_task = (
             AudioGenerationTask.query.filter_by(book_project_id=book_id)
             .order_by(AudioGenerationTask.created_at.desc())
             .first()
+        )
+        pending_invitation_count = (
+            CollaborationInvitation.query.join(BookCollaboration)
+            .filter(
+                BookCollaboration.book_project_id == book_id,
+                CollaborationInvitation.status == InvitationStatus.PENDING,
+            )
+            .count()
         )
 
     try:
@@ -1468,6 +1477,7 @@ def view_book(book_id, user_profile, profile_type):
                              book=book, 
                              chapters=chapters,
                              collaborations=collaborations,
+                             pending_invitation_count=pending_invitation_count,
                              is_author=is_author,
                              is_collaborator=is_collaborator,
                              investment_readiness=investment_readiness,
@@ -1558,7 +1568,6 @@ def edit_book(book_id, user_profile, profile_type):
                 ci = (request.form.get('cover_image') or '').strip()
                 if ci:
                     book.cover_image = ci
-            book.allow_collaboration = data.get('allow_collaboration') == 'on' or data.get('allow_collaboration') == True
             book.updated_at = datetime.now(timezone.utc)
 
             def _as_bool(v):
@@ -1682,6 +1691,14 @@ def edit_book(book_id, user_profile, profile_type):
                     if is_book_published(book):
                         book.status = BookStatus.DRAFT
                         logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
+
+            from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
+
+            try:
+                assign_marketplace_isbn_if_needed(book)
+            except IsbnPoolError as e:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': str(e)}), 503
             
             db.session.commit()
 
@@ -3202,6 +3219,8 @@ def marketplace():
 @login_required
 def api_marketplace_book_detail(book_id):
     """JSON detail for marketplace modal / future PDP (published books only)."""
+    from glconnect.isbn_pool_service import format_isbn_display, platform_publisher_name
+
     lang_labels = {
         'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
         'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean',
@@ -3259,6 +3278,9 @@ def api_marketplace_book_detail(book_id):
             'cover_url': _marketplace_cover_url(book),
             'published_at': book.published_at.isoformat() if book.published_at else None,
             'created_at': book.created_at.isoformat() if book.created_at else None,
+            'isbn': book.isbn,
+            'isbn_display': format_isbn_display(book.isbn) if book.isbn else None,
+            'publisher_name': book.publisher_name or platform_publisher_name(),
             'formats': {
                 'digital': bool(book.digital_book_published and book.digital_file_path),
                 'audiobook': bool(book.audiobook_published and book.has_audiobook),
@@ -3339,6 +3361,14 @@ def publish_book(book_id):
         book.investment_campaign.status = CampaignStatus.FUNDED
         if not book.investment_campaign.funded_at:
             book.investment_campaign.funded_at = datetime.now(timezone.utc)
+
+    from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
+
+    try:
+        assign_marketplace_isbn_if_needed(book)
+    except IsbnPoolError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 503
     
     db.session.commit()
 
@@ -6447,6 +6477,15 @@ def upload_digital_book():
             db.session.flush()  # Flush to get book.id
             logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
 
+            from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
+
+            try:
+                assign_marketplace_isbn_if_needed(book)
+            except IsbnPoolError as e:
+                db.session.rollback()
+                flash(str(e), 'error')
+                return redirect(url_for('book_platform.upload_digital_book'))
+
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
 
@@ -8727,6 +8766,85 @@ def admin_process_refund(refund_id):
         flash(f'Refund of ${refund.amount:.2f} marked as processed (manual - no Stripe payment intent).', 'warning')
     
     return redirect(url_for('book_platform.admin_refund_requests'))
+
+
+# ============================================================================
+# SELF-PUBLISHING PIPELINE HUB
+# ============================================================================
+
+@book_bp.route('/publishing')
+@login_required
+def publishing_pipeline():
+    """Map full self-publishing capabilities (scouting → ISBN) to live platform tools."""
+    from glconnect.isbn_pool_service import platform_publisher_name
+
+    authored_books = []
+    is_author = False
+    first_book_id = None
+
+    user_profile, profile_type = get_user_profile()
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        if author_id:
+            authored_books = (
+                BookProject.query.filter_by(author_id=author_id)
+                .order_by(BookProject.updated_at.desc())
+                .all()
+            )
+            if authored_books:
+                is_author = True
+                first_book_id = authored_books[0].id
+        elif current_user.role == 'author':
+            is_author = True
+
+    excluded = {'podcaster', 'freelancer', 'blogger', 'artist', 'other'}
+    if current_user.role in excluded:
+        is_author = False
+        authored_books = []
+
+    return render_template(
+        'book_platform/publishing_pipeline.html',
+        is_author=is_author,
+        authored_books=authored_books,
+        first_book_id=first_book_id,
+        platform_publisher=platform_publisher_name(),
+    )
+
+
+@book_bp.route('/publicity')
+@login_required
+def publicity_promotion():
+    """Marketing, publicity & promotion hub — media relations, streams, reviews, editorial."""
+    authored_books = []
+    is_author = False
+    first_book_id = None
+
+    user_profile, profile_type = get_user_profile()
+    if user_profile:
+        author_id = get_profile_id(user_profile, profile_type)
+        if author_id:
+            authored_books = (
+                BookProject.query.filter_by(author_id=author_id)
+                .order_by(BookProject.updated_at.desc())
+                .all()
+            )
+            if authored_books:
+                is_author = True
+                first_book_id = authored_books[0].id
+        elif current_user.role == 'author':
+            is_author = True
+
+    excluded = {'podcaster', 'freelancer', 'blogger', 'artist', 'other'}
+    if current_user.role in excluded:
+        is_author = False
+        authored_books = []
+
+    return render_template(
+        'book_platform/publicity_promotion.html',
+        is_author=is_author,
+        authored_books=authored_books,
+        first_book_id=first_book_id,
+    )
 
 
 # ============================================================================

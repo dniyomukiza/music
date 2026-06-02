@@ -136,3 +136,44 @@ def create_marketing_agent(book_text_compiled: str, genre: str) -> Agent:
         {book_text_compiled}
         """
     )
+
+
+def create_media_publicist_agent(
+    book_title: str,
+    book_text_compiled: str,
+    genre: str,
+    author_name: str = "the author",
+) -> Agent:
+    """
+    Generates launch publicity materials: press release, interview prep, feature pitches.
+    """
+    return Agent(
+        model="gemini-2.0-flash",
+        name="media_publicist",
+        description="Publicity specialist for press releases, interviews, and book reviews outreach.",
+        instruction=f"""
+        You are a senior publicity director at a major publisher launching "{book_title}" ({genre}) by {author_name}.
+
+        Use this manuscript context:
+        {book_text_compiled}
+
+        Return professional markdown with these exact section headers:
+
+        ## Press release
+        (400–600 words, ready for media distribution: dateline, headline, lead, quotes placeholder for author, boilerplate about GLC/Ink Studio imprint)
+
+        ## Media pitch email
+        (Short email to journalists/bloggers pitching coverage)
+
+        ## Author interview guide
+        (10 talking points + 5 suggested Q&A pairs for TV, radio, or podcast interviews)
+
+        ## Feature article angles
+        (3 distinct angles freelancers or bloggers could write, with suggested headlines)
+
+        ## Book review outreach
+        (2-paragraph note to reviewers/critics explaining why the book merits attention)
+
+        Be factual to the manuscript; do not invent plot spoilers beyond the context provided.
+        """
+    )

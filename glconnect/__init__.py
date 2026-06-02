@@ -703,6 +703,9 @@ def create_app(config_overrides=None):
             ensure_audiobook_segment_plan_schema,
             ensure_page_analytics_slim_schema,
         )
+        from .isbn_pool_service import bootstrap_isbn_pool
+
+        bootstrap_isbn_pool(db)
         ensure_investment_campaign_milestone_schema(db)
         ensure_digital_book_editions_schema(db)
         ensure_author_card_setup_schema(db)

@@ -207,6 +207,7 @@
                                     <div class="form-check form-switch mb-3 p-3 rounded-3 ink-upload-switch">
                                         {{ form.use_ai_cover(class="form-check-input", id="useAiCover", role="switch") }}
                                         <label class="form-check-label" for="useAiCover">Also generate a cover with AI (preview, then approve)</label>
+                                        <div class="mt-2 ps-1">{% include 'book_platform/_platform_content_liability_notice.html' with brief=true %}</div>
                                     </div>
                                     <div id="coverArtBriefBlock" class="mb-3" style="display: none;">
                                         <label for="cover_art_brief" class="form-label">Art direction <span class="text-muted fw-normal">(optional)</span></label>

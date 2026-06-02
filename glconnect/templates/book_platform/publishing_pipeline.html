@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Self-publishing pipeline | Ink Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body class="ink-publishing ink-dashboard">
+    <div class="ink-dash-page-bg" aria-hidden="true"></div>
+    <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-dashboard-nav ink-dash-topnav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
+        <div class="container">
+            <a class="navbar-brand ink-mp-nav-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy me-2"></i>Ink Studio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#pubNav" aria-controls="pubNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="pubNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('book_platform.publishing_pipeline') }}" aria-current="page"><i class="fas fa-route me-1"></i>Publishing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.publicity_promotion') }}"><i class="fas fa-bullhorn me-1"></i>Publicity</a></li>
+                    {% if is_author %}<li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book me-1"></i>My books</a></li>{% endif %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.investments') }}"><i class="fas fa-seedling me-1"></i>Campaigns</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1"></i>Marketplace</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4 py-lg-5" id="ink-pub-main">
+        <header class="mb-4 mb-lg-5">
+            <p class="small text-uppercase text-muted mb-2">Full-stack self-publishing</p>
+            <h1 class="ink-mp-hero-title h2 mb-3">Publishing pipeline</h1>
+            <p class="lead text-muted mb-0" style="max-width: 42rem;">
+                {% if is_author %}
+                Every stage below is built into Ink Studio—from patron discovery through ISBN assignment, marketplace listing under <strong>{{ platform_publisher }}</strong>, and post-launch publicity.
+                {% else %}
+                Discover manuscripts, support authors, and follow books from proposal to publication. Authors use the same tools on the right column.
+                {% endif %}
+            </p>
+        </header>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="ink-pub-stages">
+                    <!-- 1 Scouting -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">1</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-search text-warning me-2"></i>Scouting &amp; proposals</h2>
+                            <p class="small text-muted mb-3">Authors launch <strong>patron campaigns</strong> with pitch, sample, and funding goal. Patrons and curators browse active campaigns to find promising manuscripts before publication.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ url_for('book_platform.investments') }}" class="btn btn-sm btn-ink-gold">Browse campaigns</a>
+                                {% if is_author and first_book_id %}
+                                <a href="{{ url_for('book_platform.view_book', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">Launch from a book</a>
+                                {% elif is_author %}
+                                <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-sm btn-outline-light">Start a book</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 2 Evaluation -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">2</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-scale-balanced text-info me-2"></i>Evaluation (patrons)</h2>
+                            <p class="small text-muted mb-3">Patrons read campaign pages, assess literary merit and fit, and contribute to funding. Authors see progress and can publish patron feedback on completed reviews when available.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ url_for('book_platform.investments') }}" class="btn btn-sm btn-outline-light">Evaluate &amp; support</a>
+                                {% if is_author %}<a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-sm btn-outline-light">Dashboard → reviews</a>{% endif %}
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 3 Developmental -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">3</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-feather-alt text-primary me-2"></i>Developmental editing</h2>
+                            <p class="small text-muted mb-3">Write in Ink Studio with sections (foreword, chapters, afterword). Use the <strong>AI assistant</strong> (Writing + Chat) and invite <strong>editors &amp; beta readers</strong> to shape structure and voice.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if is_author and first_book_id %}
+                                <a href="{{ url_for('book_platform.edit_book', book_id=first_book_id) }}" class="btn btn-sm btn-ink-gold">Continue writing</a>
+                                <a href="{{ url_for('book_platform.collaborate', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">Invite team</a>
+                                {% elif is_author %}
+                                <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-sm btn-ink-gold">Create book</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 4 Project management -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">4</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-tasks text-success me-2"></i>Project management</h2>
+                            <p class="small text-muted mb-3"><strong>Self-published:</strong> track cover, manuscript, audiobook, and marketplace steps on each book studio page. <strong>Patron-funded:</strong> milestone releases and accountability when a campaign is funded.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if is_author and first_book_id %}
+                                <a href="{{ url_for('book_platform.view_book', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">Book studio</a>
+                                {% endif %}
+                                {% if is_author %}<a href="{{ url_for('book_platform.books') }}" class="btn btn-sm btn-outline-light">All projects</a>{% endif %}
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 5 Copyedit -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">5</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-spell-check text-secondary me-2"></i>Copyediting &amp; proofreading</h2>
+                            <p class="small text-muted mb-3">In any chapter editor, open the AI assistant → <strong>Writing</strong> tab: Improve text, Proofread, Suggestions, and Analyze. Select passage text for targeted edits.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if is_author and first_book_id %}
+                                <a href="{{ url_for('book_platform.chapters', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">Open chapters</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 6 Cover -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">6</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-image text-warning me-2"></i>Cover design</h2>
+                            <p class="small text-muted mb-3">Upload your own cover or generate one with <strong>AI from your title, genre, and art direction</strong> (preview → approve). Refine anytime in Book settings; compare with marketplace listings.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if is_author %}
+                                <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-sm btn-outline-light">New book + AI cover</a>
+                                <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-sm btn-outline-light">List upload + AI cover</a>
+                                {% if first_book_id %}
+                                <a href="{{ url_for('book_platform.edit_book', book_id=first_book_id) }}" class="btn btn-sm btn-ink-gold">Book settings</a>
+                                {% endif %}
+                                {% endif %}
+                                <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-sm btn-outline-light">Market research</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 7 Production -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">7</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-headphones text-info me-2"></i>E-book &amp; audiobook production</h2>
+                            <p class="small text-muted mb-3">Upload PDF/EPUB or write in-studio. Generate <strong>AI audiobook</strong> from complete sections. One listing can offer digital + audio on the marketplace.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-sm btn-outline-light">Upload ebook</a>
+                                {% if is_author and first_book_id %}
+                                <a href="{{ url_for('book_platform.edit_book', book_id=first_book_id) }}#audiobook-section" class="btn btn-sm btn-ink-gold">Audiobook studio</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 8 ISBN -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">8</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-barcode text-light me-2"></i>ISBN assignment</h2>
+                            <p class="small text-muted mb-3">On first marketplace listing, the platform assigns the next ISBN from its pool—<strong>one ISBN per title</strong> shared by ebook and audiobook. Listings show <strong>{{ platform_publisher }}</strong> as publisher imprint.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if is_author and first_book_id %}
+                                <a href="{{ url_for('book_platform.edit_book', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">ISBN &amp; publish settings</a>
+                                {% endif %}
+                                <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-sm btn-outline-light">Marketplace</a>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- 9 Marketing & publicity -->
+                    <article class="ink-pub-stage">
+                        <div class="ink-pub-stage-num">9</div>
+                        <div class="ink-pub-stage-body">
+                            <h2 class="h5 mb-2"><i class="fas fa-bullhorn text-warning me-2"></i>Marketing, publicity &amp; promotion</h2>
+                            <p class="small text-muted mb-3"><strong>Publicity &amp; media relations:</strong> AI press releases and media pitches; author interviews on <strong>live TV &amp; radio</strong>; book reviews on air and marketplace; feature articles via blogs and the editorial feed.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-sm btn-ink-gold">Publicity hub</a>
+                                <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-sm btn-outline-light">TV, radio &amp; podcasts</a>
+                                <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-sm btn-outline-light">Feature articles</a>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                {% if is_author and authored_books %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header border-0">
+                        <h3 class="h6 mb-0 text-primary">Your books</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            {% for book in authored_books[:8] %}
+                            <li class="list-group-item bg-transparent border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                                <span class="small text-truncate me-2">{{ book.title }}</span>
+                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-sm btn-outline-light flex-shrink-0">Studio</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% if authored_books|length > 8 %}
+                        <div class="card-footer border-0 bg-transparent">
+                            <a href="{{ url_for('book_platform.books') }}" class="small">View all {{ authored_books|length }} books</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <h3 class="h6 text-primary mb-3"><i class="fas fa-store me-2"></i>Go live</h3>
+                        <p class="small text-muted">When cover, price, and content are ready, publish to the marketplace. ISBN and publisher imprint are applied automatically.</p>
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-ink-gold w-100">Open marketplace</a>
+                    </div>
+                </div>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h3 class="h6 text-primary mb-3"><i class="fas fa-bullhorn me-2"></i>After launch</h3>
+                        <p class="small text-muted">Press kits, live interviews, reviews, and blog features—all in the publicity hub.</p>
+                        <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-outline-light w-100">Publicity &amp; promotion</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

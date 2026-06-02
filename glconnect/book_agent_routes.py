@@ -12,7 +12,8 @@ from glconnect.book_agent import (
     create_developmental_editor_agent,
     create_brainstormer_agent,
     create_auto_publicist_agent,
-    create_marketing_agent
+    create_marketing_agent,
+    create_media_publicist_agent,
 )
 
 book_agents_bp = Blueprint('book_agents', __name__)
@@ -222,3 +223,69 @@ def agent_marketing(book_id):
         "success": True,
         "marketing_copy": final_output
     })
+
+
+@book_agents_bp.route('/<int:book_id>/publicity', methods=['POST'])
+@login_required
+def agent_publicity(book_id):
+    """Press kit: press release, interview guide, feature angles, review outreach."""
+    book = verify_book_access(book_id)
+    if not book:
+        return jsonify({"error": "Unauthorized or book not found"}), 403
+
+    context = fetch_book_context(book_id)
+    compiled_text = context.get('previous_chapters_summary', '') or context.get('lore', '')
+    if not compiled_text.strip():
+        return jsonify({"error": "Not enough manuscript content to generate publicity materials"}), 400
+
+    author_name = "the author"
+    if book.author:
+        if getattr(book.author, 'pen_name', None):
+            author_name = book.author.pen_name
+        elif getattr(book.author, 'username', None):
+            author_name = book.author.username
+
+    publicist = create_media_publicist_agent(
+        book_title=book.title or "Untitled",
+        book_text_compiled=compiled_text,
+        genre=book.genre or "Fiction",
+        author_name=author_name,
+    )
+
+    session_service = InMemorySessionService()
+    runner = Runner(app_name="book_agents", agent=publicist, session_service=session_service)
+    message = Content(
+        role="user",
+        parts=[Part(text="Generate the full publicity press kit with all sections.")],
+    )
+
+    import asyncio
+
+    async def run_publicity():
+        session = await session_service.create_session(
+            app_name="book_agents", user_id=str(current_user.user_id)
+        )
+        final_output = ""
+        async for chunk in runner.run_async(
+            user_id=str(current_user.user_id),
+            session_id=session.id,
+            new_message=message,
+        ):
+            if (
+                hasattr(chunk, 'content')
+                and chunk.content
+                and hasattr(chunk.content, 'parts')
+                and chunk.content.parts
+                and chunk.content.parts[0].text
+            ):
+                final_output += chunk.content.parts[0].text
+        return final_output
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        final_output = loop.run_until_complete(run_publicity())
+    finally:
+        loop.close()
+
+    return jsonify({"success": True, "publicity_kit": final_output})
