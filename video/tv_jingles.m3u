@@ -1,5 +1,5 @@
 #EXTM3U
-# Bumpers: MP4 files in project video/ (paths below). YouTube TV programs use /liqfolder/video/… in videolist.m3u.
+# Bumpers: MP4 files in project video/ (paths below). TV programs use /liqfolder/glconnect/static/ytautovid/… in videolist.m3u.
 # If bumpers live elsewhere, edit these lines to match.
 /liqfolder/video/tvjingle.mp4
 /liqfolder/video/tvjingle2.mp4

@@ -25,10 +25,21 @@ db.init_app(app)
 # Path to your output folder for music files
 output_folder = os.path.join(os.getcwd(), "glconnect/static/ytauto")
 
-# TV program MP4s live under project video/; bumpers use paths in tv_jingles.m3u only — not videolist.m3u.
+# TV program MP4s: glconnect/static/ytautovid/ → /liqfolder/glconnect/static/ytautovid/ in videolist.m3u
+# Bumpers stay under video/ and tv_jingles.m3u only.
+TV_PROGRAM_LIQ_PREFIX = "/liqfolder/glconnect/static/ytautovid/"
+LEGACY_TV_PROGRAM_VIDEO_PREFIX = "/liqfolder/video/"
+
 _TV_JINGLE_BASENAMES_LOWER = frozenset(
     ("tvjingle.mp4", "tvjingle2.mp4", "grojingle.mp4")
 )
+
+
+def tv_ytautovid_dir(glconnect_dir):
+    """Filesystem dir for TV program MP4s (created if missing)."""
+    d = os.path.join(glconnect_dir, "static", "ytautovid")
+    os.makedirs(d, exist_ok=True)
+    return d
 
 
 def _is_tv_jingle_basename(path_or_name: str) -> bool:
@@ -36,6 +47,28 @@ def _is_tv_jingle_basename(path_or_name: str) -> bool:
         return False
     bn = os.path.basename(path_or_name.replace("\\", "/")).lower()
     return bn in _TV_JINGLE_BASENAMES_LOWER
+
+
+def _migrate_program_mp4_to_ytautovid(glconnect_dir, video_dir, filename):
+    """Move a non-jingle MP4 from legacy video/ into static/ytautovid/."""
+    if _is_tv_jingle_basename(filename):
+        return None
+    yt_root = tv_ytautovid_dir(glconnect_dir)
+    src = os.path.join(video_dir, filename)
+    dst = os.path.join(yt_root, filename)
+    if not os.path.isfile(src):
+        return None
+    if os.path.isfile(dst):
+        try:
+            os.remove(src)
+        except OSError as exc:
+            print(f"TV migrate: could not remove duplicate {src}: {exc}")
+        return TV_PROGRAM_LIQ_PREFIX + filename
+    import shutil
+
+    shutil.move(src, dst)
+    print(f"TV migrate: {filename} -> static/ytautovid/")
+    return TV_PROGRAM_LIQ_PREFIX + filename
 
 
 class AudioDownloader:
@@ -319,7 +352,7 @@ class PlaylistIngestion:
         local_path when a row matched title parse but had no path / wrong file (manual copies,
         DB reset, renames). Skips only when this exact file is already catalogued.
         """
-        prefix_liq = "/liqfolder/video/"
+        prefix_liq = TV_PROGRAM_LIQ_PREFIX
         if not os.path.isdir(output_folder):
             print(f"TV output folder does not exist: {output_folder}")
             return 0, 0
@@ -417,80 +450,69 @@ def _parse_video_title(filename):
 
 def _tv_resolve_playable_liq_path(glconnect_dir, video_dir, local_path):
     """
-    Return a /liqfolder/... path only if that file exists on disk (or the same basename exists
-    under video/ or static/ytautovid/). Omits missing files so videolist.m3u stays playable.
+    Return a playable program path under TV_PROGRAM_LIQ_PREFIX only.
+    Legacy files under video/ are moved into static/ytautovid/ when found.
     """
     p = (local_path or "").strip().replace("\\", "/")
     if not p or _is_tv_jingle_basename(p):
         return None
-    pref_video = "/liqfolder/video/"
-    pref_yt = "/liqfolder/glconnect/static/ytautovid/"
-    yt_root = os.path.join(glconnect_dir, "static", "ytautovid")
-
-    def _fs_for_liq(liq):
-        if liq.startswith(pref_video):
-            rel = liq[len(pref_video) :].lstrip("/")
-            if not rel or any(part == ".." for part in rel.split("/")):
-                return None
-            return os.path.normpath(os.path.join(video_dir, rel))
-        if liq.startswith(pref_yt):
-            rel = liq[len(pref_yt) :].lstrip("/")
-            if not rel or any(part == ".." for part in rel.split("/")):
-                return None
-            return os.path.normpath(os.path.join(yt_root, rel))
-        return None
-
-    fs = _fs_for_liq(p)
-    if fs and os.path.isfile(fs):
-        return p
-
+    yt_root = tv_ytautovid_dir(glconnect_dir)
     bn = os.path.basename(p)
     if not bn.lower().endswith(".mp4"):
         return None
-    for disk_dir, prefix in ((video_dir, pref_video), (yt_root, pref_yt)):
-        if not os.path.isdir(disk_dir):
-            continue
-        cand = os.path.join(disk_dir, bn)
-        if os.path.isfile(cand):
-            return prefix + bn
+
+    dest = os.path.join(yt_root, bn)
+    if os.path.isfile(dest):
+        return TV_PROGRAM_LIQ_PREFIX + bn
+
+    legacy = os.path.join(video_dir, bn)
+    if os.path.isfile(legacy):
+        return _migrate_program_mp4_to_ytautovid(glconnect_dir, video_dir, bn)
+
     return None
 
 
 def sync_tv_videolist_from_db():
     """
-    Preserve existing video/videolist.m3u contents and append any newly discovered paths from:
-    - video/videolist_extra.m3u (manual paths, optional)
-    - downloaded_videos.local_path rows (resolved only when playable)
-    - orphan *.mp4 under project video/ and legacy glconnect/static/ytautovid/
-    Existing lines are never removed or rewritten; only missing paths are appended.
+    Rebuild video/videolist.m3u program lines as /liqfolder/glconnect/static/ytautovid/*.mp4
+    from videolist_extra.m3u, downloaded_videos, disk under static/ytautovid/, and legacy video/
+    (non-jingle MP4s moved into ytautovid/). Comments in the existing M3U are preserved.
     Must run inside Flask app context. Returns non-comment path count in final playlist.
     """
     glconnect_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(glconnect_dir)
     video_dir = os.path.join(project_root, "video")
+    yt_root = tv_ytautovid_dir(glconnect_dir)
     extra_m3u = os.path.join(video_dir, "videolist_extra.m3u")
     out_m3u = os.path.join(video_dir, "videolist.m3u")
-    existing_lines = []
-    existing_paths = []
+    comment_lines = []
     seen = set()
-    appended_paths = []
+    program_paths = []
 
     if os.path.isfile(out_m3u):
         with open(out_m3u, "r", encoding="utf-8", errors="replace") as f:
             for raw in f:
-                existing_lines.append(raw.rstrip("\n"))
-                line = raw.strip()
-                if not line or line.startswith("#"):
+                line = raw.rstrip("\n")
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    comment_lines.append(line)
                     continue
-                existing_paths.append(line)
-                seen.add(line)
+                resolved = _tv_resolve_playable_liq_path(
+                    glconnect_dir, video_dir, stripped
+                )
+                if resolved and resolved not in seen:
+                    seen.add(resolved)
+                    program_paths.append(resolved)
 
     def append_path(pp):
         pp = (pp or "").strip()
         if not pp or pp in seen or _is_tv_jingle_basename(pp):
             return
-        seen.add(pp)
-        appended_paths.append(pp)
+        resolved = _tv_resolve_playable_liq_path(glconnect_dir, video_dir, pp)
+        if not resolved:
+            return
+        seen.add(resolved)
+        program_paths.append(resolved)
 
     if os.path.isfile(extra_m3u):
         with open(extra_m3u, "r", encoding="utf-8", errors="replace") as f:
@@ -514,47 +536,42 @@ def sync_tv_videolist_from_db():
         )
         if resolved:
             append_path(resolved)
-    # Orphan MP4s on disk (e.g. copied in, DB reset, or download skipped) — add if not already listed.
-    _orphan_dirs = (
-        (video_dir, "/liqfolder/video/"),
-        (
-            os.path.join(glconnect_dir, "static", "ytautovid"),
-            "/liqfolder/glconnect/static/ytautovid/",
-        ),
-    )
-    for disk_dir, liq_prefix in _orphan_dirs:
-        if not os.path.isdir(disk_dir):
-            continue
+    # Orphan MP4s already in static/ytautovid/
+    if os.path.isdir(yt_root):
         try:
-            disk_mp4 = sorted(
-                f for f in os.listdir(disk_dir) if f.lower().endswith(".mp4")
-            )
+            for fn in sorted(f for f in os.listdir(yt_root) if f.lower().endswith(".mp4")):
+                append_path(TV_PROGRAM_LIQ_PREFIX + fn)
         except OSError as exc:
-            print(f"TV sync: cannot list {disk_dir}: {exc}")
-            continue
-        for fn in disk_mp4:
-            if _is_tv_jingle_basename(fn):
-                continue
-            liq_path = liq_prefix + fn
-            append_path(liq_path)
-    os.makedirs(video_dir, exist_ok=True)
-    if not os.path.isfile(out_m3u):
-        existing_lines = [
-            "#EXTM3U",
-            "# Preserved playlist. New TV paths are appended by admin TV download/sync.",
-        ]
-    final_lines = existing_lines + appended_paths
-    with open(out_m3u, "w", encoding="utf-8") as f:
-        for line in final_lines:
-            f.write(line + "\n")
+            print(f"TV sync: cannot list {yt_root}: {exc}")
+    # Legacy program MP4s still sitting in video/ → move into ytautovid/
+    if os.path.isdir(video_dir):
+        try:
+            for fn in sorted(f for f in os.listdir(video_dir) if f.lower().endswith(".mp4")):
+                if _is_tv_jingle_basename(fn):
+                    continue
+                migrated = _migrate_program_mp4_to_ytautovid(glconnect_dir, video_dir, fn)
+                if migrated:
+                    append_path(migrated)
+        except OSError as exc:
+            print(f"TV sync: cannot list {video_dir}: {exc}")
 
-    final_paths = existing_paths + appended_paths
+    os.makedirs(video_dir, exist_ok=True)
+    if not comment_lines:
+        comment_lines = [
+            "#EXTM3U",
+            "# TV programs: /liqfolder/glconnect/static/ytautovid/*.mp4 (bumpers: tv_jingles.m3u only).",
+        ]
+    with open(out_m3u, "w", encoding="utf-8") as f:
+        for line in comment_lines:
+            f.write(line + "\n")
+        for path in program_paths:
+            f.write(path + "\n")
+
     print(
-        f"TV videolist synced: kept {len(existing_paths)} existing path(s), "
-        f"appended {len(appended_paths)} new path(s) -> {out_m3u}"
+        f"TV videolist synced: {len(program_paths)} program path(s) under {TV_PROGRAM_LIQ_PREFIX} -> {out_m3u}"
     )
-    _write_videolist_hls_m3u(video_dir, final_paths)
-    return len(final_paths)
+    _write_videolist_hls_m3u(video_dir, program_paths)
+    return len(program_paths)
 
 
 def _read_tv_jingle_paths(video_dir):

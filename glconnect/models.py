@@ -49,7 +49,7 @@ class DownloadedSong(db.Model):
 
 
 class DownloadedVideo(db.Model):
-    """Admin YouTube → MP4 TV catalog. Paths merged into video/videolist.m3u for Liquidsoap HLS."""
+    """Admin YouTube → MP4 TV catalog under static/ytautovid; paths in video/videolist.m3u for Liquidsoap HLS."""
     __tablename__ = 'downloaded_videos'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)

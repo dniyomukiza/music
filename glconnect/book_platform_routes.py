@@ -10063,7 +10063,7 @@ def admin_tv_status():
 @book_bp.route('/admin/tv/download', methods=['POST'])
 @login_required
 def admin_tv_download():
-    """yt-dlp → MP4 in project video/ → DB → merge video/videolist.m3u for HLS TV."""
+    """yt-dlp → MP4 in glconnect/static/ytautovid → DB → merge video/videolist.m3u for HLS TV."""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
     data = request.get_json() or request.form
@@ -10096,7 +10096,10 @@ def admin_tv_download():
                 )
                 glconnect_dir = os.path.dirname(os.path.abspath(pipeline_mod.__file__))
                 project_root = os.path.dirname(glconnect_dir)
-                output_folder = os.path.normpath(os.path.join(project_root, 'video'))
+                output_folder = os.path.normpath(
+                    os.path.join(glconnect_dir, 'static', 'ytautovid')
+                )
+                os.makedirs(output_folder, exist_ok=True)
 
                 # Pick up any MP4s already on disk (skipped re-download, manual copy, wrong DB path).
                 try:
@@ -10124,7 +10127,7 @@ def admin_tv_download():
                 current_step = 'ingest'
                 _set_tv_download_status(
                     'ingesting',
-                    'Writing videolist.m3u from disk (video/*.mp4 + extra + DB)…',
+                    'Writing videolist.m3u from disk (static/ytautovid + extra + DB)…',
                     url=url,
                     step=current_step,
                 )
