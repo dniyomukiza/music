@@ -81,6 +81,13 @@ from glconnect.book_utils import (
     delete_book_chapter_version_graph_for_project,
     is_book_published,
 )
+from glconnect.author_dashboard_stats import build_author_dashboard_stats
+from glconnect.chapter_version_service import (
+    list_chapter_versions as fetch_chapter_versions,
+    resolve_version_actor_id,
+    restore_chapter_version as apply_chapter_version_restore,
+    snapshot_chapter,
+)
 import threading
 from werkzeug.utils import secure_filename
 
@@ -675,26 +682,35 @@ def collaboration_required(f):
         book_id = kwargs.get('book_id')
         if not book_id:
             return jsonify({'error': 'Book ID required'}), 400
-        
+
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         if not book_user:
             return jsonify({'error': 'Ink Studio profile required'}), 403
-        
-        # Check if user is author or collaborator
+
         book = BookProject.query.get_or_404(book_id)
         collaboration = BookCollaboration.query.filter_by(
-            book_project_id=book_id, 
+            book_project_id=book_id,
             collaborator_id=book_user.id,
-            is_active=True
+            is_active=True,
         ).first()
-        
+
         if book.author_id != book_user.id and not collaboration:
             return jsonify({'error': 'Access denied'}), 403
-        
+
         return f(*args, **kwargs)
     return decorated_function
 
-# Ink Studio access route - handles redirects based on user type
+
+def _user_can_view_chapter_history(book, book_user_id):
+    if book.author_id == book_user_id:
+        return True
+    return BookCollaboration.query.filter_by(
+        book_project_id=book.id,
+        collaborator_id=book_user_id,
+        is_active=True,
+    ).first() is not None
+
+
 @book_bp.route('/ink-studio')
 def ink_studio_access():
     """Ink Studio access point - redirects to login if not authenticated, otherwise redirects based on role."""
@@ -756,9 +772,10 @@ def dashboard(user_profile, profile_type):
                              review_requests=[],
                              user_reviewer_profile=None,
                              user_investments=[],
-                             freelancer_stories=freelancer_stories,
-                             is_freelancer=True,
-                             marketplace_cover_url=_marketplace_cover_url)
+                         freelancer_stories=freelancer_stories,
+                         is_freelancer=True,
+                         marketplace_cover_url=_marketplace_cover_url,
+                         author_dashboard_stats=None)
     
     if profile_type == 'writer':
         # For writers, create a temporary BookPlatformUser-like object
@@ -850,6 +867,15 @@ def dashboard(user_profile, profile_type):
             .all()
         )
     
+    author_dashboard_stats = None
+    if is_author:
+        author_id_for_stats = get_profile_id(user_profile, profile_type)
+        if author_id_for_stats:
+            try:
+                author_dashboard_stats = build_author_dashboard_stats(author_id_for_stats)
+            except Exception as stats_exc:
+                logger.warning("Dashboard author stats failed: %s", stats_exc)
+
     return render_template('book_platform/dashboard.html', 
                          authored_books=authored_books,
                          collaborations=collaborations,
@@ -863,7 +889,24 @@ def dashboard(user_profile, profile_type):
                          user_investments=user_investments,
                          freelancer_stories=[],
                          is_freelancer=False,
-                         marketplace_cover_url=_marketplace_cover_url)
+                         marketplace_cover_url=_marketplace_cover_url,
+                         author_dashboard_stats=author_dashboard_stats)
+
+
+@book_bp.route('/api/dashboard/author-stats', methods=['GET'])
+@writer_or_book_platform_required
+def api_author_dashboard_stats(user_profile, profile_type):
+    """Live JSON stats for author dashboard (sales, downloads, engagement)."""
+    author_id = get_profile_id(user_profile, profile_type)
+    if not author_id:
+        return jsonify({'success': False, 'error': 'Author profile required'}), 403
+    try:
+        payload = build_author_dashboard_stats(author_id)
+        payload['updated_at'] = datetime.now(timezone.utc).isoformat()
+        return jsonify({'success': True, **payload})
+    except Exception as exc:
+        logger.error("api_author_dashboard_stats: %s", exc, exc_info=True)
+        return jsonify({'success': False, 'error': 'Could not load stats'}), 500
 
 
 @book_bp.route('/my-listings')
@@ -1869,6 +1912,10 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             else:
                 data = request.form.to_dict()
             
+            actor_id = resolve_version_actor_id(book, current_user.user_id)
+            if actor_id:
+                snapshot_chapter(chapter, actor_id, change_source='author_edit')
+            
             # Update chapter fields
             chapter.title = data.get('title', chapter.title)
             chapter.content = data.get('content', chapter.content)
@@ -1898,52 +1945,6 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 chapter.word_count = 0
             chapter.updated_at = datetime.now(timezone.utc)
             
-            # Create version snapshot for change tracking
-            try:
-                # Get the current user's BookPlatformUser or Writer profile ID
-                book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-                if book_user:
-                    # Get or create a BookVersion for this book
-                    book_version = BookVersion.query.filter_by(book_project_id=book_id, is_current=True).first()
-                    if not book_version:
-                        # Create a new book version if none exists
-                        existing_book_versions = BookVersion.query.filter_by(book_project_id=book_id).count()
-                        book_version = BookVersion(
-                            book_project_id=book_id,
-                            version_number=f"{existing_book_versions + 1}.0",
-                            title=book.title,
-                            word_count=book.word_count or 0,
-                            is_current=True,
-                            created_by_id=book_user.id
-                        )
-                        db.session.add(book_version)
-                        db.session.flush()  # Flush to get book_version.id
-                        # Set all other book versions to not current
-                        BookVersion.query.filter_by(book_project_id=book_id).filter(BookVersion.id != book_version.id).update({'is_current': False})
-                    
-                    # Get next version number
-                    existing_versions = ChapterVersion.query.filter_by(chapter_id=chapter_id).count()
-                    version_number = f"{existing_versions + 1}.0"
-                    
-                    # Set all other versions to not current BEFORE creating new one
-                    ChapterVersion.query.filter_by(chapter_id=chapter_id).update({'is_current': False})
-                    
-                    # Create version
-                    version = ChapterVersion(
-                        chapter_id=chapter_id,
-                        book_version_id=book_version.id,
-                        version_number=version_number,
-                        title=chapter.title,
-                        content=chapter.content,
-                        word_count=chapter.word_count,
-                        is_current=True,
-                        created_by_id=book_user.id
-                    )
-                    db.session.add(version)
-            except Exception as e:
-                logging.error(f"Version tracking error: {e}", exc_info=True)
-                # Don't fail the edit if version tracking fails
-            
             # Update book's total word count
             update_book_word_count(book)
             
@@ -1971,9 +1972,66 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 flash(f'An unexpected error occurred while editing chapter: {error_msg}', 'error')
     
     # GET request - show edit form
-    return render_template('book_platform/edit_chapter.html', 
-                         book=book, 
-                         chapter=chapter)
+    can_restore_versions = book.author_id == get_profile_id(user_profile, profile_type)
+    return render_template(
+        'book_platform/edit_chapter.html',
+        book=book,
+        chapter=chapter,
+        can_restore_versions=can_restore_versions,
+    )
+
+
+@book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/versions', methods=['GET'])
+@writer_or_book_platform_required
+def chapter_versions_list(book_id, chapter_id, user_profile, profile_type):
+    """JSON list of saved chapter snapshots (collaboration change history)."""
+    book = BookProject.query.get_or_404(book_id)
+    chapter = BookChapter.query.get_or_404(chapter_id)
+    if chapter.book_project_id != book_id:
+        return jsonify({'success': False, 'error': 'Chapter not found in this book'}), 404
+
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user or not _user_can_view_chapter_history(book, book_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    return jsonify({
+        'success': True,
+        'versions': fetch_chapter_versions(chapter_id),
+        'can_restore': book.author_id == get_profile_id(user_profile, profile_type)
+        and not chapter.is_published,
+    })
+
+
+@book_bp.route(
+    '/books/<int:book_id>/chapters/<int:chapter_id>/versions/<int:version_id>/restore',
+    methods=['POST'],
+)
+@writer_or_book_platform_required
+def chapter_version_restore(book_id, chapter_id, version_id, user_profile, profile_type):
+    """Roll chapter back to a prior snapshot (author only; chapter must be open for editing)."""
+    book = BookProject.query.get_or_404(book_id)
+    chapter = BookChapter.query.get_or_404(chapter_id)
+    author_id = get_profile_id(user_profile, profile_type)
+
+    if book.author_id != author_id:
+        return jsonify({'success': False, 'error': 'Only the author can restore a prior version'}), 403
+    if chapter.is_published:
+        return jsonify({'success': False, 'error': 'Reopen the chapter before restoring a version'}), 400
+    if chapter.book_project_id != book_id:
+        return jsonify({'success': False, 'error': 'Chapter not found in this book'}), 404
+
+    actor_id = resolve_version_actor_id(book, current_user.user_id)
+    if not actor_id:
+        return jsonify({'success': False, 'error': 'Could not resolve author profile'}), 400
+
+    ok, message, restored = apply_chapter_version_restore(chapter, version_id, actor_id)
+    if not ok:
+        return jsonify({'success': False, 'error': message}), 404
+
+    update_book_word_count(book)
+    db.session.commit()
+    return jsonify({'success': True, 'message': message, 'version': restored})
+
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/unpublish', methods=['POST'])
 @book_platform_required
@@ -2676,10 +2734,11 @@ def approve_suggestion(suggestion_id, user_profile, profile_type):
     if suggestion.status != 'pending':
         return jsonify({'error': 'This suggestion has already been processed'}), 400
     
-    # Update chapter with suggested changes
+    # Save snapshot, then apply collaborator suggestion
     chapter = suggestion.chapter
+    actor_id = resolve_version_actor_id(book, current_user.user_id) or author_id
+    snapshot_chapter(chapter, actor_id, change_source='suggestion_approved')
     
-    # Save current version before applying suggestion
     chapter.content = suggestion.suggested_content
     chapter.title = suggestion.suggested_title
     chapter.summary = suggestion.suggested_summary or chapter.summary
@@ -5943,6 +6002,9 @@ def chapter_content_api(book_id, chapter_id):
     
     elif request.method == 'POST':
         data = request.get_json()
+        actor_id = resolve_version_actor_id(chapter.book_project, current_user.user_id)
+        if actor_id:
+            snapshot_chapter(chapter, actor_id, change_source='collaboration')
         
         # Update chapter content
         chapter.content = data.get('content', chapter.content)

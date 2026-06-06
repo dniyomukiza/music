@@ -2569,6 +2569,16 @@ body.ink-dashboard .ink-dash-notify-item .notification-title {
     color: #e8ece9 !important;
 }
 
+body.ink-dashboard .ink-dash-stat-tile {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.ink-dashboard .ink-dash-pricing-table td,
+body.ink-dashboard .ink-dash-pricing-table th {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
 body.ink-dashboard .dropdown-menu {
     background: rgba(12, 15, 14, 0.98);
     border: 1px solid rgba(201, 162, 39, 0.22);
@@ -3221,30 +3231,65 @@ body.ink-books-ui .main-content .stat-item h3 {
     color: inherit !important;
 }
 
-body.ink-books-ui .btn-group .btn-ink-ghost {
-    flex: 1 1 auto;
+body.ink-books-ui .ink-books-icon-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding-top: 0.15rem;
 }
 
-body.ink-books-ui .ink-books-btn-warn {
-    border-color: rgba(224, 188, 58, 0.45) !important;
-    color: #f5d76a !important;
+body.ink-books-ui .ink-books-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.125rem;
+    height: 2.125rem;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(232, 236, 233, 0.82);
+    font-size: 0.95rem;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
-body.ink-books-ui .ink-books-btn-warn:hover {
-    background: rgba(201, 162, 39, 0.14) !important;
-    border-color: rgba(224, 188, 58, 0.65) !important;
-    color: #fff !important;
+body.ink-books-ui .ink-books-icon-btn:hover,
+body.ink-books-ui .ink-books-icon-btn:focus-visible {
+    background: rgba(201, 162, 39, 0.14);
+    color: #fff;
+    transform: translateY(-1px);
+    outline: none;
 }
 
-body.ink-books-ui .ink-books-btn-danger {
-    border-color: rgba(220, 53, 69, 0.55) !important;
-    color: #f8a0aa !important;
+body.ink-books-ui .ink-books-icon-btn.disabled,
+body.ink-books-ui .ink-books-icon-btn:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
 }
 
-body.ink-books-ui .ink-books-btn-danger:hover {
-    background: rgba(220, 53, 69, 0.12) !important;
-    border-color: rgba(220, 53, 69, 0.75) !important;
-    color: #fff !important;
+body.ink-books-ui .ink-books-icon-btn-warn {
+    color: #f5d76a;
+}
+
+body.ink-books-ui .ink-books-icon-btn-warn:hover,
+body.ink-books-ui .ink-books-icon-btn-warn:focus-visible {
+    background: rgba(201, 162, 39, 0.18);
+    color: #fff;
+}
+
+body.ink-books-ui .ink-books-icon-btn-danger {
+    color: #f8a0aa;
+}
+
+body.ink-books-ui .ink-books-icon-btn-danger:hover,
+body.ink-books-ui .ink-books-icon-btn-danger:focus-visible {
+    background: rgba(220, 53, 69, 0.14);
+    color: #fff;
 }
 
 body.ink-books-ui .navbar-dark.bg-primary {

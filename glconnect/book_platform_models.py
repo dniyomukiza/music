@@ -387,6 +387,8 @@ class ChapterVersion(db.Model):
     content = db.Column(db.Text, nullable=True)
     word_count = db.Column(db.Integer, default=0)
     is_current = db.Column(db.Boolean, default=False)
+    summary = db.Column(db.Text, nullable=True)
+    change_source = db.Column(db.String(40), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Foreign Keys

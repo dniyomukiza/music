@@ -214,6 +214,19 @@
                                 </div>
                             </div>
 
+                            <div class="mb-4" id="chapterVersionHistory">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                    <h6 class="mb-0 text-secondary"><i class="fas fa-code-branch me-2"></i>Change history</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-light" id="btnRefreshVersions">
+                                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                                    </button>
+                                </div>
+                                <p class="small text-muted mb-2">Every save (and approved collaborator edits) keeps a snapshot you can roll back to{% if not can_restore_versions %} — only the author can restore{% endif %}.</p>
+                                <div id="versionHistoryList" class="list-group list-group-flush rounded border border-secondary border-opacity-25" style="max-height: 220px; overflow-y: auto;">
+                                    <div class="list-group-item bg-transparent text-muted small py-3">Loading history…</div>
+                                </div>
+                            </div>
+
                             <div class="d-flex justify-content-end gap-3 pt-3" style="border-top: 1px solid var(--border-light);">
                                 <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}" 
                                    class="btn btn-secondary">
@@ -346,6 +359,100 @@
             const textarea = document.createElement('textarea');
             textarea.innerHTML = text;
             return textarea.value;
+        }
+
+        const versionsUrl = '{{ url_for("book_platform.chapter_versions_list", book_id=book.id, chapter_id=chapter.id) }}';
+        const restoreUrlTpl = '{{ url_for("book_platform.chapter_version_restore", book_id=book.id, chapter_id=chapter.id, version_id=999999) }}';
+        const restoreUrlFor = function (versionId) {
+            return restoreUrlTpl.replace('999999', String(versionId));
+        };
+        const canRestoreVersions = {{ 'true' if can_restore_versions else 'false' }};
+        const versionListEl = document.getElementById('versionHistoryList');
+        const btnRefreshVersions = document.getElementById('btnRefreshVersions');
+
+        function formatVersionSource(src) {
+            const labels = {
+                author_edit: 'Author save',
+                collaboration: 'Collaboration',
+                suggestion_approved: 'Suggestion merged',
+                rollback: 'Rollback',
+                auto: 'Auto'
+            };
+            return labels[src] || src || 'Edit';
+        }
+
+        function renderVersionHistory(versions, canRestore) {
+            if (!versionListEl) return;
+            if (!versions || !versions.length) {
+                versionListEl.innerHTML = '<div class="list-group-item bg-transparent text-muted small py-3">No snapshots yet — save once to start tracking.</div>';
+                return;
+            }
+            versionListEl.innerHTML = versions.map(function (v) {
+                const when = v.created_at ? new Date(v.created_at).toLocaleString() : '';
+                const restoreBtn = canRestore
+                    ? '<button type="button" class="btn btn-sm btn-outline-warning ms-2 btn-restore-version" data-version-id="' + v.id + '">Restore</button>'
+                    : '';
+                return '<div class="list-group-item bg-transparent py-2 px-3">' +
+                    '<div class="d-flex flex-wrap align-items-start justify-content-between gap-2">' +
+                    '<div><strong>v' + escapeHtml(v.version_number) + '</strong> · ' + escapeHtml(formatVersionSource(v.change_source)) +
+                    '<div class="small text-muted">' + escapeHtml(v.created_by) + (when ? ' · ' + when : '') + '</div></div>' +
+                    restoreBtn +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s == null ? '' : String(s);
+            return d.innerHTML;
+        }
+
+        async function loadVersionHistory() {
+            if (!versionListEl) return;
+            try {
+                const res = await fetch(versionsUrl, { credentials: 'same-origin' });
+                const data = await res.json();
+                if (data.success) {
+                    renderVersionHistory(data.versions, data.can_restore && canRestoreVersions);
+                } else {
+                    versionListEl.innerHTML = '<div class="list-group-item bg-transparent text-danger small py-3">' + escapeHtml(data.error || 'Could not load history') + '</div>';
+                }
+            } catch (e) {
+                versionListEl.innerHTML = '<div class="list-group-item bg-transparent text-danger small py-3">Could not load history.</div>';
+            }
+        }
+
+        if (btnRefreshVersions) {
+            btnRefreshVersions.addEventListener('click', loadVersionHistory);
+        }
+        if (versionListEl) {
+            versionListEl.addEventListener('click', async function (e) {
+                const btn = e.target.closest('.btn-restore-version');
+                if (!btn) return;
+                const vid = btn.getAttribute('data-version-id');
+                if (!vid || !confirm('Restore this snapshot? Your current text will be saved as a new snapshot first.')) return;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(restoreUrlFor(vid), {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        body: '{}',
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showNotification(data.message || 'Version restored', 'success');
+                        window.location.reload();
+                    } else {
+                        showNotification(data.error || 'Restore failed', 'error');
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    showNotification('Restore failed', 'error');
+                    btn.disabled = false;
+                }
+            });
+            loadVersionHistory();
         }
     </script>
 </body>

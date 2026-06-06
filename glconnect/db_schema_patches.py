@@ -712,3 +712,70 @@ def ensure_page_analytics_slim_schema(db) -> None:
     except Exception as e:
         db.session.rollback()
         logger.warning("page_analytics slim schema: %s", e)
+
+
+def _chapter_versions_column_names(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'chapter_versions'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(chapter_versions)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def ensure_chapter_versions_metadata_columns(db) -> None:
+    """Add summary + change_source for collaboration rollback history."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("chapter_versions patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+
+    exists = db.session.execute(
+        text(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chapter_versions'"
+            if dialect == "postgresql"
+            else "SELECT name FROM sqlite_master WHERE type='table' AND name='chapter_versions'"
+        )
+    ).fetchone()
+    db.session.rollback()
+    if not exists:
+        return
+
+    cols = _chapter_versions_column_names(db, dialect)
+    try:
+        if "summary" not in cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text("ALTER TABLE chapter_versions ADD COLUMN IF NOT EXISTS summary TEXT")
+                )
+            else:
+                db.session.execute(text("ALTER TABLE chapter_versions ADD COLUMN summary TEXT"))
+        if "change_source" not in cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(
+                        "ALTER TABLE chapter_versions ADD COLUMN IF NOT EXISTS change_source VARCHAR(40)"
+                    )
+                )
+            else:
+                db.session.execute(
+                    text("ALTER TABLE chapter_versions ADD COLUMN change_source VARCHAR(40)")
+                )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch chapter_versions metadata columns: %s", e, exc_info=True)
+

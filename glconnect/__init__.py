@@ -702,6 +702,7 @@ def create_app(config_overrides=None):
             ensure_library_book_hides_format_columns,
             ensure_audiobook_segment_plan_schema,
             ensure_page_analytics_slim_schema,
+            ensure_chapter_versions_metadata_columns,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -717,6 +718,7 @@ def create_app(config_overrides=None):
         ensure_reader_annotations_schema(db)
         ensure_library_book_hides_format_columns(db)
         ensure_page_analytics_slim_schema(db)
+        ensure_chapter_versions_metadata_columns(db)
 
         # Import and register blueprints
         from .routes import bp 

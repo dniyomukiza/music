@@ -266,22 +266,41 @@
                             <div class="col-6">
                                 <div class="stat-card text-center">
                                     <div class="stat-icon bg-warning text-white rounded-circle mx-auto mb-2">
-                                        <i class="fas fa-bell"></i>
+                                        <i class="fas fa-dollar-sign"></i>
                                     </div>
-                                    <div class="stat-number h4 mb-0">{{ notifications|length }}</div>
-                                    <div class="stat-label text-muted small">Notifications</div>
+                                    <div class="stat-number h4 mb-0">{% if author_dashboard_stats %}${{ "%.0f"|format(author_dashboard_stats.summary.author_earnings) }}{% else %}—{% endif %}</div>
+                                    <div class="stat-label text-muted small">Net earnings</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="stat-card text-center">
                                     <div class="stat-icon bg-info text-white rounded-circle mx-auto mb-2">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </div>
+                                    <div class="stat-number h4 mb-0">{% if author_dashboard_stats %}{{ author_dashboard_stats.summary.total_sales }}{% else %}0{% endif %}</div>
+                                    <div class="stat-label text-muted small">Sales</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-icon bg-primary text-white rounded-circle mx-auto mb-2">
                                         <i class="fas fa-eye"></i>
                                     </div>
-                                    <div class="stat-number h4 mb-0">{{ authored_books|selectattr('status.value', 'equalto', 'published')|list|length }}</div>
-                                    <div class="stat-label text-muted small">Published</div>
+                                    <div class="stat-number h4 mb-0">{% if author_dashboard_stats %}{{ author_dashboard_stats.summary.total_views }}{% else %}0{% endif %}</div>
+                                    <div class="stat-label text-muted small">Views</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card text-center">
+                                    <div class="stat-icon bg-success text-white rounded-circle mx-auto mb-2">
+                                        <i class="fas fa-download"></i>
+                                    </div>
+                                    <div class="stat-number h4 mb-0">{% if author_dashboard_stats %}{{ author_dashboard_stats.summary.total_downloads }}{% else %}0{% endif %}</div>
+                                    <div class="stat-label text-muted small">Downloads</div>
                                 </div>
                             </div>
                         </div>
+                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-sm btn-outline-primary w-100 mt-2">Earnings detail</a>
                     </div>
                 </div>
                 {% endif %}
@@ -338,6 +357,114 @@
                         <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-outline-light">Open publicity hub</a>
                     </div>
                 </div>
+
+                {% if author_dashboard_stats %}
+                <!-- Live sales & engagement -->
+                <div class="card shadow-sm border-0 mb-4 ink-dash-live-stats" id="authorLiveStats">
+                    <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h2 class="h5 text-primary mb-0"><i class="fas fa-chart-line me-2" aria-hidden="true"></i>Sales &amp; reader engagement</h2>
+                        <span class="small text-muted" id="authorStatsUpdated" aria-live="polite">Updating…</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3" id="authorStatsSummary">
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3 rounded ink-dash-stat-tile">
+                                    <div class="h3 mb-0 text-success" data-stat="total_sales">{{ author_dashboard_stats.summary.total_sales }}</div>
+                                    <div class="small text-muted">Completed sales</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3 rounded ink-dash-stat-tile">
+                                    <div class="h3 mb-0 text-warning" data-stat="author_earnings">${{ "%.2f"|format(author_dashboard_stats.summary.author_earnings) }}</div>
+                                    <div class="small text-muted">Your net earnings</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3 rounded ink-dash-stat-tile">
+                                    <div class="h3 mb-0 text-info" data-stat="total_views">{{ author_dashboard_stats.summary.total_views }}</div>
+                                    <div class="small text-muted">Marketplace views</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3 rounded ink-dash-stat-tile">
+                                    <div class="h3 mb-0 text-primary" data-stat="total_downloads">{{ author_dashboard_stats.summary.total_downloads }}</div>
+                                    <div class="small text-muted">Downloads</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-sm btn-ink-gold"><i class="fas fa-dollar-sign me-1"></i>Full earnings</a>
+                            <a href="{{ url_for('book_platform.books') }}" class="btn btn-sm btn-outline-light">All listings &amp; analytics</a>
+                        </div>
+                        <h3 class="h6 text-secondary mb-2">Recent sales</h3>
+                        <div id="authorRecentSales">
+                            {% if author_dashboard_stats.recent_sales %}
+                            <ul class="list-group list-group-flush rounded border border-secondary border-opacity-25">
+                                {% for s in author_dashboard_stats.recent_sales %}
+                                <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                                    <span><strong>{{ s.book_title }}</strong> <span class="text-muted small">· {{ s.format }}</span></span>
+                                    <span class="text-success small fw-semibold">${{ "%.2f"|format(s.net_amount) }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="small text-muted mb-0">No completed sales yet — stats refresh automatically when readers buy.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing & earnings clarity -->
+                <div class="card shadow-sm border-0 mb-4 border-start border-success border-4">
+                    <div class="card-header border-0">
+                        <h2 class="h5 text-primary mb-1"><i class="fas fa-tags me-2" aria-hidden="true"></i>Pricing &amp; what you earn</h2>
+                        <p class="small text-muted mb-0">Set ebook, audiobook, and bundle prices per title. You keep <strong>~70%</strong> of each list-price sale; anything a reader pays above list price goes entirely to you.</p>
+                    </div>
+                    <div class="card-body pt-0">
+                        {% if author_dashboard_stats.books %}
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0 ink-dash-pricing-table">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th>Title</th>
+                                        <th>Ebook</th>
+                                        <th>Audiobook</th>
+                                        <th>Bundle <span class="fw-normal">(20% off)</span></th>
+                                        <th>Sales</th>
+                                        <th>Net</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in author_dashboard_stats.books %}
+                                    <tr>
+                                        <td>
+                                            <span class="fw-semibold">{{ row.title }}</span>
+                                            {% if row.live %}<span class="badge bg-success ms-1">Live</span>{% else %}<span class="badge bg-secondary ms-1">Draft</span>{% endif %}
+                                        </td>
+                                        <td>{{ row.price_ebook_label }}</td>
+                                        <td>{% if row.has_audiobook %}{{ row.price_audiobook_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                        <td>{% if row.price_bundle_label != 'Free' %}{{ row.price_bundle_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                        <td>{{ row.sales }}</td>
+                                        <td class="text-success">${{ "%.2f"|format(row.earnings) }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('book_platform.edit_book', book_id=row.id) }}#price" class="btn btn-sm btn-outline-light">Set prices</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted mb-3">Create or list a book to set prices and start earning.</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-sm btn-primary">Start writing</a>
+                            <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-sm btn-ink-sage">List uploaded book</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
                 {% endif %}
                 <!-- Profile summary -->
                 <div class="welcome-card rounded-3 shadow-sm p-4 mb-4 border-start border-primary border-4">
@@ -846,6 +973,66 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='book_platform.js') }}"></script>
     <script>
+        // Live author stats (poll every 45s)
+        (function () {
+            const liveRoot = document.getElementById('authorLiveStats');
+            if (!liveRoot) return;
+            const statsUrl = '{{ url_for("book_platform.api_author_dashboard_stats") }}';
+            const updatedEl = document.getElementById('authorStatsUpdated');
+            const recentEl = document.getElementById('authorRecentSales');
+
+            function fmtMoney(n) {
+                return '$' + Number(n || 0).toFixed(2);
+            }
+
+            function renderRecent(sales) {
+                if (!recentEl) return;
+                if (!sales || !sales.length) {
+                    recentEl.innerHTML = '<p class="small text-muted mb-0">No completed sales yet — stats refresh automatically when readers buy.</p>';
+                    return;
+                }
+                recentEl.innerHTML = '<ul class="list-group list-group-flush rounded border border-secondary border-opacity-25">' +
+                    sales.map(function (s) {
+                        return '<li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">' +
+                            '<span><strong>' + escapeHtml(s.book_title) + '</strong> <span class="text-muted small">· ' + escapeHtml(s.format || 'digital') + '</span></span>' +
+                            '<span class="text-success small fw-semibold">' + fmtMoney(s.net_amount) + '</span></li>';
+                    }).join('') + '</ul>';
+            }
+
+            function escapeHtml(t) {
+                const d = document.createElement('div');
+                d.textContent = t == null ? '' : String(t);
+                return d.innerHTML;
+            }
+
+            async function refreshAuthorStats() {
+                try {
+                    const res = await fetch(statsUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                    const data = await res.json();
+                    if (!data.success || !data.summary) return;
+                    const map = {
+                        total_sales: data.summary.total_sales,
+                        author_earnings: fmtMoney(data.summary.author_earnings),
+                        total_views: data.summary.total_views,
+                        total_downloads: data.summary.total_downloads,
+                    };
+                    Object.keys(map).forEach(function (key) {
+                        const el = liveRoot.querySelector('[data-stat="' + key + '"]');
+                        if (el) el.textContent = map[key];
+                    });
+                    renderRecent(data.recent_sales);
+                    if (updatedEl && data.updated_at) {
+                        updatedEl.textContent = 'Updated ' + new Date(data.updated_at).toLocaleTimeString();
+                    }
+                } catch (e) {
+                    if (updatedEl) updatedEl.textContent = 'Live refresh paused';
+                }
+            }
+
+            refreshAuthorStats();
+            setInterval(refreshAuthorStats, 45000);
+        })();
+
         // Handle delete button clicks
         document.addEventListener('DOMContentLoaded', function() {
             const deleteButtons = document.querySelectorAll('.delete-book-btn');
