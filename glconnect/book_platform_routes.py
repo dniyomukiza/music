@@ -659,7 +659,11 @@ def book_platform_required(f):
         # Check if user has Ink Studio profile
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         if not book_user:
-            return redirect(url_for('book_platform.setup_profile'))
+            flash(
+                'Complete your Ink Studio author profile before listing a book on the marketplace.',
+                'warning',
+            )
+            return redirect(url_for('book_platform.setup_profile', next=request.path))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -976,7 +980,7 @@ def books(user_profile, profile_type):
     from glconnect.book_platform_models import BookPlatformUser, InvestmentCampaign
 
     if profile_type == 'freelancer':
-        flash('This page is for authors with book projects.', 'info')
+        flash('Listing and writing books in Ink Studio is for authors. Freelancers can publish stories from the dashboard.', 'info')
         return redirect(url_for('book_platform.dashboard'))
 
     if _author_needs_marketplace_profile_step():
@@ -1104,7 +1108,7 @@ def create_book(user_profile, profile_type):
     # The dashboard template will hide the "Start Writing" button for non-authors
     # This allows Writer profiles to create books immediately
     if profile_type == 'freelancer':
-        flash('This page is for authors with book projects.', 'info')
+        flash('Listing and writing books in Ink Studio is for authors. Freelancers can publish stories from the dashboard.', 'info')
         return redirect(url_for('book_platform.dashboard'))
 
     if _author_needs_marketplace_profile_step():
@@ -3914,7 +3918,7 @@ def library_reader_search_index(book_id):
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required
 def purchase_book(book_id):
-    """Purchase a book - accessible to all logged-in users, prevents self-purchase"""
+    """Purchase a book — accessible to all logged-in users (including the author)."""
     # Wrap entire function in try-except to ensure JSON responses
     try:
         # Resolve app without referencing bare `current_app` — a nested `import current_app` in this
@@ -3943,24 +3947,6 @@ def purchase_book(book_id):
         
         # Buyers only need a user account - NO profile required
         buyer_user_id = current_user.user_id
-        
-        # Prevent self-purchase: Check if current user is the author
-        # Get author's user_id from book.author (BookPlatformUser) -> user relationship
-        try:
-            if book.author:
-                author_user_id = None
-                # Try to get user_id from book.author.user_id (direct field)
-                if hasattr(book.author, 'user_id'):
-                    author_user_id = book.author.user_id
-                # Fallback: try to get from book.author.user relationship
-                elif hasattr(book.author, 'user') and book.author.user:
-                    author_user_id = book.author.user.user_id
-                
-                if author_user_id and author_user_id == buyer_user_id:
-                    return jsonify({'error': 'You cannot purchase your own book'}), 400
-        except Exception as self_purchase_check_error:
-            logger.warning(f"Error checking self-purchase: {self_purchase_check_error}, continuing anyway")
-            # Continue with purchase if check fails (better to allow than block)
         
         # Check if buyer_user_id column exists - if yes, we don't need BookPlatformUser profile
         # If no, we need to create one as a workaround
@@ -4026,74 +4012,6 @@ def purchase_book(book_id):
         else:
             base_price = book.price
         
-        # Check if already purchased THIS FORMAT - user can own digital + audiobook separately
-        existing_purchase = False
-        from sqlalchemy import text
-        
-        try:
-            # Query completed purchases for this user+book
-            q = text("""
-                SELECT id, COALESCE(purchase_format, 'digital') as fmt FROM book_purchases 
-                WHERE book_project_id = :book_id AND status = 'COMPLETED'
-                AND (buyer_id = :buyer_id OR (buyer_user_id = :buyer_user_id AND :buyer_user_id IS NOT NULL))
-            """)
-            rows = db.session.execute(q, {
-                'book_id': book_id, 'buyer_id': buyer_id or 0,
-                'buyer_user_id': buyer_user_id if has_buyer_user_id_col else None
-            }).fetchall()
-            formats = [r.fmt for r in rows] if rows else []
-            if not formats and buyer_id:
-                q2 = text("""
-                    SELECT COALESCE(purchase_format, 'digital') as fmt FROM book_purchases 
-                    WHERE buyer_id = :buyer_id AND book_project_id = :book_id AND status = 'COMPLETED'
-                """)
-                rows2 = db.session.execute(q2, {'buyer_id': buyer_id, 'book_id': book_id}).fetchall()
-                formats = [r.fmt for r in rows2] if rows2 else []
-            if not formats and has_buyer_user_id_col:
-                q3 = text("""
-                    SELECT COALESCE(purchase_format, 'digital') as fmt FROM book_purchases 
-                    WHERE buyer_user_id = :uid AND book_project_id = :book_id AND status = 'COMPLETED'
-                """)
-                rows3 = db.session.execute(q3, {'uid': buyer_user_id, 'book_id': book_id}).fetchall()
-                formats = [r.fmt for r in rows3] if rows3 else []
-            
-            has_digital = 'digital' in formats or 'bundle' in formats
-            has_audiobook = 'audiobook' in formats or 'bundle' in formats
-            if purchase_type == 'digital':
-                existing_purchase = has_digital
-            elif purchase_type == 'audiobook':
-                existing_purchase = has_audiobook
-            else:
-                existing_purchase = 'bundle' in formats or (has_digital and has_audiobook)
-        except Exception as e:
-            logger.warning(f"Error checking existing purchase by format: {e}")
-            # Fallback: if purchase_format column missing, any completed purchase blocks (assume all are digital)
-            try:
-                r = db.session.execute(text("""
-                    SELECT 1 FROM book_purchases WHERE book_project_id = :bid AND status = 'COMPLETED'
-                    AND (buyer_id = :bid2 OR buyer_user_id = :uid)
-                    LIMIT 1
-                """), {'bid': book_id, 'bid2': buyer_id or 0, 'uid': buyer_user_id}).fetchone()
-                existing_purchase = r is not None
-            except Exception:
-                pass
-        
-        if existing_purchase:
-            fmt_msg = {'digital': 'digital copy', 'audiobook': 'audiobook', 'bundle': 'bundle'}[purchase_type]
-            restored = _restore_library_visibility_for_owned_format(buyer_user_id, book_id, purchase_type)
-            if restored:
-                db.session.commit()
-            return jsonify({
-                'success': True,
-                'already_owned': True,
-                'restored_to_library': restored,
-                'message': (
-                    f'You already own this {fmt_msg}. '
-                    + ('It is back on My Library.' if restored else 'Open My Library — hiding a title does not remove your purchase.')
-                ),
-                'library_url': url_for('book_platform.my_library'),
-            })
-
         # Validate book has a price for the selected format
         if not base_price or base_price <= 0:
             return jsonify({'error': f'This {purchase_type} is not available for purchase. Please contact the author.'}), 400
@@ -5225,11 +5143,6 @@ def purchase_success():
             # No purchase found - create new one (fallback, signed-in only)
             book = BookProject.query.get_or_404(book_id)
             
-            # Prevent self-purchase
-            if book.author and book.author.user_id == buyer_user_id:
-                flash('You cannot purchase your own book.', 'error')
-                return redirect(url_for('book_platform.marketplace'))
-            
             # Ensure user has BookPlatformUser profile
             if not buyer_id:
                 from glconnect.models import Writer
@@ -5352,6 +5265,8 @@ def purchase_success():
             f"✅ Purchase {purchase.id} recorded from Stripe success for book {book_id}, sale id={getattr(sale, 'id', None)}"
         )
         success_fmt = getattr(purchase, 'purchase_format', None) or 'digital'
+        if _restore_library_visibility_for_owned_format(buyer_user_id, book_id, success_fmt):
+            db.session.commit()
         return _post_purchase_redirect(book_id, success_fmt)
         
     except Exception as e:
@@ -5569,11 +5484,6 @@ def stripe_webhook():
                 logger.error(f"Book {purchase.book_project_id} not found for purchase {purchase.id}")
                 return False
             
-            # Prevent self-purchase
-            if book.author and purchase.buyer_user_id and book.author.user_id == purchase.buyer_user_id:
-                logger.warning(f"Self-purchase attempt blocked for purchase {purchase.id}")
-                return False
-            
             # Update purchase amount if actual amount paid differs (user paid more than book price)
             if amount_total and amount_total > 0:
                 if abs(purchase.amount - amount_total) > 0.01:  # Allow $0.01 tolerance for rounding
@@ -5667,6 +5577,12 @@ def stripe_webhook():
                 send_book_purchase_receipt_email(book, purchase)
             except Exception as receipt_err:
                 logger.warning("Webhook purchase receipt email error: %s", receipt_err, exc_info=True)
+
+            buyer_uid = getattr(purchase, 'buyer_user_id', None)
+            if buyer_uid and _restore_library_visibility_for_owned_format(
+                buyer_uid, purchase.book_project_id, getattr(purchase, 'purchase_format', None) or 'digital'
+            ):
+                db.session.commit()
 
             return True
         
@@ -5892,7 +5808,7 @@ def stripe_webhook():
                                 buyer_user_id = user.user_id
                                 book = BookProject.query.get(book_id)
                                 
-                                if book and book.author and book.author.user_id != buyer_user_id:
+                                if book:
                                     from glconnect.book_platform_models import BookPlatformUser
                                     from glconnect.models import Writer
                                     
@@ -6154,9 +6070,14 @@ def handle_500_error(error):
             'success': False,
             'error': 'We encountered an unexpected error. Our team has been notified. Please try again in a moment.'
         }), 500
-    
-    # For non-API routes, let Flask handle it normally
-    raise error
+
+    error_msg = str(getattr(error, 'description', None) or error)
+    logger.error("Ink Studio page error on %s: %s", request.path, error_msg, exc_info=True)
+    flash(
+        'This page could not be loaded. If you were listing or creating a book, complete your author profile first, then try again.',
+        'error',
+    )
+    return redirect(url_for('book_platform.marketplace'))
 
 @book_bp.errorhandler(404)
 def not_found(error):

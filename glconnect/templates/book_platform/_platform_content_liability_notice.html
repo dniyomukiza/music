@@ -1,5 +1,5 @@
-{# Platform IP / liability notice. Use brief=true near AI tools; full text is in _author_listing_terms_scroll.html #}
-{% if brief %}
+{# Brief liability notice near AI tools. Full terms: _author_listing_terms_scroll.html #}
+{% if brief|default(true) %}
 <p class="small text-muted mb-0">
     <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
     <strong>You are responsible</strong> for all content you upload or generate here (including AI covers).

@@ -835,11 +835,6 @@
                 })
             .then(data => {
                 if (data.success) {
-                    if (data.already_owned) {
-                        alert(data.message || 'You already own this book.');
-                        if (data.library_url) window.location.href = data.library_url;
-                        return;
-                    }
                     // Store purchase info for success callback
                     if (data.success_url) {
                         localStorage.setItem('pendingPurchase', JSON.stringify({
@@ -1265,11 +1260,6 @@
             })
             .then(data => {
                 if (data.success) {
-                    if (data.already_owned) {
-                        alert(data.message || 'You already own this book.');
-                        if (data.library_url) window.location.href = data.library_url;
-                        return;
-                    }
                     // Store purchase info for success callback
                     if (data.success_url) {
                         localStorage.setItem('pendingPurchase', JSON.stringify({
