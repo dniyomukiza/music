@@ -12,6 +12,8 @@ class AIWritingAssistant {
         this.chatHistory = [];
         this.chatSending = false;
         this.activeTab = 'writing';
+        this._dragState = null;
+        this._positionStorageKey = 'inkStudioAiToolbarPosition';
         this.aiFeatures = {
             generateContent: true,
             improveText: true,
@@ -96,8 +98,8 @@ class AIWritingAssistant {
         toolbar.id = 'ai-toolbar';
         toolbar.className = 'ai-toolbar';
         toolbar.innerHTML = `
-            <div class="ai-toolbar-header">
-                <h6><i class="fas fa-robot"></i> AI Assistant</h6>
+            <div class="ai-toolbar-header ai-toolbar-drag-handle" title="Drag to move anywhere on screen">
+                <h6><i class="fas fa-grip-vertical ai-drag-grip" aria-hidden="true"></i><i class="fas fa-robot"></i> AI Assistant</h6>
                 <div class="ai-status ${this.isEnabled ? 'enabled' : 'disabled'}">
                     ${this.isEnabled ? 'Enabled' : 'Disabled'}
                 </div>
@@ -169,15 +171,136 @@ class AIWritingAssistant {
             </div>
         `;
 
-        // Add to page
-        const editorContainer = document.querySelector('.editor-container') || document.body;
-        editorContainer.appendChild(toolbar);
+        // Fixed to viewport so drag works anywhere on the page
+        document.body.appendChild(toolbar);
 
         this.setupToolbarTabs(toolbar);
         this.setupChatPanel(toolbar);
+        this.setupDraggable(toolbar);
 
         // Add CSS
         this.addAIStyles();
+    }
+
+    /**
+     * Drag header to reposition; position persists in localStorage.
+     */
+    setupDraggable(toolbar) {
+        const handle = toolbar.querySelector('.ai-toolbar-drag-handle');
+        if (!handle) return;
+
+        this.restoreToolbarPosition(toolbar);
+
+        const endDrag = (e) => {
+            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
+            try {
+                handle.releasePointerCapture(e.pointerId);
+            } catch (_) { /* already released */ }
+            toolbar.classList.remove('is-dragging');
+            this._dragState = null;
+            this.clampToolbarPosition(toolbar);
+            this.saveToolbarPosition(toolbar);
+        };
+
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            e.preventDefault();
+            const rect = toolbar.getBoundingClientRect();
+            this._prepareToolbarForDrag(toolbar);
+            toolbar.style.left = `${rect.left}px`;
+            toolbar.style.top = `${rect.top}px`;
+            toolbar.classList.add('is-dragging');
+            this._dragState = {
+                pointerId: e.pointerId,
+                offsetX: e.clientX - rect.left,
+                offsetY: e.clientY - rect.top,
+            };
+            handle.setPointerCapture(e.pointerId);
+        });
+
+        handle.addEventListener('pointermove', (e) => {
+            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
+            e.preventDefault();
+            const margin = 8;
+            const maxLeft = window.innerWidth - toolbar.offsetWidth - margin;
+            const maxTop = window.innerHeight - toolbar.offsetHeight - margin;
+            const left = Math.min(maxLeft, Math.max(margin, e.clientX - this._dragState.offsetX));
+            const top = Math.min(maxTop, Math.max(margin, e.clientY - this._dragState.offsetY));
+            toolbar.style.left = `${left}px`;
+            toolbar.style.top = `${top}px`;
+        });
+
+        handle.addEventListener('pointerup', endDrag);
+        handle.addEventListener('pointercancel', endDrag);
+
+        window.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
+    }
+
+    _prepareToolbarForDrag(toolbar) {
+        toolbar.classList.add('is-positioned');
+        toolbar.style.right = 'auto';
+        toolbar.style.bottom = 'auto';
+        toolbar.style.transform = 'none';
+    }
+
+    applyDefaultToolbarPosition(toolbar) {
+        requestAnimationFrame(() => {
+            const margin = 12;
+            const width = toolbar.offsetWidth || 320;
+            const height = toolbar.offsetHeight || 400;
+            const left = Math.max(margin, window.innerWidth - width - margin);
+            const top = Math.max(margin, (window.innerHeight - height) / 2);
+            this._prepareToolbarForDrag(toolbar);
+            toolbar.style.left = `${left}px`;
+            toolbar.style.top = `${top}px`;
+        });
+    }
+
+    restoreToolbarPosition(toolbar) {
+        try {
+            const raw = localStorage.getItem(this._positionStorageKey);
+            if (!raw) {
+                this.applyDefaultToolbarPosition(toolbar);
+                return;
+            }
+            const parsed = JSON.parse(raw);
+            const left = Number(parsed.left);
+            const top = Number(parsed.top);
+            if (!Number.isFinite(left) || !Number.isFinite(top)) {
+                this.applyDefaultToolbarPosition(toolbar);
+                return;
+            }
+            this._prepareToolbarForDrag(toolbar);
+            toolbar.style.left = `${left}px`;
+            toolbar.style.top = `${top}px`;
+            requestAnimationFrame(() => this.clampToolbarPosition(toolbar));
+        } catch (_) {
+            this.applyDefaultToolbarPosition(toolbar);
+        }
+    }
+
+    clampToolbarPosition(toolbar) {
+        if (!toolbar.classList.contains('is-positioned')) return;
+        const margin = 8;
+        const width = toolbar.offsetWidth;
+        const height = toolbar.offsetHeight;
+        const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+        const maxTop = Math.max(margin, window.innerHeight - height - margin);
+        const currentLeft = parseFloat(toolbar.style.left) || 0;
+        const currentTop = parseFloat(toolbar.style.top) || 0;
+        const left = Math.min(maxLeft, Math.max(margin, currentLeft));
+        const top = Math.min(maxTop, Math.max(margin, currentTop));
+        toolbar.style.left = `${left}px`;
+        toolbar.style.top = `${top}px`;
+    }
+
+    saveToolbarPosition(toolbar) {
+        const left = parseFloat(toolbar.style.left);
+        const top = parseFloat(toolbar.style.top);
+        if (!Number.isFinite(left) || !Number.isFinite(top)) return;
+        try {
+            localStorage.setItem(this._positionStorageKey, JSON.stringify({ left, top }));
+        } catch (_) { /* private mode / quota */ }
     }
 
     /**
@@ -188,19 +311,45 @@ class AIWritingAssistant {
         style.textContent = `
             .ai-toolbar {
                 position: fixed;
-                right: 20px;
-                top: 50%;
-                transform: translateY(-50%);
                 width: 320px;
+                max-width: calc(100vw - 16px);
                 background: white;
                 border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                z-index: 1000;
+                z-index: 1050;
                 max-height: 85vh;
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
+            }
+
+            .ai-toolbar.is-positioned {
+                right: auto;
+                bottom: auto;
+                transform: none;
+            }
+
+            .ai-toolbar.is-dragging {
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+                opacity: 0.98;
+            }
+
+            .ai-toolbar-drag-handle {
+                cursor: grab;
+                touch-action: none;
+                user-select: none;
+            }
+
+            .ai-toolbar-drag-handle:active,
+            .ai-toolbar.is-dragging .ai-toolbar-drag-handle {
+                cursor: grabbing;
+            }
+
+            .ai-drag-grip {
+                margin-right: 6px;
+                color: #94a3b8 !important;
+                font-size: 12px;
             }
 
             .ai-toolbar-tabs {

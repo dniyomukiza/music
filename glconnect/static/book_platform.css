@@ -339,6 +339,8 @@ body {
     position: relative;
     z-index: 10000;
     background-color: white;
+    pointer-events: auto !important;
+    cursor: pointer;
 }
 
 .navbar .dropdown-item:hover {
@@ -2768,11 +2770,15 @@ body.ink-invest .ink-inv-page-bg {
 }
 
 body.ink-invest .ink-inv-skip,
-body.ink-invest .ink-invest-nav,
+body.ink-invest .ink-invest-nav {
+    position: relative;
+    z-index: 1;
+}
+
 body.ink-invest .hero-section.ink-mp-hero,
 body.ink-invest .ink-inv-main {
     position: relative;
-    z-index: 1;
+    z-index: 0;
 }
 
 body.ink-invest .ink-invest-nav.ink-mp-sticky-nav.ink-inv-topnav {
@@ -2929,6 +2935,8 @@ body.ink-invest .dropdown-menu {
 
 body.ink-invest .dropdown-item {
     color: #e8ece9;
+    pointer-events: auto !important;
+    cursor: pointer;
 }
 
 body.ink-invest .dropdown-item:hover,
@@ -3479,6 +3487,40 @@ body.ink-books-ui .form-check-label {
 
 body.ink-books-ui .form-check-label strong {
     color: #f0e6b8;
+}
+
+/* Author listing terms — light scroll panel on dark Ink Studio pages */
+.listing-terms-scrollbox {
+    max-height: 280px;
+    overflow-y: auto;
+    background: #f8fafc !important;
+    border-color: rgba(15, 23, 42, 0.14) !important;
+    color: #1e293b !important;
+}
+
+.listing-terms-scrollbox p,
+.listing-terms-scrollbox strong,
+.listing-terms-scrollbox .fw-semibold {
+    color: #1e293b !important;
+}
+
+.listing-terms-scrollbox strong {
+    color: #0f172a !important;
+}
+
+body.ink-books-ui .listing-terms-section {
+    background: #eef2f6 !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+body.ink-books-ui .listing-terms-section h6,
+body.ink-books-ui .listing-terms-section .text-muted,
+body.ink-books-ui .listing-terms-section .form-check-label {
+    color: #334155 !important;
+}
+
+body.ink-books-ui .listing-terms-section h6 i {
+    color: #475569 !important;
 }
 
 body.ink-books-ui .alert-info {
@@ -5324,6 +5366,27 @@ body.ink-workspace .ink-books-page-bg {
 body.ink-workspace .ink-workspace-nav {
     background: rgba(6, 8, 7, 0.94) !important;
     backdrop-filter: blur(10px);
+    z-index: 1040;
+    isolation: isolate;
+    overflow: visible !important;
+}
+
+body.ink-workspace .ink-workspace-nav .navbar-collapse,
+body.ink-workspace .ink-workspace-nav .ink-workspace-nav-secondary {
+    overflow: visible !important;
+}
+
+body.ink-workspace .ink-workspace-nav .dropdown-menu,
+body.ink-workspace .ink-workspace-nav .ink-workspace-dropdown {
+    z-index: 1055 !important;
+    pointer-events: auto !important;
+}
+
+body.ink-workspace .ink-workspace-nav .ink-workspace-dropdown .dropdown-item {
+    pointer-events: auto !important;
+    cursor: pointer;
+    background-color: transparent !important;
+    color: #e8ece9 !important;
 }
 
 body.ink-workspace .ink-workspace-nav-inner {

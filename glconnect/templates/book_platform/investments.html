@@ -14,96 +14,10 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
 </head>
-<body class="ink-invest">
-    <div class="ink-inv-page-bg" aria-hidden="true"></div>
-    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2 ink-inv-skip" href="#ink-inv-main">Skip to campaigns</a>
-    <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-invest-nav ink-inv-topnav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
-        <div class="container py-1">
-            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
-            </a>
-            <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#invNavbar" aria-controls="invNavbar" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="invNavbar">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
-                            <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
-                            <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>Publicity
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
-                            <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content
-                        </a>
-                    </li>
-                    {% if ink_nav_show_author_nav|default(false) %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">
-                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
-                            <i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace
-                        </a>
-                    </li>
-                    {% if ink_nav_show_my_library|default(false) %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
-                            <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('book_platform.investments') }}" aria-current="page">
-                            <i class="fas fa-seedling me-1" aria-hidden="true"></i>Discover campaigns
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
-                            <i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Sales &amp; payouts
-                        </a>
-                    </li>
-                    {% if ink_nav_show_author_nav|default(false) %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
-                            <i class="fas fa-wallet me-1" aria-hidden="true"></i>Payout
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if current_user.role == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">
-                            <i class="fas fa-cogs me-1" aria-hidden="true"></i>Admin
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-                {% if current_user.is_authenticated %}
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="invNavUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user me-1" aria-hidden="true"></i>{{ current_user.username }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end ink-inv-dropdown" aria-labelledby="invNavUser">
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Sign out</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                {% endif %}
-            </div>
-        </div>
-    </nav>
+<body class="ink-workspace ink-invest ink-books-ui">
+    <div class="ink-workspace-bg" aria-hidden="true"></div>
+    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#ink-inv-main">Skip to campaigns</a>
+    {% include 'book_platform/includes/_ink_studio_nav.html' %}
 
     <header class="hero-section bg-gradient-primary text-white ink-mp-hero ink-invest-hero py-4 py-md-5">
         <div class="container">

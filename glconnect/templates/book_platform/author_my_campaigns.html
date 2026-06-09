@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>My campaigns | Ink Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body class="ink-workspace ink-invest ink-books-ui">
+    <div class="ink-workspace-bg" aria-hidden="true"></div>
+    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#ink-campaigns-main">Skip to content</a>
+    {% include 'book_platform/includes/_ink_studio_nav.html' %}
+
+    <main id="ink-campaigns-main" class="ink-workspace-main container-fluid px-3 px-lg-4 py-4" tabindex="-1">
+        <header class="ink-page-header mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <p class="ink-page-kicker mb-1">Author workspace</p>
+                    <h1 class="ink-page-title h2 mb-1">My campaigns</h1>
+                    <p class="ink-page-subtitle text-muted mb-0">Track funding, patrons, and milestones for campaigns you started from your books.</p>
+                </div>
+                <a href="{{ url_for('book_platform.books') }}" class="btn btn-sm btn-ink-ghost">Back to My books</a>
+            </div>
+        </header>
+
+        <section class="ink-panel mb-4">
+            <div class="ink-panel-head d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h2 class="ink-panel-title mb-0">Your campaigns</h2>
+                <span class="ink-panel-meta">{{ campaigns|length }} total</span>
+            </div>
+            <div class="ink-panel-body">
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <a href="{{ url_for('book_platform.author_my_campaigns', status='all') }}" class="btn btn-sm {% if status_filter == 'all' %}btn-ink-gold{% else %}btn-ink-ghost{% endif %}">All</a>
+                    <a href="{{ url_for('book_platform.author_my_campaigns', status='active') }}" class="btn btn-sm {% if status_filter == 'active' %}btn-ink-gold{% else %}btn-ink-ghost{% endif %}">Active</a>
+                    <a href="{{ url_for('book_platform.author_my_campaigns', status='funded') }}" class="btn btn-sm {% if status_filter == 'funded' %}btn-ink-gold{% else %}btn-ink-ghost{% endif %}">Funded</a>
+                    <a href="{{ url_for('book_platform.author_my_campaigns', status='draft') }}" class="btn btn-sm {% if status_filter == 'draft' %}btn-ink-gold{% else %}btn-ink-ghost{% endif %}">Draft</a>
+                </div>
+
+                {% if campaigns %}
+                <div class="row g-3">
+                    {% for campaign in campaigns %}
+                    {% set st = campaign.status.value if campaign.status else '' %}
+                    {% set progress = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
+                    <div class="col-md-6 col-xl-4">
+                        <article class="ink-book-list-card h-100">
+                            <div class="ink-book-list-head">
+                                <h3 class="ink-book-list-title">{{ campaign.title }}</h3>
+                                {% if st == 'active' %}
+                                <span class="ink-status-pill is-live">Active</span>
+                                {% elif st == 'funded' %}
+                                <span class="ink-status-pill is-accent">Funded</span>
+                                {% else %}
+                                <span class="ink-status-pill is-draft">{{ st|replace('_', ' ')|title }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="ink-book-list-body">
+                                <p class="ink-book-list-meta mb-2">
+                                    <i class="fas fa-book me-1" aria-hidden="true"></i>{{ campaign.book_project.title }}
+                                </p>
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Raised</span>
+                                        <span>${{ "%.2f"|format(campaign.current_funding) }} / ${{ "%.2f"|format(campaign.funding_goal) }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar {% if progress >= 100 or st == 'funded' %}bg-success{% endif %}" style="width: {{ [progress, 100]|min }}%;" role="progressbar" aria-valuenow="{{ progress|round(1) }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="small text-muted">{{ "%.0f"|format(progress) }}% of goal</span>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Min patron gift ${{ "%.2f"|format(campaign.minimum_investment) }}
+                                    {% if campaign.end_date %}
+                                    · Ends {{ campaign.end_date.strftime('%b %d, %Y') }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="ink-book-list-foot d-flex flex-wrap gap-2">
+                                <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-sm btn-ink-gold">Manage campaign</a>
+                                <a href="{{ url_for('book_platform.view_book', book_id=campaign.book_project_id) }}" class="btn btn-sm btn-ink-ghost">View book</a>
+                            </div>
+                        </article>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-seedling fa-3x text-muted mb-3" aria-hidden="true"></i>
+                    <h2 class="h5 mb-2">No campaigns yet</h2>
+                    <p class="text-muted mb-4 mx-auto" style="max-width: 28rem;">Start a patron campaign from a book in <strong>My books</strong> when your manuscript meets readiness requirements.</p>
+                    <a href="{{ url_for('book_platform.books') }}" class="btn btn-ink-gold btn-sm">Open My books</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <p class="small text-muted mb-0">
+            Want to support other authors?
+            <a href="{{ url_for('book_platform.investments') }}">Browse discover campaigns</a>.
+        </p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

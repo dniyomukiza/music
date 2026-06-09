@@ -7113,6 +7113,47 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     
     return render_template('book_platform/create_campaign.html', form=form, book=book)
 
+
+@book_bp.route('/investments/my-campaigns', methods=['GET'])
+@writer_or_book_platform_required
+def author_my_campaigns(user_profile, profile_type):
+    """Author hub: manage patron campaigns started from their books."""
+    author_id = get_profile_id(user_profile, profile_type)
+    if not author_id:
+        flash('Complete your author profile to manage book campaigns.', 'warning')
+        return redirect(url_for('book_platform.setup_profile', next=request.path))
+
+    status_filter = request.args.get('status', 'all')
+    query = (
+        InvestmentCampaign.query
+        .join(BookProject, InvestmentCampaign.book_project_id == BookProject.id)
+        .options(joinedload(InvestmentCampaign.book_project))
+        .filter(BookProject.author_id == author_id)
+    )
+
+    if status_filter == 'active':
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.ACTIVE)
+    elif status_filter == 'funded':
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.FUNDED)
+    elif status_filter == 'draft':
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.DRAFT)
+    elif status_filter != 'all':
+        status_filter = 'all'
+
+    campaigns = query.order_by(
+        InvestmentCampaign.updated_at.desc(),
+        InvestmentCampaign.created_at.desc(),
+    ).all()
+
+    return render_template(
+        'book_platform/author_my_campaigns.html',
+        campaigns=campaigns,
+        status_filter=status_filter,
+        is_author=True,
+        ink_nav_active='my_campaigns',
+        marketplace_cover_url=_marketplace_cover_url,
+    )
+
 # Investment Marketplace
 @book_bp.route('/investments', methods=['GET'])
 @login_required
@@ -7173,7 +7214,8 @@ def investments():
     return render_template('book_platform/investments.html', 
                          campaigns=campaigns,
                          status_filter=status_filter,
-                         search_query=search_query)
+                         search_query=search_query,
+                         ink_nav_active='investments')
 
 # Investment Campaign Details
 @book_bp.route('/investments/<int:campaign_id>', methods=['GET'])

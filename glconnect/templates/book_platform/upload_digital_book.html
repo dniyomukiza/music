@@ -279,25 +279,25 @@
                                     Review and accept terms
                                 </button>
                             </div>
-                            <div id="listingTermsPanelUpload" class="d-none">
+                            <div id="listingTermsPanelUpload" class="d-none listing-terms-panel">
                                 {% set terms_scroll_id = 'listingTermsScrollUpload' %}
                                 {% set terms_hint_id = 'listingTermsScrollHintUpload' %}
                                 {% include 'book_platform/_author_listing_terms_scroll.html' %}
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on" disabled>
-                                    <label class="form-check-label small" for="listing_terms_rights_warranty">
+                                    <label class="form-check-label small listing-terms-check-label" for="listing_terms_rights_warranty">
                                         I confirm I own or hold all rights/licenses to publish and sell this work.
                                     </label>
                                 </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on" disabled>
-                                    <label class="form-check-label small" for="listing_terms_takedown_consent">
+                                    <label class="form-check-label small listing-terms-check-label" for="listing_terms_takedown_consent">
                                         I agree this listing may be removed immediately upon a credible infringement claim.
                                     </label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on" disabled>
-                                    <label class="form-check-label small" for="listing_ai_rights_confirm">
+                                    <label class="form-check-label small listing-terms-check-label" for="listing_ai_rights_confirm">
                                         If AI-assisted, I confirm I have commercial rights to use the generated output.
                                     </label>
                                 </div>

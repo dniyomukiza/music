@@ -1,4 +1,4 @@
-{# ink_nav_active: books | marketplace | earnings | content | dashboard (freelancer home) #}
+{# ink_nav_active: books | marketplace | earnings | my_campaigns | investments | content | dashboard (freelancer home) #}
 {% set _active = ink_nav_active|default('') %}
 {% set _author = is_author|default(ink_nav_show_author_nav|default(false)) %}
 {% set _dash_url = url_for('book_platform.books') if _author else url_for('book_platform.dashboard') %}
@@ -23,21 +23,22 @@
                 </li>
             </ul>
             <ul class="navbar-nav ink-workspace-nav-secondary align-items-lg-center">
-                {% if _author %}
-                <li class="nav-item d-none d-lg-block">
-                    <a class="btn btn-sm btn-ink-gold ms-lg-2" href="{{ url_for('book_platform.create_book') }}">New book</a>
-                </li>
-                {% endif %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle ink-workspace-more-toggle" href="#" id="inkStudioMore" role="button" data-bs-toggle="dropdown" aria-expanded="false">More</a>
                     <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown" aria-labelledby="inkStudioMore">
                         {% if _author %}
-                        <li><a class="dropdown-item" href="{{ url_for('book_platform.upload_digital_book') }}">List uploaded book</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">New book</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('book_platform.upload_digital_book') }}">List book</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout setup</a></li>
                         <li><hr class="dropdown-divider"></li>
                         {% endif %}
                         <li><a class="dropdown-item{% if _active == 'content' %} active{% endif %}" href="{{ url_for('book_platform.content_hub') }}">Content hub</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('book_platform.investments') }}">Book campaigns</a></li>
+                        {% if _author %}
+                        <li><a class="dropdown-item{% if _active == 'my_campaigns' %} active{% endif %}" href="{{ url_for('book_platform.author_my_campaigns') }}">My campaigns</a></li>
+                        <li><a class="dropdown-item{% if _active == 'investments' %} active{% endif %}" href="{{ url_for('book_platform.investments') }}">Discover campaigns</a></li>
+                        {% else %}
+                        <li><a class="dropdown-item{% if _active == 'investments' %} active{% endif %}" href="{{ url_for('book_platform.investments') }}">Book campaigns</a></li>
+                        {% endif %}
                         {% if ink_nav_show_my_library|default(false) %}
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.my_library') }}">My library</a></li>
                         {% endif %}
@@ -53,10 +54,8 @@
                         {{ current_user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown" aria-labelledby="inkStudioAccount">
+                        <li><a class="dropdown-item" href="{{ _dash_url }}">Dashboard</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
-                        {% if _author %}
-                        <li class="d-lg-none"><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">New book</a></li>
-                        {% endif %}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>
                     </ul>

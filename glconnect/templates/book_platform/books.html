@@ -20,16 +20,10 @@
 
     <main id="ink-books-main" class="ink-workspace-main container-fluid px-3 px-lg-4 py-4" tabindex="-1">
         <header class="ink-page-header mb-4">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                <div>
-                    <p class="ink-page-kicker mb-1">Author workspace</p>
-                    <h1 class="ink-page-title h2 mb-1">My books</h1>
-                    <p class="ink-page-subtitle text-muted mb-0">Listings, pricing, sales, chapters, and team — organized in one place.</p>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-gold btn-sm">New book</a>
-                    <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-sage btn-sm">List upload</a>
-                </div>
+            <div>
+                <p class="ink-page-kicker mb-1">Author workspace</p>
+                <h1 class="ink-page-title h2 mb-1">My books</h1>
+                <p class="ink-page-subtitle text-muted mb-0">Listings, pricing, sales, chapters, and team — organized in one place.</p>
             </div>
         </header>
 
@@ -221,19 +215,12 @@
             </div>
         </section>
 
-        <p class="small text-muted mb-0">
-            Sales and net reflect completed checkout. <a href="{{ url_for('book_platform.earnings_dashboard') }}">Full earnings</a>.
-        </p>
         {% else %}
         <section class="ink-panel mb-4">
             <div class="ink-panel-body text-center py-5">
                 <i class="fas fa-book fa-3x text-muted mb-3" aria-hidden="true"></i>
                 <h2 class="h4 mb-2">No books yet</h2>
-                <p class="text-muted mb-4">Start writing in Ink Studio or list an uploaded title.</p>
-                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-gold">New book</a>
-                    <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-sage">List upload</a>
-                </div>
+                <p class="text-muted mb-0">Use <strong>More → New book</strong> or <strong>List book</strong> to get started.</p>
             </div>
         </section>
         {% endif %}
