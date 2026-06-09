@@ -27,7 +27,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home me-1"></i>Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('book_platform.publishing_pipeline') }}" aria-current="page"><i class="fas fa-route me-1"></i>Publishing</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.publicity_promotion') }}"><i class="fas fa-bullhorn me-1"></i>Publicity</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-bullhorn me-1"></i>Publicity</a></li>
                     {% if is_author %}<li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book me-1"></i>My books</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.investments') }}"><i class="fas fa-seedling me-1"></i>Campaigns</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1"></i>Marketplace</a></li>
@@ -184,7 +184,7 @@
                             <h2 class="h5 mb-2"><i class="fas fa-bullhorn text-warning me-2"></i>Marketing, publicity &amp; promotion</h2>
                             <p class="small text-muted mb-3"><strong>Publicity &amp; media relations:</strong> AI press releases and media pitches; author interviews on <strong>live TV &amp; radio</strong>; book reviews on air and marketplace; feature articles via blogs and the editorial feed.</p>
                             <div class="d-flex flex-wrap gap-2">
-                                <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-sm btn-ink-gold">Publicity hub</a>
+                                <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-sm btn-ink-gold">Publicity hub</a>
                                 <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-sm btn-outline-light">TV, radio &amp; podcasts</a>
                                 <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-sm btn-outline-light">Feature articles</a>
                             </div>
@@ -228,7 +228,7 @@
                     <div class="card-body">
                         <h3 class="h6 text-primary mb-3"><i class="fas fa-bullhorn me-2"></i>After launch</h3>
                         <p class="small text-muted">Press kits, live interviews, reviews, and blog features—all in the publicity hub.</p>
-                        <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-outline-light w-100">Publicity &amp; promotion</a>
+                        <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-light w-100">Publicity &amp; promotion</a>
                     </div>
                 </div>
             </div>

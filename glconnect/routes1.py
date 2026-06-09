@@ -98,7 +98,7 @@ def get_role_based_redirect(user):
         if not writer and not book_user:
             return redirect('https://glc.cool/writer/profile')
         else:
-            return redirect(url_for('book_platform.dashboard'))
+            return redirect(url_for('book_platform.books'))
     
     # Freelancer users → blogs
     elif user.role == "freelancer":

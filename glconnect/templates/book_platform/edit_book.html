@@ -873,7 +873,7 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     {% if not book.digital_file_path %}
     {# Only show AI Assistant for manually created books, not uploaded digital books #}
-    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.1"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.2"></script>
     {% endif %}
     <script>
         let listingTermsConfirmed = false;

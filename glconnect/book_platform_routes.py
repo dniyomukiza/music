@@ -139,7 +139,7 @@ def _safe_next_url_for_profile_setup(req) -> str:
     n = (req.values.get("next") or "").strip()
     if n.startswith("/mybook") and not n.startswith("//") and ".." not in n and "\n" not in n:
         return n
-    return url_for("book_platform.dashboard")
+    return url_for("book_platform.books")
 
 
 def _setup_profile_next_query_param() -> str:
@@ -730,11 +730,11 @@ def ink_studio_access():
     if user_role == 'artist':
         return redirect(url_for('book_platform.music_dashboard'))
     
-    # Author users → writer/profile if no profile, else /mybook dashboard
+    # Author users → writer/profile if no profile, else author workspace (My books)
     elif user_role == 'author':
         if not writer and not book_user:
             return redirect('https://glc.cool/writer/profile')
-        return redirect(url_for('book_platform.dashboard'))
+        return redirect(url_for('book_platform.books'))
     
     # Freelancer users → blogs
     elif user_role == 'freelancer':
@@ -752,7 +752,7 @@ def ink_studio_access():
 @book_bp.route('/')
 @writer_or_book_platform_required
 def dashboard(user_profile, profile_type):
-    """Main Ink Studio dashboard - Writer profiles are primary users, freelancers have limited access"""
+    """Main Ink Studio entry — freelancers use a simplified home; authors land on My books."""
     
     # Handle freelancers separately - they get limited dashboard access
     if profile_type == 'freelancer':
@@ -775,122 +775,12 @@ def dashboard(user_profile, profile_type):
                          freelancer_stories=freelancer_stories,
                          is_freelancer=True,
                          marketplace_cover_url=_marketplace_cover_url,
-                         author_dashboard_stats=None)
-    
-    if profile_type == 'writer':
-        # For writers, create a temporary BookPlatformUser-like object
-        class WriterAsBookUser:
-            def __init__(self, writer):
-                self.id = writer.writer_id
-                self.user_id = writer.user_id
-                self.pen_name = writer.writer_name
-                self.bio = writer.bio
-                self.profile_picture = writer.profile_picture
-        
-        book_user = WriterAsBookUser(user_profile)
-        
-        # Use optimized database queries
-        authored_books, collaborations, notifications = DatabaseOptimizer.get_dashboard_data(
-            user_profile.user_id, 'writer'
-        )[1:]  # Skip the first return value (book_user)
-        
-    else:
-        # For BookPlatformUsers (legacy), use existing logic with eager loading
-        # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
-        from glconnect.book_platform_models import BookPlatformUser
-        
-        book_user = user_profile
-        # Eager load author information to ensure fresh data from database
-        authored_books = BookProject.query.options(
-            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-        ).filter_by(author_id=book_user.id).all()
-        collaborations = BookCollaboration.query.options(
-            joinedload(BookCollaboration.book_project).joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-        ).filter_by(
-            collaborator_id=book_user.id, 
-            is_active=True
-        ).all()
-        notifications = BookNotification.query.filter_by(
-            user_id=book_user.id,
-            is_read=False
-        ).order_by(BookNotification.created_at.desc()).limit(5).all()
-    
-    # Determine if user is an author
-    # Only users with 'author' role OR users who have actually authored books (but not excluded roles) are considered authors
-    # Excluded roles should NEVER see author content, even if they have authored books
-    excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
-    has_authored_books = len(authored_books) > 0
-    
-    # User is considered an author only if:
-    # 1. They have role 'author' AND have a writer/book_platform profile, OR
-    # 2. They have actually authored books AND their role is NOT in excluded_roles
-    # This ensures 'other' role users NEVER see author content, even if they have a writer profile
-    if current_user.role in excluded_roles:
-        # Excluded roles are NEVER authors, regardless of profile or books
-        is_author = False
-    elif current_user.role == 'author' and (profile_type == 'writer' or profile_type == 'book_platform'):
-        # Users with 'author' role and writer/book_platform profile are authors
-        is_author = True
-    elif has_authored_books:
-        # If they have authored books and role is not excluded, they're an author
-        is_author = True
-    else:
-        # Default: not an author
-        is_author = False
-    
-    # Get additional data for authors
-    investment_campaigns = []
-    review_requests = []
-    if is_author:
-        from glconnect.book_platform_models import InvestmentCampaign, CampaignStatus
-        author_id = get_profile_id(user_profile, profile_type)
-        books_with_ids = [book.id for book in authored_books]
-        if books_with_ids:
-            investment_campaigns = InvestmentCampaign.query.filter(
-                InvestmentCampaign.book_project_id.in_(books_with_ids)
-            ).all()
-    
-    # Get data for regular users (investors / supporters)
-    user_reviewer_profile = None
-    user_investments = []
-    if not is_author:
-        user_investments = (
-            BookInvestment.query
-            .join(InvestmentCampaign, BookInvestment.campaign_id == InvestmentCampaign.id)
-            .join(BookProject, BookInvestment.book_project_id == BookProject.id)
-            .filter(
-                BookInvestment.investor_id == get_profile_id(user_profile, profile_type),
-                BookInvestment.status.in_([InvestmentStatus.ACTIVE, InvestmentStatus.CONFIRMED]),
-            )
-            .order_by(BookInvestment.created_at.desc())
-            .limit(5)
-            .all()
-        )
-    
-    author_dashboard_stats = None
-    if is_author:
-        author_id_for_stats = get_profile_id(user_profile, profile_type)
-        if author_id_for_stats:
-            try:
-                author_dashboard_stats = build_author_dashboard_stats(author_id_for_stats)
-            except Exception as stats_exc:
-                logger.warning("Dashboard author stats failed: %s", stats_exc)
+                         ink_nav_active='dashboard')
 
-    return render_template('book_platform/dashboard.html', 
-                         authored_books=authored_books,
-                         collaborations=collaborations,
-                         notifications=notifications,
-                         user_profile=book_user,
-                         profile_type=profile_type,
-                         is_author=is_author,
-                         investment_campaigns=investment_campaigns,
-                         review_requests=review_requests,
-                         user_reviewer_profile=user_reviewer_profile,
-                         user_investments=user_investments,
-                         freelancer_stories=[],
-                         is_freelancer=False,
-                         marketplace_cover_url=_marketplace_cover_url,
-                         author_dashboard_stats=author_dashboard_stats)
+    if profile_type in ('writer', 'book_platform') or current_user.role == 'author':
+        return redirect(url_for('book_platform.books'))
+
+    return redirect(url_for('book_platform.content_hub'))
 
 
 @book_bp.route('/api/dashboard/author-stats', methods=['GET'])
@@ -1023,8 +913,8 @@ def books(user_profile, profile_type):
     from glconnect.book_platform_models import BookPlatformUser, InvestmentCampaign
 
     if profile_type == 'freelancer':
-        flash('Listing and writing books in Ink Studio is for authors. Freelancers can publish stories from the dashboard.', 'info')
-        return redirect(url_for('book_platform.dashboard'))
+        flash('Listing and writing books in Ink Studio is for authors. Freelancers can publish stories from Content hub.', 'info')
+        return redirect(url_for('book_platform.content_hub'))
 
     if _author_needs_marketplace_profile_step():
         flash(
@@ -1040,9 +930,9 @@ def books(user_profile, profile_type):
 
     if profile_type != 'writer':
         authored_books_count = BookProject.query.filter_by(author_id=author_id).count()
-        if authored_books_count == 0:
-            flash('You need to be an author to access this page. Create a Writer profile or start writing your first book.', 'warning')
-            return redirect(url_for('book_platform.dashboard'))
+        if authored_books_count == 0 and current_user.role not in ('author',):
+            flash('Create your first book to get started.', 'info')
+            return redirect(url_for('book_platform.create_book'))
 
     books_q = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
@@ -1101,6 +991,14 @@ def books(user_profile, profile_type):
     summary_live = sum(1 for b in books_q if listing_stats[b.id]['live'])
     summary_units = sum(listing_stats[b.id]['completed_sales'] for b in books_q)
     summary_earnings = sum(listing_stats[b.id]['author_earnings'] for b in books_q)
+    summary_views = sum(listing_stats[b.id]['agg_views'] for b in books_q)
+    summary_downloads = sum(listing_stats[b.id]['agg_downloads'] for b in books_q)
+
+    author_dashboard_stats = None
+    try:
+        author_dashboard_stats = build_author_dashboard_stats(author_id)
+    except Exception as stats_exc:
+        logger.warning("Books page author stats failed: %s", stats_exc)
 
     book_campaigns = {}
     for book in books_q:
@@ -1140,6 +1038,11 @@ def books(user_profile, profile_type):
         summary_total_books=len(books_q),
         summary_units=summary_units,
         summary_earnings=summary_earnings,
+        summary_views=summary_views,
+        summary_downloads=summary_downloads,
+        author_dashboard_stats=author_dashboard_stats,
+        is_author=True,
+        ink_nav_active='books',
         marketplace_cover_url=_marketplace_cover_url,
     )
 
@@ -8758,76 +8661,15 @@ def admin_process_refund(refund_id):
 @book_bp.route('/publishing')
 @login_required
 def publishing_pipeline():
-    """Map full self-publishing capabilities (scouting → ISBN) to live platform tools."""
-    from glconnect.isbn_pool_service import platform_publisher_name
-
-    authored_books = []
-    is_author = False
-    first_book_id = None
-
-    user_profile, profile_type = get_user_profile()
-    if user_profile:
-        author_id = get_profile_id(user_profile, profile_type)
-        if author_id:
-            authored_books = (
-                BookProject.query.filter_by(author_id=author_id)
-                .order_by(BookProject.updated_at.desc())
-                .all()
-            )
-            if authored_books:
-                is_author = True
-                first_book_id = authored_books[0].id
-        elif current_user.role == 'author':
-            is_author = True
-
-    excluded = {'podcaster', 'freelancer', 'blogger', 'artist', 'other'}
-    if current_user.role in excluded:
-        is_author = False
-        authored_books = []
-
-    return render_template(
-        'book_platform/publishing_pipeline.html',
-        is_author=is_author,
-        authored_books=authored_books,
-        first_book_id=first_book_id,
-        platform_publisher=platform_publisher_name(),
-    )
+    """Legacy URL — use My books and Content hub instead."""
+    return redirect(url_for('book_platform.books'), code=301)
 
 
 @book_bp.route('/publicity')
 @login_required
 def publicity_promotion():
-    """Marketing, publicity & promotion hub — media relations, streams, reviews, editorial."""
-    authored_books = []
-    is_author = False
-    first_book_id = None
-
-    user_profile, profile_type = get_user_profile()
-    if user_profile:
-        author_id = get_profile_id(user_profile, profile_type)
-        if author_id:
-            authored_books = (
-                BookProject.query.filter_by(author_id=author_id)
-                .order_by(BookProject.updated_at.desc())
-                .all()
-            )
-            if authored_books:
-                is_author = True
-                first_book_id = authored_books[0].id
-        elif current_user.role == 'author':
-            is_author = True
-
-    excluded = {'podcaster', 'freelancer', 'blogger', 'artist', 'other'}
-    if current_user.role in excluded:
-        is_author = False
-        authored_books = []
-
-    return render_template(
-        'book_platform/publicity_promotion.html',
-        is_author=is_author,
-        authored_books=authored_books,
-        first_book_id=first_book_id,
-    )
+    """Legacy URL — publicity lives in Content hub."""
+    return redirect(url_for('book_platform.content_hub'), code=301)
 
 
 # ============================================================================

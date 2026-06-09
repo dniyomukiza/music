@@ -69,7 +69,7 @@ def complete_profile():
             db.session.commit()
             flash("Profile completed successfully! Welcome to Ink Studio.", "success")
             # Return immediately after redirect - no code should run after this
-            return redirect(url_for('book_platform.dashboard'))
+            return redirect(url_for('book_platform.books'))
         except Exception as e:
             db.session.rollback()
             flash(f"An error occurred while saving: {str(e)}", "danger")
@@ -295,7 +295,7 @@ def delete_book(book_id):
 def access_book_platform():
     """Redirect to Ink Studio dashboard - writers can access directly"""
     # Writers can now access Ink Studio directly without separate profile
-    return redirect(url_for('book_platform.dashboard'))
+    return redirect(url_for('book_platform.books'))
 
 @writer.route('/marketplace')
 @login_required

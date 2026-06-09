@@ -171,9 +171,10 @@
 <body class="ink-content-hub">
     <div class="ink-ch-page-bg" aria-hidden="true"></div>
     <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2 ink-ch-skip" href="#ink-ch-main">Skip to content</a>
+    {% set _dash_url = url_for('book_platform.books') if ink_nav_show_author_nav|default(false) else url_for('book_platform.dashboard') %}
     <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-ch-topnav border-bottom border-white border-opacity-10" aria-label="Content hub">
         <div class="container py-1">
-            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
+            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ _dash_url }}">
                 <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
             </a>
             <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -182,7 +183,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                        <a class="nav-link" href="{{ _dash_url }}">
                             <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
                         </a>
                     </li>
@@ -242,7 +243,7 @@
                             <i class="fas fa-user-circle me-1" aria-hidden="true"></i>{{ current_user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end ink-ch-dropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ _dash_url }}">Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign out</a></li>
@@ -289,10 +290,7 @@
         <!-- Hero Section -->
         <div class="hub-header">
             <h1>Content ecosystem</h1>
-            <p>Your content for music, podcasts, editorial—and the <strong>book store</strong> experience (Amazon-style browse and buy) plus <strong>AI covers</strong>, <strong>TTS audiobooks</strong>, and tools to create books in one place. Live radio at the bottom of most pages features <strong>reviews</strong> and <strong>author interviews</strong>.</p>
-            <a href="{{ url_for('book_platform.publicity_promotion') }}" class="btn btn-modern btn-modern-primary mt-3">
-                <i class="fas fa-bullhorn me-2"></i>Author publicity &amp; press kit
-            </a>
+            <p>Your content for music, podcasts, editorial—and the <strong>book store</strong> experience (Amazon-style browse and buy) plus <strong>AI covers</strong>, <strong>TTS audiobooks</strong>, and tools to create books in one place. Live radio at the bottom of most pages features <strong>reviews</strong> and <strong>author interviews</strong>. Author publicity, press kits, and promotion tools are here too.</p>
         </div>
 
         <!-- Content Type Cards -->

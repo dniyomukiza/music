@@ -17,9 +17,10 @@
 <body class="ink-earnings">
     <div class="ink-earn-page-bg" aria-hidden="true"></div>
     <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2 ink-earn-skip" href="#ink-earn-main">Skip to earnings</a>
+    {% set _dash_url = url_for('book_platform.books') if ink_nav_show_author_nav|default(false) else url_for('book_platform.dashboard') %}
     <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-earnings-nav ink-earn-topnav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
         <div class="container py-1">
-            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
+            <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ _dash_url }}">
                 <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
             </a>
             <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#earnNavbar" aria-controls="earnNavbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,7 +29,7 @@
             <div class="collapse navbar-collapse" id="earnNavbar">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
+                        <a class="nav-link" href="{{ _dash_url }}">
                             <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
                         </a>
                     </li>
@@ -37,13 +38,6 @@
                             <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content
                         </a>
                     </li>
-                    {% if ink_nav_show_author_nav|default(false) %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">
-                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books
-                        </a>
-                    </li>
-                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
                             <i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace
@@ -88,7 +82,7 @@
                             <i class="fas fa-user me-1" aria-hidden="true"></i>{{ current_user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end ink-earn-dropdown" aria-labelledby="earnNavUser">
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ _dash_url }}">Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Sign out</a></li>
@@ -245,11 +239,8 @@
         <!-- Author Sales -->
         {% if earnings_data.author_sales %}
         <div class="card shadow mb-4">
-            <div class="card-header bg-info text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="card-header bg-info text-white">
                 <h3 class="mb-0"><i class="fas fa-book me-2"></i>Author Sales</h3>
-                <a href="{{ url_for('book_platform.books') }}" class="btn btn-sm btn-ink-ghost">
-                    <i class="fas fa-book me-1"></i>My books &amp; listings
-                </a>
             </div>
             <div class="card-body">
                 <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap">
@@ -337,7 +328,7 @@
             <i class="fas fa-info-circle fa-2x mb-3"></i>
             <h4>No earnings yet</h4>
             <p>Back a campaign or sell your books on the marketplace to see activity here.</p>
-            <p class="mb-0"><a href="{{ url_for('book_platform.books') }}" class="alert-link">Authors: open My books &amp; listings</a></p>
+            <p class="mb-0"><a href="{{ url_for('book_platform.books') }}" class="alert-link">Authors: open Dashboard</a></p>
         </div>
         {% endif %}
     </main>

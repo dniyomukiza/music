@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>My books &amp; listings | Ink Studio</title>
+    <title>Dashboard | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,243 +13,182 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
 </head>
-<body class="ink-books-ui ink-books-list">
-    <div class="ink-books-page-bg" aria-hidden="true"></div>
-    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2 ink-books-skip" href="#ink-books-main">Skip to books</a>
-    <div class="container-fluid ink-books-shell">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar">
-                <div class="sidebar-header">
-                    <h4 class="ink-books-sidebar-brand"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio</h4>
+<body class="ink-workspace ink-books-ui">
+    <div class="ink-workspace-bg" aria-hidden="true"></div>
+    <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2" href="#ink-books-main">Skip to content</a>
+    {% include 'book_platform/includes/_ink_studio_nav.html' %}
+
+    <main id="ink-books-main" class="ink-workspace-main container-fluid px-3 px-lg-4 py-4" tabindex="-1">
+        <header class="ink-page-header mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <p class="ink-page-kicker mb-1">Author workspace</p>
+                    <h1 class="ink-page-title h2 mb-1">My books</h1>
+                    <p class="ink-page-subtitle text-muted mb-0">Listings, pricing, sales, chapters, and team — organized in one place.</p>
                 </div>
-                <nav class="sidebar-nav" aria-label="Ink Studio">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">
-                                <i class="fas fa-home me-2" aria-hidden="true"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.publicity_promotion') }}">
-                                <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>Publicity
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.publishing_pipeline') }}">
-                                <i class="fas fa-route me-2" aria-hidden="true"></i>Publishing
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">
-                                <i class="fas fa-broadcast-tower me-2" aria-hidden="true"></i>Content
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="{{ url_for('book_platform.books') }}" aria-current="page">
-                                <i class="fas fa-book me-2" aria-hidden="true"></i>My books &amp; listings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
-                                <i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace
-                            </a>
-                        </li>
-                        {% if ink_nav_show_my_library|default(false) %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
-                                <i class="fas fa-book-reader me-2" aria-hidden="true"></i>My library
-                            </a>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
-                                <i class="fas fa-seedling me-2" aria-hidden="true"></i>Discover campaigns
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
-                                <i class="fas fa-dollar-sign me-2" aria-hidden="true"></i>Earnings
-                            </a>
-                        </li>
-                        {% if ink_nav_show_author_nav|default(false) %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">
-                                <i class="fas fa-wallet me-2" aria-hidden="true"></i>Payout
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% if current_user.role == 'admin' %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">
-                                <i class="fas fa-cogs me-2" aria-hidden="true"></i>Admin
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-gold btn-sm">New book</a>
+                    <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-sage btn-sm">List upload</a>
+                </div>
             </div>
+        </header>
 
-            <!-- Main Content -->
-            <div id="ink-books-main" class="col-md-9 col-lg-10 main-content" tabindex="-1">
-                <div class="content-header">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                        <div>
-                            <h1><i class="fas fa-book"></i> My books &amp; listings</h1>
-                            <p class="text-muted mb-0">Manage every project in one place: writing, chapters, patron campaigns, marketplace listing, sales, and analytics.</p>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-gold">
-                                <i class="fas fa-plus" aria-hidden="true"></i> New book
-                            </a>
-                            <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-sage" aria-label="List a book on the marketplace">
-                                <i class="fas fa-file-upload" aria-hidden="true"></i> List
-                            </a>
-                            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-ink-ghost">
-                                <i class="fas fa-store" aria-hidden="true"></i> Marketplace
-                            </a>
-                        </div>
+        {% if books_with_readiness %}
+        <section class="ink-panel mb-4" id="authorLiveStats">
+            <div class="ink-panel-head">
+                <h2 class="ink-panel-title">Overview</h2>
+                <span class="ink-panel-meta" id="authorStatsUpdated" aria-live="polite">Updating…</span>
+            </div>
+            <div class="ink-panel-body">
+                <div class="ink-stat-strip mb-3">
+                    <div class="ink-stat-cell is-accent">
+                        <div class="ink-stat-value">{{ summary_live }}</div>
+                        <div class="ink-stat-label">Live</div>
+                    </div>
+                    <div class="ink-stat-cell">
+                        <div class="ink-stat-value">{{ summary_total_books }}</div>
+                        <div class="ink-stat-label">Projects</div>
+                    </div>
+                    <div class="ink-stat-cell is-success">
+                        <div class="ink-stat-value" data-stat="total_sales">{{ summary_units }}</div>
+                        <div class="ink-stat-label">Sales</div>
+                    </div>
+                    <div class="ink-stat-cell is-accent">
+                        <div class="ink-stat-value" data-stat="author_earnings">${{ "%.2f"|format(summary_earnings) }}</div>
+                        <div class="ink-stat-label">Net</div>
+                    </div>
+                    <div class="ink-stat-cell is-info">
+                        <div class="ink-stat-value" data-stat="total_views">{{ summary_views }}</div>
+                        <div class="ink-stat-label">Views</div>
+                    </div>
+                    <div class="ink-stat-cell">
+                        <div class="ink-stat-value" data-stat="total_downloads">{{ summary_downloads }}</div>
+                        <div class="ink-stat-label">Downloads</div>
                     </div>
                 </div>
-
-                {% if books_with_readiness %}
-                <div class="row g-3 mb-4">
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm h-100 text-center">
-                            <div class="card-body py-3">
-                                <div class="text-primary h3 mb-0">{{ summary_live }}</div>
-                                <div class="small text-muted">Live on marketplace</div>
-                            </div>
-                        </div>
+                <div class="row g-2 text-center small text-muted mb-3">
+                    <div class="col-4">
+                        <span class="text-success fw-semibold">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'published')|list|length }}</span> published
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm h-100 text-center">
-                            <div class="card-body py-3">
-                                <div class="text-dark h3 mb-0">{{ summary_total_books }}</div>
-                                <div class="small text-muted">Total projects</div>
-                            </div>
-                        </div>
+                    <div class="col-4">
+                        <span class="text-warning fw-semibold">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'draft')|list|length }}</span> drafts
                     </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm h-100 text-center">
-                            <div class="card-body py-3">
-                                <div class="text-success h3 mb-0">{{ summary_units }}</div>
-                                <div class="small text-muted">Completed sales (units)</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm h-100 text-center">
-                            <div class="card-body py-3">
-                                <div class="text-success h3 mb-0">${{ "%.2f"|format(summary_earnings) }}</div>
-                                <div class="small text-muted">Your net (completed)</div>
-                            </div>
-                        </div>
+                    <div class="col-4">
+                        <span class="text-info fw-semibold">{{ books_with_readiness|sum(attribute='book.word_count')|default(0) }}</span> words
                     </div>
                 </div>
-                {% endif %}
+                <h3 class="h6 text-secondary mb-2">Recent sales</h3>
+                <div id="authorRecentSales">
+                    {% if author_dashboard_stats and author_dashboard_stats.recent_sales %}
+                    <ul class="list-group list-group-flush rounded border border-secondary border-opacity-25">
+                        {% for s in author_dashboard_stats.recent_sales %}
+                        <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
+                            <span><strong>{{ s.book_title }}</strong> <span class="text-muted small">· {{ s.format }}</span></span>
+                            <span class="text-success small fw-semibold">${{ "%.2f"|format(s.net_amount) }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="small text-muted mb-0">No completed sales yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
 
-                <!-- Books Grid -->
-                {% if books_with_readiness %}
-                    <div class="row">
+        {% if author_dashboard_stats and author_dashboard_stats.books %}
+        <section class="ink-panel mb-4">
+            <div class="ink-panel-head">
+                <h2 class="ink-panel-title">Pricing</h2>
+                <span class="ink-panel-meta">~70% royalty on list price</span>
+            </div>
+            <div class="ink-panel-body pt-0 px-0 pb-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 ink-dash-pricing-table">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th class="ps-3">Title</th>
+                                <th>Ebook</th>
+                                <th>Audio</th>
+                                <th>Bundle</th>
+                                <th>Sales</th>
+                                <th>Net</th>
+                                <th class="pe-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in author_dashboard_stats.books %}
+                            <tr>
+                                <td class="ps-3">
+                                    <span class="fw-semibold">{{ row.title }}</span>
+                                    {% if row.live %}<span class="ink-status-pill is-live ms-1">Live</span>{% else %}<span class="ink-status-pill is-draft ms-1">Draft</span>{% endif %}
+                                </td>
+                                <td>{{ row.price_ebook_label }}</td>
+                                <td>{% if row.has_audiobook %}{{ row.price_audiobook_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{% if row.price_bundle_label != 'Free' %}{{ row.price_bundle_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{{ row.sales }}</td>
+                                <td class="text-success">${{ "%.2f"|format(row.earnings) }}</td>
+                                <td class="text-end pe-3">
+                                    <a href="{{ url_for('book_platform.edit_book', book_id=row.id) }}#price" class="btn btn-sm btn-outline-light">Set prices</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="ink-panel mb-4">
+            <div class="ink-panel-head">
+                <h2 class="ink-panel-title">Your titles</h2>
+                <span class="ink-panel-meta">{{ summary_total_books }} project{{ 's' if summary_total_books != 1 else '' }}</span>
+            </div>
+            <div class="ink-panel-body">
+                <div class="row g-3">
                         {% for item in books_with_readiness %}
                             {% set book = item.book %}
                             {% set investment_readiness = item.investment_readiness %}
                             {% set listing = item.listing %}
                             {% set listing_live = listing.live %}
-                            <div class="col-md-6 col-lg-4 mb-4">
-                                <div class="card book-card h-100">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">{{ book.title }}</h6>
-                                        <span class="badge badge-{{ 'success' if listing_live else 'warning' }}">
-                                            {{ 'Live in marketplace' if listing_live else 'Draft / private' }}
-                                        </span>
+                            <div class="col-md-6 col-xl-4">
+                                <article class="ink-book-list-card">
+                                    <div class="ink-book-list-head">
+                                        <h3 class="ink-book-list-title">{{ book.title }}</h3>
+                                        <span class="ink-status-pill {{ 'is-live' if listing_live else 'is-draft' }}">{{ 'Live' if listing_live else 'Draft' }}</span>
                                     </div>
-                                    <div class="card-body">
-                                        {% if book.description %}
-                                            <p class="card-text">{{ book.description[:100] }}{% if book.description|length > 100 %}...{% endif %}</p>
-                                        {% else %}
-                                            <p class="card-text text-muted">No description provided</p>
-                                        {% endif %}
-                                        
-                                        <div class="book-meta mb-3">
-                                            {% if book.genre %}
-                                                <span class="badge badge-secondary">{{ book.genre }}</span>
-                                            {% endif %}
-                                            {% if book.word_count %}
-                                                <span class="badge badge-info">{{ book.word_count }} words</span>
-                                            {% endif %}
-                                            {% if book.digital_file_path %}
-                                                <span class="badge badge-dark">Uploaded listing</span>
-                                                {% if book.digital_book_published %}
-                                                    <span class="badge badge-success">Digital live</span>
-                                                {% endif %}
-                                                {% if book.audiobook_published %}
-                                                    <span class="badge badge-success">Audiobook live</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="badge badge-primary">Written in platform</span>
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- Investment Campaign Status (uploaded books never have campaigns) -->
+                                    <div class="ink-book-list-body">
+                                        <p class="ink-book-list-meta mb-2">
+                                            {% if book.genre %}{{ book.genre }}{% else %}No genre{% endif %}
+                                            · {% if book.word_count %}{{ book.word_count }} words{% else %}— words{% endif %}
+                                            · {% if book.digital_file_path %}Uploaded{% else %}Platform{% endif %}
+                                        </p>
                                         {% if not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
-                                        <div class="alert alert-success py-2 px-3 mb-3">
-                                            <small>
-                                                <i class="fas fa-check-circle me-1"></i>
-                                                <strong>Ready for campaign</strong>
-                                            </small>
-                                        </div>
+                                        <p class="small text-success mb-2"><i class="fas fa-check-circle me-1"></i>Ready for campaign</p>
                                         {% elif not book.digital_file_path and book.has_investment_campaign %}
-                                        <div class="alert alert-info py-2 px-3 mb-3">
-                                            <small>
-                                                <i class="fas fa-chart-line me-1"></i>
-                                                <strong>Campaign Active</strong>
-                                            </small>
-                                        </div>
+                                        <p class="small text-info mb-2"><i class="fas fa-chart-line me-1"></i>Campaign active</p>
                                         {% endif %}
-
-                                        <div class="book-stats mb-2">
-                                            <small class="text-muted">
-                                                <i class="fas fa-calendar"></i> Created: {{ book.created_at.strftime('%Y-%m-%d') }}
-                                                {% if book.published_at %}
-                                                    <br><i class="fas fa-check-circle"></i> Published: {{ book.published_at.strftime('%Y-%m-%d') }}
-                                                {% endif %}
-                                            </small>
+                                        <div class="ink-book-list-perf">
+                                            <strong>{{ listing.completed_sales }}</strong> sales ·
+                                            <span class="text-success"><strong>${{ "%.2f"|format(listing.author_earnings) }}</strong></span> net ·
+                                            {{ listing.agg_views }} views · {{ listing.agg_downloads }} dl
                                         </div>
-                                        <div class="border-top pt-2 mt-2">
-                                            <div class="small text-muted mb-1"><i class="fas fa-chart-line me-1"></i>Performance</div>
-                                            <div class="small">
-                                                <span class="text-nowrap"><strong>{{ listing.completed_sales }}</strong> sales</span>
-                                                · <span class="text-nowrap text-success"><strong>${{ "%.2f"|format(listing.author_earnings) }}</strong> net</span>
-                                                · <span class="text-nowrap"><strong>{{ listing.agg_views }}</strong> views</span>
-                                                · <span class="text-nowrap"><strong>{{ listing.agg_downloads }}</strong> dl</span>
-                                            </div>
-                                            <a href="{{ url_for('book_platform.book_analytics', book_id=book.id) }}" class="btn btn-ink-ghost btn-sm mt-2">
-                                                <i class="fas fa-chart-area me-1" aria-hidden="true"></i>Analytics
-                                            </a>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <a href="{{ url_for('book_platform.book_analytics', book_id=book.id) }}" class="small text-decoration-none">Analytics</a>
                                             {% if listing_live %}
-                                            <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="btn btn-ink-sage btn-sm mt-2 ms-1">
-                                                <i class="fas fa-eye me-1"></i>Store preview
-                                            </a>
+                                            <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="small text-decoration-none">Store preview</a>
+                                            {% endif %}
+                                            {% if not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
+                                            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="small text-decoration-none">Start campaign</a>
+                                            {% elif not book.digital_file_path and book.has_investment_campaign %}
+                                                {% set campaign = book_campaigns.get(book.id) if book_campaigns else None %}
+                                                {% if campaign and campaign.id is defined %}
+                                                <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="small text-decoration-none">View campaign</a>
+                                                {% endif %}
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="card-footer">
-                                        <!-- Create Campaign Button (platform books only; uploaded books sell only) -->
-                                        {% if not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
-                                        <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-ink-sage btn-sm w-100 mb-2">
-                                            <i class="fas fa-plus-circle me-1" aria-hidden="true"></i>Start Campaign
-                                        </a>
-                                        {% elif not book.digital_file_path and book.has_investment_campaign %}
-                                            {% set campaign = book_campaigns.get(book.id) if book_campaigns else None %}
-                                            {% if campaign and campaign.id is defined %}
-                                            <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-ink-sage btn-sm w-100 mb-2">
-                                                <i class="fas fa-chart-line me-1" aria-hidden="true"></i>View Campaign
-                                            </a>
-                                            {% endif %}
-                                        {% endif %}
-                                        
+                                    <div class="ink-book-list-foot">
                                         <div class="ink-books-icon-actions" role="toolbar" aria-label="Book actions">
                                             <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="ink-books-icon-btn" title="View book" aria-label="View book">
                                                 <i class="fas fa-eye" aria-hidden="true"></i>
@@ -275,71 +214,92 @@
                                             </button>
                                         </div>
                                     </div>
-                                </div>
+                                </article>
                             </div>
                         {% endfor %}
-                    </div>
-                {% else %}
-                    <!-- Empty State -->
-                    <div class="text-center py-5">
-                        <div class="empty-state">
-                            <i class="fas fa-book fa-4x text-muted mb-4"></i>
-                            <h3>No Books Yet</h3>
-                            <p class="text-muted mb-4">Start your writing journey by creating your first book project.</p>
-                            <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-gold btn-lg">
-                                <i class="fas fa-plus" aria-hidden="true"></i> Create Your First Book
-                            </a>
-                        </div>
-                    </div>
-                {% endif %}
-
-                {% if books_with_readiness %}
-                <p class="small text-muted mt-4 mb-0">
-                    <i class="fas fa-info-circle me-1"></i>Sales and net reflect completed checkout. Views/downloads use analytics when recorded. Payout detail: <a href="{{ url_for('book_platform.earnings_dashboard') }}">Earnings</a>.
-                </p>
-                {% endif %}
-
-                <!-- Writing stats (manuscript status — separate from marketplace “live”) -->
-                {% if books_with_readiness %}
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="fas fa-pen-fancy"></i> Writing overview</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-md-4">
-                                        <div class="stat-item">
-                                            <h3 class="text-success">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'published')|list|length }}</h3>
-                                            <p class="text-muted">Published (status)</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="stat-item">
-                                            <h3 class="text-warning">{{ books_with_readiness|selectattr('book.status.value', 'equalto', 'draft')|list|length }}</h3>
-                                            <p class="text-muted">Drafts</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="stat-item">
-                                            <h3 class="text-info">{{ books_with_readiness|sum(attribute='book.word_count') }}</h3>
-                                            <p class="text-muted">Total words</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-                {% endif %}
             </div>
-        </div>
-    </div>
+        </section>
+
+        <p class="small text-muted mb-0">
+            Sales and net reflect completed checkout. <a href="{{ url_for('book_platform.earnings_dashboard') }}">Full earnings</a>.
+        </p>
+        {% else %}
+        <section class="ink-panel mb-4">
+            <div class="ink-panel-body text-center py-5">
+                <i class="fas fa-book fa-3x text-muted mb-3" aria-hidden="true"></i>
+                <h2 class="h4 mb-2">No books yet</h2>
+                <p class="text-muted mb-4">Start writing in Ink Studio or list an uploaded title.</p>
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-gold">New book</a>
+                    <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-sage">List upload</a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Add any JavaScript functionality here if needed
+        (function () {
+            const liveRoot = document.getElementById('authorLiveStats');
+            if (!liveRoot) return;
+            const statsUrl = '{{ url_for("book_platform.api_author_dashboard_stats") }}';
+            const updatedEl = document.getElementById('authorStatsUpdated');
+            const recentEl = document.getElementById('authorRecentSales');
+
+            function fmtMoney(n) {
+                return '$' + Number(n || 0).toFixed(2);
+            }
+
+            function escapeHtml(t) {
+                const d = document.createElement('div');
+                d.textContent = t == null ? '' : String(t);
+                return d.innerHTML;
+            }
+
+            function renderRecent(sales) {
+                if (!recentEl) return;
+                if (!sales || !sales.length) {
+                    recentEl.innerHTML = '<p class="small text-muted mb-0">No completed sales yet — stats refresh automatically when readers buy.</p>';
+                    return;
+                }
+                recentEl.innerHTML = '<ul class="list-group list-group-flush rounded border border-secondary border-opacity-25">' +
+                    sales.map(function (s) {
+                        return '<li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">' +
+                            '<span><strong>' + escapeHtml(s.book_title) + '</strong> <span class="text-muted small">· ' + escapeHtml(s.format || 'digital') + '</span></span>' +
+                            '<span class="text-success small fw-semibold">' + fmtMoney(s.net_amount) + '</span></li>';
+                    }).join('') + '</ul>';
+            }
+
+            async function refreshAuthorStats() {
+                try {
+                    const res = await fetch(statsUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                    const data = await res.json();
+                    if (!data.success || !data.summary) return;
+                    const map = {
+                        total_sales: data.summary.total_sales,
+                        author_earnings: fmtMoney(data.summary.author_earnings),
+                        total_views: data.summary.total_views,
+                        total_downloads: data.summary.total_downloads,
+                    };
+                    Object.keys(map).forEach(function (key) {
+                        const el = liveRoot.querySelector('[data-stat="' + key + '"]');
+                        if (el) el.textContent = map[key];
+                    });
+                    renderRecent(data.recent_sales);
+                    if (updatedEl && data.updated_at) {
+                        updatedEl.textContent = 'Updated ' + new Date(data.updated_at).toLocaleTimeString();
+                    }
+                } catch (e) {
+                    if (updatedEl) updatedEl.textContent = 'Live refresh paused';
+                }
+            }
+
+            refreshAuthorStats();
+            setInterval(refreshAuthorStats, 45000);
+        })();
+
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips if needed
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

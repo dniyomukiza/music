@@ -111,34 +111,43 @@ class AIWritingAssistant {
                     <div class="ai-help-text">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Developmental:</strong> structure &amp; new prose. <strong>Copy edit:</strong> select text, then Improve or Proofread.
+                            <strong>Developmental</strong> adds or expands prose. <strong>Copy edit</strong> fixes what you already wrote—select text first when noted.
                         </small>
                     </div>
                     <div class="ai-section">
                         <h6>Developmental</h6>
-                        <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-content">
-                            <i class="fas fa-magic"></i> Generate Content
+                        <p class="ai-section-hint">Structure, new scenes, and creative expansion.</p>
+                        <button type="button" class="ai-action-btn ai-action-btn-primary" data-ai-action="generate-content" title="Write new prose from your prompt">
+                            <span class="ai-action-label"><i class="fas fa-magic" aria-hidden="true"></i><span>Generate content</span></span>
+                            <span class="ai-action-desc">Draft new paragraphs or scenes from a prompt you enter.</span>
                         </button>
-                        <button class="btn btn-sm btn-outline-primary" data-ai-action="generate-ideas">
-                            <i class="fas fa-lightbulb"></i> Story Ideas
+                        <button type="button" class="ai-action-btn ai-action-btn-primary" data-ai-action="generate-ideas" title="Brainstorm story directions">
+                            <span class="ai-action-label"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>Story ideas</span></span>
+                            <span class="ai-action-desc">Get plot angles, scene ideas, or directions for a theme.</span>
                         </button>
                     </div>
                     <div class="ai-section">
                         <h6>Copyediting &amp; proofreading</h6>
-                        <button class="btn btn-sm btn-outline-success" data-ai-action="improve-text">
-                            <i class="fas fa-edit"></i> Improve Text
+                        <p class="ai-section-hint">Polish existing text. Highlight a passage first when possible.</p>
+                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="improve-text" title="Rewrite selected text for clarity or style">
+                            <span class="ai-action-label"><i class="fas fa-edit" aria-hidden="true"></i><span>Improve text</span></span>
+                            <span class="ai-action-desc">Rewrite selection for grammar, style, clarity, dialogue, or description.</span>
                         </button>
-                        <button class="btn btn-sm btn-outline-success" data-ai-action="proofread">
-                            <i class="fas fa-spell-check"></i> Proofread
+                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="proofread" title="Fix spelling and grammar">
+                            <span class="ai-action-label"><i class="fas fa-spell-check" aria-hidden="true"></i><span>Proofread</span></span>
+                            <span class="ai-action-desc">Correct spelling, punctuation, and grammar (selection or full chapter).</span>
                         </button>
-                        <button class="btn btn-sm btn-outline-success" data-ai-action="suggest-improvements">
-                            <i class="fas fa-tools"></i> Suggestions
+                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="suggest-improvements" title="List specific edits to consider">
+                            <span class="ai-action-label"><i class="fas fa-tools" aria-hidden="true"></i><span>Suggestions</span></span>
+                            <span class="ai-action-desc">Get a checklist of targeted edits without auto-rewriting.</span>
                         </button>
                     </div>
                     <div class="ai-section">
                         <h6>Analysis</h6>
-                        <button class="btn btn-sm btn-outline-info" data-ai-action="analyze-text">
-                            <i class="fas fa-chart-line"></i> Analyze Text
+                        <p class="ai-section-hint">Understand how the writing reads.</p>
+                        <button type="button" class="ai-action-btn ai-action-btn-info" data-ai-action="analyze-text" title="Analyze tone, pacing, and readability">
+                            <span class="ai-action-label"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Analyze text</span></span>
+                            <span class="ai-action-desc">Report on tone, pacing, readability, and structure (selection or full chapter).</span>
                         </button>
                     </div>
                 </div>
@@ -182,7 +191,7 @@ class AIWritingAssistant {
                 right: 20px;
                 top: 50%;
                 transform: translateY(-50%);
-                width: 300px;
+                width: 320px;
                 background: white;
                 border: 1px solid #e2e8f0;
                 border-radius: 8px;
@@ -347,19 +356,102 @@ class AIWritingAssistant {
             .ai-section {
                 margin-bottom: 16px;
             }
+
+            .ai-section-hint {
+                font-size: 11px;
+                line-height: 1.35;
+                color: #64748b !important;
+                margin: -4px 0 8px;
+            }
             
             .ai-section h6 {
-                margin-bottom: 8px;
+                margin-bottom: 4px;
                 color: #2c3e50;
                 font-size: 12px;
                 text-transform: uppercase;
                 font-weight: 600;
+                letter-spacing: 0.04em;
+            }
+
+            .ai-action-btn {
+                display: block;
+                width: 100%;
+                margin-bottom: 8px;
+                padding: 10px 12px;
+                text-align: left;
+                border-radius: 8px;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+                cursor: pointer;
+                transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            }
+
+            .ai-action-btn:last-child {
+                margin-bottom: 0;
+            }
+
+            .ai-action-btn:hover {
+                background: #f8fafc;
+                box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+            }
+
+            .ai-action-btn:focus-visible {
+                outline: 2px solid #2563eb;
+                outline-offset: 2px;
+            }
+
+            .ai-action-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 13px;
+                font-weight: 700;
+                color: #0f172a !important;
+                margin-bottom: 4px;
+            }
+
+            .ai-action-label i {
+                width: 1.1rem;
+                text-align: center;
+                flex-shrink: 0;
+            }
+
+            .ai-action-desc {
+                display: block;
+                font-size: 11px;
+                line-height: 1.4;
+                color: #475569 !important;
+                padding-left: 1.55rem;
+            }
+
+            .ai-action-btn-primary {
+                border-color: #93c5fd;
+            }
+
+            .ai-action-btn-primary .ai-action-label i {
+                color: #2563eb;
+            }
+
+            .ai-action-btn-success {
+                border-color: #86efac;
+            }
+
+            .ai-action-btn-success .ai-action-label i {
+                color: #16a34a;
+            }
+
+            .ai-action-btn-info {
+                border-color: #7dd3fc;
+            }
+
+            .ai-action-btn-info .ai-action-label i {
+                color: #0284c7;
             }
             
-            .ai-section button {
+            .ai-section button.ai-action-btn {
                 width: 100%;
-                margin-bottom: 4px;
-                font-size: 12px;
+                margin-bottom: 8px;
+                font-size: inherit;
             }
             
             /* Ensure all text in AI toolbar is visible */
@@ -375,40 +467,16 @@ class AIWritingAssistant {
                 color: #2c3e50 !important;
             }
             
-            /* Ensure button text is visible */
-            .ai-section .btn {
-                color: inherit;
-            }
-            
-            .ai-section .btn-outline-primary {
-                color: #007bff;
-            }
-            
-            .ai-section .btn-outline-success {
-                color: #28a745;
-            }
-            
-            .ai-section .btn-outline-info {
-                color: #17a2b8;
-            }
-            
-            /* Fix: Ensure AI toolbar buttons are visible despite global .btn border overrides */
-            .ai-toolbar .btn {
+            .ai-chat-actions .btn {
                 border: 1px solid #ced4da !important;
                 background-color: #ffffff;
                 border-radius: 6px;
             }
-            .ai-toolbar .btn.btn-outline-primary {
-                border-color: #007bff !important;
-            }
-            .ai-toolbar .btn.btn-outline-success {
-                border-color: #28a745 !important;
-            }
-            .ai-toolbar .btn.btn-outline-info {
-                border-color: #17a2b8 !important;
-            }
-            .ai-toolbar .btn:hover {
-                background-color: #f8f9fa;
+
+            .ai-chat-actions .btn-primary {
+                background-color: #0d6efd;
+                border-color: #0d6efd !important;
+                color: #fff !important;
             }
             
             /* Modal text visibility */
