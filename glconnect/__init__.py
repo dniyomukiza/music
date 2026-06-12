@@ -57,15 +57,6 @@ def _load_config():
         "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
         "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
     }
-    # E2E local runs only: STRIPE_SECRET_FOR_TEST — production STRIPE_SECRET_KEY unchanged on deploy.
-    if os.getenv("E2E_TESTING") == "1":
-        _e2e_sk = (os.getenv("STRIPE_SECRET_FOR_TEST") or "").strip()
-        if _e2e_sk:
-            tsk = normalize_stripe_secret_candidate(_e2e_sk)
-            if tsk.startswith("sk_"):
-                cfg["STRIPE_SECRET_KEY"] = tsk
-                cfg["STRIPE_API_KEY"] = tsk
-                stripe_test_keys_from_glconfig = True
     # Fallback: load from glconfig if env vars are empty (e.g. /etc/glconfig.json or /etc/glconfig on Linux)
     _gl_paths = [
         "/etc/glconfig.json",
@@ -231,11 +222,7 @@ if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
 if config.get("RECEIVER_MAIL") and not (os.getenv("RECEIVER_MAIL") or "").strip():
     os.environ["RECEIVER_MAIL"] = config["RECEIVER_MAIL"]
 
-if STRIPE_TEST_KEYS_FROM_GLCONFIG and os.getenv("E2E_TESTING") == "1":
-    print(
-        "NOTICE: E2E_TESTING=1 — Stripe server key overridden by STRIPE_SECRET_FOR_TEST from .env."
-    )
-elif STRIPE_TEST_KEYS_FROM_GLCONFIG:
+if STRIPE_TEST_KEYS_FROM_GLCONFIG:
     print(
         "NOTICE: Stripe keys are overridden by test credentials from glconfig "
         "(STRIPE_TEST_SECRET / STRIPE_TEST_KEY / STRIPE_TEST_PRIVATE_KEY). "
@@ -332,6 +319,26 @@ def create_app(config_overrides=None):
         f"STRIPE_SECRET_KEY={'set' if _stripe_secret_present else 'NOT SET'}, "
         f"STRIPE_API_KEY={'set' if _stripe_api_present else 'NOT SET'}"
     )
+    if _stripe_secret_present and os.getenv("STRIPE_LOG_OUTBOUND_IP", "1").strip().lower() not in ("0", "false", "no"):
+        try:
+            from glconnect.stripe_utils import detect_server_outbound_ip, probe_stripe_server_key
+
+            _out_ip = detect_server_outbound_ip(timeout=4.0)
+            if _out_ip:
+                print(f"Stripe: server outbound IP (add to key allowlist if restricted): {_out_ip}")
+            _probe = probe_stripe_server_key(app)
+            if _probe.get("ok"):
+                print("Stripe: secret key probe OK from this host.")
+            elif (_probe.get("details") or {}).get("operator_error_code") == "STRIPE_KEY_IP_RESTRICTED":
+                app.logger.warning(
+                    "Stripe secret key blocked by IP allowlist on this host (outbound_ip=%s). "
+                    "Add that IP in Stripe Dashboard → API keys → Manage IP restrictions.",
+                    _out_ip or "unknown",
+                )
+            elif not _probe.get("ok"):
+                app.logger.warning("Stripe secret key probe failed: %s", _probe.get("reason"))
+        except Exception as _stripe_diag_err:
+            app.logger.debug("Stripe outbound IP / probe skipped: %s", _stripe_diag_err)
 
     # Startup visibility for AI cover generation key setup.
     _cover_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
@@ -716,6 +723,7 @@ def create_app(config_overrides=None):
             ensure_audiobook_segment_plan_schema,
             ensure_page_analytics_slim_schema,
             ensure_chapter_versions_metadata_columns,
+            ensure_book_chapter_section_kind_schema,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -732,6 +740,7 @@ def create_app(config_overrides=None):
         ensure_library_book_hides_format_columns(db)
         ensure_page_analytics_slim_schema(db)
         ensure_chapter_versions_metadata_columns(db)
+        ensure_book_chapter_section_kind_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

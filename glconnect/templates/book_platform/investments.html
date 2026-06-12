@@ -35,10 +35,10 @@
             <div class="card-body p-3 p-md-4">
                 <div class="d-flex flex-wrap align-items-center gap-2 ink-inv-pill-row mb-3">
                     <span class="small text-white-50 me-1 d-none d-sm-inline">Status</span>
-                    <a href="{{ url_for('book_platform.investments', status='active', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'active' %}btn-inv-pill-active{% endif %}">Active</a>
-                    <a href="{{ url_for('book_platform.investments', status='funded', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'funded' %}btn-inv-pill-active{% endif %}">Funded</a>
-                    <a href="{{ url_for('book_platform.investments', status='draft', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'draft' %}btn-inv-pill-active{% endif %}">Draft</a>
-                    <a href="{{ url_for('book_platform.investments', status='all', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'all' %}btn-inv-pill-active{% endif %}">All</a>
+                    <a href="{{ url_for('book_platform.campaigns', status='active', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'active' %}btn-inv-pill-active{% endif %}">Active</a>
+                    <a href="{{ url_for('book_platform.campaigns', status='funded', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'funded' %}btn-inv-pill-active{% endif %}">Funded</a>
+                    <a href="{{ url_for('book_platform.campaigns', status='draft', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'draft' %}btn-inv-pill-active{% endif %}">Draft</a>
+                    <a href="{{ url_for('book_platform.campaigns', status='all', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'all' %}btn-inv-pill-active{% endif %}">All</a>
                 </div>
                 <form method="GET" class="row g-3 align-items-end" role="search" aria-label="Search campaigns">
                     <input type="hidden" name="status" value="{{ status_filter }}">
@@ -51,7 +51,7 @@
                             <i class="fas fa-search me-2" aria-hidden="true"></i>Apply
                         </button>
                         {% if search_query %}
-                        <a href="{{ url_for('book_platform.investments', status=status_filter) }}" class="btn btn-lg btn-ink-ghost">Clear</a>
+                        <a href="{{ url_for('book_platform.campaigns', status=status_filter) }}" class="btn btn-lg btn-ink-ghost">Clear</a>
                         {% endif %}
                     </div>
                 </form>
@@ -100,7 +100,7 @@
                             {% endif %}
                         </p>
 
-                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta w-100 mt-auto">
+                        <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="btn ink-mp-cta w-100 mt-auto">
                             <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>View campaign
                         </a>
                     </div>
@@ -116,7 +116,7 @@
             {% if status_filter == 'active' %}
             <p class="small text-white-50 mb-3 mx-auto" style="max-width: 32rem;">Authors create campaigns from a book’s page in Ink Studio. If you’re an author, open <strong>My books</strong> to set one up.</p>
             <div class="d-flex flex-wrap justify-content-center gap-2">
-                <a href="{{ url_for('book_platform.investments', status='all') }}" class="btn ink-mp-cta">
+                <a href="{{ url_for('book_platform.campaigns', status='all') }}" class="btn ink-mp-cta">
                     <i class="fas fa-list me-2" aria-hidden="true"></i>Show all statuses
                 </a>
                 <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-ink-ghost">
@@ -124,7 +124,7 @@
                 </a>
             </div>
             {% else %}
-            <a href="{{ url_for('book_platform.investments', status='active') }}" class="btn ink-mp-cta">
+            <a href="{{ url_for('book_platform.campaigns', status='active') }}" class="btn ink-mp-cta">
                 <i class="fas fa-filter me-2" aria-hidden="true"></i>View active only
             </a>
             {% endif %}

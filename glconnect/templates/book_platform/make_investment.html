@@ -12,7 +12,7 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}">
+                <a class="nav-link" href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}">
                     <i class="fas fa-arrow-left"></i> Back to Campaign
                 </a>
             </div>
@@ -96,7 +96,7 @@
                                 
                                 const amount = document.getElementById('investmentAmount').value;
                                 
-                                fetch('{{ url_for("book_platform.make_investment", campaign_id=campaign.id) }}', {
+                                fetch('{{ url_for("book_platform.contribute_to_campaign", campaign_id=campaign.id) }}', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',

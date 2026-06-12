@@ -29,7 +29,7 @@
                     <li class="nav-item"><a class="nav-link active" href="{{ url_for('book_platform.publishing_pipeline') }}" aria-current="page"><i class="fas fa-route me-1"></i>Publishing</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-bullhorn me-1"></i>Publicity</a></li>
                     {% if is_author %}<li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book me-1"></i>My books</a></li>{% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.investments') }}"><i class="fas fa-seedling me-1"></i>Campaigns</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.campaigns') }}"><i class="fas fa-seedling me-1"></i>Campaigns</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1"></i>Marketplace</a></li>
                 </ul>
             </div>
@@ -59,7 +59,7 @@
                             <h2 class="h5 mb-2"><i class="fas fa-search text-warning me-2"></i>Scouting &amp; proposals</h2>
                             <p class="small text-muted mb-3">Authors launch <strong>patron campaigns</strong> with pitch, sample, and funding goal. Patrons and curators browse active campaigns to find promising manuscripts before publication.</p>
                             <div class="d-flex flex-wrap gap-2">
-                                <a href="{{ url_for('book_platform.investments') }}" class="btn btn-sm btn-ink-gold">Browse campaigns</a>
+                                <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-sm btn-ink-gold">Browse campaigns</a>
                                 {% if is_author and first_book_id %}
                                 <a href="{{ url_for('book_platform.view_book', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">Launch from a book</a>
                                 {% elif is_author %}
@@ -76,7 +76,7 @@
                             <h2 class="h5 mb-2"><i class="fas fa-scale-balanced text-info me-2"></i>Evaluation (patrons)</h2>
                             <p class="small text-muted mb-3">Patrons read campaign pages, assess literary merit and fit, and contribute to funding. Authors see progress and can publish patron feedback on completed reviews when available.</p>
                             <div class="d-flex flex-wrap gap-2">
-                                <a href="{{ url_for('book_platform.investments') }}" class="btn btn-sm btn-outline-light">Evaluate &amp; support</a>
+                                <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-sm btn-outline-light">Evaluate &amp; support</a>
                                 {% if is_author %}<a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-sm btn-outline-light">Dashboard → reviews</a>{% endif %}
                             </div>
                         </div>
@@ -156,7 +156,7 @@
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-sm btn-outline-light">Upload ebook</a>
                                 {% if is_author and first_book_id %}
-                                <a href="{{ url_for('book_platform.edit_book', book_id=first_book_id) }}#audiobook-section" class="btn btn-sm btn-ink-gold">Audiobook studio</a>
+                                <a href="{{ url_for('book_platform.book_audiobook', book_id=first_book_id) }}" class="btn btn-sm btn-ink-gold">Audiobook studio</a>
                                 {% endif %}
                             </div>
                         </div>

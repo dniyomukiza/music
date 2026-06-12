@@ -14,10 +14,44 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from glconnect.audiobook_text_segments import build_uploaded_book_audiobook_chapters
 from glconnect.book_platform_models import BookChapter, BookProject
-from glconnect.book_utils import is_book_published
+from glconnect.book_utils import is_book_published, resolve_section_kind, section_kind_label
 from glconnect.digital_book_processor import digital_book_processor
 
 logger = logging.getLogger(__name__)
+
+_CHAPTER_TITLE = re.compile(r'(?i)^\s*(chapter|ch\.?|part)\b')
+
+
+def _audiobook_display_title(title: str, kind: str, narrative_index: int | None) -> str:
+    t = (title or '').strip()
+    if kind == 'chapter':
+        if _CHAPTER_TITLE.match(t):
+            return t
+        if narrative_index:
+            return f'Chapter {narrative_index}: {t}' if t else f'Chapter {narrative_index}'
+        return t or 'Chapter'
+    return t or section_kind_label(kind)
+
+
+def _attach_section_kind_to_uploaded_chapters(chapters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    narrative_index = 0
+    out: List[Dict[str, Any]] = []
+    for ch in chapters:
+        kind = resolve_section_kind(ch.get('title'))
+        if kind == 'chapter':
+            narrative_index += 1
+            n_idx = narrative_index
+        else:
+            n_idx = None
+        row = dict(ch)
+        row['section_kind'] = kind
+        row['kind_label'] = section_kind_label(kind)
+        row['is_narrative_chapter'] = kind == 'chapter'
+        row['narrative_chapter_index'] = n_idx
+        row['reading_order'] = ch.get('chapter_number')
+        row['title'] = _audiobook_display_title(ch.get('title') or '', kind, n_idx)
+        out.append(row)
+    return out
 
 
 def build_audiobook_source(
@@ -60,7 +94,9 @@ def build_audiobook_source(
                 "chapters_for_audio": [],
                 "source_hash": "",
             }
-        chapters_for_audio = build_uploaded_book_audiobook_chapters(full_text)
+        chapters_for_audio = _attach_section_kind_to_uploaded_chapters(
+            build_uploaded_book_audiobook_chapters(full_text)
+        )
     else:
         all_chapters = (
             BookChapter.query.filter_by(book_project_id=book_id)
@@ -109,9 +145,17 @@ def build_audiobook_source(
                 }
 
         chapters_for_audio = []
+        narrative_index = 0
         for chapter in chapters:
-            chapter_text = ""
-            chapter_text += f"Chapter {chapter.chapter_number}: {chapter.title}\n\n"
+            kind = resolve_section_kind(chapter.title, getattr(chapter, 'section_kind', None))
+            if kind == 'chapter':
+                narrative_index += 1
+                n_idx = narrative_index
+            else:
+                n_idx = None
+            display_title = _audiobook_display_title(chapter.title, kind, n_idx)
+
+            chapter_text = f"{display_title}\n\n"
             if chapter.summary:
                 clean_summary = re.sub(r"<[^>]+>", "", chapter.summary)
                 clean_summary = re.sub(r"\s+", " ", clean_summary).strip()
@@ -125,9 +169,14 @@ def build_audiobook_source(
             if chapter_text.strip():
                 chapters_for_audio.append(
                     {
-                        "title": f"Chapter {chapter.chapter_number}: {chapter.title}",
+                        "title": display_title,
                         "text": chapter_text,
                         "chapter_number": chapter.chapter_number,
+                        "reading_order": chapter.chapter_number,
+                        "narrative_chapter_index": n_idx,
+                        "section_kind": kind,
+                        "kind_label": section_kind_label(kind),
+                        "is_narrative_chapter": kind == 'chapter',
                         "book_chapter_id": chapter.id,
                     }
                 )
@@ -175,6 +224,20 @@ def filter_and_renumber_chapters(
             picked.append(dict(ch))
     if not picked:
         return None, "At least one section must be included for the audiobook."
-    for i, ch in enumerate(picked, start=1):
-        ch["chapter_number"] = i
+    if not any(ch.get('section_kind') == 'chapter' or ch.get('is_narrative_chapter') for ch in picked):
+        return None, (
+            "Include at least one content chapter for the audiobook. "
+            "Front matter and back matter alone cannot define the narrative."
+        )
+    audio_track = 0
+    narrative_track = 0
+    for ch in picked:
+        audio_track += 1
+        ch['audio_track_number'] = audio_track
+        if ch.get('section_kind') == 'chapter' or ch.get('is_narrative_chapter'):
+            narrative_track += 1
+            ch['narrative_chapter_index'] = narrative_track
+            ch['chapter_number'] = narrative_track
+        else:
+            ch['chapter_number'] = audio_track
     return picked, None

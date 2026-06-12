@@ -2814,7 +2814,7 @@ body.ink-invest .ink-inv-dropdown {
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* --- Investment browse (/mybook/investments) --- */
+/* --- Campaign browse (/mybook/campaigns) --- */
 body.ink-invest .ink-inv-trust-note {
     color: rgba(255, 255, 255, 0.72) !important;
     font-size: 0.95rem;
@@ -2947,6 +2947,511 @@ body.ink-invest .dropdown-item:focus {
 
 body.ink-invest .dropdown-divider {
     border-color: rgba(42, 61, 50, 0.8);
+}
+
+/* --- Campaign detail (/mybook/campaigns/<id>) --- */
+body.ink-campaign-detail {
+    padding-bottom: 5rem;
+}
+
+@media (min-width: 992px) {
+    body.ink-campaign-detail {
+        padding-bottom: 0;
+    }
+}
+
+body.ink-campaign-detail .ink-camp-hero {
+    position: relative;
+    z-index: 1;
+    padding: 1.75rem 0 2rem;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.18);
+    background:
+        radial-gradient(ellipse 80% 60% at 0% 0%, rgba(201, 162, 39, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 50% at 100% 20%, rgba(42, 61, 50, 0.35), transparent 50%),
+        linear-gradient(180deg, rgba(12, 15, 14, 0.95), rgba(6, 8, 7, 0.98));
+}
+
+body.ink-campaign-detail .ink-camp-cover-wrap {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(201, 162, 39, 0.28);
+    aspect-ratio: 2 / 3;
+    max-width: 220px;
+    background: rgba(12, 15, 14, 0.9);
+}
+
+body.ink-campaign-detail .ink-camp-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+body.ink-campaign-detail .ink-camp-cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(201, 162, 39, 0.45);
+    font-size: 3rem;
+    background: linear-gradient(145deg, rgba(26, 34, 28, 0.95), rgba(12, 15, 14, 0.98));
+}
+
+body.ink-campaign-detail .ink-camp-eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(201, 162, 39, 0.85);
+    font-weight: 600;
+}
+
+body.ink-campaign-detail .ink-camp-title {
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.65rem, 4vw, 2.35rem);
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: #f5f7f6;
+    margin-bottom: 0.35rem;
+}
+
+body.ink-campaign-detail .ink-camp-book-line {
+    color: rgba(232, 236, 233, 0.72);
+    font-size: 1.05rem;
+    margin-bottom: 1rem;
+}
+
+body.ink-campaign-detail .ink-camp-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+body.ink-campaign-detail .ink-camp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e8ece9;
+}
+
+body.ink-campaign-detail .ink-camp-chip.is-active {
+    border-color: rgba(45, 106, 79, 0.55);
+    background: rgba(45, 106, 79, 0.22);
+    color: #a7f3d0;
+}
+
+body.ink-campaign-detail .ink-camp-chip.is-funded {
+    border-color: rgba(201, 162, 39, 0.45);
+    background: rgba(201, 162, 39, 0.18);
+    color: #f5d76a;
+}
+
+body.ink-campaign-detail .ink-camp-chip.is-ended {
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(100, 116, 139, 0.18);
+    color: #cbd5e1;
+}
+
+body.ink-campaign-detail .ink-camp-chip.is-urgent {
+    border-color: rgba(201, 76, 76, 0.45);
+    background: rgba(201, 76, 76, 0.15);
+    color: #fecaca;
+}
+
+body.ink-campaign-detail .ink-camp-progress-block {
+    margin-top: 0.5rem;
+}
+
+body.ink-campaign-detail .ink-camp-progress-bar {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+body.ink-campaign-detail .ink-camp-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #a68520, #e0bc3a);
+    transition: width 0.4s ease;
+}
+
+body.ink-campaign-detail .ink-camp-progress-fill.is-complete {
+    background: linear-gradient(90deg, #2d6a4f, #52b788);
+}
+
+body.ink-campaign-detail .ink-camp-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+@media (min-width: 576px) {
+    body.ink-campaign-detail .ink-camp-stat-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+body.ink-campaign-detail .ink-camp-stat {
+    padding: 0.75rem 0.85rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.ink-campaign-detail .ink-camp-stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #fff;
+    line-height: 1.2;
+}
+
+body.ink-campaign-detail .ink-camp-stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(232, 236, 233, 0.55);
+    margin-top: 0.15rem;
+}
+
+body.ink-campaign-detail .ink-camp-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+}
+
+body.ink-campaign-detail .ink-camp-jump {
+    position: sticky;
+    top: 56px;
+    z-index: 20;
+    background: rgba(6, 8, 7, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+    padding: 0.65rem 0;
+}
+
+body.ink-campaign-detail .ink-camp-jump-inner {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+}
+
+body.ink-campaign-detail .ink-camp-jump-inner::-webkit-scrollbar {
+    display: none;
+}
+
+body.ink-campaign-detail .ink-camp-jump-link {
+    flex-shrink: 0;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(232, 236, 233, 0.75);
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+body.ink-campaign-detail .ink-camp-jump-link:hover,
+body.ink-campaign-detail .ink-camp-jump-link:focus-visible {
+    color: #f5d76a;
+    background: rgba(201, 162, 39, 0.1);
+    border-color: rgba(201, 162, 39, 0.25);
+}
+
+body.ink-campaign-detail .ink-camp-main {
+    position: relative;
+    z-index: 1;
+    padding: 1.75rem 0 3rem;
+}
+
+body.ink-campaign-detail .ink-camp-panel {
+    background: rgba(12, 15, 14, 0.88);
+    border: 1px solid rgba(201, 162, 39, 0.18);
+    border-radius: 18px;
+    padding: 1.35rem 1.35rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+body.ink-campaign-detail .ink-camp-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+body.ink-campaign-detail .ink-camp-panel-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin: 0;
+    color: #f5f7f6;
+}
+
+body.ink-campaign-detail .ink-camp-panel-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
+    background: rgba(201, 162, 39, 0.15);
+    color: #f5d76a;
+}
+
+body.ink-campaign-detail .ink-camp-pitch {
+    color: rgba(232, 236, 233, 0.88);
+    line-height: 1.7;
+}
+
+body.ink-campaign-detail .ink-camp-pitch p:last-child {
+    margin-bottom: 0;
+}
+
+body.ink-campaign-detail .ink-camp-trust {
+    border-radius: 14px;
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    background: rgba(201, 162, 39, 0.06);
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+}
+
+body.ink-campaign-detail .ink-camp-trust summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #f5d76a;
+    list-style: none;
+}
+
+body.ink-campaign-detail .ink-camp-trust summary::-webkit-details-marker {
+    display: none;
+}
+
+body.ink-campaign-detail .ink-camp-trust summary::before {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+}
+
+body.ink-campaign-detail .ink-camp-trust[open] summary::before {
+    transform: rotate(180deg);
+}
+
+body.ink-campaign-detail .ink-camp-sample-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+body.ink-campaign-detail .ink-camp-sample-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(42, 61, 50, 0.75);
+    background: rgba(6, 8, 7, 0.55);
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+@media (hover: hover) {
+    body.ink-campaign-detail .ink-camp-sample-card:hover {
+        border-color: rgba(201, 162, 39, 0.35);
+        transform: translateY(-1px);
+    }
+}
+
+body.ink-campaign-detail .ink-camp-sample-title {
+    font-weight: 600;
+    color: #f5f7f6;
+    margin-bottom: 0.2rem;
+    font-size: 0.95rem;
+}
+
+body.ink-campaign-detail .ink-camp-author-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+body.ink-campaign-detail .ink-camp-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(201, 162, 39, 0.35);
+    flex-shrink: 0;
+}
+
+body.ink-campaign-detail .ink-camp-avatar-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201, 162, 39, 0.15);
+    color: #c9a227;
+    flex-shrink: 0;
+}
+
+body.ink-campaign-detail .ink-camp-milestone {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0;
+    font-size: 0.92rem;
+    color: rgba(232, 236, 233, 0.82);
+}
+
+body.ink-campaign-detail .ink-camp-milestone.is-done {
+    color: #a7f3d0;
+}
+
+body.ink-campaign-detail .ink-camp-milestone.is-done i {
+    color: #52b788;
+}
+
+body.ink-campaign-detail .ink-camp-supporter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(42, 61, 50, 0.6);
+}
+
+body.ink-campaign-detail .ink-camp-supporter:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+body.ink-campaign-detail .ink-camp-supporter-amount {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    color: #f5d76a;
+}
+
+body.ink-campaign-detail .ink-camp-sidebar {
+    position: sticky;
+    top: 7.5rem;
+}
+
+body.ink-campaign-detail .ink-camp-side-card {
+    background: rgba(12, 15, 14, 0.95);
+    border: 1px solid rgba(201, 162, 39, 0.28);
+    border-radius: 18px;
+    padding: 1.35rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+body.ink-campaign-detail .ink-camp-side-note {
+    font-size: 0.82rem;
+    color: rgba(232, 236, 233, 0.65);
+    padding: 0.75rem;
+    border-radius: 10px;
+    margin-top: 0.85rem;
+    line-height: 1.5;
+}
+
+body.ink-campaign-detail .ink-camp-side-note.is-patron {
+    background: rgba(201, 162, 39, 0.08);
+    border-left: 3px solid rgba(201, 162, 39, 0.45);
+}
+
+body.ink-campaign-detail .ink-camp-side-note.is-shield {
+    background: rgba(14, 165, 233, 0.08);
+    border-left: 3px solid rgba(14, 165, 233, 0.45);
+}
+
+body.ink-campaign-detail .ink-camp-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 1px dashed rgba(201, 162, 39, 0.28);
+    border-radius: 14px;
+    color: rgba(232, 236, 233, 0.65);
+}
+
+body.ink-campaign-detail .ink-camp-empty-icon {
+    font-size: 2rem;
+    color: #c9a227;
+    margin-bottom: 0.75rem;
+}
+
+body.ink-campaign-detail .ink-camp-mobile-cta {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1030;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0));
+    background: rgba(6, 8, 7, 0.96);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(201, 162, 39, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+body.ink-campaign-detail .ink-camp-mobile-cta-stats {
+    flex: 1;
+    min-width: 0;
+}
+
+body.ink-campaign-detail .ink-camp-mobile-cta-stats strong {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    color: #f5d76a;
+    font-size: 1rem;
+}
+
+body.ink-campaign-detail .ink-camp-share-toast {
+    position: fixed;
+    bottom: 5.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 1040;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: rgba(45, 106, 79, 0.95);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+body.ink-campaign-detail .ink-camp-share-toast.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (min-width: 992px) {
+    body.ink-campaign-detail .ink-camp-mobile-cta {
+        display: none !important;
+    }
 }
 
 /* --- Earnings dashboard (/mybook/earnings) --- */
@@ -3987,6 +4492,7 @@ body.ink-upload-book kbd {
         position: static;
     }
 }
+
 
 /* --- Edit book: listing flow step 2 (audiobook after /upload-digital-book) --- */
 body.ink-edit-book-listing .edit-book {
@@ -5210,6 +5716,13 @@ body.ink-book-studio .ink-chapter-num {
 body.ink-book-studio .ink-chapter-row.is-draft-chapter .ink-chapter-num {
     background: rgba(224, 188, 58, 0.12);
     color: #e0bc3a;
+}
+
+body.ink-book-studio .ink-chapter-num--section {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    font-size: 1.1rem;
+    font-weight: 500;
 }
 
 body.ink-book-studio .ink-chapter-meta {

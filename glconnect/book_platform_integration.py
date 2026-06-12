@@ -70,6 +70,26 @@ def init_book_platform(app):
             patronage = True
         return {"bcp_patronage": patronage}
 
+    @app.context_processor
+    def inject_manuscript_section_helpers():
+        from glconnect.book_utils import (
+            format_manuscript_summary,
+            manuscript_section_heading,
+            manuscript_section_kind,
+            manuscript_section_rows,
+            resolve_section_kind,
+            section_kind_label,
+        )
+
+        return {
+            'format_manuscript_summary': format_manuscript_summary,
+            'manuscript_section_heading': manuscript_section_heading,
+            'manuscript_section_kind': manuscript_section_kind,
+            'manuscript_section_rows': manuscript_section_rows,
+            'resolve_section_kind': resolve_section_kind,
+            'section_kind_label': section_kind_label,
+        }
+
     # Register the Ink Studio blueprints
     app.register_blueprint(book_bp)
     app.register_blueprint(gemini_bp)

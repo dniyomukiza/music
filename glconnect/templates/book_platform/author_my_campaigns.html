@@ -82,7 +82,7 @@
                                 </p>
                             </div>
                             <div class="ink-book-list-foot d-flex flex-wrap gap-2">
-                                <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-sm btn-ink-gold">Manage campaign</a>
+                                <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="btn btn-sm btn-ink-gold">Manage campaign</a>
                                 <a href="{{ url_for('book_platform.view_book', book_id=campaign.book_project_id) }}" class="btn btn-sm btn-ink-ghost">View book</a>
                             </div>
                         </article>
@@ -102,7 +102,7 @@
 
         <p class="small text-muted mb-0">
             Want to support other authors?
-            <a href="{{ url_for('book_platform.investments') }}">Browse discover campaigns</a>.
+            <a href="{{ url_for('book_platform.campaigns') }}">Browse discover campaigns</a>.
         </p>
     </main>
 

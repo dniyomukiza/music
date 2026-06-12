@@ -2,6 +2,131 @@
 Shared utilities for book platform - avoids circular imports.
 """
 
+import re
+
+_FRONT_MATTER_PREFIXES = (
+    'foreword', 'preface', 'introduction', 'prologue', 'acknowledgment',
+    'acknowledgement', 'acknowledgments', 'acknowledgements', 'dedication',
+)
+_BACK_MATTER_PREFIXES = (
+    'afterword', 'epilogue', 'appendix', 'appendices', 'index', 'bibliography',
+    'glossary', 'endnotes', 'endnote', 'colophon', 'notes on',
+)
+_CHAPTER_TITLE = re.compile(r'(?i)^\s*(chapter|ch\.?|part)\b')
+
+
+def manuscript_section_kind(title: str) -> str:
+    """Classify a manuscript section: front, chapter, back, or other."""
+    t = (title or '').strip().lower()
+    if not t:
+        return 'other'
+    if any(t.startswith(p) for p in _FRONT_MATTER_PREFIXES):
+        return 'front'
+    if any(t.startswith(p) for p in _BACK_MATTER_PREFIXES):
+        return 'back'
+    if _CHAPTER_TITLE.match(t):
+        return 'chapter'
+    return 'other'
+
+
+def manuscript_counts(chapters) -> dict:
+    counts = {'chapter': 0, 'front': 0, 'back': 0, 'other': 0}
+    for ch in chapters or []:
+        counts[resolve_section_kind(
+            getattr(ch, 'title', None),
+            getattr(ch, 'section_kind', None),
+        )] += 1
+    return counts
+
+
+def format_manuscript_summary(chapters) -> str:
+    """Human summary, e.g. '1 chapter · 3 sections' for foreword + ch + afterword + appendix."""
+    counts = manuscript_counts(chapters)
+    parts = []
+    n_ch = counts['chapter']
+    if n_ch == 1:
+        parts.append('1 chapter')
+    elif n_ch > 1:
+        parts.append(f'{n_ch} chapters')
+    extras = counts['front'] + counts['back'] + counts['other']
+    if extras == 1:
+        parts.append('1 section')
+    elif extras > 1:
+        parts.append(f'{extras} sections')
+    if not parts:
+        return 'No sections yet'
+    return ' · '.join(parts)
+
+
+_KIND_LABELS = {
+    'front': 'Front matter',
+    'back': 'Back matter',
+    'chapter': 'Content chapter',
+    'other': 'Section',
+}
+
+VALID_SECTION_KINDS = frozenset(_KIND_LABELS.keys())
+
+
+def section_kind_label(kind: str) -> str:
+    return _KIND_LABELS.get(kind or '', 'Section')
+
+
+def resolve_section_kind(title: str, stored_kind: str | None = None) -> str:
+    """Prefer explicit section_kind from DB; fall back to title heuristics."""
+    kind = (stored_kind or '').strip().lower()
+    if kind in VALID_SECTION_KINDS:
+        return kind
+    return manuscript_section_kind(title)
+
+
+def normalize_section_kind_input(raw: str | None, title: str) -> str:
+    """Validate form/API section_kind or infer from title."""
+    return resolve_section_kind(title, raw)
+
+
+def audiobook_default_include(kind: str) -> bool:
+    """Default audiobook narration toggle by section type."""
+    if kind == 'chapter':
+        return True
+    if kind == 'back':
+        return False
+    if kind == 'front':
+        return True
+    return False
+
+
+def manuscript_section_rows(chapters):
+    """Ordered display metadata for manuscript list UIs."""
+    rows = []
+    narrative_index = 0
+    for ch in chapters or []:
+        kind = resolve_section_kind(
+            getattr(ch, 'title', None),
+            getattr(ch, 'section_kind', None),
+        )
+        if kind == 'chapter':
+            narrative_index += 1
+        rows.append({
+            'chapter': ch,
+            'kind': kind,
+            'kind_label': section_kind_label(kind),
+            'display_num': str(narrative_index) if kind == 'chapter' else '·',
+            'narrative_index': narrative_index if kind == 'chapter' else None,
+        })
+    return rows
+
+
+def manuscript_section_heading(title: str, chapter_number: int) -> str:
+    """Subtitle for a section view — use the section title, not 'Chapter N' for foreword etc."""
+    t = (title or '').strip()
+    if t:
+        return t
+    kind = manuscript_section_kind(title)
+    if kind == 'chapter':
+        return f'Chapter {chapter_number}'
+    return _KIND_LABELS.get(kind, 'Section')
+
 
 def audiobook_ready_for_marketplace_publish(book):
     """

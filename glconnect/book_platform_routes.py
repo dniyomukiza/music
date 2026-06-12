@@ -948,10 +948,13 @@ def setup_profile():
             return jsonify({'success': False, 'error': str(e)}), 500
 
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    next_after = _setup_profile_next_query_param()
+    is_collaborator_setup = '/invitations/' in next_after
     return render_template(
         'book_platform/setup_profile.html',
         book_user=book_user,
-        next_after_setup=_setup_profile_next_query_param(),
+        next_after_setup=next_after,
+        is_collaborator_setup=is_collaborator_setup,
     )
 
 # Book management routes
@@ -1734,11 +1737,42 @@ def edit_book(book_id, user_profile, profile_type):
             return jsonify({'success': False, 'error': str(e)}), 500
     
     listing_flow = (request.args.get('flow') or '').strip().lower() == 'listing'
+    if listing_flow or request.args.get('audiobook'):
+        return redirect(url_for('book_platform.book_audiobook', book_id=book_id))
     return render_template(
         'book_platform/edit_book.html',
         book=book,
         ebook_language_label=language_label(book.language),
-        listing_flow=listing_flow,
+    )
+
+@book_bp.route('/books/<int:book_id>/audiobook', methods=['GET'])
+@writer_or_book_platform_required
+def book_audiobook(book_id, user_profile, profile_type):
+    """Audiobook generation and publishing — separate from manuscript edit."""
+    from glconnect.book_platform_models import BookPlatformUser
+    from sqlalchemy.orm import joinedload
+
+    book = BookProject.query.options(
+        joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+    ).get_or_404(book_id)
+
+    if not book.author:
+        flash('Book author information could not be loaded.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+
+    author_id = get_profile_id(user_profile, profile_type)
+    if author_id is None:
+        flash('Profile configuration error. Please ensure you have a Writer or Ink Studio profile.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+
+    if book.author_id != author_id:
+        flash('Only the author can manage the audiobook', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+
+    return render_template(
+        'book_platform/book_audiobook.html',
+        book=book,
+        ebook_language_label=language_label(book.language),
     )
 
 # Chapter management routes
@@ -1775,11 +1809,14 @@ def create_chapter(book_id):
             content = data.get('content', '')
             word_count = count_words_from_html(content) if content else 0
             
+            from glconnect.book_utils import normalize_section_kind_input
+
             chapter = BookChapter(
                 title=data['title'],
                 content=content,
                 summary=data.get('summary', ''),
                 chapter_number=chapter_number,
+                section_kind=normalize_section_kind_input(data.get('section_kind'), data['title']),
                 word_count=word_count,
                 word_count_target=int(data.get('word_count_target', 0)) if data.get('word_count_target') else None,
                 book_project_id=book_id,
@@ -1872,6 +1909,11 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             chapter.title = data.get('title', chapter.title)
             chapter.content = data.get('content', chapter.content)
             chapter.summary = data.get('summary', chapter.summary)
+            from glconnect.book_utils import normalize_section_kind_input
+            chapter.section_kind = normalize_section_kind_input(
+                data.get('section_kind'),
+                chapter.title,
+            )
             
             # Handle word_count_target safely
             word_count_target = data.get('word_count_target', '')
@@ -2799,8 +2841,9 @@ def send_collaboration_invitation_email(invitation, book, inviter):
 This invitation will expire in 7 days.
 
 Account Requirements:
-- If you don't have an account yet, you'll be prompted to create one when you click the link
-- After logging in, you'll need to set up your Ink Studio profile (a quick one-time setup) to accept the invitation and start collaborating
+- Click the link below to open your invitation
+- Log in with your GLC account, or create one if you are new
+- Accept the invitation to start collaborating
 
 Best regards,
 Ink Studio Team
@@ -2922,7 +2965,7 @@ def invite_collaborator(book_id, user_profile, profile_type):
     
     return jsonify({'success': True, 'invitation_id': invitation.id})
 
-@book_bp.route('/invitations/<string:invitation_uuid>')
+@book_bp.route('/invitations/<string:invitation_uuid>', methods=['GET', 'POST'])
 def accept_invitation(invitation_uuid):
     """Accept collaboration invitation"""
     invitation = CollaborationInvitation.query.options(
@@ -2950,12 +2993,18 @@ def accept_invitation(invitation_uuid):
     if request.method == 'POST':
         if not current_user.is_authenticated:
             flash('Please log in to accept the invitation', 'error')
-            return redirect(url_for('login'))
+            return redirect(url_for(
+                'routes1.login',
+                next=url_for('book_platform.accept_invitation', invitation_uuid=invitation_uuid),
+            ))
         
         # Check if user has Ink Studio profile
         book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
         if not book_user:
-            return redirect(url_for('book_platform.setup_profile'))
+            return redirect(url_for(
+                'book_platform.setup_profile',
+                next=url_for('book_platform.accept_invitation', invitation_uuid=invitation_uuid),
+            ))
         
         # Update collaboration with actual user
         collaboration = invitation.collaboration
@@ -2975,7 +3024,11 @@ def accept_invitation(invitation_uuid):
         flash('Invitation accepted successfully!', 'success')
         return redirect(url_for('book_platform.view_book', book_id=collaboration.book_project_id))
     
-    return render_template('book_platform/accept_invitation.html', invitation=invitation)
+    return render_template(
+        'book_platform/accept_invitation.html',
+        invitation=invitation,
+        invite_return_path=url_for('book_platform.accept_invitation', invitation_uuid=invitation_uuid),
+    )
 
 # Comments and feedback routes
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/comments', methods=['POST'])
@@ -6430,7 +6483,7 @@ def upload_digital_book():
             )
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
-            next_step_url = url_for("book_platform.edit_book", book_id=book.id, flow="listing") + "#audiobook-section"
+            next_step_url = url_for("book_platform.book_audiobook", book_id=book.id)
             if _upload_digital_book_accepts_json():
                 return jsonify(
                     success=True,
@@ -7107,7 +7160,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     existing_campaign = InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
     if existing_campaign:
         flash('A book campaign already exists for this title.', 'info')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=existing_campaign.id))
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=existing_campaign.id))
     
     # Check if book is ready for investment
     investment_readiness = check_investment_readiness(book)
@@ -7153,7 +7206,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
             db.session.commit()
             
             flash('Book campaign launched successfully!', 'success')
-            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign.id))
+            return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign.id))
             
         except Exception as e:
             db.session.rollback()
@@ -7163,10 +7216,32 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     return render_template('book_platform/create_campaign.html', form=form, book=book)
 
 
+def _maybe_redirect_legacy_investments_url(campaign_id=None, contribution_id=None):
+    """301 GET requests from legacy /investments/* paths to /campaigns/* or /contributions/*."""
+    if request.method != 'GET':
+        return None
+    path = request.path.rstrip('/') or request.path
+    if path in ('/mybook/investments',):
+        return redirect(url_for('book_platform.campaigns', **request.args), code=301)
+    if path == '/mybook/investments/my-campaigns':
+        return redirect(url_for('book_platform.author_my_campaigns', **request.args), code=301)
+    if campaign_id is not None and path == f'/mybook/investments/{campaign_id}':
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id, **request.args), code=301)
+    if campaign_id is not None and path == f'/mybook/investments/{campaign_id}/invest':
+        return redirect(url_for('book_platform.contribute_to_campaign', campaign_id=campaign_id), code=301)
+    if contribution_id is not None and path == f'/mybook/investments/{contribution_id}/refund-status':
+        return redirect(url_for('book_platform.contribution_refund_status', contribution_id=contribution_id), code=301)
+    return None
+
+
+@book_bp.route('/campaigns/mine', methods=['GET'])
 @book_bp.route('/investments/my-campaigns', methods=['GET'])
 @writer_or_book_platform_required
 def author_my_campaigns(user_profile, profile_type):
     """Author hub: manage patron campaigns started from their books."""
+    legacy = _maybe_redirect_legacy_investments_url()
+    if legacy:
+        return legacy
     author_id = get_profile_id(user_profile, profile_type)
     if not author_id:
         flash('Complete your author profile to manage book campaigns.', 'warning')
@@ -7203,17 +7278,15 @@ def author_my_campaigns(user_profile, profile_type):
         marketplace_cover_url=_marketplace_cover_url,
     )
 
-# Investment Marketplace
+# Patron campaign discovery
+@book_bp.route('/campaigns', methods=['GET'])
 @book_bp.route('/investments', methods=['GET'])
 @login_required
-def investments():
-    """Browse investment campaigns - visible to investors regardless of book publication status
-    
-    Investment campaigns are designed to get funding BEFORE publishing, so campaigns
-    are visible as soon as they're created (ACTIVE status), even if the book is still in draft.
-    
-    IMPORTANT: Authors cannot see their own book campaigns here - they can only invest in other authors' books.
-    """
+def campaigns():
+    """Browse patron book campaigns before publication."""
+    legacy = _maybe_redirect_legacy_investments_url()
+    if legacy:
+        return legacy
     status_filter = request.args.get('status', 'active')
     search_query = request.args.get('q', '')
     
@@ -7234,6 +7307,12 @@ def investments():
     # Filter by campaign status
     if status_filter == 'active':
         query = query.filter(InvestmentCampaign.status == CampaignStatus.ACTIVE)
+        query = query.filter(
+            db.or_(
+                InvestmentCampaign.end_date.is_(None),
+                InvestmentCampaign.end_date > datetime.now(timezone.utc),
+            )
+        )
     elif status_filter == 'funded':
         query = query.filter(InvestmentCampaign.status == CampaignStatus.FUNDED)
     elif status_filter == 'draft':
@@ -7264,12 +7343,16 @@ def investments():
                          campaigns=campaigns,
                          status_filter=status_filter,
                          search_query=search_query,
-                         ink_nav_active='investments')
+                         ink_nav_active='campaigns')
 
-# Investment Campaign Details
+# Campaign detail page
+@book_bp.route('/campaigns/<int:campaign_id>', methods=['GET'])
 @book_bp.route('/investments/<int:campaign_id>', methods=['GET'])
-def investment_campaign(campaign_id):
-    """View investment campaign details"""
+def campaign_detail(campaign_id):
+    """View patron campaign details."""
+    legacy = _maybe_redirect_legacy_investments_url(campaign_id=campaign_id)
+    if legacy:
+        return legacy
     campaign = InvestmentCampaign.query.options(
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
@@ -7278,7 +7361,7 @@ def investment_campaign(campaign_id):
     # Safety check: ensure book is a single object, not a collection
     if book is None:
         flash('Book project not found for this campaign.', 'error')
-        return redirect(url_for('book_platform.investments'))
+        return redirect(url_for('book_platform.campaigns'))
     
     investments = BookInvestment.query.filter_by(campaign_id=campaign_id).all()
     
@@ -7359,6 +7442,21 @@ def investment_campaign(campaign_id):
             current_user_id = get_profile_id(user_profile, profile_type)
             if current_user_id:
                 is_author = (book.author_id == current_user_id)
+
+    from glconnect.book_campaign_patronage import (
+        campaign_open_for_contributions,
+        campaign_period_ended,
+        campaign_goal_reached,
+    )
+    accepts_contributions, contribution_block_reason = campaign_open_for_contributions(campaign, book)
+    period_ended = campaign_period_ended(campaign)
+    goal_reached = campaign_goal_reached(campaign)
+
+    share_url = url_for('book_platform.campaign_detail', campaign_id=campaign_id, _external=True)
+    pitch_plain = ''
+    if campaign.description:
+        import re
+        pitch_plain = re.sub(r'<[^>]+>', '', campaign.description)[:160].strip()
     
     return render_template('book_platform/campaign_details.html', 
                          campaign=campaign,
@@ -7375,13 +7473,24 @@ def investment_campaign(campaign_id):
                          completed_chapters_count=completed_chapters_count,
                          days_remaining=days_remaining,
                          author_other_books=author_other_books,
-                         is_author=is_author)
+                         is_author=is_author,
+                         accepts_contributions=accepts_contributions,
+                         contribution_block_reason=contribution_block_reason,
+                         period_ended=period_ended,
+                         goal_reached=goal_reached,
+                         share_url=share_url,
+                         pitch_plain=pitch_plain,
+                         ink_nav_active='campaigns')
 
-# Make Investment
+# Patron contribution checkout
+@book_bp.route('/campaigns/<int:campaign_id>/contribute', methods=['GET', 'POST'])
 @book_bp.route('/investments/<int:campaign_id>/invest', methods=['GET', 'POST'])
 @login_required
-def make_investment(campaign_id):
-    """User invests in a campaign"""
+def contribute_to_campaign(campaign_id):
+    """Patron contributes to a book campaign."""
+    legacy = _maybe_redirect_legacy_investments_url(campaign_id=campaign_id)
+    if legacy:
+        return legacy
     campaign = InvestmentCampaign.query.options(
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
@@ -7390,20 +7499,12 @@ def make_investment(campaign_id):
     
     logger.info(f"Make investment attempt - User: {current_user.user_id}, Campaign: {campaign_id}, Status: {campaign.status.value}, Book Status: {book.status.value if book else 'None'}")
     
-    # Stop new investments if book is published OR goal has been reached
-    if book and is_book_published(book):
-        logger.warning(f"Investment blocked - Book {book.id} is already published")
-        flash('This campaign is closed because the book is already published.', 'error')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
-    
-    # Campaign must be ACTIVE to accept investments (FUNDED means goal reached, no more investments)
-    if campaign.status != CampaignStatus.ACTIVE:
-        logger.warning(f"Investment blocked - Campaign {campaign_id} status is {campaign.status.value}, not ACTIVE")
-        if campaign.status == CampaignStatus.FUNDED:
-            flash('This campaign has reached its funding goal and is no longer accepting contributions.', 'error')
-        else:
-            flash('This campaign is not currently accepting contributions.', 'error')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+    from glconnect.book_campaign_patronage import campaign_open_for_contributions
+    can_contribute, block_reason = campaign_open_for_contributions(campaign, book)
+    if not can_contribute:
+        logger.warning(f"Investment blocked - Campaign {campaign_id}: {block_reason}")
+        flash(block_reason, 'error')
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
     # All users can invest - ensure they have a BookPlatformUser profile for investment tracking
     # Get or create BookPlatformUser profile for the investor
@@ -7419,7 +7520,7 @@ def make_investment(campaign_id):
         if book.author.user_id == investor_user_id:
             logger.warning(f"Investment blocked - User {investor_user_id} is the author of book {book.id}")
             flash('You cannot contribute to your own book campaign.', 'error')
-            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+            return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
     # Get or create BookPlatformUser profile for contributions
     bp_user = BookPlatformUser.query.filter_by(user_id=investor_user_id).first()
@@ -7443,7 +7544,7 @@ def make_investment(campaign_id):
             db.session.rollback()
             logger.error(f"Failed to create BookPlatformUser for investor: {str(e)}", exc_info=True)
             flash('Failed to set up your supporter profile. Please try again.', 'error')
-            return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+            return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
     investor_id = bp_user.id
     
@@ -7451,7 +7552,7 @@ def make_investment(campaign_id):
     if book and book.author_id == investor_id:
         logger.warning(f"Investment blocked - Investor {investor_id} is the author_id of book {book.id}")
         flash('You cannot contribute to your own book campaign.', 'error')
-        return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
     # Handle both JSON (AJAX) and form submissions (like book purchase)
     form = InvestmentForm()
@@ -7470,23 +7571,23 @@ def make_investment(campaign_id):
         # Form submission - use form validation
         form = InvestmentForm()
         if not form.validate_on_submit():
-            return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+            return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
         amount = form.amount.data
     
     # Validate amount (same for both JSON and form)
     if amount < campaign.minimum_investment:
-        error_msg = f'Minimum contribution is ${campaign.minimum_investment:.2f}'
+        error_msg = f'Minimum patron gift is ${campaign.minimum_investment:.2f}'
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+        return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
     
     if campaign.maximum_investment and amount > campaign.maximum_investment:
-        error_msg = f'Maximum contribution is ${campaign.maximum_investment:.2f}'
+        error_msg = f'Maximum patron gift is ${campaign.maximum_investment:.2f}'
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+        return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
     
     # Check if goal would be exceeded
     if campaign.current_funding + amount > campaign.funding_goal:
@@ -7495,7 +7596,7 @@ def make_investment(campaign_id):
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+        return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
     
     try:
         from glconnect.book_campaign_patronage import (
@@ -7529,23 +7630,23 @@ def make_investment(campaign_id):
             apply_patronage_terms_to_investment(investment)
         
         db.session.add(investment)
-        db.session.commit()
-        logger.info(f"Created investment {investment.id} for campaign {campaign_id}, amount: ${amount}")
+        db.session.flush()
+        logger.info(f"Prepared patron contribution {investment.id} for campaign {campaign_id}, amount: ${amount}")
 
         # Create Stripe Checkout Session (same pattern as book purchase)
         domain_url = current_app.config.get("FRONTEND_BASE_URL") or request.url_root.rstrip("/")
-        success_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=success"
-        cancel_url = f"{domain_url}{url_for('book_platform.investment_campaign', campaign_id=campaign_id)}?payment=cancelled"
+        success_url = f"{domain_url}{url_for('book_platform.campaign_detail', campaign_id=campaign_id)}?payment=success"
+        cancel_url = f"{domain_url}{url_for('book_platform.campaign_detail', campaign_id=campaign_id)}?payment=cancelled"
         
         stripe_checkout_url = None
-        stripe_error = None
+        stripe_exc = None
         try:
             import stripe
             stripe_api_key = get_stripe_server_secret_key(current_app)
-            logger.info(f"Investment Stripe key check: stripe_api_key exists = {bool(stripe_api_key)}")
+            logger.info(f"Patron contribution Stripe key check: stripe_api_key exists = {bool(stripe_api_key)}")
             if stripe_api_key:
                 stripe.api_key = stripe_api_key
-                logger.info(f"Creating Stripe checkout session for investment {investment.id}, amount: ${amount}")
+                logger.info(f"Creating Stripe checkout session for contribution {investment.id}, amount: ${amount}")
                 _investor_email = checkout_customer_email_for_user(current_user)
                 _inv_kw = dict(
                     mode="payment",
@@ -7556,8 +7657,8 @@ def make_investment(campaign_id):
                                 "currency": "usd",
                                 "unit_amount": int(amount * 100),
                                 "product_data": {
-                                    "name": f"Patron contribution to '{book.title}'",
-                                    "description": f"Book campaign #{campaign.id} on Ink Studio — not an investment",
+                                    "name": f"Patron gift — '{book.title}'",
+                                    "description": f"Book campaign #{campaign.id} on Ink Studio (patronage, not an investment)",
                                 },
                             },
                             "quantity": 1,
@@ -7578,11 +7679,24 @@ def make_investment(campaign_id):
                 stripe_checkout_url = checkout_session.url
                 logger.info(f"Successfully created Stripe checkout session: {stripe_checkout_url}")
             else:
-                stripe_error = "Stripe API key not found in configuration"
-                logger.warning(f"Stripe API key not found in config for investment {investment.id}")
+                stripe_exc = RuntimeError("Stripe API key not found in configuration")
+                logger.warning(f"Stripe API key not found in config for contribution {investment.id}")
         except Exception as e:
-            stripe_error = str(e)
-            logger.error(f"Could not create Stripe Checkout Session for investment {investment.id}: {e}", exc_info=True)
+            stripe_exc = e
+            logger.error(f"Could not create Stripe Checkout Session for contribution {investment.id}: {e}", exc_info=True)
+
+        if not stripe_checkout_url:
+            db.session.rollback()
+            if request_data:
+                from glconnect.stripe_utils import purchase_checkout_unavailable_response
+                return purchase_checkout_unavailable_response(current_app, stripe_exc)
+            flash(
+                'Payment could not be started. If you operate this site, check Stripe API key IP restrictions.',
+                'error',
+            )
+            return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
+
+        db.session.commit()
         
         # Return JSON response (same pattern as book purchase)
         if request_data:
@@ -7593,21 +7707,11 @@ def make_investment(campaign_id):
                 'message': 'Contribution recorded. Redirecting to payment...',
                 'success_url': success_url,
                 'cancel_url': cancel_url,
+                'stripe_checkout_url': stripe_checkout_url,
             }
-            if stripe_checkout_url:
-                response['stripe_checkout_url'] = stripe_checkout_url
-                return jsonify(response)
-            else:
-                error_msg = stripe_error or 'Stripe payment is not configured. Please set STRIPE_SECRET_KEY in your environment.'
-                logger.warning(f"Stripe checkout URL not available for investment {investment.id}: {error_msg}")
-                return jsonify({'success': False, 'error': error_msg}), 503
+            return jsonify(response)
         else:
-            # Form submission - redirect to Stripe (backward compatibility)
-            if stripe_checkout_url:
-                return redirect(stripe_checkout_url, code=303)
-            else:
-                flash('Stripe payment is not configured. Please contact support.', 'error')
-                return redirect(url_for('book_platform.investment_campaign', campaign_id=campaign_id))
+            return redirect(stripe_checkout_url, code=303)
             
     except Exception as e:
         db.session.rollback()
@@ -7619,7 +7723,7 @@ def make_investment(campaign_id):
     
     # Render form for GET requests or form validation errors
     form = InvestmentForm() if not request_data else None
-    return render_template('book_platform/make_investment.html', form=form, campaign=campaign)
+    return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
 
 # Earnings Dashboard
 @book_bp.route('/earnings', methods=['GET'])
@@ -8429,6 +8533,7 @@ def reviewer_earnings_by_book(book_id):
                          total_earnings=sum(e.amount for e in earnings))
 
 # Retired: sale-linked funder returns
+@book_bp.route('/campaigns/my-returns/<int:book_id>', methods=['GET'])
 @book_bp.route('/investments/my-returns/<int:book_id>', methods=['GET'])
 @login_required
 def investor_returns_by_book(book_id):
@@ -8440,8 +8545,8 @@ def investor_returns_by_book(book_id):
             book_project_id=book_id, investor_id=bp_user.id
         ).first()
         if investment and investment.campaign_id:
-            return redirect(url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id))
-    return redirect(url_for('book_platform.investments'))
+            return redirect(url_for('book_platform.campaign_detail', campaign_id=investment.campaign_id))
+    return redirect(url_for('book_platform.campaigns'))
 
 # Accountability & Refund Routes
 @book_bp.route('/books/<int:book_id>/accountability', methods=['GET'])
@@ -8552,18 +8657,19 @@ def request_campaign_fund_release(book_id):
     return redirect(url_for('book_platform.book_accountability_status', book_id=book_id))
 
 
-# Investor refund request (only before first draft is out)
-@book_bp.route('/investments/<int:investment_id>/request-refund', methods=['POST'])
+# Patron contribution refund request (only before first draft is out)
+@book_bp.route('/contributions/<int:contribution_id>/request-refund', methods=['POST'])
+@book_bp.route('/investments/<int:contribution_id>/request-refund', methods=['POST'])
 @login_required
-def request_investment_refund(investment_id):
-    """Investor requests refund - only allowed before first draft is completed (25k+ words)"""
+def request_contribution_refund(contribution_id):
+    """Patron requests refund — only allowed before first draft is completed (25k+ words)."""
     from glconnect.book_platform_models import BookInvestment, RefundRequest, TransactionStatus
     from glconnect.accountability_service import FIRST_DRAFT_MIN_WORDS
     
     investment = BookInvestment.query.options(
         joinedload(BookInvestment.book_project),
         joinedload(BookInvestment.campaign)
-    ).get_or_404(investment_id)
+    ).get_or_404(contribution_id)
     
     user_profile, profile_type = get_user_profile()
     if not user_profile:
@@ -8571,14 +8677,14 @@ def request_investment_refund(investment_id):
     
     investor_id = get_profile_id(user_profile, profile_type)
     if investment.investor_id != investor_id:
-        return jsonify({'error': 'Not your investment'}), 403
+        return jsonify({'error': 'Not your contribution'}), 403
     
     if investment.status == InvestmentStatus.REFUNDED:
-        return jsonify({'error': 'Investment already refunded'}), 400
+        return jsonify({'error': 'Contribution already refunded'}), 400
     
     # Check for existing pending refund
     pending = RefundRequest.query.filter_by(
-        investment_id=investment_id,
+        investment_id=contribution_id,
         status=TransactionStatus.PENDING
     ).first()
     if pending:
@@ -8599,45 +8705,49 @@ def request_investment_refund(investment_id):
         return jsonify({'error': f'First draft is complete ({word_count:,} words). Refunds only available before first draft.'}), 400
     
     refund = RefundRequest(
-        investment_id=investment_id,
+        investment_id=contribution_id,
         amount=investment.amount,
         currency=investment.currency or 'USD',
-        reason='Investor requested refund (before first draft)',
+        reason='Patron requested refund (before first draft)',
         status=TransactionStatus.PENDING
     )
     db.session.add(refund)
     db.session.commit()
     
-    logger.info(f"Investor refund request {refund.id} for investment {investment_id}")
+    logger.info(f"Patron refund request {refund.id} for contribution {contribution_id}")
     if request.is_json or request.content_type == 'application/json':
         return jsonify({
             'success': True,
             'message': f'Refund request of ${investment.amount:.2f} submitted. Admin will process it shortly.'
         })
     flash(f'Refund request of ${investment.amount:.2f} submitted. Admin will process it shortly.', 'success')
-    return redirect(url_for('book_platform.investment_refund_status', investment_id=investment_id))
+    return redirect(url_for('book_platform.contribution_refund_status', contribution_id=contribution_id))
 
 
-@book_bp.route('/investments/<int:investment_id>/refund-status', methods=['GET'])
+@book_bp.route('/contributions/<int:contribution_id>/refund-status', methods=['GET'])
+@book_bp.route('/investments/<int:contribution_id>/refund-status', methods=['GET'])
 @login_required
-def investment_refund_status(investment_id):
-    """View refund status for an investment"""
+def contribution_refund_status(contribution_id):
+    """View refund status for a patron contribution."""
+    legacy = _maybe_redirect_legacy_investments_url(contribution_id=contribution_id)
+    if legacy:
+        return legacy
     from glconnect.book_platform_models import BookInvestment, RefundRequest
     
     investment = BookInvestment.query.options(
         joinedload(BookInvestment.book_project),
         joinedload(BookInvestment.campaign)
-    ).get_or_404(investment_id)
+    ).get_or_404(contribution_id)
     
     user_profile, profile_type = get_user_profile()
     if not user_profile:
         flash('You need a profile to view this page.', 'error')
-        return redirect(url_for('book_platform.investments'))
+        return redirect(url_for('book_platform.campaigns'))
     
     investor_id = get_profile_id(user_profile, profile_type)
     if investment.investor_id != investor_id:
-        flash('You can only view your own investment refunds.', 'error')
-        return redirect(url_for('book_platform.investments'))
+        flash('You can only view your own contribution refunds.', 'error')
+        return redirect(url_for('book_platform.campaigns'))
     
     # Check if refund allowed (before first draft, no pending refund)
     from glconnect.accountability_service import FIRST_DRAFT_MIN_WORDS
@@ -8647,6 +8757,9 @@ def investment_refund_status(investment_id):
     except Exception:
         pass
     word_count = (investment.book_project.word_count or 0)
+    refunds = RefundRequest.query.filter_by(investment_id=contribution_id).order_by(
+        RefundRequest.created_at.desc()
+    ).all()
     has_pending = any(r.status == TransactionStatus.PENDING for r in refunds)
     can_request_refund = (
         word_count < FIRST_DRAFT_MIN_WORDS
@@ -8654,12 +8767,9 @@ def investment_refund_status(investment_id):
         and not has_pending
     )
     
-    refunds = RefundRequest.query.filter_by(investment_id=investment_id).order_by(
-        RefundRequest.created_at.desc()
-    ).all()
-    
-    return render_template('book_platform/investment_refund_status.html',
+    return render_template('book_platform/contribution_refund_status.html',
                          investment=investment,
+                         contribution=investment,
                          refunds=refunds,
                          can_request_refund=can_request_refund,
                          first_draft_min_words=FIRST_DRAFT_MIN_WORDS)
@@ -10172,6 +10282,8 @@ def admin_stripe_diagnostics():
         normalize_stripe_secret_candidate,
         process_env_has_stripe_secret,
         stripe_secret_configured,
+        detect_server_outbound_ip,
+        probe_stripe_server_key,
     )
 
     def classify(v):
@@ -10198,6 +10310,12 @@ def admin_stripe_diagnostics():
         'STRIPE_KEY': classify(os.getenv('STRIPE_KEY')),
         'STRIPE_PRIVATE_KEY': classify(os.getenv('STRIPE_PRIVATE_KEY')),
     }
+    outbound_ip = detect_server_outbound_ip()
+    stripe_probe = probe_stripe_server_key(current_app)
+    ip_restricted = (
+        not stripe_probe.get('ok')
+        and (stripe_probe.get('details') or {}).get('operator_error_code') == 'STRIPE_KEY_IP_RESTRICTED'
+    )
     return jsonify({
         'STRIPE_SECRET_KEY': sk_meta,
         'STRIPE_API_KEY': api_meta,
@@ -10205,9 +10323,21 @@ def admin_stripe_diagnostics():
         'app_config_has_secret': app_config_has_secret,
         'process_env_has_sk': process_env_has_stripe_secret(),
         'ready_for_checkout': stripe_secret_configured(current_app),
-        'hint': 'If app_config_has_secret is false but process_env_has_sk is true, keys may exist only in os.environ. '
+        'outbound_ip': outbound_ip,
+        'stripe_key_probe': stripe_probe,
+        'stripe_ip_allowlist_ok': stripe_probe.get('ok') is True,
+        'stripe_ip_restricted': ip_restricted,
+        'hint': (
+            'Add outbound_ip to your Stripe secret key IP allowlist (Dashboard → Developers → API keys → '
+            'Manage IP restrictions). Use the host egress IP below — not glc.cool’s public address. '
+            'After updating Stripe, retry patron checkout.'
+            if ip_restricted
+            else (
+                'If app_config_has_secret is false but process_env_has_sk is true, keys may exist only in os.environ. '
                 'If ready_for_checkout is false, set a *secret* key (sk_...) in the production host environment '
-                '(e.g. STRIPE_SECRET_KEY) and restart — a local .env is not used by glc.cool unless the server loads it.',
+                '(e.g. STRIPE_SECRET_KEY) and restart.'
+            )
+        ),
     })
 
 

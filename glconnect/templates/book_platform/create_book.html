@@ -45,7 +45,7 @@
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.investments') }}"><i class="fas fa-seedling me-1" aria-hidden="true"></i>Discover campaigns</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.campaigns') }}"><i class="fas fa-seedling me-1" aria-hidden="true"></i>Discover campaigns</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}"><i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Earnings</a>
@@ -130,11 +130,6 @@
                                     <div id="createCoverPreviewStatus" class="small text-muted mb-2" aria-live="polite"></div>
                                     <img id="createCoverPreviewImg" alt="AI cover preview" class="img-fluid rounded border d-none" style="max-height: 260px;">
                                 </div>
-                            </div>
-
-                            <div class="alert alert-light border mb-3">
-                                <h6 class="alert-heading"><i class="fas fa-headphones me-2"></i>Audiobook later</h6>
-                                <p class="small mb-0">After you add and publish chapters, open <strong>Edit book</strong> to generate an <strong>AI audiobook</strong> from your chapter text—chapter-by-chapter listening when you’re ready.</p>
                             </div>
 
                             <div class="row">
@@ -262,10 +257,6 @@
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
                                 <strong>Writing in Ink Studio:</strong> Sections you write here can go to the marketplace with optional AI audiobook. Already have a PDF or EPUB? Use <a href="{{ url_for('book_platform.upload_digital_book') }}" aria-label="List a book on the marketplace">List</a> instead—no need to retype your manuscript.
-                            </div>
-                            <div class="alert alert-light border small mb-0">
-                                <i class="fas fa-users me-1 text-info"></i>
-                                <strong>Editors &amp; beta readers:</strong> After your book is created, open it in Ink Studio and use <strong>Editors &amp; beta readers</strong> to invite people by email (editor, beta reader, or co-author roles).
                             </div>
 
                             <div class="d-grid gap-2">

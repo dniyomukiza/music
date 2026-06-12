@@ -1,4 +1,4 @@
-{# ink_nav_active: books | marketplace | earnings | my_campaigns | investments | content | dashboard (freelancer home) #}
+{# ink_nav_active: books | marketplace | earnings | my_campaigns | campaigns | content | dashboard (freelancer home) #}
 {% set _active = ink_nav_active|default('') %}
 {% set _author = is_author|default(ink_nav_show_author_nav|default(false)) %}
 {% set _dash_url = ink_studio_home_url|default(url_for('book_platform.my_library')) %}
@@ -35,11 +35,10 @@
                         <li><a class="dropdown-item{% if _active == 'content' %} active{% endif %}" href="{{ url_for('book_platform.content_hub') }}">Content hub</a></li>
                         {% if _author %}
                         <li><a class="dropdown-item{% if _active == 'my_campaigns' %} active{% endif %}" href="{{ url_for('book_platform.author_my_campaigns') }}">My campaigns</a></li>
-                        <li><a class="dropdown-item{% if _active == 'investments' %} active{% endif %}" href="{{ url_for('book_platform.investments') }}">Discover campaigns</a></li>
                         {% else %}
-                        <li><a class="dropdown-item{% if _active == 'investments' %} active{% endif %}" href="{{ url_for('book_platform.investments') }}">Book campaigns</a></li>
+                        <li><a class="dropdown-item{% if _active == 'campaigns' %} active{% endif %}" href="{{ url_for('book_platform.campaigns') }}">Book campaigns</a></li>
                         {% endif %}
-                        {% if ink_nav_show_my_library|default(false) %}
+                        {% if ink_nav_show_my_library|default(false) and not _author %}
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.my_library') }}">My library</a></li>
                         {% endif %}
                         {% if current_user.role == 'admin' %}

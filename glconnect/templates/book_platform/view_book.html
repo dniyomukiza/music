@@ -76,7 +76,7 @@
                         {% endif %}
                         <span class="ink-studio-meta-chip"><i class="fas fa-keyboard"></i> {{ book.word_count or 0 }} words</span>
                         {% if not book.digital_file_path %}
-                        <span class="ink-studio-meta-chip"><i class="fas fa-list-ol"></i> {{ chapters|length }} chapters</span>
+                        <span class="ink-studio-meta-chip"><i class="fas fa-list-ol"></i> {{ format_manuscript_summary(chapters) }}</span>
                         {% endif %}
                         {% if book.price and book.price > 0 %}
                         <span class="ink-studio-meta-chip"><i class="fas fa-tag"></i> ${{ "%.2f"|format(book.price) }}</span>
@@ -116,34 +116,6 @@
             </div>
         </header>
 
-        {% if is_author|default(True) %}
-        <!-- Journey: where you are at a glance -->
-        <section class="ink-studio-journey" aria-label="Book progress">
-            <div class="ink-journey-step {% if has_listing_cover %}is-done{% else %}is-issue{% endif %}">
-                <div class="step-icon"><i class="fas fa-image" aria-hidden="true"></i></div>
-                <div class="step-label">Cover</div>
-                <p class="step-hint">{% if has_listing_cover %}Ready for storefront{% else %}Add in Book settings{% endif %}</p>
-            </div>
-            <div class="ink-journey-step {% if manuscript_ready %}is-done{% else %}is-active{% endif %}">
-                <div class="step-icon"><i class="fas fa-feather-alt" aria-hidden="true"></i></div>
-                <div class="step-label">{% if book.digital_file_path %}Manuscript file{% else %}Manuscript{% endif %}</div>
-                <p class="step-hint">{% if manuscript_ready %}{% if book.digital_file_path %}Uploaded{% else %}{{ chapters|length }} chapter(s){% endif %}{% else %}Start your first chapter{% endif %}</p>
-            </div>
-            <div class="ink-journey-step {% if book.has_audiobook %}is-done{% elif latest_audio_task and latest_audio_task.status in ('pending', 'processing') %}is-active{% elif latest_audio_task and latest_audio_task.status == 'failed' %}is-issue{% else %}{% endif %}" id="authorAudiobookJourneyStep">
-                <div class="step-icon"><i class="fas fa-headphones" aria-hidden="true"></i></div>
-                <div class="step-label">Audiobook</div>
-                <p class="step-hint" data-journey-audio-hint>
-                    {% if book.has_audiobook %}Listeners can hear your story{% elif latest_audio_task and latest_audio_task.status in ('pending', 'processing') %}Generating…{% elif latest_audio_task and latest_audio_task.status == 'failed' %}Needs attention{% else %}Optional — cultural layer{% endif %}
-                </p>
-            </div>
-            <div class="ink-journey-step {% if book.status.value == 'published' %}is-done{% elif listing_ready %}is-active{% else %}{% endif %}">
-                <div class="step-icon"><i class="fas fa-store" aria-hidden="true"></i></div>
-                <div class="step-label">Marketplace</div>
-                <p class="step-hint">{% if book.status.value == 'published' %}Live{% elif listing_ready %}Ready to publish{% else %}Cover + price required{% endif %}</p>
-            </div>
-        </section>
-        {% endif %}
-
         <div class="row g-4">
             <!-- Primary workspace -->
             <div class="col-lg-8">
@@ -151,7 +123,7 @@
                 <div class="ink-resume-banner" role="region" aria-label="Resume writing">
                     <div>
                         <div class="small text-uppercase fw-semibold text-warning mb-1">Pick up where you left off</div>
-                        <div class="fw-semibold">Chapter {{ resume_ch.chapter.chapter_number }}: {{ resume_ch.chapter.title }}</div>
+                        <div class="fw-semibold">{{ resume_ch.chapter.title }}</div>
                         <div class="small text-muted">Last updated {{ resume_ch.chapter.updated_at.strftime('%b %d, %Y at %I:%M %p') if resume_ch.chapter.updated_at else 'recently' }}</div>
                     </div>
                     <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=resume_ch.chapter.id) }}" class="btn btn-ink-gold">
@@ -164,7 +136,12 @@
                 <!-- Manuscript / chapters -->
                 <section class="ink-studio-panel" aria-labelledby="manuscript-heading">
                     <div class="ink-studio-panel-header">
-                        <h2 id="manuscript-heading"><i class="fas fa-feather-alt me-2 text-warning"></i>Manuscript</h2>
+                        <div>
+                            <h2 id="manuscript-heading" class="mb-0"><i class="fas fa-feather-alt me-2 text-warning"></i>Manuscript</h2>
+                            {% if chapters %}
+                            <p class="small text-muted mb-0 mt-1">{{ format_manuscript_summary(chapters) }} in reading order</p>
+                            {% endif %}
+                        </div>
                         {% if is_author|default(True) %}
                         <div class="d-flex gap-2 flex-wrap">
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-sm btn-outline-light">
@@ -176,13 +153,15 @@
                     <div class="ink-studio-panel-body">
                         {% if chapters %}
                         <div class="d-flex flex-column gap-1">
-                            {% for chapter in chapters %}
-                            <article class="ink-chapter-row {% if not chapter.is_published %}is-draft-chapter{% endif %}">
-                                <div class="ink-chapter-num" aria-hidden="true">{{ chapter.chapter_number }}</div>
+                            {% for row in manuscript_section_rows(chapters) %}
+                            {% set chapter = row.chapter %}
+                            <article class="ink-chapter-row {% if not chapter.is_published %}is-draft-chapter{% endif %}{% if row.kind != 'chapter' %} is-manuscript-section{% endif %}">
+                                <div class="ink-chapter-num{% if row.kind != 'chapter' %} ink-chapter-num--section{% endif %}" aria-hidden="true" title="{{ row.kind_label }}">{{ row.display_num }}</div>
                                 <div class="ink-chapter-meta">
                                     <p class="chapter-title">{{ chapter.title }}</p>
                                     <p class="chapter-sub">
-                                        {{ chapter.word_count or 0 }} words
+                                        <span class="text-muted">{{ row.kind_label }}</span>
+                                        · {{ chapter.word_count or 0 }} words
                                         · {% if chapter.is_published %}<span class="text-success">Complete</span>{% else %}<span class="text-warning">In progress</span>{% endif %}
                                         {% if chapter.updated_at %} · {{ chapter.updated_at.strftime('%b %d') }}{% endif %}
                                     </p>
@@ -264,7 +243,7 @@
                             </audio>
                         </div>
                         {% elif is_author|default(True) %}
-                        <p class="small text-muted mt-3 mb-0"><i class="fas fa-info-circle me-1"></i>Add an audiobook in <strong>Book settings</strong> to reach listeners who prefer audio.</p>
+                        <p class="small text-muted mt-3 mb-0"><i class="fas fa-info-circle me-1"></i>Add an audiobook on the <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">audiobook page</a> to reach listeners who prefer audio.</p>
                         {% endif %}
                     </div>
                 </section>
@@ -275,7 +254,8 @@
                 <section class="ink-studio-panel" aria-labelledby="status-detail-heading">
                     <div class="ink-studio-panel-header">
                         <h3 id="status-detail-heading" class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Status details</h3>
-                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}#audiobook-section" class="btn btn-sm btn-outline-light">Book settings</a>
+                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Edit manuscript</a>
+                        <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Audiobook</a>
                     </div>
                     <div class="ink-studio-panel-body">
                         {% set cover_is_ai = book.cover_image and ('ai_cover_' in (book.cover_image or '')) %}
@@ -294,7 +274,7 @@
                                     <span class="fs-5 {% if manuscript_ready %}text-success{% else %}text-warning{% endif %}">{% if manuscript_ready %}<i class="fas fa-check-circle"></i>{% else %}<i class="fas fa-pen"></i>{% endif %}</span>
                                     <div>
                                         <div class="fw-semibold small">Content</div>
-                                        <div class="small text-muted mb-0">{% if manuscript_ready %}{% if book.digital_file_path %}File on file{% else %}{{ chapters|length }} chapters{% endif %}{% else %}Add chapters or upload{% endif %}</div>
+                                        <div class="small text-muted mb-0">{% if manuscript_ready %}{% if book.digital_file_path %}File on file{% else %}{{ format_manuscript_summary(chapters) }}{% endif %}{% else %}Add sections or upload{% endif %}</div>
                                     </div>
                                 </div>
                             </div>
@@ -325,7 +305,7 @@
                                     <span class="fs-5 text-secondary"><i class="fas fa-headphones"></i></span>
                                     <div class="flex-grow-1">
                                         <div class="fw-semibold small">Audiobook</div>
-                                        <div class="small text-muted mb-0" data-a11y-status-body>Not started — Book settings → Audiobook</div>
+                                        <div class="small text-muted mb-0" data-a11y-status-body>Not started — <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">Open audiobook studio</a></div>
                                     </div>
                                     {% endif %}
                                 </div>
@@ -349,51 +329,6 @@
             <div class="col-lg-4">
                 <aside class="ink-studio-rail">
                     {% if is_author|default(True) %}
-                    <div class="ink-studio-panel ink-rail-actions">
-                        <div class="ink-studio-panel-header">
-                            <h3 class="mb-0 h6">Actions</h3>
-                        </div>
-                        <div class="ink-studio-panel-body d-grid gap-2">
-                            {% if not book.digital_file_path %}
-                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-light">
-                                <i class="fas fa-pen-nib me-2"></i>Continue writing
-                            </a>
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-outline-light">
-                                <i class="fas fa-plus me-2"></i>Add section
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-light">
-                                <i class="fas fa-sliders-h me-2"></i>Book settings
-                            </a>
-                            {% endif %}
-                            <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-light">
-                                <i class="fas fa-bullhorn me-2"></i>Publicity &amp; media
-                            </a>
-                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}#audiobook-section" class="btn btn-outline-light">
-                                <i class="fas fa-headphones me-2"></i>Audiobook studio
-                            </a>
-                            {% if not book.digital_file_path %}
-                            <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-light">
-                                <i class="fas fa-users me-2"></i>Editors &amp; beta readers
-                            </a>
-                            {% endif %}
-                            {% if investment_campaign and investment_campaign.status.value == 'funded' %}
-                            <a href="{{ url_for('book_platform.book_accountability_status', book_id=book.id) }}" class="btn btn-outline-info">
-                                <i class="fas fa-seedling me-2"></i>Campaign funds
-                            </a>
-                            {% endif %}
-                            {% if book.status.value == 'draft' %}
-                            <button type="button" class="btn btn-success" onclick="publishBook()">
-                                <i class="fas fa-globe me-2"></i>Publish
-                            </button>
-                            {% elif book.status.value == 'published' %}
-                            <button type="button" class="btn btn-outline-warning" onclick="unpublishBook()">
-                                <i class="fas fa-eye-slash me-2"></i>Unpublish
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-
                     {% if not book.digital_file_path %}
                     <div class="ink-studio-panel">
                         <div class="ink-studio-panel-header">
@@ -440,7 +375,7 @@
                                 Launch campaign
                             </a>
                             {% else %}
-                            <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm">
+                            <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm">
                                 View campaign
                             </a>
                             {% endif %}
@@ -492,7 +427,7 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='book_platform.js') }}"></script>
     {% if not book.digital_file_path %}
-    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.3"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.4"></script>
     {% endif %}
     <script>
         function collectListingTermsPayload() {

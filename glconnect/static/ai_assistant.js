@@ -98,7 +98,7 @@ class AIWritingAssistant {
         toolbar.id = 'ai-toolbar';
         toolbar.className = 'ai-toolbar';
         toolbar.innerHTML = `
-            <div class="ai-toolbar-header ai-toolbar-drag-handle" title="Drag to move anywhere on screen">
+            <div class="ai-toolbar-header ai-toolbar-drag-handle" title="Drag to move horizontally or vertically">
                 <h6><i class="fas fa-grip-vertical ai-drag-grip" aria-hidden="true"></i><i class="fas fa-robot"></i> AI Assistant</h6>
                 <div class="ai-status ${this.isEnabled ? 'enabled' : 'disabled'}">
                     ${this.isEnabled ? 'Enabled' : 'Disabled'}
@@ -176,10 +176,44 @@ class AIWritingAssistant {
 
         this.setupToolbarTabs(toolbar);
         this.setupChatPanel(toolbar);
-        this.setupDraggable(toolbar);
-
-        // Add CSS
         this.addAIStyles();
+        this.setupDraggable(toolbar);
+    }
+
+    _viewportHeight() {
+        return window.visualViewport?.height ?? window.innerHeight;
+    }
+
+    _viewportWidth() {
+        return window.visualViewport?.width ?? window.innerWidth;
+    }
+
+    /**
+     * Drag bounds: full horizontal range; vertical range down to bottom of viewport
+     * (only the header strip must stay visible so the panel can be re-grabbed).
+     */
+    _getToolbarDragBounds(toolbar) {
+        const margin = 8;
+        const minVisible = 44;
+        const rect = toolbar.getBoundingClientRect();
+        const width = rect.width || toolbar.offsetWidth || 320;
+        const viewportW = this._viewportWidth();
+        const viewportH = this._viewportHeight();
+        return {
+            margin,
+            minLeft: margin,
+            maxLeft: Math.max(margin, viewportW - width - margin),
+            minTop: margin,
+            maxTop: Math.max(margin, viewportH - minVisible),
+        };
+    }
+
+    _applyToolbarPosition(toolbar, left, top) {
+        const bounds = this._getToolbarDragBounds(toolbar);
+        const x = Math.min(bounds.maxLeft, Math.max(bounds.minLeft, left));
+        const y = Math.min(bounds.maxTop, Math.max(bounds.minTop, top));
+        toolbar.style.left = `${x}px`;
+        toolbar.style.top = `${y}px`;
     }
 
     /**
@@ -191,8 +225,21 @@ class AIWritingAssistant {
 
         this.restoreToolbarPosition(toolbar);
 
+        const onPointerMove = (e) => {
+            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
+            e.preventDefault();
+            this._applyToolbarPosition(
+                toolbar,
+                e.clientX - this._dragState.offsetX,
+                e.clientY - this._dragState.offsetY
+            );
+        };
+
         const endDrag = (e) => {
             if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', endDrag);
+            window.removeEventListener('pointercancel', endDrag);
             try {
                 handle.releasePointerCapture(e.pointerId);
             } catch (_) { /* already released */ }
@@ -216,24 +263,15 @@ class AIWritingAssistant {
                 offsetY: e.clientY - rect.top,
             };
             handle.setPointerCapture(e.pointerId);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', endDrag);
+            window.addEventListener('pointercancel', endDrag);
         });
-
-        handle.addEventListener('pointermove', (e) => {
-            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
-            e.preventDefault();
-            const margin = 8;
-            const maxLeft = window.innerWidth - toolbar.offsetWidth - margin;
-            const maxTop = window.innerHeight - toolbar.offsetHeight - margin;
-            const left = Math.min(maxLeft, Math.max(margin, e.clientX - this._dragState.offsetX));
-            const top = Math.min(maxTop, Math.max(margin, e.clientY - this._dragState.offsetY));
-            toolbar.style.left = `${left}px`;
-            toolbar.style.top = `${top}px`;
-        });
-
-        handle.addEventListener('pointerup', endDrag);
-        handle.addEventListener('pointercancel', endDrag);
 
         window.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
+        }
     }
 
     _prepareToolbarForDrag(toolbar) {
@@ -281,17 +319,9 @@ class AIWritingAssistant {
 
     clampToolbarPosition(toolbar) {
         if (!toolbar.classList.contains('is-positioned')) return;
-        const margin = 8;
-        const width = toolbar.offsetWidth;
-        const height = toolbar.offsetHeight;
-        const maxLeft = Math.max(margin, window.innerWidth - width - margin);
-        const maxTop = Math.max(margin, window.innerHeight - height - margin);
         const currentLeft = parseFloat(toolbar.style.left) || 0;
         const currentTop = parseFloat(toolbar.style.top) || 0;
-        const left = Math.min(maxLeft, Math.max(margin, currentLeft));
-        const top = Math.min(maxTop, Math.max(margin, currentTop));
-        toolbar.style.left = `${left}px`;
-        toolbar.style.top = `${top}px`;
+        this._applyToolbarPosition(toolbar, currentLeft, currentTop);
     }
 
     saveToolbarPosition(toolbar) {

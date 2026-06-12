@@ -46,6 +46,18 @@
             {% set preview_name = (book_user.pen_name if book_user and book_user.pen_name else None) or current_user.username %}
 
             <header class="ink-setup-hero">
+                {% if is_collaborator_setup|default(false) %}
+                <p class="ink-setup-eyebrow mb-0">Collaboration invite</p>
+                <h1 class="ink-setup-title">Your contributor profile</h1>
+                <p class="ink-setup-lead">
+                    <strong>Save once</strong> so we can add you to the book team. Choose a display name (pen name); photo and bio are optional. Your email stays private.
+                </p>
+                <div class="ink-setup-trust" role="list">
+                    <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-users" aria-hidden="true"></i> Shown to the author and team</span>
+                    <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-lock" aria-hidden="true"></i> Email never shown publicly</span>
+                    <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-bolt" aria-hidden="true"></i> About one minute</span>
+                </div>
+                {% else %}
                 <p class="ink-setup-eyebrow mb-0">Author onboarding</p>
                 <h1 class="ink-setup-title">Introduce yourself to readers</h1>
                 <p class="ink-setup-lead">
@@ -56,6 +68,7 @@
                     <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-lock" aria-hidden="true"></i> Email never shown to buyers</span>
                     <span class="ink-setup-trust-item" role="listitem"><i class="fas fa-bolt" aria-hidden="true"></i> About two minutes</span>
                 </div>
+                {% endif %}
             </header>
 
             <div id="inkSetupAlert" class="ink-setup-alert mb-3" role="alert" aria-live="polite" tabindex="-1"></div>

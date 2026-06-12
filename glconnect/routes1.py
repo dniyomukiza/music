@@ -107,16 +107,9 @@ def get_role_based_redirect(user):
     else:
         return redirect(url_for('book_platform.content_hub'))
 
-def _e2e_disable_recaptcha(form):
-    """Skip reCAPTCHA when E2E_TESTING=1 (Playwright/pytest suite)."""
-    if os.getenv("E2E_TESTING") == "1" and hasattr(form, "recap"):
-        form.recap.validators = []
-
-
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
-    _e2e_disable_recaptcha(form)
     raw_next = (
         request.form.get("next")
         if request.method == "POST"
@@ -274,7 +267,9 @@ def login():
             session['user_id'] = user.user_id 
             flash('Login successful!', 'success')
 
-            next_page = safe_post_auth_next(request.args.get("next"))
+            next_page = safe_post_auth_next(
+                request.args.get("next") or request.form.get("next")
+            )
             if next_page:
                 session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None)
                 return redirect(next_page)

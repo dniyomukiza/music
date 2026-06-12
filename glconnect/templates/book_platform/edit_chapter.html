@@ -156,16 +156,28 @@
                         <form id="editChapterForm">
                             <div class="row">
                                 <div class="col-md-9 mb-4">
-                                    <label for="title" class="form-label">Chapter Title *</label>
+                                    <label for="title" class="form-label">Section title *</label>
                                     <input type="text" class="form-control" id="title" name="title" required
-                                           value="{{ chapter.title }}" placeholder="Enter chapter title">
+                                           value="{{ chapter.title }}" placeholder="Enter section title">
                                 </div>
                                 <div class="col-md-3 mb-4">
-                                    <label for="chapter_number" class="form-label">Chapter No.</label>
+                                    <label for="chapter_number" class="form-label">Reading order</label>
                                     <input type="number" class="form-control" id="chapter_number" name="chapter_number" 
                                            min="1" value="{{ chapter.chapter_number }}" readonly>
                                     <small class="text-muted" style="font-size: 0.8rem;">Cannot be changed</small>
                                 </div>
+                            </div>
+
+                            {% set section_kind_value = resolve_section_kind(chapter.title, chapter.section_kind) %}
+                            <div class="mb-4">
+                                <label for="section_kind" class="form-label">Section type *</label>
+                                <select class="form-select" id="section_kind" name="section_kind" required>
+                                    <option value="chapter" {% if section_kind_value == 'chapter' %}selected{% endif %}>Content chapter (main narrative — audiobook track boundary)</option>
+                                    <option value="front" {% if section_kind_value == 'front' %}selected{% endif %}>Front matter (foreword, preface, introduction)</option>
+                                    <option value="back" {% if section_kind_value == 'back' %}selected{% endif %}>Back matter (afterword, appendix, index)</option>
+                                    <option value="other" {% if section_kind_value == 'other' %}selected{% endif %}>Other section</option>
+                                </select>
+                                <small class="text-muted">Content chapters define audiobook start/stop tracks; front and back matter are optional in audio.</small>
                             </div>
 
                             <div class="mb-4">
@@ -247,7 +259,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
-    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.3"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.4"></script>
     <script>
         let editor;
 

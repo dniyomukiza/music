@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='../static/login.css') }}">
     <form method="POST" action="">
         {{ form.hidden_tag() }}
+        {% set login_next = request.args.get('next') %}
+        {% if login_next %}
+        <input type="hidden" name="next" value="{{ login_next }}">
+        {% endif %}
         {{ form.username(placeholder="Username") }}
         {{ form.password(placeholder="Password") }}
         <div class="remember-me">

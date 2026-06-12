@@ -59,6 +59,7 @@
                                 <div class="col-md-4">
                                     {{ form.funding_goal.label(class="form-label") }}
                                     {{ form.funding_goal(class="form-control") }}
+                                    <div class="form-text">How much patron support you hope to raise to finish and publish.</div>
                                     {% if form.funding_goal.errors %}
                                         <div class="text-danger small">{{ form.funding_goal.errors[0] }}</div>
                                     {% endif %}
@@ -66,6 +67,7 @@
                                 <div class="col-md-4">
                                     {{ form.minimum_investment.label(class="form-label") }}
                                     {{ form.minimum_investment(class="form-control") }}
+                                    <div class="form-text">Smallest gift a patron can make (covers payment processing).</div>
                                     {% if form.minimum_investment.errors %}
                                         <div class="text-danger small">{{ form.minimum_investment.errors[0] }}</div>
                                     {% endif %}
@@ -73,6 +75,7 @@
                                 <div class="col-md-4">
                                     {{ form.maximum_investment.label(class="form-label") }}
                                     {{ form.maximum_investment(class="form-control") }}
+                                    <div class="form-text">Optional cap per patron. Leave blank for no limit.</div>
                                     {% if form.maximum_investment.errors %}
                                         <div class="text-danger small">{{ form.maximum_investment.errors[0] }}</div>
                                     {% endif %}
@@ -81,12 +84,17 @@
 
                             <p class="small text-muted border rounded p-3 mb-3">
                                 <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
-                                <strong>Patronage campaign:</strong> Supporters contribute to help publish this book. They do not receive a share of marketplace sales or financial returns.
+                                <strong>Patronage, not investment:</strong> Donors support your work as patrons. They do not receive royalties, profit share, or financial returns from book sales.
                             </p>
 
                             <div class="mb-3">
                                 {{ form.investment_period_days.label(class="form-label") }}
                                 {{ form.investment_period_days(class="form-control") }}
+                                <div class="form-text">
+                                    How long patrons can contribute (e.g. 30 days). When the window closes, new gifts stop—but
+                                    <strong>patrons who already gave keep their support with you</strong>. This is not all-or-nothing:
+                                    you keep what was raised even if the goal is not fully met. Use the window to focus momentum, not as a refund trigger.
+                                </div>
                                 {% if form.investment_period_days.errors %}
                                     <div class="text-danger small">{{ form.investment_period_days.errors[0] }}</div>
                                 {% endif %}

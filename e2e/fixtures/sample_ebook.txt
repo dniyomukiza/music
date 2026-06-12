@@ -1,3 +1,0 @@
-E2E Sample Ebook
-
-This is a minimal manuscript for automated marketplace listing tests.

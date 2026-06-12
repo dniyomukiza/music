@@ -216,20 +216,36 @@ class InvestmentCampaignForm(FlaskForm):
                                render_kw={"placeholder": "Tell supporters why they should back your book"})
     pitch_video_url = StringField('Pitch Video URL (Optional)', validators=[Optional(), Length(max=500)],
                                  render_kw={"placeholder": "YouTube, Vimeo, or other video link"})
-    funding_goal = FloatField('Funding Goal (USD)', validators=[DataRequired()],
+    funding_goal = FloatField('Patron goal (USD)', validators=[DataRequired()],
                              render_kw={"placeholder": "e.g., 5000.00", "step": "0.01"})
-    minimum_investment = FloatField('Minimum Contribution (USD)', validators=[DataRequired()],
-                                   render_kw={"placeholder": "e.g., 50.00", "step": "0.01"})
-    maximum_investment = FloatField('Maximum Contribution (USD)', validators=[Optional()],
-                                   render_kw={"placeholder": "e.g., 1000.00 (leave empty for no limit)", "step": "0.01"})
-    investment_period_days = IntegerField('Campaign Duration (Days)', validators=[DataRequired()], default=30,
-                                         render_kw={"placeholder": "e.g., 30"})
+    minimum_investment = FloatField(
+        'Minimum patron gift (USD)',
+        validators=[DataRequired()],
+        render_kw={
+            "placeholder": "e.g., 25.00",
+            "step": "0.01",
+        },
+    )
+    maximum_investment = FloatField(
+        'Maximum patron gift (USD, optional)',
+        validators=[Optional()],
+        render_kw={
+            "placeholder": "Leave empty for no cap per supporter",
+            "step": "0.01",
+        },
+    )
+    investment_period_days = IntegerField(
+        'Patron window (days)',
+        validators=[DataRequired()],
+        default=30,
+        render_kw={"placeholder": "e.g., 30"},
+    )
     submit = SubmitField('Launch Campaign')
     recap = RecaptchaField()
 
 # Contribution / back-a-campaign form
 class InvestmentForm(FlaskForm):
-    amount = FloatField('Contribution Amount (USD)', validators=[DataRequired()],
+    amount = FloatField('Patron gift (USD)', validators=[DataRequired()],
                        render_kw={"placeholder": "Enter amount", "step": "0.01"})
-    submit = SubmitField('Contribute Now')
+    submit = SubmitField('Continue to payment')
     recap = RecaptchaField()

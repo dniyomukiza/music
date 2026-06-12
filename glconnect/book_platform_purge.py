@@ -4,7 +4,7 @@ Destructive: remove Ink Studio book projects and related DB rows
 
 Does NOT delete users, writers, or book_platform_users.
 
-Call only via scripts/clear_all_books.py or glconnect/test_data_cleanup.py with explicit confirmations.
+Call only via scripts/clear_all_books.py with explicit confirmations.
 """
 
 from __future__ import annotations

@@ -13,6 +13,13 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from glconnect.book_utils import (
+    audiobook_default_include,
+    manuscript_section_kind,
+    resolve_section_kind,
+    section_kind_label,
+)
+
 logger = logging.getLogger(__name__)
 
 # Match news / book_cover: routes2._get_google_api_key()
@@ -30,14 +37,25 @@ def _gemini_api_key() -> Optional[str]:
     return (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip() or None
 
 
-def heuristic_section_include(title: str, preview: str) -> Tuple[bool, str]:
+def heuristic_section_include(
+    title: str,
+    preview: str,
+    section_kind: str | None = None,
+) -> Tuple[bool, str]:
     """Fast rule-based suggestion when Gemini is unavailable."""
+    kind = section_kind or manuscript_section_kind(title)
+    if kind == 'chapter':
+        return True, "Content chapter — each included chapter becomes its own audio track"
+    if kind == 'back':
+        return False, "Back matter — usually skipped for audio (appendix, index, etc.)"
+    if kind == 'front':
+        return True, "Front matter — included by default; uncheck if you do not want it narrated"
     t = (title or "").strip()
     if BACK_MATTER_TITLE.search(t):
         return False, "Title matches common back-matter / reference pattern"
     if re.search(r"(?i)\b(index|appendix|endnotes?|bibliography)\b", t) and len(t) < 100:
         return False, "Short heading suggests reference / back matter"
-    return True, "Heuristic: treat as main audiobook content"
+    return audiobook_default_include(kind), "Non-chapter section — review whether it should be spoken"
 
 
 def _parse_sections_json(content: str, expected_indices: List[int]) -> Optional[Dict[int, Dict[str, Any]]]:
@@ -135,12 +153,14 @@ def classify_sections_gemini(
     instruction = (
         "You label sections of a book for audiobook narration only. "
         "The print/ebook edition may keep index, footnotes, tables, and appendix; this task is only what should be spoken.\n"
-        "For each section, set include=true if it should be read aloud as part of the listening "
-        "experience (story, chapters, prologue, most prefaces).\n"
+        "Each section has section_kind: chapter (main narrative — defines audio start/stop tracks), "
+        "front (foreword/preface), back (afterword/appendix/index), or other.\n"
+        "For section_kind=chapter, strongly prefer include=true — these are the story boundaries.\n"
+        "For section_kind=back, prefer include=false unless the preview is short and narrative.\n"
+        "For section_kind=front, include=true is common but optional.\n"
         "Set include=false for index, appendix, endnotes, footnote collections, long data tables, "
-        "bibliography, references, acknowledgments (optional true if very short and narrative), "
-        "copyright pages, tables of contents, and long citation lists.\n"
-        "When unsure, prefer include=true.\n"
+        "bibliography, references, copyright pages, tables of contents, and long citation lists.\n"
+        "When unsure on non-chapter sections, prefer include=false.\n"
         "Respond with ONLY valid JSON (no markdown): "
         '{"sections": [{"index": number, "include": boolean, "reason": string}]}\n'
     )
@@ -153,6 +173,7 @@ def classify_sections_gemini(
                 {
                     "index": s["index"],
                     "title": (s.get("title") or "")[:400],
+                    "section_kind": s.get("section_kind") or manuscript_section_kind(s.get("title")),
                     "preview": (s.get("preview") or "")[:450],
                 }
             )
@@ -209,9 +230,15 @@ def suggest_includes_for_chapters(
 
     for i, ch in enumerate(chapters_for_audio):
         title = ch.get("title") or f"Part {i + 1}"
+        kind = ch.get("section_kind") or resolve_section_kind(title)
         body = clean_for_tts(ch.get("text") or "")
         preview = body[:preview_chars] if body else ""
-        segments_for_api.append({"index": i, "title": title, "preview": preview})
+        segments_for_api.append({
+            "index": i,
+            "title": title,
+            "section_kind": kind,
+            "preview": preview,
+        })
 
     ai_out = classify_sections_gemini(segments_for_api)
     ai_by_index: Dict[int, Tuple[bool, str]] = {}
@@ -225,17 +252,23 @@ def suggest_includes_for_chapters(
     built: List[Dict[str, Any]] = []
     for i, ch in enumerate(chapters_for_audio):
         title = ch.get("title") or f"Part {i + 1}"
+        kind = ch.get("section_kind") or resolve_section_kind(title)
         body = clean_for_tts(ch.get("text") or "")
         preview = body[:preview_chars] if body else ""
         if i in ai_by_index:
             ai_inc, ai_reas = ai_by_index[i]
         else:
-            ai_inc, ai_reas = heuristic_section_include(title, preview)
+            ai_inc, ai_reas = heuristic_section_include(title, preview, kind)
         built.append(
             {
                 "index": i,
                 "title": title[:300],
                 "preview": preview,
+                "section_kind": kind,
+                "kind_label": section_kind_label(kind),
+                "is_narrative_chapter": kind == 'chapter',
+                "narrative_chapter_index": ch.get("narrative_chapter_index"),
+                "reading_order": ch.get("reading_order", ch.get("chapter_number")),
                 "ai_include": ai_inc,
                 "ai_reason": ai_reas,
                 "include": ai_inc,

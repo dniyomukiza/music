@@ -779,3 +779,39 @@ def ensure_chapter_versions_metadata_columns(db) -> None:
         db.session.rollback()
         logger.error("Could not patch chapter_versions metadata columns: %s", e, exc_info=True)
 
+
+def ensure_book_chapter_section_kind_schema(db) -> None:
+    """Add section_kind to book_chapters for manuscript vs audiobook boundaries."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("book_chapters section_kind patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+
+    col = "section_kind"
+    try:
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_chapters ADD COLUMN IF NOT EXISTS section_kind VARCHAR(20)"
+                )
+            )
+            db.session.commit()
+            return
+
+        rows = db.session.execute(text("PRAGMA table_info(book_chapters)")).fetchall()
+        db.session.rollback()
+        names = {r[1] for r in rows}
+        if col in names:
+            return
+        db.session.execute(text("ALTER TABLE book_chapters ADD COLUMN section_kind VARCHAR(20)"))
+        db.session.commit()
+        logger.info("book_chapters.%s column added (SQLite).", col)
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch book_chapters.section_kind: %s", e, exc_info=True)
+

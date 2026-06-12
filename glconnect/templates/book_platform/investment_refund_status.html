@@ -15,7 +15,7 @@
                 <i class="fas fa-pen-fancy"></i> Ink Studio
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.investments') }}">
+                <a class="nav-link" href="{{ url_for('book_platform.campaigns') }}">
                     <i class="fas fa-seedling"></i> Discover campaigns
                 </a>
                 <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
@@ -46,7 +46,7 @@
             <div class="card-body">
                 <h5 class="mb-3"><i class="fas fa-undo me-2"></i>Request Refund</h5>
                 <p class="text-muted">First draft is not yet complete. You may request a full refund.</p>
-                <form method="POST" action="{{ url_for('book_platform.request_investment_refund', investment_id=investment.id) }}" onsubmit="return confirm('Request refund of ${{ "%.2f"|format(investment.amount) }}? Admin will process it shortly.');">
+                <form method="POST" action="{{ url_for('book_platform.request_contribution_refund', investment_id=investment.id) }}" onsubmit="return confirm('Request refund of ${{ "%.2f"|format(investment.amount) }}? Admin will process it shortly.');">
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-paper-plane me-1"></i>Request Refund
                     </button>

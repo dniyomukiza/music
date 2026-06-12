@@ -64,7 +64,7 @@
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-ink-ghost btn-lg">
                             <i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace
                         </a>
-                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-ink-ghost btn-lg">
+                        <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-ink-ghost btn-lg">
                             <i class="fas fa-seedling me-2" aria-hidden="true"></i>Discover campaigns
                         </a>
                     </div>
@@ -78,7 +78,7 @@
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-ink-ghost btn-lg">
                             <i class="fas fa-broadcast-tower me-2" aria-hidden="true"></i>Content hub
                         </a>
-                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-ink-ghost btn-lg">
+                        <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-ink-ghost btn-lg">
                             <i class="fas fa-seedling me-2" aria-hidden="true"></i>Discover campaigns
                         </a>
                     </div>
@@ -399,7 +399,7 @@
                                         <p class="small mb-0">
                                             <strong>${{ "%.2f"|format(campaign.current_funding) }}</strong> / ${{ "%.2f"|format(campaign.funding_goal) }}
                                         </p>
-                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                                        <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-primary mt-2">
                                             View Campaign
                                         </a>
                                     </div>
@@ -514,7 +514,7 @@
                                     <div class="card-body">
                                         <h6 class="card-title">{{ investment.book_project.title }}</h6>
                                         <p class="text-muted small mb-2">Contributed: ${{ "%.2f"|format(investment.amount) }}</p>
-                                        <a href="{{ url_for('book_platform.investment_campaign', campaign_id=investment.campaign_id) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment.campaign_id) }}" class="btn btn-sm btn-outline-primary">
                                             View Details
                                         </a>
                                     </div>
@@ -523,7 +523,7 @@
                             {% endfor %}
                         </div>
                         <div class="text-center mt-3">
-                            <a href="{{ url_for('book_platform.investments') }}" class="btn btn-outline-primary">
+                            <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-outline-primary">
                                 View all contributions
                             </a>
                         </div>
@@ -540,7 +540,7 @@
                         <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted mb-3">Back overlooked stories</h5>
                         <p class="text-muted mb-4">Help authors finish and publish stories that might not get a traditional deal—contributions are patron gifts, not investments.</p>
-                        <a href="{{ url_for('book_platform.investments') }}" class="btn btn-primary">
+                        <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-primary">
                             <i class="fas fa-search me-2"></i>Browse book campaigns
                         </a>
                     </div>

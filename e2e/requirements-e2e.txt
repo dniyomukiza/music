@@ -1,6 +1,0 @@
-# Ink Studio E2E test dependencies (install alongside main requirements.txt)
-pytest>=8.3.0
-pytest-playwright>=0.5.2
-pytest-xdist>=3.6.0
-playwright>=1.49.0
-python-dotenv>=1.0.1

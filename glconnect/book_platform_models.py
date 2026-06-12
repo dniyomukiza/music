@@ -201,6 +201,7 @@ class BookChapter(db.Model):
     content = db.Column(db.Text, nullable=True)  # Rich text content
     summary = db.Column(db.Text, nullable=True)  # Chapter summary
     chapter_number = db.Column(db.Integer, nullable=False)
+    section_kind = db.Column(db.String(20), nullable=True)  # front | chapter | back | other
     word_count = db.Column(db.Integer, default=0)
     word_count_target = db.Column(db.Integer, nullable=True)  # Target word count for this chapter
     is_published = db.Column(db.Boolean, default=False)

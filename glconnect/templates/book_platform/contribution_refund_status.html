@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refund status — patron gift #{{ contribution.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
+</head>
+<body class="ink-workspace ink-invest">
+    <div class="ink-workspace-bg" aria-hidden="true"></div>
+    {% include 'book_platform/includes/_ink_studio_nav.html' %}
+
+    <div class="container my-5" style="position:relative;z-index:1;">
+        <h1 class="mb-4"><i class="fas fa-money-bill-wave me-2"></i>Patron gift refund</h1>
+        <p class="lead text-white-50">Refunds are available only before the first draft is completed ({{ "{:,}".format(first_draft_min_words) }}+ words).</p>
+
+        <div class="ink-camp-panel mb-4">
+            <h5 class="text-white">{{ contribution.book_project.title if contribution.book_project else 'Unknown book' }}</h5>
+            <p class="mb-0 text-white-50">
+                <strong class="text-white">${{ "%.2f"|format(contribution.amount) }}</strong> {{ contribution.currency }}
+                <span class="badge bg-{% if contribution.status.value == 'active' %}success{% elif contribution.status.value == 'refunded' %}danger{% else %}secondary{% endif %} ms-2">
+                    {{ contribution.status.value|title }}
+                </span>
+            </p>
+        </div>
+
+        {% if can_request_refund %}
+        <div class="ink-camp-panel mb-4 border border-success border-opacity-25">
+            <h5 class="text-white mb-3"><i class="fas fa-undo me-2"></i>Request refund</h5>
+            <p class="text-white-50">First draft is not yet complete. You may request a full refund of your patron gift.</p>
+            <form method="POST" action="{{ url_for('book_platform.request_contribution_refund', contribution_id=contribution.id) }}" onsubmit="return confirm('Request refund of ${{ "%.2f"|format(contribution.amount) }}? Admin will process it shortly.');">
+                <button type="submit" class="btn ink-mp-cta">
+                    <i class="fas fa-paper-plane me-1"></i>Request refund
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="ink-camp-panel">
+            <h5 class="text-white mb-3"><i class="fas fa-list me-2"></i>Refund requests</h5>
+            {% if refunds %}
+            <div class="table-responsive">
+                <table class="table table-dark table-borderless mb-0">
+                    <thead>
+                        <tr class="text-white-50 small">
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for refund in refunds %}
+                        <tr>
+                            <td class="text-white-50">{{ refund.requested_at.strftime('%b %d, %Y') if refund.requested_at else 'N/A' }}</td>
+                            <td class="text-white">${{ "%.2f"|format(refund.amount) }}</td>
+                            <td><span class="badge bg-{% if refund.status.value == 'completed' %}success{% elif refund.status.value == 'pending' %}warning{% else %}secondary{% endif %}">{{ refund.status.value|title }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-white-50 mb-0">No refund requests for this patron gift.</p>
+            {% endif %}
+        </div>
+
+        <p class="small text-white-50 mt-4 mb-0">
+            <a href="{{ url_for('book_platform.campaigns') }}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Discover campaigns</a>
+        </p>
+    </div>
+    {% include 'includes/_ndotonic_mission_footer.html' %}
+</body>
+</html>

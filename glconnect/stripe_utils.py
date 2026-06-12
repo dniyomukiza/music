@@ -194,7 +194,69 @@ def describe_stripe_checkout_error(
             )
         d["operator_error_code"] = "STRIPE_BUSINESS_NAME_REQUIRED"
 
+    if "does not allow requests from your ip" in msg or (
+        "ip address" in msg and "api key" in msg
+    ):
+        d["operator_error_code"] = "STRIPE_KEY_IP_RESTRICTED"
+        d["hint"] = (
+            "Stripe rejected this request because the server's outbound IP is not on the "
+            "secret key's IP allowlist. Open Stripe Dashboard → Developers → API keys → "
+            "your secret key → Manage IP restrictions, and add the app's outbound IP "
+            "(not the public website URL). Use GET /mybook/admin/stripe-diagnostics as admin "
+            "to see outbound_ip on this host. "
+            "https://docs.stripe.com/keys#limit-api-secret-keys-ip-address"
+        )
+        d["patron_message"] = (
+            "Payment could not be started due to a server configuration issue. "
+            "Please try again later or contact the site operator."
+        )
+
     return d
+
+
+def detect_server_outbound_ip(timeout: float = 5.0) -> Optional[str]:
+    """
+    Best-effort public IPv4/IPv6 seen by the internet when this host calls outbound HTTPS.
+    Use this value in Stripe secret key IP allowlists (Render egress ≠ inbound glc.cool IP).
+    """
+    import urllib.request
+
+    for url in (
+        "https://api.ipify.org",
+        "https://ifconfig.me/ip",
+        "https://checkip.amazonaws.com",
+    ):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "InkStudio-StripeDiagnostics/1.0"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                ip = (resp.read() or b"").decode("utf-8", errors="ignore").strip()
+                if ip and len(ip) <= 45:
+                    return ip
+        except Exception as exc:
+            logger.debug("Outbound IP lookup failed via %s: %s", url, exc)
+    return None
+
+
+def probe_stripe_server_key(app) -> Dict[str, Any]:
+    """
+    Lightweight Stripe API call to verify the configured secret key works from this host
+    (including IP allowlist). No secrets returned.
+    """
+    sk = get_stripe_server_secret_key(app)
+    if not sk:
+        return {"ok": False, "reason": "no_secret_key"}
+    try:
+        import stripe as stripe_mod
+
+        stripe_mod.api_key = sk
+        stripe_mod.Balance.retrieve()
+        return {"ok": True}
+    except Exception as exc:
+        return {
+            "ok": False,
+            "reason": "stripe_api_error",
+            "details": describe_stripe_checkout_error(exc),
+        }
 
 
 def purchase_checkout_unavailable_response(
@@ -238,10 +300,13 @@ def purchase_checkout_unavailable_response(
         details = describe_stripe_checkout_error(
             exc, stripe_connect_account_id=stripe_connect_account_id
         )
+        patron_msg = details.get("patron_message")
         payload = {
             "success": False,
-            "error": "Stripe did not create a checkout session. See 'details' and server logs.",
-            "error_code": "STRIPE_CHECKOUT_FAILED",
+            "error": patron_msg or (
+                "Payment could not be started. Please try again later or contact the site operator."
+            ),
+            "error_code": details.get("operator_error_code") or "STRIPE_CHECKOUT_FAILED",
             "details": details,
         }
         if details.get("hint"):
