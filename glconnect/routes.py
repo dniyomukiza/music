@@ -148,6 +148,7 @@ def health():
     """
     payload = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
+        'e2e_testing': os.getenv('E2E_TESTING') == '1',
     }
     try:
         process = psutil.Process(os.getpid())

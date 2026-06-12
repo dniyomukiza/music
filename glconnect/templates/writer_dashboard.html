@@ -12,7 +12,7 @@
         <!-- Writer Platform Actions -->
         <div class="platform-actions">
             <h3>Writer Platform</h3>
-            <a href="{{ url_for('writer.writer_profile') }}" class="btn btn-primary">Edit Profile</a>
+            <a href="{{ url_for('book_platform.setup_profile') }}" class="btn btn-primary">Edit Profile</a>
             <form method="POST" action="{{ url_for('writer.delete_profile') }}" style="display:inline;">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete your profile? This action cannot be undone.')">Delete Profile</button>
             </form>

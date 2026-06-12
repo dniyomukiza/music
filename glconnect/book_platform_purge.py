@@ -1,28 +1,49 @@
 """
-Destructive: remove every Ink Studio book project and all related rows
+Destructive: remove Ink Studio book projects and related DB rows
 (investments, campaigns, sales, purchases, distributions, reviews, chapters, …).
 
 Does NOT delete users, writers, or book_platform_users.
 
-Call only via scripts/clear_all_books.py with explicit env confirmations.
+Call only via scripts/clear_all_books.py or glconnect/test_data_cleanup.py with explicit confirmations.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Sequence
 
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 
 logger = logging.getLogger(__name__)
 
 
-def purge_all_book_projects(db) -> Dict[str, Any]:
-    """
-    Delete all BookProject rows and dependent book-platform data.
+def _delete_legacy_book_cart_rows(db, book_id: int) -> None:
+    """Best-effort cleanup of legacy book_cart_items rows if the table still exists."""
+    try:
+        with db.session.begin_nested():
+            db.session.execute(
+                text("DELETE FROM book_cart_items WHERE book_project_id = :bid"),
+                {"bid": int(book_id)},
+            )
+    except Exception:
+        pass
 
-    Returns a summary dict with counts (best-effort).
+
+def purge_book_projects_by_ids(
+    db,
+    book_ids: Sequence[int],
+    *,
+    commit: bool = True,
+    clear_all_author_sales_payout_requests: bool = False,
+    author_ids_for_sales_payouts: Optional[Sequence[int]] = None,
+) -> Dict[str, Any]:
     """
+    Delete BookProject rows (by id) and all dependent book-platform data.
+
+    :param clear_all_author_sales_payout_requests: Only for full-table purge (legacy behaviour).
+    :param author_ids_for_sales_payout_requests: Scope sales payout cleanup to these authors.
+    """
+    from glconnect.book_utils import delete_book_chapter_version_graph_for_project
     from glconnect.book_platform_models import (
         AudioGenerationTask,
         AudiobookChapter,
@@ -54,13 +75,15 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
         ReviewRequest,
     )
 
-    book_ids: List[int] = [r[0] for r in db.session.query(BookProject.id).all()]
+    book_ids = sorted({int(b) for b in book_ids})
     summary: Dict[str, Any] = {"book_project_ids": len(book_ids)}
     if not book_ids:
-        summary["message"] = "No book_projects rows; nothing to do."
+        summary["message"] = "No book_projects ids; nothing to do."
         return summary
 
-    # --- Investments & campaigns ---
+    for bid in book_ids:
+        _delete_legacy_book_cart_rows(db, bid)
+
     camp_ids = [
         r[0]
         for r in db.session.query(InvestmentCampaign.id)
@@ -116,7 +139,6 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
     )
     summary["investment_campaigns_deleted"] = n
 
-    # --- Sales & revenue ---
     sale_ids = [
         r[0]
         for r in db.session.query(BookSale.id)
@@ -163,7 +185,6 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
     )
     summary["book_purchases_deleted"] = n
 
-    # --- Reviews (earnings first) ---
     review_ids = [
         r[0]
         for r in db.session.query(BookReview.id)
@@ -188,7 +209,6 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
     )
     summary["review_requests_deleted"] = n
 
-    # --- Misc per-book ---
     for model, key in (
         (ReaderAnnotation, "reader_annotations_deleted"),
         (LibraryBookHide, "library_book_hides_deleted"),
@@ -225,7 +245,9 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
     )
     summary["book_collaborations_deleted"] = n
 
-    # --- Chapters & versions ---
+    for bid in book_ids:
+        delete_book_chapter_version_graph_for_project(bid)
+
     chapter_ids = [
         r[0]
         for r in db.session.query(BookChapter.id)
@@ -268,22 +290,45 @@ def purge_all_book_projects(db) -> Dict[str, Any]:
     )
     summary["book_versions_deleted"] = n
 
-    # --- Stale author withdrawal rows (sales are gone) ---
     try:
         from glconnect.book_platform_models import AuthorSalesPayoutRequest
 
-        n = db.session.query(AuthorSalesPayoutRequest).delete(synchronize_session=False)
-        summary["author_sales_payout_requests_deleted"] = n
+        if clear_all_author_sales_payout_requests:
+            n = db.session.query(AuthorSalesPayoutRequest).delete(synchronize_session=False)
+            summary["author_sales_payout_requests_deleted"] = n
+        elif author_ids_for_sales_payouts:
+            n = (
+                AuthorSalesPayoutRequest.query.filter(
+                    AuthorSalesPayoutRequest.author_id.in_(list(author_ids_for_sales_payouts))
+                ).delete(synchronize_session=False)
+            )
+            summary["author_sales_payout_requests_deleted"] = n
     except Exception as exc:
         logger.warning("Could not clear author_sales_payout_requests: %s", exc)
         summary["author_sales_payout_requests_deleted"] = "skipped"
 
-    # --- Books ---
     n = (
         BookProject.query.filter(BookProject.id.in_(book_ids))
         .delete(synchronize_session=False)
     )
     summary["book_projects_deleted"] = n
-    db.session.commit()
-    summary["message"] = "Purge complete."
+
+    if commit:
+        db.session.commit()
+    summary["message"] = "Book purge complete."
     return summary
+
+
+def purge_all_book_projects(db) -> Dict[str, Any]:
+    """Delete all BookProject rows and dependent book-platform data."""
+    from glconnect.book_platform_models import BookProject
+
+    book_ids: List[int] = [r[0] for r in db.session.query(BookProject.id).all()]
+    if not book_ids:
+        return {"book_project_ids": 0, "message": "No book_projects rows; nothing to do."}
+    return purge_book_projects_by_ids(
+        db,
+        book_ids,
+        commit=True,
+        clear_all_author_sales_payout_requests=True,
+    )

@@ -1,0 +1,34 @@
+{# Canonical scope line — docs/NDOTONIC_MISSION_AND_MESSAGING.md §2 #}
+<style>
+    .ndotonic-mission-footer {
+        margin-top: auto;
+        padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+        text-align: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(6, 8, 7, 0.55);
+        flex-shrink: 0;
+    }
+    .ndotonic-mission-footer__text {
+        margin: 0;
+        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        line-height: 1.45;
+        color: rgba(232, 236, 233, 0.72);
+    }
+    .ndotonic-mission-footer__text strong {
+        color: rgba(245, 215, 106, 0.95);
+        font-weight: 600;
+    }
+    body.ink-marketplace .ndotonic-mission-footer,
+    body.ink-library-page .ndotonic-mission-footer,
+    body.ink-dashboard .ndotonic-mission-footer,
+    body.ink-workspace .ndotonic-mission-footer {
+        background: rgba(6, 8, 7, 0.85);
+        border-top-color: rgba(201, 162, 39, 0.2);
+    }
+</style>
+<footer class="ndotonic-mission-footer" role="contentinfo" aria-label="Ndotonic mission">
+    <p class="ndotonic-mission-footer__text">Ndotonic is about the <strong>work</strong>, not the passport.</p>
+</footer>

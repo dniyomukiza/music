@@ -83,22 +83,17 @@ def sync_auth_entry_marketplace_from_next(raw_next):
 def get_role_based_redirect(user):
     """Helper function to get the appropriate redirect URL based on user role.
     Used by both login and registration flows to ensure consistent redirects."""
-    from glconnect.models import Writer
-    from glconnect.book_platform_models import BookPlatformUser
+    from glconnect.book_platform_routes import _author_requires_setup_profile
     
     # Artist users → music dashboard
     if user.role == "artist":
         return redirect(url_for('book_platform.music_dashboard'))
     
-    # Author users → writer/profile if no profile, else /mybook dashboard
+    # Author users → Ink Studio setup-profile until author card is complete
     elif user.role == "author":
-        writer = Writer.query.filter_by(user_id=user.user_id).first()
-        book_user = BookPlatformUser.query.filter_by(user_id=user.user_id).first()
-        
-        if not writer and not book_user:
-            return redirect('https://glc.cool/writer/profile')
-        else:
-            return redirect(url_for('book_platform.books'))
+        if _author_requires_setup_profile(user.user_id):
+            return redirect(url_for('book_platform.setup_profile'))
+        return redirect(url_for('book_platform.books'))
     
     # Freelancer users → blogs
     elif user.role == "freelancer":
@@ -112,9 +107,16 @@ def get_role_based_redirect(user):
     else:
         return redirect(url_for('book_platform.content_hub'))
 
+def _e2e_disable_recaptcha(form):
+    """Skip reCAPTCHA when E2E_TESTING=1 (Playwright/pytest suite)."""
+    if os.getenv("E2E_TESTING") == "1" and hasattr(form, "recap"):
+        form.recap.validators = []
+
+
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegistrationForm()
+    _e2e_disable_recaptcha(form)
     raw_next = (
         request.form.get("next")
         if request.method == "POST"
@@ -153,23 +155,6 @@ def register():
             try:
                 db.session.add(new_user)
                 db.session.commit()
-                
-                # Auto-create Writer profile for authors
-                if new_user_role == 'author':
-                    from glconnect.models import Writer
-                    from datetime import datetime, timezone
-                    
-                    # Create a Writer profile with default values
-                    writer_profile = Writer(
-                        user_id=new_user.user_id,
-                        writer_name=f"{new_user.first_name} {new_user.last_name}",
-                        bio="",
-                        profile_picture="static/uploads/default_writer.jpg"
-                    )
-                    db.session.add(writer_profile)
-                    db.session.commit()
-                    
-                    print(f"✅ Auto-created Writer profile for {new_user.username}")
 
                 # Generate email confirmation token
                 s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])

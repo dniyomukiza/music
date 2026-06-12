@@ -42,7 +42,7 @@ def upload_work():
         writer = Writer.query.filter_by(user_id=current_user.user_id).first()
         if not writer:
             flash("You need to create a writer profile first.", "warning")
-            return redirect(url_for('writer.writer_profile'))
+            return redirect(url_for('book_platform.setup_profile'))
 
         # Create the new book object and save it to the database
         new_book = Book(

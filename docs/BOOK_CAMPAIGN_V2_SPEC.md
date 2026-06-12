@@ -2,7 +2,7 @@
 
 **Status:** Patronage mode implemented in backend (`glconnect/book_campaign_patronage.py`, default on)  
 **Replaces (conceptually):** Investment campaigns with revenue-share returns  
-**Mission:** Help authors meet their audience through storytelling — the right books funded by people who care, then sold on the marketplace.
+**Mission (campaign layer):** Help authors meet their audience through storytelling—books backed by patrons who care, then sold on the marketplace. See org mission and copy: [`NDOTONIC_MISSION_AND_MESSAGING.md`](NDOTONIC_MISSION_AND_MESSAGING.md).
 
 ---
 

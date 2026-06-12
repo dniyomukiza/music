@@ -14,7 +14,7 @@
                     <ul style="margin-top:10px; margin-bottom:0;">
                         {% for field, errors in form.errors.items() %}
                             {% for error in errors %}
-                                <li>{{ form[field].label.text }}: {{ error }}</li>
+                                <li>{% if form[field].label.text %}{{ form[field].label.text }}: {% endif %}{{ error }}</li>
                             {% endfor %}
                         {% endfor %}
                     </ul>

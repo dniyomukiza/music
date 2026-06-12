@@ -17,7 +17,7 @@
 <body class="ink-earnings">
     <div class="ink-earn-page-bg" aria-hidden="true"></div>
     <a class="ink-skip-link visually-hidden-focusable btn btn-sm btn-outline-light position-absolute top-0 start-0 m-2 ink-earn-skip" href="#ink-earn-main">Skip to earnings</a>
-    {% set _dash_url = url_for('book_platform.books') if ink_nav_show_author_nav|default(false) else url_for('book_platform.dashboard') %}
+    {% set _dash_url = ink_studio_home_url|default(url_for('book_platform.my_library')) %}
     <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-earnings-nav ink-earn-topnav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
         <div class="container py-1">
             <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ _dash_url }}">
@@ -380,6 +380,8 @@
             });
         }
     </script>
+    {% include 'includes/_ndotonic_mission_footer.html' %}
+
 </body>
 </html>
 

@@ -47,11 +47,16 @@ def init_book_platform(app):
             return ctx
         ctx['ink_nav_show_my_library'] = True
         try:
-            from glconnect.book_platform_routes import ink_studio_show_author_nav_links
+            from glconnect.book_platform_routes import (
+                ink_studio_home_url,
+                ink_studio_show_author_nav_links,
+            )
 
             ctx['ink_nav_show_author_nav'] = ink_studio_show_author_nav_links()
+            ctx['ink_studio_home_url'] = ink_studio_home_url()
         except Exception:
             ctx['ink_nav_show_author_nav'] = False
+            ctx['ink_studio_home_url'] = ''
         return ctx
 
     @app.context_processor

@@ -1,13 +1,13 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color:black
+    background-color: black;
     margin: 0;
     padding: 2rem;
 }
 
-h2 {
+.writer-profile-container h2 {
     text-align: center;
-    color: #343a40;
+    color: #f4f1ea;
     margin-bottom: 2rem;
 }
 
@@ -63,17 +63,36 @@ button[type="submit"]:hover {
     background-color: #084298;
 }
 
-a {
+.writer-profile-container a {
     display: block;
     text-align: center;
     margin-top: 1.5rem;
-    color: #0d6efd;
+    color: #7eb8ff;
     text-decoration: none;
     font-weight: 500;
 }
 
-a:hover {
+.writer-profile-container a:hover {
     text-decoration: underline;
+}
+
+/* High-contrast errors inside the white form card (override dark-theme .alert-danger) */
+.writer-profile-container form .alert-danger {
+    background-color: #f8d7da !important;
+    color: #842029 !important;
+    border: 1px solid #f5c2c7 !important;
+}
+
+.writer-profile-container form .alert-danger strong,
+.writer-profile-container form .alert-danger li {
+    color: #842029 !important;
+}
+
+.writer-profile-container form .invalid-feedback {
+    display: block;
+    color: #842029 !important;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
 }
 
 .flash-message {

@@ -124,14 +124,19 @@ def allowed_image_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
+def _author_requires_setup_profile(user_id: int) -> bool:
+    """True until user_id has saved Ink Studio author card at /mybook/setup-profile."""
+    bu = BookPlatformUser.query.filter_by(user_id=user_id).first()
+    if not bu:
+        return True
+    return not bool(getattr(bu, "author_card_setup_completed", False))
+
+
 def _author_needs_marketplace_profile_step() -> bool:
     """True until the author saves Ink Studio author card once at /mybook/setup-profile."""
     if not current_user.is_authenticated:
         return False
-    bu = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    if not bu:
-        return True
-    return not bool(getattr(bu, "author_card_setup_completed", False))
+    return _author_requires_setup_profile(current_user.user_id)
 
 
 def _safe_next_url_for_profile_setup(req) -> str:
@@ -397,20 +402,18 @@ from .database_optimizer import DatabaseOptimizer, QueryCache, cache_result
 # Add memory monitoring to key functions (temporarily disabled)
 # @memory_monitor
 def get_user_profile():
-    """Get user profile - Writer profile is primary for Ink Studio"""
+    """Ink Studio profile (BookPlatformUser) first; legacy Writer row as fallback."""
     if not current_user.is_authenticated:
         return None, None
-    
-    # Check for Writer profile first (primary users for Ink Studio)
-    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
-    if writer:
-        return writer, 'writer'
-    
-    # Check for BookPlatformUser profile (legacy support)
+
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if book_user:
         return book_user, 'book_platform'
-    
+
+    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
+    if writer:
+        return writer, 'writer'
+
     return None, None
 
 def _profile_for_ink_permission_checks():
@@ -481,6 +484,28 @@ def get_profile_id(user_profile, profile_type):
         import traceback
         traceback.print_exc()
         return None
+
+
+def ink_studio_home_url():
+    """Role-appropriate Ink Studio home — readers go to My library, not author profile setup."""
+    if not current_user.is_authenticated:
+        return url_for('book_platform.marketplace')
+    role = getattr(current_user, 'role', None)
+    if role == 'artist':
+        return url_for('book_platform.music_dashboard')
+    if role == 'freelancer':
+        return url_for('book_platform.dashboard')
+    if role == 'blogger':
+        return url_for('blog.blogs')
+    if role == 'podcaster':
+        return url_for('book_platform.content_hub')
+    if role == 'author':
+        if _author_requires_setup_profile(current_user.user_id):
+            return url_for('book_platform.setup_profile')
+        return url_for('book_platform.books')
+    if ink_studio_show_author_nav_links():
+        return url_for('book_platform.books')
+    return url_for('book_platform.my_library')
 
 
 def ink_studio_show_author_nav_links():
@@ -641,9 +666,8 @@ def writer_or_book_platform_required(f):
         
         user_profile, profile_type = get_user_profile()
         if not user_profile:
-            # If no profile exists, redirect to writer profile creation
-            flash('You need a Writer profile to access Ink Studio', 'warning')
-            return redirect(url_for('writer.writer_profile'))
+            flash('Complete your Ink Studio author profile to access this area.', 'warning')
+            return redirect(url_for('book_platform.setup_profile', next=request.path))
         
         # Add profile info to kwargs for use in the function
         kwargs['user_profile'] = user_profile
@@ -719,21 +743,16 @@ def ink_studio_access():
         return redirect(url_for('routes1.login', next=url_for('book_platform.ink_studio_access')))
 
     # User is authenticated - redirect based on role
-    from glconnect.models import Writer
-    from glconnect.book_platform_models import BookPlatformUser
-    
-    writer = Writer.query.filter_by(user_id=current_user.user_id).first()
-    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     user_role = getattr(current_user, 'role', None)
     
     # Artist users → music dashboard
     if user_role == 'artist':
         return redirect(url_for('book_platform.music_dashboard'))
     
-    # Author users → writer/profile if no profile, else author workspace (My books)
+    # Author users → Ink Studio setup-profile until author card is complete
     elif user_role == 'author':
-        if not writer and not book_user:
-            return redirect('https://glc.cool/writer/profile')
+        if _author_requires_setup_profile(current_user.user_id):
+            return redirect(url_for('book_platform.setup_profile'))
         return redirect(url_for('book_platform.books'))
     
     # Freelancer users → blogs
@@ -750,37 +769,67 @@ def ink_studio_access():
 
 # Main dashboard route
 @book_bp.route('/')
-@writer_or_book_platform_required
-def dashboard(user_profile, profile_type):
-    """Main Ink Studio entry — freelancers use a simplified home; authors land on My books."""
-    
-    # Handle freelancers separately - they get limited dashboard access
-    if profile_type == 'freelancer':
-        # Freelancers get a simplified dashboard focused on freelancing features
-        from glconnect.models import Post
-        # Get freelancer's stories
-        freelancer_stories = Post.query.filter_by(user_id=current_user.user_id).order_by(Post.date_posted.desc()).limit(10).all()
-        
-        return render_template('book_platform/dashboard.html',
-                             authored_books=[],
-                             collaborations=[],
-                             notifications=[],
-                             user_profile=user_profile,
-                             profile_type=profile_type,
-                             is_author=False,
-                             investment_campaigns=[],
-                             review_requests=[],
-                             user_reviewer_profile=None,
-                             user_investments=[],
-                         freelancer_stories=freelancer_stories,
-                         is_freelancer=True,
-                         marketplace_cover_url=_marketplace_cover_url,
-                         ink_nav_active='dashboard')
+@login_required
+def dashboard():
+    """Ink Studio entry — role-based home; readers without author profiles go to My library."""
+    role = getattr(current_user, 'role', None)
 
-    if profile_type in ('writer', 'book_platform') or current_user.role == 'author':
+    if role == 'artist':
+        return redirect(url_for('book_platform.music_dashboard'))
+
+    if role == 'freelancer':
+        from glconnect.models import Post
+
+        class FreelancerProfile:
+            def __init__(self, user):
+                self.id = user.user_id
+                self.user_id = user.user_id
+                self.pen_name = user.username
+                self.bio = None
+                self.profile_picture = None
+
+        freelancer_stories = (
+            Post.query.filter_by(user_id=current_user.user_id)
+            .order_by(Post.date_posted.desc())
+            .limit(10)
+            .all()
+        )
+        fp = FreelancerProfile(current_user)
+        return render_template(
+            'book_platform/dashboard.html',
+            authored_books=[],
+            collaborations=[],
+            notifications=[],
+            user_profile=fp,
+            profile_type='freelancer',
+            is_author=False,
+            investment_campaigns=[],
+            review_requests=[],
+            user_reviewer_profile=None,
+            user_investments=[],
+            freelancer_stories=freelancer_stories,
+            is_freelancer=True,
+            marketplace_cover_url=_marketplace_cover_url,
+            ink_nav_active='dashboard',
+        )
+
+    user_profile, profile_type = get_user_profile()
+
+    if role == 'author':
+        if _author_requires_setup_profile(current_user.user_id):
+            return redirect(url_for('book_platform.setup_profile'))
         return redirect(url_for('book_platform.books'))
 
-    return redirect(url_for('book_platform.content_hub'))
+    if profile_type in ('writer', 'book_platform') and user_profile and ink_studio_show_author_nav_links():
+        return redirect(url_for('book_platform.books'))
+
+    if role == 'blogger':
+        return redirect(url_for('blog.blogs'))
+
+    if role == 'podcaster':
+        return redirect(url_for('book_platform.content_hub'))
+
+    return redirect(url_for('book_platform.my_library'))
 
 
 @book_bp.route('/api/dashboard/author-stats', methods=['GET'])

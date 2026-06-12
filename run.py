@@ -39,7 +39,12 @@ if __name__ == "__main__":
     
     # In Docker/production, disable reloader even if FLASK_ENV=development
     # to prevent 502 Bad Gateway errors during code reloads
-    use_reloader = debug_mode and not os.path.exists('/.dockerenv')
+    # Disable reloader during E2E — mid-run reloads cause Playwright net::ERR_ABORTED
+    use_reloader = (
+        debug_mode
+        and not os.path.exists('/.dockerenv')
+        and os.getenv('E2E_TESTING') != '1'
+    )
     
     logger = logging.getLogger(__name__)
     logger.info(f"Starting Flask app in {'DEBUG' if debug_mode else 'PRODUCTION'} mode")

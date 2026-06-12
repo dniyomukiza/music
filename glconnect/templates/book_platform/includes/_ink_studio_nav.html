@@ -1,7 +1,7 @@
 {# ink_nav_active: books | marketplace | earnings | my_campaigns | investments | content | dashboard (freelancer home) #}
 {% set _active = ink_nav_active|default('') %}
 {% set _author = is_author|default(ink_nav_show_author_nav|default(false)) %}
-{% set _dash_url = url_for('book_platform.books') if _author else url_for('book_platform.dashboard') %}
+{% set _dash_url = ink_studio_home_url|default(url_for('book_platform.my_library')) %}
 <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-workspace-nav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
     <div class="container-fluid ink-workspace-nav-inner px-3 px-lg-4">
         <a class="navbar-brand ink-mp-nav-brand" href="{{ _dash_url }}">
@@ -13,7 +13,7 @@
         <div class="collapse navbar-collapse" id="inkStudioNav">
             <ul class="navbar-nav me-auto ink-workspace-nav-primary">
                 <li class="nav-item">
-                    <a class="nav-link{% if (_author and _active == 'books') or (not _author and _active == 'dashboard') %} active{% endif %}" href="{{ _dash_url }}"{% if (_author and _active == 'books') or (not _author and _active == 'dashboard') %} aria-current="page"{% endif %}>Dashboard</a>
+                    <a class="nav-link{% if (_author and _active == 'books') or (not _author and _active in ('dashboard', 'library')) %} active{% endif %}" href="{{ _dash_url }}"{% if (_author and _active == 'books') or (not _author and _active in ('dashboard', 'library')) %} aria-current="page"{% endif %}>{% if _author %}Dashboard{% else %}My library{% endif %}</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link{% if _active == 'marketplace' %} active{% endif %}" href="{{ url_for('book_platform.marketplace') }}"{% if _active == 'marketplace' %} aria-current="page"{% endif %}>Marketplace</a>
@@ -54,7 +54,7 @@
                         {{ current_user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown" aria-labelledby="inkStudioAccount">
-                        <li><a class="dropdown-item" href="{{ _dash_url }}">Dashboard</a></li>
+                        <li><a class="dropdown-item" href="{{ _dash_url }}">{% if _author %}Dashboard{% else %}My library{% endif %}</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>

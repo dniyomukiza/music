@@ -12,7 +12,7 @@ from glconnect.book_utils import delete_book_chapter_version_graph_for_project
 import os
 
 
-def delete_user_and_all_data(user_id):
+def delete_user_and_all_data(user_id, *, commit: bool = True):
     """
     Safely delete a user and all associated data including:
     - Writer profiles and books
@@ -105,8 +105,7 @@ def delete_user_and_all_data(user_id):
             for invitation in invitations:
                 db.session.delete(invitation)
             
-            # Delete analytics and notifications
-            BookAnalytics.query.filter_by(user_id=bp_user_id).delete()
+            # Notifications for this author; book analytics are per book_project (removed with books)
             BookNotification.query.filter_by(user_id=bp_user_id).delete()
             
             # Delete profile picture
@@ -122,16 +121,20 @@ def delete_user_and_all_data(user_id):
         
         # 3. Finally delete the user
         db.session.delete(user)
-        
-        db.session.commit()
-        
+
+        if commit:
+            db.session.commit()
+        else:
+            db.session.flush()
+
         return {
             'success': True,
             'message': f'User {user_username} and all associated data deleted successfully'
         }
-        
+
     except Exception as e:
-        db.session.rollback()
+        if commit:
+            db.session.rollback()
         return {
             'success': False,
             'message': f'Error deleting user: {str(e)}'

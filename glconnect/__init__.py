@@ -57,6 +57,15 @@ def _load_config():
         "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
         "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
     }
+    # E2E local runs only: STRIPE_SECRET_FOR_TEST — production STRIPE_SECRET_KEY unchanged on deploy.
+    if os.getenv("E2E_TESTING") == "1":
+        _e2e_sk = (os.getenv("STRIPE_SECRET_FOR_TEST") or "").strip()
+        if _e2e_sk:
+            tsk = normalize_stripe_secret_candidate(_e2e_sk)
+            if tsk.startswith("sk_"):
+                cfg["STRIPE_SECRET_KEY"] = tsk
+                cfg["STRIPE_API_KEY"] = tsk
+                stripe_test_keys_from_glconfig = True
     # Fallback: load from glconfig if env vars are empty (e.g. /etc/glconfig.json or /etc/glconfig on Linux)
     _gl_paths = [
         "/etc/glconfig.json",
@@ -222,7 +231,11 @@ if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
 if config.get("RECEIVER_MAIL") and not (os.getenv("RECEIVER_MAIL") or "").strip():
     os.environ["RECEIVER_MAIL"] = config["RECEIVER_MAIL"]
 
-if STRIPE_TEST_KEYS_FROM_GLCONFIG:
+if STRIPE_TEST_KEYS_FROM_GLCONFIG and os.getenv("E2E_TESTING") == "1":
+    print(
+        "NOTICE: E2E_TESTING=1 — Stripe server key overridden by STRIPE_SECRET_FOR_TEST from .env."
+    )
+elif STRIPE_TEST_KEYS_FROM_GLCONFIG:
     print(
         "NOTICE: Stripe keys are overridden by test credentials from glconfig "
         "(STRIPE_TEST_SECRET / STRIPE_TEST_KEY / STRIPE_TEST_PRIVATE_KEY). "
@@ -527,9 +540,9 @@ def create_app(config_overrides=None):
         # Try to redirect back with error message
         if current_user.is_authenticated:
             flash('File upload is too large. Maximum file size is 50MB. Please compress or resize your image and try again.', 'error')
-            # Try to redirect to the previous page or writer profile
+            # Try to redirect to the previous page or author setup profile
             try:
-                return redirect(url_for('writer.writer_profile'))
+                return redirect(url_for('book_platform.setup_profile'))
             except:
                 return redirect('/')
         return 'File upload is too large. Maximum file size is 50MB. Please compress or resize your image and try again.', 413

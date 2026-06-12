@@ -602,3 +602,161 @@ Ink Studio database tables created successfully
 2026-04-02 19:23:48,435 - werkzeug - WARNING -  * Debugger is active!
 2026-04-02 20:13:28,716 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
 2026-04-02 20:13:29,041 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:48:24,862 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:48:25,785 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:48:25,988 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:48:26,388 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:48:28,534 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:48:31,047 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:48:31,271 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:48:35,851 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:48:35,852 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:48:35,852 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:48:35,852 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:48:35,852 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:48:38,412 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:48:39,540 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:48:39,729 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:48:40,126 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:48:42,255 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:48:44,264 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:48:44,443 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:48:49,475 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:48:49,476 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:48:49,476 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:48:49,476 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:48:49,476 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:48:49,513 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 12:54:35,092 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:54:36,010 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:54:36,220 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:54:36,609 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:54:38,703 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:54:40,824 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:54:41,007 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:54:45,732 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:54:45,733 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:54:45,733 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:54:45,733 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:54:45,733 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:54:45,762 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 12:55:04,295 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:55:05,260 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:55:05,456 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:55:05,873 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:55:08,020 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:55:09,834 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:55:09,969 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:55:14,856 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:55:14,856 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:55:14,856 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:55:14,856 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:55:14,856 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:55:14,886 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 12:55:21,762 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:55:22,761 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:55:23,089 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:55:23,536 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:55:25,573 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:55:27,240 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:55:27,373 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:55:32,077 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:55:32,077 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:55:32,077 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:55:32,077 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:55:32,077 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:55:32,103 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 12:55:46,125 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:55:47,058 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:55:47,258 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:55:47,754 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:55:50,292 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:55:52,058 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:55:52,193 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:55:56,908 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:55:56,909 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:55:56,909 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:55:56,909 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:55:56,909 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:55:56,931 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 12:58:29,222 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:58:30,156 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:58:30,374 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:58:30,819 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:58:32,824 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:58:34,502 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:58:34,639 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:58:39,334 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:58:39,334 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:58:39,334 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:58:39,334 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:58:39,334 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:58:39,357 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 12:58:49,921 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 12:58:50,793 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 12:58:51,024 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 12:58:51,397 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 12:58:53,305 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 12:58:55,159 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 12:58:55,284 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 12:59:00,225 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 12:59:00,226 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 12:59:00,226 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 12:59:00,226 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 12:59:00,226 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 12:59:00,266 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 13:05:22,328 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 13:05:23,475 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 13:05:23,837 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 13:05:24,378 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 13:05:27,097 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 13:05:29,277 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 13:05:29,456 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 13:05:34,955 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 13:05:34,956 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 13:05:34,956 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 13:05:34,956 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 13:06:09,335 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 13:06:10,514 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 13:06:10,726 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 13:06:11,183 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 13:06:13,177 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 13:06:14,886 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 13:06:15,017 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 13:06:20,194 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 13:06:20,194 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 13:06:20,194 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 13:06:20,194 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 13:06:20,194 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 13:06:20,222 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 13:06:52,150 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 13:06:53,110 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 13:06:53,329 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 13:06:53,725 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 13:06:55,840 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 13:06:57,606 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 13:06:57,739 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 13:07:02,483 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 13:07:02,483 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-06-12 13:07:02,483 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 13:07:02,483 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 13:07:02,483 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 13:07:02,529 - werkzeug - WARNING -  * Debugger is active!
+2026-06-12 13:08:37,220 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-06-12 13:08:38,330 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-06-12 13:08:38,531 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-06-12 13:08:38,998 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-06-12 13:08:41,073 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-06-12 13:08:42,897 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-06-12 13:08:43,034 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-06-12 13:08:47,762 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-06-12 13:08:47,763 - __main__ - INFO - Reloader: DISABLED (prevents 502 errors)
+2026-06-12 13:08:47,763 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-06-12 13:08:47,763 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-06-12 13:08:47,763 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-06-12 13:16:11,813 - glconnect.audio_book_generator - ERROR - Failed to initialize TTS client: TTS credentials file not found at tts.json or default 'tts.json'
+Traceback (most recent call last):
+  File "/Applications/untitled folder/music-1/glconnect/audio_book_generator.py", line 474, in _ensure_client
+    raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
+Exception: TTS credentials file not found at tts.json or default 'tts.json'
+2026-06-12 13:16:12,349 - glconnect.book_platform_routes - ERROR - Error parsing JSON request: 415 Unsupported Media Type: Did not attempt to load JSON data because the request Content-Type was not 'application/json'.

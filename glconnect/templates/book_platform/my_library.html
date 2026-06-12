@@ -466,11 +466,8 @@
 
     <header class="ink-lib-topbar">
         <div class="container">
-            <a class="ink-lib-brand" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio</a>
+            <a class="ink-lib-brand" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace</a>
             <nav class="ink-lib-nav navbar-nav flex-row" aria-label="Main">
-                {% if current_user.is_authenticated %}
-                <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard</a>
-                {% endif %}
                 <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace</a>
                 {% if ink_nav_show_my_library|default(false) %}
                 <a class="nav-link active" aria-current="page" href="{{ url_for('book_platform.my_library') }}"><i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library</a>
@@ -625,5 +622,7 @@
             });
         })();
     </script>
+    {% include 'includes/_ndotonic_mission_footer.html' %}
+
 </body>
 </html>

@@ -132,16 +132,6 @@ class PasswordResetForm(FlaskForm):
     submit = SubmitField('Reset Password')
 
 
-class WriterProfileForm(FlaskForm):
-    writer_name = StringField('Writer Name', validators=[DataRequired()])
-    bio = TextAreaField('Bio')
-    profile_picture = FileField('Profile Picture', validators=[
-        Optional(), 
-        FileAllowed(['jpg', 'jpeg', 'png'], 'Only JPG, JPEG, and PNG images are allowed!'),
-        FileSize(max_size_mb=10, message='Profile picture must be less than 10MB')
-    ])
-    submit = SubmitField('Save Profile')
-    recap=RecaptchaField()
 
 class UploadBookForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired(), Length(min=3, max=200)])

@@ -12,7 +12,7 @@
 |----------------|-------------------|
 | Authors negotiate revenue share + fixed fees | Simpler trust: campaign + writing quality + author profile |
 | 10% of every sale split among reviewers | More to author (and platform) |
-| “Publishing house replacement” positioning | **Mission:** storytelling → audience via campaigns + marketplace |
+| “Publishing house replacement” positioning | **Mission:** create & self-publish in Ink Studio → patron campaigns → marketplace → amplification tools & reviews |
 | Extra admin (accreditation, payouts, guarantees) | Smaller operational surface |
 
 Reader trust can come from **sample chapters**, **campaign transparency**, **author track record**, and **post-publish reviews** (future: simple star ratings from buyers — not accredited freelancers).

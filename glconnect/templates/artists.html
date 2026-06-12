@@ -74,7 +74,8 @@
         {% else %}
         <p>No songs found. <a href="{{ url_for('music.upload_song') }}">Upload your first song</a> to get started!</p>
         {% endif %}
-    </div>
+    </div>    {% include 'includes/_ndotonic_mission_footer.html' %}
+
     
 
 </body>
