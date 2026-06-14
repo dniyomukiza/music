@@ -815,3 +815,234 @@ def ensure_book_chapter_section_kind_schema(db) -> None:
         db.session.rollback()
         logger.error("Could not patch book_chapters.section_kind: %s", e, exc_info=True)
 
+
+def _book_projects_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'book_projects'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(book_projects)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def ensure_print_edition_schema(db) -> None:
+    """Add print edition columns to book_projects."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("print edition schema patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    try:
+        names = _book_projects_existing_columns(db, dialect)
+        if not names:
+            return
+        added = []
+        patches = [
+            ("print_enabled", "BOOLEAN DEFAULT FALSE NOT NULL"),
+            ("print_price", "FLOAT"),
+            ("print_shipping_price", "FLOAT DEFAULT 0"),
+            ("print_handling_days", "INTEGER DEFAULT 7"),
+            ("print_description", "TEXT"),
+        ]
+        for col, typedef in patches:
+            if col in names:
+                continue
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(f"ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS {col} {typedef}")
+                )
+            else:
+                db.session.execute(text(f"ALTER TABLE book_projects ADD COLUMN {col} {typedef}"))
+            added.append(col)
+        if added:
+            db.session.commit()
+            logger.info("book_projects print columns added (%s): %s", dialect, ", ".join(added))
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch print edition schema: %s", e, exc_info=True)
+
+
+def ensure_book_print_orders_schema(db) -> None:
+    """Create book_print_orders table if missing."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("book_print_orders schema patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    try:
+        exists = db.session.execute(
+            text(
+                "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' "
+                "AND table_name = 'book_print_orders'"
+                if dialect == "postgresql"
+                else "SELECT name FROM sqlite_master WHERE type='table' AND name='book_print_orders'"
+            )
+        ).fetchone()
+        db.session.rollback()
+        if exists:
+            return
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS book_print_orders (
+                        id SERIAL PRIMARY KEY,
+                        uuid VARCHAR(36) NOT NULL UNIQUE,
+                        book_purchase_id INTEGER NOT NULL UNIQUE REFERENCES book_purchases(id) ON DELETE CASCADE,
+                        book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+                        book_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+                        shipping_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+                        shipping_name VARCHAR(200),
+                        shipping_line1 VARCHAR(200) NOT NULL,
+                        shipping_line2 VARCHAR(200),
+                        shipping_city VARCHAR(100) NOT NULL,
+                        shipping_state VARCHAR(100),
+                        shipping_postal VARCHAR(30) NOT NULL,
+                        shipping_country VARCHAR(2) NOT NULL DEFAULT 'US',
+                        status VARCHAR(40) NOT NULL DEFAULT 'pending_fulfillment',
+                        tracking_number VARCHAR(200),
+                        shipped_at TIMESTAMP,
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                    """
+                )
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_book_print_orders_book_project_id "
+                    "ON book_print_orders(book_project_id)"
+                )
+            )
+        else:
+            db.session.execute(
+                text(
+                    """
+                    CREATE TABLE book_print_orders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        uuid VARCHAR(36) NOT NULL UNIQUE,
+                        book_purchase_id INTEGER NOT NULL UNIQUE REFERENCES book_purchases(id) ON DELETE CASCADE,
+                        book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+                        book_amount FLOAT NOT NULL DEFAULT 0,
+                        shipping_amount FLOAT NOT NULL DEFAULT 0,
+                        shipping_name VARCHAR(200),
+                        shipping_line1 VARCHAR(200) NOT NULL,
+                        shipping_line2 VARCHAR(200),
+                        shipping_city VARCHAR(100) NOT NULL,
+                        shipping_state VARCHAR(100),
+                        shipping_postal VARCHAR(30) NOT NULL,
+                        shipping_country VARCHAR(2) NOT NULL DEFAULT 'US',
+                        status VARCHAR(40) NOT NULL DEFAULT 'pending_fulfillment',
+                        tracking_number VARCHAR(200),
+                        shipped_at TIMESTAMP,
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                    """
+                )
+            )
+        db.session.commit()
+        logger.info("book_print_orders table created (%s).", dialect)
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not create book_print_orders table: %s", e, exc_info=True)
+
+
+def _book_platform_users_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'book_platform_users'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(book_platform_users)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def ensure_author_publishing_agreement_schema(db) -> None:
+    """Add agreement acceptance columns to book_platform_users and book_projects."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("author publishing agreement schema patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    try:
+        user_cols = _book_platform_users_existing_columns(db, dialect)
+        if user_cols:
+            user_patches = [
+                ("author_agreement_version", "VARCHAR(20)"),
+                ("author_agreement_accepted_at", "TIMESTAMP"),
+            ]
+            added_user = []
+            for col, typedef in user_patches:
+                if col in user_cols:
+                    continue
+                if dialect == "postgresql":
+                    db.session.execute(
+                        text(f"ALTER TABLE book_platform_users ADD COLUMN IF NOT EXISTS {col} {typedef}")
+                    )
+                else:
+                    db.session.execute(text(f"ALTER TABLE book_platform_users ADD COLUMN {col} {typedef}"))
+                added_user.append(col)
+            if added_user:
+                db.session.commit()
+                logger.info(
+                    "book_platform_users agreement columns added (%s): %s",
+                    dialect,
+                    ", ".join(added_user),
+                )
+
+        project_cols = _book_projects_existing_columns(db, dialect)
+        if project_cols:
+            project_patches = [
+                ("listing_attestation_version", "VARCHAR(20)"),
+                ("listing_attestation_accepted_at", "TIMESTAMP"),
+            ]
+            added_proj = []
+            for col, typedef in project_patches:
+                if col in project_cols:
+                    continue
+                if dialect == "postgresql":
+                    db.session.execute(
+                        text(f"ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS {col} {typedef}")
+                    )
+                else:
+                    db.session.execute(text(f"ALTER TABLE book_projects ADD COLUMN {col} {typedef}"))
+                added_proj.append(col)
+            if added_proj:
+                db.session.commit()
+                logger.info(
+                    "book_projects listing attestation columns added (%s): %s",
+                    dialect,
+                    ", ".join(added_proj),
+                )
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch author publishing agreement schema: %s", e, exc_info=True)
+

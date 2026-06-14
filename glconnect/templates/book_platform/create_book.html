@@ -88,8 +88,8 @@
             <div class="col-md-8 col-lg-6">
                 <div class="card">
                     <div class="card-header text-center">
-                        <h3><i class="fas fa-plus-circle"></i> Create New Book</h3>
-                        <p class="text-muted">Start your writing journey</p>
+                        <h3><i class="fas fa-pen"></i> Write in Ink Studio</h3>
+                        <p class="text-muted">Optional — for authors who want to draft chapter-by-chapter here instead of uploading a finished file.</p>
                     </div>
                     <div class="card-body">
                         <form id="createBookForm" enctype="multipart/form-data" method="post">
@@ -121,7 +121,7 @@
                                 </div>
                                 <div id="aiCreateCoverPreviewWrap" class="mb-2 border rounded p-3 ink-create-ai-preview" style="display: none;">
                                     <p class="small fw-semibold mb-1">AI cover preview</p>
-                                    <p class="small text-muted mb-2">Generate a preview, then <strong>Use this cover</strong> if you want it for this book (required when you are not uploading a file). Discard to tweak your prompt and try again.</p>
+                                    <p class="small text-muted mb-2">The cover will include your <strong>book title</strong> (from this form) and your <strong>author name</strong> (from your Ink Studio profile) automatically. Generate a preview, then <strong>Use this cover</strong> if you want it for this book (required when you are not uploading a file). Discard to tweak your prompt and try again.</p>
                                     <div class="d-flex flex-wrap gap-2 mb-2">
                                         <button type="button" class="btn btn-ink-ghost btn-sm" id="btnCreateCoverGenerate">Generate preview</button>
                                         <button type="button" class="btn btn-ink-sage btn-sm" id="btnCreateCoverAccept" disabled>Use this cover</button>
@@ -256,12 +256,12 @@
 
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i>
-                                <strong>Writing in Ink Studio:</strong> Sections you write here can go to the marketplace with optional AI audiobook. Already have a PDF or EPUB? Use <a href="{{ url_for('book_platform.upload_digital_book') }}" aria-label="List a book on the marketplace">List</a> instead—no need to retype your manuscript.
+                                <strong>Already have a manuscript?</strong> Most authors upload a finished file—like Kindle Direct Publishing. Use <a href="{{ url_for('book_platform.upload_digital_book') }}" aria-label="Upload a manuscript to the marketplace">Upload manuscript</a> with <strong>EPUB or DOCX</strong> for the best reading experience. This page is for writing section-by-section inside Ink Studio instead.
                             </div>
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-ink-gold btn-lg">
-                                    <i class="fas fa-book" aria-hidden="true"></i> Create Book &amp; Start Writing
+                                    <i class="fas fa-pen" aria-hidden="true"></i> Create project &amp; start writing
                                 </button>
                                 <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-ink-ghost">
                                     <i class="fas fa-times" aria-hidden="true"></i> Cancel

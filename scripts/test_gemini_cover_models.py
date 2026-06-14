@@ -95,6 +95,7 @@ def main() -> None:
             "A minimal test book for API checks.",
             "fiction",
             "simple bold typography",
+            author_name="Test Author",
         )
         if out.get("success"):
             n = len(out.get("image_bytes") or b"")

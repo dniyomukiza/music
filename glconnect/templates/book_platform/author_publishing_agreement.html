@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Author Publishing Agreement | Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body class="ink-dashboard">
+    <div class="ink-dash-page-bg" aria-hidden="true"></div>
+    <nav class="navbar navbar-dark ink-dashboard-nav border-bottom border-white border-opacity-10 mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
+                <i class="fas fa-pen-fancy me-2"></i>Ink Studio
+            </a>
+        </div>
+    </nav>
+    <main class="container pb-5" style="max-width: 42rem;">
+        <header class="mb-4">
+            <h1 class="h3 text-white">Author Publishing Agreement</h1>
+            <p class="text-muted mb-0">Accept once for your author account before listing books on the marketplace. Version {{ author_agreement_version }}.</p>
+            {% if already_accepted %}
+            <p class="small text-success mt-2 mb-0"><i class="fas fa-check-circle me-1"></i>You accepted this version on {{ accepted_at.strftime('%Y-%m-%d') if accepted_at else 'record' }}.</p>
+            {% endif %}
+        </header>
+
+        <div id="agreementAlert" class="alert d-none" role="alert"></div>
+
+        <div class="card bg-dark border-secondary mb-4">
+            <div class="card-body text-light">
+                {% set terms_scroll_id = 'authorAgreementScroll' %}
+                {% set terms_hint_id = 'authorAgreementScrollHint' %}
+                {% include 'book_platform/_author_publishing_agreement_account_scroll.html' %}
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="author_agreement_accept" value="on" disabled>
+                    <label class="form-check-label" for="author_agreement_accept">
+                        I have read and accept the Author Publishing Agreement (v{{ author_agreement_version }}) for my Ink Studio account.
+                    </label>
+                </div>
+                <p class="small text-muted mb-0">This is not legal advice. Consult a qualified attorney for your situation.</p>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            {% if already_accepted %}
+            <a href="{{ next_url }}" class="btn btn-primary">Continue</a>
+            {% else %}
+            <button type="button" class="btn btn-success" id="btnAcceptAgreement" disabled>
+                <i class="fas fa-check me-1"></i>Accept agreement
+            </button>
+            <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-outline-secondary">Back to dashboard</a>
+            {% endif %}
+        </div>
+    </main>
+    <script>
+        (function () {
+            const scrollEl = document.getElementById('authorAgreementScroll');
+            const hintEl = document.getElementById('authorAgreementScrollHint');
+            const acceptCb = document.getElementById('author_agreement_accept');
+            const btn = document.getElementById('btnAcceptAgreement');
+            if (!scrollEl || !acceptCb) return;
+
+            function updateGate() {
+                const needs = scrollEl.scrollHeight > scrollEl.clientHeight + 8;
+                const atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
+                acceptCb.disabled = !atBottom;
+                if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+                if (btn) btn.disabled = !atBottom || !acceptCb.checked;
+            }
+
+            scrollEl.addEventListener('scroll', updateGate);
+            acceptCb.addEventListener('change', updateGate);
+            requestAnimationFrame(updateGate);
+
+            if (btn) {
+                btn.addEventListener('click', function () {
+                    if (!acceptCb.checked || acceptCb.disabled) return;
+                    btn.disabled = true;
+                    fetch('{{ url_for("book_platform.author_publishing_agreement") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ author_agreement_accept: true })
+                    }).then(function (r) {
+                        return r.json().then(function (j) { return { ok: r.ok, j: j }; });
+                    }).then(function (res) {
+                        if (!res.ok) throw new Error(res.j.error || 'Could not save acceptance');
+                        window.location.href = res.j.redirect || '{{ next_url }}';
+                    }).catch(function (err) {
+                        const alertEl = document.getElementById('agreementAlert');
+                        if (alertEl) {
+                            alertEl.className = 'alert alert-danger';
+                            alertEl.textContent = err.message || 'Request failed';
+                            alertEl.classList.remove('d-none');
+                        }
+                        btn.disabled = false;
+                    });
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

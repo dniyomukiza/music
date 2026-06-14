@@ -154,7 +154,10 @@ class DigitalBookUploadForm(FlaskForm):
     )
     digital_book_file = FileField('Digital Book File', validators=[
         DataRequired(),
-        FileAllowed(['pdf', 'epub', 'docx', 'txt'], 'Only PDF, EPUB, DOCX, and TXT files are allowed!')
+        FileAllowed(
+            ['epub', 'docx', 'txt', 'pdf'],
+            'Use EPUB, DOCX, or TXT for the best in-app reading experience. PDF is accepted for download but often does not reflow well in the browser reader.',
+        )
     ])
     cover_image = FileField('Cover Image', validators=[
         Optional(),

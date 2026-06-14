@@ -471,6 +471,12 @@
     </div>
 
     {% if total_pages and current_page %}
+    {% if book.digital_file_type and book.digital_file_type|lower == 'pdf' %}
+    <div class="alert alert-secondary border-0 small mb-3 ink-reader-card" role="status">
+        <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
+        This title was uploaded as PDF. In-browser reading uses extracted text and may not reflow like a true ebook. For the best experience, use <strong>Download</strong> with a PDF app, or ask the author for an EPUB/DOCX edition.
+    </div>
+    {% endif %}
     <div class="ink-reader-card">
         <div class="ink-reader-nav-row library-reader-nav">
             <div class="ink-reader-position" id="readerPosition">
@@ -512,7 +518,7 @@
         <div class="ink-reader-empty">
             <p class="mb-3"><i class="fas fa-file-circle-question fa-2x mb-3 opacity-50" aria-hidden="true"></i></p>
             <p class="mb-0">No extractable text in the browser for this title.</p>
-            <p class="small mt-2 mb-3">Use <strong>Download</strong> to read with your favorite app.</p>
+            <p class="small mt-2 mb-3">Common with image-only or layout-heavy PDFs. Use <strong>Download</strong> to read with your favorite app{% if book.digital_file_type and book.digital_file_type|lower == 'pdf' %}, or look for an EPUB/DOCX edition for reflowable reading{% endif %}.</p>
             <a class="ink-reader-chip primary" href="{{ download_url }}"><i class="fas fa-download" aria-hidden="true"></i> Download ebook</a>
         </div>
     </div>

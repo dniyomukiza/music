@@ -724,6 +724,9 @@ def create_app(config_overrides=None):
             ensure_page_analytics_slim_schema,
             ensure_chapter_versions_metadata_columns,
             ensure_book_chapter_section_kind_schema,
+            ensure_print_edition_schema,
+            ensure_book_print_orders_schema,
+            ensure_author_publishing_agreement_schema,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -741,6 +744,9 @@ def create_app(config_overrides=None):
         ensure_page_analytics_slim_schema(db)
         ensure_chapter_versions_metadata_columns(db)
         ensure_book_chapter_section_kind_schema(db)
+        ensure_print_edition_schema(db)
+        ensure_book_print_orders_schema(db)
+        ensure_author_publishing_agreement_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

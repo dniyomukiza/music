@@ -260,7 +260,8 @@
                         <div class="mb-3 border rounded p-3 bg-light listing-terms-section">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div>
-                                    <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author listing terms</h6>
+                                    <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author Publishing Agreement</h6>
+                                    <small class="text-muted d-block">Listing attestation (v{{ listing_attestation_version }}) when publishing audiobook.</small>
                                     <small class="text-muted">Required before newly listing audiobook.</small>
                                 </div>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(); return false;">
@@ -396,7 +397,7 @@
 
             if (!panel || panel.classList.contains('d-none')) {
                 openListingTermsPanel();
-                showNotification('Review and accept terms in the Author listing terms section before listing.', 'error');
+                showNotification('Review and accept the listing attestation in the Author Publishing Agreement section before listing.', 'error');
                 return false;
             }
             if (!rights || rights.disabled || !rights.checked) {

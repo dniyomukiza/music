@@ -363,12 +363,9 @@ def checkout_customer_email_for_user(user: Any) -> Optional[str]:
 
 def _book_list_base_price_for_purchase_type(book: Any, purchase_type: str) -> float:
     """List/base price for the format (matches BookSale logic in purchase_book)."""
-    pt = (purchase_type or "digital").lower()
-    if pt == "audiobook":
-        return float(book.audiobook_price or book.price or 0)
-    if pt == "bundle":
-        return (float(book.price or 0) + float(book.audiobook_price or 0)) * 0.8
-    return float(book.price or 0)
+    from glconnect.book_purchase_format import base_price_for_format
+
+    return base_price_for_format(book, purchase_type)
 
 
 def marketplace_book_payment_intent_data(

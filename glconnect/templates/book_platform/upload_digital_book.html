@@ -70,7 +70,10 @@
                 </li>
                 {% endif %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('book_platform.create_book') }}"><i class="fas fa-pen me-1" aria-hidden="true"></i>Start writing</a>
+                    <a class="nav-link active" href="{{ url_for('book_platform.upload_digital_book') }}" aria-current="page"><i class="fas fa-file-upload me-1" aria-hidden="true"></i>Upload manuscript</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('book_platform.create_book') }}"><i class="fas fa-pen me-1" aria-hidden="true"></i>Write in Ink Studio</a>
                 </li>
                 {% if current_user.role == 'admin' %}
                 <li class="nav-item">
@@ -101,8 +104,8 @@
     <div class="container-fluid px-3 px-md-4 px-xl-5 py-4 py-md-5">
         <div class="row align-items-end g-4">
             <div class="col-lg-8">
-                <h1 class="ink-upload-title mb-3">Publish · Digital listing</h1>
-                <p class="ink-upload-lead mb-0"><strong>Step 1:</strong> upload ebook, set cover, set price. Ebook goes live automatically. <strong>Step 2:</strong> generate audiobook or skip for now.</p>
+                <h1 class="ink-upload-title mb-3">Publish · Upload manuscript</h1>
+                <p class="ink-upload-lead mb-0">Like Kindle Direct Publishing: upload your finished ebook file, set cover and price, and go live. <strong>Step 1:</strong> manuscript + listing details. <strong>Step 2:</strong> optional AI audiobook.</p>
             </div>
         </div>
         <ol class="ink-upload-steps list-unstyled d-flex flex-wrap gap-2 gap-md-3 mt-4 mb-0" aria-label="Form sections">
@@ -185,11 +188,16 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Ebook file <span class="text-danger">*</span></label>
                                     <label class="ink-file-drop mb-0" for="digital_book_file_input">
-                                        <input type="file" name="digital_book_file" id="digital_book_file_input" class="ink-file-drop-input" accept=".pdf,.epub,.docx,.txt,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain">
+                                        <input type="file" name="digital_book_file" id="digital_book_file_input" class="ink-file-drop-input" accept=".epub,.docx,.txt,.pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/pdf">
                                         <span class="ink-file-drop-icon" aria-hidden="true"><i class="fas fa-cloud-upload-alt"></i></span>
                                         <span class="ink-file-drop-title">Drop file or click to browse</span>
                                         <span class="ink-file-drop-hint" id="ebookFileName">No file chosen</span>
                                     </label>
+                                    <p class="form-text mb-2"><strong>Best for readers:</strong> EPUB or DOCX (reflowable text in our in-app reader and cleaner AI audiobook source). Plain TXT also works well. PDF is fine for fixed-layout download, but most PDFs do not provide text that reflows—readers may see a poor in-browser experience unless you export an EPUB or DOCX.</p>
+                                    <div id="ebookPdfFormatNotice" class="alert alert-warning py-2 px-3 small mb-0 d-none" role="status">
+                                        <i class="fas fa-exclamation-triangle me-1" aria-hidden="true"></i>
+                                        PDF selected: in-browser reading uses extracted text and often breaks columns, footnotes, and line breaks. For a reflowable ebook experience, upload <strong>EPUB</strong> or <strong>DOCX</strong> instead.
+                                    </div>
                                     {% if form.digital_book_file.errors %}
                                         <div class="invalid-feedback d-block">{% for error in form.digital_book_file.errors %}{{ error }}{% endfor %}</div>
                                     {% endif %}
@@ -215,7 +223,7 @@
                                     </div>
                                     <div id="aiListingCoverPreviewWrap" class="mb-3 border rounded-3 p-3" style="display: none; border-color: rgba(201, 162, 39, 0.35) !important; background: rgba(8, 10, 9, 0.35);">
                                         <p class="small fw-semibold mb-1"><i class="fas fa-image me-1 text-warning"></i>AI cover preview</p>
-                                        <p class="small text-muted mb-3">Generate a preview, then tap <strong>Use this cover</strong> if you want it for submit (required when you are not uploading a file). Discard to adjust your prompt and try again.</p>
+                                        <p class="small text-muted mb-3">The cover will include your <strong>book title</strong> (from the form above) and your <strong>author name</strong> (from your Ink Studio profile) automatically. Generate a preview, then tap <strong>Use this cover</strong> if you want it for submit (required when you are not uploading a file). Discard to adjust your prompt and try again.</p>
                                         <div class="d-flex flex-wrap gap-2 mb-2">
                                             <button type="button" class="btn btn-ink-ghost btn-sm" id="btnListingCoverGenerate"><i class="fas fa-magic me-1" aria-hidden="true"></i>Generate preview</button>
                                             <button type="button" class="btn btn-ink-sage btn-sm" id="btnListingCoverAccept" disabled><i class="fas fa-check me-1" aria-hidden="true"></i>Use this cover</button>
@@ -268,8 +276,8 @@
                         <div class="ink-upload-card-head">
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-scale-balanced"></i></span>
                             <div>
-                                <h2 id="heading-terms" class="h5 mb-1">Author listing terms</h2>
-                                <p class="small text-muted mb-0">Required before listing your ebook.</p>
+                                <h2 id="heading-terms" class="h5 mb-1">Author Publishing Agreement</h2>
+                                <p class="small text-muted mb-0">Listing attestation (v{{ listing_attestation_version }}) — required before your ebook goes live.</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">
@@ -372,6 +380,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const coverInput = document.getElementById('cover_image');
     const digitalFileInput = document.getElementById('digital_book_file_input');
     const ebookFileName = document.getElementById('ebookFileName');
+    const ebookPdfFormatNotice = document.getElementById('ebookPdfFormatNotice');
+
+    function syncEbookFileUi(inputEl) {
+        if (!inputEl) return;
+        const f = inputEl.files && inputEl.files[0];
+        if (ebookFileName) {
+            ebookFileName.textContent = f ? f.name : 'No file chosen';
+        }
+        inputEl.closest('.ink-file-drop').classList.toggle('has-file', !!f);
+        if (ebookPdfFormatNotice) {
+            const isPdf = !!(f && /\.pdf$/i.test(f.name || ''));
+            ebookPdfFormatNotice.classList.toggle('d-none', !isPdf);
+        }
+    }
     const aiListingCoverPreviewWrap = document.getElementById('aiListingCoverPreviewWrap');
     const btnListingCoverGenerate = document.getElementById('btnListingCoverGenerate');
     const btnListingCoverAccept = document.getElementById('btnListingCoverAccept');
@@ -535,9 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (digitalFileInput && ebookFileName) {
         digitalFileInput.addEventListener('change', function () {
-            const f = this.files && this.files[0];
-            ebookFileName.textContent = f ? f.name : 'No file chosen';
-            this.closest('.ink-file-drop').classList.toggle('has-file', !!f);
+            syncEbookFileUi(this);
         });
     }
 
@@ -572,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function runDigitalUploadClientChecks() {
         const digitalFile = digitalFileInput || document.querySelector('input[name="digital_book_file"]');
         if (!digitalFile || !digitalFile.files.length) {
-            return { ok: false, focus: digitalFile, msg: 'Please choose your ebook file (PDF, EPUB, DOCX, or TXT).' };
+            return { ok: false, focus: digitalFile, msg: 'Please choose your ebook file (EPUB or DOCX recommended; TXT or PDF also accepted).' };
         }
         const ai = useAiCover && useAiCover.checked;
         const hasCoverFile = !!(coverInput && coverInput.files && coverInput.files.length);
@@ -595,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const takedown = document.getElementById('listing_terms_takedown_consent');
         if (!listingTermsPanelUpload || listingTermsPanelUpload.classList.contains('d-none')) {
             openListingTermsPanelUpload();
-            return { ok: false, focus: showListingTermsBtnUpload, msg: 'Review and accept terms in the Author listing terms section before listing.' };
+            return { ok: false, focus: showListingTermsBtnUpload, msg: 'Review and accept the listing attestation in the Author Publishing Agreement section before listing.' };
         }
         if (!rights || rights.disabled || !rights.checked) {
             return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms text, then accept the rights warranty before listing.' };
@@ -694,8 +714,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (file.size > maxSize) {
                     alert('File size must be less than 50MB.');
                     this.value = '';
-                    if (ebookFileName) ebookFileName.textContent = 'No file chosen';
-                    this.closest('.ink-file-drop').classList.remove('has-file');
+                    syncEbookFileUi(this);
                 }
             }
         });

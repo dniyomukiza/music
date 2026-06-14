@@ -100,11 +100,11 @@
                     
                     <div class="d-flex flex-wrap gap-2">
                         {% if can_list_book_on_marketplace %}
-                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
-                            <i class="fas fa-pen-fancy me-1"></i>Start writing
+                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2" aria-label="Upload a manuscript to the marketplace">
+                            <i class="fas fa-file-upload me-1"></i>Upload manuscript
                         </a>
-                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2" aria-label="List a book on the marketplace">
-                            <i class="fas fa-file-upload me-1"></i>List
+                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
+                            <i class="fas fa-pen-fancy me-1"></i>Write in Ink Studio
                         </a>
                         {% endif %}
                         {% if current_user.is_authenticated %}
@@ -540,8 +540,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2">Choose ebook, audiobook, or both, then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
-                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
+                    <p class="mb-2">Choose ebook, audiobook, print, or bundle, then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
+                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to your address.</p>
                     <div class="mb-3 d-none" id="purchaseTypeBlock">
                         <label class="form-label fw-bold d-block mb-2">Choose format</label>
                         <div class="form-check">
@@ -556,7 +556,12 @@
                             <input class="form-check-input" type="radio" name="purchaseTypeOption" id="purchaseTypeBundle" value="bundle">
                             <label class="form-check-label" for="purchaseTypeBundle">Both (combined)</label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="purchaseTypeOption" id="purchaseTypePrint" value="print">
+                            <label class="form-check-label" for="purchaseTypePrint" id="purchaseTypePrintLabel">Print edition</label>
+                        </div>
                     </div>
+                    <p class="small text-info d-none mb-3" id="purchasePrintNote"></p>
                     <div class="mb-3">
                         <label for="customAmount" class="form-label fw-bold">Payment Amount</label>
                         <div class="input-group">
@@ -701,6 +706,9 @@
                     const priceAudio = b.audiobook_price != null ? Number(b.audiobook_price) : null;
                     const fmtDigital = b.formats && b.formats.digital;
                     const fmtAudio = b.formats && b.formats.audiobook;
+                    const fmtPrint = b.formats && b.formats.print;
+                    const pricePrint = b.print_price != null ? Number(b.print_price) : null;
+                    const pricePrintShip = b.print_shipping_price != null ? Number(b.print_shipping_price) : 0;
 
                     let investBadge = '';
                     if (b.investment && (b.investment.active || b.investment.funded)) {
@@ -728,7 +736,8 @@
                         '<ul class="small mb-0">' +
                         (fmtDigital ? '<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + (priceDigital != null && priceDigital > 0 ? ' — <strong>$' + priceDigital.toFixed(2) + '</strong>' : ' — <strong>Free</strong>') + '</li>' : '') +
                         (fmtAudio ? '<li>Audiobook' + (priceAudio != null && priceAudio > 0 ? ' — <strong>$' + priceAudio.toFixed(2) + '</strong>' : ' — <strong>Free</strong>') + '</li>' : '') +
-                        (!fmtDigital && !fmtAudio ? '<li class="text-muted">See listing for availability.</li>' : '') +
+                        (fmtPrint && pricePrint != null && pricePrint > 0 ? '<li>Print — <strong>$' + pricePrint.toFixed(2) + '</strong> + <strong>$' + pricePrintShip.toFixed(2) + '</strong> shipping' + (b.print_handling_days ? ' · ships in ~' + Number(b.print_handling_days) + ' days' : '') + '</li>' : '') +
+                        (!fmtDigital && !fmtAudio && !fmtPrint ? '<li class="text-muted">See listing for availability.</li>' : '') +
                         '</ul></div></div></div>';
 
                     actionsEl.innerHTML = '';
@@ -737,35 +746,67 @@
                         if (inst) inst.hide();
                     };
 
-                    if (fmtDigital) {
-                        if (priceDigital != null && priceDigital > 0) {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn btn-success';
-                            btn.innerHTML = '<i class="fas fa-credit-card me-1"></i>' + ((fmtAudio && priceAudio != null && priceAudio > 0) ? 'Buy options' : 'Buy digital');
-                            btn.addEventListener('click', function () {
-                                closeModal();
-                                if (fmtAudio && priceAudio != null && priceAudio > 0) {
-                                    showPurchaseModal(b.id, {
-                                        digital: priceDigital,
-                                        audiobook: priceAudio,
-                                        allow_bundle: true
-                                    });
-                                } else {
-                                    showPurchaseModal(b.id, priceDigital, false);
-                                }
-                            });
-                            actionsEl.appendChild(btn);
-                        } else {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn btn-outline-primary';
-                            btn.innerHTML = '<i class="fas fa-download me-1"></i>Free download';
-                            btn.addEventListener('click', function () {
-                                window.open('/mybook/books/' + b.id + '/download', '_blank');
-                            });
-                            actionsEl.appendChild(btn);
-                        }
+                    const purchaseOpts = {
+                        digital: (fmtDigital && priceDigital != null && priceDigital > 0) ? priceDigital : 0,
+                        audiobook: (fmtAudio && priceAudio != null && priceAudio > 0) ? priceAudio : 0,
+                        allow_bundle: !!(fmtDigital && fmtAudio && priceDigital != null && priceAudio != null && priceDigital > 0 && priceAudio > 0),
+                        print: !!(fmtPrint && pricePrint != null && pricePrint > 0),
+                        print_price: (fmtPrint && pricePrint != null && pricePrint > 0) ? pricePrint : 0,
+                        print_shipping: pricePrintShip || 0,
+                        print_handling_days: Number(b.print_handling_days || 7),
+                    };
+                    const paidFormatCount = (purchaseOpts.digital > 0 ? 1 : 0) + (purchaseOpts.audiobook > 0 ? 1 : 0) + (purchaseOpts.print ? 1 : 0);
+
+                    if (fmtDigital && (priceDigital == null || priceDigital <= 0)) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn btn-outline-primary';
+                        btn.innerHTML = '<i class="fas fa-download me-1"></i>Free download';
+                        btn.addEventListener('click', function () {
+                            window.open('/mybook/books/' + b.id + '/download', '_blank');
+                        });
+                        actionsEl.appendChild(btn);
+                    }
+                    if (paidFormatCount >= 2) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn btn-success';
+                        btn.innerHTML = '<i class="fas fa-credit-card me-1"></i>Buy options';
+                        btn.addEventListener('click', function () {
+                            closeModal();
+                            showPurchaseModal(b.id, purchaseOpts);
+                        });
+                        actionsEl.appendChild(btn);
+                    } else if (purchaseOpts.digital > 0) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn btn-success';
+                        btn.innerHTML = '<i class="fas fa-credit-card me-1"></i>Buy digital';
+                        btn.addEventListener('click', function () {
+                            closeModal();
+                            showPurchaseModal(b.id, purchaseOpts);
+                        });
+                        actionsEl.appendChild(btn);
+                    } else if (purchaseOpts.audiobook > 0) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn btn-warning text-dark';
+                        btn.innerHTML = '<i class="fas fa-headphones me-1"></i>Buy audiobook';
+                        btn.addEventListener('click', function () {
+                            closeModal();
+                            showPurchaseModal(b.id, purchaseOpts);
+                        });
+                        actionsEl.appendChild(btn);
+                    } else if (purchaseOpts.print) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn btn-outline-warning';
+                        btn.innerHTML = '<i class="fas fa-book me-1"></i>Buy print';
+                        btn.addEventListener('click', function () {
+                            closeModal();
+                            showPurchaseModal(b.id, purchaseOpts);
+                        });
+                        actionsEl.appendChild(btn);
                     }
                     if (fmtAudio) {
                         if (b.audiobook_preview_url) {
@@ -777,17 +818,6 @@
                                 window.open(b.audiobook_preview_url, '_blank');
                             });
                             actionsEl.appendChild(pbtn);
-                        }
-                        if (priceAudio != null && priceAudio > 0 && !(fmtDigital && priceDigital != null && priceDigital > 0)) {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn btn-warning text-dark';
-                            btn.innerHTML = '<i class="fas fa-headphones me-1"></i>Buy audiobook';
-                            btn.addEventListener('click', function () {
-                                closeModal();
-                                showPurchaseModal(b.id, priceAudio, true);
-                            });
-                            actionsEl.appendChild(btn);
                         }
                     }
                 })
@@ -929,7 +959,16 @@
             if (!options) return 0;
             if (type === 'audiobook') return Number(options.audiobook || 0);
             if (type === 'bundle') return Number(Number(options.digital || 0) + Number(options.audiobook || 0));
+            if (type === 'print') return Number(Number(options.print_price || 0) + Number(options.print_shipping || 0));
             return Number(options.digital || 0);
+        }
+
+        function countPaidPurchaseFormats(options) {
+            let n = 0;
+            if (Number((options || {}).digital || 0) > 0) n++;
+            if (Number((options || {}).audiobook || 0) > 0) n++;
+            if ((options || {}).print) n++;
+            return n;
         }
 
         function refreshPurchaseTypeUi() {
@@ -940,23 +979,51 @@
 
             const hasDigital = Number((currentPurchaseOptions || {}).digital || 0) > 0;
             const hasAudio = Number((currentPurchaseOptions || {}).audiobook || 0) > 0;
+            const hasPrint = !!((currentPurchaseOptions || {}).print);
             const hasBundle = !!((currentPurchaseOptions || {}).allow_bundle) && hasDigital && hasAudio;
-            const showChoices = hasDigital && hasAudio;
+            const showChoices = countPaidPurchaseFormats(currentPurchaseOptions) >= 2;
 
             if (block) block.classList.toggle('d-none', !showChoices);
             const digitalEl = document.getElementById('purchaseTypeDigital');
             const audioEl = document.getElementById('purchaseTypeAudiobook');
             const bundleEl = document.getElementById('purchaseTypeBundle');
+            const printEl = document.getElementById('purchaseTypePrint');
             if (digitalEl) digitalEl.disabled = !hasDigital;
             if (audioEl) audioEl.disabled = !hasAudio;
             if (bundleEl) bundleEl.disabled = !hasBundle;
+            if (printEl) printEl.disabled = !hasPrint;
 
-            if (!showChoices) currentPurchaseType = hasAudio ? 'audiobook' : 'digital';
-            const targetId = currentPurchaseType === 'bundle'
-                ? 'purchaseTypeBundle'
-                : (currentPurchaseType === 'audiobook' ? 'purchaseTypeAudiobook' : 'purchaseTypeDigital');
+            const printLabel = document.getElementById('purchaseTypePrintLabel');
+            if (printLabel && hasPrint) {
+                const pp = Number((currentPurchaseOptions || {}).print_price || 0);
+                const ps = Number((currentPurchaseOptions || {}).print_shipping || 0);
+                printLabel.textContent = 'Print ($' + pp.toFixed(2) + ' + $' + ps.toFixed(2) + ' shipping)';
+            }
+
+            if (!showChoices) {
+                if (hasDigital) currentPurchaseType = 'digital';
+                else if (hasAudio) currentPurchaseType = 'audiobook';
+                else if (hasPrint) currentPurchaseType = 'print';
+            }
+            const targetIdMap = {
+                bundle: 'purchaseTypeBundle',
+                audiobook: 'purchaseTypeAudiobook',
+                print: 'purchaseTypePrint',
+                digital: 'purchaseTypeDigital',
+            };
+            const targetId = targetIdMap[currentPurchaseType] || 'purchaseTypeDigital';
             const targetInput = document.getElementById(targetId);
             if (targetInput && !targetInput.disabled) targetInput.checked = true;
+
+            const printNote = document.getElementById('purchasePrintNote');
+            if (printNote) {
+                const showPrintNote = currentPurchaseType === 'print';
+                printNote.classList.toggle('d-none', !showPrintNote);
+                if (showPrintNote) {
+                    const days = Number((currentPurchaseOptions || {}).print_handling_days || 7);
+                    printNote.textContent = "You'll enter your shipping address on Stripe. The author ships within about " + days + ' business days.';
+                }
+            }
 
             const baseAmount = getBaseAmountForType(currentPurchaseType, currentPurchaseOptions);
             currentMinAmount = baseAmount;
@@ -978,12 +1045,17 @@
                         digital: Number(minAmountOrOptions.digital || 0),
                         audiobook: Number(minAmountOrOptions.audiobook || 0),
                         allow_bundle: !!minAmountOrOptions.allow_bundle,
+                        print: !!minAmountOrOptions.print,
+                        print_price: Number(minAmountOrOptions.print_price || 0),
+                        print_shipping: Number(minAmountOrOptions.print_shipping || 0),
+                        print_handling_days: Number(minAmountOrOptions.print_handling_days || 7),
                     };
-                    currentPurchaseType = 'digital';
+                    currentPurchaseType = currentPurchaseOptions.digital > 0 ? 'digital'
+                        : (currentPurchaseOptions.audiobook > 0 ? 'audiobook' : 'print');
                 } else {
                     currentPurchaseOptions = audiobookPurchase
-                        ? { digital: 0, audiobook: Number(minAmountOrOptions || 0), allow_bundle: false }
-                        : { digital: Number(minAmountOrOptions || 0), audiobook: 0, allow_bundle: false };
+                        ? { digital: 0, audiobook: Number(minAmountOrOptions || 0), allow_bundle: false, print: false, print_price: 0, print_shipping: 0, print_handling_days: 7 }
+                        : { digital: Number(minAmountOrOptions || 0), audiobook: 0, allow_bundle: false, print: false, print_price: 0, print_shipping: 0, print_handling_days: 7 };
                     currentPurchaseType = audiobookPurchase ? 'audiobook' : 'digital';
                 }
                 currentMinAmount = getBaseAmountForType(currentPurchaseType, currentPurchaseOptions);
@@ -1008,8 +1080,8 @@
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <p class="mb-2">Choose ebook, audiobook, or both, then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
-                                        <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Content is delivered after successful payment.</p>
+                                        <p class="mb-2">Choose ebook, audiobook, print, or bundle, then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
+                                        <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to your address.</p>
                                         <div class="mb-3 d-none" id="purchaseTypeBlock">
                                             <label class="form-label fw-bold d-block mb-2">Choose format</label>
                                             <div class="form-check">
@@ -1024,7 +1096,12 @@
                                                 <input class="form-check-input" type="radio" name="purchaseTypeOption" id="purchaseTypeBundle" value="bundle">
                                                 <label class="form-check-label" for="purchaseTypeBundle">Both (combined)</label>
                                             </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="purchaseTypeOption" id="purchaseTypePrint" value="print">
+                                                <label class="form-check-label" for="purchaseTypePrint" id="purchaseTypePrintLabel">Print edition</label>
+                                            </div>
                                         </div>
+                                        <p class="small text-info d-none mb-3" id="purchasePrintNote"></p>
                                         <div class="mb-3">
                                             <label for="customAmount" class="form-label fw-bold">Payment Amount</label>
                                             <div class="input-group">
@@ -1340,7 +1417,11 @@
         }
 
         function showPurchaseReminder(bookId, purchaseType) {
-            const label = purchaseType === 'bundle' ? 'bundle' : (purchaseType === 'audiobook' ? 'audiobook' : 'ebook');
+            const isPrint = purchaseType === 'print';
+            const label = purchaseType === 'bundle' ? 'bundle' : (purchaseType === 'audiobook' ? 'audiobook' : (isPrint ? 'print book' : 'ebook'));
+            const message = isPrint
+                ? 'If you completed your print purchase, the author will ship to your address. Check your email for confirmation.'
+                : ('If you completed your ' + label + ' purchase, please refresh the page to access your content.');
             const notification = document.createElement('div');
             notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
             notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
@@ -1350,7 +1431,7 @@
                     <i class="fas fa-exclamation-triangle fa-2x me-3 text-warning"></i>
                     <div>
                         <h6 class="mb-1">Purchase Verification</h6>
-                        <p class="mb-0">If you completed your ${label} purchase, please refresh the page to access your content.</p>
+                        <p class="mb-0">${message}</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

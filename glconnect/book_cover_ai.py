@@ -213,9 +213,11 @@ def generate_book_cover_bytes(
     description: str = "",
     genre: str = "",
     art_brief: str = "",
+    author_name: str = "",
 ) -> Dict[str, Any]:
     """
     Return {success, image_bytes, error} — image_bytes is raw PNG/JPEG from the model when success.
+    Title and author_name are rendered as legible cover typography (not just mood cues).
     """
     api_key = cover_image_api_key()
     if not api_key:
@@ -226,21 +228,27 @@ def generate_book_cover_bytes(
         }
 
     title = (title or "").strip()[:200]
+    author = (author_name or "").strip()[:120] or "Author"
     desc = (description or "").strip()[:1200]
     genre = (genre or "").strip()[:120]
     brief = (art_brief or "").strip()[:800]
 
-    prompt = f"""Design a professional ebook cover illustration for online bookstore listings.
+    prompt = f"""Design a professional ebook cover for online bookstore listings.
 
-Book title (for mood and theme only—do not dominate the design with huge title text): "{title}"
+Exact text that MUST appear on the cover (spell exactly as shown):
+- Book title: "{title}"
+- Author name: "{author}"
+
 Genre: {genre or "general"}
 Summary for visual inspiration: {desc or "Not provided."}
 Author art direction (optional): {brief or "None—use genre-appropriate professional design."}
 
 Requirements:
 - Vertical book-cover composition, aspect ratio approximately 2:3 (portrait), suitable for thumbnail and full display.
-- Striking, commercially appropriate, genre-appropriate artwork; high quality; no cluttered collage.
-- If you include the book title as text, make it clearly readable and well integrated; otherwise focus on strong imagery alone.
+- Render the book TITLE prominently in the upper half: large, legible, professionally typeset typography integrated with the artwork.
+- Render the AUTHOR NAME clearly below the title (smaller than the title but still easily readable at thumbnail size).
+- Both title and author text must be spelled exactly as given above—do not substitute, abbreviate, or omit either.
+- Striking, commercially appropriate, genre-appropriate background artwork; high quality; no cluttered collage.
 - No watermarks, no QR codes, no publisher logos, no price tags.
 - Original illustrative style; avoid copying specific existing book covers or trademarked characters.
 """

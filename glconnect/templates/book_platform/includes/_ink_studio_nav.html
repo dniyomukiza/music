@@ -27,8 +27,8 @@
                     <a class="nav-link dropdown-toggle ink-workspace-more-toggle" href="#" id="inkStudioMore" role="button" data-bs-toggle="dropdown" aria-expanded="false">More</a>
                     <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown" aria-labelledby="inkStudioMore">
                         {% if _author %}
-                        <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">New book</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('book_platform.upload_digital_book') }}">List book</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('book_platform.upload_digital_book') }}">Upload manuscript</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">Write in Ink Studio</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout setup</a></li>
                         <li><hr class="dropdown-divider"></li>
                         {% endif %}

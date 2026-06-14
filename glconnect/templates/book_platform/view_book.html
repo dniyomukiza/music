@@ -256,6 +256,9 @@
                         <h3 id="status-detail-heading" class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Status details</h3>
                         <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Edit manuscript</a>
                         <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Audiobook</a>
+                        {% if book.print_enabled %}
+                        <a href="{{ url_for('book_platform.book_print_orders', book_id=book.id) }}" class="btn btn-sm btn-outline-warning">Print orders</a>
+                        {% endif %}
                     </div>
                     <div class="ink-studio-panel-body">
                         {% set cover_is_ai = book.cover_image and ('ai_cover_' in (book.cover_image or '')) %}

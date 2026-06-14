@@ -28,13 +28,16 @@
                     <p class="small text-white-50 text-uppercase ink-dash-kicker mb-2 mb-md-3">Welcome back</p>
                     {% if is_author and current_user.role == 'author' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ user_profile.pen_name or current_user.first_name or current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Write, publish, and sell from one workspace.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">Upload finished manuscripts to sell—like Kindle—or write chapter-by-chapter in Ink Studio when you need a built-in editor.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row gap-2">
+                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-lg btn-ink-gold">
+                            <i class="fas fa-file-upload me-2" aria-hidden="true"></i>Upload manuscript
+                        </a>
                         <a href="{{ url_for('book_platform.books') }}" class="btn btn-lg ink-mp-cta">
                             <i class="fas fa-book me-2" aria-hidden="true"></i>My books
                         </a>
-                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-lg btn-ink-gold">
-                            <i class="fas fa-plus me-2" aria-hidden="true"></i>New book
+                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-lg btn-ink-ghost">
+                            <i class="fas fa-pen me-2" aria-hidden="true"></i>Write in Ink Studio
                         </a>
                     </div>
                     {% elif is_freelancer or current_user.role == 'freelancer' %}

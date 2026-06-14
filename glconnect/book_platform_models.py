@@ -95,6 +95,13 @@ class CampaignStatus(PyEnum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
+class PrintOrderStatus(PyEnum):
+    PENDING_FULFILLMENT = "pending_fulfillment"
+    SHIPPED = "shipped"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
 class DistributionType(PyEnum):
     REVIEWER = "reviewer"
     INVESTOR = "investor"
@@ -118,6 +125,9 @@ class BookPlatformUser(db.Model):
     stripe_connect_account_id = db.Column(db.String(255), nullable=True)
     # Set True after author saves /mybook/setup-profile once; required before My Books / Create book.
     author_card_setup_completed = db.Column(db.Boolean, default=False, nullable=False)
+    # Account-level Author Publishing Agreement (versioned; re-accept when version bumps)
+    author_agreement_version = db.Column(db.String(20), nullable=True)
+    author_agreement_accepted_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
@@ -171,6 +181,17 @@ class BookProject(db.Model):
     audiobook_published = db.Column(db.Boolean, default=False)  # Whether audiobook is published to marketplace
     audiobook_published_at = db.Column(db.DateTime, nullable=True)  # When audiobook was published
     audiobook_segment_plan = db.Column(db.JSON, nullable=True)  # Section include/exclude draft for TTS prep
+
+    # Print edition (author fulfills shipping; Ink collects payment)
+    print_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    print_price = db.Column(db.Float, nullable=True)
+    print_shipping_price = db.Column(db.Float, nullable=True, default=0.0)
+    print_handling_days = db.Column(db.Integer, nullable=True, default=7)
+    print_description = db.Column(db.Text, nullable=True)
+
+    # Per-title listing attestation (Layer 2 of Author Publishing Agreement)
+    listing_attestation_version = db.Column(db.String(20), nullable=True)
+    listing_attestation_accepted_at = db.Column(db.DateTime, nullable=True)
     
     # Investment & Sales Tracking
     has_investment_campaign = db.Column(db.Boolean, default=False)
@@ -421,7 +442,7 @@ class BookPurchase(db.Model):
     buyer_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)  # Direct reference to users table
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
     
-    # Purchase format: digital (ebook), audiobook, bundle - determines sale_format and access
+    # Purchase format: digital (ebook), audiobook, bundle, print
     purchase_format = db.Column(db.String(20), default='digital', nullable=True)
     
     # Buyer information (stored for easy access and historical record)
@@ -546,6 +567,43 @@ class BookPurchase(db.Model):
                     self.buyer_full_name = f"{user.first_name} {user.last_name}"
                 else:
                     self.buyer_full_name = user.username
+
+
+class BookPrintOrder(db.Model):
+    """Physical print order — author ships; platform collected payment via BookPurchase."""
+
+    __tablename__ = 'book_print_orders'
+
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
+    book_purchase_id = db.Column(
+        db.Integer, db.ForeignKey('book_purchases.id', ondelete='CASCADE'), nullable=False, unique=True
+    )
+    book_project_id = db.Column(
+        db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True
+    )
+    book_amount = db.Column(db.Float, nullable=False, default=0.0)
+    shipping_amount = db.Column(db.Float, nullable=False, default=0.0)
+    shipping_name = db.Column(db.String(200), nullable=True)
+    shipping_line1 = db.Column(db.String(200), nullable=False)
+    shipping_line2 = db.Column(db.String(200), nullable=True)
+    shipping_city = db.Column(db.String(100), nullable=False)
+    shipping_state = db.Column(db.String(100), nullable=True)
+    shipping_postal = db.Column(db.String(30), nullable=False)
+    shipping_country = db.Column(db.String(2), nullable=False, default='US')
+    status = db.Column(db.Enum(PrintOrderStatus), default=PrintOrderStatus.PENDING_FULFILLMENT)
+    tracking_number = db.Column(db.String(200), nullable=True)
+    shipped_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    purchase = db.relationship('BookPurchase', backref=db.backref('print_order', uselist=False))
+    book_project = db.relationship('BookProject', backref='print_orders')
+
 
 class LibraryBookHide(db.Model):
     """Buyer hid format(s) from My Library UI; purchase rows stay for history/support."""
