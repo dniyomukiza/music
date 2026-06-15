@@ -62,6 +62,7 @@ python-dateutil==2.9.0.post0
 # Security
 PyJWT==2.10.1
 itsdangerous==2.2.0
+bleach==6.0.0
 
 # Forms and templates
 WTForms==3.2.1
