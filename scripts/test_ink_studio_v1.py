@@ -19,6 +19,7 @@ def main():
     from glconnect.ink_studio_v1 import (
         ink_account_capabilities,
         ink_is_author_account,
+        ink_show_author_workspace,
         ink_show_media_ecosystem,
         ink_v1_books_launch,
     )
@@ -63,6 +64,12 @@ def main():
     with app.app_context():
         if ink_is_author_account():
             failures.append("ink_is_author_account should be False with no logged-in user")
+        if ink_show_author_workspace():
+            failures.append("ink_show_author_workspace should be False with no logged-in user")
+        try:
+            ink_is_author_account(1)
+        except ImportError as exc:
+            failures.append(f"ink_is_author_account(1) ImportError: {exc}")
 
     if failures:
         print("FAILURES:")

@@ -435,10 +435,6 @@
                             </div>
 
                             <ul class="list-unstyled small text-white-50 mb-0">
-                                <li class="mb-2"><i class="fas fa-gift me-2 text-warning" aria-hidden="true"></i>Min patron gift <strong class="text-white">${{ "%.2f"|format(campaign.minimum_investment) }}</strong></li>
-                                {% if campaign.maximum_investment %}
-                                <li class="mb-2"><i class="fas fa-hand-holding-heart me-2 text-warning" aria-hidden="true"></i>Max per patron <strong class="text-white">${{ "%.2f"|format(campaign.maximum_investment) }}</strong></li>
-                                {% endif %}
                                 {% if period_ended %}
                                 <li class="mb-2"><i class="fas fa-clock me-2" aria-hidden="true"></i>Funding deadline <strong class="text-white">Passed</strong></li>
                                 {% elif days_remaining > 0 %}

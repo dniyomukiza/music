@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="Ndotonic connects the world to knowledge about Africa—indie ebooks and audiobooks. Browse the catalog and check out securely.">
+    <meta name="description" content="Turning real experiences into published books—indie ebooks and audiobooks. Browse the catalog and check out securely.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <title>Marketplace — Indie ebooks &amp; audiobooks</title>
@@ -96,7 +96,7 @@
                 <div class="col-12 col-xl-10">
                     <p class="ink-hero-eyebrow text-uppercase small fw-semibold mb-2 opacity-90">Overlooked, undiscovered stories</p>
                     <h1 class="ink-mp-hero-title mb-3">Marketplace</h1>
-                    <p class="ink-mp-mission">Ndotonic connects the world to knowledge about Africa.</p>
+                    <p class="ink-mp-mission">Turning real experiences into published books.</p>
                     <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3 mb-3">
                         <span class="badge ink-hero-badge fs-6 rounded-pill px-3 py-2">
                             <i class="fas fa-book-open me-2" aria-hidden="true"></i><strong>{{ total_books }}</strong> titles
@@ -109,7 +109,7 @@
                     </div>
                     <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">
                         Browse and buy finished ebooks and audiobooks from the catalog below.
-                        {% if ink_is_author_account|default(false) %}
+                        {% if ink_show_author_workspace|default(false) %}
                         <span class="d-block mt-2">As an author you can list your own books here. To back or launch campaigns, use <strong>Book campaigns</strong> in the menu.</span>
                         {% else %}
                         <span class="d-block mt-2">Want to publish or fund a book in progress? Use <strong>Book campaigns</strong> in the menu—not on this page.</span>
@@ -126,7 +126,7 @@
                         <a href="{{ url_for('book_platform.my_library') }}" class="btn btn-ink-ghost btn-sm px-3 py-2">
                             <i class="fas fa-book-reader me-1"></i>My library
                         </a>
-                        {% if ink_is_author_account|default(false) %}
+                        {% if ink_show_author_workspace|default(false) %}
                         <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2" aria-label="Upload a manuscript to the marketplace">
                             <i class="fas fa-file-upload me-1"></i>Upload manuscript
                         </a>

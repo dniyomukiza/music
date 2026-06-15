@@ -28,15 +28,11 @@
                 Your gift helps the author finish and publish. You do not receive financial returns or a share of sales.
             </p>
             <ul class="list-unstyled small text-white-50 mb-0">
-                <li class="mb-2"><i class="fas fa-gift me-2 text-warning" aria-hidden="true"></i>Min gift <strong class="text-white">${{ "%.2f"|format(campaign.minimum_investment) }}</strong></li>
-                {% if campaign.maximum_investment %}
-                <li class="mb-2"><i class="fas fa-hand-holding-heart me-2 text-warning" aria-hidden="true"></i>Max per patron <strong class="text-white">${{ "%.2f"|format(campaign.maximum_investment) }}</strong></li>
-                {% endif %}
                 <li><i class="fas fa-bullseye me-2 text-warning" aria-hidden="true"></i>
                     {% if campaign.current_funding >= campaign.funding_goal %}
-                    Goal met — extra support still helps the author
+                    Goal met — extra support still welcome
                     {% else %}
-                    ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }} left to reach the patron goal
+                    ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }} left toward the patron goal
                     {% endif %}
                 </li>
             </ul>
@@ -66,12 +62,11 @@
                     <input type="number"
                            class="form-control form-control-lg"
                            step="0.01"
-                           min="{{ campaign.minimum_investment }}"
-                           {% if campaign.maximum_investment %}max="{{ campaign.maximum_investment }}"{% endif %}
+                           min="{{ patron_gift_payment_min|default(0.50) }}"
                            id="contributionAmount"
                            name="{{ form.amount.name }}"
                            value="{{ form.amount.data or '' }}"
-                           placeholder="{{ '%.2f'|format(campaign.minimum_investment) }}"
+                           placeholder="Enter amount"
                            required>
                     {% if form.amount.errors %}
                     <div class="text-danger small mt-1">{{ form.amount.errors[0] }}</div>

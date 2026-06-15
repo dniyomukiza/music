@@ -229,22 +229,6 @@ class InvestmentCampaignForm(FlaskForm):
                                  render_kw={"placeholder": "YouTube, Vimeo, or other video link"})
     funding_goal = FloatField('Patron goal (USD)', validators=[DataRequired()],
                              render_kw={"placeholder": "e.g., 5000.00", "step": "0.01"})
-    minimum_investment = FloatField(
-        'Minimum patron gift (USD)',
-        validators=[DataRequired()],
-        render_kw={
-            "placeholder": "e.g., 25.00",
-            "step": "0.01",
-        },
-    )
-    maximum_investment = FloatField(
-        'Maximum patron gift (USD, optional)',
-        validators=[Optional()],
-        render_kw={
-            "placeholder": "Leave empty for no cap per supporter",
-            "step": "0.01",
-        },
-    )
     submit = SubmitField('Launch Campaign')
     recap = RecaptchaField()
 

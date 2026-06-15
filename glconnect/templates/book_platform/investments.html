@@ -26,8 +26,9 @@
                 <h1 class="ink-mp-hero-title mb-0">{% if status_filter == 'saved' %}Saved campaigns{% else %}Book campaigns{% endif %}</h1>
                 <span class="badge rounded-pill px-3 py-2 ink-inv-results-badge">{{ campaigns|length }} listing{% if campaigns|length != 1 %}s{% endif %}</span>
             </div>
-            <p class="lead mb-3 ink-mp-hero-lead mb-md-4">{% if status_filter == 'saved' %}Projects you bookmarked to review or support later.{% else %}Back real stories before they reach the shelf—review each campaign, funding progress, and the author’s pitch. Contributions are patron gifts, not financial investments.{% endif %} <a href="{{ url_for('book_platform.marketplace') }}" class="link-light">Browse finished books on the marketplace</a>.</p>
-            <p class="ink-inv-trust-note mb-0"><i class="fas fa-shield-alt me-2" aria-hidden="true"></i>Your own book campaigns are never listed here so you can focus on backing other creators.</p>
+            {% if status_filter == 'saved' %}
+            <p class="lead mb-0 ink-mp-hero-lead">Projects you bookmarked to review or support later.</p>
+            {% endif %}
         </div>
     </header>
 
@@ -114,13 +115,6 @@
                             </div>
                             <span class="small text-white-50">{{ "%.1f"|format(progress) }}% funded</span>
                         </div>
-
-                        <p class="small text-white-50 mb-3 mb-md-4">
-                            <i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Min ${{ "%.2f"|format(campaign.minimum_investment) }}
-                            {% if campaign.maximum_investment %}
-                            <span class="text-white-50"> · Max ${{ "%.2f"|format(campaign.maximum_investment) }}</span>
-                            {% endif %}
-                        </p>
 
                         <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="btn ink-mp-cta w-100 mt-auto">
                             <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>View campaign

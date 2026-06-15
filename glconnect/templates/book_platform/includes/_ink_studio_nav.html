@@ -1,6 +1,6 @@
 {# ink_nav_active: books | marketplace | earnings | my_campaigns | campaigns | content | dashboard (freelancer home) #}
 {% set _active = ink_nav_active|default('') %}
-{% set _author = is_author|default(ink_nav_show_author_nav|default(false)) %}
+{% set _author = is_author|default(ink_show_author_workspace|default(ink_nav_show_author_nav|default(false))) %}
 {% set _v1 = ink_v1_books_launch|default(false) %}
 {% set _dash_url = ink_studio_home_url|default(url_for('book_platform.my_library')) %}
 <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-workspace-nav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
@@ -56,7 +56,7 @@
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout setup</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item{% if _active == 'my_campaigns' %} active{% endif %}" href="{{ url_for('book_platform.author_my_campaigns') }}">My book campaigns</a></li>
-                        {% elif _v1 and current_user.is_authenticated %}
+                        {% elif _v1 and current_user.is_authenticated and current_user.role != 'author' %}
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile', next=request.path) }}">Become an author</a></li>
                         <li><hr class="dropdown-divider"></li>
                         {% endif %}

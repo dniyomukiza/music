@@ -7611,8 +7611,8 @@ def create_investment_campaign(book_id, user_profile, profile_type):
                 tentative_timeline=form.tentative_timeline.data or None,
                 pitch_video_url=form.pitch_video_url.data,
                 funding_goal=form.funding_goal.data,
-                minimum_investment=form.minimum_investment.data,
-                maximum_investment=form.maximum_investment.data if form.maximum_investment.data else None,
+                minimum_investment=0.01,
+                maximum_investment=None,
                 revenue_share_percentage=patronage_terms["revenue_share_percentage"],
                 return_multiplier_cap=patronage_terms["return_multiplier_cap"],
                 investment_period_days=CAMPAIGN_GOAL_DEADLINE_DAYS,
@@ -8151,21 +8151,21 @@ def contribute_to_campaign(campaign_id):
     book = campaign.book_project
 
     from glconnect.campaign_translation_service import campaign_translation_context
+    from glconnect.book_campaign_patronage import (
+        PATRON_GIFT_PAYMENT_MIN_USD,
+        campaign_open_for_contributions,
+        ensure_campaign_goal_deadline_resolved,
+    )
     contribute_template_kwargs = {
         'campaign': campaign,
         'book': book,
         'ink_nav_active': 'campaigns',
+        'patron_gift_payment_min': PATRON_GIFT_PAYMENT_MIN_USD,
         **campaign_translation_context(book),
     }
-    
-    logger.info(f"Make investment attempt - User: {current_user.user_id}, Campaign: {campaign_id}, Status: {campaign.status.value}, Book Status: {book.status.value if book else 'None'}")
-    
-    from glconnect.book_campaign_patronage import (
-        campaign_open_for_contributions,
-        ensure_campaign_goal_deadline_resolved,
-    )
     ensure_campaign_goal_deadline_resolved(campaign, db)
     db.session.refresh(campaign)
+    logger.info(f"Make investment attempt - User: {current_user.user_id}, Campaign: {campaign_id}, Status: {campaign.status.value}, Book Status: {book.status.value if book else 'None'}")
     can_contribute, block_reason = campaign_open_for_contributions(campaign, book)
     if not can_contribute:
         logger.warning(f"Investment blocked - Campaign {campaign_id}: {block_reason}")
@@ -8209,12 +8209,12 @@ def contribute_to_campaign(campaign_id):
     request_data = request.get_json() if request.is_json else None
     amount = None
     
+    from glconnect.book_campaign_patronage import validate_patron_gift_amount
+
     if request_data:
         # JSON request (AJAX) - same pattern as book purchase
         try:
             amount = float(request_data.get('amount', 0))
-            if amount <= 0:
-                return jsonify({'error': 'Invalid contribution amount'}), 400
         except (ValueError, TypeError):
             return jsonify({'error': 'Invalid contribution amount'}), 400
     else:
@@ -8223,20 +8223,12 @@ def contribute_to_campaign(campaign_id):
         if not form.validate_on_submit():
             return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
         amount = form.amount.data
-    
-    # Validate amount (same for both JSON and form)
-    if amount < campaign.minimum_investment:
-        error_msg = f'Minimum patron gift is ${campaign.minimum_investment:.2f}'
+
+    ok_amount, amount_error = validate_patron_gift_amount(amount)
+    if not ok_amount:
         if request_data:
-            return jsonify({'error': error_msg}), 400
-        flash(error_msg, 'error')
-        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
-    
-    if campaign.maximum_investment and amount > campaign.maximum_investment:
-        error_msg = f'Maximum patron gift is ${campaign.maximum_investment:.2f}'
-        if request_data:
-            return jsonify({'error': error_msg}), 400
-        flash(error_msg, 'error')
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
         return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
     
     try:

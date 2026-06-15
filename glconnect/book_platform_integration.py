@@ -39,22 +39,35 @@ def init_book_platform(app):
     def inject_ink_studio_v1():
         from flask_login import current_user
 
-        from glconnect.ink_studio_v1 import (
-            ink_account_capabilities,
-            ink_is_author_account,
-            ink_show_media_ecosystem,
-            ink_v1_books_launch,
-        )
+        try:
+            from glconnect.ink_studio_v1 import (
+                ink_account_capabilities,
+                ink_is_author_account,
+                ink_show_author_workspace,
+                ink_show_media_ecosystem,
+                ink_v1_books_launch,
+            )
 
-        v1 = ink_v1_books_launch(app)
-        caps = ink_account_capabilities()
-        is_author = caps["is_author"]
-        return {
-            "ink_v1_books_launch": v1,
-            "ink_is_author_account": is_author,
-            "ink_show_media_ecosystem": ink_show_media_ecosystem(app),
-            "ink_account_capabilities": caps,
-        }
+            v1 = ink_v1_books_launch(app)
+            caps = ink_account_capabilities()
+            is_author = caps["is_author"]
+            show_author_workspace = ink_show_author_workspace()
+            return {
+                "ink_v1_books_launch": v1,
+                "ink_is_author_account": is_author,
+                "ink_show_author_workspace": show_author_workspace,
+                "ink_show_media_ecosystem": ink_show_media_ecosystem(app),
+                "ink_account_capabilities": caps,
+            }
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "inject_ink_studio_v1 failed safely: %s", exc, exc_info=True
+            )
+            from glconnect.ink_studio_v1 import ink_studio_v1_context_defaults
+
+            return ink_studio_v1_context_defaults(app)
 
     @app.context_processor
     def inject_ink_studio_nav():
@@ -72,10 +85,10 @@ def init_book_platform(app):
                 ink_studio_home_url,
                 ink_studio_show_author_nav_links,
             )
-            from glconnect.ink_studio_v1 import ink_is_author_account, ink_v1_books_launch
+            from glconnect.ink_studio_v1 import ink_show_author_workspace, ink_v1_books_launch
 
             if ink_v1_books_launch(app):
-                ctx['ink_nav_show_author_nav'] = ink_is_author_account()
+                ctx['ink_nav_show_author_nav'] = ink_show_author_workspace()
             else:
                 ctx['ink_nav_show_author_nav'] = ink_studio_show_author_nav_links()
             ctx['ink_studio_home_url'] = ink_studio_home_url()

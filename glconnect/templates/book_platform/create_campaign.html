@@ -73,28 +73,12 @@
                             </div>
 
                             <div class="row mb-3">
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     {{ form.funding_goal.label(class="form-label") }}
                                     {{ form.funding_goal(class="form-control") }}
-                                    <div class="form-text">How much patron support you hope to raise to finish and publish.</div>
+                                    <div class="form-text">How much patron support you hope to raise. Projects can receive more than this goal.</div>
                                     {% if form.funding_goal.errors %}
                                         <div class="text-danger small">{{ form.funding_goal.errors[0] }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-4">
-                                    {{ form.minimum_investment.label(class="form-label") }}
-                                    {{ form.minimum_investment(class="form-control") }}
-                                    <div class="form-text">Smallest gift a patron can make (covers payment processing).</div>
-                                    {% if form.minimum_investment.errors %}
-                                        <div class="text-danger small">{{ form.minimum_investment.errors[0] }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-4">
-                                    {{ form.maximum_investment.label(class="form-label") }}
-                                    {{ form.maximum_investment(class="form-control") }}
-                                    <div class="form-text">Optional cap per patron. Leave blank for no limit.</div>
-                                    {% if form.maximum_investment.errors %}
-                                        <div class="text-danger small">{{ form.maximum_investment.errors[0] }}</div>
                                     {% endif %}
                                 </div>
                             </div>

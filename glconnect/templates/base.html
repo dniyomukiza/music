@@ -246,7 +246,7 @@
         {% if ink_show_media_ecosystem|default(true) %}
         <li><a href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
         {% endif %}
-        {% if ink_is_author_account|default(false) %}
+        {% if ink_show_author_workspace|default(false) %}
         <li><a href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> My books</a></li>
         {% elif ink_v1_books_launch|default(false) %}
         <li><a href="{{ url_for('book_platform.setup_profile', next=url_for('book_platform.marketplace')) }}"><i class="fas fa-user-edit" style="margin-right:10px; width:20px; text-align:center;"></i> Become an author</a></li>

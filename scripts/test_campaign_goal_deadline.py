@@ -20,11 +20,13 @@ def main():
     from glconnect.book_campaign_patronage import (
         CAMPAIGN_GOAL_DEADLINE_DAYS,
         CAMPAIGN_GOAL_FAILURE_REASON,
+        PATRON_GIFT_PAYMENT_MIN_USD,
         campaign_days_until_goal_deadline,
         campaign_goal_deadline,
         campaign_goal_reached,
         campaign_open_for_contributions,
         campaign_period_ended,
+        validate_patron_gift_amount,
     )
 
     failures = []
@@ -103,6 +105,13 @@ def main():
 
     if '2 years' not in CAMPAIGN_GOAL_FAILURE_REASON.lower():
         failures.append('failure reason should mention 2 years')
+
+    ok, err = validate_patron_gift_amount(25.0)
+    if not ok or err:
+        failures.append('patron gift validation should accept 25.00')
+    ok_low, _ = validate_patron_gift_amount(PATRON_GIFT_PAYMENT_MIN_USD - 0.01)
+    if ok_low:
+        failures.append('patron gift below payment minimum should be rejected')
 
     if failures:
         print('FAILURES:')

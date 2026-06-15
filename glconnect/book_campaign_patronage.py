@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 # Authors must reach the full funding goal within this many days of campaign start.
 CAMPAIGN_GOAL_DEADLINE_DAYS = 730  # 2 years
 
+# Stripe USD minimum; not a campaign rule — patrons may give any amount at or above this.
+PATRON_GIFT_PAYMENT_MIN_USD = 0.50
+
 CAMPAIGN_GOAL_FAILURE_REASON = (
     'Funding goal not reached within 2 years of campaign start. '
     'Patrons will be refunded their pledges.'
@@ -78,6 +81,20 @@ def campaign_goal_reached(campaign: Any) -> bool:
     goal = float(getattr(campaign, 'funding_goal', 0) or 0)
     current = float(getattr(campaign, 'current_funding', 0) or 0)
     return goal > 0 and current >= goal
+
+
+def validate_patron_gift_amount(amount: float) -> Tuple[bool, Optional[str]]:
+    """Patrons choose any gift size; only enforce payment-processor minimum."""
+    try:
+        value = float(amount)
+    except (TypeError, ValueError):
+        return False, 'Enter a valid contribution amount.'
+    if value < PATRON_GIFT_PAYMENT_MIN_USD:
+        return False, (
+            f'Enter at least ${PATRON_GIFT_PAYMENT_MIN_USD:.2f} '
+            '(payment processor minimum).'
+        )
+    return True, None
 
 
 def process_campaign_goal_deadline_failure(campaign: Any, db: Any) -> dict[str, Any]:

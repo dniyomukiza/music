@@ -35,11 +35,12 @@
                         </div>
                         <div class="alert alert-info">
                             <strong>Campaign:</strong><br>
-                            Min contribution: ${{ "%.2f"|format(campaign.minimum_investment) }}<br>
-                            {% if campaign.maximum_investment %}
-                            Max contribution: ${{ "%.2f"|format(campaign.maximum_investment) }}<br>
+                            {% if campaign.current_funding >= campaign.funding_goal %}
+                            Goal met — extra support still welcome<br>
+                            {% else %}
+                            Remaining to goal: ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }}<br>
                             {% endif %}
-                            Remaining to goal: ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }}
+                            Projects may receive more than the stated goal.
                         </div>
 
                         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -61,10 +62,11 @@
                                 <input type="number" 
                                        class="form-control" 
                                        step="0.01" 
-                                       min="{{ campaign.minimum_investment }}" 
+                                       min="{{ patron_gift_payment_min|default(0.50) }}" 
                                        id="investmentAmount" 
                                        name="{{ form.amount.name }}" 
                                        value="{{ form.amount.data or '' }}" 
+                                       placeholder="Enter amount"
                                        required>
                                 {% if form.amount.errors %}
                                     <div class="text-danger small">{{ form.amount.errors[0] }}</div>
