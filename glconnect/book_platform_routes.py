@@ -7499,32 +7499,11 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     return render_template('book_platform/create_campaign.html', form=form, book=book)
 
 
-def _maybe_redirect_legacy_investments_url(campaign_id=None, contribution_id=None):
-    """301 GET requests from legacy /investments/* paths to /campaigns/* or /contributions/*."""
-    if request.method != 'GET':
-        return None
-    path = request.path.rstrip('/') or request.path
-    if path in ('/mybook/investments',):
-        return redirect(url_for('book_platform.campaigns', **request.args), code=301)
-    if path == '/mybook/investments/my-campaigns':
-        return redirect(url_for('book_platform.author_my_campaigns', **request.args), code=301)
-    if campaign_id is not None and path == f'/mybook/investments/{campaign_id}':
-        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id, **request.args), code=301)
-    if campaign_id is not None and path == f'/mybook/investments/{campaign_id}/invest':
-        return redirect(url_for('book_platform.contribute_to_campaign', campaign_id=campaign_id), code=301)
-    if contribution_id is not None and path == f'/mybook/investments/{contribution_id}/refund-status':
-        return redirect(url_for('book_platform.contribution_refund_status', contribution_id=contribution_id), code=301)
-    return None
-
-
 @book_bp.route('/campaigns/mine', methods=['GET'])
 @book_bp.route('/investments/my-campaigns', methods=['GET'])
 @writer_or_book_platform_required
 def author_my_campaigns(user_profile, profile_type):
     """Author hub: manage patron campaigns started from their books."""
-    legacy = _maybe_redirect_legacy_investments_url()
-    if legacy:
-        return legacy
     author_id = get_profile_id(user_profile, profile_type)
     if not author_id:
         flash('Complete your author profile to manage book campaigns.', 'warning')
@@ -7561,15 +7540,13 @@ def author_my_campaigns(user_profile, profile_type):
         marketplace_cover_url=_marketplace_cover_url,
     )
 
-# Patron campaign discovery
+
+# Patron campaign discovery — /campaigns is canonical; /investments remains a supported alias.
 @book_bp.route('/campaigns', methods=['GET'])
 @book_bp.route('/investments', methods=['GET'])
 @login_required
 def campaigns():
     """Browse patron book campaigns before publication."""
-    legacy = _maybe_redirect_legacy_investments_url()
-    if legacy:
-        return legacy
     status_filter = request.args.get('status', 'active')
     search_query = request.args.get('q', '')
     
@@ -7633,9 +7610,6 @@ def campaigns():
 @book_bp.route('/investments/<int:campaign_id>', methods=['GET'])
 def campaign_detail(campaign_id):
     """View patron campaign details."""
-    legacy = _maybe_redirect_legacy_investments_url(campaign_id=campaign_id)
-    if legacy:
-        return legacy
     campaign = InvestmentCampaign.query.options(
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
@@ -7771,9 +7745,6 @@ def campaign_detail(campaign_id):
 @login_required
 def contribute_to_campaign(campaign_id):
     """Patron contributes to a book campaign."""
-    legacy = _maybe_redirect_legacy_investments_url(campaign_id=campaign_id)
-    if legacy:
-        return legacy
     campaign = InvestmentCampaign.query.options(
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
@@ -9012,9 +8983,6 @@ def request_contribution_refund(contribution_id):
 @login_required
 def contribution_refund_status(contribution_id):
     """View refund status for a patron contribution."""
-    legacy = _maybe_redirect_legacy_investments_url(contribution_id=contribution_id)
-    if legacy:
-        return legacy
     from glconnect.book_platform_models import BookInvestment, RefundRequest
     
     investment = BookInvestment.query.options(
