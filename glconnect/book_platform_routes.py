@@ -7499,8 +7499,47 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     return render_template('book_platform/create_campaign.html', form=form, book=book)
 
 
-@book_bp.route('/campaigns/mine', methods=['GET'])
+def _legacy_investments_redirect(endpoint, **url_kwargs):
+    """Permanent redirect from deprecated /investments/* URLs to /campaigns/* or /contributions/*."""
+    query = request.args.to_dict(flat=True)
+    return redirect(url_for(endpoint, **{**url_kwargs, **query}), code=301)
+
+
+@book_bp.route('/investments', methods=['GET'])
+@book_bp.route('/investments/', methods=['GET'])
+def legacy_investments_discover_redirect():
+    return _legacy_investments_redirect('book_platform.campaigns')
+
+
 @book_bp.route('/investments/my-campaigns', methods=['GET'])
+def legacy_my_campaigns_redirect():
+    return _legacy_investments_redirect('book_platform.author_my_campaigns')
+
+
+@book_bp.route('/investments/<int:campaign_id>', methods=['GET'])
+def legacy_campaign_detail_redirect(campaign_id):
+    return _legacy_investments_redirect('book_platform.campaign_detail', campaign_id=campaign_id)
+
+
+@book_bp.route('/investments/<int:campaign_id>/invest', methods=['GET'])
+def legacy_contribute_redirect(campaign_id):
+    return _legacy_investments_redirect('book_platform.contribute_to_campaign', campaign_id=campaign_id)
+
+
+@book_bp.route('/investments/my-returns/<int:book_id>', methods=['GET'])
+def legacy_my_returns_redirect(book_id):
+    return _legacy_investments_redirect('book_platform.investor_returns_by_book', book_id=book_id)
+
+
+@book_bp.route('/investments/<int:contribution_id>/refund-status', methods=['GET'])
+def legacy_refund_status_redirect(contribution_id):
+    return _legacy_investments_redirect(
+        'book_platform.contribution_refund_status',
+        contribution_id=contribution_id,
+    )
+
+
+@book_bp.route('/campaigns/mine', methods=['GET'])
 @writer_or_book_platform_required
 def author_my_campaigns(user_profile, profile_type):
     """Author hub: manage patron campaigns started from their books."""
@@ -7541,9 +7580,8 @@ def author_my_campaigns(user_profile, profile_type):
     )
 
 
-# Patron campaign discovery — /campaigns is canonical; /investments remains a supported alias.
+# Patron campaign discovery — /campaigns is canonical; /investments GET → 301 redirect above.
 @book_bp.route('/campaigns', methods=['GET'])
-@book_bp.route('/investments', methods=['GET'])
 @login_required
 def campaigns():
     """Browse patron book campaigns before publication."""
@@ -7562,7 +7600,7 @@ def campaigns():
         author_id = get_profile_id(user_profile, profile_type)
         if author_id:
             query = query.filter(BookProject.author_id != author_id)
-            logger.info(f"Investments page - Filtering out campaigns for user's own books (author_id: {author_id})")
+            logger.info(f"Campaigns page - Filtering out campaigns for user's own books (author_id: {author_id})")
     
     # Filter by campaign status
     if status_filter == 'active':
@@ -7607,7 +7645,6 @@ def campaigns():
 
 # Campaign detail page
 @book_bp.route('/campaigns/<int:campaign_id>', methods=['GET'])
-@book_bp.route('/investments/<int:campaign_id>', methods=['GET'])
 def campaign_detail(campaign_id):
     """View patron campaign details."""
     campaign = InvestmentCampaign.query.options(
@@ -7739,9 +7776,9 @@ def campaign_detail(campaign_id):
                          pitch_plain=pitch_plain,
                          ink_nav_active='campaigns')
 
-# Patron contribution checkout
+# Patron contribution checkout (legacy POST /investments/<id>/invest still accepted)
 @book_bp.route('/campaigns/<int:campaign_id>/contribute', methods=['GET', 'POST'])
-@book_bp.route('/investments/<int:campaign_id>/invest', methods=['GET', 'POST'])
+@book_bp.route('/investments/<int:campaign_id>/invest', methods=['POST'])
 @login_required
 def contribute_to_campaign(campaign_id):
     """Patron contributes to a book campaign."""
@@ -8786,9 +8823,8 @@ def reviewer_earnings_by_book(book_id):
                          earnings_by_sale=earnings_by_sale,
                          total_earnings=sum(e.amount for e in earnings))
 
-# Retired: sale-linked funder returns
+# Retired: sale-linked funder returns (legacy /investments/my-returns → 301 redirect above)
 @book_bp.route('/campaigns/my-returns/<int:book_id>', methods=['GET'])
-@book_bp.route('/investments/my-returns/<int:book_id>', methods=['GET'])
 @login_required
 def investor_returns_by_book(book_id):
     """Redirect legacy returns URL to campaign discovery."""
@@ -8979,7 +9015,6 @@ def request_contribution_refund(contribution_id):
 
 
 @book_bp.route('/contributions/<int:contribution_id>/refund-status', methods=['GET'])
-@book_bp.route('/investments/<int:contribution_id>/refund-status', methods=['GET'])
 @login_required
 def contribution_refund_status(contribution_id):
     """View refund status for a patron contribution."""

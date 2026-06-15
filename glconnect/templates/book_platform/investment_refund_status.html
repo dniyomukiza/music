@@ -46,7 +46,7 @@
             <div class="card-body">
                 <h5 class="mb-3"><i class="fas fa-undo me-2"></i>Request Refund</h5>
                 <p class="text-muted">First draft is not yet complete. You may request a full refund.</p>
-                <form method="POST" action="{{ url_for('book_platform.request_contribution_refund', investment_id=investment.id) }}" onsubmit="return confirm('Request refund of ${{ "%.2f"|format(investment.amount) }}? Admin will process it shortly.');">
+                <form method="POST" action="{{ url_for('book_platform.request_contribution_refund', contribution_id=investment.id) }}" onsubmit="return confirm('Request refund of ${{ "%.2f"|format(investment.amount) }}? Admin will process it shortly.');">
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-paper-plane me-1"></i>Request Refund
                     </button>
@@ -94,7 +94,7 @@
                     </tbody>
                 </table>
                 {% else %}
-                <p class="text-muted mb-0">No refund requests for this investment.</p>
+                <p class="text-muted mb-0">No refund requests for this contribution.</p>
                 {% endif %}
             </div>
         </div>

@@ -26536,3 +26536,63 @@
     Device: Desktop
     User-Agent: Werkzeug/3.1.3
 --------------------------------------------------------------------------------
+[2026-06-15 03:35:23 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:23 UTC] GET /mybook/investments/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:23 UTC] GET /mybook/investments/my-campaigns
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:54 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:54 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:55 UTC] GET /mybook/investments/42
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:55 UTC] GET /mybook/investments/42/invest
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:55 UTC] GET /mybook/investments/my-campaigns
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:55 UTC] GET /mybook/investments/5/refund-status
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:35:56 UTC] GET /mybook/investments/my-returns/3
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
