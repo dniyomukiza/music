@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="Ndotonic connects the world to knowledge about Africa—indie ebooks and audiobooks. Browse, fund campaigns, and check out securely.">
+    <meta name="description" content="Ndotonic connects the world to knowledge about Africa—indie ebooks and audiobooks. Browse the catalog and check out securely.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <title>Marketplace — Indie ebooks &amp; audiobooks</title>
@@ -108,11 +108,11 @@
                         {% endif %}
                     </div>
                     <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">
-                        Buy finished ebooks and audiobooks—or back another author’s book campaign before it publishes.
+                        Browse and buy finished ebooks and audiobooks from the catalog below.
                         {% if ink_is_author_account|default(false) %}
-                        <span class="d-block mt-2">As an author you can also list your own books and launch campaigns. You can still fund <strong>other</strong> authors’ projects (not your own).</span>
+                        <span class="d-block mt-2">As an author you can list your own books here. To back or launch campaigns, use <strong>Book campaigns</strong> in the menu.</span>
                         {% else %}
-                        <span class="d-block mt-2">Want to publish? Complete your author profile to list books or launch a campaign.</span>
+                        <span class="d-block mt-2">Want to publish or fund a book in progress? Use <strong>Book campaigns</strong> in the menu—not on this page.</span>
                         {% endif %}
                     </p>
 
@@ -154,58 +154,6 @@
         <div class="row g-4 align-items-start pt-3 pt-md-4 ink-marketplace-body" id="marketplace-catalog">
             <!-- Titles + grid (left on lg+) -->
             <div class="col-12 col-lg-9 ink-results-column">
-                {% if current_user.is_authenticated and active_investment_campaigns %}
-                <section class="card border-0 shadow-sm mb-4 ink-invest-strip" aria-labelledby="invest-strip-heading">
-                    <div class="card-body">
-                        <h2 id="invest-strip-heading" class="h5 text-primary mb-1 d-flex align-items-center gap-2">
-                            <i class="fas fa-seedling" aria-hidden="true"></i> Fund a book
-                        </h2>
-                        <p class="text-muted small mb-3 mb-0">
-                            Campaigns still accepting contributions (book not yet published). Your own campaigns are not listed here—use your dashboard or campaign link to manage them.
-                            <a href="{{ url_for('book_platform.campaigns', status='active') }}">See all book campaigns</a>.
-                        </p>
-                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mt-3">
-                            {% for campaign in active_investment_campaigns %}
-                            {% set ibook = campaign.book_project %}
-                            {% set pct = ((campaign.current_funding / campaign.funding_goal * 100)|round(1)) if campaign.funding_goal and campaign.funding_goal > 0 else 0 %}
-                            {% set bar_pct = pct if pct < 100 else 100 %}
-                            <div class="col">
-                                <div class="card h-100 border shadow-sm">
-                                    <div class="row g-0">
-                                        <div class="col-4 col-sm-3">
-                                            <div class="ratio ratio-2x3 bg-light rounded-start" style="max-height: 140px;">
-                                                {% if ibook %}
-                                                    {% set cover_u = marketplace_cover_url(ibook) %}
-                                                    {% if cover_u %}
-                                                        <img src="{{ cover_u }}" class="object-fit-cover rounded-start w-100 h-100" alt="">
-                                                    {% else %}
-                                                        <div class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="fas fa-book fa-2x"></i></div>
-                                                    {% endif %}
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="col-8 col-sm-9">
-                                            <div class="card-body py-2 px-3 d-flex flex-column h-100">
-                                                <h3 class="h6 card-title mb-1">{{ ibook.title if ibook else campaign.title }}</h3>
-                                                <p class="small text-muted mb-2 mb-md-3 flex-grow-1">{{ campaign.description[:100] }}{% if campaign.description|length > 100 %}…{% endif %}</p>
-                                                <div class="progress mb-2" style="height: 6px;" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
-                                                    <div class="progress-bar bg-success" style="width: {{ bar_pct }}%;"></div>
-                                                </div>
-                                                <div class="small text-muted mb-2">${{ "%.2f"|format(campaign.current_funding) }} of ${{ "%.2f"|format(campaign.funding_goal) }} · min ${{ "%.2f"|format(campaign.minimum_investment) }}</div>
-                                                <div class="d-grid">
-                                                    <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn btn-success btn-sm"><i class="fas fa-heart me-1"></i>Back this book</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </section>
-                {% endif %}
-
                 <div class="ink-results-toolbar card border-0 shadow-sm mb-4 ink-mp-toolbar">
                     <div class="card-body py-3 py-md-4">
                         <div class="row g-3 align-items-center">

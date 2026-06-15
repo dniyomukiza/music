@@ -121,7 +121,17 @@ if [ "${#BUILD_SERVICES[@]}" -eq 0 ]; then
 else
   echo "--- Building Docker images: ${BUILD_SERVICES[*]} (${REBUILD_REASON}) ---"
   echo "--- Tip: routine code-only pushes should show 'Fast deploy' above ---"
-  if ! "${COMPOSE[@]}" build "${BUILD_SERVICES[@]}"; then
+  if [ -f scripts/docker-prebuild-cleanup.sh ]; then
+    echo "--- Pre-build Docker cleanup (free disk; keep recent build cache) ---"
+    chmod +x scripts/docker-prebuild-cleanup.sh 2>/dev/null || true
+    DEBUG_LOG_PATH="$CACHE_DIR/docker-prebuild-debug.ndjson" \
+      bash scripts/docker-prebuild-cleanup.sh || true
+  fi
+  BUILD_FLAGS=()
+  if [ "${FORCE_REBUILD:-0}" = "1" ]; then
+    BUILD_FLAGS+=(--pull)
+  fi
+  if ! "${COMPOSE[@]}" build "${BUILD_FLAGS[@]}" "${BUILD_SERVICES[@]}"; then
     echo "--- Build failed; keeping site up with existing images (fast fallback) ---"
     FAST_DEPLOY=1
     "${COMPOSE_UP[@]}" --no-build
@@ -130,6 +140,8 @@ else
   else
     save_all_hashes
     "${COMPOSE_UP[@]}"
+    echo "--- Post-build: remove dangling layers from superseded images ---"
+    docker image prune -f >/dev/null 2>&1 || true
   fi
 fi
 
@@ -187,11 +199,6 @@ for i in $(seq 1 8); do
   echo "FastAPI... ($i/8)"
   sleep 5
 done
-
-# Only prune on explicit full rebuild — avoids deleting images the next fast deploy needs.
-if [ "${FORCE_REBUILD:-0}" = "1" ]; then
-  docker image prune -f >/dev/null 2>&1 || true
-fi
 
 ELAPSED=$(( $(date +%s) - DEPLOY_START ))
 echo "Deploy finished in ${ELAPSED}s ($(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s). Mode: $([ "$FAST_DEPLOY" = 1 ] && echo FAST || echo BUILD:${BUILD_SERVICES[*]})."
