@@ -106,7 +106,9 @@
 
                             <div class="mb-3">
                                 <h6 class="text-secondary">Cover for the marketplace</h6>
-                                {% include 'book_platform/includes/_cover_upload_or_ai.html' with cover_uid='create', use_wtforms=false %}
+                                {% with cover_uid='create', use_wtforms=false %}
+                                {% include 'book_platform/includes/_cover_upload_or_ai.html' %}
+                                {% endwith %}
                             </div>
 
                             <div class="row">

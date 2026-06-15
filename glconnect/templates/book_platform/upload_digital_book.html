@@ -207,7 +207,9 @@
                                         <h3 class="h6 mb-0">Cover art</h3>
                                         <span class="badge rounded-pill ink-upload-pill">Upload or AI</span>
                                     </div>
-                                    {% include 'book_platform/includes/_cover_upload_or_ai.html' with cover_uid='listing', use_wtforms=true %}
+                                    {% with cover_uid='listing', use_wtforms=true %}
+                                    {% include 'book_platform/includes/_cover_upload_or_ai.html' %}
+                                    {% endwith %}
                                 </div>
                             </div>
                         </div>
