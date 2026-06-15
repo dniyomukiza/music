@@ -1,0 +1,123 @@
+<script>
+(function () {
+    var bar = document.getElementById('ink-camp-lang-bar');
+    if (!bar) return;
+
+    var select = document.getElementById('ink-camp-lang-select');
+    var statusEl = document.getElementById('ink-camp-lang-status');
+    var campaignId = bar.getAttribute('data-campaign-id');
+    var sourceLang = bar.getAttribute('data-source-lang') || 'en';
+    var translateUrl = bar.getAttribute('data-translate-url');
+    var storageKey = 'inkCampLang_' + campaignId;
+
+    var fields = {
+        title: document.querySelector('[data-ink-translate="title"]'),
+        book_title: document.querySelector('[data-ink-translate="book_title"]'),
+        author_bio: document.querySelector('[data-ink-translate="author_bio"]'),
+        book_description: document.querySelector('[data-ink-translate="book_description"]'),
+        campaign_description: document.querySelector('[data-ink-translate="campaign_description"]'),
+        tentative_timeline: document.querySelector('[data-ink-translate="tentative_timeline"]')
+    };
+
+    Object.keys(fields).forEach(function (key) {
+        var el = fields[key];
+        if (!el) return;
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.setAttribute('data-original', el.value || '');
+        } else {
+            el.setAttribute('data-original', el.innerHTML || '');
+        }
+    });
+
+    function setStatus(msg) {
+        if (statusEl) statusEl.textContent = msg || '';
+    }
+
+    function applyField(key, value) {
+        var el = fields[key];
+        if (!el || value == null) return;
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.value = value;
+        } else {
+            el.innerHTML = value;
+        }
+    }
+
+    function restoreOriginal() {
+        Object.keys(fields).forEach(function (key) {
+            var el = fields[key];
+            if (!el) return;
+            var original = el.getAttribute('data-original') || '';
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                el.value = original;
+            } else {
+                el.innerHTML = original;
+            }
+        });
+        setStatus('');
+    }
+
+    function applyTranslation(data) {
+        var t = data.translations || {};
+        applyField('title', t.title);
+        applyField('book_title', t.book_title);
+        applyField('author_bio', t.author_bio);
+        applyField('book_description', t.book_description);
+        applyField('campaign_description', t.campaign_description);
+        applyField('tentative_timeline', t.tentative_timeline);
+        setStatus(data.cached ? 'Translated (cached)' : 'Translated with AI');
+    }
+
+    function translateTo(lang) {
+        if (!lang || lang === 'original') {
+            restoreOriginal();
+            try { localStorage.removeItem(storageKey); } catch (e) {}
+            return;
+        }
+        setStatus('Translating…');
+        select.disabled = true;
+        fetch(translateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ target_language: lang })
+        })
+            .then(function (r) {
+                return r.json().then(function (data) {
+                    if (!r.ok) throw new Error((data && data.error) || 'Translation failed');
+                    return data;
+                });
+            })
+            .then(function (data) {
+                if (data.is_original) {
+                    restoreOriginal();
+                } else {
+                    applyTranslation(data);
+                }
+                try { localStorage.setItem(storageKey, lang); } catch (e) {}
+            })
+            .catch(function (err) {
+                setStatus('');
+                alert(err.message || 'Could not translate this page.');
+                select.value = 'original';
+            })
+            .finally(function () {
+                select.disabled = false;
+            });
+    }
+
+    if (select) {
+        select.addEventListener('change', function () {
+            translateTo(select.value);
+        });
+    }
+
+    try {
+        var saved = localStorage.getItem(storageKey);
+        if (saved && saved !== 'original' && select) {
+            select.value = saved;
+            translateTo(saved);
+        }
+    } catch (e) {}
+})();
+</script>

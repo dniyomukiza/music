@@ -215,8 +215,16 @@ class BookReviewForm(FlaskForm):
 class InvestmentCampaignForm(FlaskForm):
     title = StringField('Campaign Title', validators=[DataRequired(), Length(min=5, max=200)],
                        render_kw={"placeholder": "e.g., Help publish my debut novel"})
-    description = CKEditorField('Campaign Description', validators=[DataRequired()],
-                               render_kw={"placeholder": "Tell supporters why they should back your book"})
+    description = CKEditorField(
+        'Why backing this project',
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Explain why patrons should support this book now"},
+    )
+    tentative_timeline = StringField(
+        'Tentative timeline',
+        validators=[Optional(), Length(max=200)],
+        render_kw={"placeholder": "e.g., First draft by June 2026, marketplace launch Fall 2026"},
+    )
     pitch_video_url = StringField('Pitch Video URL (Optional)', validators=[Optional(), Length(max=500)],
                                  render_kw={"placeholder": "YouTube, Vimeo, or other video link"})
     funding_goal = FloatField('Patron goal (USD)', validators=[DataRequired()],
@@ -237,14 +245,36 @@ class InvestmentCampaignForm(FlaskForm):
             "step": "0.01",
         },
     )
-    investment_period_days = IntegerField(
-        'Patron window (days)',
-        validators=[DataRequired()],
-        default=30,
-        render_kw={"placeholder": "e.g., 30"},
-    )
     submit = SubmitField('Launch Campaign')
     recap = RecaptchaField()
+
+class EditCampaignProjectForm(FlaskForm):
+    title = StringField(
+        'Campaign title',
+        validators=[DataRequired(), Length(min=5, max=200)],
+        render_kw={"placeholder": "e.g., Help publish my debut novel"},
+    )
+    book_description = CKEditorField(
+        'About the project',
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Describe the book and what patrons are supporting"},
+    )
+    campaign_description = CKEditorField(
+        'Why backing this project',
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Explain why patrons should support this book now"},
+    )
+    tentative_timeline = StringField(
+        'Tentative timeline',
+        validators=[Optional(), Length(max=200)],
+        render_kw={"placeholder": "e.g., First draft by June 2026, marketplace launch Fall 2026"},
+    )
+    pitch_video_url = StringField(
+        'Pitch video URL (optional)',
+        validators=[Optional(), Length(max=500)],
+        render_kw={"placeholder": "YouTube or Vimeo link"},
+    )
+    submit = SubmitField('Save project')
 
 # Contribution / back-a-campaign form
 class InvestmentForm(FlaskForm):

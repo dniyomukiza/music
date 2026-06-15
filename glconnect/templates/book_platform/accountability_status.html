@@ -151,10 +151,27 @@
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <strong>Total Campaign Funding:</strong>
+                                <strong>Total Patron Pledges:</strong>
                                 <h4 class="text-primary">${{ "%.2f"|format(fund_release.total_funding) }}</h4>
                             </div>
                             <div class="col-md-4">
+                                <strong>Your share after platform fee:</strong>
+                                <h4 class="text-success">${{ "%.2f"|format(fund_release.author_net_funding) }}</h4>
+                                <small class="text-muted">
+                                    {% if fund_release.is_first_author_project %}
+                                    First funded project — 0% campaign fee
+                                    {% else %}
+                                    {{ "%.0f"|format(fund_release.platform_fee_percent) }}% platform fee (${{ "%.2f"|format(fund_release.platform_fee_amount) }})
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Marketplace sales:</strong>
+                                <p class="mb-0">10% platform / 90% author on book sales</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
                                 <strong>First Draft (50%):</strong>
                                 {% if fund_release.first_draft_released %}
                                 <span class="badge bg-success">Released ${{ "%.2f"|format(fund_release.first_draft_amount or 0) }}</span>
@@ -172,7 +189,7 @@
                                 <small>Requires {{ "{:,}".format(fund_release.first_draft_min_words) }}+ words</small>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <strong>Publication (50%):</strong>
                                 {% if fund_release.publication_released %}
                                 <span class="badge bg-success">Released ${{ "%.2f"|format(fund_release.publication_amount or 0) }}</span>

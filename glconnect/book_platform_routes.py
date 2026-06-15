@@ -35,6 +35,7 @@ from glconnect.book_platform_models import (
     ReaderAnnotation,
     BookStatus, CollaborationRole, InvitationStatus, CommentStatus, TransactionStatus,
     AudioGenerationTask, AudiobookChapter, AccreditedReviewer, BookReview, InvestmentCampaign, BookInvestment,
+    SavedBookCampaign,
     AuthorCampaignPayoutRequest,
     RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, ReviewerPayoutRequest, AuthorSalesPayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
     ReviewStatus, ReviewRequest, ReviewRequestStatus, InvestmentStatus, CampaignStatus, DistributionType,
@@ -42,12 +43,19 @@ from glconnect.book_platform_models import (
 )
 
 # Import additional modules
-from glconnect.forms import DigitalBookUploadForm, ReviewerRegistrationForm, BookReviewForm, InvestmentCampaignForm, InvestmentForm
+from glconnect.forms import DigitalBookUploadForm, ReviewerRegistrationForm, BookReviewForm, InvestmentCampaignForm, InvestmentForm, EditCampaignProjectForm
 from glconnect.digital_book_processor import digital_book_processor
 from glconnect.audiobook_text_segments import build_uploaded_book_audiobook_chapters
 from glconnect.audiobook_generation_helpers import build_audiobook_source, filter_and_renumber_chapters
 from glconnect.audiobook_segment_classifier import suggest_includes_for_chapters
 from glconnect.book_cover_ai import generate_book_cover_bytes
+from glconnect.platform_fee_policy import (
+    apply_campaign_fee_terms,
+    campaign_fee_summary,
+    campaign_milestone_release_amount,
+    ensure_campaign_fee_terms,
+    marketplace_author_royalty_fraction,
+)
 from glconnect.book_purchase_format import (
     normalize_purchase_format,
     print_listed,
@@ -102,6 +110,19 @@ from glconnect.book_utils import (
     is_book_published,
 )
 from glconnect.author_dashboard_stats import build_author_dashboard_stats
+from glconnect.project_description_media import (
+    MEDIA_GUIDE,
+    ProjectDescriptionError,
+    build_audio_html,
+    build_image_html,
+    build_video_html,
+    build_video_iframe_html,
+    normalize_video_embed_url,
+    project_description_plain_length,
+    sanitize_project_description,
+    save_project_media_file,
+    ckeditor_upload_response,
+)
 from glconnect.chapter_version_service import (
     list_chapter_versions as fetch_chapter_versions,
     resolve_version_actor_id,
@@ -524,7 +545,14 @@ def get_profile_id(user_profile, profile_type):
 
 def ink_studio_home_url():
     """Role-appropriate Ink Studio home — readers go to My library, not author profile setup."""
+    from glconnect.ink_studio_v1 import ink_v1_books_launch
+
     if not current_user.is_authenticated:
+        return url_for('book_platform.marketplace')
+    if ink_v1_books_launch():
+        if getattr(current_user, 'role', None) == 'author':
+            if _author_requires_setup_profile(current_user.user_id):
+                return url_for('book_platform.setup_profile')
         return url_for('book_platform.marketplace')
     role = getattr(current_user, 'role', None)
     if role == 'artist':
@@ -639,7 +667,7 @@ def check_investment_readiness(book):
     
     if not book.title or len(book.title.strip()) < 3:
         issues.append("Book must have a title (at least 3 characters)")
-    if not book.description or len(book.description.strip()) < 50:
+    if not book.description or project_description_plain_length(book.description) < PROJECT_DESCRIPTION_MIN_PLAIN_CHARS:
         issues.append("Book must have a description (at least 50 characters)")
     if not book.genre:
         issues.append("Book must have a genre selected")
@@ -678,6 +706,43 @@ def check_investment_readiness(book):
         'word_count': book.word_count or 0
     }
 
+
+_CONTRIBUTION_BACKER_STATUSES = (
+    InvestmentStatus.CONFIRMED,
+    InvestmentStatus.ACTIVE,
+    InvestmentStatus.COMPLETED,
+)
+
+
+def campaign_backer_counts(campaign_ids):
+    """Distinct patron count per campaign (confirmed/active/completed contributions only)."""
+    if not campaign_ids:
+        return {}
+    from sqlalchemy import func
+
+    rows = (
+        db.session.query(
+            BookInvestment.campaign_id,
+            func.count(func.distinct(BookInvestment.investor_id)),
+        )
+        .filter(
+            BookInvestment.campaign_id.in_(campaign_ids),
+            BookInvestment.status.in_(_CONTRIBUTION_BACKER_STATUSES),
+        )
+        .group_by(BookInvestment.campaign_id)
+        .all()
+    )
+    return {cid: cnt for cid, cnt in rows}
+
+
+def saved_campaign_ids_for_user(user_id):
+    """Campaign IDs the user saved to return to later."""
+    if not user_id:
+        return set()
+    rows = SavedBookCampaign.query.filter_by(user_id=user_id).all()
+    return {r.campaign_id for r in rows}
+
+
 def writer_or_book_platform_required(f):
     """Decorator that requires Writer profile (primary) or BookPlatformUser profile (legacy) for Ink Studio access.
     Also allows freelancers to access with limited features."""
@@ -685,9 +750,15 @@ def writer_or_book_platform_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('routes1.login', next=request.path))
+
+        from glconnect.ink_studio_v1 import ink_v1_books_launch
+
+        if ink_v1_books_launch() and current_user.role == 'freelancer':
+            flash('Complete an author profile to list books or start book campaigns.', 'warning')
+            return redirect(url_for('book_platform.setup_profile', next=request.path))
         
         # Allow freelancers to access with a temporary profile
-        if current_user.role == 'freelancer':
+        if current_user.role == 'freelancer' and not ink_v1_books_launch():
             class FreelancerProfile:
                 def __init__(self, user):
                     self.id = user.user_id
@@ -774,9 +845,14 @@ def _user_can_view_chapter_history(book, book_user_id):
 @book_bp.route('/ink-studio')
 def ink_studio_access():
     """Ink Studio access point - redirects to login if not authenticated, otherwise redirects based on role."""
+    from glconnect.ink_studio_v1 import ink_v1_books_launch, ink_v1_role_redirect
+
     # If not authenticated, redirect to login (which has register link)
     if not current_user.is_authenticated:
         return redirect(url_for('routes1.login', next=url_for('book_platform.ink_studio_access')))
+
+    if ink_v1_books_launch():
+        return ink_v1_role_redirect(current_user)
 
     # User is authenticated - redirect based on role
     user_role = getattr(current_user, 'role', None)
@@ -808,6 +884,14 @@ def ink_studio_access():
 @login_required
 def dashboard():
     """Ink Studio entry — role-based home; readers without author profiles go to My library."""
+    from glconnect.ink_studio_v1 import ink_v1_books_launch
+
+    if ink_v1_books_launch():
+        if getattr(current_user, 'role', None) == 'author':
+            if _author_requires_setup_profile(current_user.user_id):
+                return redirect(url_for('book_platform.setup_profile'))
+        return redirect(url_for('book_platform.marketplace'))
+
     role = getattr(current_user, 'role', None)
 
     if role == 'artist':
@@ -1234,7 +1318,11 @@ def create_book(user_profile, profile_type):
             return jsonify({'success': False, 'error': 'Please select a language for your book.'}), 400
 
         genre_val = (request.form.get('genre') or '').strip()
-        desc_val = (request.form.get('description') or '').strip()
+        raw_description = (request.form.get('description') or '').strip()
+        try:
+            desc_val = sanitize_project_description(raw_description, book_id=None) if raw_description else None
+        except ProjectDescriptionError as exc:
+            return jsonify({'success': False, 'error': str(exc)}), 400
         use_ai_cover = request.form.get('use_ai_cover') == 'on'
         art_brief = (request.form.get('cover_art_brief') or '').strip()
 
@@ -1265,12 +1353,12 @@ def create_book(user_profile, profile_type):
         else:
             return jsonify({
                 'success': False,
-                'error': 'Upload a cover image or turn on “Create cover with AI from my book details”.',
+                'error': 'Upload a cover image or choose Generate with AI and confirm a preview.',
             }), 400
 
         book = BookProject(
             title=title,
-            description=(request.form.get('description') or '').strip() or None,
+            description=desc_val,
             genre=(request.form.get('genre') or '').strip() or None,
             language=language,
             target_audience=(request.form.get('target_audience') or '').strip() or None,
@@ -1669,7 +1757,11 @@ def edit_book(book_id, user_profile, profile_type):
             
             # Update book fields
             book.title = data['title']
-            book.description = data.get('description', '')
+            raw_description = data.get('description', '')
+            try:
+                book.description = sanitize_project_description(raw_description, book_id=book_id)
+            except ProjectDescriptionError as exc:
+                return jsonify({'success': False, 'error': str(exc)}), 400
             book.genre = data.get('genre', '')
             if not book.digital_file_path:
                 book.language = data.get('language', '')
@@ -1874,10 +1966,13 @@ def edit_book(book_id, user_profile, profile_type):
     listing_flow = (request.args.get('flow') or '').strip().lower() == 'listing'
     if listing_flow or request.args.get('audiobook'):
         return redirect(url_for('book_platform.book_audiobook', book_id=book_id))
+    campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
     return render_template(
         'book_platform/edit_book.html',
         book=book,
         ebook_language_label=language_label(book.language),
+        media_guide=MEDIA_GUIDE,
+        investment_campaign=campaign,
     )
 
 @book_bp.route('/books/<int:book_id>/audiobook', methods=['GET'])
@@ -3337,8 +3432,13 @@ def marketplace():
         else:
             has_writer_profile = False
             has_book_platform_user = False
-        # Authors can list finished digital/audio-ready titles without writing in Ink Studio (same flow as /upload-digital-book)
-        can_list_book_on_marketplace = bool(has_writer_profile or has_book_platform_user)
+        from glconnect.ink_studio_v1 import ink_is_author_account, ink_v1_books_launch
+
+        if ink_v1_books_launch():
+            can_list_book_on_marketplace = ink_is_author_account()
+        else:
+            # Authors can list finished digital/audio-ready titles without writing in Ink Studio
+            can_list_book_on_marketplace = bool(has_writer_profile or has_book_platform_user)
 
         # Fund-a-book strip: signed-in users only; authors never see their own campaign here.
         active_investment_campaigns = []
@@ -3566,6 +3666,8 @@ def publish_book(book_id):
         book.investment_campaign.status = CampaignStatus.FUNDED
         if not book.investment_campaign.funded_at:
             book.investment_campaign.funded_at = datetime.now(timezone.utc)
+        from glconnect.platform_fee_policy import apply_campaign_fee_terms
+        apply_campaign_fee_terms(book.investment_campaign, db)
 
     from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
 
@@ -3576,6 +3678,13 @@ def publish_book(book_id):
         return jsonify({'error': str(e)}), 503
     
     db.session.commit()
+
+    if not was_already_published:
+        from glconnect.patron_support_service import notify_patrons_book_listed
+        try:
+            notify_patrons_book_listed(book, db)
+        except Exception as exc:
+            logger.warning('Patron listing notifications failed for book %s: %s', book.id, exc)
 
     resp = {'success': True}
     author_is_current = (
@@ -4612,7 +4721,7 @@ def purchase_book(book_id):
                 base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
                     book, sale_format, purchase_amount
                 )
-                royalty_percentage = 0.7
+                royalty_percentage = marketplace_author_royalty_fraction()
                 
                 logger.info(f"📊 Calculating revenue split:")
                 logger.info(f"   Format: {sale_format}")
@@ -5134,18 +5243,10 @@ def purchase_book(book_id):
                     
                     if not existing_sale:
                         sale_format = getattr(purchase, 'purchase_format', None) or purchase_type
-                        if sale_format == 'audiobook':
-                            base_price = book.audiobook_price or book.price
-                        elif sale_format == 'bundle':
-                            base_price = (book.price + (book.audiobook_price or 0)) * 0.8
-                        else:
-                            base_price = book.price
-                        extra_amount = max(0, payment_amount - base_price)
-                        royalty_percentage = 0.7
-                        base_royalty = base_price * royalty_percentage
-                        base_platform_fee = base_price - base_royalty
-                        royalty_amount = base_royalty + extra_amount
-                        platform_fee = base_platform_fee
+                        base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+                            book, sale_format, payment_amount
+                        )
+                        royalty_percentage = marketplace_author_royalty_fraction()
                         
                         logger.info(f"Creating BookSale for purchase {purchase.id} (fallback, {sale_format}): base=${base_price:.2f}, total=${payment_amount:.2f}")
                         
@@ -5848,7 +5949,7 @@ def stripe_webhook():
                 base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
                     book, sale_format, purchase.amount
                 )
-                royalty_percentage = 0.7
+                royalty_percentage = marketplace_author_royalty_fraction()
                 
                 logger.info(f"Revenue split for purchase {purchase.id} ({sale_format}): base=${base_price:.2f}, extra=${extra_amount:.2f}, total=${purchase.amount:.2f}")
                 
@@ -6033,12 +6134,19 @@ def stripe_webhook():
                             apply_patronage_terms_to_investment(investment)
                         # Update campaign funding on successful payment
                         campaign.current_funding += investment.amount
-                        
-                        # If goal reached, mark campaign as FUNDED (stops new investments)
+
+                        # First time goal is met → mark FUNDED (patrons may still give above goal)
                         if campaign.current_funding >= campaign.funding_goal:
-                            campaign.status = CampaignStatus.FUNDED
-                            campaign.funded_at = datetime.now(timezone.utc)
-                            # Activate all confirmed investments
+                            if campaign.status != CampaignStatus.FUNDED:
+                                campaign.status = CampaignStatus.FUNDED
+                                if not campaign.funded_at:
+                                    campaign.funded_at = datetime.now(timezone.utc)
+                            from glconnect.platform_fee_policy import (
+                                apply_campaign_fee_terms,
+                                update_campaign_fee_totals,
+                            )
+                            apply_campaign_fee_terms(campaign, db)
+                            update_campaign_fee_totals(campaign)
                             for inv in campaign.investments:
                                 if inv.status == InvestmentStatus.CONFIRMED:
                                     if patronage:
@@ -6193,24 +6301,17 @@ def stripe_webhook():
                                         db.session.add(purchase)
                                         db.session.flush()
                                         
-                                        # Revenue sharing: base book price is split 70/30, extra amount goes 100% to author
-                                        base_price = book.price
-                                        extra_amount = max(0, actual_amount - base_price)  # Amount exceeding book price
-                                        
-                                        # Base price: 70% to author, 30% to platform
-                                        base_royalty = base_price * 0.7
-                                        base_platform_fee = base_price * 0.3
-                                        
-                                        # Extra amount: 100% to author, 0% to platform
-                                        royalty_amount = base_royalty + extra_amount  # Author gets base royalty + all extra
-                                        platform_fee = base_platform_fee  # Platform only gets fee from base price
+                                        # Revenue sharing: 90% author / 10% platform on list price; extras to author
+                                        base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+                                            book, 'digital', actual_amount
+                                        )
                                         
                                         sale = BookSale(
                                             seller_id=book.author_id,
                                             book_project_id=book_id,
                                             purchase_id=purchase.id,
                                             royalty_amount=royalty_amount,
-                                            royalty_percentage=0.7,
+                                            royalty_percentage=marketplace_author_royalty_fraction(),
                                             platform_fee=platform_fee,
                                             net_amount=royalty_amount,
                                             currency=book.currency,
@@ -6490,6 +6591,67 @@ def upload_chapter_image(book_id, chapter_id, user_profile, profile_type):
         'filename': unique_filename
     })
 
+@book_bp.route('/books/<int:book_id>/project-description/upload', methods=['POST'])
+@writer_or_book_platform_required
+def upload_project_description_media(book_id, user_profile, profile_type):
+    """Upload image, audio, or video for rich project descriptions (CKEditor + toolbar)."""
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        collaboration = BookCollaboration.query.filter_by(
+            book_project_id=book_id,
+            collaborator_id=author_id,
+            is_active=True,
+        ).first()
+        if not collaboration:
+            return ckeditor_upload_response(error='Access denied')
+
+    embed_url = (request.form.get('embed_url') or '').strip()
+    if embed_url:
+        normalized = normalize_video_embed_url(embed_url)
+        if not normalized:
+            return ckeditor_upload_response(error='Only YouTube and Vimeo links are allowed.')
+        html = build_video_iframe_html(normalized)
+        return jsonify({
+            'uploaded': 1,
+            'url': normalized,
+            'html': html,
+        })
+
+    if 'upload' not in request.files:
+        return ckeditor_upload_response(error='No file uploaded')
+
+    file = request.files['upload']
+    if not file or file.filename == '':
+        return ckeditor_upload_response(error='No file selected')
+
+    media_type = (request.form.get('media_type') or 'image').strip().lower()
+    try:
+        public_url, filename = save_project_media_file(
+            file,
+            book_id=book_id,
+            app_root=current_app.root_path,
+            media_type=media_type,
+        )
+    except ProjectDescriptionError as exc:
+        return ckeditor_upload_response(error=str(exc))
+
+    html = None
+    if media_type == 'audio':
+        html = build_audio_html(public_url)
+    elif media_type == 'video':
+        html = build_video_html(public_url)
+    elif media_type == 'image':
+        html = build_image_html(public_url)
+
+    payload = {
+        'uploaded': 1,
+        'fileName': filename,
+        'url': public_url,
+        'html': html,
+    }
+    return jsonify(payload)
+
 @book_bp.route('/books/<int:book_id>/images')
 @writer_or_book_platform_required
 def get_chapter_images(book_id, user_profile, profile_type):
@@ -6700,7 +6862,7 @@ def upload_digital_book():
             else:
                 return _upload_digital_book_error(
                     form,
-                    "Please upload a cover image or check “Generate cover with AI” so your listing has artwork.",
+                    "Please upload a cover image or choose Generate with AI and confirm a preview.",
                 )
 
             primary_lang = (form.ebook_language.data or "en").lower().strip()
@@ -7459,6 +7621,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     if form.validate_on_submit():
         try:
             from glconnect.book_campaign_patronage import (
+                CAMPAIGN_GOAL_DEADLINE_DAYS,
                 is_book_campaign_patronage_mode,
                 patronage_campaign_terms,
             )
@@ -7466,19 +7629,20 @@ def create_investment_campaign(book_id, user_profile, profile_type):
             patronage_terms = patronage_campaign_terms() if patronage else {}
             # Create timezone-aware datetimes in UTC
             start_date = datetime.now(timezone.utc)
-            end_date = start_date + timedelta(days=form.investment_period_days.data)
+            end_date = start_date + timedelta(days=CAMPAIGN_GOAL_DEADLINE_DAYS)
             
             campaign = InvestmentCampaign(
                 book_project_id=book_id,
                 title=form.title.data,
-                description=form.description.data,
+                description=sanitize_project_description(form.description.data, book_id=book_id),
+                tentative_timeline=form.tentative_timeline.data or None,
                 pitch_video_url=form.pitch_video_url.data,
                 funding_goal=form.funding_goal.data,
                 minimum_investment=form.minimum_investment.data,
                 maximum_investment=form.maximum_investment.data if form.maximum_investment.data else None,
                 revenue_share_percentage=patronage_terms["revenue_share_percentage"],
                 return_multiplier_cap=patronage_terms["return_multiplier_cap"],
-                investment_period_days=form.investment_period_days.data,
+                investment_period_days=CAMPAIGN_GOAL_DEADLINE_DAYS,
                 status=CampaignStatus.ACTIVE,
                 start_date=start_date,
                 end_date=end_date
@@ -7491,12 +7655,89 @@ def create_investment_campaign(book_id, user_profile, profile_type):
             flash('Book campaign launched successfully!', 'success')
             return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign.id))
             
+        except ProjectDescriptionError as exc:
+            db.session.rollback()
+            flash(str(exc), 'error')
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error creating campaign: {str(e)}", exc_info=True)
             flash(f'An error occurred: {str(e)}', 'error')
     
-    return render_template('book_platform/create_campaign.html', form=form, book=book)
+    return render_template(
+        'book_platform/create_campaign.html',
+        form=form,
+        book=book,
+        media_guide=MEDIA_GUIDE,
+    )
+
+
+@book_bp.route('/campaigns/<int:campaign_id>/edit-project', methods=['GET', 'POST'])
+@writer_or_book_platform_required
+def edit_campaign_project(campaign_id, user_profile, profile_type):
+    """Author edits campaign pitch and book project description shown on the campaign page."""
+    campaign = InvestmentCampaign.query.options(
+        joinedload(InvestmentCampaign.book_project)
+    ).get_or_404(campaign_id)
+    book = campaign.book_project
+    author_id = get_profile_id(user_profile, profile_type)
+
+    if not author_id or book.author_id != author_id:
+        flash('Only the author can edit this project.', 'error')
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
+
+    form = EditCampaignProjectForm()
+    upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id)
+    preview_page_url = url_for(
+        'book_platform.campaign_detail',
+        campaign_id=campaign_id,
+        preview=1,
+    )
+
+    if request.method == 'GET':
+        form.title.data = campaign.title
+        form.book_description.data = book.description or ''
+        form.campaign_description.data = campaign.description or ''
+        form.tentative_timeline.data = campaign.tentative_timeline or ''
+        form.pitch_video_url.data = campaign.pitch_video_url or ''
+
+    if form.validate_on_submit():
+        try:
+            book.description = sanitize_project_description(
+                form.book_description.data,
+                book_id=book.id,
+            )
+            campaign.title = form.title.data.strip()
+            campaign.description = sanitize_project_description(
+                form.campaign_description.data,
+                book_id=book.id,
+            )
+            campaign.tentative_timeline = (form.tentative_timeline.data or '').strip() or None
+            pitch_url = (form.pitch_video_url.data or '').strip() or None
+            if pitch_url:
+                embed = normalize_video_embed_url(pitch_url)
+                campaign.pitch_video_url = embed or pitch_url
+            else:
+                campaign.pitch_video_url = None
+            db.session.commit()
+            flash('Project updated. Preview your campaign page before sharing.', 'success')
+            return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id, preview=1))
+        except ProjectDescriptionError as exc:
+            db.session.rollback()
+            flash(str(exc), 'error')
+        except Exception as exc:
+            db.session.rollback()
+            logger.error('Error updating campaign project: %s', exc, exc_info=True)
+            flash(f'An error occurred: {exc}', 'error')
+
+    return render_template(
+        'book_platform/edit_campaign_project.html',
+        form=form,
+        campaign=campaign,
+        book=book,
+        media_guide=MEDIA_GUIDE,
+        upload_url=upload_url,
+        preview_page_url=preview_page_url,
+    )
 
 
 def _legacy_investments_redirect(endpoint, **url_kwargs):
@@ -7585,25 +7826,29 @@ def author_my_campaigns(user_profile, profile_type):
 @login_required
 def campaigns():
     """Browse patron book campaigns before publication."""
+    from glconnect.book_campaign_patronage import resolve_expired_active_campaigns
+    resolve_expired_active_campaigns(db)
+
     status_filter = request.args.get('status', 'active')
     search_query = request.args.get('q', '')
+    saved_ids = saved_campaign_ids_for_user(current_user.user_id)
     
     # Join with BookProject to enable search
-    # Campaigns are visible based on their status (ACTIVE, FUNDED, DRAFT), not book status
-    # This allows investors to fund books before they're published
     query = InvestmentCampaign.query.join(BookProject)
     
     # Exclude campaigns where the current user is the author
-    # Authors can only invest in books that are NOT their own
     user_profile, profile_type = get_user_profile()
     if user_profile:
         author_id = get_profile_id(user_profile, profile_type)
         if author_id:
             query = query.filter(BookProject.author_id != author_id)
-            logger.info(f"Campaigns page - Filtering out campaigns for user's own books (author_id: {author_id})")
     
-    # Filter by campaign status
-    if status_filter == 'active':
+    if status_filter == 'saved':
+        if saved_ids:
+            query = query.filter(InvestmentCampaign.id.in_(saved_ids))
+        else:
+            query = query.filter(InvestmentCampaign.id == -1)
+    elif status_filter == 'active':
         query = query.filter(InvestmentCampaign.status == CampaignStatus.ACTIVE)
         query = query.filter(
             db.or_(
@@ -7616,7 +7861,6 @@ def campaigns():
     elif status_filter == 'draft':
         query = query.filter(InvestmentCampaign.status == CampaignStatus.DRAFT)
     elif status_filter == 'all':
-        # Show all campaigns except cancelled/failed
         query = query.filter(
             InvestmentCampaign.status.in_([
                 CampaignStatus.DRAFT,
@@ -7624,8 +7868,16 @@ def campaigns():
                 CampaignStatus.FUNDED
             ])
         )
-    # Default to active if no valid filter
-    
+    elif status_filter != 'saved':
+        status_filter = 'active'
+        query = query.filter(InvestmentCampaign.status == CampaignStatus.ACTIVE)
+        query = query.filter(
+            db.or_(
+                InvestmentCampaign.end_date.is_(None),
+                InvestmentCampaign.end_date > datetime.now(timezone.utc),
+            )
+        )
+
     if search_query:
         query = query.filter(
             db.or_(
@@ -7635,16 +7887,135 @@ def campaigns():
             )
         )
     
-    campaigns = query.order_by(InvestmentCampaign.created_at.desc()).all()
+    if status_filter == 'saved':
+        campaigns = query.order_by(InvestmentCampaign.updated_at.desc()).all()
+    else:
+        campaigns = query.order_by(InvestmentCampaign.created_at.desc()).all()
+    backer_counts = campaign_backer_counts([c.id for c in campaigns])
     
     return render_template('book_platform/investments.html', 
                          campaigns=campaigns,
+                         campaign_backer_counts=backer_counts,
+                         saved_campaign_ids=saved_ids,
                          status_filter=status_filter,
                          search_query=search_query,
                          ink_nav_active='campaigns')
 
-# Campaign detail page
+
+@book_bp.route('/campaigns/supported', methods=['GET'])
+@login_required
+def supported_projects():
+    """Patron hub: track projects they supported and marketplace listing alerts."""
+    from glconnect.patron_support_service import (
+        group_patron_supported_projects,
+        mark_patron_listing_notifications_read,
+        patron_listing_notifications,
+    )
+
+    from glconnect.patron_support_service import ensure_patron_book_platform_user
+
+    status_filter = request.args.get('status', 'all')
+    bp_user = ensure_patron_book_platform_user(current_user.user_id, db)
+
+    projects = group_patron_supported_projects(bp_user.id, db)
+
+    if status_filter == 'active':
+        projects = [p for p in projects if p['campaign'] and p['campaign'].status == CampaignStatus.ACTIVE]
+    elif status_filter == 'listed':
+        projects = [
+            p for p in projects
+            if p['book'] and p['book'].status == BookStatus.PUBLISHED
+        ]
+    elif status_filter == 'ended':
+        projects = [
+            p for p in projects
+            if p['campaign'] and p['campaign'].status in (CampaignStatus.FAILED, CampaignStatus.CANCELLED)
+        ]
+    elif status_filter != 'all':
+        status_filter = 'all'
+
+    listing_alerts = patron_listing_notifications(bp_user.id, db, unread_only=True, limit=10)
+    if listing_alerts:
+        mark_patron_listing_notifications_read(bp_user.id, db)
+
+    return render_template(
+        'book_platform/supported_projects.html',
+        projects=projects,
+        listing_alerts=listing_alerts,
+        status_filter=status_filter,
+        ink_nav_active='supported',
+        marketplace_cover_url=_marketplace_cover_url,
+    )
+
+
+@book_bp.route('/campaigns/<int:campaign_id>/translate', methods=['POST'])
+@login_required
+def translate_campaign_page(campaign_id):
+    """AI-translate campaign page content for patrons (cached per language)."""
+    campaign = InvestmentCampaign.query.options(
+        joinedload(InvestmentCampaign.book_project).joinedload(BookProject.author),
+    ).get_or_404(campaign_id)
+    book = campaign.book_project
+    if not book:
+        return jsonify({'success': False, 'error': 'Book not found for this campaign'}), 404
+
+    data = request.get_json(silent=True) or {}
+    target_language = data.get('target_language') or request.form.get('target_language')
+    if not target_language:
+        return jsonify({'success': False, 'error': 'Target language is required'}), 400
+
+    from glconnect.campaign_translation_service import translate_campaign
+
+    result = translate_campaign(campaign, book, book.author, target_language, db)
+    if not result.get('success'):
+        return jsonify(result), 400
+    return jsonify(result)
+
+
+@book_bp.route('/campaigns/<int:campaign_id>/translations', methods=['GET'])
+@login_required
+def list_campaign_page_translations(campaign_id):
+    """List languages with cached translations for a campaign."""
+    InvestmentCampaign.query.get_or_404(campaign_id)
+    from glconnect.campaign_translation_service import list_campaign_translation_languages
+
+    return jsonify({
+        'success': True,
+        'languages': list_campaign_translation_languages(campaign_id, db),
+    })
+
+
+@book_bp.route('/campaigns/<int:campaign_id>/save', methods=['POST'])
+@login_required
+def toggle_saved_campaign(campaign_id):
+    """Save or unsave a campaign for later (patrons only)."""
+    campaign = InvestmentCampaign.query.options(
+        joinedload(InvestmentCampaign.book_project)
+    ).get_or_404(campaign_id)
+    book = campaign.book_project
+    if book and book.author and book.author.user_id == current_user.user_id:
+        return jsonify({'success': False, 'error': 'You cannot save your own campaign.'}), 400
+
+    rec = SavedBookCampaign.query.filter_by(
+        user_id=current_user.user_id,
+        campaign_id=campaign_id,
+    ).first()
+    if rec:
+        db.session.delete(rec)
+        db.session.commit()
+        return jsonify({'success': True, 'saved': False})
+
+    db.session.add(SavedBookCampaign(
+        user_id=current_user.user_id,
+        campaign_id=campaign_id,
+    ))
+    db.session.commit()
+    return jsonify({'success': True, 'saved': True})
+
+
+# Campaign detail page (signed-in only — same gate as marketplace)
 @book_bp.route('/campaigns/<int:campaign_id>', methods=['GET'])
+@login_required
 def campaign_detail(campaign_id):
     """View patron campaign details."""
     campaign = InvestmentCampaign.query.options(
@@ -7652,18 +8023,25 @@ def campaign_detail(campaign_id):
     ).get_or_404(campaign_id)
     book = campaign.book_project
     
+    from glconnect.book_campaign_patronage import ensure_campaign_goal_deadline_resolved
+    ensure_campaign_goal_deadline_resolved(campaign, db)
+    db.session.refresh(campaign)
+    
     # Safety check: ensure book is a single object, not a collection
     if book is None:
         flash('Book project not found for this campaign.', 'error')
         return redirect(url_for('book_platform.campaigns'))
     
     investments = BookInvestment.query.filter_by(campaign_id=campaign_id).all()
+    counted_investments = [
+        inv for inv in investments if inv.status in _CONTRIBUTION_BACKER_STATUSES
+    ]
     
     # Group investments by investor to show unique investors with totals
     from collections import defaultdict
     investor_totals = defaultdict(lambda: {'total_amount': 0.0, 'investments': [], 'first_investment_date': None, 'last_investment_date': None})
     
-    for investment in investments:
+    for investment in counted_investments:
         investor_id = investment.investor_id
         investor_totals[investor_id]['total_amount'] += investment.amount
         investor_totals[investor_id]['investments'].append(investment)
@@ -7711,15 +8089,16 @@ def campaign_detail(campaign_id):
         completed_chapters = [ch for ch in book.chapters if ch.content and hasattr(ch, 'id')]
         completed_chapters_count = len(completed_chapters)
     
-    # Calculate days remaining
-    from datetime import timedelta
-    days_remaining = 0
-    if campaign.end_date:
-        # Ensure end_date is timezone-aware for comparison
-        end_date = campaign.end_date
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=timezone.utc)
-        days_remaining = max(0, (end_date - datetime.now(timezone.utc)).days)
+    # Calculate days remaining until the 2-year goal deadline
+    from glconnect.book_campaign_patronage import (
+        campaign_days_until_goal_deadline,
+        campaign_goal_deadline,
+        campaign_open_for_contributions,
+        campaign_period_ended,
+        campaign_goal_reached,
+    )
+    goal_deadline = campaign_goal_deadline(campaign)
+    days_remaining = campaign_days_until_goal_deadline(campaign)
     
     # Get author's other books (for track record)
     author_other_books = []
@@ -7737,11 +8116,6 @@ def campaign_detail(campaign_id):
             if current_user_id:
                 is_author = (book.author_id == current_user_id)
 
-    from glconnect.book_campaign_patronage import (
-        campaign_open_for_contributions,
-        campaign_period_ended,
-        campaign_goal_reached,
-    )
     accepts_contributions, contribution_block_reason = campaign_open_for_contributions(campaign, book)
     period_ended = campaign_period_ended(campaign)
     goal_reached = campaign_goal_reached(campaign)
@@ -7751,6 +8125,17 @@ def campaign_detail(campaign_id):
     if campaign.description:
         import re
         pitch_plain = re.sub(r'<[^>]+>', '', campaign.description)[:160].strip()
+
+    campaign_is_saved = False
+    if current_user.is_authenticated and not is_author:
+        campaign_is_saved = campaign_id in saved_campaign_ids_for_user(current_user.user_id)
+
+    from glconnect.campaign_translation_service import campaign_translation_context
+    translation_ctx = campaign_translation_context(book)
+
+    preview_mode = request.args.get('preview') in ('1', 'true', 'yes')
+    if preview_mode and not is_author:
+        preview_mode = False
     
     return render_template('book_platform/campaign_details.html', 
                          campaign=campaign,
@@ -7766,6 +8151,7 @@ def campaign_detail(campaign_id):
                          completed_chapters=completed_chapters[:3],  # First 3 for preview
                          completed_chapters_count=completed_chapters_count,
                          days_remaining=days_remaining,
+                         goal_deadline=goal_deadline,
                          author_other_books=author_other_books,
                          is_author=is_author,
                          accepts_contributions=accepts_contributions,
@@ -7774,7 +8160,10 @@ def campaign_detail(campaign_id):
                          goal_reached=goal_reached,
                          share_url=share_url,
                          pitch_plain=pitch_plain,
-                         ink_nav_active='campaigns')
+                         campaign_is_saved=campaign_is_saved,
+                         preview_mode=preview_mode,
+                         ink_nav_active='campaigns',
+                         **translation_ctx)
 
 # Patron contribution checkout (legacy POST /investments/<id>/invest still accepted)
 @book_bp.route('/campaigns/<int:campaign_id>/contribute', methods=['GET', 'POST'])
@@ -7787,21 +8176,32 @@ def contribute_to_campaign(campaign_id):
     ).get_or_404(campaign_id)
     
     book = campaign.book_project
+
+    from glconnect.campaign_translation_service import campaign_translation_context
+    contribute_template_kwargs = {
+        'campaign': campaign,
+        'book': book,
+        'ink_nav_active': 'campaigns',
+        **campaign_translation_context(book),
+    }
     
     logger.info(f"Make investment attempt - User: {current_user.user_id}, Campaign: {campaign_id}, Status: {campaign.status.value}, Book Status: {book.status.value if book else 'None'}")
     
-    from glconnect.book_campaign_patronage import campaign_open_for_contributions
+    from glconnect.book_campaign_patronage import (
+        campaign_open_for_contributions,
+        ensure_campaign_goal_deadline_resolved,
+    )
+    ensure_campaign_goal_deadline_resolved(campaign, db)
+    db.session.refresh(campaign)
     can_contribute, block_reason = campaign_open_for_contributions(campaign, book)
     if not can_contribute:
         logger.warning(f"Investment blocked - Campaign {campaign_id}: {block_reason}")
         flash(block_reason, 'error')
         return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
-    # All users can invest - ensure they have a BookPlatformUser profile for investment tracking
-    # Get or create BookPlatformUser profile for the investor
-    from glconnect.book_platform_models import BookPlatformUser
-    from glconnect.models import Writer
-    
+    # All signed-in accounts can contribute (authors included — except to their own campaign).
+    from glconnect.patron_support_service import ensure_patron_book_platform_user
+
     investor_user_id = current_user.user_id
     
     # Prevent self-investment: Check if current user is the author
@@ -7813,30 +8213,16 @@ def contribute_to_campaign(campaign_id):
             flash('You cannot contribute to your own book campaign.', 'error')
             return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
-    # Get or create BookPlatformUser profile for contributions
-    bp_user = BookPlatformUser.query.filter_by(user_id=investor_user_id).first()
-    
-    if not bp_user:
-        # Create BookPlatformUser profile for investment
-        # Try to get info from Writer profile if user is an author
-        writer = Writer.query.filter_by(user_id=investor_user_id).first()
-        
-        try:
-            bp_user = BookPlatformUser(
-                user_id=investor_user_id,
-                pen_name=writer.writer_name if writer else current_user.username,
-                bio=writer.bio if writer else "Patron",
-                profile_picture=writer.profile_picture if writer else "static/uploads/default_writer.jpg"
-            )
-            db.session.add(bp_user)
-            db.session.commit()
-            logger.info(f"Created BookPlatformUser {bp_user.id} for investor {investor_user_id}")
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Failed to create BookPlatformUser for investor: {str(e)}", exc_info=True)
-            flash('Failed to set up your supporter profile. Please try again.', 'error')
-            return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
-    
+    from glconnect.patron_support_service import ensure_patron_book_platform_user
+
+    try:
+        bp_user = ensure_patron_book_platform_user(investor_user_id, db)
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Failed to create patron profile for investor: {str(e)}", exc_info=True)
+        flash('Failed to set up your supporter profile. Please try again.', 'error')
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
+
     investor_id = bp_user.id
     
     # Double-check: Prevent investing in own book using investor_id
@@ -7862,7 +8248,7 @@ def contribute_to_campaign(campaign_id):
         # Form submission - use form validation
         form = InvestmentForm()
         if not form.validate_on_submit():
-            return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
+            return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
         amount = form.amount.data
     
     # Validate amount (same for both JSON and form)
@@ -7871,23 +8257,14 @@ def contribute_to_campaign(campaign_id):
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
     
     if campaign.maximum_investment and amount > campaign.maximum_investment:
         error_msg = f'Maximum patron gift is ${campaign.maximum_investment:.2f}'
         if request_data:
             return jsonify({'error': error_msg}), 400
         flash(error_msg, 'error')
-        return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
-    
-    # Check if goal would be exceeded
-    if campaign.current_funding + amount > campaign.funding_goal:
-        max_remaining = campaign.funding_goal - campaign.current_funding
-        error_msg = f'This contribution would exceed the funding goal. Maximum remaining: ${max_remaining:.2f}'
-        if request_data:
-            return jsonify({'error': error_msg}), 400
-        flash(error_msg, 'error')
-        return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
     
     try:
         from glconnect.book_campaign_patronage import (
@@ -8014,7 +8391,7 @@ def contribute_to_campaign(campaign_id):
     
     # Render form for GET requests or form validation errors
     form = InvestmentForm() if not request_data else None
-    return render_template('book_platform/contribute.html', form=form, campaign=campaign, ink_nav_active='campaigns')
+    return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
 
 # Earnings Dashboard
 @book_bp.route('/earnings', methods=['GET'])
@@ -8868,12 +9245,19 @@ def book_accountability_status(book_id):
     campaign = book.investment_campaign
     fund_release = {}
     if campaign and campaign.status == CampaignStatus.FUNDED:
+        from glconnect.platform_fee_policy import campaign_fee_summary, campaign_milestone_release_amount
+        ensure_campaign_fee_terms(campaign, db)
+        fee_info = campaign_fee_summary(campaign, db)
         can_first, msg_first = can_request_first_draft_release(book, campaign, db)
         can_pub, msg_pub = can_request_publication_release(book, campaign, db)
-        first_amount = (campaign.current_funding * 0.5) if not campaign.author_first_draft_released else 0
-        pub_amount = (campaign.current_funding * 0.5) if campaign.author_first_draft_released and not campaign.author_publication_released else 0
+        first_amount = campaign_milestone_release_amount(campaign, db) if not campaign.author_first_draft_released else 0
+        pub_amount = campaign_milestone_release_amount(campaign, db) if campaign.author_first_draft_released and not campaign.author_publication_released else 0
         fund_release = {
             'total_funding': campaign.current_funding,
+            'author_net_funding': fee_info['author_net_funding'],
+            'platform_fee_percent': fee_info['platform_fee_percent'],
+            'platform_fee_amount': fee_info['platform_fee_amount'],
+            'is_first_author_project': fee_info['is_first_author_project'],
             'first_draft_released': campaign.author_first_draft_released,
             'first_draft_amount': campaign.author_first_draft_amount,
             'publication_released': campaign.author_publication_released,
@@ -8920,14 +9304,17 @@ def request_campaign_fund_release(book_id):
         return redirect(url_for('book_platform.book_accountability_status', book_id=book_id))
     
     from glconnect.accountability_service import can_request_first_draft_release, can_request_publication_release, FIRST_DRAFT_RELEASE_PERCENT, PUBLICATION_RELEASE_PERCENT
+    from glconnect.platform_fee_policy import campaign_milestone_release_amount, ensure_campaign_fee_terms
     from glconnect.book_platform_models import AuthorCampaignPayoutRequest
+    
+    ensure_campaign_fee_terms(campaign, db)
     
     if milestone == 'first_draft':
         can_req, msg = can_request_first_draft_release(book, campaign, db)
-        amount = campaign.current_funding * (FIRST_DRAFT_RELEASE_PERCENT / 100)
+        amount = campaign_milestone_release_amount(campaign, db, milestone_percent=FIRST_DRAFT_RELEASE_PERCENT)
     else:
         can_req, msg = can_request_publication_release(book, campaign, db)
-        amount = campaign.current_funding * (PUBLICATION_RELEASE_PERCENT / 100)
+        amount = campaign_milestone_release_amount(campaign, db, milestone_percent=PUBLICATION_RELEASE_PERCENT)
     
     if not can_req:
         flash(msg or 'Cannot request this release.', 'error')

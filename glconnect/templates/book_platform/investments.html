@@ -6,7 +6,8 @@
     <meta name="description" content="Discover book campaigns—back indie authors before publication and follow funding progress.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Book campaigns | Ink Studio</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% if status_filter == 'saved' %}Saved campaigns{% else %}Book campaigns{% endif %} | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -22,10 +23,10 @@
     <header class="hero-section bg-gradient-primary text-white ink-mp-hero ink-invest-hero py-4 py-md-5">
         <div class="container">
             <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-                <h1 class="ink-mp-hero-title mb-0">Book campaigns</h1>
+                <h1 class="ink-mp-hero-title mb-0">{% if status_filter == 'saved' %}Saved campaigns{% else %}Book campaigns{% endif %}</h1>
                 <span class="badge rounded-pill px-3 py-2 ink-inv-results-badge">{{ campaigns|length }} listing{% if campaigns|length != 1 %}s{% endif %}</span>
             </div>
-            <p class="lead mb-3 ink-mp-hero-lead mb-md-4">Back overlooked stories before they hit the marketplace—review each campaign, funding progress, and the author’s pitch. Contributions are not investments and do not entitle you to financial returns.</p>
+            <p class="lead mb-3 ink-mp-hero-lead mb-md-4">{% if status_filter == 'saved' %}Projects you bookmarked to review or support later.{% else %}Back real stories before they reach the shelf—review each campaign, funding progress, and the author’s pitch. Contributions are patron gifts, not financial investments.{% endif %} <a href="{{ url_for('book_platform.marketplace') }}" class="link-light">Browse finished books on the marketplace</a>.</p>
             <p class="ink-inv-trust-note mb-0"><i class="fas fa-shield-alt me-2" aria-hidden="true"></i>Your own book campaigns are never listed here so you can focus on backing other creators.</p>
         </div>
     </header>
@@ -39,6 +40,7 @@
                     <a href="{{ url_for('book_platform.campaigns', status='funded', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'funded' %}btn-inv-pill-active{% endif %}">Funded</a>
                     <a href="{{ url_for('book_platform.campaigns', status='draft', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'draft' %}btn-inv-pill-active{% endif %}">Draft</a>
                     <a href="{{ url_for('book_platform.campaigns', status='all', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'all' %}btn-inv-pill-active{% endif %}">All</a>
+                    <a href="{{ url_for('book_platform.campaigns', status='saved', q=search_query) }}" class="btn btn-sm btn-outline-light {% if status_filter == 'saved' %}btn-inv-pill-active{% endif %}"><i class="fas fa-bookmark me-1" aria-hidden="true"></i>Saved</a>
                 </div>
                 <form method="GET" class="row g-3 align-items-end" role="search" aria-label="Search campaigns">
                     <input type="hidden" name="status" value="{{ status_filter }}">
@@ -67,6 +69,15 @@
                         {% set st = campaign.status.value if campaign.status else '' %}
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                             <h3 class="h5 card-title mb-0">{{ campaign.title }}</h3>
+                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                <button type="button"
+                                        class="btn btn-sm btn-link text-white-50 p-1 ink-save-campaign-btn{% if campaign.id in saved_campaign_ids|default([]) %} is-saved text-warning{% endif %}"
+                                        data-campaign-id="{{ campaign.id }}"
+                                        data-save-url="{{ url_for('book_platform.toggle_saved_campaign', campaign_id=campaign.id) }}"
+                                        aria-label="{% if campaign.id in saved_campaign_ids|default([]) %}Remove from saved{% else %}Save for later{% endif %}"
+                                        aria-pressed="{{ 'true' if campaign.id in saved_campaign_ids|default([]) else 'false' }}">
+                                    <i class="fas fa-bookmark" aria-hidden="true"></i>
+                                </button>
                             {% if st == 'active' %}
                             <span class="badge rounded-pill bg-success flex-shrink-0">Active</span>
                             {% elif st == 'funded' %}
@@ -76,15 +87,26 @@
                             {% else %}
                             <span class="badge rounded-pill bg-secondary flex-shrink-0">{{ st|replace('_', ' ')|title }}</span>
                             {% endif %}
+                            </div>
                         </div>
                         <p class="small ink-inv-book-line mb-3">
                             <i class="fas fa-book me-1" aria-hidden="true"></i>{{ campaign.book_project.title }}
                         </p>
 
                         <div class="mb-3 ink-inv-progress">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="small text-white-50">Funding</span>
-                                <span class="small fw-semibold">${{ "%.2f"|format(campaign.current_funding) }} <span class="text-white-50 fw-normal">/ ${{ "%.2f"|format(campaign.funding_goal) }}</span></span>
+                            <div class="row g-2 text-center small mb-2">
+                                <div class="col-4">
+                                    <div class="text-white-50">Goal</div>
+                                    <div class="fw-semibold">${{ "%.0f"|format(campaign.funding_goal) }}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-white-50">Funded</div>
+                                    <div class="fw-semibold">${{ "%.0f"|format(campaign.current_funding) }}</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-white-50">Backers</div>
+                                    <div class="fw-semibold">{{ campaign_backer_counts.get(campaign.id, 0) }}</div>
+                                </div>
                             </div>
                             {% set progress = (campaign.current_funding / campaign.funding_goal * 100) if campaign.funding_goal > 0 else 0 %}
                             <div class="progress" style="height: 10px;">
@@ -110,10 +132,12 @@
         </div>
         {% else %}
         <div class="ink-inv-empty text-center py-5 px-3">
-            <i class="fas fa-chart-line ink-inv-empty-icon fa-3x mb-3" aria-hidden="true"></i>
-            <h2 class="h4 mb-2">No campaigns match</h2>
-            <p class="text-white-50 mb-4 mx-auto" style="max-width: 28rem;">Try another status filter or search term. New campaigns appear as authors publish their funding rounds.</p>
-            {% if status_filter == 'active' %}
+            <i class="fas {% if status_filter == 'saved' %}fa-bookmark{% else %}fa-chart-line{% endif %} ink-inv-empty-icon fa-3x mb-3" aria-hidden="true"></i>
+            <h2 class="h4 mb-2">{% if status_filter == 'saved' %}No saved projects yet{% else %}No campaigns match{% endif %}</h2>
+            <p class="text-white-50 mb-4 mx-auto" style="max-width: 28rem;">{% if status_filter == 'saved' %}Open a book campaign and choose <strong>Save for later</strong> to return when you are ready to support.{% else %}Try another status filter or search term. New campaigns appear as authors publish their funding rounds.{% endif %}</p>
+            {% if status_filter == 'saved' %}
+            <a href="{{ url_for('book_platform.campaigns', status='active') }}" class="btn ink-mp-cta">Browse active campaigns</a>
+            {% elif status_filter == 'active' %}
             <p class="small text-white-50 mb-3 mx-auto" style="max-width: 32rem;">Authors create campaigns from a book’s page in Ink Studio. If you’re an author, open <strong>My books</strong> to set one up.</p>
             <div class="d-flex flex-wrap justify-content-center gap-2">
                 <a href="{{ url_for('book_platform.campaigns', status='all') }}" class="btn ink-mp-cta">
@@ -133,6 +157,43 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function () {
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        document.querySelectorAll('.ink-save-campaign-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var url = btn.getAttribute('data-save-url');
+                var headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+                fetch(url, { method: 'POST', headers: headers, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (!data.success) {
+                            alert(data.error || 'Could not update saved list');
+                            return;
+                        }
+                        if (data.saved) {
+                            btn.classList.add('is-saved', 'text-warning');
+                            btn.setAttribute('aria-pressed', 'true');
+                            btn.setAttribute('aria-label', 'Remove from saved');
+                        } else {
+                            btn.classList.remove('is-saved', 'text-warning');
+                            btn.setAttribute('aria-pressed', 'false');
+                            btn.setAttribute('aria-label', 'Save for later');
+                            var card = btn.closest('.col-md-6');
+                            if (card && window.location.search.indexOf('status=saved') !== -1) {
+                                card.remove();
+                            }
+                        }
+                    })
+                    .catch(function () { alert('Could not update saved list'); });
+            });
+        });
+    })();
+    </script>
     {% include 'includes/_ndotonic_mission_footer.html' %}
 
 </body>

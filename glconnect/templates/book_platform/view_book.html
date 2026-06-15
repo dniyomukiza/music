@@ -378,8 +378,11 @@
                                 Launch campaign
                             </a>
                             {% else %}
-                            <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm">
+                            <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm mb-2">
                                 View campaign
+                            </a>
+                            <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}" class="btn btn-outline-light w-100 btn-sm">
+                                Edit &amp; preview project
                             </a>
                             {% endif %}
                             {% else %}

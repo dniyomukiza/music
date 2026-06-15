@@ -242,13 +242,23 @@
       <ul>
         {% if current_user.is_authenticated %}
         <li><a href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store" style="margin-right:10px; width:20px; text-align:center;"></i> Marketplace</a></li>
-        <li><a href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
         <li><a href="{{ url_for('book_platform.campaigns') }}"><i class="fas fa-seedling" style="margin-right:10px; width:20px; text-align:center;"></i> Book campaigns</a></li>
+        {% if ink_show_media_ecosystem|default(true) %}
+        <li><a href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
+        {% endif %}
+        {% if ink_is_author_account|default(false) %}
+        <li><a href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> My books</a></li>
+        {% elif ink_v1_books_launch|default(false) %}
+        <li><a href="{{ url_for('book_platform.setup_profile', next=url_for('book_platform.marketplace')) }}"><i class="fas fa-user-edit" style="margin-right:10px; width:20px; text-align:center;"></i> Become an author</a></li>
+        {% else %}
         <li><a href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> Authors</a></li>
+        {% endif %}
         {% else %}
         <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}"><i class="fas fa-store" style="margin-right:10px; width:20px; text-align:center;"></i> Marketplace</a></li>
-        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.content_hub')) }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
         <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.campaigns')) }}"><i class="fas fa-seedling" style="margin-right:10px; width:20px; text-align:center;"></i> Book campaigns</a></li>
+        {% if ink_show_media_ecosystem|default(true) %}
+        <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.content_hub')) }}"><i class="fas fa-broadcast-tower" style="margin-right:10px; width:20px; text-align:center;"></i> Creators</a></li>
+        {% endif %}
         <li><a href="{{ url_for('routes1.login', next=url_for('book_platform.books')) }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> Authors</a></li>
         {% endif %}
         <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 5px 0;">
@@ -259,9 +269,9 @@
         <li><a href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open" style="margin-right:10px; width:20px; text-align:center;"></i> My Books</a></li>
         <li><a href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}"><i class="fas fa-wallet" style="margin-right:10px; width:20px; text-align:center;"></i> Payout account</a></li>
         {% endif %}
-        {% if current_user.is_authenticated %}
+        {% if current_user.is_authenticated and ink_show_media_ecosystem|default(true) %}
         <li><a href="{{ url_for('book_platform.music_dashboard') }}"><i class="fas fa-compact-disc" style="margin-right:10px; width:20px; text-align:center;"></i> Music</a></li>
-        {% else %}
+        {% elif not current_user.is_authenticated %}
         <li><a href="/prof/uprofile"><i class="fas fa-user" style="margin-right:10px; width:20px; text-align:center;"></i> Others</a></li>
         {% endif %}
       </ul>

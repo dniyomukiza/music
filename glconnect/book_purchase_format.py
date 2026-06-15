@@ -45,12 +45,16 @@ def total_checkout_amount(book: Any, purchase_format: str) -> float:
 
 
 def revenue_split_for_purchase(
-    book: Any, purchase_format: str, purchase_amount: float, royalty_percentage: float = 0.7
+    book: Any, purchase_format: str, purchase_amount: float, royalty_percentage: float | None = None
 ) -> Tuple[float, float, float, float]:
     """
     Returns (base_price, extra_amount, royalty_amount, platform_fee).
     Extra amount (e.g. shipping, tip) goes 100% to author; platform fee only on base list.
+    Default author share is 90% (10% marketplace platform fee).
     """
+    if royalty_percentage is None:
+        from glconnect.platform_fee_policy import marketplace_author_royalty_fraction
+        royalty_percentage = marketplace_author_royalty_fraction()
     base_price = base_price_for_format(book, purchase_format)
     extra_amount = max(0.0, float(purchase_amount) - base_price)
     base_royalty = base_price * royalty_percentage

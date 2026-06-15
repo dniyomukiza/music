@@ -1,0 +1,66 @@
+{# Shared cover choice: upload file OR AI prompt (Ink Studio listing flows).
+   Variables:
+     cover_uid — prefix for element ids (e.g. listing, create)
+     use_wtforms — if true, pass form= for DigitalBookUploadForm fields
+#}
+{% set uid = cover_uid|default('listing') %}
+{% set use_wtforms = use_wtforms|default(false) %}
+
+<div class="ink-cover-source mb-3">
+    <p class="small text-muted mb-2 mb-md-3">Add marketplace cover art — <strong>upload your own image</strong> or <strong>prompt AI</strong> (your book title and author name are placed on the cover automatically).</p>
+    <div class="row g-2 ink-cover-source-pick" role="radiogroup" aria-label="Cover source">
+        <div class="col-sm-6">
+            <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeUpload" value="upload" autocomplete="off" checked data-cover-uid="{{ uid }}">
+            <label class="btn btn-outline-light w-100 text-start py-3 px-3" for="{{ uid }}CoverModeUpload">
+                <i class="fas fa-upload me-2 text-warning" aria-hidden="true"></i><strong>Upload cover</strong>
+                <span class="d-block small text-white-50 mt-1 mb-0">PNG, JPG, WebP, or GIF</span>
+            </label>
+        </div>
+        <div class="col-sm-6">
+            <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeAi" value="ai" autocomplete="off" data-cover-uid="{{ uid }}">
+            <label class="btn btn-outline-light w-100 text-start py-3 px-3" for="{{ uid }}CoverModeAi">
+                <i class="fas fa-magic me-2 text-warning" aria-hidden="true"></i><strong>Generate with AI</strong>
+                <span class="d-block small text-white-50 mt-1 mb-0">Describe the mood; preview before you list</span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div id="{{ uid }}CoverUploadPanel">
+    <label for="{% if use_wtforms %}cover_image{% else %}cover_image{% endif %}" class="form-label">Cover image file</label>
+    {% if use_wtforms %}
+    {{ form.cover_image(class="form-control ink-upload-control", accept="image/png,image/jpeg,image/gif,image/webp", id="cover_image") }}
+    {% else %}
+    <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+    {% endif %}
+    <div class="form-text mb-2">Portrait orientation works best (about 2:3). You can change the cover later in <strong>My books → Edit</strong>.</div>
+    <img id="{{ uid }}CoverUploadPreview" alt="" class="img-fluid rounded border d-none mt-2" style="max-height: 220px;">
+</div>
+
+<div id="{{ uid }}CoverAiPanel" class="d-none">
+    {% if use_wtforms %}
+    {{ form.use_ai_cover(class="d-none", id="useAiCover") }}
+    {% else %}
+    <input type="checkbox" class="d-none" name="use_ai_cover" value="on" id="useAiCoverCreate">
+    {% endif %}
+    <div class="mb-3">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
+    <div id="{% if uid == 'create' %}coverArtBriefCreateWrap{% else %}coverArtBriefBlock{% endif %}" class="mb-3">
+        <label for="cover_art_brief" class="form-label">Art direction <span class="text-muted fw-normal">(optional prompt)</span></label>
+        {% if use_wtforms %}
+        {{ form.cover_art_brief(class="form-control ink-upload-control", rows="2", placeholder="e.g. noir thriller, rain-soaked city, teal accents") }}
+        {% else %}
+        <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="2" placeholder="e.g. warm literary fiction, soft watercolor, open road at sunset"></textarea>
+        {% endif %}
+        <div class="form-text">AI uses your title, description, genre, and this prompt. Generate a preview, then confirm before listing.</div>
+    </div>
+    <div id="{% if uid == 'create' %}aiCreateCoverPreviewWrap{% else %}aiListingCoverPreviewWrap{% endif %}" class="mb-3 border rounded-3 p-3" style="border-color: rgba(201, 162, 39, 0.35) !important; background: rgba(8, 10, 9, 0.35);">
+        <p class="small fw-semibold mb-1"><i class="fas fa-image me-1 text-warning"></i>AI cover preview</p>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <button type="button" class="btn btn-ink-ghost btn-sm" id="{% if uid == 'create' %}btnCreateCoverGenerate{% else %}btnListingCoverGenerate{% endif %}"><i class="fas fa-magic me-1" aria-hidden="true"></i>Generate preview</button>
+            <button type="button" class="btn btn-ink-sage btn-sm" id="{% if uid == 'create' %}btnCreateCoverAccept{% else %}btnListingCoverAccept{% endif %}" disabled><i class="fas fa-check me-1" aria-hidden="true"></i>Use this cover</button>
+            <button type="button" class="btn btn-ink-ghost btn-sm" id="{% if uid == 'create' %}btnCreateCoverReject{% else %}btnListingCoverReject{% endif %}" disabled><i class="fas fa-times me-1" aria-hidden="true"></i>Discard</button>
+        </div>
+        <div id="{% if uid == 'create' %}createCoverPreviewStatus{% else %}listingCoverPreviewStatus{% endif %}" class="small mb-2 text-muted" aria-live="polite"></div>
+        <img id="{% if uid == 'create' %}createCoverPreviewImg{% else %}listingCoverPreviewImg{% endif %}" alt="AI cover preview" class="img-fluid rounded border d-none" style="max-height: 280px;">
+    </div>
+</div>

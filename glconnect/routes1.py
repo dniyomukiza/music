@@ -84,6 +84,10 @@ def get_role_based_redirect(user):
     """Helper function to get the appropriate redirect URL based on user role.
     Used by both login and registration flows to ensure consistent redirects."""
     from glconnect.book_platform_routes import _author_requires_setup_profile
+    from glconnect.ink_studio_v1 import ink_v1_books_launch, ink_v1_role_redirect
+
+    if ink_v1_books_launch():
+        return ink_v1_role_redirect(user)
     
     # Artist users → music dashboard
     if user.role == "artist":

@@ -26596,3 +26596,87 @@
     Device: Desktop
     User-Agent: Werkzeug/3.1.3
 --------------------------------------------------------------------------------
+[2026-06-15 03:46:35 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:46:35 UTC] GET /mybook/investments/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:46:36 UTC] GET /mybook/investments/2/invest
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:46:36 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:46:36 UTC] GET /mybook/
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:56:54 UTC] GET /mybook/campaigns/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 03:59:51 UTC] POST /mybook/campaigns/1/save
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:33 UTC] GET /mybook/investments
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:33 UTC] GET /mybook/investments/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:34 UTC] GET /mybook/investments/2/invest
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:34 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:34 UTC] GET /mybook/campaigns/1
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:34 UTC] GET /marketplace
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-06-15 04:34:35 UTC] GET /mybook/
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------

@@ -399,7 +399,9 @@ def marketplace_book_payment_intent_data(
         return None, None
 
     base = _book_list_base_price_for_purchase_type(book, purchase_type)
-    platform_fee_usd = base * 0.3
+    from glconnect.platform_fee_policy import MARKETPLACE_PLATFORM_FEE_PERCENT
+
+    platform_fee_usd = base * (MARKETPLACE_PLATFORM_FEE_PERCENT / 100.0)
     app_fee_cents = int(round(platform_fee_usd * 100))
     total_cents = int(round(float(payment_amount) * 100))
     if total_cents <= 0:

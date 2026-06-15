@@ -180,7 +180,7 @@
                             <span class="ink-upload-badge" aria-hidden="true">2</span>
                             <div>
                                 <h2 id="heading-files" class="h5 mb-1">Ebook &amp; cover</h2>
-                                <p class="small text-muted mb-0">Upload ebook and choose a cover.</p>
+                                <p class="small text-muted mb-0">Upload your manuscript and add cover art (upload or AI).</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">
@@ -205,33 +205,9 @@
                                 <div class="col-md-6">
                                     <div class="d-flex align-items-center gap-2 mb-2">
                                         <h3 class="h6 mb-0">Cover art</h3>
-                                        <span class="badge rounded-pill ink-upload-pill">Upload and/or AI</span>
+                                        <span class="badge rounded-pill ink-upload-pill">Upload or AI</span>
                                     </div>
-                                    <div id="coverFileBlock" class="mb-3">
-                                        <label for="cover_image" class="form-label">Upload cover image</label>
-                                        {{ form.cover_image(class="form-control ink-upload-control", accept="image/png,image/jpeg,image/gif,image/webp", id="cover_image") }}
-                                        <div class="form-text">Optional if you confirm an AI cover below. If you upload <em>and</em> confirm AI, the <strong>uploaded file</strong> is used for this listing. You can switch covers later in <strong>My books</strong>.</div>
-                                    </div>
-                                    <div class="form-check form-switch mb-3 p-3 rounded-3 ink-upload-switch">
-                                        {{ form.use_ai_cover(class="form-check-input", id="useAiCover", role="switch") }}
-                                        <label class="form-check-label" for="useAiCover">Also generate a cover with AI (preview, then approve)</label>
-                                        <div class="mt-2 ps-1">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
-                                    </div>
-                                    <div id="coverArtBriefBlock" class="mb-3" style="display: none;">
-                                        <label for="cover_art_brief" class="form-label">Art direction <span class="text-muted fw-normal">(optional)</span></label>
-                                        {{ form.cover_art_brief(class="form-control ink-upload-control", rows="2", placeholder="e.g. noir thriller, rain, teal highlights") }}
-                                    </div>
-                                    <div id="aiListingCoverPreviewWrap" class="mb-3 border rounded-3 p-3" style="display: none; border-color: rgba(201, 162, 39, 0.35) !important; background: rgba(8, 10, 9, 0.35);">
-                                        <p class="small fw-semibold mb-1"><i class="fas fa-image me-1 text-warning"></i>AI cover preview</p>
-                                        <p class="small text-muted mb-3">The cover will include your <strong>book title</strong> (from the form above) and your <strong>author name</strong> (from your Ink Studio profile) automatically. Generate a preview, then tap <strong>Use this cover</strong> if you want it for submit (required when you are not uploading a file). Discard to adjust your prompt and try again.</p>
-                                        <div class="d-flex flex-wrap gap-2 mb-2">
-                                            <button type="button" class="btn btn-ink-ghost btn-sm" id="btnListingCoverGenerate"><i class="fas fa-magic me-1" aria-hidden="true"></i>Generate preview</button>
-                                            <button type="button" class="btn btn-ink-sage btn-sm" id="btnListingCoverAccept" disabled><i class="fas fa-check me-1" aria-hidden="true"></i>Use this cover</button>
-                                            <button type="button" class="btn btn-ink-ghost btn-sm" id="btnListingCoverReject" disabled><i class="fas fa-times me-1" aria-hidden="true"></i>Discard preview</button>
-                                        </div>
-                                        <div id="listingCoverPreviewStatus" class="small mb-2 text-muted" aria-live="polite"></div>
-                                        <img id="listingCoverPreviewImg" alt="AI cover preview" class="img-fluid rounded border d-none" style="max-height: 280px;">
-                                    </div>
+                                    {% include 'book_platform/includes/_cover_upload_or_ai.html' with cover_uid='listing', use_wtforms=true %}
                                 </div>
                             </div>
                         </div>
@@ -540,18 +516,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function syncCoverUi() {
-        const ai = useAiCover && useAiCover.checked;
-        if (coverArtBriefBlock) coverArtBriefBlock.style.display = ai ? 'block' : 'none';
-        if (aiListingCoverPreviewWrap) aiListingCoverPreviewWrap.style.display = ai ? 'block' : 'none';
-        if (!ai) {
-            listingCoverAccepted = false;
-            postJson('{{ url_for("book_platform.ai_cover_preview_listing_reject") }}', null);
-            setListingCoverPreviewUi('', false);
-            syncListingPreviewButtons();
-        }
+        /* legacy hook — mode is driven by cover source radios */
     }
+
+    function bindCoverSourceMode(uid, useAiEl, onAiOff) {
+        const uploadPanel = document.getElementById(uid + 'CoverUploadPanel');
+        const aiPanel = document.getElementById(uid + 'CoverAiPanel');
+        document.querySelectorAll('input[name="' + uid + '_cover_mode"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                if (!this.checked) return;
+                const isAi = this.value === 'ai';
+                if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
+                if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+                if (useAiEl) useAiEl.checked = isAi;
+                if (!isAi && onAiOff) onAiOff();
+            });
+        });
+        const checked = document.querySelector('input[name="' + uid + '_cover_mode"]:checked');
+        const isAi = checked && checked.value === 'ai';
+        if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
+        if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+        if (useAiEl) useAiEl.checked = !!isAi;
+    }
+
+    bindCoverSourceMode('listing', useAiCover, function () {
+        listingCoverAccepted = false;
+        postJson('{{ url_for("book_platform.ai_cover_preview_listing_reject") }}', null);
+        setListingCoverPreviewUi('', false);
+        syncListingPreviewButtons();
+    });
+
+    const listingCoverUploadPreview = document.getElementById('listingCoverUploadPreview');
+    if (coverInput && listingCoverUploadPreview) {
+        coverInput.addEventListener('change', function () {
+            const f = this.files && this.files[0];
+            if (f && f.type && f.type.startsWith('image/')) {
+                listingCoverUploadPreview.src = URL.createObjectURL(f);
+                listingCoverUploadPreview.classList.remove('d-none');
+            } else {
+                listingCoverUploadPreview.classList.add('d-none');
+                listingCoverUploadPreview.removeAttribute('src');
+            }
+        });
+    }
+
     if (useAiCover) {
-        useAiCover.addEventListener('change', syncCoverUi);
         syncCoverUi();
     }
 
@@ -594,13 +603,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!digitalFile || !digitalFile.files.length) {
             return { ok: false, focus: digitalFile, msg: 'Please choose your ebook file (EPUB or DOCX recommended; TXT or PDF also accepted).' };
         }
-        const ai = useAiCover && useAiCover.checked;
+        const coverModeAi = document.getElementById('listingCoverModeAi') && document.getElementById('listingCoverModeAi').checked;
+        const ai = coverModeAi || (useAiCover && useAiCover.checked);
         const hasCoverFile = !!(coverInput && coverInput.files && coverInput.files.length);
         if (!hasCoverFile && !ai) {
-            return { ok: false, focus: coverInput, msg: 'Upload a cover image, or turn on AI and confirm a preview with “Use this cover”.' };
+            return { ok: false, focus: coverInput, msg: 'Choose Upload cover and select an image, or choose Generate with AI.' };
         }
         if (!hasCoverFile && ai && !listingCoverAccepted) {
-            return { ok: false, focus: null, msg: 'Upload a cover file, or generate an AI preview and tap “Use this cover” before submitting.' };
+            return { ok: false, focus: null, msg: 'Generate an AI preview and tap “Use this cover” before submitting.' };
         }
         const digitalPriceEl = document.getElementById('digital_price') || document.querySelector('input[name="digital_price"]');
         const rawPrice = digitalPriceEl ? String(digitalPriceEl.value || '').trim() : '';

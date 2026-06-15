@@ -1,10 +1,11 @@
 {# ink_nav_active: books | marketplace | earnings | my_campaigns | campaigns | content | dashboard (freelancer home) #}
 {% set _active = ink_nav_active|default('') %}
 {% set _author = is_author|default(ink_nav_show_author_nav|default(false)) %}
+{% set _v1 = ink_v1_books_launch|default(false) %}
 {% set _dash_url = ink_studio_home_url|default(url_for('book_platform.my_library')) %}
 <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-workspace-nav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
     <div class="container-fluid ink-workspace-nav-inner px-3 px-lg-4">
-        <a class="navbar-brand ink-mp-nav-brand" href="{{ _dash_url }}">
+        <a class="navbar-brand ink-mp-nav-brand" href="{{ url_for('book_platform.marketplace') if _v1 else _dash_url }}">
             <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
         </a>
         <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#inkStudioNav" aria-controls="inkStudioNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -13,14 +14,37 @@
         <div class="collapse navbar-collapse" id="inkStudioNav">
             <ul class="navbar-nav me-auto ink-workspace-nav-primary">
                 <li class="nav-item">
-                    <a class="nav-link{% if (_author and _active == 'books') or (not _author and _active in ('dashboard', 'library')) %} active{% endif %}" href="{{ _dash_url }}"{% if (_author and _active == 'books') or (not _author and _active in ('dashboard', 'library')) %} aria-current="page"{% endif %}>{% if _author %}Dashboard{% else %}My library{% endif %}</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link{% if _active == 'marketplace' %} active{% endif %}" href="{{ url_for('book_platform.marketplace') }}"{% if _active == 'marketplace' %} aria-current="page"{% endif %}>Marketplace</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link{% if _active == 'campaigns' %} active{% endif %}" href="{{ url_for('book_platform.campaigns', status='active') }}"{% if _active == 'campaigns' %} aria-current="page"{% endif %}>Book campaigns</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if _active == 'supported' %} active{% endif %}" href="{{ url_for('book_platform.supported_projects') }}"{% if _active == 'supported' %} aria-current="page"{% endif %}>Supported</a>
+                </li>
+                {% if _v1 %}
+                <li class="nav-item">
+                    <a class="nav-link{% if _active in ('dashboard', 'library') %} active{% endif %}" href="{{ url_for('book_platform.my_library') }}"{% if _active in ('dashboard', 'library') %} aria-current="page"{% endif %}>My library</a>
+                </li>
+                {% if _author %}
+                <li class="nav-item">
+                    <a class="nav-link{% if _active == 'books' %} active{% endif %}" href="{{ url_for('book_platform.books') }}"{% if _active == 'books' %} aria-current="page"{% endif %}>My books</a>
+                </li>
+                {% endif %}
+                {% elif not _v1 %}
+                <li class="nav-item">
+                    <a class="nav-link{% if (_author and _active == 'books') or (not _author and _active in ('dashboard', 'library')) %} active{% endif %}" href="{{ _dash_url }}"{% if (_author and _active == 'books') or (not _author and _active in ('dashboard', 'library')) %} aria-current="page"{% endif %}>{% if _author %}Dashboard{% else %}My library{% endif %}</a>
+                </li>
+                {% endif %}
+                {% if _author %}
+                <li class="nav-item">
                     <a class="nav-link{% if _active == 'earnings' %} active{% endif %}" href="{{ url_for('book_platform.earnings_dashboard') }}"{% if _active == 'earnings' %} aria-current="page"{% endif %}>Earnings</a>
                 </li>
+                {% elif not _v1 %}
+                <li class="nav-item">
+                    <a class="nav-link{% if _active == 'earnings' %} active{% endif %}" href="{{ url_for('book_platform.earnings_dashboard') }}"{% if _active == 'earnings' %} aria-current="page"{% endif %}>Earnings</a>
+                </li>
+                {% endif %}
             </ul>
             <ul class="navbar-nav ink-workspace-nav-secondary align-items-lg-center">
                 <li class="nav-item dropdown">
@@ -31,13 +55,21 @@
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">Write in Ink Studio</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout setup</a></li>
                         <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item{% if _active == 'my_campaigns' %} active{% endif %}" href="{{ url_for('book_platform.author_my_campaigns') }}">My book campaigns</a></li>
+                        {% elif _v1 and current_user.is_authenticated %}
+                        <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile', next=request.path) }}">Become an author</a></li>
+                        <li><hr class="dropdown-divider"></li>
                         {% endif %}
+                        {% if ink_show_media_ecosystem|default(true) %}
                         <li><a class="dropdown-item{% if _active == 'content' %} active{% endif %}" href="{{ url_for('book_platform.content_hub') }}">Content hub</a></li>
+                        {% endif %}
+                        {% if not _v1 %}
+                        <li><a class="dropdown-item{% if _active == 'campaigns' %} active{% endif %}" href="{{ url_for('book_platform.campaigns') }}">Book campaigns</a></li>
                         {% if _author %}
                         <li><a class="dropdown-item{% if _active == 'my_campaigns' %} active{% endif %}" href="{{ url_for('book_platform.author_my_campaigns') }}">My book campaigns</a></li>
                         {% endif %}
-                        <li><a class="dropdown-item{% if _active == 'campaigns' %} active{% endif %}" href="{{ url_for('book_platform.campaigns') }}">Book campaigns</a></li>
-                        {% if ink_nav_show_my_library|default(false) and not _author %}
+                        {% endif %}
+                        {% if ink_nav_show_my_library|default(false) and not _author and not _v1 %}
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.my_library') }}">My library</a></li>
                         {% endif %}
                         {% if current_user.role == 'admin' %}
@@ -52,7 +84,7 @@
                         {{ current_user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown" aria-labelledby="inkStudioAccount">
-                        <li><a class="dropdown-item" href="{{ _dash_url }}">{% if _author %}Dashboard{% else %}My library{% endif %}</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('book_platform.marketplace') if _v1 else _dash_url }}">{% if _v1 %}Marketplace{% elif _author %}Dashboard{% else %}My library{% endif %}</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('blog.logout') }}">Logout</a></li>

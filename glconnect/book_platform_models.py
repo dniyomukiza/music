@@ -855,6 +855,7 @@ class InvestmentCampaign(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     pitch_video_url = db.Column(db.String(500), nullable=True)
+    tentative_timeline = db.Column(db.String(200), nullable=True)
     
     # Funding Goals
     funding_goal = db.Column(db.Float, nullable=False)
@@ -865,7 +866,7 @@ class InvestmentCampaign(db.Model):
     # Terms
     revenue_share_percentage = db.Column(db.Float, nullable=False)  # Total % shared with investors
     return_multiplier_cap = db.Column(db.Float, nullable=False, default=3.0)  # Max return (e.g., 3x)
-    investment_period_days = db.Column(db.Integer, default=30)  # Days to reach goal
+    investment_period_days = db.Column(db.Integer, default=730)  # Days to reach goal (2 years)
     
     # Status
     status = db.Column(db.Enum(CampaignStatus), default=CampaignStatus.DRAFT)
@@ -882,6 +883,12 @@ class InvestmentCampaign(db.Model):
     author_publication_released = db.Column(db.Boolean, default=False)
     author_publication_released_at = db.Column(db.DateTime, nullable=True)
     author_publication_amount = db.Column(db.Float, nullable=True)  # Remaining 50% when released
+
+    # Platform fee snapshot at funding (first project: 0% on pledges; later: 3%)
+    is_first_author_project = db.Column(db.Boolean, default=False)
+    campaign_platform_fee_percent = db.Column(db.Float, nullable=True)
+    campaign_platform_fee_amount = db.Column(db.Float, nullable=True)
+    author_net_funding = db.Column(db.Float, nullable=True)  # Pledges after campaign platform fee
     
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -892,6 +899,51 @@ class InvestmentCampaign(db.Model):
     # Relationships
     book_project = db.relationship('BookProject', backref='investment_campaign', uselist=False)
     investments = db.relationship('BookInvestment', backref='campaign', lazy=True, cascade='all, delete-orphan')
+
+
+class SavedBookCampaign(db.Model):
+    """Patron saved a campaign to return and support later."""
+
+    __tablename__ = 'saved_book_campaigns'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'campaign_id', name='uq_saved_campaign_user'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('investment_campaigns.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', foreign_keys=[user_id], lazy=True)
+    campaign = db.relationship('InvestmentCampaign', backref='saved_by_users', lazy=True)
+
+
+class CampaignTranslation(db.Model):
+    """Cached AI translations of campaign page content for patrons."""
+
+    __tablename__ = 'campaign_translations'
+    __table_args__ = (
+        db.UniqueConstraint('campaign_id', 'language', name='uq_campaign_translation_lang'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(
+        db.Integer,
+        db.ForeignKey('investment_campaigns.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    language = db.Column(db.String(10), nullable=False)
+    translated_title = db.Column(db.String(200), nullable=True)
+    translated_book_title = db.Column(db.String(200), nullable=True)
+    translated_author_bio = db.Column(db.Text, nullable=True)
+    translated_book_description = db.Column(db.Text, nullable=True)
+    translated_campaign_description = db.Column(db.Text, nullable=True)
+    translated_tentative_timeline = db.Column(db.String(200), nullable=True)
+    translation_method = db.Column(db.String(50), default='gemini')
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    campaign = db.relationship('InvestmentCampaign', backref='translations', lazy=True)
 
 # Book Investment Model
 class BookInvestment(db.Model):

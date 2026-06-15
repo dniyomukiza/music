@@ -36,8 +36,20 @@
                     </li>
                     {% endif %}
                     <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.campaigns', status='active') }}">
+                            <i class="fas fa-seedling me-1" aria-hidden="true"></i>Book campaigns
+                        </a>
+                    </li>
+                    {% if ink_show_media_ecosystem|default(true) %}
+                    <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.content_hub') }}" title="Music, podcasts, and more">
                             <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.supported_projects') }}">
+                            <i class="fas fa-heart me-1" aria-hidden="true"></i>Supported
                         </a>
                     </li>
                     {% if ink_nav_show_author_nav|default(false) %}
@@ -95,24 +107,41 @@
                         </span>
                         {% endif %}
                     </div>
-                    <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">Discover ebooks and audiobooks from indie authors—filter by category, listen where available, and check out securely. <span class="d-block mt-2 mt-md-0 d-md-inline">Signed-in readers may see open <strong>book campaigns</strong> to back above the catalog.</span></p>
+                    <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">
+                        Buy finished ebooks and audiobooks—or back another author’s book campaign before it publishes.
+                        {% if ink_is_author_account|default(false) %}
+                        <span class="d-block mt-2">As an author you can also list your own books and launch campaigns. You can still fund <strong>other</strong> authors’ projects (not your own).</span>
+                        {% else %}
+                        <span class="d-block mt-2">Want to publish? Complete your author profile to list books or launch a campaign.</span>
+                        {% endif %}
+                    </p>
 
-                    
                     <div class="d-flex flex-wrap gap-2">
-                        {% if can_list_book_on_marketplace %}
+                        <a href="{{ url_for('book_platform.campaigns', status='active') }}" class="btn btn-ink-sage btn-sm px-3 py-2">
+                            <i class="fas fa-seedling me-1"></i>Book campaigns
+                        </a>
+                        <a href="{{ url_for('book_platform.supported_projects') }}" class="btn btn-ink-ghost btn-sm px-3 py-2">
+                            <i class="fas fa-heart me-1"></i>Supported
+                        </a>
+                        <a href="{{ url_for('book_platform.my_library') }}" class="btn btn-ink-ghost btn-sm px-3 py-2">
+                            <i class="fas fa-book-reader me-1"></i>My library
+                        </a>
+                        {% if ink_is_author_account|default(false) %}
                         <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2" aria-label="Upload a manuscript to the marketplace">
                             <i class="fas fa-file-upload me-1"></i>Upload manuscript
                         </a>
                         <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
                             <i class="fas fa-pen-fancy me-1"></i>Write in Ink Studio
                         </a>
-                        {% endif %}
-                        {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('book_platform.campaigns', status='active') }}" class="btn btn-ink-sage btn-sm px-3 py-2">
-                            <i class="fas fa-seedling me-1"></i>Book campaigns
+                        <a href="{{ url_for('book_platform.books') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
+                            <i class="fas fa-book-open me-1"></i>My books
                         </a>
                         <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-ink-gold btn-sm px-3 py-2">
                             <i class="fas fa-dollar-sign me-1"></i>Sales &amp; payouts
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('book_platform.setup_profile', next=url_for('book_platform.marketplace')) }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2">
+                            <i class="fas fa-user-edit me-1"></i>Become an author
                         </a>
                         {% endif %}
                     </div>

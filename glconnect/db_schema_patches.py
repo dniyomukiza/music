@@ -1046,3 +1046,163 @@ def ensure_author_publishing_agreement_schema(db) -> None:
         db.session.rollback()
         logger.error("Could not patch author publishing agreement schema: %s", e, exc_info=True)
 
+
+def ensure_campaign_tentative_timeline_schema(db) -> None:
+    """Add optional tentative_timeline on investment_campaigns."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        bind = db.engine
+        if bind.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Schema patch: could not inspect dialect: %s", e)
+        return
+
+    check = db.session.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_schema = 'public' AND table_name = 'investment_campaigns' "
+            "AND column_name = 'tentative_timeline'"
+        )
+    ).fetchone()
+    if check:
+        db.session.rollback()
+        return
+
+    try:
+        db.session.execute(
+            text(
+                "ALTER TABLE investment_campaigns "
+                "ADD COLUMN IF NOT EXISTS tentative_timeline VARCHAR(200)"
+            )
+        )
+        db.session.commit()
+        logger.info("Added investment_campaigns.tentative_timeline column")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not add tentative_timeline column: %s", e, exc_info=True)
+
+
+def ensure_saved_book_campaigns_schema(db) -> None:
+    """Create saved_book_campaigns table for patron save-for-later."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        bind = db.engine
+        if bind.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Schema patch: could not inspect dialect: %s", e)
+        return
+
+    check = db.session.execute(
+        text(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_name = 'saved_book_campaigns'"
+        )
+    ).fetchone()
+    if check:
+        db.session.rollback()
+        return
+
+    create_sql = """
+CREATE TABLE IF NOT EXISTS saved_book_campaigns (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    campaign_id INTEGER NOT NULL REFERENCES investment_campaigns(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_saved_campaign_user UNIQUE (user_id, campaign_id)
+)
+"""
+    index_stmts = [
+        "CREATE INDEX IF NOT EXISTS ix_saved_book_campaigns_user_id ON saved_book_campaigns(user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_saved_book_campaigns_campaign_id ON saved_book_campaigns(campaign_id)",
+    ]
+    try:
+        db.session.execute(text(create_sql))
+        for stmt in index_stmts:
+            db.session.execute(text(stmt))
+        db.session.commit()
+        logger.info("Created saved_book_campaigns table")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not create saved_book_campaigns table: %s", e, exc_info=True)
+
+
+def ensure_campaign_platform_fee_schema(db) -> None:
+    """Add platform fee snapshot columns on investment_campaigns."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        bind = db.engine
+        if bind.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Schema patch: could not inspect dialect: %s", e)
+        return
+
+    stmts = [
+        "ALTER TABLE investment_campaigns ADD COLUMN IF NOT EXISTS is_first_author_project BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE investment_campaigns ADD COLUMN IF NOT EXISTS campaign_platform_fee_percent DOUBLE PRECISION",
+        "ALTER TABLE investment_campaigns ADD COLUMN IF NOT EXISTS campaign_platform_fee_amount DOUBLE PRECISION",
+        "ALTER TABLE investment_campaigns ADD COLUMN IF NOT EXISTS author_net_funding DOUBLE PRECISION",
+    ]
+    try:
+        for stmt in stmts:
+            db.session.execute(text(stmt))
+        db.session.commit()
+        logger.info("Ensured investment_campaigns platform fee columns")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch campaign platform fee schema: %s", e, exc_info=True)
+
+
+def ensure_campaign_translations_schema(db) -> None:
+    """Create campaign_translations table for AI patron-facing translations."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        bind = db.engine
+        if bind.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Schema patch: could not inspect dialect: %s", e)
+        return
+
+    check = db.session.execute(
+        text(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_name = 'campaign_translations'"
+        )
+    ).fetchone()
+    if check:
+        db.session.rollback()
+        return
+
+    create_sql = """
+CREATE TABLE IF NOT EXISTS campaign_translations (
+    id SERIAL PRIMARY KEY,
+    campaign_id INTEGER NOT NULL REFERENCES investment_campaigns(id) ON DELETE CASCADE,
+    language VARCHAR(10) NOT NULL,
+    translated_title VARCHAR(200),
+    translated_book_title VARCHAR(200),
+    translated_author_bio TEXT,
+    translated_book_description TEXT,
+    translated_campaign_description TEXT,
+    translated_tentative_timeline VARCHAR(200),
+    translation_method VARCHAR(50) DEFAULT 'gemini',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_campaign_translation_lang UNIQUE (campaign_id, language)
+)
+"""
+    index_sql = "CREATE INDEX IF NOT EXISTS ix_campaign_translations_campaign_id ON campaign_translations(campaign_id)"
+    try:
+        db.session.execute(text(create_sql))
+        db.session.execute(text(index_sql))
+        db.session.commit()
+        logger.info("Created campaign_translations table")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not create campaign_translations table: %s", e, exc_info=True)
+

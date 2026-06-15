@@ -1,0 +1,19 @@
+{# AI language switcher for campaign / contribute pages #}
+<div class="ink-camp-lang-bar border border-white border-opacity-10 rounded-3 p-3 mb-4 d-flex flex-wrap align-items-center gap-2"
+     id="ink-camp-lang-bar"
+     data-campaign-id="{{ campaign.id }}"
+     data-source-lang="{{ campaign_source_language }}"
+     data-translate-url="{{ url_for('book_platform.translate_campaign_page', campaign_id=campaign.id) }}">
+    <span class="small text-white-50"><i class="fas fa-language me-1" aria-hidden="true"></i>Read in your language</span>
+    <label class="visually-hidden" for="ink-camp-lang-select">Translation language</label>
+    <select id="ink-camp-lang-select" class="form-select form-select-sm" style="max-width: 12rem;">
+        <option value="original">Original ({{ campaign_source_language_name }})</option>
+        {% for lang in campaign_translation_languages %}
+        {% if lang.code != campaign_source_language %}
+        <option value="{{ lang.code }}">{{ lang.name }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+    <span id="ink-camp-lang-status" class="small text-white-50" aria-live="polite"></span>
+    <span class="small text-white-50 ms-auto d-none d-md-inline">Translate to understand the project, then fund in USD.</span>
+</div>

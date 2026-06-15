@@ -101,35 +101,12 @@
                             <div class="mb-3">
                                 <label for="description" class="form-label">Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="4" placeholder="Brief description of your book..."></textarea>
+                                <div class="form-text">After you create the book, you can add images, audio, video, and links on the edit page.</div>
                             </div>
 
                             <div class="mb-3">
                                 <h6 class="text-secondary">Cover for the marketplace</h6>
-                                <div id="coverFileCreateWrap" class="mb-2">
-                                    <label for="cover_image" class="form-label">Upload your cover</label>
-                                    <input type="file" class="form-control" id="cover_image" name="cover_image" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
-                                    <div class="form-text small">Optional if you confirm an AI cover below. If you upload <em>and</em> confirm AI, the <strong>uploaded file</strong> is used. Change covers anytime in <strong>Edit book</strong> (including a new AI preview there).</div>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="use_ai_cover" value="on" id="useAiCoverCreate">
-                                    <label class="form-check-label" for="useAiCoverCreate">Also create a cover with AI (preview, then approve)</label>
-                                    <div class="mt-2">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
-                                </div>
-                                <div class="mb-2" id="coverArtBriefCreateWrap" style="display: none;">
-                                    <label for="cover_art_brief" class="form-label">Art direction for AI (optional)</label>
-                                    <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="2" placeholder="e.g. warm literary fiction, soft watercolor, open road at sunset"></textarea>
-                                </div>
-                                <div id="aiCreateCoverPreviewWrap" class="mb-2 border rounded p-3 ink-create-ai-preview" style="display: none;">
-                                    <p class="small fw-semibold mb-1">AI cover preview</p>
-                                    <p class="small text-muted mb-2">The cover will include your <strong>book title</strong> (from this form) and your <strong>author name</strong> (from your Ink Studio profile) automatically. Generate a preview, then <strong>Use this cover</strong> if you want it for this book (required when you are not uploading a file). Discard to tweak your prompt and try again.</p>
-                                    <div class="d-flex flex-wrap gap-2 mb-2">
-                                        <button type="button" class="btn btn-ink-ghost btn-sm" id="btnCreateCoverGenerate">Generate preview</button>
-                                        <button type="button" class="btn btn-ink-sage btn-sm" id="btnCreateCoverAccept" disabled>Use this cover</button>
-                                        <button type="button" class="btn btn-ink-ghost btn-sm" id="btnCreateCoverReject" disabled>Discard preview</button>
-                                    </div>
-                                    <div id="createCoverPreviewStatus" class="small text-muted mb-2" aria-live="polite"></div>
-                                    <img id="createCoverPreviewImg" alt="AI cover preview" class="img-fluid rounded border d-none" style="max-height: 260px;">
-                                </div>
+                                {% include 'book_platform/includes/_cover_upload_or_ai.html' with cover_uid='create', use_wtforms=false %}
                             </div>
 
                             <div class="row">
@@ -377,21 +354,51 @@
                 });
             }
 
+            function bindCoverSourceMode(uid, useAiEl, onAiOff) {
+                const uploadPanel = document.getElementById(uid + 'CoverUploadPanel');
+                const aiPanel = document.getElementById(uid + 'CoverAiPanel');
+                document.querySelectorAll('input[name="' + uid + '_cover_mode"]').forEach(function (radio) {
+                    radio.addEventListener('change', function () {
+                        if (!this.checked) return;
+                        const isAi = this.value === 'ai';
+                        if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
+                        if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+                        if (useAiEl) useAiEl.checked = isAi;
+                        if (!isAi && onAiOff) onAiOff();
+                    });
+                });
+                const checked = document.querySelector('input[name="' + uid + '_cover_mode"]:checked');
+                const isAi = checked && checked.value === 'ai';
+                if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
+                if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+                if (useAiEl) useAiEl.checked = !!isAi;
+            }
+
+            bindCoverSourceMode('create', useAi, function () {
+                window.createCoverAccepted = false;
+                postJson('{{ url_for("book_platform.ai_cover_preview_listing_reject") }}', null);
+                setPreviewUi('', false);
+                syncBtns();
+            });
+
+            const createCoverUploadPreview = document.getElementById('createCoverUploadPreview');
+            if (coverInput && createCoverUploadPreview) {
+                coverInput.addEventListener('change', function () {
+                    const f = this.files && this.files[0];
+                    if (f && f.type && f.type.startsWith('image/')) {
+                        createCoverUploadPreview.src = URL.createObjectURL(f);
+                        createCoverUploadPreview.classList.remove('d-none');
+                    } else {
+                        createCoverUploadPreview.classList.add('d-none');
+                        createCoverUploadPreview.removeAttribute('src');
+                    }
+                });
+            }
+
             function syncCoverCreate() {
-                const on = useAi && useAi.checked;
-                if (brief) brief.style.display = on ? 'block' : 'none';
-                if (previewWrap) previewWrap.style.display = on ? 'block' : 'none';
-                if (!on) {
-                    window.createCoverAccepted = false;
-                    postJson('{{ url_for("book_platform.ai_cover_preview_listing_reject") }}', null);
-                    setPreviewUi('', false);
-                    syncBtns();
-                }
+                /* mode handled by bindCoverSourceMode */
             }
-            if (useAi) {
-                useAi.addEventListener('change', syncCoverCreate);
-                syncCoverCreate();
-            }
+            syncCoverCreate();
         });
 
         document.getElementById('createBookForm').addEventListener('submit', async function(e) {
@@ -402,7 +409,8 @@
             const language = formData.get('language');
             const coverInput = document.getElementById('cover_image');
             const useAiCover = document.getElementById('useAiCoverCreate');
-            const ai = useAiCover && useAiCover.checked;
+            const coverModeAi = document.getElementById('createCoverModeAi') && document.getElementById('createCoverModeAi').checked;
+            const ai = coverModeAi || (useAiCover && useAiCover.checked);
             const coverFile = coverInput && coverInput.files && coverInput.files[0];
 
             if (!title) {
@@ -416,12 +424,12 @@
             }
 
             if (!coverFile && !ai) {
-                alert('Upload a cover image, or turn on AI and confirm a preview with “Use this cover”.');
+                alert('Choose Upload cover and select an image, or choose Generate with AI.');
                 return;
             }
 
             if (!coverFile && ai && !window.createCoverAccepted) {
-                alert('Upload a cover file, or generate an AI preview and tap “Use this cover” before creating the book.');
+                alert('Generate an AI preview and tap “Use this cover” before creating the book.');
                 return;
             }
 

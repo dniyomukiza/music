@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
-    <title>Become a patron — {{ campaign.title }}</title>
+    <title>Support project — {{ campaign.title }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -17,9 +17,10 @@
     {% include 'book_platform/includes/_ink_studio_nav.html' %}
 
     <main class="container my-4 my-md-5" style="position:relative;z-index:1;max-width:560px;">
+        {% include 'book_platform/includes/_campaign_language_toolbar.html' %}
         <p class="ink-camp-eyebrow mb-2"><i class="fas fa-heart me-1" aria-hidden="true"></i>Patron gift</p>
-        <h1 class="ink-camp-title mb-1" style="font-size:1.75rem;">Back this book</h1>
-        <p class="text-white-50 mb-4">{{ campaign.title }}</p>
+        <h1 class="ink-camp-title mb-1" style="font-size:1.75rem;">Support Project</h1>
+        <p class="text-white-50 mb-4" data-ink-translate="title">{{ campaign.title }}</p>
 
         <div class="ink-camp-panel mb-3">
             <p class="small text-white-50 mb-3">
@@ -31,8 +32,18 @@
                 {% if campaign.maximum_investment %}
                 <li class="mb-2"><i class="fas fa-hand-holding-heart me-2 text-warning" aria-hidden="true"></i>Max per patron <strong class="text-white">${{ "%.2f"|format(campaign.maximum_investment) }}</strong></li>
                 {% endif %}
-                <li><i class="fas fa-bullseye me-2 text-warning" aria-hidden="true"></i>${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }} left to reach the patron goal</li>
+                <li><i class="fas fa-bullseye me-2 text-warning" aria-hidden="true"></i>
+                    {% if campaign.current_funding >= campaign.funding_goal %}
+                    Goal met — extra support still helps the author
+                    {% else %}
+                    ${{ "%.2f"|format(campaign.funding_goal - campaign.current_funding) }} left to reach the patron goal
+                    {% endif %}
+                </li>
             </ul>
+            <p class="small text-white-50 mb-0 mt-3">
+                If the goal is fully funded within 2 years of launch, pledged funds go to the author.
+                If not, patrons are refunded what they pledged.
+            </p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -143,6 +154,7 @@
         });
     });
     </script>
+    {% include 'book_platform/includes/_campaign_translate_script.html' %}
     {% include 'includes/_ndotonic_mission_footer.html' %}
 </body>
 </html>

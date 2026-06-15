@@ -1,0 +1,210 @@
+{# Rich project description editor (CKEditor + media uploads). Requires:
+   project_desc_field_id, project_desc_book_id, project_desc_upload_url
+   Optional: project_desc_preview_target (element id for live preview) #}
+<div class="ink-project-desc-editor mb-3" data-ink-editor-field="{{ project_desc_field_id }}">
+    {% if show_media_guide is not defined or show_media_guide %}
+    <div class="ink-project-desc-guide small text-muted border rounded p-3 mb-2">
+        <strong class="d-block mb-1"><i class="fas fa-photo-film me-1" aria-hidden="true"></i>Media in your description</strong>
+        <ul class="mb-2 ps-3">
+            <li><strong>Images:</strong> {{ media_guide.images }}</li>
+            <li><strong>Audio:</strong> {{ media_guide.audio }}</li>
+            <li><strong>Video files:</strong> {{ media_guide.video_files }}</li>
+            <li><strong>Video links:</strong> {{ media_guide.video_embeds }}</li>
+            <li><strong>Links:</strong> {{ media_guide.links }}</li>
+        </ul>
+        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Insert project media">
+            <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="image">
+                <i class="fas fa-image me-1"></i> Image
+            </button>
+            <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="audio">
+                <i class="fas fa-volume-up me-1"></i> Audio
+            </button>
+            <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="video">
+                <i class="fas fa-film me-1"></i> Video file
+            </button>
+            <button type="button" class="btn btn-outline-secondary ink-project-embed-video-btn">
+                <i class="fab fa-youtube me-1"></i> YouTube / Vimeo
+            </button>
+        </div>
+        <input type="file" class="ink-project-media-file d-none" accept="">
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var fieldId = {{ project_desc_field_id | tojson }};
+    var uploadUrl = {{ project_desc_upload_url | tojson }};
+    var previewTargetId = {{ project_desc_preview_target | default(none) | tojson }};
+
+    function boot() {
+        if (window.inkProjectDescriptionBooted && window.inkProjectDescriptionBooted[fieldId]) return;
+        var container = document.querySelector('.ink-project-desc-editor[data-ink-editor-field="' + fieldId + '"]');
+        if (!container || !document.getElementById(fieldId) || !window.CKEDITOR) return;
+        window.inkProjectDescriptionBooted = window.inkProjectDescriptionBooted || {};
+        window.inkProjectDescriptionBooted[fieldId] = true;
+
+    var editorInstance = null;
+    var acceptByKind = {
+        image: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp',
+        audio: '.mp3,.m4a,.ogg,.wav,audio/mpeg,audio/mp4,audio/ogg,audio/wav',
+        video: '.mp4,.webm,video/mp4,video/webm'
+    };
+
+    function updatePreview() {
+        if (!previewTargetId || !editorInstance) return;
+        var target = document.getElementById(previewTargetId);
+        if (!target) return;
+        var html = editorInstance.getData();
+        target.innerHTML = html && html.trim()
+            ? html
+            : '<p class="text-white-50 mb-0">Nothing to preview yet.</p>';
+    }
+
+    CKEDITOR.replace(fieldId, {
+        height: 280,
+        extraPlugins: 'uploadimage',
+        uploadUrl: uploadUrl,
+        filebrowserUploadUrl: uploadUrl,
+        filebrowserUploadMethod: 'form',
+        removePlugins: 'elementspath',
+        resize_enabled: true,
+        toolbar: [
+            ['Bold', 'Italic', 'Underline'],
+            ['NumberedList', 'BulletedList'],
+            ['Link', 'Unlink'],
+            ['Image'],
+            ['RemoveFormat', 'Source']
+        ]
+    });
+
+    CKEDITOR.instances[fieldId].on('instanceReady', function (evt) {
+        editorInstance = evt.editor;
+        editorInstance.on('change', updatePreview);
+        editorInstance.on('mode', updatePreview);
+        updatePreview();
+    });
+
+    function insertHtml(html) {
+        if (!editorInstance) return;
+        editorInstance.insertHtml(html);
+        updatePreview();
+    }
+
+    function uploadMedia(kind, file) {
+        var formData = new FormData();
+        formData.append('upload', file);
+        formData.append('media_type', kind);
+        return fetch(uploadUrl, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (res) {
+            return res.json().then(function (data) {
+                if (!res.ok || !data.uploaded) {
+                    var msg = (data.error && data.error.message) || data.error || 'Upload failed';
+                    throw new Error(msg);
+                }
+                return data;
+            });
+        });
+    }
+
+    var fileInput = container.querySelector('.ink-project-media-file');
+    var pendingKind = 'image';
+
+    container.querySelectorAll('.ink-project-media-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            pendingKind = btn.getAttribute('data-media-kind') || 'image';
+            fileInput.accept = acceptByKind[pendingKind] || acceptByKind.image;
+            fileInput.click();
+        });
+    });
+
+    fileInput.addEventListener('change', function () {
+        var file = fileInput.files && fileInput.files[0];
+        fileInput.value = '';
+        if (!file) return;
+
+        uploadMedia(pendingKind, file)
+            .then(function (data) {
+                if (data.html) {
+                    insertHtml(data.html);
+                    return;
+                }
+                if (pendingKind === 'image' && data.url) {
+                    insertHtml(
+                        '<figure class="ink-project-media ink-project-media--image">' +
+                        '<img src="' + data.url + '" alt="Project image" loading="lazy" class="ink-project-media__img">' +
+                        '</figure>'
+                    );
+                }
+            })
+            .catch(function (err) {
+                alert(err.message || 'Could not upload media.');
+            });
+    });
+
+    var embedBtn = container.querySelector('.ink-project-embed-video-btn');
+    if (embedBtn) {
+        embedBtn.addEventListener('click', function () {
+            var url = window.prompt('Paste a YouTube or Vimeo link:');
+            if (!url) return;
+
+            var formData = new FormData();
+            formData.append('embed_url', url.trim());
+            fetch(uploadUrl, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (!data.uploaded || !data.html) {
+                        throw new Error((data.error && data.error.message) || 'Invalid video link.');
+                    }
+                    insertHtml(data.html);
+                })
+                .catch(function (err) {
+                    alert(err.message || 'Could not embed video.');
+                });
+        });
+    }
+
+    window.inkProjectDescriptionEditors = window.inkProjectDescriptionEditors || {};
+    window.inkProjectDescriptionEditors[fieldId] = function () {
+        if (editorInstance) {
+            editorInstance.updateElement();
+        }
+    };
+    window.inkSyncProjectDescriptionEditor = function () {
+        Object.keys(window.inkProjectDescriptionEditors || {}).forEach(function (key) {
+            window.inkProjectDescriptionEditors[key]();
+        });
+    };
+
+    var parentForm = document.getElementById(fieldId).form;
+    if (parentForm && !parentForm.dataset.inkProjectEditorBound) {
+        parentForm.dataset.inkProjectEditorBound = '1';
+        parentForm.addEventListener('submit', function () {
+            window.inkSyncProjectDescriptionEditor();
+        });
+    }
+    }
+
+    if (window.CKEDITOR) {
+        boot();
+    } else if (!window.__inkCkeditorLoading) {
+        window.__inkCkeditorLoading = true;
+        var script = document.createElement('script');
+        script.src = 'https://cdn.ckeditor.com/4.16.2/full/ckeditor.js';
+        script.onload = function () {
+            document.dispatchEvent(new CustomEvent('ink-ckeditor-ready'));
+        };
+        document.head.appendChild(script);
+    }
+    document.addEventListener('ink-ckeditor-ready', boot);
+})();
+</script>

@@ -47,9 +47,21 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="description" class="form-label">Book Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="4"
-                                          placeholder="Describe your book">{{ book.description or '' }}</textarea>
+                                <label for="description" class="form-label">About the project</label>
+                                <textarea class="form-control" id="description" name="description" rows="6"
+                                          placeholder="Describe your book for patrons and readers">{{ book.description or '' }}</textarea>
+                                {% set project_desc_field_id = 'description' %}
+                                {% set project_desc_book_id = book.id %}
+                                {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
+                                {% set project_desc_preview_target = 'inkPreviewBookDescription' %}
+                                {% include 'book_platform/_project_description_editor.html' %}
+                                <div class="form-text">Shown on your campaign page under “About the project”.{% if investment_campaign %}
+                                    After saving, <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}">edit the full project</a> to preview both sections together.{% endif %}
+                                </div>
+                                {% set ink_preview_single_id = 'inkPreviewBookDescription' %}
+                                <div class="mt-3">
+                                    {% include 'book_platform/_project_description_preview.html' %}
+                                </div>
                             </div>
 
                             <div class="row">
@@ -626,6 +638,10 @@
         document.getElementById('editBookForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
+            if (typeof window.inkSyncProjectDescriptionEditor === 'function') {
+                window.inkSyncProjectDescriptionEditor();
+            }
+
 if (shouldRequireListingTerms()) {
                 if (!listingTermsConfirmed) {
                     openListingTermsPanel();
@@ -733,9 +749,15 @@ if (shouldRequireListingTerms()) {
                 const description = document.getElementById('description');
                 const genre = document.getElementById('genre');
                 const brief = document.getElementById('ai_cover_art_brief_edit');
+                let descriptionText = '';
+                if (typeof CKEDITOR !== 'undefined' && CKEDITOR.instances.description) {
+                    descriptionText = CKEDITOR.instances.description.getData().trim();
+                } else if (description && description.value) {
+                    descriptionText = description.value.trim();
+                }
                 return {
                     title: (title && title.value) ? title.value.trim() : '',
-                    description: (description && description.value) ? description.value.trim() : '',
+                    description: descriptionText,
                     genre: (genre && genre.value) ? genre.value.trim() : '',
                     cover_art_brief: (brief && brief.value) ? brief.value.trim() : '',
                 };

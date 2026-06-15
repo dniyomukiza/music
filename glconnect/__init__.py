@@ -56,6 +56,8 @@ def _load_config():
         "SENDER_MAIL": (os.getenv("SENDER_MAIL") or "").strip() or None,
         "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
         "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
+        "INK_STUDIO_V1_BOOKS_LAUNCH": os.getenv("INK_STUDIO_V1_BOOKS_LAUNCH", "").strip().lower()
+        in ("1", "true", "yes", "on"),
     }
     # Fallback: load from glconfig if env vars are empty (e.g. /etc/glconfig.json or /etc/glconfig on Linux)
     _gl_paths = [
@@ -727,6 +729,10 @@ def create_app(config_overrides=None):
             ensure_print_edition_schema,
             ensure_book_print_orders_schema,
             ensure_author_publishing_agreement_schema,
+            ensure_campaign_tentative_timeline_schema,
+            ensure_saved_book_campaigns_schema,
+            ensure_campaign_platform_fee_schema,
+            ensure_campaign_translations_schema,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -747,6 +753,10 @@ def create_app(config_overrides=None):
         ensure_print_edition_schema(db)
         ensure_book_print_orders_schema(db)
         ensure_author_publishing_agreement_schema(db)
+        ensure_campaign_tentative_timeline_schema(db)
+        ensure_saved_book_campaigns_schema(db)
+        ensure_campaign_platform_fee_schema(db)
+        ensure_campaign_translations_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

@@ -6,6 +6,7 @@
     <meta name="description" content="Back {{ book.title if book else campaign.title }} — a patron campaign on Ink Studio. Help an indie author finish and publish their book.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta property="og:title" content="{{ campaign.title }} — {{ book.title if book else 'Book campaign' }}">
     <meta property="og:description" content="{{ pitch_plain or 'Support this author before publication on Ink Studio.' }}">
     {% if book and book.cover_image %}
@@ -37,6 +38,28 @@
         {% endif %}
     {% endwith %}
 
+    {% if preview_mode %}
+    <div class="container pt-3 position-relative" style="z-index:2;">
+        <div class="alert alert-warning border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-0" role="status">
+            <span><i class="fas fa-eye me-2" aria-hidden="true"></i><strong>Preview mode</strong> — this is your saved campaign page as patrons see it.</span>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=campaign.id) }}" class="btn btn-sm btn-dark">Edit project</a>
+                <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-dark">Exit preview</a>
+            </div>
+        </div>
+    </div>
+    {% elif is_author %}
+    <div class="container pt-3 position-relative" style="z-index:2;">
+        <div class="alert alert-info border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-0 py-2" role="status">
+            <span class="small"><i class="fas fa-pen me-2" aria-hidden="true"></i>Author view — update your project copy anytime.</span>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=campaign.id) }}" class="btn btn-sm btn-ink-gold">Edit project</a>
+                <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id, preview=1) }}" class="btn btn-sm btn-ink-ghost">Preview</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <header class="ink-camp-hero">
         <div class="container">
             <div class="row g-4 align-items-start">
@@ -51,15 +74,18 @@
                 </div>
                 <div class="col">
                     <p class="ink-camp-eyebrow mb-2"><i class="fas fa-seedling me-1" aria-hidden="true"></i>Patron campaign</p>
-                    <h1 class="ink-camp-title">{{ campaign.title }}</h1>
+                    <h1 class="ink-camp-title" data-ink-translate="title">{{ campaign.title }}</h1>
                     <p class="ink-camp-book-line mb-0">
-                        for <strong>{{ book.title if book else 'Unknown book' }}</strong>
+                        for <strong data-ink-translate="book_title">{{ book.title if book else 'Unknown book' }}</strong>
                         {% if author %} · by {{ author.pen_name or (author.user.username if author.user else 'Unknown') }}{% endif %}
                     </p>
 
                     <div class="ink-camp-meta mt-3">
                         {% if goal_reached or (campaign.status.value == 'funded' and campaign.current_funding > 0) %}
                         <span class="ink-camp-chip is-funded"><i class="fas fa-check-circle" aria-hidden="true"></i> Goal reached</span>
+                        {% if accepts_contributions %}
+                        <span class="ink-camp-chip is-active"><i class="fas fa-heart" aria-hidden="true"></i> Extra support welcome</span>
+                        {% endif %}
                         {% elif period_ended %}
                         <span class="ink-camp-chip is-ended"><i class="fas fa-clock" aria-hidden="true"></i> Window ended</span>
                         {% elif campaign.status.value == 'active' %}
@@ -83,7 +109,7 @@
                     <div class="ink-camp-progress-block">
                         <div class="d-flex justify-content-between align-items-baseline mb-2">
                             <span class="small text-white-50">${{ "%.2f"|format(campaign.current_funding) }} raised</span>
-                            <span class="small fw-semibold text-white">${{ "%.2f"|format(campaign.funding_goal) }} goal · {{ "%.1f"|format(progress_percentage) }}%</span>
+                            <span class="small fw-semibold text-white">${{ "%.2f"|format(campaign.funding_goal) }} goal · {{ "%.1f"|format(progress_percentage) }}%{% if progress_percentage > 100 %} ({{ "%.0f"|format(progress_percentage) }}% with extra support){% endif %}</span>
                         </div>
                         <div class="ink-camp-progress-bar" role="progressbar" aria-valuenow="{{ progress_percentage|round(1) }}" aria-valuemin="0" aria-valuemax="100" aria-label="Funding progress">
                             <div class="ink-camp-progress-fill {% if progress_percentage >= 100 %}is-complete{% endif %}" style="width: {{ [progress_percentage, 100]|min }}%;"></div>
@@ -92,28 +118,34 @@
 
                     <div class="ink-camp-stat-grid">
                         <div class="ink-camp-stat">
-                            <div class="ink-camp-stat-value">${{ "%.0f"|format(campaign.current_funding) }}</div>
-                            <div class="ink-camp-stat-label">Raised</div>
+                            <div class="ink-camp-stat-value">${{ "%.2f"|format(campaign.funding_goal) }}</div>
+                            <div class="ink-camp-stat-label">Goal</div>
+                        </div>
+                        <div class="ink-camp-stat">
+                            <div class="ink-camp-stat-value">${{ "%.2f"|format(campaign.current_funding) }}</div>
+                            <div class="ink-camp-stat-label">Funded</div>
                         </div>
                         <div class="ink-camp-stat">
                             <div class="ink-camp-stat-value">{{ unique_investor_count }}</div>
-                            <div class="ink-camp-stat-label">Patrons</div>
-                        </div>
-                        <div class="ink-camp-stat">
-                            <div class="ink-camp-stat-value">{{ book.word_count or 0 }}</div>
-                            <div class="ink-camp-stat-label">Words</div>
-                        </div>
-                        <div class="ink-camp-stat">
-                            <div class="ink-camp-stat-value">{% if completed_chapters_count %}{{ completed_chapters_count }}{% else %}—{% endif %}</div>
-                            <div class="ink-camp-stat-label">Samples</div>
+                            <div class="ink-camp-stat-label">Backers</div>
                         </div>
                     </div>
 
                     <div class="ink-camp-hero-actions d-none d-lg-flex">
                         {% if accepts_contributions and not is_author %}
                         <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta btn-lg px-4">
-                            <i class="fas fa-heart me-2" aria-hidden="true"></i>Become a patron
+                            <i class="fas fa-heart me-2" aria-hidden="true"></i>Support Project
                         </a>
+                        {% endif %}
+                        {% if current_user.is_authenticated and not is_author %}
+                        <button type="button"
+                                class="btn btn-ink-ghost ink-save-campaign-btn{% if campaign_is_saved %} is-saved{% endif %}"
+                                data-campaign-id="{{ campaign.id }}"
+                                data-save-url="{{ url_for('book_platform.toggle_saved_campaign', campaign_id=campaign.id) }}"
+                                aria-pressed="{{ 'true' if campaign_is_saved else 'false' }}">
+                            <i class="fas {% if campaign_is_saved %}fa-bookmark{% else %}fa-bookmark{% endif %} me-2" aria-hidden="true"></i>
+                            <span class="ink-save-campaign-label">{% if campaign_is_saved %}Saved{% else %}Save for later{% endif %}</span>
+                        </button>
                         {% endif %}
                         <button type="button" class="btn btn-ink-ghost" id="ink-camp-share-btn" data-share-url="{{ share_url }}" data-share-title="{{ campaign.title }}">
                             <i class="fas fa-share-alt me-2" aria-hidden="true"></i>Share campaign
@@ -131,17 +163,19 @@
 
     <nav class="ink-camp-jump" aria-label="Campaign sections">
         <div class="container ink-camp-jump-inner">
-            <a class="ink-camp-jump-link" href="#ink-camp-pitch">The pitch</a>
+            {% if author %}<a class="ink-camp-jump-link" href="#ink-camp-about-author">About author</a>{% endif %}
+            <a class="ink-camp-jump-link" href="#ink-camp-about-project">About the project</a>
+            <a class="ink-camp-jump-link" href="#ink-camp-why-back">Why backing</a>
+            <a class="ink-camp-jump-link" href="#ink-camp-timeline">Tentative time</a>
             {% if completed_chapters %}<a class="ink-camp-jump-link" href="#ink-camp-samples">Read samples</a>{% endif %}
-            {% if author %}<a class="ink-camp-jump-link" href="#ink-camp-author">Author</a>{% endif %}
-            {% if chapters_count > 0 %}<a class="ink-camp-jump-link" href="#ink-camp-progress">Progress</a>{% endif %}
-            <a class="ink-camp-jump-link" href="#ink-camp-supporters">Patrons</a>
-            <a class="ink-camp-jump-link" href="#ink-camp-back">Back this book</a>
+            <a class="ink-camp-jump-link" href="#ink-camp-supporters">Backers</a>
+            <a class="ink-camp-jump-link" href="#ink-camp-back">Support project</a>
         </div>
     </nav>
 
     <main id="ink-camp-main" class="ink-camp-main" tabindex="-1">
         <div class="container">
+            {% include 'book_platform/includes/_campaign_language_toolbar.html' %}
             <details class="ink-camp-trust">
                 <summary><i class="fas fa-heart me-1" aria-hidden="true"></i> Back a story, not a stock — what patronage means</summary>
                 <p class="small mb-2 mt-2 mb-0 text-white-50">
@@ -157,8 +191,8 @@
                     </div>
                     <div class="col-md-6">
                         <ul class="mb-0 ps-3">
-                            <li>Funds release in milestones (draft → publish)</li>
-                            <li>Gifts stay with the author if the window ends early</li>
+                            <li>Funds go to the author when the goal is fully funded within 2 years</li>
+                            <li>If the goal is not met in 2 years, patrons are refunded</li>
                             <li>Refund policies apply if work stalls</li>
                         </ul>
                     </div>
@@ -167,21 +201,83 @@
 
             <div class="row g-4">
                 <div class="col-lg-8">
-                    <section id="ink-camp-pitch" class="ink-camp-panel">
+                    {% if author %}
+                    <section id="ink-camp-about-author" class="ink-camp-panel">
                         <div class="ink-camp-panel-head">
-                            <h2 class="ink-camp-panel-title">The pitch</h2>
-                            <span class="ink-camp-panel-badge">Why it matters</span>
+                            <h2 class="ink-camp-panel-title">About author</h2>
+                        </div>
+                        <div class="ink-camp-author-row">
+                            {% if author.profile_picture %}
+                            <img src="{{ url_for('static', filename=author.profile_picture) }}" class="ink-camp-avatar" alt="">
+                            {% else %}
+                            <div class="ink-camp-avatar-fallback" aria-hidden="true"><i class="fas fa-user fa-lg"></i></div>
+                            {% endif %}
+                            <div>
+                                <h3 class="h5 mb-1 text-white">{{ author.pen_name or (author.user.username if author.user else 'Unknown') }}</h3>
+                                {% if author.bio %}
+                                <p class="text-white-50 mb-2" data-ink-translate="author_bio">{{ author.bio }}</p>
+                                {% else %}
+                                <p class="text-white-50 mb-2">This author has not added a bio yet.</p>
+                                {% endif %}
+                                {% if author_other_books %}
+                                <p class="small mb-0">
+                                    <span class="text-white-50">Also on Ink Studio:</span>
+                                    {% for other_book in author_other_books %}
+                                    <span class="badge rounded-pill bg-secondary bg-opacity-25 text-white-50 me-1">{{ other_book.title }}</span>
+                                    {% endfor %}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <section id="ink-camp-about-project" class="ink-camp-panel">
+                        <div class="ink-camp-panel-head">
+                            <h2 class="ink-camp-panel-title">About the project</h2>
+                            <span class="ink-camp-panel-badge">{{ book.title if book else campaign.title }}</span>
+                        </div>
+                        {% if book and book.description %}
+                        <div class="ink-camp-pitch ink-project-description" data-ink-translate="book_description">{{ book.description|safe }}</div>
+                        {% else %}
+                        <p class="text-white-50 mb-0">The author has not added a project description yet.</p>
+                        {% endif %}
+                    </section>
+
+                    <section id="ink-camp-why-back" class="ink-camp-panel">
+                        <div class="ink-camp-panel-head">
+                            <h2 class="ink-camp-panel-title">Why backing this project</h2>
                         </div>
                         {% if campaign.description %}
-                        <div class="ink-camp-pitch">{{ campaign.description|safe }}</div>
+                        <div class="ink-camp-pitch ink-project-description" data-ink-translate="campaign_description">{{ campaign.description|safe }}</div>
                         {% else %}
-                        <p class="text-white-50 mb-0">The author has not added a campaign description yet.</p>
+                        <p class="text-white-50 mb-0">The author has not explained why patrons should back this project yet.</p>
                         {% endif %}
                         {% if campaign.pitch_video_url %}
                         <div class="ratio ratio-16x9 mt-3 rounded-3 overflow-hidden border border-secondary border-opacity-25">
                             <iframe src="{{ campaign.pitch_video_url }}" title="Campaign pitch video" allowfullscreen loading="lazy"></iframe>
                         </div>
                         {% endif %}
+                    </section>
+
+                    <section id="ink-camp-timeline" class="ink-camp-panel">
+                        <div class="ink-camp-panel-head">
+                            <h2 class="ink-camp-panel-title">Tentative time</h2>
+                        </div>
+                        {% if campaign.tentative_timeline %}
+                        <p class="text-white mb-2"><span data-ink-translate="tentative_timeline">{{ campaign.tentative_timeline }}</span></p>
+                        {% elif goal_deadline %}
+                        <p class="text-white mb-2"><span data-ink-translate="tentative_timeline">Funding deadline: <strong>{{ goal_deadline.strftime('%B %d, %Y') }}</strong> (2 years from launch).</span></p>
+                        {% else %}
+                        <p class="text-white-50 mb-0">The author has not shared a tentative timeline yet.</p>
+                        {% endif %}
+                        {% if days_remaining > 0 and not period_ended and accepts_contributions %}
+                        <p class="small text-white-50 mb-0 mt-2"><i class="fas fa-hourglass-half me-1" aria-hidden="true"></i>{{ days_remaining }} day{{ 's' if days_remaining != 1 else '' }} left to reach the funding goal.</p>
+                        {% endif %}
+                        <p class="small text-white-50 mb-0 mt-2">
+                            If the goal is fully funded within 2 years, pledged funds go to the author (released at draft and publication milestones).
+                            Otherwise patrons are refunded what they pledged.
+                        </p>
                     </section>
 
                     {% if completed_chapters %}
@@ -224,35 +320,6 @@
                         <div class="ink-camp-empty">
                             <div class="ink-camp-empty-icon"><i class="fas fa-feather-alt" aria-hidden="true"></i></div>
                             <p class="mb-0"><strong>No sample writing yet.</strong> The author hasn’t published preview sections—consider that before becoming a patron.</p>
-                        </div>
-                    </section>
-                    {% endif %}
-
-                    {% if author %}
-                    <section id="ink-camp-author" class="ink-camp-panel">
-                        <div class="ink-camp-panel-head">
-                            <h2 class="ink-camp-panel-title">Meet the author</h2>
-                        </div>
-                        <div class="ink-camp-author-row">
-                            {% if author.profile_picture %}
-                            <img src="{{ url_for('static', filename=author.profile_picture) }}" class="ink-camp-avatar" alt="">
-                            {% else %}
-                            <div class="ink-camp-avatar-fallback" aria-hidden="true"><i class="fas fa-user fa-lg"></i></div>
-                            {% endif %}
-                            <div>
-                                <h3 class="h5 mb-1 text-white">{{ author.pen_name or (author.user.username if author.user else 'Unknown') }}</h3>
-                                {% if author.bio %}
-                                <p class="text-white-50 small mb-2">{{ author.bio[:280] }}{% if author.bio|length > 280 %}…{% endif %}</p>
-                                {% endif %}
-                                {% if author_other_books %}
-                                <p class="small mb-0">
-                                    <span class="text-white-50">Also on Ink Studio:</span>
-                                    {% for other_book in author_other_books %}
-                                    <span class="badge rounded-pill bg-secondary bg-opacity-25 text-white-50 me-1">{{ other_book.title }}</span>
-                                    {% endfor %}
-                                </p>
-                                {% endif %}
-                            </div>
                         </div>
                     </section>
                     {% endif %}
@@ -308,7 +375,7 @@
 
                     <section id="ink-camp-supporters" class="ink-camp-panel">
                         <div class="ink-camp-panel-head">
-                            <h2 class="ink-camp-panel-title">Patrons</h2>
+                            <h2 class="ink-camp-panel-title">Backers</h2>
                             <span class="ink-camp-panel-badge">{{ unique_investor_count }} total</span>
                         </div>
                         {% if investor_summaries %}
@@ -331,7 +398,7 @@
                             <div class="ink-camp-empty-icon"><i class="fas fa-heart" aria-hidden="true"></i></div>
                             <p class="mb-2"><strong>Be the first patron.</strong> Early supporters help authors cross the finish line—and show others this story is worth backing.</p>
                             {% if accepts_contributions and not is_author %}
-                            <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta btn-sm">Back this book</a>
+                            <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta btn-sm">Support Project</a>
                             {% endif %}
                         </div>
                         {% endif %}
@@ -341,12 +408,26 @@
                 <div class="col-lg-4">
                     <aside id="ink-camp-back" class="ink-camp-sidebar">
                         <div class="ink-camp-side-card">
-                            <h2 class="h5 mb-3 text-white">Back this book</h2>
+                            <h2 class="h5 mb-3 text-white">Project stats</h2>
+
+                            <ul class="list-unstyled mb-3">
+                                <li class="d-flex justify-content-between py-2 border-bottom border-white border-opacity-10">
+                                    <span class="text-white-50">Goal</span>
+                                    <strong class="text-white">${{ "%.2f"|format(campaign.funding_goal) }}</strong>
+                                </li>
+                                <li class="d-flex justify-content-between py-2 border-bottom border-white border-opacity-10">
+                                    <span class="text-white-50">Funded</span>
+                                    <strong class="text-white">${{ "%.2f"|format(campaign.current_funding) }}</strong>
+                                </li>
+                                <li class="d-flex justify-content-between py-2 mb-2">
+                                    <span class="text-white-50">Backers</span>
+                                    <strong class="text-white">{{ unique_investor_count }}</strong>
+                                </li>
+                            </ul>
 
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between small mb-2">
-                                    <span class="text-white-50">Patron goal</span>
-                                    <span class="fw-semibold">${{ "%.2f"|format(campaign.current_funding) }} / ${{ "%.2f"|format(campaign.funding_goal) }}</span>
+                                    <span class="text-white-50">{{ "%.0f"|format([progress_percentage, 100]|min) }}% funded{% if progress_percentage > 100 %} · {{ "%.0f"|format(progress_percentage) }}% with extra support{% endif %}</span>
                                 </div>
                                 <div class="ink-camp-progress-bar">
                                     <div class="ink-camp-progress-fill {% if progress_percentage >= 100 %}is-complete{% endif %}" style="width: {{ [progress_percentage, 100]|min }}%;"></div>
@@ -359,9 +440,9 @@
                                 <li class="mb-2"><i class="fas fa-hand-holding-heart me-2 text-warning" aria-hidden="true"></i>Max per patron <strong class="text-white">${{ "%.2f"|format(campaign.maximum_investment) }}</strong></li>
                                 {% endif %}
                                 {% if period_ended %}
-                                <li class="mb-2"><i class="fas fa-clock me-2" aria-hidden="true"></i>Patron window <strong class="text-white">Ended</strong></li>
+                                <li class="mb-2"><i class="fas fa-clock me-2" aria-hidden="true"></i>Funding deadline <strong class="text-white">Passed</strong></li>
                                 {% elif days_remaining > 0 %}
-                                <li class="mb-2"><i class="fas fa-hourglass-half me-2" aria-hidden="true"></i><strong class="text-white">{{ days_remaining }}</strong> day{{ 's' if days_remaining != 1 else '' }} remaining</li>
+                                <li class="mb-2"><i class="fas fa-hourglass-half me-2" aria-hidden="true"></i><strong class="text-white">{{ days_remaining }}</strong> day{{ 's' if days_remaining != 1 else '' }} to reach goal</li>
                                 {% endif %}
                             </ul>
 
@@ -370,30 +451,43 @@
                                 Your gift helps the author finish and publish. You do not earn royalties or sales revenue.
                             </div>
                             <div class="ink-camp-side-note is-shield">
-                                <strong class="text-white d-block mb-1">Milestone release</strong>
-                                Author receives 50% at a full first draft (25,000+ words), 50% at publication—reducing ghost-author risk.
+                                <strong class="text-white d-block mb-1">Funding policy</strong>
+                                Fully funded within 2 years → author receives funds (50% at first draft, 50% at publication).
+                                Goal not met in time → patrons refunded.
+                                Marketplace sales: 10% platform fee (90% to author).
                             </div>
+
+                            {% if current_user.is_authenticated and not is_author %}
+                            <button type="button"
+                                    class="btn btn-ink-ghost w-100 mt-2 ink-save-campaign-btn{% if campaign_is_saved %} is-saved{% endif %}"
+                                    data-campaign-id="{{ campaign.id }}"
+                                    data-save-url="{{ url_for('book_platform.toggle_saved_campaign', campaign_id=campaign.id) }}"
+                                    aria-pressed="{{ 'true' if campaign_is_saved else 'false' }}">
+                                <i class="fas fa-bookmark me-2" aria-hidden="true"></i>
+                                <span class="ink-save-campaign-label">{% if campaign_is_saved %}Saved{% else %}Save for later{% endif %}</span>
+                            </button>
+                            {% endif %}
 
                             {% if accepts_contributions %}
                                 {% if is_author %}
                                 <div class="alert alert-info mt-3 mb-0 py-2 px-3 small">
                                     <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
-                                    You’re the author—you can’t patron your own campaign. Share the link so others can back your book.
+                                    You’re the author—you can’t patron your own campaign. Share the link so others can back your book, or support other authors from <a href="{{ url_for('book_platform.campaigns', status='active') }}" class="alert-link">Book campaigns</a>.
                                 </div>
                                 <button type="button" class="btn btn-ink-ghost w-100 mt-2 ink-camp-share-trigger" data-share-url="{{ share_url }}" data-share-title="{{ campaign.title }}">
                                     <i class="fas fa-share-alt me-2" aria-hidden="true"></i>Share with patrons
                                 </button>
                                 {% else %}
                                 <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta btn-lg w-100 mt-3">
-                                    <i class="fas fa-heart me-2" aria-hidden="true"></i>Become a patron
+                                    <i class="fas fa-heart me-2" aria-hidden="true"></i>Support Project
                                 </a>
                                 {% endif %}
                             {% else %}
                             <button class="btn btn-secondary btn-lg w-100 mt-3" disabled>
                                 {% if goal_reached or (campaign.status.value == 'funded' and campaign.current_funding > 0) %}
                                 <i class="fas fa-check-circle me-1" aria-hidden="true"></i> Goal reached
-                                {% elif period_ended %}
-                                <i class="fas fa-clock me-1" aria-hidden="true"></i> Window ended
+                                {% elif period_ended or campaign.status.value == 'failed' %}
+                                <i class="fas fa-clock me-1" aria-hidden="true"></i> Goal not met in time
                                 {% elif book and book.status.value == 'published' %}
                                 <i class="fas fa-book me-1" aria-hidden="true"></i> Book published
                                 {% else %}
@@ -416,13 +510,13 @@
     </main>
 
     {% if accepts_contributions and not is_author %}
-    <div class="ink-camp-mobile-cta d-lg-none" role="region" aria-label="Back this book">
+    <div class="ink-camp-mobile-cta d-lg-none" role="region" aria-label="Support this project">
         <div class="ink-camp-mobile-cta-stats">
-            <strong>${{ "%.2f"|format(campaign.current_funding) }} raised</strong>
-            <span class="small text-white-50">{{ "%.0f"|format(progress_percentage) }}% · min ${{ "%.0f"|format(campaign.minimum_investment) }}</span>
+            <strong>${{ "%.2f"|format(campaign.current_funding) }} funded</strong>
+            <span class="small text-white-50">Goal ${{ "%.0f"|format(campaign.funding_goal) }} · {{ unique_investor_count }} backers</span>
         </div>
         <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta flex-shrink-0">
-            <i class="fas fa-heart me-1" aria-hidden="true"></i>Back
+            <i class="fas fa-heart me-1" aria-hidden="true"></i>Support
         </a>
     </div>
     {% endif %}
@@ -459,8 +553,40 @@
                 shareCampaign(btn.getAttribute('data-share-url'), btn.getAttribute('data-share-title'));
             });
         });
+
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        document.querySelectorAll('.ink-save-campaign-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var url = btn.getAttribute('data-save-url');
+                var headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+                fetch(url, { method: 'POST', headers: headers, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (!data.success) {
+                            alert(data.error || 'Could not update saved list');
+                            return;
+                        }
+                        var label = btn.querySelector('.ink-save-campaign-label');
+                        if (data.saved) {
+                            btn.classList.add('is-saved');
+                            btn.setAttribute('aria-pressed', 'true');
+                            if (label) label.textContent = 'Saved';
+                            showToast('Project saved — find it under Saved on Book campaigns.');
+                        } else {
+                            btn.classList.remove('is-saved');
+                            btn.setAttribute('aria-pressed', 'false');
+                            if (label) label.textContent = 'Save for later';
+                            showToast('Removed from saved projects.');
+                        }
+                    })
+                    .catch(function () { alert('Could not update saved list'); });
+            });
+        });
     })();
     </script>
+    {% include 'book_platform/includes/_campaign_translate_script.html' %}
     {% include 'includes/_ndotonic_mission_footer.html' %}
 </body>
 </html>

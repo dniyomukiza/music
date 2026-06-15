@@ -13,8 +13,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Revenue distribution percentages (configurable)
-PLATFORM_FEE_PERCENTAGE = 15.0  # 15% to platform
-AUTHOR_BASE_PERCENTAGE = 50.0   # 50% base to author (author also receives remainder pools)
+PLATFORM_FEE_PERCENTAGE = 10.0  # 10% to platform on marketplace sales
+AUTHOR_BASE_PERCENTAGE = 90.0   # 90% to author on marketplace sales
 REVIEWER_POOL_PERCENTAGE = 0.0  # Accredited reviewers retired
 
 
@@ -57,7 +57,7 @@ def distribute_revenue(book_sale, db):
         sale_amount = book_sale.net_amount + book_sale.platform_fee  # Total sale amount
         distributions = []
         
-        # 1. Platform Fee (15%)
+        # 1. Platform Fee (10%)
         platform_amount = sale_amount * (PLATFORM_FEE_PERCENTAGE / 100)
         platform_dist = RevenueDistribution(
             distribution_type=DistributionType.PLATFORM,

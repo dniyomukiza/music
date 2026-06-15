@@ -192,8 +192,11 @@
                 <small class="opacity-75">Patron gifts help authors publish. They do not include earnings from book sales.</small>
             </div>
             <div class="card-body">
-                <div class="alert alert-light border">
+                <div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h4 class="mb-0">Total contributed: ${{ "%.2f"|format(earnings_data.total_contributed) }}</h4>
+                    <a href="{{ url_for('book_platform.supported_projects') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-heart me-1" aria-hidden="true"></i>Supported projects
+                    </a>
                 </div>
                 <div class="table-responsive">
                     <table class="table">
