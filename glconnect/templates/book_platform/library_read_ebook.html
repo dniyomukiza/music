@@ -418,7 +418,7 @@
         <div class="ink-reader-title-block">
             <p class="ink-reader-title">{{ book.title }}</p>
             {% if book.author %}
-            <p class="ink-reader-sub">{{ book.author.pen_name or (book.author.user.username if book.author.user else 'Author') }}</p>
+            <p class="ink-reader-sub">{{ author_display_name(book.author) if book.author else 'Author' }}</p>
             {% endif %}
         </div>
         <div class="ink-reader-actions">

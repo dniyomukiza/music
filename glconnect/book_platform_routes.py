@@ -17,6 +17,7 @@ import uuid
 import json
 import logging
 import re
+from collections import defaultdict
 from functools import wraps
 import zipfile
 from tempfile import SpooledTemporaryFile
@@ -58,10 +59,16 @@ from glconnect.platform_fee_policy import (
 )
 from glconnect.book_purchase_format import (
     normalize_purchase_format,
-    print_listed,
-    print_shipping_amount,
+    parse_selected_formats,
+    purchase_format_key,
+    purchase_grants_format,
+    formats_from_purchase_format,
+    total_for_formats,
+    combo_base_price,
     base_price_for_format,
     total_checkout_amount,
+    print_listed,
+    print_shipping_amount,
     revenue_split_for_purchase,
     STRIPE_PRINT_SHIPPING_COUNTRIES,
 )
@@ -75,6 +82,11 @@ from glconnect.author_publishing_agreement import (
     record_listing_attestation,
     agreement_context_for_templates,
 )
+from glconnect.author_display import (
+    marketplace_author_display_name,
+    sync_stale_book_platform_pen_name,
+)
+from glconnect.ink_listing_genres import is_valid_ink_upload_genre
 from glconnect.book_cover_preview import (
     clear_edit_preview,
     clear_listing_preview,
@@ -383,7 +395,7 @@ def _library_reader_user_has_ebook_access(book: BookProject, user_id: int) -> bo
         BookPurchase.status == TransactionStatus.COMPLETED,
     ).all()
     return any(
-        getattr(p, 'purchase_format', 'digital') in ('digital', 'bundle') for p in purchases
+        purchase_grants_format(getattr(p, 'purchase_format', 'digital'), 'digital') for p in purchases
     )
 
 
@@ -465,6 +477,8 @@ def get_user_profile():
 
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if book_user:
+        if sync_stale_book_platform_pen_name(book_user):
+            db.session.commit()
         return book_user, 'book_platform'
 
     writer = Writer.query.filter_by(user_id=current_user.user_id).first()
@@ -1388,14 +1402,11 @@ def _ai_cover_preview_form_dict():
 
 
 def _author_display_name_for_cover(user_profile, profile_type, book=None):
-    """Pen name (or username) used as author typography on AI-generated covers."""
+    """Pen name (or account name) used as author typography on AI-generated covers."""
     if book is not None:
         author = getattr(book, "author", None)
         if author:
-            if getattr(author, "pen_name", None):
-                return author.pen_name.strip()
-            if getattr(author, "user", None) and author.user.username:
-                return author.user.username.strip()
+            return marketplace_author_display_name(author)
     if profile_type == "book_platform" and getattr(user_profile, "pen_name", None):
         return user_profile.pen_name.strip()
     if profile_type == "writer" and getattr(user_profile, "writer_name", None):
@@ -1910,7 +1921,11 @@ def edit_book(book_id, user_profile, profile_type):
                         book.status = BookStatus.DRAFT
                         logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
 
-            from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
+            from glconnect.isbn_pool_service import (
+                apply_listing_isbn,
+                IsbnPoolError,
+                IsbnValidationError,
+            )
 
             if newly_listing or (
                 book.print_enabled
@@ -1924,7 +1939,14 @@ def edit_book(book_id, user_profile, profile_type):
                 record_listing_attestation(book)
 
             try:
-                assign_marketplace_isbn_if_needed(book)
+                apply_listing_isbn(
+                    book,
+                    data.get('isbn_source'),
+                    data.get('isbn_manual'),
+                )
+            except IsbnValidationError as e:
+                db.session.rollback()
+                return jsonify({'success': False, 'error': str(e)}), 400
             except IsbnPoolError as e:
                 db.session.rollback()
                 return jsonify({'success': False, 'error': str(e)}), 503
@@ -3366,9 +3388,9 @@ def send_book_purchase_receipt_email(book, purchase):
         "",
         f"Your book: {view_url}",
     ]
-    if fmt in ("digital", "bundle") and dl_url:
+    if purchase_grants_format(fmt, "digital") and dl_url:
         lines.append(f"Download digital copy: {dl_url}")
-    if fmt in ("audiobook", "bundle") and player_url:
+    if purchase_grants_format(fmt, "audiobook") and player_url:
         lines.append(f"Audiobook player: {player_url}")
     body = "\n".join(lines)
 
@@ -3510,16 +3532,11 @@ def api_marketplace_book_detail(book_id):
         return jsonify({'success': False, 'error': 'Book not found or not available in the marketplace.'}), 404
 
     author = book.author
-    author_name = 'Unknown'
-    author_user_id = None
-    if author:
-        if author.pen_name:
-            author_name = author.pen_name
-        elif author.user:
-            author_name = author.user.username
-            author_user_id = author.user.user_id
-        else:
-            author_name = 'Author'
+    author_name = marketplace_author_display_name(
+        author,
+        log_context=f"api_marketplace_book_detail:{book_id}",
+    )
+    author_user_id = author.user.user_id if author and author.user else None
 
     author_listing_count = DatabaseOptimizer.marketplace_books_base_query().filter(
         BookProject.author_id == book.author_id
@@ -3642,10 +3659,17 @@ def publish_book(book_id):
         from glconnect.platform_fee_policy import apply_campaign_fee_terms
         apply_campaign_fee_terms(book.investment_campaign, db)
 
-    from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
+    from glconnect.isbn_pool_service import apply_listing_isbn, IsbnPoolError, IsbnValidationError
 
     try:
-        assign_marketplace_isbn_if_needed(book)
+        apply_listing_isbn(
+            book,
+            (payload or {}).get('isbn_source'),
+            (payload or {}).get('isbn_manual'),
+        )
+    except IsbnValidationError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
     except IsbnPoolError as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 503
@@ -3910,25 +3934,14 @@ def _restore_library_visibility_for_owned_format(user_id: int, book_id: int, pur
     rec = LibraryBookHide.query.filter_by(user_id=user_id, book_project_id=book_id).first()
     if not rec:
         return False
-    pf = (purchase_format or 'digital').lower().strip()
+    fmts = formats_from_purchase_format(purchase_format)
     changed = False
-    if pf == 'digital':
-        if rec.hide_ebook:
-            rec.hide_ebook = False
-            changed = True
-    elif pf == 'audiobook':
-        if rec.hide_audiobook:
-            rec.hide_audiobook = False
-            changed = True
-    elif pf == 'bundle':
-        if rec.hide_ebook or rec.hide_audiobook:
-            rec.hide_ebook = False
-            rec.hide_audiobook = False
-            changed = True
-    else:
-        if rec.hide_ebook:
-            rec.hide_ebook = False
-            changed = True
+    if 'digital' in fmts and rec.hide_ebook:
+        rec.hide_ebook = False
+        changed = True
+    if 'audiobook' in fmts and rec.hide_audiobook:
+        rec.hide_audiobook = False
+        changed = True
     if not rec.hide_ebook and not rec.hide_audiobook:
         db.session.delete(rec)
         changed = True
@@ -3974,8 +3987,8 @@ def my_library():
         hide_e = bool(hide.hide_ebook) if hide else False
         hide_a = bool(hide.hide_audiobook) if hide else False
         fmt = (getattr(p, 'purchase_format', 'digital') or 'digital').lower()
-        from_digital = fmt in ('digital', 'bundle') and not hide_e
-        from_audio = fmt in ('audiobook', 'bundle') and not hide_a
+        from_digital = purchase_grants_format(fmt, 'digital') and not hide_e
+        from_audio = purchase_grants_format(fmt, 'audiobook') and not hide_a
         if not from_digital and not from_audio:
             continue
         b = books_by_id.get(bid)
@@ -4032,9 +4045,9 @@ def library_hide_book(book_id):
     owns_audiobook = False
     for p in purchases:
         pf = (getattr(p, 'purchase_format', 'digital') or 'digital').lower()
-        if pf in ('digital', 'bundle'):
+        if purchase_grants_format(pf, 'digital'):
             owns_digital = True
-        if pf in ('audiobook', 'bundle'):
+        if purchase_grants_format(pf, 'audiobook'):
             owns_audiobook = True
 
     if fmt == 'ebook':
@@ -4250,7 +4263,7 @@ def library_reader_search_index(book_id):
 
 def _create_print_order_from_checkout_session(purchase, book, session):
     """Create BookPrintOrder from Stripe Checkout session shipping (print purchases only)."""
-    if normalize_purchase_format(getattr(purchase, 'purchase_format', None)) != 'print':
+    if not purchase_grants_format(getattr(purchase, 'purchase_format', None), 'print'):
         return None
     existing = BookPrintOrder.query.filter_by(book_purchase_id=purchase.id).first()
     if existing:
@@ -4289,6 +4302,30 @@ def _create_print_order_from_checkout_session(purchase, book, session):
     return order
 
 
+def _validate_marketplace_format_selection(book, formats):
+    """Ensure each requested format is listed and priced on this book."""
+    fmts = parse_selected_formats(formats)
+    if not fmts:
+        return None, "Choose at least one format to purchase."
+    for fmt in fmts:
+        if fmt == "digital":
+            if not book.digital_book_published and book.status != BookStatus.PUBLISHED:
+                return None, "Digital ebook is not available for this title."
+            if not book.price or book.price <= 0:
+                return None, "Digital ebook price is not set for this book."
+        elif fmt == "audiobook":
+            if not book.has_audiobook or not book.audiobook_published:
+                return None, "Audiobook is not available for this title."
+            if not book.audiobook_price or book.audiobook_price <= 0:
+                return None, "Audiobook price is not set for this book."
+        elif fmt == "print":
+            if not print_listed(book):
+                return None, "Print edition is not available for this title."
+            if not is_book_published(book):
+                return None, "This book is not listed on the marketplace yet."
+    return fmts, None
+
+
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required
 def purchase_book(book_id):
@@ -4302,22 +4339,29 @@ def purchase_book(book_id):
         # Get custom amount and purchase type from request
         request_data = request.get_json() or {}
         custom_amount = request_data.get('custom_amount')
-        purchase_type = normalize_purchase_format(request_data.get('purchase_type') or 'digital')
+
+        from glconnect.book_platform_models import BookPlatformUser
+
+        book = BookProject.query.options(
+            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
+        ).get_or_404(book_id)
+
+        raw_combo = request_data.get('combo_formats')
+        if isinstance(raw_combo, list) and raw_combo:
+            selected_formats, fmt_err = _validate_marketplace_format_selection(book, raw_combo)
+        else:
+            selected_formats, fmt_err = _validate_marketplace_format_selection(
+                book, parse_selected_formats(None, request_data.get('purchase_type') or 'digital')
+            )
+        if fmt_err:
+            return jsonify({'error': fmt_err}), 400
+
+        purchase_type = purchase_format_key(selected_formats)
         
-        # Initialize variables that might be needed in error handling
         buyer_user_id = current_user.user_id if current_user.is_authenticated else None
         if not buyer_user_id:
             return jsonify({'error': 'User not authenticated'}), 401
         
-        # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
-        from glconnect.book_platform_models import BookPlatformUser
-        
-        # Eager load author information to ensure fresh data from database
-        book = BookProject.query.options(
-            joinedload(BookProject.author).joinedload(BookPlatformUser.user)
-        ).get_or_404(book_id)
-        
-        # Buyers only need a user account - NO profile required
         buyer_user_id = current_user.user_id
         
         # Check if buyer_user_id column exists - if yes, we don't need BookPlatformUser profile
@@ -4368,43 +4412,15 @@ def purchase_book(book_id):
         else:
             logger.info(f"buyer_user_id column not found - using buyer_id={buyer_id}")
         
-        # Validate purchase type and set price
-        if purchase_type == 'print':
-            if not print_listed(book):
-                return jsonify({'error': 'Print edition is not available for this book.'}), 400
-            if not is_book_published(book):
-                return jsonify({'error': 'This book is not listed on the marketplace yet.'}), 400
-            base_price = base_price_for_format(book, 'print')
-        elif purchase_type == 'audiobook':
-            if not book.has_audiobook or not book.audiobook_published:
-                return jsonify({'error': 'This book does not have an audiobook available for purchase.'}), 400
-            if not book.audiobook_price or book.audiobook_price <= 0:
-                return jsonify({'error': 'Audiobook price is not set. Please contact the author.'}), 400
-            base_price = base_price_for_format(book, 'audiobook')
-        elif purchase_type == 'bundle':
-            if not book.has_audiobook or not book.audiobook_published:
-                return jsonify({'error': 'Bundle requires an audiobook. This book does not have one available.'}), 400
-            if not book.audiobook_price or book.audiobook_price <= 0:
-                return jsonify({'error': 'Audiobook price is not set. Cannot create bundle.'}), 400
-            base_price = base_price_for_format(book, 'bundle')
-        else:
-            base_price = base_price_for_format(book, 'digital')
-        
-        # Validate book has a price for the selected format
+        base_price = combo_base_price(book, selected_formats)
         if not base_price or base_price <= 0:
-            return jsonify({'error': f'This {purchase_type} is not available for purchase. Please contact the author.'}), 400
-        
-        # Validate book has an author
+            return jsonify({'error': 'Selected formats are not available for purchase.'}), 400
+
         if not book.author_id:
             logger.error(f"Book {book_id} has no author_id - cannot create sale")
             return jsonify({'error': 'Book has no author. Cannot process purchase.'}), 400
-        
-        # Digital/bundle require ebook list price; print uses print_price only
-        if purchase_type in ('digital', 'bundle') and (not book.price or book.price <= 0):
-            logger.error(f"Book {book_id} has no digital price: {book.price}")
-            return jsonify({'error': 'This book is not available for purchase. Please contact the author.'}), 400
-        
-        list_checkout_total = total_checkout_amount(book, purchase_type)
+
+        list_checkout_total = total_for_formats(book, selected_formats)
         
         # Validate and set payment amount (custom amount must be >= checkout total for this format)
         if custom_amount is not None:
@@ -4933,47 +4949,72 @@ def purchase_book(book_id):
                         'purchase_type': purchase_type,
                     },
                 )
-                if purchase_type == 'print':
-                    book_amt = base_price_for_format(book, 'print')
-                    ship_amt = print_shipping_amount(book)
-                    line_items = []
-                    if book_amt > 0:
-                        line_items.append({
-                            'price_data': {
-                                'currency': (book.currency or 'USD').lower(),
-                                'product_data': {
-                                    'name': f'{book.title} (print edition)',
-                                    'description': 'Physical book — author ships to your address',
-                                },
-                                'unit_amount': int(round(book_amt * 100)),
-                            },
-                            'quantity': 1,
-                        })
-                    if ship_amt > 0:
-                        line_items.append({
-                            'price_data': {
-                                'currency': (book.currency or 'USD').lower(),
-                                'product_data': {
-                                    'name': 'Shipping',
-                                    'description': 'Flat shipping (author fulfills)',
-                                },
-                                'unit_amount': int(round(ship_amt * 100)),
-                            },
-                            'quantity': 1,
-                        })
-                    if not line_items:
+                if purchase_grants_format(purchase_type, 'print'):
+                    combo_fmts = formats_from_purchase_format(purchase_type)
+                    if len(combo_fmts) > 1:
+                        labels = []
+                        if 'digital' in combo_fmts:
+                            labels.append('Ebook')
+                        if 'audiobook' in combo_fmts:
+                            labels.append('Audiobook')
+                        if 'print' in combo_fmts:
+                            labels.append('Print')
                         line_items = [{
                             'price_data': {
                                 'currency': (book.currency or 'USD').lower(),
-                                'product_data': {'name': book.title},
-                                'unit_amount': int(payment_amount * 100),
+                                'product_data': {
+                                    'name': f'{book.title} ({", ".join(labels)})',
+                                    'description': 'Combined purchase — print ships to your address',
+                                },
+                                'unit_amount': int(round(payment_amount * 100)),
                             },
                             'quantity': 1,
                         }]
-                    checkout_kw['line_items'] = line_items
-                    checkout_kw['shipping_address_collection'] = {
-                        'allowed_countries': STRIPE_PRINT_SHIPPING_COUNTRIES,
-                    }
+                        checkout_kw['line_items'] = line_items
+                        checkout_kw['shipping_address_collection'] = {
+                            'allowed_countries': STRIPE_PRINT_SHIPPING_COUNTRIES,
+                        }
+                    else:
+                        book_amt = base_price_for_format(book, 'print')
+                        ship_amt = print_shipping_amount(book)
+                        line_items = []
+                        if book_amt > 0:
+                            line_items.append({
+                                'price_data': {
+                                    'currency': (book.currency or 'USD').lower(),
+                                    'product_data': {
+                                        'name': f'{book.title} (print edition)',
+                                        'description': 'Physical book — author ships to your address',
+                                    },
+                                    'unit_amount': int(round(book_amt * 100)),
+                                },
+                                'quantity': 1,
+                            })
+                        if ship_amt > 0:
+                            line_items.append({
+                                'price_data': {
+                                    'currency': (book.currency or 'USD').lower(),
+                                    'product_data': {
+                                        'name': 'Shipping',
+                                        'description': 'Flat shipping (author fulfills)',
+                                    },
+                                    'unit_amount': int(round(ship_amt * 100)),
+                                },
+                                'quantity': 1,
+                            })
+                        if not line_items:
+                            line_items = [{
+                                'price_data': {
+                                    'currency': (book.currency or 'USD').lower(),
+                                    'product_data': {'name': book.title},
+                                    'unit_amount': int(payment_amount * 100),
+                                },
+                                'quantity': 1,
+                            }]
+                        checkout_kw['line_items'] = line_items
+                        checkout_kw['shipping_address_collection'] = {
+                            'allowed_countries': STRIPE_PRINT_SHIPPING_COUNTRIES,
+                        }
                 else:
                     checkout_kw['line_items'] = [{
                         'price_data': {
@@ -5445,7 +5486,10 @@ def purchase_success():
         notify_receipt = False
         def _post_purchase_redirect(book_id: int, purchase_format: str):
             """Route buyers after checkout — library for digital/audio, marketplace for print."""
-            if normalize_purchase_format(purchase_format) == 'print':
+            if purchase_grants_format(purchase_format, 'print') and not (
+                purchase_grants_format(purchase_format, 'digital')
+                or purchase_grants_format(purchase_format, 'audiobook')
+            ):
                 return redirect(url_for('book_platform.marketplace'))
             return redirect(url_for('book_platform.my_library', book_id=book_id))
 
@@ -5654,8 +5698,8 @@ def purchase_success():
             except Exception as receipt_err:
                 logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
 
-        success_fmt = normalize_purchase_format(getattr(purchase, 'purchase_format', None))
-        if success_fmt == 'print' and session_id:
+        purchase_format = getattr(purchase, 'purchase_format', None) or 'digital'
+        if purchase_grants_format(purchase_format, 'print') and session_id:
             try:
                 init_stripe()
                 import stripe
@@ -5671,10 +5715,19 @@ def purchase_success():
                     exc_info=True,
                 )
 
-        if success_fmt == 'print':
+        has_print = purchase_grants_format(purchase_format, 'print')
+        has_digital = purchase_grants_format(purchase_format, 'digital')
+        has_audio = purchase_grants_format(purchase_format, 'audiobook')
+        if has_print and not has_digital and not has_audio:
             handling_days = int(getattr(book, 'print_handling_days', None) or 7)
             flash(
                 f'Print order confirmed! The author will ship within about {handling_days} business days.',
+                'success',
+            )
+        elif has_print:
+            handling_days = int(getattr(book, 'print_handling_days', None) or 7)
+            flash(
+                f'Purchase successful! Digital formats are in your library; print ships within about {handling_days} business days.',
                 'success',
             )
         else:
@@ -5682,9 +5735,9 @@ def purchase_success():
         logger.info(
             f"✅ Purchase {purchase.id} recorded from Stripe success for book {book_id}, sale id={getattr(sale, 'id', None)}"
         )
-        if success_fmt != 'print' and _restore_library_visibility_for_owned_format(buyer_user_id, book_id, success_fmt):
+        if (has_digital or has_audio) and _restore_library_visibility_for_owned_format(buyer_user_id, book_id, purchase_format):
             db.session.commit()
-        return _post_purchase_redirect(book_id, success_fmt)
+        return _post_purchase_redirect(book_id, purchase_format)
         
     except Exception as e:
         db.session.rollback()
@@ -6212,7 +6265,7 @@ def stripe_webhook():
                     if purchase:
                         if complete_purchase(purchase, payment_intent_id, amount_total):
                             logger.info(f"✅ Purchase {purchase.id} completed from checkout.session.completed webhook")
-                            if normalize_purchase_format(getattr(purchase, 'purchase_format', None)) == 'print':
+                            if purchase_grants_format(getattr(purchase, 'purchase_format', None), 'print'):
                                 book_for_print = BookProject.query.get(purchase.book_project_id)
                                 if book_for_print:
                                     _create_print_order_from_checkout_session(purchase, book_for_print, session)
@@ -6410,7 +6463,11 @@ def get_author_details(author_id):
 
         writer = Writer.query.filter_by(user_id=author.user_id).first()
 
-        author_name = author.pen_name or (author.user.username if author.user else 'Author')
+        author_name = marketplace_author_display_name(
+            author,
+            writer=writer,
+            log_context=f"api_author_details:{author_id}",
+        )
         author_bio = _marketplace_author_bio(author, writer)
         author_profile_picture = _marketplace_author_profile_picture(author, writer)
 
@@ -6779,6 +6836,12 @@ def upload_digital_book():
             terms_error = validate_listing_terms_payload(request.form or {})
             if terms_error:
                 return _upload_digital_book_error(form, terms_error)
+
+            if not is_valid_ink_upload_genre(form.genre.data or ''):
+                return _upload_digital_book_error(
+                    form,
+                    "Select Real Life or Nonfiction as the book category.",
+                )
             
             # Handle file uploads
             digital_file = form.digital_book_file.data
@@ -6878,14 +6941,20 @@ def upload_digital_book():
             db.session.flush()  # Flush to get book.id
             logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
 
-            from glconnect.isbn_pool_service import assign_marketplace_isbn_if_needed, IsbnPoolError
+            from glconnect.isbn_pool_service import apply_listing_isbn, IsbnPoolError, IsbnValidationError
 
             try:
-                assign_marketplace_isbn_if_needed(book)
+                apply_listing_isbn(
+                    book,
+                    request.form.get('isbn_source'),
+                    request.form.get('isbn_manual'),
+                )
+            except IsbnValidationError as e:
+                db.session.rollback()
+                return _upload_digital_book_error(form, str(e))
             except IsbnPoolError as e:
                 db.session.rollback()
-                flash(str(e), 'error')
-                return redirect(url_for('book_platform.upload_digital_book'))
+                return _upload_digital_book_error(form, str(e))
 
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
@@ -7005,7 +7074,7 @@ def download_digital_book(book_id):
             BookPurchase.status == TransactionStatus.COMPLETED
         ).all()
         has_digital_access = any(
-            getattr(p, 'purchase_format', 'digital') in ('digital', 'bundle') for p in purchases
+            purchase_grants_format(getattr(p, 'purchase_format', 'digital'), 'digital') for p in purchases
         )
         if not has_digital_access:
             flash("You must purchase this book to download it.", "error")
@@ -7062,7 +7131,7 @@ def serve_audiobook_file(book_id):
             BookPurchase.status == TransactionStatus.COMPLETED
         ).all()
         has_audiobook_access = any(
-            getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+            purchase_grants_format(getattr(p, 'purchase_format', 'digital'), 'audiobook') for p in purchases
         )
         if not has_audiobook_access:
             return "Access denied", 403
@@ -7231,11 +7300,7 @@ def audiobook_player(book_id):
     if not chapter_tracklist:
         single_audiobook_src = url_for('book_platform.serve_audiobook_file', book_id=book.id)
 
-    author_label = 'Author'
-    if book.author:
-        author_label = book.author.pen_name or (
-            book.author.user.username if book.author.user else author_label
-        )
+    author_label = marketplace_author_display_name(book.author) if book.author else 'Author'
 
     return render_template(
         'book_platform/audiobook_player.html',
@@ -7274,7 +7339,7 @@ def download_audio_book(book_id):
             BookPurchase.status == TransactionStatus.COMPLETED
         ).all()
         has_audiobook_access = any(
-            getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+            purchase_grants_format(getattr(p, 'purchase_format', 'digital'), 'audiobook') for p in purchases
         )
         if not has_audiobook_access:
             flash("You must purchase the audiobook to download it.", "error")
@@ -8011,7 +8076,6 @@ def campaign_detail(campaign_id):
     ]
     
     # Group investments by investor to show unique investors with totals
-    from collections import defaultdict
     investor_totals = defaultdict(lambda: {'total_amount': 0.0, 'investments': [], 'first_investment_date': None, 'last_investment_date': None})
     
     for investment in counted_investments:

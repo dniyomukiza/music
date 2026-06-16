@@ -156,6 +156,7 @@ class BookProject(db.Model):
     cover_image = db.Column(db.String(500), nullable=True)
     isbn = db.Column(db.String(20), nullable=True)
     publisher_name = db.Column(db.String(200), nullable=True)  # Platform imprint when listed
+    isbn_source = db.Column(db.String(20), nullable=True)  # pool | author
     isbn_assigned_at = db.Column(db.DateTime, nullable=True)
     price = db.Column(db.Float, nullable=True)  # Price in USD
     currency = db.Column(db.String(3), default='USD')
@@ -443,7 +444,7 @@ class BookPurchase(db.Model):
     book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id'), nullable=False)
     
     # Purchase format: digital (ebook), audiobook, bundle, print
-    purchase_format = db.Column(db.String(20), default='digital', nullable=True)
+    purchase_format = db.Column(db.String(64), default='digital', nullable=True)
     
     # Buyer information (stored for easy access and historical record)
     buyer_username = db.Column(db.String(80), nullable=True)  # Store username for quick access

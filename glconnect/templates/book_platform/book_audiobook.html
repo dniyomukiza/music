@@ -65,6 +65,8 @@
                     <input type="hidden" name="publish_digital_book" id="publish_digital_book" value="on" data-was-published="1">
                     <input type="hidden" name="publish_audiobook" id="publish_audiobook" value="{% if book.audiobook_published %}on{% endif %}" data-was-published="{% if book.audiobook_published %}1{% else %}0{% endif %}">
                     <input type="hidden" name="confirm_audiobook_publish" id="confirm_audiobook_publish_field" value="">
+                    <input type="hidden" name="listing_terms_rights_warranty" id="listing_terms_rights_warranty_field" value="">
+                    <input type="hidden" name="listing_terms_takedown_consent" id="listing_terms_takedown_consent_field" value="">
                     {% else %}
                     <input type="hidden" name="is_published" id="is_published" value="{% if book.status.value == 'published' %}on{% endif %}" data-was-published="{% if book.status.value == 'published' %}1{% else %}0{% endif %}">
                     {% endif %}
@@ -179,21 +181,21 @@
                                         <label class="form-label">Voice Selection</label>
                                         <p class="small mb-2 ink-voice-picker-hint">Preview different voices to find the perfect one for your audiobook</p>
                                         
-                                        <!-- Voice Type Tabs -->
+                                        <!-- Voice Type Tabs (display names — not Google product labels) -->
                                         <ul class="nav nav-tabs mb-3" id="voiceTypeTabs" role="tablist">
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link active" id="neural2-tab" data-bs-toggle="tab" data-bs-target="#neural2-voices" type="button" role="tab">
-                                                    Neural2
+                                                <button class="nav-link active" id="neural2-tab" data-bs-toggle="tab" data-bs-target="#neural2-voices" type="button" role="tab" title="Balanced, natural narration for everyday listening">
+                                                    Natural
                                                 </button>
                                             </li>
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="studio-tab" data-bs-toggle="tab" data-bs-target="#studio-voices" type="button" role="tab">
-                                                    Studio
+                                                <button class="nav-link" id="studio-tab" data-bs-toggle="tab" data-bs-target="#studio-voices" type="button" role="tab" title="Polished narrator-style voices">
+                                                    Professional
                                                 </button>
                                             </li>
                                             <li class="nav-item" role="presentation">
-                                                <button class="nav-link" id="chirp3-tab" data-bs-toggle="tab" data-bs-target="#chirp3-voices" type="button" role="tab">
-                                                    Chirp 3 HD
+                                                <button class="nav-link" id="chirp3-tab" data-bs-toggle="tab" data-bs-target="#chirp3-voices" type="button" role="tab" title="Rich, expressive high-definition voices">
+                                                    Expressive
                                                 </button>
                                             </li>
                                         </ul>
@@ -257,14 +259,19 @@
                 {% if book.digital_file_path %}
                 <div class="card border-primary mt-3" id="audiobook-publish-actions">
                     <div class="card-body">
+                        <ol class="small text-muted mb-3 ps-3 mb-0" id="listingPublishSteps">
+                            <li id="listingStepTerms" class="mb-1"><strong>Step 1:</strong> Scroll the agreement, check each box, then click <strong>Agree to terms</strong>.</li>
+                            <li id="listingStepPreview" class="mb-1"><strong>Step 2:</strong> Preview the audiobook and check the approval box.</li>
+                            <li id="listingStepPublish" class="mb-2"><strong>Step 3:</strong> Click <strong>Publish audiobook now</strong>.</li>
+                        </ol>
                         <div class="mb-3 border rounded p-3 bg-light listing-terms-section">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div>
                                     <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author Publishing Agreement</h6>
                                     <small class="text-muted d-block">Listing attestation (v{{ listing_attestation_version }}) when publishing audiobook.</small>
-                                    <small class="text-muted">Required before newly listing audiobook.</small>
+                                    <small class="text-muted">Scroll to the bottom to unlock the checkboxes, then click Agree to terms.</small>
                                 </div>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(); return false;">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(true); return false;">
                                     Review and accept terms
                                 </button>
                             </div>
@@ -291,13 +298,14 @@
                                     </label>
                                 </div>
                                 <div class="mt-3">
-                                    <button type="button" class="btn btn-primary btn-sm" id="btnConfirmListingTerms">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnConfirmListingTerms" disabled title="Check each required box above first">
                                         <i class="fas fa-check-circle me-1"></i>Agree to terms
                                     </button>
+                                    <small class="text-muted d-block mt-2">Checking the boxes alone is not enough — click Agree to terms to continue.</small>
                                 </div>
                             </div>
                             <div id="listingTermsConfirmedNote" class="alert alert-success mt-3 d-none small mb-0">
-                                <i class="fas fa-check me-1"></i>Terms accepted. Continue to publish your audiobook below.
+                                <i class="fas fa-check me-1"></i>Step 1 complete — terms accepted. Continue with Step 2 below.
                             </div>
                         </div>
                         <p id="listingAudiobookPublishHint" class="small text-muted mb-3" role="status" aria-live="polite"></p>
@@ -313,7 +321,7 @@
                             <button type="button" class="btn btn-primary btn-sm" id="btnQuickPublishAudiobook" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
                                 <i class="fas fa-layer-group me-1"></i>Publish audiobook now
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtnStep2" onclick="openListingTermsPanel(); return false;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtnStep2" onclick="openListingTermsPanel(true); return false;">
                                 <i class="fas fa-scale-balanced me-1"></i>Review and accept terms
                             </button>
                             <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
@@ -333,13 +341,103 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         let listingTermsConfirmed = false;
+        let audiobookReadyForPublish = {{ 'true' if book.has_audiobook else 'false' }};
+
+        function syncListingTermsToForm() {
+            const rights = document.getElementById('listing_terms_rights_warranty');
+            const takedown = document.getElementById('listing_terms_takedown_consent');
+            const rightsField = document.getElementById('listing_terms_rights_warranty_field');
+            const takedownField = document.getElementById('listing_terms_takedown_consent_field');
+            if (rightsField) rightsField.value = (rights && rights.checked) ? 'on' : '';
+            if (takedownField) takedownField.value = (takedown && takedown.checked) ? 'on' : '';
+        }
+
+        function dbgLog(hypothesisId, location, message, data) {
+            // #region agent log
+            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',runId:'pre-fix',hypothesisId:hypothesisId,location:location,message:message,data:data,timestamp:Date.now()})}).catch(function(){});
+            // #endregion
+        }
+
+        function listingTermsCheckboxState() {
+            const rights = document.getElementById('listing_terms_rights_warranty');
+            const takedown = document.getElementById('listing_terms_takedown_consent');
+            return {
+                confirmed: listingTermsConfirmed,
+                rightsChecked: !!(rights && rights.checked),
+                rightsDisabled: !!(rights && rights.disabled),
+                takedownChecked: !!(takedown && takedown.checked),
+                takedownDisabled: !!(takedown && takedown.disabled),
+                panelHidden: (function () {
+                    const p = document.getElementById('listingTermsPanel');
+                    return !!(p && p.classList.contains('d-none'));
+                })(),
+            };
+        }
+
+        function listingTermsRequiredBoxesChecked() {
+            const rights = document.getElementById('listing_terms_rights_warranty');
+            const takedown = document.getElementById('listing_terms_takedown_consent');
+            return !!(rights && rights.checked && takedown && takedown.checked);
+        }
+
+        function updateListingPublishSteps() {
+            const stepTerms = document.getElementById('listingStepTerms');
+            const stepPreview = document.getElementById('listingStepPreview');
+            const stepPublish = document.getElementById('listingStepPublish');
+            const previewCb = document.getElementById('confirm_audiobook_publish_cb');
+            if (stepTerms) {
+                stepTerms.classList.toggle('text-success', listingTermsConfirmed);
+                stepTerms.classList.toggle('text-muted', !listingTermsConfirmed);
+            }
+            const previewDone = !previewCb || previewCb.checked;
+            if (stepPreview) {
+                stepPreview.classList.toggle('text-success', listingTermsConfirmed && previewDone);
+                stepPreview.classList.toggle('text-muted', !(listingTermsConfirmed && previewDone));
+            }
+            if (stepPublish) {
+                const ready = listingTermsConfirmed && previewDone && audiobookReadyForPublish;
+                stepPublish.classList.toggle('text-success', ready);
+                stepPublish.classList.toggle('text-muted', !ready);
+            }
+        }
+
+        function updateListingTermsAgreeButton() {
+            const btn = document.getElementById('btnConfirmListingTerms');
+            if (!btn) return;
+            const ready = listingTermsRequiredBoxesChecked();
+            btn.disabled = !ready;
+            btn.classList.toggle('btn-primary', ready);
+            btn.classList.toggle('btn-secondary', !ready);
+        }
+
+        function updatePublishButtonsUx() {
+            const quickPubBtn = document.getElementById('btnQuickPublishAudiobook');
+            if (!quickPubBtn) return;
+            quickPubBtn.disabled = !(audiobookReadyForPublish && listingTermsConfirmed);
+            if (!listingTermsConfirmed) {
+                quickPubBtn.title = 'Complete Step 1: scroll the agreement, check each box, then click Agree to terms.';
+            } else if (!audiobookReadyForPublish) {
+                quickPubBtn.title = 'Publish unlocks after the audiobook is generated successfully.';
+            } else {
+                quickPubBtn.title = '';
+            }
+            updateListingPublishSteps();
+        }
 
         function setListingTermsConfirmed(confirmed) {
+            const prev = listingTermsConfirmed;
             listingTermsConfirmed = !!confirmed;
+            dbgLog('H3', 'book_audiobook:setListingTermsConfirmed', 'terms confirmed state changed', {
+                prev: prev,
+                next: listingTermsConfirmed,
+                stack: (new Error().stack || '').split('\n').slice(1, 4).join(' | '),
+            });
             const note = document.getElementById('listingTermsConfirmedNote');
             if (note) {
                 note.classList.toggle('d-none', !listingTermsConfirmed);
             }
+            syncListingTermsToForm();
+            updatePublishButtonsUx();
         }
 
         function shouldRequireListingTerms() {
@@ -368,59 +466,88 @@
             const atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
             boxes.forEach(function (cb) { cb.disabled = !atBottom; });
             if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+            updateListingTermsAgreeButton();
         }
 
-        function openListingTermsPanel() {
+        function openListingTermsPanel(reset) {
+            if (reset === undefined) reset = true;
+            dbgLog('H1', 'book_audiobook:openListingTermsPanel', 'opening terms panel', {
+                resetArg: reset,
+                confirmedBefore: listingTermsConfirmed,
+                state: listingTermsCheckboxState(),
+            });
             const panel = document.getElementById('listingTermsPanel');
             if (!panel) return false;
             panel.classList.remove('d-none');
             panel.style.display = 'block';
-            setListingTermsConfirmed(false);
-            const scrollEl = document.getElementById('listingTermsScrollEdit');
-            const hintEl = document.getElementById('listingTermsScrollHintEdit');
-            if (scrollEl) scrollEl.scrollTop = 0;
-            ['listing_terms_rights_warranty', 'listing_terms_takedown_consent', 'listing_ai_rights_confirm'].forEach(function (id) {
-                const cb = document.getElementById(id);
-                if (cb) { cb.checked = false; cb.disabled = true; }
-            });
-            if (hintEl) hintEl.classList.remove('d-none');
+            if (reset) {
+                setListingTermsConfirmed(false);
+                const scrollEl = document.getElementById('listingTermsScrollEdit');
+                const hintEl = document.getElementById('listingTermsScrollHintEdit');
+                if (scrollEl) scrollEl.scrollTop = 0;
+                ['listing_terms_rights_warranty', 'listing_terms_takedown_consent', 'listing_ai_rights_confirm'].forEach(function (id) {
+                    const cb = document.getElementById(id);
+                    if (cb) { cb.checked = false; cb.disabled = true; }
+                });
+                if (hintEl) hintEl.classList.remove('d-none');
+            }
             requestAnimationFrame(function () { updateListingTermsScrollGateEdit(); });
             panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return true;
         }
 
         function validateListingTermsForm() {
-            const rights = document.getElementById('listing_terms_rights_warranty');
-            const takedown = document.getElementById('listing_terms_takedown_consent');
-            const panel = document.getElementById('listingTermsPanel');
             const scrollEl = document.getElementById('listingTermsScrollEdit');
+            const boxesOk = listingTermsRequiredBoxesChecked();
+            dbgLog('H2', 'book_audiobook:validateListingTermsForm', 'validation start', {
+                boxesOk: boxesOk,
+                state: listingTermsCheckboxState(),
+            });
 
-            if (!panel || panel.classList.contains('d-none')) {
-                openListingTermsPanel();
-                showNotification('Review and accept the listing attestation in the Author Publishing Agreement section before listing.', 'error');
-                return false;
-            }
-            if (!rights || rights.disabled || !rights.checked) {
-                showNotification('Scroll through the full terms text, then accept the rights warranty before listing.', 'error');
+            if (!boxesOk) {
+                openListingTermsPanel(false);
+                showNotification('Scroll through the full terms, check each required box, then click “Agree to terms”.', 'error');
                 if (scrollEl) scrollEl.focus();
+                dbgLog('H1', 'book_audiobook:validateListingTermsForm', 'failed: boxes not checked', {
+                    resetArgPassed: listingTermsConfirmed,
+                    stateAfter: listingTermsCheckboxState(),
+                });
                 return false;
             }
-            if (!takedown || takedown.disabled || !takedown.checked) {
-                showNotification('Scroll through the full terms text, then accept takedown consent before listing.', 'error');
-                if (scrollEl) scrollEl.focus();
+            if (!listingTermsConfirmed) {
+                openListingTermsPanel(false);
+                showNotification('Almost there — click “Agree to terms” after checking each box.', 'error');
+                dbgLog('H4', 'book_audiobook:validateListingTermsForm', 'failed: not confirmed', {
+                    stateAfter: listingTermsCheckboxState(),
+                });
                 return false;
             }
+            syncListingTermsToForm();
+            dbgLog('H2', 'book_audiobook:validateListingTermsForm', 'validation passed', {
+                state: listingTermsCheckboxState(),
+            });
             return true;
         }
 
         const showListingTermsBtn = document.getElementById('showListingTermsBtn');
-        if (showListingTermsBtn) showListingTermsBtn.addEventListener('click', openListingTermsPanel);
+        if (showListingTermsBtn) showListingTermsBtn.addEventListener('click', function () { openListingTermsPanel(true); });
         const showListingTermsBtnStep2 = document.getElementById('showListingTermsBtnStep2');
-        if (showListingTermsBtnStep2) showListingTermsBtnStep2.addEventListener('click', openListingTermsPanel);
+        if (showListingTermsBtnStep2) showListingTermsBtnStep2.addEventListener('click', function () { openListingTermsPanel(true); });
+        ['listing_terms_rights_warranty', 'listing_terms_takedown_consent', 'listing_ai_rights_confirm'].forEach(function (id) {
+            const cb = document.getElementById(id);
+            if (cb) cb.addEventListener('change', updateListingTermsAgreeButton);
+        });
+        const confirmAudiobookPublishCb = document.getElementById('confirm_audiobook_publish_cb');
+        if (confirmAudiobookPublishCb) {
+            confirmAudiobookPublishCb.addEventListener('change', updateListingPublishSteps);
+        }
         const btnConfirmListingTerms = document.getElementById('btnConfirmListingTerms');
         if (btnConfirmListingTerms) {
             btnConfirmListingTerms.addEventListener('click', function() {
-                if (!validateListingTermsForm()) return;
+                if (!listingTermsRequiredBoxesChecked()) {
+                    showNotification('Scroll through the full terms and check each required box first.', 'error');
+                    return;
+                }
                 const panel = document.getElementById('listingTermsPanel');
                 if (panel) panel.classList.add('d-none');
                 setListingTermsConfirmed(true);
@@ -429,7 +556,7 @@
                     document.getElementById('audiobook-section') ||
                     document.getElementById('editBookForm');
                 if (publishTarget) publishTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                showNotification('Terms accepted. You can now publish.', 'success');
+                showNotification('Step 1 complete — you can now publish your audiobook.', 'success');
             });
         }
 
@@ -451,15 +578,17 @@
                 return;
             }
             if (shouldRequireListingTerms()) {
-                if (!listingTermsConfirmed) {
-                    openListingTermsPanel();
-                    showNotification('Agree to terms before listing.', 'error');
-                    return;
-                }
                 if (!validateListingTermsForm()) return;
             }
             
             const formData = new FormData(this);
+            syncListingTermsToForm();
+            if (shouldRequireListingTerms()) {
+                const rightsField = document.getElementById('listing_terms_rights_warranty_field');
+                const takedownField = document.getElementById('listing_terms_takedown_consent_field');
+                formData.set('listing_terms_rights_warranty', rightsField ? rightsField.value : '');
+                formData.set('listing_terms_takedown_consent', takedownField ? takedownField.value : '');
+            }
             
             try {
                 const response = await fetch('{{ url_for("book_platform.edit_book", book_id=book.id) }}', {
@@ -493,6 +622,16 @@
         let currentPreviewVoice = null;
         let reloadTriggered = false; // Flag to prevent multiple reloads
         let statusCheckInterval = null; // Store interval ID to clear it later
+
+        /** User-facing voice tier labels (API keys stay Neural2 / Studio / Chirp3). */
+        const VOICE_CATEGORY_LABELS = {
+            Neural2: 'Natural',
+            Studio: 'Professional',
+            Chirp3: 'Expressive',
+        };
+        function voiceCategoryLabel(apiType) {
+            return VOICE_CATEGORY_LABELS[apiType] || apiType;
+        }
         
         // Load available voices on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -506,6 +645,7 @@
             {% if not book.has_audiobook %}
             loadAvailableVoices();
             {% endif %}
+            updatePublishButtonsUx();
             
             // Check audiobook generation status
             checkAudiobookStatus();
@@ -523,8 +663,9 @@
             const confirmCb = document.getElementById('confirm_audiobook_publish_cb');
 
             if (result.has_audiobook) {
+                audiobookReadyForPublish = true;
                 if (listingConfirmWrap) listingConfirmWrap.classList.remove('d-none');
-                if (quickPubBtn) quickPubBtn.disabled = false;
+                updatePublishButtonsUx();
                 if (hint) {
                     hint.className = 'small text-muted mb-3';
                     hint.textContent = '';
@@ -532,6 +673,7 @@
                 return;
             }
 
+            audiobookReadyForPublish = false;
             if (quickPubBtn) quickPubBtn.disabled = true;
             if (listingConfirmWrap) listingConfirmWrap.classList.add('d-none');
             if (confirmCb) confirmCb.checked = false;
@@ -666,21 +808,17 @@
         }
 
         function quickPublishBoth() {
+            dbgLog('H5', 'book_audiobook:quickPublishBoth', 'publish clicked', {
+                state: listingTermsCheckboxState(),
+            });
             const cb = document.getElementById('confirm_audiobook_publish_cb');
             if (cb && !cb.checked) {
                 showNotification(
-                    'Confirm that you previewed the audiobook and approve publishing it to the marketplace.',
+                    'Step 2: confirm that you previewed the audiobook and approve publishing it to the marketplace.',
                     'error'
                 );
+                if (cb) cb.focus();
                 return;
-            }
-            if (shouldRequireListingTerms()) {
-                if (!listingTermsConfirmed) {
-                    openListingTermsPanel();
-                    showNotification('Agree to terms before listing.', 'error');
-                    return;
-                }
-                if (!validateListingTermsForm()) return;
             }
             const hiddenConfirm = document.getElementById('confirm_audiobook_publish_field');
             if (hiddenConfirm) {
@@ -696,6 +834,18 @@
                 if (audio.type === 'checkbox') audio.checked = true;
                 audio.value = 'on';
             }
+            if (shouldRequireListingTerms()) {
+                if (!validateListingTermsForm()) {
+                    dbgLog('H5', 'book_audiobook:quickPublishBoth', 'blocked by terms validation', {
+                        state: listingTermsCheckboxState(),
+                    });
+                    return;
+                }
+            }
+            dbgLog('H5', 'book_audiobook:quickPublishBoth', 'submitting form', {
+                state: listingTermsCheckboxState(),
+                requireTerms: shouldRequireListingTerms(),
+            });
             const form = document.getElementById('editBookForm');
             if (form) form.requestSubmit();
         }
@@ -784,7 +934,7 @@
                                 <h6 class="card-title mb-1 small">${voice.name}</h6>
                                 <small class="text-muted">
                                     <i class="fas ${genderIcon} me-1"></i>${genderText}
-                                    <span class="badge bg-secondary ms-2">${voiceType}</span>
+                                    <span class="badge bg-secondary ms-2">${voiceCategoryLabel(voiceType)}</span>
                                 </small>
                             </div>
                             ${isSelected ? '<i class="fas fa-check-circle text-primary"></i>' : ''}
@@ -809,7 +959,7 @@
             // Update selected voice display
             const display = document.getElementById('selectedVoiceDisplay');
             const nameSpan = document.getElementById('selectedVoiceName');
-            nameSpan.textContent = voiceName + ` (${voiceType})`;
+            nameSpan.textContent = voiceName + ` (${voiceCategoryLabel(voiceType)})`;
             nameSpan.style.color = '';
             display.style.display = 'block';
             

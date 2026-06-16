@@ -547,7 +547,7 @@
         <div class="ink-lib-list" id="libraryList" role="list">
             {% for row in items %}
             {% set book = row.book %}
-            {% set author_name = book.author.pen_name or (book.author.user.username if book.author and book.author.user else 'Author') %}
+            {% set author_name = author_display_name(book.author) if book.author else 'Author' %}
             <article class="ink-lib-card {% if highlight_book_id and highlight_book_id == book.id %}highlight-purchase{% endif %}"
                      role="listitem"
                      data-library-title="{{ (book.title ~ ' ' ~ author_name)|lower }}">

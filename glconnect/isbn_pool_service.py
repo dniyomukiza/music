@@ -21,8 +21,38 @@ class IsbnPoolError(Exception):
     """Raised when an ISBN cannot be assigned (e.g. pool exhausted)."""
 
 
+class IsbnValidationError(Exception):
+    """Raised when an author-supplied ISBN is invalid or already in use."""
+
+
 def platform_publisher_name() -> str:
     return (os.getenv("INK_STUDIO_PUBLISHER_NAME") or DEFAULT_PUBLISHER_NAME).strip() or DEFAULT_PUBLISHER_NAME
+
+
+def validate_isbn13(raw: str) -> str:
+    """Validate ISBN-13 (or ISBN-10 converted to ISBN-13). Returns 13 digits."""
+    cleaned = re.sub(r"[^0-9Xx]", "", (raw or "").strip()).upper()
+    if len(cleaned) == 10:
+        core12 = f"978{cleaned[:9]}"
+        cleaned = core12 + isbn13_check_digit(core12)
+    if len(cleaned) != 13 or not cleaned.isdigit():
+        raise IsbnValidationError("Enter a valid 13-digit ISBN (hyphens optional).")
+    if cleaned[-1] != isbn13_check_digit(cleaned[:12]):
+        raise IsbnValidationError("That ISBN check digit is invalid — double-check the number.")
+    return cleaned
+
+
+def count_available_pool_isbns(db) -> int:
+    from glconnect.book_platform_models import IsbnPoolEntry, IsbnPoolStatus
+
+    try:
+        return (
+            db.session.query(IsbnPoolEntry.id)
+            .filter_by(status=IsbnPoolStatus.AVAILABLE)
+            .count()
+        )
+    except Exception:
+        return 0
 
 
 def normalize_isbn(raw: str) -> str:
@@ -82,6 +112,7 @@ def ensure_isbn_pool_schema(db) -> None:
             "CREATE INDEX IF NOT EXISTS ix_isbn_pool_book_project_id ON isbn_pool(book_project_id)",
             "ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS publisher_name VARCHAR(200)",
             "ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS isbn_assigned_at TIMESTAMP",
+            "ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS isbn_source VARCHAR(20)",
         ]
         try:
             for stmt in stmts:
@@ -192,17 +223,72 @@ def assign_marketplace_isbn_if_needed(book) -> Tuple[Optional[str], str]:
     entry.assigned_at = now
     book.isbn = isbn
     book.publisher_name = publisher
+    if hasattr(book, "isbn_source"):
+        book.isbn_source = "pool"
     if hasattr(book, "isbn_assigned_at"):
         book.isbn_assigned_at = now
 
     logger.info(
-        "Assigned ISBN %s to book %s (%s); publisher=%s",
+        "Assigned pool ISBN %s to book %s (%s); publisher=%s",
         isbn,
         book.id,
         book.title,
         publisher,
     )
     return isbn, publisher
+
+
+def apply_listing_isbn(book, source: Optional[str] = None, manual_raw: Optional[str] = None) -> Tuple[str, str]:
+    """
+    Assign ISBN when listing a title (ebook, print, or audiobook share one ISBN per book).
+    source: 'pool' (next available platform ISBN) or 'manual' (author-supplied).
+    """
+    from glconnect.book_utils import is_book_published
+    from glconnect.book_platform_models import BookProject
+
+    publisher = platform_publisher_name()
+
+    if not book or not is_book_published(book):
+        return (book.isbn if book else None), publisher
+
+    if book.isbn:
+        if not getattr(book, "publisher_name", None):
+            book.publisher_name = publisher
+        return book.isbn, book.publisher_name or publisher
+
+    mode = (source or "pool").strip().lower()
+    if mode in ("manual", "author", "own"):
+        if not manual_raw or not str(manual_raw).strip():
+            raise IsbnValidationError(
+                "Enter your ISBN or choose “Assign from platform pool”."
+            )
+        isbn = validate_isbn13(manual_raw)
+        clash = BookProject.query.filter(
+            BookProject.isbn == isbn,
+            BookProject.id != book.id,
+        ).first()
+        if clash:
+            raise IsbnValidationError(
+                "That ISBN is already used on another title in the marketplace."
+            )
+        now = datetime.now(timezone.utc)
+        book.isbn = isbn
+        book.publisher_name = publisher
+        if hasattr(book, "isbn_source"):
+            book.isbn_source = "author"
+        if hasattr(book, "isbn_assigned_at"):
+            book.isbn_assigned_at = now
+        logger.info(
+            "Author-supplied ISBN %s on book %s (%s); publisher=%s",
+            isbn,
+            book.id,
+            book.title,
+            publisher,
+        )
+        return isbn, publisher
+
+    isbn, pub = assign_marketplace_isbn_if_needed(book)
+    return isbn, pub
 
 
 def bootstrap_isbn_pool(db) -> None:

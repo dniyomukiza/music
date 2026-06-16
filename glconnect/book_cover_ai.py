@@ -241,7 +241,7 @@ Exact text that MUST appear on the cover (spell exactly as shown):
 
 Genre: {genre or "general"}
 Summary for visual inspiration: {desc or "Not provided."}
-Author art direction (optional): {brief or "None—use genre-appropriate professional design."}
+Author art direction (optional): {brief or "None provided—the model will choose genre-appropriate style and imagery on its own. Title and author name on the cover are still mandatory."}
 
 Requirements:
 - Vertical book-cover composition, aspect ratio approximately 2:3 (portrait), suitable for thumbnail and full display.

@@ -109,6 +109,26 @@ def init_book_platform(app):
         return {"bcp_patronage": patronage}
 
     @app.context_processor
+    def inject_isbn_listing_helpers():
+        from glconnect.isbn_pool_service import count_available_pool_isbns, format_isbn_display, platform_publisher_name
+
+        try:
+            pool_count = count_available_pool_isbns(db)
+        except Exception:
+            pool_count = None
+        return {
+            "format_isbn_display": format_isbn_display,
+            "platform_publisher_name": platform_publisher_name(),
+            "isbn_pool_available": pool_count,
+        }
+
+    @app.context_processor
+    def inject_author_display_helpers():
+        from glconnect.author_display import marketplace_author_display_name
+
+        return {"author_display_name": marketplace_author_display_name}
+
+    @app.context_processor
     def inject_manuscript_section_helpers():
         from glconnect.book_utils import (
             format_manuscript_summary,

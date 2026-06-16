@@ -156,8 +156,12 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="genre" class="form-label">Genre</label>
-                                    {{ form.genre(class="form-control ink-upload-control", placeholder="e.g. Fiction, Romance, Memoir") }}
+                                    <label for="genre" class="form-label">Category <span class="text-danger">*</span></label>
+                                    {{ form.genre(class="form-select ink-upload-control", id="genre") }}
+                                    <div class="form-text">Real Life or Nonfiction only — stories drawn from lived experience.</div>
+                                    {% if form.genre.errors %}
+                                        <div class="invalid-feedback d-block">{% for error in form.genre.errors %}{{ error }}{% endfor %}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-12">
                                     <label for="description" class="form-label">Description</label>
@@ -250,6 +254,19 @@
                         </div>
                     </section>
 
+                    <section class="ink-upload-card mb-4" id="section-isbn" aria-labelledby="heading-isbn">
+                        <div class="ink-upload-card-head">
+                            <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-barcode"></i></span>
+                            <div>
+                                <h2 id="heading-isbn" class="h5 mb-1">ISBN</h2>
+                                <p class="small text-muted mb-0">For ebook listing (print &amp; audiobook use the same number later).</p>
+                            </div>
+                        </div>
+                        <div class="ink-upload-card-body">
+                            {% include 'book_platform/includes/_isbn_listing_choice.html' %}
+                        </div>
+                    </section>
+
                     <section class="ink-upload-card mb-4" id="section-terms" aria-labelledby="heading-terms">
                         <div class="ink-upload-card-head">
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-scale-balanced"></i></span>
@@ -287,6 +304,15 @@
                                         If AI-assisted, I confirm I have commercial rights to use the generated output.
                                     </label>
                                 </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btnConfirmListingTermsUpload" disabled title="Check each required box above first">
+                                        <i class="fas fa-check-circle me-1"></i>Agree to terms
+                                    </button>
+                                    <small class="text-muted d-block mt-2">Scroll to the bottom to unlock checkboxes, then click Agree to terms before submitting.</small>
+                                </div>
+                            </div>
+                            <div id="listingTermsConfirmedNoteUpload" class="alert alert-success mt-3 d-none small mb-0">
+                                <i class="fas fa-check me-1"></i>Terms accepted. You can submit your listing below.
                             </div>
                         </div>
                     </section>
@@ -294,7 +320,7 @@
                     <div class="ink-upload-mobile-hint d-xl-none rounded-3 p-3 mb-3 border" style="border-color: rgba(201, 162, 39, 0.25) !important; background: rgba(8, 10, 9, 0.5);">
                         <p class="small fw-semibold mb-2"><i class="fas fa-clipboard-check me-2 text-primary"></i>Before you submit (step 1 only)</p>
                         <ul class="small text-muted mb-0 ps-3">
-                            <li>Language &amp; genre match your file</li>
+                            <li>Language &amp; category (Real Life or Nonfiction) match your file</li>
                             <li>Cover: upload and/or AI preview (this submit)</li>
                             <li>Next page: generate audiobook and choose publish mode</li>
                         </ul>
@@ -315,7 +341,7 @@
                 <div class="ink-upload-aside sticky-top">
                     <h3 class="h6 text-uppercase letter-spacing-1 text-muted mb-3">Quick checklist</h3>
                     <ul class="list-unstyled ink-checklist mb-4">
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Accurate language &amp; genre</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Real Life or Nonfiction category</li>
                         <li><i class="fas fa-check-circle text-success me-2"></i>Clean ebook file + cover path chosen</li>
                         <li><i class="fas fa-check-circle text-success me-2"></i>Pricing reflects your strategy</li>
                         <li><i class="fas fa-headphones text-secondary me-2"></i>Step 2: audiobook (optional)</li>
@@ -383,6 +409,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const listingTermsPanelUpload = document.getElementById('listingTermsPanelUpload');
     const listingTermsScrollUpload = document.getElementById('listingTermsScrollUpload');
     const listingTermsScrollHintUpload = document.getElementById('listingTermsScrollHintUpload');
+    let listingTermsConfirmedUpload = false;
+
+    function listingTermsRequiredBoxesCheckedUpload() {
+        const rights = document.getElementById('listing_terms_rights_warranty');
+        const takedown = document.getElementById('listing_terms_takedown_consent');
+        return !!(rights && rights.checked && takedown && takedown.checked);
+    }
+
+    function updateListingTermsAgreeButtonUpload() {
+        const btn = document.getElementById('btnConfirmListingTermsUpload');
+        if (!btn) return;
+        const ready = listingTermsRequiredBoxesCheckedUpload();
+        btn.disabled = !ready;
+        btn.classList.toggle('btn-ink-gold', ready);
+        btn.classList.toggle('btn-secondary', !ready);
+    }
+
+    function setListingTermsConfirmedUpload(confirmed) {
+        listingTermsConfirmedUpload = !!confirmed;
+        const note = document.getElementById('listingTermsConfirmedNoteUpload');
+        if (note) note.classList.toggle('d-none', !listingTermsConfirmedUpload);
+        if (submitBtn) {
+            submitBtn.disabled = !listingTermsConfirmedUpload;
+            submitBtn.title = listingTermsConfirmedUpload
+                ? ''
+                : 'Complete the Author Publishing Agreement first (scroll, check each box, then Agree to terms).';
+        }
+    }
 
     function listingTermsCheckboxElsUpload() {
         return [
@@ -399,6 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cb.disabled = true;
         });
         if (listingTermsScrollHintUpload) listingTermsScrollHintUpload.classList.remove('d-none');
+        setListingTermsConfirmedUpload(false);
     }
 
     function updateListingTermsScrollGateUpload() {
@@ -407,6 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var atBottom = !needs || (listingTermsScrollUpload.scrollTop + listingTermsScrollUpload.clientHeight >= listingTermsScrollUpload.scrollHeight - 8);
         listingTermsCheckboxElsUpload().forEach(function (cb) { cb.disabled = !atBottom; });
         if (listingTermsScrollHintUpload) listingTermsScrollHintUpload.classList.toggle('d-none', atBottom);
+        updateListingTermsAgreeButtonUpload();
     }
 
     if (listingTermsScrollUpload) {
@@ -416,18 +472,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function openListingTermsPanelUpload() {
+    function openListingTermsPanelUpload(reset) {
+        if (reset === undefined) reset = true;
         if (!listingTermsPanelUpload) return false;
         listingTermsPanelUpload.classList.remove('d-none');
         listingTermsPanelUpload.style.display = 'block';
-        resetListingTermsScrollGateUpload();
+        if (reset) resetListingTermsScrollGateUpload();
         requestAnimationFrame(function () { updateListingTermsScrollGateUpload(); });
         listingTermsPanelUpload.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return true;
     }
     if (showListingTermsBtnUpload) {
-        showListingTermsBtnUpload.addEventListener('click', openListingTermsPanelUpload);
+        showListingTermsBtnUpload.addEventListener('click', function () { openListingTermsPanelUpload(true); });
     }
+    listingTermsCheckboxElsUpload().forEach(function (cb) {
+        cb.addEventListener('change', updateListingTermsAgreeButtonUpload);
+    });
+    const btnConfirmListingTermsUpload = document.getElementById('btnConfirmListingTermsUpload');
+    if (btnConfirmListingTermsUpload) {
+        btnConfirmListingTermsUpload.addEventListener('click', function () {
+            if (!listingTermsRequiredBoxesCheckedUpload()) {
+                alert('Scroll through the full terms and check each required box first.');
+                return;
+            }
+            if (listingTermsPanelUpload) listingTermsPanelUpload.classList.add('d-none');
+            setListingTermsConfirmedUpload(true);
+            if (submitBtn) submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    }
+    setListingTermsConfirmedUpload(false);
 
     function setListingCoverPreviewUi(msg, imgVisible) {
         if (listingCoverPreviewStatus) listingCoverPreviewStatus.textContent = msg || '';
@@ -623,16 +696,33 @@ document.addEventListener('DOMContentLoaded', function() {
         if (parsedPrice < 0) {
             return { ok: false, focus: digitalPriceEl, msg: 'Price cannot be negative.' };
         }
+        const genreEl = document.getElementById('genre');
+        const genreVal = genreEl ? String(genreEl.value || '').trim() : '';
+        if (genreVal !== 'real-life' && genreVal !== 'nonfiction') {
+            return { ok: false, focus: genreEl, msg: 'Select Real Life or Nonfiction as the book category.' };
+        }
+        const isbnManualRadio = document.getElementById('isbnSourceManual');
+        const isbnManualInput = document.getElementById('isbnManualInput');
+        if (isbnManualRadio && isbnManualRadio.checked) {
+            const raw = isbnManualInput ? String(isbnManualInput.value || '').trim() : '';
+            if (!raw) {
+                return { ok: false, focus: isbnManualInput, msg: 'Enter your ISBN or choose “Assign from platform pool”.' };
+            }
+        }
         const rights = document.getElementById('listing_terms_rights_warranty');
         const takedown = document.getElementById('listing_terms_takedown_consent');
-        if (!listingTermsPanelUpload || listingTermsPanelUpload.classList.contains('d-none')) {
-            openListingTermsPanelUpload();
-            return { ok: false, focus: showListingTermsBtnUpload, msg: 'Review and accept the listing attestation in the Author Publishing Agreement section before listing.' };
+        if (!listingTermsRequiredBoxesCheckedUpload()) {
+            openListingTermsPanelUpload(listingTermsConfirmedUpload);
+            return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms, check each required box, then click “Agree to terms”.' };
         }
-        if (!rights || rights.disabled || !rights.checked) {
+        if (!listingTermsConfirmedUpload) {
+            openListingTermsPanelUpload(false);
+            return { ok: false, focus: btnConfirmListingTermsUpload || showListingTermsBtnUpload, msg: 'Almost there — click “Agree to terms” after checking each box.' };
+        }
+        if (!rights || !rights.checked) {
             return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms text, then accept the rights warranty before listing.' };
         }
-        if (!takedown || takedown.disabled || !takedown.checked) {
+        if (!takedown || !takedown.checked) {
             return { ok: false, focus: listingTermsScrollUpload || takedown, msg: 'Scroll through the full terms text, then accept takedown consent before listing.' };
         }
         const aiSubmitSlow = ai && !hasCoverFile;

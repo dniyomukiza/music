@@ -1,0 +1,63 @@
+{# ISBN choice for marketplace listing (ebook + print share one ISBN per title) #}
+{# expects: isbn_pool_available (int), book optional (when already assigned), id_prefix optional #}
+{% set pfx = id_prefix|default('') %}
+<div class="isbn-listing-choice" id="{{ pfx }}isbnListingSection">
+    {% if book and book.isbn %}
+    <p class="small mb-1">
+        <strong>ISBN:</strong> {{ format_isbn_display(book.isbn) if format_isbn_display is defined else book.isbn }}
+        <span class="text-muted">(ebook, audiobook{% if book.print_enabled %}, print{% endif %})</span>
+    </p>
+    <p class="small mb-1"><strong>Publisher on marketplace:</strong> {{ book.publisher_name or platform_publisher_name|default('GLC.COOL') }}</p>
+    <p class="small text-muted mb-0">
+        {% if book.isbn_source == 'author' %}
+        You supplied this ISBN. It cannot be changed after listing.
+        {% else %}
+        Assigned from the platform pool when this title was first listed.
+        {% endif %}
+        You keep copyright; {{ book.publisher_name or 'GLC.COOL' }} is the marketplace publisher imprint.
+    </p>
+    {% else %}
+    <p class="small text-muted mb-3">
+        Choose an ISBN for this title before listing. The same number applies to <strong>ebook</strong>{% if show_print_note|default(true) %}, <strong>print</strong>{% endif %}, and <strong>audiobook</strong> editions.
+    </p>
+    <div class="form-check mb-2">
+        <input class="form-check-input isbn-source-radio" type="radio" name="isbn_source" id="{{ pfx }}isbnSourcePool" value="pool" checked>
+        <label class="form-check-label small" for="{{ pfx }}isbnSourcePool">
+            <strong>Assign from platform pool</strong>
+            {% if isbn_pool_available is defined and isbn_pool_available is not none %}
+            <span class="text-muted">({{ isbn_pool_available }} available{% if isbn_pool_available == 0 %}- contact support if empty{% endif %})</span>
+            {% endif %}
+            <span class="d-block text-muted">We assign the next random ISBN from our inventory (e.g. 978-1999990-09-1).</span>
+        </label>
+    </div>
+    <div class="form-check mb-2">
+        <input class="form-check-input isbn-source-radio" type="radio" name="isbn_source" id="{{ pfx }}isbnSourceManual" value="manual">
+        <label class="form-check-label small" for="{{ pfx }}isbnSourceManual">
+            <strong>Enter my own ISBN</strong>
+            <span class="d-block text-muted">Use an ISBN you already own for ebook and/or print.</span>
+        </label>
+    </div>
+    <div class="mt-2 ms-4" id="{{ pfx }}isbnManualWrap" style="display:none;">
+        <label class="form-label small mb-1" for="{{ pfx }}isbnManualInput">Your ISBN-13 (hyphens optional)</label>
+        <input type="text" class="form-control form-control-sm ink-upload-control" name="isbn_manual" id="{{ pfx }}isbnManualInput" placeholder="978-1-234567-89-0" autocomplete="off" inputmode="numeric">
+        <div class="form-text">Must be a valid ISBN-13. One ISBN per title across digital and print formats.</div>
+    </div>
+    <p class="small text-muted mt-3 mb-0">Listings show <strong>{{ platform_publisher_name|default('GLC.COOL') }}</strong> as publisher imprint regardless of ISBN source.</p>
+    {% endif %}
+</div>
+<script>
+(function () {
+    var radios = document.querySelectorAll('#{{ pfx }}isbnListingSection .isbn-source-radio');
+    var wrap = document.getElementById('{{ pfx }}isbnManualWrap');
+    var input = document.getElementById('{{ pfx }}isbnManualInput');
+    if (!radios.length || !wrap) return;
+    function sync() {
+        var manual = document.getElementById('{{ pfx }}isbnSourceManual');
+        var show = manual && manual.checked;
+        wrap.style.display = show ? 'block' : 'none';
+        if (input) input.required = !!show;
+    }
+    radios.forEach(function (r) { r.addEventListener('change', sync); });
+    sync();
+})();
+</script>

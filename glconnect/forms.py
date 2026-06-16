@@ -7,6 +7,8 @@ from wtforms import StringField, PasswordField, SubmitField,BooleanField,SelectF
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, InputRequired, NumberRange
 import os
 
+from glconnect.ink_listing_genres import INK_UPLOAD_GENRE_CHOICES
+
 class FileSize:
     """Validator to check file size"""
     def __init__(self, max_size_mb, message=None):
@@ -145,7 +147,12 @@ class UploadBookForm(FlaskForm):
 class DigitalBookUploadForm(FlaskForm):
     title = StringField('Book Title', validators=[DataRequired(), Length(min=3, max=200)])
     description = TextAreaField('Description', validators=[Optional()])
-    genre = StringField('Genre', validators=[Optional(), Length(max=100)])
+    genre = SelectField(
+        'Category',
+        validators=[DataRequired(message='Select Real Life or Nonfiction.')],
+        choices=INK_UPLOAD_GENRE_CHOICES,
+        default='',
+    )
     ebook_language = SelectField(
         'Original language of your ebook',
         validators=[DataRequired()],

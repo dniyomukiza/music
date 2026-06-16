@@ -77,7 +77,7 @@
                     <h1 class="ink-camp-title" data-ink-translate="title">{{ campaign.title }}</h1>
                     <p class="ink-camp-book-line mb-0">
                         for <strong data-ink-translate="book_title">{{ book.title if book else 'Unknown book' }}</strong>
-                        {% if author %} · by {{ author.pen_name or (author.user.username if author.user else 'Unknown') }}{% endif %}
+                        {% if author %} · by {{ author_display_name(author) }}{% endif %}
                     </p>
 
                     <div class="ink-camp-meta mt-3">
@@ -213,7 +213,7 @@
                             <div class="ink-camp-avatar-fallback" aria-hidden="true"><i class="fas fa-user fa-lg"></i></div>
                             {% endif %}
                             <div>
-                                <h3 class="h5 mb-1 text-white">{{ author.pen_name or (author.user.username if author.user else 'Unknown') }}</h3>
+                                <h3 class="h5 mb-1 text-white">{{ author_display_name(author) }}</h3>
                                 {% if author.bio %}
                                 <p class="text-white-50 mb-2" data-ink-translate="author_bio">{{ author.bio }}</p>
                                 {% else %}

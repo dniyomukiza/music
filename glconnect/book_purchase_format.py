@@ -1,13 +1,71 @@
 """Shared purchase-format pricing for marketplace checkout and sales."""
 
-from typing import Any, Tuple
+from typing import Any, Iterable, List, Tuple
+
+ALLOWED_PURCHASE_FORMATS = frozenset({"digital", "audiobook", "print", "bundle"})
 
 
 def normalize_purchase_format(purchase_format: str) -> str:
     pt = (purchase_format or "digital").lower().strip()
-    if pt in ("digital", "audiobook", "bundle", "print"):
+    if pt.startswith("combo:"):
+        return pt
+    if pt in ALLOWED_PURCHASE_FORMATS:
         return pt
     return "digital"
+
+
+def parse_selected_formats(
+    raw_formats: Iterable[str] | None = None,
+    purchase_type: str | None = None,
+) -> List[str]:
+    """Normalize client format selection to a sorted unique list."""
+    allowed = {"digital", "audiobook", "print"}
+    if raw_formats:
+        out = sorted(
+            {
+                str(x).lower().strip()
+                for x in raw_formats
+                if str(x).lower().strip() in allowed
+            }
+        )
+        if out:
+            return out
+    pt = (purchase_type or "digital").lower().strip()
+    if pt == "bundle":
+        return ["audiobook", "digital"]
+    if pt.startswith("combo:"):
+        tail = pt.split(":", 1)[1]
+        return sorted({p for p in tail.split(",") if p in allowed})
+    if pt in allowed:
+        return [pt]
+    return []
+
+
+def purchase_format_key(formats: List[str]) -> str:
+    """Persistable purchase_format value for the selected formats."""
+    fmts = parse_selected_formats(formats)
+    if not fmts:
+        return "digital"
+    if len(fmts) == 1:
+        return fmts[0]
+    if len(fmts) == 2 and "digital" in fmts and "audiobook" in fmts:
+        return "bundle"
+    return "combo:" + ",".join(fmts)
+
+
+def formats_from_purchase_format(purchase_format: str | None) -> List[str]:
+    key = normalize_purchase_format(purchase_format or "digital")
+    if key == "bundle":
+        return ["audiobook", "digital"]
+    if key.startswith("combo:"):
+        return parse_selected_formats(key.split(":", 1)[1].split(","))
+    if key in {"digital", "audiobook", "print"}:
+        return [key]
+    return ["digital"]
+
+
+def purchase_grants_format(purchase_format: str | None, fmt: str) -> bool:
+    return fmt in formats_from_purchase_format(purchase_format)
 
 
 def print_listed(book: Any) -> bool:
@@ -25,6 +83,8 @@ def print_shipping_amount(book: Any) -> float:
 def base_price_for_format(book: Any, purchase_format: str) -> float:
     """Book list price for the format (excludes shipping for print)."""
     pt = normalize_purchase_format(purchase_format)
+    if pt.startswith("combo:"):
+        return combo_base_price(book, formats_from_purchase_format(pt))
     if pt == "audiobook":
         return float(getattr(book, "audiobook_price", None) or getattr(book, "price", None) or 0)
     if pt == "bundle":
@@ -36,10 +96,40 @@ def base_price_for_format(book: Any, purchase_format: str) -> float:
     return float(getattr(book, "price", None) or 0)
 
 
+def combo_base_price(book: Any, formats: Iterable[str]) -> float:
+    """Subtotal for selected formats (bundle discount when ebook + audiobook both chosen)."""
+    fmts = parse_selected_formats(formats)
+    total = 0.0
+    has_digital = "digital" in fmts
+    has_audio = "audiobook" in fmts
+    if has_digital and has_audio:
+        total += base_price_for_format(book, "bundle")
+    else:
+        if has_digital:
+            total += base_price_for_format(book, "digital")
+        if has_audio:
+            total += base_price_for_format(book, "audiobook")
+    if "print" in fmts:
+        total += base_price_for_format(book, "print")
+    return total
+
+
+def total_for_formats(book: Any, formats: Iterable[str]) -> float:
+    """Checkout total for a format selection (includes print shipping when applicable)."""
+    fmts = parse_selected_formats(formats)
+    total = combo_base_price(book, fmts)
+    if "print" in fmts:
+        total += print_shipping_amount(book)
+    return total
+
+
 def total_checkout_amount(book: Any, purchase_format: str) -> float:
     """Total charged at checkout (print includes flat shipping)."""
-    base = base_price_for_format(book, purchase_format)
-    if normalize_purchase_format(purchase_format) == "print":
+    pt = normalize_purchase_format(purchase_format)
+    if pt.startswith("combo:"):
+        return total_for_formats(book, formats_from_purchase_format(pt))
+    base = base_price_for_format(book, pt)
+    if pt == "print":
         return base + print_shipping_amount(book)
     return base
 

@@ -257,7 +257,7 @@
                 <!-- Book Metadata & Actions -->
                 <div class="col-lg-7 offset-lg-1">
                     <h1 class="display-4">{{ book.title }}</h1>
-                    <h4 class="author-name">By {{ book.author.pen_name or book.author.user.username }}</h4>
+                    <h4 class="author-name">By {{ author_display_name(book.author) }}</h4>
                     
                     <div class="d-flex gap-2 mb-4 flex-wrap">
                         {% if book.has_audiobook %}
