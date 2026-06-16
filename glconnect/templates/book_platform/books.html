@@ -176,9 +176,9 @@
                                             · {% if book.word_count %}{{ book.word_count }} words{% else %}— words{% endif %}
                                             · {% if book.digital_file_path %}Uploaded{% else %}Platform{% endif %}
                                         </p>
-                                        {% if not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
+                                        {% if ink_is_author_account|default(false) and not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
                                         <p class="small text-success mb-2"><i class="fas fa-check-circle me-1"></i>Ready for campaign</p>
-                                        {% elif not book.digital_file_path and book.has_investment_campaign %}
+                                        {% elif ink_is_author_account|default(false) and not book.digital_file_path and book.has_investment_campaign %}
                                         <p class="small text-info mb-2"><i class="fas fa-chart-line me-1"></i>Campaign active</p>
                                         {% endif %}
                                         <div class="ink-book-list-perf">
@@ -191,9 +191,9 @@
                                             {% if listing_live %}
                                             <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="small text-decoration-none">Store preview</a>
                                             {% endif %}
-                                            {% if not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
+                                            {% if ink_is_author_account|default(false) and not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
                                             <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="small text-decoration-none">Start campaign</a>
-                                            {% elif not book.digital_file_path and book.has_investment_campaign %}
+                                            {% elif ink_is_author_account|default(false) and not book.digital_file_path and book.has_investment_campaign %}
                                                 {% set campaign = book_campaigns.get(book.id) if book_campaigns else None %}
                                                 {% if campaign and campaign.id is defined %}
                                                 <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="small text-decoration-none">View campaign</a>

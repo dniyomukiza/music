@@ -365,7 +365,7 @@
                     </div>
                     {% endif %}
 
-                    {% if investment_readiness and not book.digital_file_path %}
+                    {% if is_author|default(True) and ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
                     <div class="ink-studio-panel">
                         <div class="ink-studio-panel-header">
                             <h3 class="mb-0 h6"><i class="fas fa-seedling me-2 text-success"></i>Patron campaign</h3>

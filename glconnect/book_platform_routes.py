@@ -208,6 +208,20 @@ def _author_needs_marketplace_profile_step() -> bool:
     return _author_requires_setup_profile(current_user.user_id)
 
 
+def _redirect_unless_author_account():
+    """Block campaign launch/edit for patrons — only completed author accounts may launch."""
+    from glconnect.ink_studio_v1 import ink_is_author_account
+
+    if ink_is_author_account():
+        return None
+    flash(
+        'Only author accounts can launch book campaigns. '
+        'You can still browse and back other authors’ campaigns.',
+        'warning',
+    )
+    return redirect(url_for('book_platform.campaigns', status='active'))
+
+
 def _safe_next_url_for_profile_setup(req) -> str:
     """After setup-profile save: only same-site paths under /mybook (open-redirect safe)."""
     n = (req.values.get("next") or "").strip()
@@ -7627,6 +7641,9 @@ def pay_review_task(book_id, review_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def create_investment_campaign(book_id, user_profile, profile_type):
     """Author creates an investment campaign for their book. Uploaded books are never allowed campaigns."""
+    blocked = _redirect_unless_author_account()
+    if blocked:
+        return blocked
     book = BookProject.query.get_or_404(book_id)
     author_id = get_profile_id(user_profile, profile_type)
     
@@ -7713,6 +7730,9 @@ def create_investment_campaign(book_id, user_profile, profile_type):
 @writer_or_book_platform_required
 def edit_campaign_project(campaign_id, user_profile, profile_type):
     """Author edits campaign pitch and book project description shown on the campaign page."""
+    blocked = _redirect_unless_author_account()
+    if blocked:
+        return blocked
     campaign = InvestmentCampaign.query.options(
         joinedload(InvestmentCampaign.book_project)
     ).get_or_404(campaign_id)
