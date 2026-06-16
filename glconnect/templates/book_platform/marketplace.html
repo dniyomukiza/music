@@ -58,10 +58,15 @@
                             <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
-                            <i class="fas fa-wallet me-1" aria-hidden="true"></i>Payouts
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle rounded px-lg-2" href="#" id="marketplaceNavMore" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            More
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10 mt-1" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="marketplaceNavMore">
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.upload_digital_book') }}"><i class="fas fa-file-upload me-2" aria-hidden="true"></i>Upload manuscript</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}"><i class="fas fa-wallet me-2" aria-hidden="true"></i>Payouts</a></li>
+                        </ul>
                     </li>
                     {% endif %}
                     <li class="nav-item dropdown">
@@ -110,29 +115,19 @@
                     <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">
                         Browse and buy finished books, ebooks, and audiobooks from the catalog below.
                         {% if ink_show_author_workspace|default(false) %}
-                        <span class="d-block mt-2">As an author you can list your own books here. To back or launch campaigns, use <strong>Book campaigns</strong> in the menu.</span>
+                        <span class="d-block mt-2">As an author you can list your own books here. Use <strong>More</strong> in the menu for upload, Ink Studio, and payouts—or <strong>Book campaigns</strong> to back or launch a project.</span>
                         {% else %}
                         <span class="d-block mt-2">Want to publish or fund a book in progress? Use <strong>Book campaigns</strong> in the menu—not on this page.</span>
                         {% endif %}
                     </p>
 
+                    {% if not ink_show_author_workspace|default(false) %}
                     <div class="d-flex flex-wrap gap-2">
-                        {% if ink_show_author_workspace|default(false) %}
-                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2" aria-label="Upload a manuscript to the marketplace">
-                            <i class="fas fa-file-upload me-1"></i>Upload manuscript
-                        </a>
-                        <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost fw-semibold btn-sm px-3 py-2">
-                            <i class="fas fa-pen-fancy me-1"></i>Write in Ink Studio
-                        </a>
-                        <a href="{{ url_for('book_platform.earnings_dashboard') }}" class="btn btn-ink-gold btn-sm px-3 py-2">
-                            <i class="fas fa-dollar-sign me-1"></i>Sales &amp; payouts
-                        </a>
-                        {% else %}
                         <a href="{{ url_for('book_platform.setup_profile', next=url_for('book_platform.marketplace')) }}" class="btn btn-ink-gold fw-semibold btn-sm px-3 py-2">
                             <i class="fas fa-user-edit me-1"></i>Become an author
                         </a>
-                        {% endif %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

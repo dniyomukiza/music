@@ -386,7 +386,7 @@
                             </a>
                             {% endif %}
                             {% else %}
-                            {% set total_requirements = 6 %}
+                            {% set total_requirements = investment_readiness.requirement_total|default(4) %}
                             {% set completed = total_requirements - investment_readiness.issues|length %}
                             {% set progress_pct = (completed / total_requirements * 100)|round %}
                             <p class="small text-muted mb-2">{{ completed }}/{{ total_requirements }} requirements met</p>

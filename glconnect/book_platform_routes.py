@@ -689,20 +689,20 @@ def update_book_word_count(book):
         return book.word_count or 0
 
 def check_investment_readiness(book):
-    """Check if a book is ready for investment and return readiness status.
-    Campaigns apply only to books created on the platform (with chapters), not to uploaded digital books."""
+    """Check if a book is ready to launch a patron campaign.
+
+    Minimal bar: title, genre, language, and one ink-studio chapter (sample for patrons).
+    Campaign pitch, timeline, and funding goal are collected on the launch form.
+    """
     issues = []
-    
+
     if not book.title or len(book.title.strip()) < 3:
         issues.append("Book must have a title (at least 3 characters)")
-    if not book.description or project_description_plain_length(book.description) < PROJECT_DESCRIPTION_MIN_PLAIN_CHARS:
-        issues.append("Book must have a description (at least 50 characters)")
     if not book.genre:
         issues.append("Book must have a genre selected")
     if not book.language:
         issues.append("Book must have a language selected")
-    
-    # Campaigns only for platform-created books (with chapters), not uploaded digital books
+
     try:
         has_digital_file = bool(getattr(book, "digital_file_path", None))
         chapter_count = len(book.chapters) if book.chapters else 0
@@ -710,28 +710,27 @@ def check_investment_readiness(book):
         logging.error(f"Error accessing chapters for book {book.id}: {e}")
         has_digital_file = False
         chapter_count = 0
-    
+
     if has_digital_file and chapter_count == 0:
-        issues.append("Book campaigns are only available for books created on the platform (with chapters), not for uploaded digital books.")
+        issues.append(
+            "Book campaigns are only available for books created on the platform "
+            "(with chapters), not for uploaded digital books."
+        )
     elif chapter_count == 0:
-        issues.append("Book must have at least one chapter")
-    
-    # Ensure word count is up to date before checking
+        issues.append("Book must have at least one chapter (patrons can preview it on your campaign page)")
+
     try:
         update_book_word_count(book)
     except Exception as e:
         logging.error(f"Error updating word count in check_investment_readiness for book {book.id}: {e}")
-        # Continue with existing word count
-    
-    # Check if book has some content (word count)
-    if book.word_count < 1000:
-        issues.append("Book should have at least 1,000 words of content")
-    
+
+    requirement_total = 4
     return {
         'is_ready': len(issues) == 0,
         'issues': issues,
         'chapter_count': chapter_count,
-        'word_count': book.word_count or 0
+        'word_count': book.word_count or 0,
+        'requirement_total': requirement_total,
     }
 
 
@@ -1270,6 +1269,7 @@ def books(user_profile, profile_type):
                     'issues': [f'Error checking readiness: {str(e)}'],
                     'chapter_count': 0,
                     'word_count': 0,
+                    'requirement_total': 4,
                 },
                 'listing': lst,
             })
