@@ -14,6 +14,7 @@ from glconnect.book_platform_models import (
     TransactionStatus,
 )
 from glconnect.book_utils import is_book_published
+from glconnect.book_purchase_format import print_listed, print_shipping_amount
 
 
 def _fmt_price(val: Optional[float]) -> str:
@@ -90,6 +91,14 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
         if book.price and book.audiobook_price:
             bundle_base = (float(book.price) + float(book.audiobook_price)) * 0.8
 
+        print_on = print_listed(book)
+        if print_on:
+            pp = float(book.print_price or 0)
+            ps = print_shipping_amount(book)
+            price_print_label = f"${pp:.2f} + ${ps:.2f} ship"
+        else:
+            price_print_label = "—"
+
         by_book.append(
             {
                 "id": book.id,
@@ -100,6 +109,8 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
                 "price_audiobook": book.audiobook_price,
                 "price_audiobook_label": _fmt_price(book.audiobook_price),
                 "price_bundle_label": _fmt_price(bundle_base),
+                "print_listed": print_on,
+                "price_print_label": price_print_label,
                 "digital_published": bool(getattr(book, "digital_book_published", False)),
                 "audiobook_published": bool(getattr(book, "audiobook_published", False)),
                 "has_audiobook": bool(getattr(book, "has_audiobook", False)),

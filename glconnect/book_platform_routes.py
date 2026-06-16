@@ -1772,6 +1772,13 @@ def edit_book(book_id, user_profile, profile_type):
                 '1', 'true', 'yes', 'on'
             )
 
+            def _as_bool(v):
+                if isinstance(v, bool):
+                    return v
+                if v is None:
+                    return False
+                return str(v).strip().lower() in ("1", "true", "yes", "on")
+
             _prev_digital_pub = book.digital_book_published
             _prev_audiobook_pub = book.audiobook_published
             _prev_status = book.status
@@ -1819,13 +1826,6 @@ def edit_book(book_id, user_profile, profile_type):
                 if ci:
                     book.cover_image = ci
             book.updated_at = datetime.now(timezone.utc)
-
-            def _as_bool(v):
-                if isinstance(v, bool):
-                    return v
-                if v is None:
-                    return False
-                return str(v).strip().lower() in ("1", "true", "yes", "on")
 
             newly_listing = False
             

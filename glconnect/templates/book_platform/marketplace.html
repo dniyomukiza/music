@@ -222,9 +222,18 @@
                                             </div>
                                             
                                             <div class="mt-auto">
-                                                <div class="d-grid gap-2 ink-card-actions">
-                                                    <button type="button" class="btn btn-primary btn-sm ink-mp-cta" onclick="viewBook({{ book.id }})">
-                                                        <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>View book
+                                                <div class="d-flex gap-2 ink-card-actions">
+                                                    {% if book.audiobook_published and book.has_audiobook %}
+                                                    <button type="button"
+                                                            class="btn btn-outline-info btn-sm ink-mp-podcast-btn"
+                                                            data-book-title="{{ book.title|e }}"
+                                                            onclick="playBookPodcast({{ book.id }}, {{ 'true' if (book.audiobook_price or 0) <= 0 else 'false' }}, this)"
+                                                            aria-label="Podcast preview for {{ book.title }}">
+                                                        <i class="fas fa-podcast" aria-hidden="true"></i><span class="ink-mp-podcast-label">Podcast</span>
+                                                    </button>
+                                                    {% endif %}
+                                                    <button type="button" class="btn btn-primary btn-sm ink-mp-cta ink-mp-view-btn flex-grow-1" onclick="viewBook({{ book.id }})" aria-label="View {{ book.title }}">
+                                                        <i class="fas fa-book-open" aria-hidden="true"></i><span class="ink-mp-view-label">View</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -470,6 +479,22 @@
         </div>
     </div>
 
+    <!-- Book podcast preview modal -->
+    <div class="modal fade" id="bookPodcastModal" tabindex="-1" aria-labelledby="bookPodcastTitle">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title mb-0" id="bookPodcastTitle">Podcast preview</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <p class="small text-muted mb-2">30-second sample</p>
+                    <audio id="bookPodcastAudio" class="w-100" controls preload="none"></audio>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Author Details Modal -->
     <div class="modal fade" id="authorDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -690,6 +715,33 @@
             // #region agent log
             fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:syncBookDetailsCheckoutUi',message:'View book format selection',data:{bookId:state.bookId,selectedFormats:selected,total:total,hasPaidFormats:state.hasPaidFormats},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
             // #endregion
+        }
+
+        function playBookPodcast(bookId, isFree, triggerEl) {
+            if (isFree) {
+                window.open('/mybook/audiobook/' + encodeURIComponent(bookId) + '/player', '_blank');
+                return;
+            }
+            const modalEl = document.getElementById('bookPodcastModal');
+            const audioEl = document.getElementById('bookPodcastAudio');
+            const titleEl = document.getElementById('bookPodcastTitle');
+            if (!modalEl || !audioEl) return;
+            const title = (triggerEl && triggerEl.getAttribute('data-book-title')) || 'Podcast preview';
+            if (titleEl) titleEl.textContent = title;
+            audioEl.pause();
+            audioEl.removeAttribute('src');
+            audioEl.load();
+            audioEl.src = '/mybook/audiobook/' + encodeURIComponent(bookId) + '/preview';
+            audioEl.load();
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalEl.addEventListener('hidden.bs.modal', function stopPodcastPreview() {
+                audioEl.pause();
+                audioEl.removeAttribute('src');
+                audioEl.load();
+                modalEl.removeEventListener('hidden.bs.modal', stopPodcastPreview);
+            });
+            modal.show();
+            audioEl.play().catch(function () {});
         }
 
         function viewBook(bookId) {

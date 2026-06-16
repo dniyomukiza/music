@@ -123,6 +123,7 @@
                                 <th>Ebook</th>
                                 <th>Audio</th>
                                 <th>Bundle</th>
+                                <th>Print</th>
                                 <th>Sales</th>
                                 <th>Net</th>
                                 <th class="pe-3"></th>
@@ -138,10 +139,11 @@
                                 <td>{{ row.price_ebook_label }}</td>
                                 <td>{% if row.has_audiobook %}{{ row.price_audiobook_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                                 <td>{% if row.price_bundle_label != 'Free' %}{{ row.price_bundle_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>{% if row.print_listed %}{{ row.price_print_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                                 <td>{{ row.sales }}</td>
                                 <td class="text-success">${{ "%.2f"|format(row.earnings) }}</td>
                                 <td class="text-end pe-3">
-                                    <a href="{{ url_for('book_platform.edit_book', book_id=row.id) }}#price" class="btn btn-sm btn-outline-light">Set prices</a>
+                                    <a href="{{ url_for('book_platform.edit_book', book_id=row.id) }}" class="btn btn-sm btn-outline-light">Edit</a>
                                 </td>
                             </tr>
                             {% endfor %}

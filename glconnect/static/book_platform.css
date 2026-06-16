@@ -2202,6 +2202,38 @@ body.ink-marketplace #booksGrid.ink-view-list .ink-card-actions {
     max-width: 280px;
 }
 
+body.ink-marketplace .ink-card-actions {
+    align-items: stretch;
+}
+
+body.ink-marketplace .ink-mp-podcast-btn {
+    flex: 0 0 auto;
+    border-radius: 999px !important;
+    padding: 0.4rem 0.65rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap;
+    border-color: rgba(13, 202, 240, 0.55) !important;
+    color: #7ee8fc !important;
+}
+
+body.ink-marketplace .ink-mp-podcast-btn:hover {
+    background: rgba(13, 202, 240, 0.12) !important;
+    color: #b8f0ff !important;
+}
+
+body.ink-marketplace .ink-mp-podcast-label {
+    margin-left: 0.35rem;
+}
+
+body.ink-marketplace .ink-mp-view-btn {
+    min-width: 0;
+    padding: 0.4rem 0.65rem !important;
+}
+
+body.ink-marketplace .ink-mp-view-label {
+    margin-left: 0.35rem;
+}
+
 @media (max-width: 575.98px) {
     body.ink-marketplace #booksGrid.ink-view-list .ink-book-card-inner {
         flex-direction: column;
