@@ -34,6 +34,7 @@
                         <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-light btn-sm">
                             <i class="fas fa-pen me-1"></i>Edit manuscript
                         </a>
+                        {% include 'book_platform/_patron_campaign_cta.html' %}
                     </div>
                 </div>
 

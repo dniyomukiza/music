@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 # Authors must reach the full funding goal within this many days of campaign start.
 CAMPAIGN_GOAL_DEADLINE_DAYS = 730  # 2 years
 
+# Minimum manuscript words before launching a patron campaign (sample chapter for preview).
+CAMPAIGN_READINESS_MIN_WORDS = 500
+
 # Stripe USD minimum; not a campaign rule — patrons may give any amount at or above this.
 PATRON_GIFT_PAYMENT_MIN_USD = 0.50
 

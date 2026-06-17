@@ -691,9 +691,12 @@ def update_book_word_count(book):
 def check_investment_readiness(book):
     """Check if a book is ready to launch a patron campaign.
 
-    Minimal bar: title, genre, language, and one ink-studio chapter (sample for patrons).
+    Minimal bar: title, genre, language, one ink-studio chapter, and
+    CAMPAIGN_READINESS_MIN_WORDS of manuscript content (sample for patrons).
     Campaign pitch, timeline, and funding goal are collected on the launch form.
     """
+    from glconnect.book_campaign_patronage import CAMPAIGN_READINESS_MIN_WORDS
+
     issues = []
 
     if not book.title or len(book.title.strip()) < 3:
@@ -724,13 +727,21 @@ def check_investment_readiness(book):
     except Exception as e:
         logging.error(f"Error updating word count in check_investment_readiness for book {book.id}: {e}")
 
-    requirement_total = 4
+    word_count = book.word_count or 0
+    if chapter_count > 0 and word_count < CAMPAIGN_READINESS_MIN_WORDS:
+        issues.append(
+            f"Book should have at least {CAMPAIGN_READINESS_MIN_WORDS:,} words of content "
+            "(write your first chapter for patrons to preview)"
+        )
+
+    requirement_total = 5
     return {
         'is_ready': len(issues) == 0,
         'issues': issues,
         'chapter_count': chapter_count,
-        'word_count': book.word_count or 0,
+        'word_count': word_count,
         'requirement_total': requirement_total,
+        'min_words': CAMPAIGN_READINESS_MIN_WORDS,
     }
 
 
@@ -862,11 +873,27 @@ def collaboration_required(f):
 def _user_can_view_chapter_history(book, book_user_id):
     if book.author_id == book_user_id:
         return True
-    return BookCollaboration.query.filter_by(
+    from glconnect.collaboration_permissions import collaboration_can_view
+
+    collaboration = BookCollaboration.query.filter_by(
         book_project_id=book.id,
         collaborator_id=book_user_id,
         is_active=True,
-    ).first() is not None
+    ).first()
+    return collaboration_can_view(collaboration)
+
+
+def _get_active_collaboration(book_id, book_user_id):
+    return BookCollaboration.query.filter_by(
+        book_project_id=book_id,
+        collaborator_id=book_user_id,
+        is_active=True,
+    ).first()
+
+
+def _author_can_manage_collaborations(book, user_profile, profile_type):
+    author_id = get_profile_id(user_profile, profile_type)
+    return author_id is not None and book.author_id == author_id
 
 
 @book_bp.route('/ink-studio')
@@ -1269,7 +1296,7 @@ def books(user_profile, profile_type):
                     'issues': [f'Error checking readiness: {str(e)}'],
                     'chapter_count': 0,
                     'word_count': 0,
-                    'requirement_total': 4,
+                    'requirement_total': 5,
                 },
                 'listing': lst,
             })
@@ -1637,7 +1664,11 @@ def view_book(book_id, user_profile, profile_type):
     # Eager load author info for collaborations
     collaborations = BookCollaboration.query.options(
         joinedload(BookCollaboration.collaborator).joinedload(BookPlatformUser.user)
-    ).filter_by(book_project_id=book_id, is_active=True).all()
+    ).filter(
+        BookCollaboration.book_project_id == book_id,
+        BookCollaboration.is_active.is_(True),
+        BookCollaboration.joined_at.isnot(None),
+    ).all()
     
     # For uploaded digital books, ensure word count is populated at least once
     # from the uploaded file if it's still 0 or missing.
@@ -1706,6 +1737,39 @@ def view_book(book_id, user_profile, profile_type):
             )
             .count()
         )
+
+    # #region agent log
+    try:
+        import time
+        _cov_raw = (getattr(book, "cover_image", None) or "").strip()
+        _cov_resolved = _marketplace_cover_url(book)
+        _cov_exists = False
+        if _cov_raw and not _cov_raw.startswith(("http://", "https://")):
+            _cov_rel = _cov_raw.lstrip("/")
+            if _cov_rel.startswith("static/"):
+                _cov_rel = _cov_rel[7:]
+            _cov_abs = os.path.join(current_app.static_folder, _cov_rel)
+            _cov_exists = os.path.isfile(_cov_abs)
+        with open("/Applications/untitled folder/music-1/.cursor/debug-fe2ff6.log", "a") as _df:
+            _df.write(json.dumps({
+                "sessionId": "fe2ff6",
+                "runId": "pre-fix",
+                "hypothesisId": "A,B,C",
+                "location": "book_platform_routes.py:view_book",
+                "message": "cover path resolution",
+                "data": {
+                    "book_id": book_id,
+                    "cover_raw": _cov_raw or None,
+                    "cover_resolved": _cov_resolved,
+                    "file_exists": _cov_exists,
+                    "has_listing_cover": has_listing_cover,
+                    "template_uses_raw_src": bool(_cov_raw),
+                },
+                "timestamp": int(time.time() * 1000),
+            }) + "\n")
+    except Exception:
+        pass
+    # #endregion
 
     try:
         return render_template('book_platform/view_book.html', 
@@ -2003,12 +2067,18 @@ def edit_book(book_id, user_profile, profile_type):
     if listing_flow or request.args.get('audiobook'):
         return redirect(url_for('book_platform.book_audiobook', book_id=book_id))
     campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
+    try:
+        investment_readiness = check_investment_readiness(book)
+        db.session.commit()
+    except Exception:
+        investment_readiness = None
     return render_template(
         'book_platform/edit_book.html',
         book=book,
         ebook_language_label=language_label(book.language),
         media_guide=MEDIA_GUIDE,
         investment_campaign=campaign,
+        investment_readiness=investment_readiness,
     )
 
 @book_bp.route('/books/<int:book_id>/audiobook', methods=['GET'])
@@ -2035,10 +2105,19 @@ def book_audiobook(book_id, user_profile, profile_type):
         flash('Only the author can manage the audiobook', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
 
+    campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
+    try:
+        investment_readiness = check_investment_readiness(book)
+        db.session.commit()
+    except Exception:
+        investment_readiness = None
+
     return render_template(
         'book_platform/book_audiobook.html',
         book=book,
         ebook_language_label=language_label(book.language),
+        investment_campaign=campaign,
+        investment_readiness=investment_readiness,
     )
 
 # Chapter management routes
@@ -2932,8 +3011,19 @@ def suggest_chapter_edit(book_id, chapter_id, user_profile, profile_type):
         is_active=True
     ).first()
     
-    if not collaboration or collaboration.role.value in ['viewer']:
+    from glconnect.collaboration_permissions import (
+        collaboration_can_edit,
+        collaboration_can_view,
+        permissions_for_role,
+    )
+
+    if not collaboration_can_view(collaboration):
         return jsonify({'error': 'You do not have permission to suggest edits'}), 403
+    perms = collaboration.permissions or permissions_for_role(collaboration.role)
+    if not perms.get('can_comment'):
+        return jsonify({'error': 'You have view-only access on this book'}), 403
+    if collaboration_can_edit(collaboration):
+        return jsonify({'error': 'You can edit directly. Save your changes in the editor.'}), 400
     
     data = request.get_json()
     
@@ -3108,7 +3198,7 @@ This invitation will expire in 7 days.
 
 Account Requirements:
 - Click the link below to open your invitation
-- Log in with your GLC account, or create one if you are new
+- Log in with your account, or create one if you are new
 - Accept the invitation to start collaborating
 
 Best regards,
@@ -3146,7 +3236,13 @@ def collaborate(book_id, user_profile, profile_type):
         flash('Only the author can manage collaborations', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
-    collaborations = BookCollaboration.query.filter_by(book_project_id=book_id, is_active=True).all()
+    collaborations = BookCollaboration.query.options(
+        joinedload(BookCollaboration.collaborator).joinedload(BookPlatformUser.user)
+    ).filter(
+        BookCollaboration.book_project_id == book_id,
+        BookCollaboration.is_active.is_(True),
+        BookCollaboration.joined_at.isnot(None),
+    ).all()
     # Pending invitations: any invitation for this book whose collaboration belongs to this book
     invitations = CollaborationInvitation.query.join(BookCollaboration).filter(
         BookCollaboration.book_project_id == book_id,
@@ -3177,26 +3273,36 @@ def invite_collaborator(book_id, user_profile, profile_type):
         # This should not happen due to the decorator, but handle it gracefully
         return jsonify({'error': 'Ink Studio profile required'}), 403
     
-    data = request.get_json()
-    
-    # Normalize role value to match enum values (lowercase with underscore)
-    role_value = data['role'].lower().replace('-', '_').replace(' ', '_')
-    
-    # Map common variations to correct enum values
-    role_mapping = {
-        'co_author': 'co_author',
-        'coauthor': 'co_author',
-        'co-author': 'co_author',
-        'author': 'author',
-        'editor': 'editor',
-        'reviewer': 'reviewer',
-        'viewer': 'viewer'
-    }
-    
-    normalized_role = role_mapping.get(role_value, role_value)
-    
+    data = request.get_json() or {}
+    invite_email = (data.get('email') or '').strip().lower()
+    if not invite_email:
+        return jsonify({'error': 'Email is required'}), 400
+
+    author_user = User.query.get(current_user.user_id)
+    if author_user and (author_user.email or '').strip().lower() == invite_email:
+        return jsonify({
+            'error': 'You cannot invite yourself — you are already the author of this book.',
+        }), 400
+
+    existing_pending = (
+        CollaborationInvitation.query.join(BookCollaboration)
+        .filter(
+            BookCollaboration.book_project_id == book_id,
+            func.lower(CollaborationInvitation.email) == invite_email,
+            CollaborationInvitation.status == InvitationStatus.PENDING,
+        )
+        .first()
+    )
+    if existing_pending:
+        return jsonify({'error': 'An invitation is already pending for this email.'}), 400
+
+    from glconnect.collaboration_permissions import (
+        normalize_collaboration_role,
+        permissions_for_role,
+    )
+
     try:
-        collaboration_role = CollaborationRole(normalized_role)
+        collaboration_role = normalize_collaboration_role(data['role'])
     except ValueError:
         return jsonify({'error': f'Invalid collaboration role: {data["role"]}'}), 400
     
@@ -3204,7 +3310,8 @@ def invite_collaborator(book_id, user_profile, profile_type):
     collaboration = BookCollaboration(
         book_project_id=book_id,
         collaborator_id=book_user.id,  # Placeholder until invitation is accepted
-        role=collaboration_role
+        role=collaboration_role,
+        permissions=permissions_for_role(collaboration_role),
     )
     db.session.add(collaboration)
     db.session.flush()  # Get the ID
@@ -3213,7 +3320,7 @@ def invite_collaborator(book_id, user_profile, profile_type):
     invitation = CollaborationInvitation(
         collaboration_id=collaboration.id,
         invited_by_id=book_user.id,
-        email=data['email'],
+        email=invite_email,
         role=collaboration_role,
         message=data.get('message'),
         expires_at=datetime.now(timezone.utc) + timedelta(days=7)
@@ -3230,6 +3337,156 @@ def invite_collaborator(book_id, user_profile, profile_type):
         # Don't fail the invitation if email fails - invitation is still created
     
     return jsonify({'success': True, 'invitation_id': invitation.id})
+
+
+@book_bp.route('/collaborations/<int:collaboration_id>/remove', methods=['POST'])
+@writer_or_book_platform_required
+def remove_collaborator(collaboration_id, user_profile, profile_type):
+    """Author revokes an active collaborator's access."""
+    collaboration = BookCollaboration.query.options(
+        joinedload(BookCollaboration.book_project),
+    ).get_or_404(collaboration_id)
+    book = collaboration.book_project
+    if not book:
+        return jsonify({'error': 'Book not found'}), 404
+    if not _author_can_manage_collaborations(book, user_profile, profile_type):
+        return jsonify({'error': 'Only the author can remove collaborators'}), 403
+    if not collaboration.is_active:
+        return jsonify({'error': 'Collaborator access is already revoked'}), 400
+
+    if not collaboration.joined_at:
+        invitation = CollaborationInvitation.query.filter_by(
+            collaboration_id=collaboration.id,
+            status=InvitationStatus.PENDING,
+        ).first()
+        if not invitation:
+            return jsonify({'error': 'This invitation is no longer pending'}), 400
+        invitation.status = InvitationStatus.DECLINED
+        invitation.responded_at = datetime.now(timezone.utc)
+        collaboration.is_active = False
+        db.session.commit()
+        return jsonify({'success': True, 'cancelled_pending': True})
+
+    collaboration.is_active = False
+    collaboration.permissions = {
+        "can_view": False,
+        "can_edit": False,
+        "can_comment": False,
+        "revoked_at": datetime.now(timezone.utc).isoformat(),
+    }
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@book_bp.route('/collaborations/<int:collaboration_id>/update', methods=['POST'])
+@writer_or_book_platform_required
+def update_collaborator(collaboration_id, user_profile, profile_type):
+    """Author updates a collaborator's role (view vs edit permissions)."""
+    collaboration = BookCollaboration.query.options(
+        joinedload(BookCollaboration.book_project),
+    ).get_or_404(collaboration_id)
+    book = collaboration.book_project
+    if not book:
+        return jsonify({'error': 'Book not found'}), 404
+    if not _author_can_manage_collaborations(book, user_profile, profile_type):
+        return jsonify({'error': 'Only the author can update collaborators'}), 403
+    if not collaboration.is_active or not collaboration.joined_at:
+        return jsonify({'error': 'Collaborator is not active'}), 400
+
+    data = request.get_json() or {}
+    role_value = data.get('role')
+    if not role_value:
+        return jsonify({'error': 'Role is required'}), 400
+
+    from glconnect.collaboration_permissions import (
+        apply_role_to_collaboration,
+        normalize_collaboration_role,
+    )
+
+    try:
+        new_role = normalize_collaboration_role(role_value)
+    except ValueError:
+        return jsonify({'error': f'Invalid collaboration role: {role_value}'}), 400
+
+    if new_role == CollaborationRole.AUTHOR:
+        return jsonify({'error': 'Cannot assign author role to a collaborator'}), 400
+
+    apply_role_to_collaboration(collaboration, new_role)
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'role': collaboration.role.value,
+        'permissions': collaboration.permissions,
+    })
+
+
+@book_bp.route('/invitations/<int:invitation_id>/cancel', methods=['POST'])
+@writer_or_book_platform_required
+def cancel_collaboration_invitation(invitation_id, user_profile, profile_type):
+    """Author cancels a pending collaboration invitation."""
+    invitation = CollaborationInvitation.query.options(
+        joinedload(CollaborationInvitation.collaboration).joinedload(BookCollaboration.book_project),
+    ).get_or_404(invitation_id)
+    collaboration = invitation.collaboration
+    book = collaboration.book_project if collaboration else None
+    if not book:
+        return jsonify({'error': 'Book not found'}), 404
+    if not _author_can_manage_collaborations(book, user_profile, profile_type):
+        return jsonify({'error': 'Only the author can cancel invitations'}), 403
+    if invitation.status != InvitationStatus.PENDING:
+        return jsonify({'error': 'Only pending invitations can be cancelled'}), 400
+
+    invitation.status = InvitationStatus.DECLINED
+    invitation.responded_at = datetime.now(timezone.utc)
+    if collaboration:
+        collaboration.is_active = False
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@book_bp.route('/invitations/<int:invitation_id>/update', methods=['POST'])
+@writer_or_book_platform_required
+def update_collaboration_invitation(invitation_id, user_profile, profile_type):
+    """Author changes the role on a pending collaboration invitation."""
+    invitation = CollaborationInvitation.query.options(
+        joinedload(CollaborationInvitation.collaboration).joinedload(BookCollaboration.book_project),
+    ).get_or_404(invitation_id)
+    collaboration = invitation.collaboration
+    book = collaboration.book_project if collaboration else None
+    if not book:
+        return jsonify({'error': 'Book not found'}), 404
+    if not _author_can_manage_collaborations(book, user_profile, profile_type):
+        return jsonify({'error': 'Only the author can update invitations'}), 403
+    if invitation.status != InvitationStatus.PENDING:
+        return jsonify({'error': 'Only pending invitations can be updated'}), 400
+
+    data = request.get_json() or {}
+    role_value = data.get('role')
+    if not role_value:
+        return jsonify({'error': 'Role is required'}), 400
+
+    from glconnect.collaboration_permissions import (
+        apply_role_to_collaboration,
+        normalize_collaboration_role,
+    )
+
+    try:
+        new_role = normalize_collaboration_role(role_value)
+    except ValueError:
+        return jsonify({'error': f'Invalid collaboration role: {role_value}'}), 400
+
+    if new_role == CollaborationRole.AUTHOR:
+        return jsonify({'error': 'Cannot assign author role to a collaborator'}), 400
+
+    invitation.role = new_role
+    if collaboration:
+        apply_role_to_collaboration(collaboration, new_role)
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'role': invitation.role.value,
+        'permissions': collaboration.permissions if collaboration else None,
+    })
 
 @book_bp.route('/invitations/<string:invitation_uuid>', methods=['GET', 'POST'])
 def accept_invitation(invitation_uuid):
@@ -3280,6 +3537,8 @@ def accept_invitation(invitation_uuid):
         
         collaboration.collaborator_id = book_user.id
         collaboration.joined_at = datetime.now(timezone.utc)
+        from glconnect.collaboration_permissions import apply_role_to_collaboration
+        apply_role_to_collaboration(collaboration, invitation.role)
         
         # Update invitation status
         invitation.status = InvitationStatus.ACCEPTED
@@ -3303,6 +3562,19 @@ def add_comment(book_id, chapter_id):
     """Add a comment to a chapter"""
     data = request.get_json()
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    book = BookProject.query.get_or_404(book_id)
+
+    if book.author_id != book_user.id:
+        from glconnect.collaboration_permissions import collaboration_can_view
+
+        collaboration = _get_active_collaboration(book_id, book_user.id)
+        perms = (collaboration.permissions or {}) if collaboration else {}
+        can_comment = perms.get('can_comment')
+        if can_comment is None:
+            from glconnect.collaboration_permissions import permissions_for_role
+            can_comment = permissions_for_role(collaboration.role).get('can_comment') if collaboration else False
+        if not collaboration_can_view(collaboration) or not can_comment:
+            return jsonify({'error': 'You do not have permission to comment on this book'}), 403
     
     comment = BookComment(
         content=data['content'],
@@ -3350,9 +3622,13 @@ def resolve_comment(comment_id):
     
     return jsonify({'success': True})
 
-def _marketplace_cover_url(book):
+def _marketplace_cover_url(book, external=False):
     """Resolve cover image URL for API and templates."""
-    placeholder = url_for("static", filename="book_platform/placeholder_cover.svg")
+    placeholder = url_for(
+        "static",
+        filename="book_platform/placeholder_cover.svg",
+        _external=external,
+    )
     if not book or not getattr(book, "cover_image", None):
         return placeholder
     path = (book.cover_image or "").strip()
@@ -3361,8 +3637,10 @@ def _marketplace_cover_url(book):
     if path.startswith(("http://", "https://")):
         return path
     if path.startswith("/"):
+        if external:
+            return request.url_root.rstrip("/") + path
         return path
-    return url_for("static", filename=path)
+    return url_for("static", filename=path, _external=external)
 
 
 def send_book_purchase_receipt_email(book, purchase):
@@ -6423,6 +6701,17 @@ def chapter_content_api(book_id, chapter_id):
     
     elif request.method == 'POST':
         data = request.get_json()
+        book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        if not book_user:
+            return jsonify({'error': 'Ink Studio profile required'}), 403
+        book = chapter.book_project
+        if book.author_id != book_user.id:
+            from glconnect.collaboration_permissions import collaboration_can_edit
+
+            collaboration = _get_active_collaboration(book_id, book_user.id)
+            if not collaboration_can_edit(collaboration):
+                return jsonify({'error': 'You do not have edit permission for this book'}), 403
+
         actor_id = resolve_version_actor_id(chapter.book_project, current_user.user_id)
         if actor_id:
             snapshot_chapter(chapter, actor_id, change_source='collaboration')
@@ -6589,14 +6878,11 @@ def upload_chapter_image(book_id, chapter_id, user_profile, profile_type):
     # Check access permissions
     author_id = get_profile_id(user_profile, profile_type)
     if book.author_id != author_id:
-        # Check if user is a collaborator
-        collaboration = BookCollaboration.query.filter_by(
-            book_project_id=book_id,
-            collaborator_id=author_id,
-            is_active=True
-        ).first()
-        if not collaboration:
-            return jsonify({'error': 'Access denied'}), 403
+        from glconnect.collaboration_permissions import collaboration_can_edit
+
+        collaboration = _get_active_collaboration(book_id, author_id)
+        if not collaboration_can_edit(collaboration):
+            return jsonify({'error': 'You do not have edit permission for this book'}), 403
     
     if 'upload' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -6642,13 +6928,11 @@ def upload_project_description_media(book_id, user_profile, profile_type):
     book = BookProject.query.get_or_404(book_id)
     author_id = get_profile_id(user_profile, profile_type)
     if book.author_id != author_id:
-        collaboration = BookCollaboration.query.filter_by(
-            book_project_id=book_id,
-            collaborator_id=author_id,
-            is_active=True,
-        ).first()
-        if not collaboration:
-            return ckeditor_upload_response(error='Access denied')
+        from glconnect.collaboration_permissions import collaboration_can_edit
+
+        collaboration = _get_active_collaboration(book_id, author_id)
+        if not collaboration_can_edit(collaboration):
+            return ckeditor_upload_response(error='You do not have edit permission for this book')
 
     embed_url = (request.form.get('embed_url') or '').strip()
     if embed_url:
@@ -6705,13 +6989,10 @@ def get_chapter_images(book_id, user_profile, profile_type):
     # Check access permissions
     author_id = get_profile_id(user_profile, profile_type)
     if book.author_id != author_id:
-        # Check if user is a collaborator
-        collaboration = BookCollaboration.query.filter_by(
-            book_project_id=book_id,
-            collaborator_id=author_id,
-            is_active=True
-        ).first()
-        if not collaboration:
+        from glconnect.collaboration_permissions import collaboration_can_view
+
+        collaboration = _get_active_collaboration(book_id, author_id)
+        if not collaboration_can_view(collaboration):
             return jsonify({'error': 'Access denied'}), 403
     
     # Get all images in the book's image folder
@@ -7707,7 +7988,6 @@ def create_investment_campaign(book_id, user_profile, profile_type):
             book.has_investment_campaign = True
             db.session.commit()
             
-            flash('Book campaign launched successfully!', 'success')
             return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign.id))
             
         except ProjectDescriptionError as exc:
@@ -8220,6 +8500,8 @@ def campaign_detail(campaign_id):
                          campaign_is_saved=campaign_is_saved,
                          preview_mode=preview_mode,
                          ink_nav_active='campaigns',
+                         marketplace_cover_url=_marketplace_cover_url,
+                         book_has_listing_cover=book_has_listing_cover,
                          **translation_ctx)
 
 # Patron contribution checkout (legacy POST /investments/<id>/invest still accepted)

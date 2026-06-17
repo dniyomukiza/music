@@ -1,0 +1,46 @@
+{# Patron campaign entry — optional; author accounts + ink-written books only.
+   Vars: book, investment_readiness, investment_campaign (optional), cta_style: compact|panel #}
+{% set _style = cta_style|default('compact') %}
+{% if ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
+    {% if _style == 'panel' %}
+        {% if investment_readiness.is_ready %}
+            {% if not book.has_investment_campaign or not investment_campaign %}
+            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-success w-100 btn-sm">
+                <i class="fas fa-seedling me-1" aria-hidden="true"></i>Launch campaign (optional)
+            </a>
+            {% else %}
+            <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm mb-2">
+                <i class="fas fa-seedling me-1" aria-hidden="true"></i>View campaign
+            </a>
+            <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}" class="btn btn-outline-light w-100 btn-sm">
+                Edit &amp; preview project
+            </a>
+            {% endif %}
+        {% else %}
+            {% set total_requirements = investment_readiness.requirement_total|default(4) %}
+            {% set completed = total_requirements - investment_readiness.issues|length %}
+            {% set progress_pct = (completed / total_requirements * 100)|round %}
+            <p class="small text-muted mb-2">Optional campaign: {{ completed }}/{{ total_requirements }} requirements met</p>
+            <div class="progress mb-2" style="height: 6px;">
+                <div class="progress-bar bg-warning" style="width: {{ progress_pct }}%"></div>
+            </div>
+            <ul class="small text-muted ps-3 mb-0">
+                {% for issue in investment_readiness.issues[:4] %}
+                <li>{{ issue }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% else %}
+        {% if investment_readiness.is_ready %}
+            {% if not book.has_investment_campaign or not investment_campaign %}
+            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-success btn-sm" title="Optional — launch patron funding; not required to sell on the marketplace">
+                <i class="fas fa-seedling me-1" aria-hidden="true"></i>Campaign
+            </a>
+            {% else %}
+            <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-outline-success btn-sm">
+                <i class="fas fa-seedling me-1" aria-hidden="true"></i>View campaign
+            </a>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+{% endif %}

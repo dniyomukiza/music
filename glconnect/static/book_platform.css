@@ -4067,6 +4067,38 @@ body.ink-books-create.ink-upload-book .text-secondary {
     color: #9aa8a0 !important;
 }
 
+/* Cover source toggle — avoid white-on-white when Upload/AI option is selected */
+body.ink-upload-book .ink-cover-source-pick .btn-outline-light {
+    background: rgba(12, 15, 14, 0.92) !important;
+    border-color: rgba(201, 162, 39, 0.32) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-upload-book .ink-cover-source-pick .btn-outline-light:hover {
+    background: rgba(201, 162, 39, 0.12) !important;
+    border-color: rgba(201, 162, 39, 0.55) !important;
+    color: #fff !important;
+}
+
+body.ink-upload-book .ink-cover-source-pick .btn-check:checked + .btn-outline-light {
+    color: #060807 !important;
+    background: linear-gradient(145deg, #e0bc3a, #c9a227) !important;
+    border-color: #c9a227 !important;
+    box-shadow: 0 6px 20px rgba(201, 162, 39, 0.25);
+}
+
+body.ink-upload-book .ink-cover-source-pick .btn-check:checked + .btn-outline-light strong {
+    color: #060807 !important;
+}
+
+body.ink-upload-book .ink-cover-source-pick .btn-check:checked + .btn-outline-light .text-white-50 {
+    color: rgba(6, 8, 7, 0.72) !important;
+}
+
+body.ink-upload-book .ink-cover-source-pick .btn-check:focus-visible + .btn-outline-light {
+    box-shadow: 0 0 0 0.2rem rgba(201, 162, 39, 0.35);
+}
+
 body.ink-books-ui .form-label {
     color: #e8ece9;
 }

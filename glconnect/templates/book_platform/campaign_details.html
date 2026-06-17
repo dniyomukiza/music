@@ -9,8 +9,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta property="og:title" content="{{ campaign.title }} — {{ book.title if book else 'Book campaign' }}">
     <meta property="og:description" content="{{ pitch_plain or 'Support this author before publication on Ink Studio.' }}">
-    {% if book and book.cover_image %}
-    <meta property="og:image" content="{{ book.cover_image if book.cover_image.startswith('http') else request.url_root.rstrip('/') ~ '/' ~ book.cover_image.lstrip('/') }}">
+    {% if book and book_has_listing_cover(book) %}
+    <meta property="og:image" content="{{ marketplace_cover_url(book, true) }}">
     {% endif %}
     <title>{{ campaign.title }} — Book campaign | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,13 +26,21 @@
     {% include 'book_platform/includes/_ink_studio_nav.html' %}
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
+        {% set alert_ns = namespace(show=false) %}
+        {% for category, message in messages %}
+            {% if category in ('error', 'warning') %}
+                {% set alert_ns.show = true %}
+            {% endif %}
+        {% endfor %}
+        {% if alert_ns.show %}
         <div class="container pt-3 position-relative" style="z-index:2;">
             {% for category, message in messages %}
-            <div class="alert alert-{% if category == 'error' %}danger{% elif category == 'success' %}success{% elif category == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+            {% if category in ('error', 'warning') %}
+            <div class="alert alert-{% if category == 'error' %}danger{% else %}warning{% endif %} alert-dismissible fade show" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% endif %}
@@ -63,10 +71,10 @@
     <header class="ink-camp-hero">
         <div class="container">
             <div class="row g-4 align-items-start">
-                <div class="col-auto d-none d-md-block">
+                <div class="col-auto">
                     <div class="ink-camp-cover-wrap">
-                        {% if book and book.cover_image %}
-                        <img src="{{ book.cover_image }}" class="ink-camp-cover" alt="Cover for {{ book.title }}">
+                        {% if book and book_has_listing_cover(book) %}
+                        <img src="{{ marketplace_cover_url(book) }}" class="ink-camp-cover" alt="Cover for {{ book.title }}">
                         {% else %}
                         <div class="ink-camp-cover-placeholder" aria-hidden="true"><i class="fas fa-book"></i></div>
                         {% endif %}
@@ -168,7 +176,6 @@
             <a class="ink-camp-jump-link" href="#ink-camp-why-back">Why backing</a>
             <a class="ink-camp-jump-link" href="#ink-camp-timeline">Tentative time</a>
             {% if completed_chapters %}<a class="ink-camp-jump-link" href="#ink-camp-samples">Read samples</a>{% endif %}
-            <a class="ink-camp-jump-link" href="#ink-camp-supporters">Backers</a>
             <a class="ink-camp-jump-link" href="#ink-camp-back">Support project</a>
         </div>
     </nav>
@@ -324,85 +331,6 @@
                     </section>
                     {% endif %}
 
-                    {% if book and chapters_count > 0 %}
-                    {% set progress_pct = (completed_chapters_count / chapters_count * 100) if chapters_count > 0 else 0 %}
-                    <section id="ink-camp-progress" class="ink-camp-panel">
-                        <div class="ink-camp-panel-head">
-                            <h2 class="ink-camp-panel-title">Writing progress</h2>
-                            <span class="ink-camp-panel-badge">{{ "%.0f"|format(progress_pct) }}% complete</span>
-                        </div>
-                        <div class="d-flex justify-content-between small text-white-50 mb-2">
-                            <span>{{ format_manuscript_summary(book.chapters) if book.chapters else chapters_count ~ ' sections' }}</span>
-                            {% if book.updated_at %}
-                            <span>Updated {{ book.updated_at.strftime('%b %d, %Y') }}</span>
-                            {% endif %}
-                        </div>
-                        <div class="progress mb-3" style="height: 8px; background: rgba(255,255,255,0.08);">
-                            <div class="progress-bar" style="width: {{ progress_pct }}%; background: linear-gradient(90deg, #2d6a4f, #52b788);"></div>
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-sm-6">
-                                <div class="ink-camp-milestone {% if completed_chapters_count >= 1 %}is-done{% endif %}">
-                                    <i class="fas {% if completed_chapters_count >= 1 %}fa-check-circle{% else %}fa-circle{% endif %}" aria-hidden="true"></i>
-                                    First section complete
-                                </div>
-                                <div class="ink-camp-milestone {% if (book.word_count or 0) >= 10000 %}is-done{% endif %}">
-                                    <i class="fas {% if (book.word_count or 0) >= 10000 %}fa-check-circle{% else %}fa-circle{% endif %}" aria-hidden="true"></i>
-                                    10,000 words
-                                </div>
-                                <div class="ink-camp-milestone {% if (book.word_count or 0) >= 25000 %}is-done{% endif %}">
-                                    <i class="fas {% if (book.word_count or 0) >= 25000 %}fa-check-circle{% else %}fa-circle{% endif %}" aria-hidden="true"></i>
-                                    First draft (25k+ words)
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="ink-camp-milestone {% if progress_pct >= 50 %}is-done{% endif %}">
-                                    <i class="fas {% if progress_pct >= 50 %}fa-check-circle{% else %}fa-circle{% endif %}" aria-hidden="true"></i>
-                                    Halfway through manuscript
-                                </div>
-                                <div class="ink-camp-milestone {% if progress_pct >= 100 %}is-done{% endif %}">
-                                    <i class="fas {% if progress_pct >= 100 %}fa-check-circle{% else %}fa-circle{% endif %}" aria-hidden="true"></i>
-                                    All sections complete
-                                </div>
-                                <div class="ink-camp-milestone {% if book.status.value == 'published' %}is-done{% endif %}">
-                                    <i class="fas {% if book.status.value == 'published' %}fa-check-circle{% else %}fa-circle{% endif %}" aria-hidden="true"></i>
-                                    Published on marketplace
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    {% endif %}
-
-                    <section id="ink-camp-supporters" class="ink-camp-panel">
-                        <div class="ink-camp-panel-head">
-                            <h2 class="ink-camp-panel-title">Backers</h2>
-                            <span class="ink-camp-panel-badge">{{ unique_investor_count }} total</span>
-                        </div>
-                        {% if investor_summaries %}
-                        {% for summary in investor_summaries %}
-                        <div class="ink-camp-supporter">
-                            <div>
-                                <div class="ink-camp-supporter-amount">${{ "%.2f"|format(summary.total_amount) }}</div>
-                                <div class="small text-white-50">
-                                    {% if summary.investor %}{{ summary.investor.pen_name or summary.investor.username or 'Anonymous supporter' }}{% else %}Anonymous supporter{% endif %}
-                                    {% if summary.investment_count > 1 %} · {{ summary.investment_count }} gifts{% endif %}
-                                </div>
-                            </div>
-                            {% if summary.first_investment_date %}
-                            <small class="text-white-50 flex-shrink-0">{{ summary.first_investment_date.strftime('%b %d, %Y') }}</small>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% else %}
-                        <div class="ink-camp-empty">
-                            <div class="ink-camp-empty-icon"><i class="fas fa-heart" aria-hidden="true"></i></div>
-                            <p class="mb-2"><strong>Be the first patron.</strong> Early supporters help authors cross the finish line—and show others this story is worth backing.</p>
-                            {% if accepts_contributions and not is_author %}
-                            <a href="{{ url_for('book_platform.contribute_to_campaign', campaign_id=campaign.id) }}" class="btn ink-mp-cta btn-sm">Support Project</a>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </section>
                 </div>
 
                 <div class="col-lg-4">
@@ -448,7 +376,7 @@
                             </div>
                             <div class="ink-camp-side-note is-shield">
                                 <strong class="text-white d-block mb-1">Funding policy</strong>
-                                Fully funded within 2 years → author receives funds (50% at first draft, 50% at publication).
+                                Fully funded within 2 years → author receives funds (50% at first draft, 50% at publication; 15% platform fee on pledges).
                                 Goal not met in time → patrons refunded.
                                 Marketplace sales: 10% platform fee (90% to author).
                             </div>

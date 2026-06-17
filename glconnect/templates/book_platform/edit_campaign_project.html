@@ -97,6 +97,7 @@
                         {% set project_desc_book_id = book.id %}
                         {% set project_desc_upload_url = upload_url %}
                         {% set project_desc_preview_target = 'inkPreviewAboutProject' %}
+                        {% set show_media_guide = false %}
                         {% include 'book_platform/_project_description_editor.html' %}
                         {% if form.book_description.errors %}
                         <div class="text-danger small">{{ form.book_description.errors[0] }}</div>

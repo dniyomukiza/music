@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for first-project vs subsequent platform fee policy."""
+"""Tests for platform fee policy on funded campaigns and marketplace sales."""
 
 import os
 import sys
@@ -23,8 +23,7 @@ class MockBook:
 
 def main():
     from glconnect.platform_fee_policy import (
-        CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST,
-        CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT,
+        CAMPAIGN_PLATFORM_FEE_PERCENT,
         MARKETPLACE_PLATFORM_FEE_PERCENT,
         apply_campaign_fee_terms,
         campaign_milestone_release_amount,
@@ -36,6 +35,8 @@ def main():
 
     failures = []
 
+    if CAMPAIGN_PLATFORM_FEE_PERCENT != 15.0:
+        failures.append('campaign platform fee should be 15%')
     if MARKETPLACE_PLATFORM_FEE_PERCENT != 10.0:
         failures.append('marketplace platform fee should be 10%')
     if marketplace_author_royalty_percent() != 90.0:
@@ -65,12 +66,10 @@ def main():
     policy.is_author_first_funded_project = lambda campaign, db: True
     apply_campaign_fee_terms(first_campaign, None)
 
-    if not first_campaign.is_first_author_project:
-        failures.append('expected first funded project flag')
-    if first_campaign.campaign_platform_fee_percent != CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST:
-        failures.append('first project campaign fee should be 0%')
-    if first_campaign.author_net_funding != 1000.0:
-        failures.append(f'first project author net should be 1000, got {first_campaign.author_net_funding}')
+    if first_campaign.campaign_platform_fee_percent != 15.0:
+        failures.append('first funded project campaign fee should be 15%')
+    if first_campaign.author_net_funding != 850.0:
+        failures.append(f'first project author net should be 850, got {first_campaign.author_net_funding}')
 
     subsequent = MockCampaign(
         id=2,
@@ -83,16 +82,14 @@ def main():
     policy.is_author_first_funded_project = lambda campaign, db: False
     apply_campaign_fee_terms(subsequent, None)
 
-    if subsequent.is_first_author_project:
-        failures.append('second project should not be first')
-    if subsequent.campaign_platform_fee_percent != CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT:
-        failures.append('subsequent project campaign fee should be 3%')
-    if subsequent.author_net_funding != 970.0:
-        failures.append(f'subsequent author net should be 970, got {subsequent.author_net_funding}')
+    if subsequent.campaign_platform_fee_percent != 15.0:
+        failures.append('subsequent funded project campaign fee should be 15%')
+    if subsequent.author_net_funding != 850.0:
+        failures.append(f'subsequent author net should be 850, got {subsequent.author_net_funding}')
 
     milestone = campaign_milestone_release_amount(subsequent, None, milestone_percent=50.0)
-    if milestone != 485.0:
-        failures.append(f'milestone release should be 485, got {milestone}')
+    if milestone != 425.0:
+        failures.append(f'milestone release should be 425, got {milestone}')
 
     if failures:
         print('FAILURES:')

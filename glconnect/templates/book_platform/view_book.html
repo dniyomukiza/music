@@ -90,28 +90,24 @@
                     {% endif %}
                 </div>
                 {% if is_author|default(True) %}
+                {% set show_book_settings = book.digital_file_path %}
+                {% set show_unpublish = book.status.value == 'published' %}
+                {% if show_book_settings or show_unpublish %}
                 <div class="col-lg-auto">
                     <div class="d-flex flex-column gap-2">
-                        {% if not book.digital_file_path %}
-                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-ink-gold btn-lg">
-                            <i class="fas fa-pen-nib me-2"></i>Continue writing
-                        </a>
-                        {% else %}
+                        {% if show_book_settings %}
                         <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-ink-gold btn-lg">
                             <i class="fas fa-sliders-h me-2"></i>Book settings
                         </a>
                         {% endif %}
-                        {% if book.status.value == 'draft' %}
-                        <button type="button" class="btn btn-success" onclick="publishBook()">
-                            <i class="fas fa-globe me-2"></i>Publish to marketplace
-                        </button>
-                        {% elif book.status.value == 'published' %}
+                        {% if show_unpublish %}
                         <button type="button" class="btn btn-outline-warning btn-sm" onclick="unpublishBook()">
                             <i class="fas fa-eye-slash me-1"></i>Unpublish
                         </button>
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
                 {% endif %}
             </div>
         </header>
@@ -335,11 +331,11 @@
                     {% if not book.digital_file_path %}
                     <div class="ink-studio-panel">
                         <div class="ink-studio-panel-header">
-                            <h3 class="mb-0 h6"><i class="fas fa-users me-2 text-info"></i>Editors &amp; beta readers</h3>
+                            <h3 class="mb-0 h6"><i class="fas fa-users me-2 text-info"></i>Collaborators</h3>
                         </div>
                         <div class="ink-studio-panel-body">
                             <p class="small text-muted mb-3">
-                                Invite editors or beta readers by email. They can comment, edit (by role), and help before you publish—not the same as listing on the marketplace.
+                                Invite collaborators by email and manage their roles (view, comment, or edit) from the team page.
                             </p>
                             {% if collaborations %}
                             <ul class="list-unstyled small mb-3">
@@ -366,16 +362,17 @@
                     {% endif %}
 
                     {% if is_author|default(True) and ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
-                    <div class="ink-studio-panel">
+                    <div class="ink-studio-panel" id="patron-campaign">
                         <div class="ink-studio-panel-header">
-                            <h3 class="mb-0 h6"><i class="fas fa-seedling me-2 text-success"></i>Patron campaign</h3>
+                            <h3 class="mb-0 h6"><i class="fas fa-seedling me-2 text-success"></i>Patron campaign <span class="badge bg-secondary fw-normal ms-1">Optional</span></h3>
                         </div>
                         <div class="ink-studio-panel-body">
+                            <p class="small text-muted mb-3">Skip this if you only want to sell on the marketplace—use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Edit manuscript</a> to set price and publish when ready.</p>
                             {% if investment_readiness.is_ready %}
-                            <p class="small text-muted mb-3">Your book is ready for patron funding.</p>
+                            <p class="small text-muted mb-3">Your book meets the minimum to launch optional patron funding.</p>
                             {% if not book.has_investment_campaign or not investment_campaign %}
-                            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-success w-100 btn-sm">
-                                Launch campaign
+                            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-success w-100 btn-sm">
+                                Launch campaign (optional)
                             </a>
                             {% else %}
                             <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm mb-2">
@@ -389,7 +386,7 @@
                             {% set total_requirements = investment_readiness.requirement_total|default(4) %}
                             {% set completed = total_requirements - investment_readiness.issues|length %}
                             {% set progress_pct = (completed / total_requirements * 100)|round %}
-                            <p class="small text-muted mb-2">{{ completed }}/{{ total_requirements }} requirements met</p>
+                            <p class="small text-muted mb-2">If you want a campaign later: {{ completed }}/{{ total_requirements }} optional requirements met</p>
                             <div class="progress mb-2" style="height: 6px;">
                                 <div class="progress-bar bg-warning" style="width: {{ progress_pct }}%"></div>
                             </div>
@@ -547,6 +544,48 @@
             tick();
             setInterval(tick, 5000);
         })();
+    </script>
+    <script>
+        // #region agent log
+        (function () {
+            var img = document.querySelector('.ink-studio-cover');
+            var payload = function (msg, hypothesisId, extra) {
+                return {
+                    sessionId: 'fe2ff6',
+                    runId: 'pre-fix',
+                    hypothesisId: hypothesisId,
+                    location: 'view_book.html:cover-img',
+                    message: msg,
+                    data: Object.assign({
+                        hasImg: !!img,
+                        src: img ? img.src : null,
+                        complete: img ? img.complete : null,
+                        naturalWidth: img ? img.naturalWidth : null,
+                        naturalHeight: img ? img.naturalHeight : null
+                    }, extra || {}),
+                    timestamp: Date.now()
+                };
+            };
+            var send = function (msg, hypothesisId, extra) {
+                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fe2ff6' },
+                    body: JSON.stringify(payload(msg, hypothesisId, extra))
+                }).catch(function () {});
+            };
+            send('cover img initial state', 'A,D');
+            if (img) {
+                img.addEventListener('load', function () {
+                    send('cover img loaded', 'A,D', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
+                });
+                img.addEventListener('error', function () {
+                    send('cover img failed to load', 'A,C,D', { src: img.src });
+                });
+            } else {
+                send('cover placeholder shown (no img)', 'B,E');
+            }
+        })();
+        // #endregion
     </script>
     {% include 'includes/_ndotonic_mission_footer.html' %}
 

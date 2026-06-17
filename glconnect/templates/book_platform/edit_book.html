@@ -55,7 +55,7 @@
                                 {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
                                 {% set project_desc_preview_target = 'inkPreviewBookDescription' %}
                                 {% include 'book_platform/_project_description_editor.html' %}
-                                <div class="form-text">Shown on your campaign page under “About the project”.{% if investment_campaign %}
+                                <div class="form-text">Used on your marketplace listing and, if you choose, on an optional campaign page.{% if investment_campaign %}
                                     After saving, <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}">edit the full project</a> to preview both sections together.{% endif %}
                                 </div>
                                 {% set ink_preview_single_id = 'inkPreviewBookDescription' %}
@@ -400,7 +400,7 @@
                             </div>
                             {% endif %}
 
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end align-items-center flex-wrap">
                                 <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
                                    class="btn btn-secondary me-md-2">
                                     <i class="fas fa-times"></i> Cancel
@@ -408,8 +408,9 @@
                                 <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-outline-primary me-md-2">
                                     <i class="fas fa-headphones"></i> Audiobook studio
                                 </a>
+                                {% include 'book_platform/_patron_campaign_cta.html' %}
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Update Book
+                                    <i class="fas fa-save"></i> Save Updates
                                 </button>
                                 <button type="button" class="btn btn-danger" onclick="confirmDeleteBook()">
                                     <i class="fas fa-trash"></i> Delete Book

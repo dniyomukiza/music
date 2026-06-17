@@ -158,11 +158,7 @@
                                 <strong>Your share after platform fee:</strong>
                                 <h4 class="text-success">${{ "%.2f"|format(fund_release.author_net_funding) }}</h4>
                                 <small class="text-muted">
-                                    {% if fund_release.is_first_author_project %}
-                                    First funded project — 0% campaign fee
-                                    {% else %}
                                     {{ "%.0f"|format(fund_release.platform_fee_percent) }}% platform fee (${{ "%.2f"|format(fund_release.platform_fee_amount) }})
-                                    {% endif %}
                                 </small>
                             </div>
                             <div class="col-md-4">

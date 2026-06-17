@@ -290,13 +290,13 @@
         <!-- Hero Section -->
         <div class="hub-header">
             <h1>Content ecosystem</h1>
-            <p>Your content for music, podcasts, editorial—and the <strong>book store</strong> experience (Amazon-style browse and buy) plus <strong>AI covers</strong>, <strong>TTS audiobooks</strong>, and tools to create books in one place. Live radio at the bottom of most pages features <strong>reviews</strong> and <strong>author interviews</strong>. Author publicity, press kits, and promotion tools are here too.</p>
+            <p>Your hub for music and podcasts—stream, upload, and connect with listeners. Live radio at the bottom of most pages features <strong>reviews</strong> and <strong>author interviews</strong>.</p>
         </div>
 
         <!-- Content Type Cards -->
-        <div class="row g-4 mb-5">
+        <div class="row g-4 mb-5 justify-content-center">
             <!-- Music -->
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-6 col-lg-5">
                 <div class="content-card">
                     <div class="content-icon-wrapper icon-music-bg">
                         <i class="fas fa-music"></i>
@@ -327,7 +327,7 @@
             </div>
 
             <!-- Podcasts & Audio -->
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-6 col-lg-5">
                 <div class="content-card">
                     <div class="content-icon-wrapper icon-podcasts-bg">
                         <i class="fas fa-podcast"></i>
@@ -348,49 +348,6 @@
                             {% endif %}
                             <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-modern d-block">
                                 <i class="fas fa-broadcast-tower me-2"></i>Live News
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Books & Audiobooks -->
-            <div class="col-md-6 col-xl-3">
-                <div class="content-card">
-                    <div class="content-icon-wrapper icon-books-bg">
-                        <i class="fas fa-book-open"></i>
-                    </div>
-                    <div class="card-body">
-                        <h4 class="card-title">Book marketplace</h4>
-                        <p class="card-text">
-                            Shop like a major book retailer: digital editions, audiobooks, categories, and secure checkout—while authors use the same platform to write, list uploads, add <strong>AI art</strong> and <strong>AI-narrated audio</strong> (TTS), and track sales.
-                        </p>
-                        <div class="mt-auto">
-                            <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-modern btn-modern-primary d-block">
-                                <i class="fas fa-shopping-bag me-2"></i>Open book store
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stories & News -->
-            <div class="col-md-6 col-xl-3">
-                <div class="content-card">
-                    <div class="content-icon-wrapper icon-stories-bg">
-                        <i class="fas fa-newspaper"></i>
-                    </div>
-                    <div class="card-body">
-                        <h4 class="card-title">Editorial</h4>
-                        <p class="card-text">
-                            Stay informed with fast, in-depth articles written by freelance journalists across the globe.
-                        </p>
-                        <div class="mt-auto">
-                            <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-modern btn-modern-primary d-block">
-                                <i class="fas fa-globe me-2"></i>Global Feed
-                            </a>
-                            <a href="{{ url_for('book_platform.blogs_redirect') }}" class="btn btn-modern d-block">
-                                <i class="fas fa-pen-nib me-2"></i>Editor's Picks
                             </a>
                         </div>
                     </div>

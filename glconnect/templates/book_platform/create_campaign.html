@@ -48,8 +48,9 @@
                                 {% set project_desc_book_id = book.id %}
                                 {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
                                 {% set project_desc_preview_target = 'inkPreviewCampaignPitch' %}
+                                {% set show_media_guide = false %}
                                 {% include 'book_platform/_project_description_editor.html' %}
-                                <div class="form-text">Tell patrons why they should back this project now. You can add images, audio, video, and links using the formats above.</div>
+                                <div class="form-text">Tell patrons why they should back this project now.</div>
                                 {% if form.description.errors %}
                                     <div class="text-danger small">{{ form.description.errors[0] }}</div>
                                 {% endif %}
@@ -97,8 +98,8 @@
 
                             <p class="small text-muted border rounded p-3 mb-3">
                                 <i class="fas fa-percent me-1" aria-hidden="true"></i>
-                                <strong>Platform fees:</strong> On your <strong>first funded project</strong>, 100% of patron pledges go to you (we take 10% on marketplace book sales only).
-                                On <strong>later projects</strong>, we take 3% on collected campaign funds and 10% on marketplace sales.
+                                <strong>Platform fees:</strong> When your project is <strong>fully funded</strong>, we retain <strong>15%</strong> of patron pledges for platform maintenance (85% released to you at draft and publication milestones).
+                                Marketplace book sales: <strong>10%</strong> platform fee (90% to you).
                             </p>
 
                             <div class="mb-3">

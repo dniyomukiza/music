@@ -885,7 +885,7 @@ class InvestmentCampaign(db.Model):
     author_publication_released_at = db.Column(db.DateTime, nullable=True)
     author_publication_amount = db.Column(db.Float, nullable=True)  # Remaining 50% when released
 
-    # Platform fee snapshot at funding (first project: 0% on pledges; later: 3%)
+    # Platform fee snapshot at funding (15% on collected pledges)
     is_first_author_project = db.Column(db.Boolean, default=False)
     campaign_platform_fee_percent = db.Column(db.Float, nullable=True)
     campaign_platform_fee_amount = db.Column(db.Float, nullable=True)

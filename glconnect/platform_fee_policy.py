@@ -1,13 +1,12 @@
 """
 Platform fee policy for Ink Studio book campaigns and marketplace sales.
 
-First funded project (per author):
-  - Campaign pledges: 100% to author (0% platform fee on collected funds)
-  - Marketplace sales: 10% platform / 90% author
+Funded book campaigns (all projects):
+  - Campaign pledges: 15% platform fee on collected funds (platform maintenance)
+  - Author net: 85% of pledges (released at draft/publication milestones)
 
-Subsequent funded projects:
-  - Campaign pledges: 3% platform fee on collected funds
-  - Marketplace sales: 10% platform / 90% author
+Marketplace sales:
+  - 10% platform fee / 90% author royalty
 """
 
 from __future__ import annotations
@@ -18,8 +17,11 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 MARKETPLACE_PLATFORM_FEE_PERCENT = 10.0
-CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST = 0.0
-CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT = 3.0
+CAMPAIGN_PLATFORM_FEE_PERCENT = 15.0
+
+# Legacy aliases (first vs subsequent no longer differ)
+CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST = CAMPAIGN_PLATFORM_FEE_PERCENT
+CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT = CAMPAIGN_PLATFORM_FEE_PERCENT
 
 
 def marketplace_author_royalty_percent() -> float:
@@ -32,7 +34,7 @@ def marketplace_author_royalty_fraction() -> float:
 
 
 def is_author_first_funded_project(campaign: Any, db: Any) -> bool:
-    """True when this is the author's earliest funded campaign."""
+    """True when this is the author's earliest funded campaign (informational only)."""
     from glconnect.book_platform_models import BookProject, CampaignStatus, InvestmentCampaign
 
     book = getattr(campaign, 'book_project', None)
@@ -55,9 +57,7 @@ def is_author_first_funded_project(campaign: Any, db: Any) -> bool:
 def campaign_platform_fee_percent_for(campaign: Any, db: Any) -> float:
     if getattr(campaign, 'campaign_platform_fee_percent', None) is not None:
         return float(campaign.campaign_platform_fee_percent)
-    if is_author_first_funded_project(campaign, db):
-        return CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST
-    return CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT
+    return CAMPAIGN_PLATFORM_FEE_PERCENT
 
 
 def apply_campaign_fee_terms(campaign: Any, db: Any) -> None:
@@ -68,11 +68,8 @@ def apply_campaign_fee_terms(campaign: Any, db: Any) -> None:
         return
 
     if getattr(campaign, 'campaign_platform_fee_percent', None) is None:
-        is_first = is_author_first_funded_project(campaign, db)
-        campaign.is_first_author_project = is_first
-        campaign.campaign_platform_fee_percent = (
-            CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST if is_first else CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT
-        )
+        campaign.is_first_author_project = is_author_first_funded_project(campaign, db)
+        campaign.campaign_platform_fee_percent = CAMPAIGN_PLATFORM_FEE_PERCENT
 
     update_campaign_fee_totals(campaign)
 
@@ -110,7 +107,7 @@ def campaign_author_pool(campaign: Any, db: Any | None = None) -> float:
         if getattr(campaign, 'author_net_funding', None) is not None:
             return float(campaign.author_net_funding)
     gross = float(getattr(campaign, 'current_funding', 0) or 0)
-    return gross
+    return round(gross * (100.0 - CAMPAIGN_PLATFORM_FEE_PERCENT) / 100.0, 2)
 
 
 def campaign_milestone_release_amount(
