@@ -216,18 +216,20 @@
                                 <td>${{ "%.2f"|format(investment.amount) }}</td>
                                 <td>{{ investment.invested_at.strftime('%B %d, %Y') if investment.invested_at else '—' }}</td>
                                 <td>
-                                    <span class="badge bg-{% if investment.status.value == 'active' %}success{% else %}secondary{% endif %}">
-                                        {{ investment.status.value|title }}
-                                    </span>
+                                    {% if investment.status.value == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Payment pending</span>
+                                    {% elif investment.status.value == 'active' %}
+                                    <span class="badge bg-success">Confirmed</span>
+                                    {% elif investment.status.value == 'confirmed' %}
+                                    <span class="badge bg-success">Confirmed</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ investment.status.value|title }}</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment.campaign_id) }}"
                                        class="btn btn-sm btn-ink-ghost">
                                         <i class="fas fa-eye"></i> View campaign
-                                    </a>
-                                    <a href="{{ url_for('book_platform.contribution_refund_status', contribution_id=investment.id) }}"
-                                       class="btn btn-sm btn-ink-ghost ms-1">
-                                        <i class="fas fa-undo"></i> Refund
                                     </a>
                                 </td>
                             </tr>

@@ -158,11 +158,6 @@
                         <button type="button" class="btn btn-ink-ghost" id="ink-camp-share-btn" data-share-url="{{ share_url }}" data-share-title="{{ campaign.title }}">
                             <i class="fas fa-share-alt me-2" aria-hidden="true"></i>Share campaign
                         </button>
-                        {% if book %}
-                        <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-ink-ghost">
-                            <i class="fas fa-book me-2" aria-hidden="true"></i>View book
-                        </a>
-                        {% endif %}
                     </div>
                 </div>
             </div>

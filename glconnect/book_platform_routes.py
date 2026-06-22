@@ -751,6 +751,30 @@ _CONTRIBUTION_BACKER_STATUSES = (
     InvestmentStatus.COMPLETED,
 )
 
+_DEBUG_LOG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    ".cursor",
+    "debug-fe2ff6.log",
+)
+
+
+def _debug_patron_log(hypothesis_id, location, message, data=None, run_id="pre-fix"):
+    # #region agent log
+    try:
+        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({
+                "sessionId": "fe2ff6",
+                "runId": run_id,
+                "hypothesisId": hypothesis_id,
+                "location": location,
+                "message": message,
+                "data": data or {},
+                "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+            }, default=str) + "\n")
+    except Exception:
+        pass
+    # #endregion
+
 
 def campaign_backer_counts(campaign_ids):
     """Distinct patron count per campaign (confirmed/active/completed contributions only)."""
@@ -4741,6 +4765,12 @@ def purchase_book(book_id):
             stripe_connect_account_id=author_connect_id or None,
         )
         if connect_checkout_error:
+            _debug_patron_log(
+                "H2",
+                "book_platform_routes.py:purchase_book",
+                "connect checkout blocked before Stripe",
+                {"book_id": book_id, "error": connect_checkout_error, "author_connect_id": bool(author_connect_id)},
+            )
             return jsonify({'error': connect_checkout_error}), 400
         
         # Ensure currency is set
@@ -5342,7 +5372,25 @@ def purchase_book(book_id):
         if stripe_checkout_url:
             response_data['stripe_checkout_url'] = stripe_checkout_url
         else:
-            from glconnect.stripe_utils import purchase_checkout_unavailable_response
+            from glconnect.stripe_utils import purchase_checkout_unavailable_response, describe_stripe_checkout_error
+            if stripe_session_error:
+                err_details = describe_stripe_checkout_error(
+                    stripe_session_error,
+                    stripe_connect_account_id=author_connect_id or None,
+                )
+                _debug_patron_log(
+                    "H1,H2,H4,H5",
+                    "book_platform_routes.py:purchase_book",
+                    "Stripe checkout session failed",
+                    {
+                        "book_id": book_id,
+                        "author_connect_id_set": bool(author_connect_id),
+                        "operator_error_code": err_details.get("operator_error_code"),
+                        "stripe_code": err_details.get("code"),
+                        "stripe_message": (err_details.get("message") or str(stripe_session_error))[:300],
+                        "checkout_on": err_details.get("checkout_on"),
+                    },
+                )
             return purchase_checkout_unavailable_response(
                 flask_app,
                 stripe_session_error,
@@ -6212,6 +6260,17 @@ def stripe_webhook():
         # Production: never accept unsigned webhooks
         if not current_app.debug and (not webhook_secret or not stripe_available or not sig_header):
             logger.error("Stripe webhook rejected: signature verification required in production")
+            _debug_patron_log(
+                "H1",
+                "book_platform_routes.py:stripe_webhook",
+                "webhook rejected in production",
+                {
+                    "has_webhook_secret": bool(webhook_secret),
+                    "stripe_available": stripe_available,
+                    "has_sig_header": bool(sig_header),
+                    "debug_mode": bool(current_app.debug),
+                },
+            )
             return jsonify({'error': 'Webhook verification required'}), 503
         
         # Verify webhook signature (if secret is configured and stripe is available)
@@ -6229,6 +6288,18 @@ def stripe_webhook():
         else:
             # Development only: parse JSON without verification when DEBUG is on
             event = json.loads(payload)
+        
+        _debug_patron_log(
+            "H1",
+            "book_platform_routes.py:stripe_webhook",
+            "webhook event received",
+            {
+                "event_type": event.get("type"),
+                "debug_mode": bool(current_app.debug),
+                "has_webhook_secret": bool(webhook_secret),
+                "has_sig_header": bool(sig_header),
+            },
+        )
         
         # Set Stripe API key if available (for retrieving additional payment info if needed)
         stripe_api_key = get_stripe_server_secret_key(current_app)
@@ -6425,12 +6496,29 @@ def stripe_webhook():
             
             # Check if this is an investment payment
             investment_id = metadata.get('investment_id')
+            _debug_patron_log(
+                "H1,H2",
+                "book_platform_routes.py:stripe_webhook:checkout.session.completed",
+                "checkout session completed",
+                {
+                    "investment_id": investment_id,
+                    "campaign_id": metadata.get("campaign_id"),
+                    "session_id": session.get("id"),
+                    "payment_status": session.get("payment_status"),
+                },
+            )
             if investment_id:
                 # Handle investment payment
                 try:
                     investment = BookInvestment.query.get(int(investment_id))
                     if not investment:
                         logger.error(f"Stripe webhook: Investment {investment_id} not found")
+                        _debug_patron_log(
+                            "H2",
+                            "book_platform_routes.py:stripe_webhook:investment",
+                            "investment not found",
+                            {"investment_id": investment_id},
+                        )
                     elif (investment.payment_status == TransactionStatus.PENDING and 
                           investment.status == InvestmentStatus.PENDING):
                         campaign = investment.campaign
@@ -6479,9 +6567,39 @@ def stripe_webhook():
                         
                         db.session.commit()
                         logger.info(f"Stripe webhook: Investment {investment.id} confirmed via Stripe")
+                        _debug_patron_log(
+                            "H3",
+                            "book_platform_routes.py:stripe_webhook:investment",
+                            "investment confirmed via webhook",
+                            {
+                                "investment_id": investment.id,
+                                "campaign_id": campaign.id,
+                                "amount": float(investment.amount or 0),
+                                "campaign_current_funding": float(campaign.current_funding or 0),
+                                "investment_status": investment.status.value if investment.status else None,
+                            },
+                        )
+                    else:
+                        _debug_patron_log(
+                            "H3",
+                            "book_platform_routes.py:stripe_webhook:investment",
+                            "investment skipped — not pending",
+                            {
+                                "investment_id": investment_id,
+                                "found": True,
+                                "payment_status": investment.payment_status.value if investment.payment_status else None,
+                                "status": investment.status.value if investment.status else None,
+                            },
+                        )
                 except Exception as e:
                     db.session.rollback()
                     logger.error(f"Stripe webhook investment processing error: {e}", exc_info=True)
+                    _debug_patron_log(
+                        "H3",
+                        "book_platform_routes.py:stripe_webhook:investment",
+                        "investment processing exception",
+                        {"investment_id": investment_id, "error": str(e)},
+                    )
             else:
                 # Handle book purchase payment
                 # Extract book_id from metadata
@@ -8257,6 +8375,29 @@ def supported_projects():
 
     projects = group_patron_supported_projects(bp_user.id, db)
 
+    from glconnect.book_platform_models import BookInvestment as _BI
+    user_investments = _BI.query.filter_by(investor_id=bp_user.id).all()
+    status_counts = {}
+    for inv in user_investments:
+        key = inv.status.value if inv.status else "unknown"
+        status_counts[key] = status_counts.get(key, 0) + 1
+    _debug_patron_log(
+        "H5",
+        "book_platform_routes.py:supported_projects",
+        "supported projects query",
+        {
+            "user_id": current_user.user_id,
+            "bp_user_id": bp_user.id,
+            "project_group_count": len(projects),
+            "investment_status_counts": status_counts,
+            "pending_amounts": [
+                float(inv.amount or 0)
+                for inv in user_investments
+                if inv.status == InvestmentStatus.PENDING
+            ],
+        },
+    )
+
     if status_filter == 'active':
         projects = [p for p in projects if p['campaign'] and p['campaign'].status == CampaignStatus.ACTIVE]
     elif status_filter == 'listed':
@@ -8374,6 +8515,30 @@ def campaign_detail(campaign_id):
     counted_investments = [
         inv for inv in investments if inv.status in _CONTRIBUTION_BACKER_STATUSES
     ]
+
+    if request.args.get("payment") == "success":
+        pending_for_campaign = [
+            inv for inv in investments
+            if inv.status == InvestmentStatus.PENDING and inv.payment_status == TransactionStatus.PENDING
+        ]
+        user_pending = [
+            inv for inv in pending_for_campaign
+            if getattr(inv.investor, "user_id", None) == current_user.user_id
+        ]
+        _debug_patron_log(
+            "H4",
+            "book_platform_routes.py:campaign_detail",
+            "returned from Stripe success URL without webhook confirmation",
+            {
+                "campaign_id": campaign_id,
+                "current_funding": float(campaign.current_funding or 0),
+                "funding_goal": float(campaign.funding_goal or 0),
+                "pending_investment_count": len(pending_for_campaign),
+                "user_pending_count": len(user_pending),
+                "user_pending_ids": [inv.id for inv in user_pending],
+                "confirmed_count": len(counted_investments),
+            },
+        )
     
     # Group investments by investor to show unique investors with totals
     investor_totals = defaultdict(lambda: {'total_amount': 0.0, 'investments': [], 'first_investment_date': None, 'last_investment_date': None})
@@ -8631,6 +8796,20 @@ def contribute_to_campaign(campaign_id):
         db.session.add(investment)
         db.session.flush()
         logger.info(f"Prepared patron contribution {investment.id} for campaign {campaign_id}, amount: ${amount}")
+        _debug_patron_log(
+            "H5",
+            "book_platform_routes.py:contribute_to_campaign",
+            "pending investment created",
+            {
+                "investment_id": investment.id,
+                "campaign_id": campaign_id,
+                "investor_id": investor_id,
+                "user_id": current_user.user_id,
+                "amount": float(amount),
+                "status": investment.status.value if investment.status else None,
+                "payment_status": investment.payment_status.value if investment.payment_status else None,
+            },
+        )
 
         # Create Stripe Checkout Session (same pattern as book purchase)
         domain_url = current_app.config.get("FRONTEND_BASE_URL") or request.url_root.rstrip("/")
@@ -8803,7 +8982,10 @@ def earnings_dashboard():
             inv for inv in all_investments
             if inv.status.value in ('confirmed', 'active', 'pending')
         ]
-        earnings_data['total_contributed'] = sum(inv.amount for inv in earnings_data['patron_contributions'])
+        earnings_data['total_contributed'] = sum(
+            inv.amount for inv in earnings_data['patron_contributions']
+            if inv.status.value in ('confirmed', 'active', 'completed')
+        )
     else:
         earnings_data['patron_contributions'] = []
         earnings_data['total_contributed'] = 0.0
@@ -8894,14 +9076,35 @@ def earnings_dashboard():
         earnings_data['author_sales_by_book'] = dict(sales_by_book)
 
     bp_for_stripe = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    is_seller_profile = profile_type in ('writer', 'book_platform')
     aid_earn = get_profile_id(user_profile, profile_type) if user_profile else None
     has_author_books = bool(aid_earn and BookProject.query.filter_by(author_id=aid_earn).first())
+    from glconnect.ink_studio_v1 import ink_show_author_workspace
+
+    show_author_workspace = ink_show_author_workspace()
     author_payout_setup_needed = bool(
         bp_for_stripe
         and author_needs_stripe_payout_setup(bp_for_stripe)
-        and (is_seller_profile or has_author_books)
+        and show_author_workspace
     )
+    # #region agent log
+    _debug_patron_log(
+        "H-EARN",
+        "book_platform_routes.py:earnings_dashboard",
+        "author payout banner decision",
+        {
+            "user_id": current_user.user_id,
+            "profile_type": profile_type,
+            "show_author_workspace": show_author_workspace,
+            "has_author_books": has_author_books,
+            "author_sales_count": len(earnings_data.get("author_sales") or []),
+            "author_payout_setup_needed": author_payout_setup_needed,
+            "has_bp_user": bool(bp_for_stripe),
+            "needs_stripe_setup": bool(
+                bp_for_stripe and author_needs_stripe_payout_setup(bp_for_stripe)
+            ),
+        },
+    )
+    # #endregion
     
     return render_template(
         'book_platform/earnings.html',
@@ -9671,7 +9874,7 @@ def request_campaign_fund_release(book_id):
 @login_required
 def request_contribution_refund(contribution_id):
     """Patron requests refund — only allowed before first draft is completed (25k+ words)."""
-    from glconnect.book_platform_models import BookInvestment, RefundRequest, TransactionStatus
+    from glconnect.book_platform_models import BookInvestment, RefundRequest, TransactionStatus, InvestmentStatus
     from glconnect.accountability_service import FIRST_DRAFT_MIN_WORDS
     
     investment = BookInvestment.query.options(
@@ -9686,6 +9889,9 @@ def request_contribution_refund(contribution_id):
     investor_id = get_profile_id(user_profile, profile_type)
     if investment.investor_id != investor_id:
         return jsonify({'error': 'Not your contribution'}), 403
+
+    if investment.status not in (InvestmentStatus.CONFIRMED, InvestmentStatus.ACTIVE):
+        return jsonify({'error': 'Only confirmed patron gifts can be refunded. Payment may still be processing.'}), 400
     
     if investment.status == InvestmentStatus.REFUNDED:
         return jsonify({'error': 'Contribution already refunded'}), 400
