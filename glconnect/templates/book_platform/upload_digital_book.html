@@ -600,8 +600,16 @@ document.addEventListener('DOMContentLoaded', function() {
             listingCoverAccepted = false;
             setListingCoverPreviewUi('Generating…', false);
             if (btnListingCoverGenerate) btnListingCoverGenerate.disabled = true;
+            const _coverGenT0 = Date.now();
+            // #region agent log
+            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'upload_digital_book.html:coverGen:start',message:'Generate preview clicked',data:{hasArtBrief:!!(payload.cover_art_brief),titleLen:(payload.title||'').length,listingFormat:(document.getElementById('listing_format')||{}).value||''},timestamp:Date.now(),hypothesisId:'H3,H5'})}).catch(function(){});
+            // #endregion
             try {
                 const { res, data } = await postJson('{{ url_for("book_platform.ai_cover_preview_listing") }}', payload);
+                const _coverGenMs = Date.now() - _coverGenT0;
+                // #region agent log
+                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'upload_digital_book.html:coverGen:end',message:'Generate preview response',data:{ok:res.ok,success:!!data.success,elapsedMs:_coverGenMs,error:(data.error||'').slice(0,200)},timestamp:Date.now(),hypothesisId:'H1,H2,H4'})}).catch(function(){});
+                // #endregion
                 if (res.ok && data.success) {
                     setListingCoverPreviewUi('Preview ready — use “Use this cover” if you like it, or discard to try again.', true);
                 } else {

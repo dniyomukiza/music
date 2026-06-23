@@ -1493,6 +1493,18 @@ def ai_cover_preview_listing(user_profile, profile_type):
     if len(title) < 1:
         return jsonify(success=False, error="Enter a title first, then generate a cover preview."), 400
     author_name = _author_display_name_for_cover(user_profile, profile_type)
+    import time as _time
+    _route_t0 = _time.monotonic()
+    _debug_patron_log(
+        "H1,H3,H5",
+        "book_platform_routes.py:ai_cover_preview_listing",
+        "listing cover preview request",
+        {
+            "has_art_brief": bool((payload.get("cover_art_brief") or "").strip()),
+            "title_len": len(title),
+            "listing_format": (request.form.get("listing_format") or request.args.get("listing") or ""),
+        },
+    )
     ai_res = generate_book_cover_bytes(
         title,
         payload["description"],
@@ -1501,11 +1513,26 @@ def ai_cover_preview_listing(user_profile, profile_type):
         author_name=author_name,
     )
     if not ai_res.get("success") or not ai_res.get("image_bytes"):
+        _debug_patron_log(
+            "H2,H4",
+            "book_platform_routes.py:ai_cover_preview_listing",
+            "listing cover preview failed",
+            {
+                "elapsed_ms": int((_time.monotonic() - _route_t0) * 1000),
+                "error": (ai_res.get("error") or "")[:200],
+            },
+        )
         return jsonify(
             success=False,
             error=ai_res.get("error") or "Could not generate a cover preview. Try again or adjust your details.",
         ), 400
     save_listing_preview(ai_res["image_bytes"])
+    _debug_patron_log(
+        "H1",
+        "book_platform_routes.py:ai_cover_preview_listing",
+        "listing cover preview succeeded",
+        {"elapsed_ms": int((_time.monotonic() - _route_t0) * 1000)},
+    )
     preview_url = url_for("book_platform.ai_cover_preview_listing_image")
     return jsonify(success=True, preview_url=preview_url)
 

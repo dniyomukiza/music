@@ -31,31 +31,31 @@
                     {% if ink_nav_show_my_library|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.my_library') }}">
-                            <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
+                            My library
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.campaigns', status='active') }}">
-                            <i class="fas fa-seedling me-1" aria-hidden="true"></i>Book campaigns
+                            Book campaigns
                         </a>
                     </li>
                     {% if ink_show_media_ecosystem|default(true) %}
                     <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.content_hub') }}" title="Music, podcasts, and more">
-                            <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content
+                            Content
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.supported_projects') }}">
-                            <i class="fas fa-heart me-1" aria-hidden="true"></i>Supported
+                            Supported
                         </a>
                     </li>
                     {% if ink_nav_show_author_nav|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link rounded px-lg-2" href="{{ url_for('book_platform.books') }}">
-                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>My books
+                            My books
                         </a>
                     </li>
                     <li class="nav-item dropdown">
@@ -63,9 +63,9 @@
                             More
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10 mt-1" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="marketplaceNavMore">
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.list_book') }}"><i class="fas fa-file-upload me-2" aria-hidden="true"></i>List your book</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}"><i class="fas fa-wallet me-2" aria-hidden="true"></i>Payouts</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.list_book') }}">List your book</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">Ink Studio</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payouts</a></li>
                         </ul>
                     </li>
                     {% endif %}

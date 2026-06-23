@@ -11,6 +11,39 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+_DEBUG_COVER_LOG = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    ".cursor",
+    "debug-fe2ff6.log",
+)
+
+
+def _debug_cover_log(hypothesis_id: str, location: str, message: str, data: Optional[dict] = None) -> None:
+    # #region agent log
+    try:
+        import json as _json
+        from datetime import datetime, timezone as _tz
+
+        with open(_DEBUG_COVER_LOG, "a", encoding="utf-8") as fh:
+            fh.write(
+                _json.dumps(
+                    {
+                        "sessionId": "fe2ff6",
+                        "runId": "cover-gen",
+                        "hypothesisId": hypothesis_id,
+                        "location": location,
+                        "message": message,
+                        "data": data or {},
+                        "timestamp": int(datetime.now(_tz.utc).timestamp() * 1000),
+                    },
+                    default=str,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
+
 
 def cover_image_api_key() -> str:
     """
@@ -233,6 +266,20 @@ def generate_book_cover_bytes(
     genre = (genre or "").strip()[:120]
     brief = (art_brief or "").strip()[:800]
 
+    import time as _time
+    _cover_t0 = _time.monotonic()
+    _debug_cover_log(
+        "H1,H3,H5",
+        "book_cover_ai.py:generate_book_cover_bytes:start",
+        "cover generation started",
+        {
+            "has_art_brief": bool(brief),
+            "title_len": len(title),
+            "desc_len": len(desc),
+            "timeout_ms": cover_genai_http_timeout_ms(),
+        },
+    )
+
     prompt = f"""Design a professional ebook cover for online bookstore listings.
 
 Exact text that MUST appear on the cover (spell exactly as shown):
@@ -259,6 +306,7 @@ Requirements:
         client = make_cover_genai_client(api_key)
         response = None
         last_model_error: Optional[Exception] = None
+        _gemini_t0 = _time.monotonic()
         for model_name in iter_book_cover_image_models():
             try:
                 response = client.models.generate_content(
@@ -266,6 +314,15 @@ Requirements:
                     contents=[prompt],
                 )
                 logger.info("book cover: used image model %s", model_name)
+                _debug_cover_log(
+                    "H1,H2",
+                    "book_cover_ai.py:generate_book_cover_bytes:gemini_ok",
+                    "gemini model succeeded",
+                    {
+                        "model": model_name,
+                        "elapsed_ms": int((_time.monotonic() - _gemini_t0) * 1000),
+                    },
+                )
                 break
             except genai_errors.ClientError as e:
                 last_model_error = e
@@ -288,8 +345,25 @@ Requirements:
                     continue
                 raise
         if response is None:
+            _imagen_t0 = _time.monotonic()
             image_bytes_fb = _try_imagen_book_cover(client, prompt)
+            _debug_cover_log(
+                "H2",
+                "book_cover_ai.py:generate_book_cover_bytes:imagen_fallback",
+                "imagen fallback after gemini failure",
+                {
+                    "success": bool(image_bytes_fb),
+                    "elapsed_ms": int((_time.monotonic() - _imagen_t0) * 1000),
+                    "last_gemini_ms": int((_time.monotonic() - _gemini_t0) * 1000),
+                },
+            )
             if image_bytes_fb:
+                _debug_cover_log(
+                    "H1",
+                    "book_cover_ai.py:generate_book_cover_bytes:done",
+                    "cover generation finished",
+                    {"path": "imagen", "total_ms": int((_time.monotonic() - _cover_t0) * 1000)},
+                )
                 return {"success": True, "image_bytes": image_bytes_fb, "error": None}
             logger.error(
                 "book cover: all Gemini image models failed; last error: %r",
@@ -302,8 +376,24 @@ Requirements:
             }
 
         if not response.candidates:
+            _imagen_t0 = _time.monotonic()
             image_bytes_fb = _try_imagen_book_cover(client, prompt)
+            _debug_cover_log(
+                "H2",
+                "book_cover_ai.py:generate_book_cover_bytes:imagen_no_candidates",
+                "imagen fallback — no gemini candidates",
+                {
+                    "success": bool(image_bytes_fb),
+                    "elapsed_ms": int((_time.monotonic() - _imagen_t0) * 1000),
+                },
+            )
             if image_bytes_fb:
+                _debug_cover_log(
+                    "H1",
+                    "book_cover_ai.py:generate_book_cover_bytes:done",
+                    "cover generation finished",
+                    {"path": "imagen_no_candidates", "total_ms": int((_time.monotonic() - _cover_t0) * 1000)},
+                )
                 return {"success": True, "image_bytes": image_bytes_fb, "error": None}
             return {
                 "success": False,
@@ -316,14 +406,36 @@ Requirements:
                 image_bytes = part.inline_data.data
                 break
         if not image_bytes:
+            _imagen_t0 = _time.monotonic()
             image_bytes_fb = _try_imagen_book_cover(client, prompt)
+            _debug_cover_log(
+                "H2",
+                "book_cover_ai.py:generate_book_cover_bytes:imagen_no_inline",
+                "imagen fallback — no inline image bytes",
+                {
+                    "success": bool(image_bytes_fb),
+                    "elapsed_ms": int((_time.monotonic() - _imagen_t0) * 1000),
+                },
+            )
             if image_bytes_fb:
+                _debug_cover_log(
+                    "H1",
+                    "book_cover_ai.py:generate_book_cover_bytes:done",
+                    "cover generation finished",
+                    {"path": "imagen_no_inline", "total_ms": int((_time.monotonic() - _cover_t0) * 1000)},
+                )
                 return {"success": True, "image_bytes": image_bytes_fb, "error": None}
             return {
                 "success": False,
                 "error": "We couldn’t produce a cover image. Try again or upload your own image.",
                 "image_bytes": None,
             }
+        _debug_cover_log(
+            "H1",
+            "book_cover_ai.py:generate_book_cover_bytes:done",
+            "cover generation finished",
+            {"path": "gemini", "total_ms": int((_time.monotonic() - _cover_t0) * 1000)},
+        )
         return {"success": True, "image_bytes": image_bytes, "error": None}
     except Exception as e:
         logger.exception("book cover AI generation failed: %s", e)
