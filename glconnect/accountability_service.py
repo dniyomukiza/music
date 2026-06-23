@@ -68,7 +68,7 @@ def check_author_accountability(book_id, db):
             elif is_draft and days_since_funding > (MAX_BOOK_COMPLETION_DAYS + MAX_PUBLICATION_DAYS):
                 warnings.append(f"Book completed but not published after {days_since_funding} days")
         
-        # Accredited reviewer guarantees retired — no new reviewer payouts from accountability checks
+        # Accredited reviewer guarantees retired, no new reviewer payouts from accountability checks
         
         return {
             'success': True,

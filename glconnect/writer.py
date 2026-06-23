@@ -143,7 +143,7 @@ def delete_profile():
         return redirect(url_for('writer.writer_dashboard'))
 
 
-@writer.route('/delete-book/<int:book_id>', methods=['POST'])
+@writer.route('/deletEbook/<int:book_id>', methods=['POST'])
 @login_required
 def delete_book(book_id):
     book = Book.query.get_or_404(book_id)

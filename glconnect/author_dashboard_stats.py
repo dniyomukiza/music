@@ -135,7 +135,7 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
             ps = print_shipping_amount(book)
             price_print_label = f"${pp:.2f} + ${ps:.2f} ship"
         else:
-            price_print_label = "—"
+            price_print_label = ", "
 
         by_book.append(
             {

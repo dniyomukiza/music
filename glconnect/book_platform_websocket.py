@@ -1,6 +1,6 @@
 """
-WebSocket implementation for real-time collaboration in Ink Studio
-This module handles WebSocket connections for real-time editing, comments, and collaboration features.
+WebSocket implementation for Real time collaboration in Ink Studio
+This module handles WebSocket connections for Real time editing, comments, and collaboration features.
 """
 
 from flask import request
@@ -41,7 +41,7 @@ def handle_disconnect(*args, **kwargs):
 
     python-socketio passes at least one argument (e.g. disconnect reason).
     Any exception here can leave Werkzeug in a bad state for the next HTTP
-    request (AssertionError: write() before start_response) — e.g. contact form POST.
+    request (AssertionError: write() before start_response), e.g. contact form POST.
     """
     try:
         if current_user.is_authenticated:
@@ -179,7 +179,7 @@ def handle_leave_book(data):
 
 @socketio.on('content_change')
 def handle_content_change(data):
-    """Handle real-time content changes"""
+    """Handle Real time content changes"""
     if not current_user.is_authenticated:
         return False
     
@@ -240,7 +240,7 @@ def handle_cursor_position(data):
 
 @socketio.on('add_comment')
 def handle_add_comment(data):
-    """Handle real-time comment additions"""
+    """Handle Real time comment additions"""
     if not current_user.is_authenticated:
         return False
     

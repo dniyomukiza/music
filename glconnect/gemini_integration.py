@@ -44,7 +44,7 @@ AUTHOR_REVIEW_CATEGORIES = {
         "label": "Common linguistic errors",
         "instruction": (
             "You are a copy editor helping an author. Review the passage for common linguistic errors such as "
-            "wrong-word usage (e.g. affect/effect), tense shifts, subject-verb disagreement, pronoun ambiguity, "
+            "wrong word usage (e.g. affect/effect), tense shifts, subject-verb disagreement, pronoun ambiguity, "
             "dangling or misplaced modifiers, redundant phrasing, and awkward idioms. "
             "For each issue: quote the problematic phrase, explain the error briefly, and give a concrete fix. "
             "If no issues are found, say so clearly. Do not rewrite the whole passage."
@@ -77,7 +77,7 @@ AUTHOR_REVIEW_CATEGORIES = {
         "label": "Narrative style",
         "instruction": (
             "You are a writing coach focused on narrative style. Assess point of view consistency, tone, voice, "
-            "sentence rhythm, show-vs-tell balance, and whether the prose fits the apparent genre. "
+            "sentence rhythm, show vs tell balance, and whether the prose fits the apparent genre. "
             "Highlight what works and what feels uneven. Give targeted suggestions; do not rewrite the entire passage."
         ),
     },
@@ -418,7 +418,7 @@ Analysis:"""
         """Comprehensive proofreading (grammar, spelling, punctuation)"""
         prompt = f"""You are a professional proofreader for fiction and nonfiction manuscripts.
 Correct grammar, spelling, and punctuation while preserving the author's voice and meaning.
-Return only the corrected passage — no commentary.
+Return only the corrected passage, no commentary.
 
 {text}
 
@@ -537,7 +537,7 @@ Suggestions:"""
             return {"success": False, "error": str(e)}
 
     def chat(self, message: str, history: Optional[List[Dict]] = None) -> Dict:
-        """Open-ended chat — general questions, not tied to the current book."""
+        """Open-ended chat, general questions, not tied to the current book."""
         message = (message or "").strip()
         if not message:
             return {"success": False, "error": "Message is required"}
@@ -557,7 +557,7 @@ Suggestions:"""
         system_instruction = (
             "You are a friendly, knowledgeable writing assistant in Ink Studio, a platform for authors. "
             "Help with craft questions: grammar and punctuation, spelling, common linguistic errors, "
-            "plot continuity, pacing and tension, and narrative style — plus research, brainstorming, "
+            "plot continuity, pacing and tension, and narrative style, plus research, brainstorming, "
             "publishing, and general topics. Answer clearly and helpfully. "
             "For passage-level edits on their manuscript, suggest the dedicated Writing tools: "
             "Grammar & punctuation, Spelling, Linguistic errors, Plot continuity, Pacing & tension, "

@@ -24,7 +24,7 @@ bp2 = Blueprint('routes2', __name__)
 # Get TTS credentials path from environment variables
 tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
 
-# Create the text-to-speech client (lazy initialization)
+# Create the text to speech client (lazy initialization)
 client = None
 
 def generate_news_with_gemini(topic: str) -> str:

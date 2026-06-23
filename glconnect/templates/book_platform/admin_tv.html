@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - YouTube TV | Ink Studio</title>
+    <title>Admin | YouTube TV | Ink Studio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}" rel="stylesheet">
@@ -34,7 +34,7 @@
             <i class="fas fa-tv me-2"></i>YouTube TV (HLS) download
         </h2>
         <p class="text-muted">
-            Paste a YouTube video or playlist URL <strong>only to download</strong>—the live channel never streams YouTube links.
+            Paste a YouTube video or playlist URL <strong>only to download</strong>, the live channel never streams YouTube links.
             Each item becomes a <strong>local MP4</strong> under <code>glconnect/static/ytautovid/</code>. After rename, the job
             <strong>writes <code>video/videolist.m3u</code> immediately</strong> with <code>/liqfolder/glconnect/static/ytautovid/…</code> paths (plus extras + DB),
             then reconciles <code>downloaded_videos</code> (insert or fix <code>local_path</code>), then refreshes the M3U again.
@@ -107,7 +107,7 @@
             <i class="fas fa-info-circle me-2"></i>
             Ensure the project root is mounted in the Liquidsoap TV container as <code>/liqfolder</code> (see <code>docker-compose.yml</code>).
             Program paths in <code>video/videolist.m3u</code> use <code>/liqfolder/glconnect/static/ytautovid/…mp4</code> (downloads land in <code>glconnect/static/ytautovid/</code>).
-            Bumpers in <code>tv_jingles.m3u</code> stay under <code>/liqfolder/video/</code>—edit that M3U if you move jingle MP4s. Never use https YouTube URLs in M3Us.
+            Bumpers in <code>tv_jingles.m3u</code> stay under <code>/liqfolder/video/</code>, edit that M3U if you move jingle MP4s. Never use https YouTube URLs in M3Us.
             Bumpers air only when the main playlist is empty/unavailable (not between every song).
         </div>
     </div>

@@ -51,7 +51,7 @@ def validate_book_input(data):
     # Genre validation
     if 'genre' in data:
         valid_genres = [
-            'fiction', 'non-fiction', 'mystery', 'romance', 'sci-fi', 'fantasy',
+            'fiction', 'non-fiction', 'mystery', 'romance', 'sci fi', 'fantasy',
             'thriller', 'biography', 'self-help', 'business', 'history', 'poetry',
             'children', 'young-adult', 'other'
         ]

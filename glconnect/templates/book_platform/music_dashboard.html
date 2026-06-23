@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <meta name="description" content="Ink Studio music dashboard — search, queue, and voice DJ.">
+    <meta name="description" content="Ink Studio music dashboard, search, queue, and voice DJ.">
     <title>Music Dashboard | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -75,9 +75,9 @@
         <header class="ink-music-hero mb-4 mb-lg-5">
             <p class="ink-music-eyebrow mb-0">Ink Studio · Music</p>
             <h1 class="ink-music-title">Artist dashboard</h1>
-            <p class="ink-music-lead">Search the catalog, build your queue, and use the voice agent to DJ hands-free—optimized for focus and flow.</p>
+            <p class="ink-music-lead">Search the catalog, build your queue, and use the voice agent to DJ hands free, optimized for focus and flow.</p>
             <div class="ink-music-pills" role="list">
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-wave-square me-1" aria-hidden="true"></i>High-fidelity stream</span>
+                <span class="ink-music-pill" role="listitem"><i class="fas fa-wave-square me-1" aria-hidden="true"></i>High fidelity stream</span>
                 <span class="ink-music-pill" role="listitem"><i class="fas fa-list-ol me-1" aria-hidden="true"></i>Smart queue</span>
                 <span class="ink-music-pill" role="listitem"><i class="fas fa-microphone-alt me-1" aria-hidden="true"></i>Voice DJ</span>
             </div>
@@ -292,7 +292,7 @@
                 return;
             }
             
-            // Double-check that the input value hasn't changed (avoid race conditions)
+            // Double check that the input value hasn't changed (avoid race conditions)
             if (input && input.value.trim() !== query) {
                 console.log('Query changed, ignoring response');
                 return; // Query changed, ignore this response
@@ -460,7 +460,7 @@
             suggestionsContainer.style.visibility = 'visible';
             suggestionsContainer.classList.add('show');
             
-            // Double-check visibility
+            // Double check visibility
             if (!suggestionsContainer.classList.contains('show')) {
                 suggestionsContainer.classList.add('show');
             }

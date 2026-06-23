@@ -1,4 +1,4 @@
-"""Ink Studio Milestone 1 — marketplace entry, book campaigns + book sales."""
+"""Ink Studio Milestone 1, marketplace entry, book campaigns + book sales."""
 
 import json
 import logging
@@ -61,7 +61,7 @@ def ink_v1_books_launch(app=None) -> bool:
 
 
 def ink_show_media_ecosystem(app=None) -> bool:
-    """False in V1 — hide content hub, music, creators nav."""
+    """False in V1, hide content hub, music, creators nav."""
     return not ink_v1_books_launch(app)
 
 

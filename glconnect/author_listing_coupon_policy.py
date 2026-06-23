@@ -1,5 +1,5 @@
 """
-Author cross-format listing coupons — earn by publishing one format, redeem when listing another.
+Author cross format listing coupons, earn by publishing one format, redeem when listing another.
 
 Coupons reduce the platform fee on sales of the redeemed format only (not buyer price).
 """
@@ -199,7 +199,7 @@ def expire_stale_coupons_for_book(book_id: int) -> None:
 
 
 def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
-    """Available cross-format coupons for listing target_format on this book."""
+    """Available cross format coupons for listing target_format on this book."""
     from glconnect.book_platform_models import AuthorFormatListingCoupon
 
     target = (target_format or "").lower().strip()

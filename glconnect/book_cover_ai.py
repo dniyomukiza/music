@@ -1,5 +1,5 @@
 """
-Optional AI-generated ebook covers for authors without a design file.
+Optional AI generated ebook covers for authors without a design file.
 Credentials are read from the server environment (not exposed to end users).
 """
 
@@ -64,7 +64,7 @@ def cover_genai_http_timeout_ms() -> int:
     GoogleGenAI httpOptions.timeout. Override with BOOK_COVER_GENAI_TIMEOUT_MS.
     """
     raw = (os.getenv("BOOK_COVER_GENAI_TIMEOUT_MS") or "").strip()
-    default_ms = 300_000  # 5 minutes — image generation is often slow
+    default_ms = 300_000  # 5 minutes, image generation is often slow
     if not raw:
         return default_ms
     try:
@@ -92,7 +92,7 @@ _DEFAULT_IMAGEN_MODELS = ("imagen-4.0-fast-generate-001",)
 
 
 def iter_imagen_cover_models():
-    """Imagen uses generate_images() — often a different quota than Gemini Flash Image."""
+    """Imagen uses generate_images(), often a different quota than Gemini Flash Image."""
     env = (os.getenv(_ENV_IMAGEN_MODEL) or "").strip()
     if env:
         yield env
@@ -249,7 +249,7 @@ def generate_book_cover_bytes(
     author_name: str = "",
 ) -> Dict[str, Any]:
     """
-    Return {success, image_bytes, error} — image_bytes is raw PNG/JPEG from the model when success.
+    Return {success, image_bytes, error}, image_bytes is raw PNG/JPEG from the model when success.
     Title and author_name are rendered as legible cover typography (not just mood cues).
     """
     api_key = cover_image_api_key()
@@ -288,13 +288,13 @@ Exact text that MUST appear on the cover (spell exactly as shown):
 
 Genre: {genre or "general"}
 Summary for visual inspiration: {desc or "Not provided."}
-Author art direction (optional): {brief or "None provided—the model will choose genre-appropriate style and imagery on its own. Title and author name on the cover are still mandatory."}
+Author art direction (optional): {brief or "None provided, the model will choose genre-appropriate style and imagery on its own. Title and author name on the cover are still mandatory."}
 
 Requirements:
 - Vertical book-cover composition, aspect ratio approximately 2:3 (portrait), suitable for thumbnail and full display.
 - Render the book TITLE prominently in the upper half: large, legible, professionally typeset typography integrated with the artwork.
 - Render the AUTHOR NAME clearly below the title (smaller than the title but still easily readable at thumbnail size).
-- Both title and author text must be spelled exactly as given above—do not substitute, abbreviate, or omit either.
+- Both title and author text must be spelled exactly as given above, do not substitute, abbreviate, or omit either.
 - Striking, commercially appropriate, genre-appropriate background artwork; high quality; no cluttered collage.
 - No watermarks, no QR codes, no publisher logos, no price tags.
 - Original illustrative style; avoid copying specific existing book covers or trademarked characters.
@@ -381,7 +381,7 @@ Requirements:
             _debug_cover_log(
                 "H2",
                 "book_cover_ai.py:generate_book_cover_bytes:imagen_no_candidates",
-                "imagen fallback — no gemini candidates",
+                "imagen fallback, no gemini candidates",
                 {
                     "success": bool(image_bytes_fb),
                     "elapsed_ms": int((_time.monotonic() - _imagen_t0) * 1000),
@@ -411,7 +411,7 @@ Requirements:
             _debug_cover_log(
                 "H2",
                 "book_cover_ai.py:generate_book_cover_bytes:imagen_no_inline",
-                "imagen fallback — no inline image bytes",
+                "imagen fallback, no inline image bytes",
                 {
                     "success": bool(image_bytes_fb),
                     "elapsed_ms": int((_time.monotonic() - _imagen_t0) * 1000),

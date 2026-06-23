@@ -143,7 +143,7 @@ def revenue_split_for_purchase(
     """
     Returns (base_price, extra_amount, royalty_amount, platform_fee, platform_fee_percent_applied).
     Extra amount (e.g. shipping, tip) goes 100% to author; platform fee only on base list portions.
-    Per-format fee overrides (from cross-format coupons) apply via author_listing_coupon_policy.
+    Per-format fee overrides (from cross format coupons) apply via author_listing_coupon_policy.
     """
     from glconnect.author_listing_coupon_policy import (
         effective_platform_fee_percent,

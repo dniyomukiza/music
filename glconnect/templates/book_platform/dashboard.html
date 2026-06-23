@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ink Studio—your hub for books, marketplace, book campaigns, and creator tools.">
+    <meta name="description" content="Ink Studio, your hub for books, marketplace, book campaigns, and creator tools.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <title>Ink Studio</title>
@@ -28,7 +28,7 @@
                     <p class="small text-white-50 text-uppercase ink-dash-kicker mb-2 mb-md-3">Welcome back</p>
                     {% if is_author and current_user.role == 'author' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ user_profile.pen_name or current_user.first_name or current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">List ebooks, printed books you ship, or both—then write chapter-by-chapter in Ink Studio when you need a built-in editor.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">List ebooks, printed books you ship, or both, then write chapter by chapter in Ink Studio when you need a built in editor.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row gap-2">
                         <a href="{{ url_for('book_platform.list_book') }}" class="btn btn-lg btn-ink-gold">
                             <i class="fas fa-file-upload me-2" aria-hidden="true"></i>List your book
@@ -42,7 +42,7 @@
                     </div>
                     {% elif is_freelancer or current_user.role == 'freelancer' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Stories, the wider <strong>Content</strong> hub, and the book <strong>marketplace</strong>—keep your portfolio and discovery in one place.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">Stories, the wider <strong>Content</strong> hub, and the book <strong>marketplace</strong>, keep your portfolio and discovery in one place.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row">
                         <a href="{{ url_for('blog.blogpost') }}" class="btn btn-lg ink-mp-cta">
                             <i class="fas fa-pen me-2" aria-hidden="true"></i>New story
@@ -73,7 +73,7 @@
                     </div>
                     {% else %}
                     <h1 class="ink-mp-hero-title mb-3">{{ current_user.first_name or current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Discover books, audio, editorial, and campaigns—your <strong>library</strong> and purchases stay on your account.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">Discover books, audio, editorial, and campaigns, your <strong>library</strong> and purchases stay on your account.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-lg ink-mp-cta">
                             <i class="fas fa-store me-2" aria-hidden="true"></i>Browse books
@@ -542,7 +542,7 @@
                     <div class="card-body text-center py-4">
                         <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted mb-3">Back overlooked stories</h5>
-                        <p class="text-muted mb-4">Help authors finish and publish stories that might not get a traditional deal—contributions are patron gifts, not investments.</p>
+                        <p class="text-muted mb-4">Help authors finish and publish stories that might not get a traditional deal, contributions are patron gifts, not investments.</p>
                         <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-primary">
                             <i class="fas fa-search me-2"></i>Browse book campaigns
                         </a>

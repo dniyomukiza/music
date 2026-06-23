@@ -163,7 +163,7 @@ class DigitalBookUploadForm(FlaskForm):
         Optional(),
         FileAllowed(
             ['epub', 'docx', 'txt', 'pdf'],
-            'Use EPUB, DOCX, or TXT for the best in-app reading experience. PDF is accepted for download but often does not reflow well in the browser reader.',
+            'Use EPUB, DOCX, or TXT for the best in app reading experience. PDF is accepted for download but often does not reflow well in the browser reader.',
         )
     ])
     cover_image = FileField('Cover Image', validators=[
@@ -196,7 +196,7 @@ class ReviewerRegistrationForm(FlaskForm):
     portfolio_url = StringField('Portfolio URL', validators=[Optional(), Length(max=500)],
                                render_kw={"placeholder": "Link to your published reviews or portfolio"})
     specialties = TextAreaField('Genres You Review', validators=[Optional()],
-                              render_kw={"placeholder": "e.g., Fiction, Non-fiction, Mystery, Romance (comma-separated)"})
+                              render_kw={"placeholder": "e.g., Fiction, Non-fiction, Mystery, Romance (Comma separated)"})
     credentials = TextAreaField('Credentials', validators=[Optional(), Length(max=1000)],
                                render_kw={"placeholder": "Education, certifications, publications, etc."})
     default_revenue_share = FloatField('Default Revenue Share %', validators=[Optional()], default=2.5,

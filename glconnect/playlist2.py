@@ -708,7 +708,7 @@ def add_to_playlist():
 
 # Define the function to get the user playlist
 def get_user_playlist():
-    user_id = current_user.user_id  # Using Flask-Login to get the current logged-in user's ID
+    user_id = current_user.user_id  # Using Flask-Login to get the current logged in user's ID
     if not user_id:
         return []  # No user is logged in, return an empty playlist
 
@@ -805,7 +805,7 @@ def get_user_playlist():
 @play.route('/view_playlist')
 @login_required
 def view_playlist():
-    # Retrieve the playlist for the current logged-in user
+    # Retrieve the playlist for the current logged in user
     user_playlist = get_user_playlist()
     return jsonify(user_playlist)  # Return the playlist data as JSON
 

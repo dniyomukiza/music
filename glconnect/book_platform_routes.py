@@ -3,7 +3,7 @@ Ink Studio Routes - Flask routes for the Ink Studio functionality
 This module contains all routes for Ink Studio including:
 - Book creation and management
 - Collaboration features
-- Real-time editing
+- Real time editing
 - Marketplace functionality
 - User management
 """
@@ -204,12 +204,12 @@ def _author_requires_setup_profile(user_id: int) -> bool:
 
 
 def _author_needs_publishing_agreement(user_id: int) -> bool:
-    """True until author accepts the current account-level Author Publishing Agreement."""
+    """True until author accepts the current account level Author Publishing Agreement."""
     return author_requires_publishing_agreement(user_id)
 
 
 def _redirect_to_publishing_agreement(next_path: str = None):
-    """Redirect authors to accept the account-level agreement before listing."""
+    """Redirect authors to accept the account level agreement before listing."""
     n = safe_mybook_next_path(next_path, url_for('book_platform.books'))
     return redirect(url_for('book_platform.author_publishing_agreement', next=n))
 
@@ -222,7 +222,7 @@ def _author_needs_marketplace_profile_step() -> bool:
 
 
 def _redirect_unless_author_account():
-    """Block campaign launch/edit for patrons — only completed author accounts may launch."""
+    """Block campaign launch/edit for patrons, only completed author accounts may launch."""
     from glconnect.ink_studio_v1 import ink_is_author_account
 
     if ink_is_author_account():
@@ -323,7 +323,7 @@ def book_has_listing_cover(book):
 
 
 def _issue_listing_coupons_for_formats(book, formats):
-    """Earn cross-format coupons after first publish of each format."""
+    """Earn cross format coupons after first publish of each format."""
     issued = []
     for fmt in formats:
         coupon = issue_coupon_on_format_publish(book, fmt)
@@ -525,7 +525,7 @@ def get_user_profile():
     return None, None
 
 def _profile_for_ink_permission_checks():
-    """Writer, BookPlatformUser, or freelancer stub — mirrors writer_or_book_platform_required (non-admin)."""
+    """Writer, BookPlatformUser, or freelancer stub, mirrors writer_or_book_platform_required (non-admin)."""
     if current_user.role == 'freelancer':
         class FreelancerProfile:
             def __init__(self, user):
@@ -595,7 +595,7 @@ def get_profile_id(user_profile, profile_type):
 
 
 def ink_studio_home_url():
-    """Role-appropriate Ink Studio home — readers go to My library, not author profile setup."""
+    """Role-appropriate Ink Studio home, readers go to My library, not author profile setup."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch
 
     if not current_user.is_authenticated:
@@ -624,7 +624,7 @@ def ink_studio_home_url():
 
 
 def ink_studio_show_author_nav_links():
-    """My Books / Payout account in shared nav — same rules as dashboard ``is_author``."""
+    """My Books / Payout account in shared nav, same rules as dashboard ``is_author``."""
     if not current_user.is_authenticated:
         return False
     excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
@@ -984,7 +984,7 @@ def ink_studio_access():
 @book_bp.route('/')
 @login_required
 def dashboard():
-    """Ink Studio entry — role-based home; readers without author profiles go to My library."""
+    """Ink Studio entry, role-based home; readers without author profiles go to My library."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch
 
     if ink_v1_books_launch():
@@ -1190,7 +1190,7 @@ def setup_profile():
 @book_bp.route('/author-publishing-agreement', methods=['GET', 'POST'])
 @login_required
 def author_publishing_agreement():
-    """Account-level Author Publishing Agreement — accept once (re-accept on version bump)."""
+    """Account-level Author Publishing Agreement, accept once (re-accept on version bump)."""
     bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not bp_user:
         flash('Complete your author profile first.', 'warning')
@@ -1491,7 +1491,7 @@ def _ai_cover_preview_form_dict():
 
 
 def _author_display_name_for_cover(user_profile, profile_type, book=None):
-    """Pen name (or account name) used as author typography on AI-generated covers."""
+    """Pen name (or account name) used as author typography on AI generated covers."""
     if book is not None:
         author = getattr(book, "author", None)
         if author:
@@ -1510,7 +1510,7 @@ def _author_display_name_for_cover(user_profile, profile_type, book=None):
 @book_bp.route("/ai-cover-preview/listing", methods=["POST"])
 @writer_or_book_platform_required
 def ai_cover_preview_listing(user_profile, profile_type):
-    """Generate a temporary AI cover for listing / create-book flows; user must accept before submit."""
+    """Generate a temporary AI cover for listing / creatEbook flows; user must accept before submit."""
     payload = _ai_cover_preview_form_dict()
     title = payload["title"]
     if len(title) < 1:
@@ -1789,7 +1789,7 @@ def view_book(book_id, user_profile, profile_type):
         digital_download_options.append(
             {
                 "lang": pl,
-                "label": f"{language_label(pl)} — original ({(book.digital_file_type or 'file').upper()})",
+                "label": f"{language_label(pl)}, original ({(book.digital_file_type or 'file').upper()})",
                 "ready": True,
                 "url": url_for("book_platform.download_digital_book", book_id=book.id, lang=pl),
             }
@@ -2163,7 +2163,7 @@ def edit_book(book_id, user_profile, profile_type):
 @book_bp.route('/books/<int:book_id>/audiobook', methods=['GET'])
 @writer_or_book_platform_required
 def book_audiobook(book_id, user_profile, profile_type):
-    """Audiobook generation and publishing — separate from manuscript edit."""
+    """Audiobook generation and publishing, separate from manuscript edit."""
     from glconnect.book_platform_models import BookPlatformUser
     from sqlalchemy.orm import joinedload
 
@@ -2679,7 +2679,7 @@ def prepare_audiobook_segments(book_id):
         'segment_count': len(segments),
         'segments': segments,
         'notice': (
-            'Your ebook listing is unchanged—footnotes, index, tables, and appendix stay in the digital edition. '
+            'Your ebook listing is unchanged, footnotes, index, tables, and appendix stay in the digital edition. '
             'Here you only choose what is read for the audiobook. Uncheck sections you do not want narrated.'
         ),
     })
@@ -3391,7 +3391,7 @@ def invite_collaborator(book_id, user_profile, profile_type):
     author_user = User.query.get(current_user.user_id)
     if author_user and (author_user.email or '').strip().lower() == invite_email:
         return jsonify({
-            'error': 'You cannot invite yourself — you are already the author of this book.',
+            'error': 'You cannot invite yourself, you are already the author of this book.',
         }), 400
 
     existing_pending = (
@@ -4120,7 +4120,7 @@ def _can_add_print_edition(book) -> bool:
 @book_bp.route('/books/<int:book_id>/add-print-edition', methods=['GET', 'POST'])
 @writer_or_book_platform_required
 def add_print_edition(book_id, user_profile, profile_type):
-    """Enable print on an existing listed title — reuses cover and ISBN (one per title)."""
+    """Enable print on an existing listed title, reuses cover and ISBN (one per title)."""
     if _author_needs_publishing_agreement(current_user.user_id):
         flash('Accept the Author Publishing Agreement before listing books.', 'warning')
         return _redirect_to_publishing_agreement(
@@ -4253,7 +4253,7 @@ def add_print_edition(book_id, user_profile, profile_type):
         db.session.commit()
         _issue_listing_coupons_for_formats(book, [LISTING_FORMAT_PRINT])
         db.session.commit()
-        flash('Print edition is live — same cover and ISBN as your other formats.', 'success')
+        flash('Print edition is live, same cover and ISBN as your other formats.', 'success')
         return redirect(url_for('book_platform.books'))
 
     redeemable = list_redeemable_coupons(book, LISTING_FORMAT_PRINT)
@@ -4521,7 +4521,7 @@ def _restore_library_visibility_for_owned_format(user_id: int, book_id: int, pur
 @book_bp.route('/library', methods=['GET'])
 @login_required
 def my_library():
-    """Library for the logged-in user: completed purchases (ebook / audiobook). Empty if none.
+    """Library for the logged in user: completed purchases (ebook / audiobook). Empty if none.
 
     Purchases may reference the account as buyer_user_id (users.user_id) and/or buyer_id
     (BookPlatformUser.id on older rows). Authors and readers use the same User row when
@@ -4899,10 +4899,10 @@ def _validate_marketplace_format_selection(book, formats):
 @book_bp.route('/books/<int:book_id>/purchase', methods=['POST'])
 @login_required
 def purchase_book(book_id):
-    """Purchase a book — accessible to all logged-in users (including the author)."""
+    """Purchase a book, accessible to all logged in users (including the author)."""
     # Wrap entire function in try-except to ensure JSON responses
     try:
-        # Resolve app without referencing bare `current_app` — a nested `import current_app` in this
+        # Resolve app without referencing bare `current_app`, a nested `import current_app` in this
         # function would shadow the name and break even this line (UnboundLocalError).
         import flask as _flask_mod
         flask_app = _flask_mod.current_app._get_current_object()
@@ -5555,7 +5555,7 @@ def purchase_book(book_id):
                                 'currency': (book.currency or 'USD').lower(),
                                 'product_data': {
                                     'name': f'{book.title} ({", ".join(labels)})',
-                                    'description': 'Combined purchase — print ships to your address',
+                                    'description': 'Combined purchase, print ships to your address',
                                 },
                                 'unit_amount': int(round(payment_amount * 100)),
                             },
@@ -5575,7 +5575,7 @@ def purchase_book(book_id):
                                     'currency': (book.currency or 'USD').lower(),
                                     'product_data': {
                                         'name': f'{book.title} (print edition)',
-                                        'description': 'Physical book — author ships to your address',
+                                        'description': 'Physical book, author ships to your address',
                                     },
                                     'unit_amount': int(round(book_amt * 100)),
                                 },
@@ -6048,7 +6048,7 @@ def purchase_book(book_id):
 
 @book_bp.route('/checkout/quick-register', methods=['POST'])
 def checkout_quick_register():
-    """Create an account during marketplace checkout, then continue as a logged-in buyer."""
+    """Create an account during marketplace checkout, then continue as a logged in buyer."""
     if getattr(current_user, 'is_authenticated', False):
         return jsonify({'success': True, 'already_logged_in': True})
 
@@ -6094,7 +6094,7 @@ def purchase_success():
     try:
         notify_receipt = False
         def _post_purchase_redirect(book_id: int, purchase_format: str):
-            """Route buyers after checkout — library for digital/audio, marketplace for print."""
+            """Route buyers after checkout, library for digital/audio, marketplace for print."""
             if purchase_grants_format(purchase_format, 'print') and not (
                 purchase_grants_format(purchase_format, 'digital')
                 or purchase_grants_format(purchase_format, 'audiobook')
@@ -6854,7 +6854,7 @@ def stripe_webhook():
                         _debug_patron_log(
                             "H3",
                             "book_platform_routes.py:stripe_webhook:investment",
-                            "investment skipped — not pending",
+                            "investment skipped, not pending",
                             {
                                 "investment_id": investment_id,
                                 "found": True,
@@ -7074,11 +7074,11 @@ def book_analytics(book_id):
                          analytics=analytics,
                          sales=sales)
 
-# API routes for real-time features
+# API routes for Real time features
 @book_bp.route('/api/books/<int:book_id>/chapters/<int:chapter_id>/content', methods=['GET', 'POST'])
 @collaboration_required
 def chapter_content_api(book_id, chapter_id):
-    """API endpoint for chapter content (for real-time editing)"""
+    """API endpoint for chapter content (for Real time editing)"""
     chapter = BookChapter.query.get_or_404(chapter_id)
     
     if request.method == 'GET':
@@ -7146,7 +7146,7 @@ def collaborators_api(book_id):
 @book_bp.route('/api/author/<int:author_id>/details', methods=['GET'])
 @login_required
 def get_author_details(author_id):
-    """Get author details for marketplace display (no email—photo, bio, https website only)."""
+    """Get author details for marketplace display (no email, photo, bio, https website only)."""
     try:
         # Ensure BookPlatformUser is accessible
         from glconnect.book_platform_models import BookPlatformUser, BookStatus
@@ -7765,7 +7765,7 @@ def upload_digital_book():
                 flash(
                     " ".join(parts)
                     + (
-                        " Note: PDF listings often read poorly in-browser; consider also offering EPUB or DOCX for reflowable reading."
+                        " Note: PDF listings often read poorly in browser; consider also offering EPUB or DOCX for reflowable reading."
                         if file_type == "pdf"
                         else ""
                     ),
@@ -7887,7 +7887,7 @@ def audio_generation_status(book_id):
 @book_bp.route('/books/<int:book_id>/download-digital')
 @login_required
 def download_digital_book(book_id):
-    """Download digital book — author or signed-in buyer."""
+    """Download digital book, author or signed-in buyer."""
     book = BookProject.query.get_or_404(book_id)
     user_id = current_user.user_id
     is_author = bool(book.author and book.author.user_id == user_id)
@@ -7940,7 +7940,7 @@ def download_digital_book(book_id):
 @book_bp.route('/audiobook/<int:book_id>/file')
 @login_required
 def serve_audiobook_file(book_id):
-    """Serve the audiobook file — author or signed-in buyer."""
+    """Serve the audiobook file, author or signed-in buyer."""
     book = BookProject.query.get_or_404(book_id)
     
     if not book.has_audiobook or not book.audiobook_file_path:
@@ -8466,7 +8466,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
         flash('You can only create campaigns for your own books.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
-    # Uploaded books (PDF/EPUB/DOCX) can never have campaigns—only selling digital/audio
+    # Uploaded books (PDF/EPUB/DOCX) can never have campaigns, only selling digital/audio
     if book.digital_file_path:
         flash('Book campaigns are not available for uploaded books. Uploaded books can only be sold (digital/audio) in the marketplace.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
@@ -8693,7 +8693,7 @@ def author_my_campaigns(user_profile, profile_type):
     )
 
 
-# Patron campaign discovery — /campaigns is canonical; /investments GET → 301 redirect above.
+# Patron campaign discovery, /campaigns is canonical; /investments GET → 301 redirect above.
 @book_bp.route('/campaigns', methods=['GET'])
 @login_required
 def campaigns():
@@ -8908,7 +8908,7 @@ def toggle_saved_campaign(campaign_id):
     return jsonify({'success': True, 'saved': True})
 
 
-# Campaign detail page (signed-in only — same gate as marketplace)
+# Campaign detail page (signed-in only, same gate as marketplace)
 @book_bp.route('/campaigns/<int:campaign_id>', methods=['GET'])
 @login_required
 def campaign_detail(campaign_id):
@@ -9119,7 +9119,7 @@ def contribute_to_campaign(campaign_id):
         flash(block_reason, 'error')
         return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
     
-    # All signed-in accounts can contribute (authors included — except to their own campaign).
+    # All signed-in accounts can contribute (authors included, except to their own campaign).
     from glconnect.patron_support_service import ensure_patron_book_platform_user
 
     investor_user_id = current_user.user_id
@@ -9145,7 +9145,7 @@ def contribute_to_campaign(campaign_id):
 
     investor_id = bp_user.id
     
-    # Double-check: Prevent investing in own book using investor_id
+    # Double check: Prevent investing in own book using investor_id
     if book and book.author_id == investor_id:
         logger.warning(f"Investment blocked - Investor {investor_id} is the author_id of book {book.id}")
         flash('You cannot contribute to your own book campaign.', 'error')
@@ -9251,7 +9251,7 @@ def contribute_to_campaign(campaign_id):
                                 "currency": "usd",
                                 "unit_amount": int(amount * 100),
                                 "product_data": {
-                                    "name": f"Patron gift — '{book.title}'",
+                                    "name": f"Patron gift, '{book.title}'",
                                     "description": f"Book campaign #{campaign.id} on Ink Studio (patronage, not an investment)",
                                 },
                             },
@@ -9382,7 +9382,7 @@ def earnings_dashboard():
         'author_sales_by_book': {}
     }
     
-    # Accredited reviewer earnings retired — no reviewer section on dashboard
+    # Accredited reviewer earnings retired, no reviewer section on dashboard
     
     # Patron contributions (no sale-linked returns)
     book_platform_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
@@ -10289,7 +10289,7 @@ def request_campaign_fund_release(book_id):
 @book_bp.route('/investments/<int:contribution_id>/request-refund', methods=['POST'])
 @login_required
 def request_contribution_refund(contribution_id):
-    """Patron requests refund — only allowed before first draft is completed (25k+ words)."""
+    """Patron requests refund, only allowed before first draft is completed (25k+ words)."""
     from glconnect.book_platform_models import BookInvestment, RefundRequest, TransactionStatus, InvestmentStatus
     from glconnect.accountability_service import FIRST_DRAFT_MIN_WORDS
     
@@ -10488,14 +10488,14 @@ def admin_process_refund(refund_id):
 @book_bp.route('/publishing')
 @login_required
 def publishing_pipeline():
-    """Legacy URL — use My books and Content hub instead."""
+    """Legacy URL, use My books and Content hub instead."""
     return redirect(url_for('book_platform.books'), code=301)
 
 
 @book_bp.route('/publicity')
 @login_required
 def publicity_promotion():
-    """Legacy URL — publicity lives in Content hub."""
+    """Legacy URL, publicity lives in Content hub."""
     return redirect(url_for('book_platform.content_hub'), code=301)
 
 
@@ -10512,7 +10512,7 @@ def content_hub():
     - Podcasts & Audio (News broadcasts)
     - Freelance Journalism
     - Music (Artists & Songs)
-    Accessible to ALL logged-in users (no author profile required)
+    Accessible to ALL logged in users (no author profile required)
     Maintains backward compatibility with existing routes
     """
     from glconnect.models import Post, Artist
@@ -11900,7 +11900,7 @@ def admin_tv_sync_playlist():
 def admin_stripe_diagnostics():
     """
     Admin-only: whether this running app process sees a valid Stripe *secret* key (sk_...).
-    No key material is returned — only categories. Use to debug 'Payment processing is not configured'.
+    No key material is returned, only categories. Use to debug 'Payment processing is not configured'.
     """
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin privileges required'}), 403
@@ -11955,7 +11955,7 @@ def admin_stripe_diagnostics():
         'stripe_ip_restricted': ip_restricted,
         'hint': (
             'Add outbound_ip to your Stripe secret key IP allowlist (Dashboard → Developers → API keys → '
-            'Manage IP restrictions). Use the host egress IP below — not glc.cool’s public address. '
+            'Manage IP restrictions). Use the host egress IP below, not glc.cool’s public address. '
             'After updating Stripe, retry patron checkout.'
             if ip_restricted
             else (

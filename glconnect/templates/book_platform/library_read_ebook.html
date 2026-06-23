@@ -482,7 +482,7 @@
             <div class="ink-reader-position" id="readerPosition">
                 <i class="fas fa-bookmark text-muted me-1" aria-hidden="true"></i>
                 Section <strong>{{ page_idx + 1 }}</strong> of {{ total_pages }}
-                {% if current_page.title %} — <span id="sectionTitle">{{ current_page.title }}</span>{% endif %}
+                {% if current_page.title %}, <span id="sectionTitle">{{ current_page.title }}</span>{% endif %}
             </div>
             <div class="btn-group" role="group" aria-label="Section navigation">
                 {% if page_idx > 0 %}
@@ -518,7 +518,7 @@
         <div class="ink-reader-empty">
             <p class="mb-3"><i class="fas fa-file-circle-question fa-2x mb-3 opacity-50" aria-hidden="true"></i></p>
             <p class="mb-0">No extractable text in the browser for this title.</p>
-            <p class="small mt-2 mb-3">Common with image-only or layout-heavy PDFs. Use <strong>Download</strong> to read with your favorite app{% if book.digital_file_type and book.digital_file_type|lower == 'pdf' %}, or look for an EPUB/DOCX edition for reflowable reading{% endif %}.</p>
+            <p class="small mt-2 mb-3">Common with image only or layout heavy PDFs. Use <strong>Download</strong> to read with your favorite app{% if book.digital_file_type and book.digital_file_type|lower == 'pdf' %}, or look for an EPUB/DOCX edition for reflowable reading{% endif %}.</p>
             <a class="ink-reader-chip primary" href="{{ download_url }}"><i class="fas fa-download" aria-hidden="true"></i> Download ebook</a>
         </div>
     </div>
@@ -571,7 +571,7 @@
         <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-        <p class="small text-muted">Saved to your account — available on any device when you’re signed in.</p>
+        <p class="small text-muted">Saved to your account, available on any device when you’re signed in.</p>
         <div id="readerAnnotationsList" class="d-grid gap-3"></div>
         <p class="small text-muted mb-0 mt-3 d-none" id="readerAnnotationsEmpty">No highlights yet. Select text in the story and tap <strong>Highlight</strong>.</p>
     </div>

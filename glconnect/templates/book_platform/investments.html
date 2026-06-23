@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Discover book campaigns—back indie authors before publication and follow funding progress.">
+    <meta name="description" content="Discover book campaigns, back indie authors before publication and follow funding progress.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -132,7 +132,7 @@
             {% if status_filter == 'saved' %}
             <a href="{{ url_for('book_platform.campaigns', status='active') }}" class="btn ink-mp-cta">Browse active campaigns</a>
             {% elif status_filter == 'active' %}
-            <p class="small text-white-50 mb-3 mx-auto" style="max-width: 32rem;">Authors can <strong>list on the marketplace</strong> without a campaign. Patron campaigns are optional—start one from a book’s studio page if you want early funding.</p>
+            <p class="small text-white-50 mb-3 mx-auto" style="max-width: 32rem;">Authors can <strong>list on the marketplace</strong> without a campaign. Patron campaigns are optional, start one from a book’s studio page if you want early funding.</p>
             <div class="d-flex flex-wrap justify-content-center gap-2">
                 <a href="{{ url_for('book_platform.campaigns', status='all') }}" class="btn ink-mp-cta">
                     <i class="fas fa-list me-2" aria-hidden="true"></i>Show all statuses

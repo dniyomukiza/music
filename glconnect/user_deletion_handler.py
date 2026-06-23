@@ -144,7 +144,7 @@ def delete_user_and_all_data(user_id, *, commit: bool = True):
 def cleanup_book_data(book_id):
     """Clean up all data associated with a book"""
     try:
-        # Real-time sessions
+        # Real time sessions
         RealtimeSession.query.filter_by(book_project_id=book_id).delete()
         
         # Comments (cascade should handle this, but being explicit)

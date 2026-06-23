@@ -105,7 +105,7 @@ def _load_config():
                     if wh:
                         cfg["STRIPE_WEBHOOK_SECRET"] = wh
 
-                # Mailtrap (account confirmation, receipts, etc.) — same paths as DB/Stripe
+                # Mailtrap (account confirmation, receipts, etc.), same paths as DB/Stripe
                 if not cfg.get("SENDER_MAIL"):
                     _sm = _gl_first_nonempty(file_cfg, "SENDER_MAIL", "SENDER_EMAIL")
                     if _sm:
@@ -123,7 +123,7 @@ def _load_config():
                     if _rm:
                         cfg["RECEIVER_MAIL"] = _rm
 
-                # Optional: Stripe *test* keys from glconfig only — override live/env secrets for the whole app.
+                # Optional: Stripe *test* keys from glconfig only, override live/env secrets for the whole app.
                 # Same alias pattern as live keys: STRIPE_SECRET_KEY / STRIPE_KEY / STRIPE_PRIVATE_KEY maps to
                 # STRIPE_TEST_SECRET / STRIPE_TEST_KEY / STRIPE_TEST_PRIVATE_KEY; STRIPE_API_KEY → STRIPE_TEST_API
                 # or STRIPE_TEST_API_KEY. If any test secret is set (non-empty), it MUST normalize to sk_...
@@ -161,7 +161,7 @@ def _load_config():
                         if not ta.startswith("sk_"):
                             raise RuntimeError(
                                 "STRIPE_TEST_API / STRIPE_TEST_API_KEY in glconfig must be a secret key (sk_...), "
-                                "not a publishable key. Fix or remove — live credentials are not used as a fallback."
+                                "not a publishable key. Fix or remove, live credentials are not used as a fallback."
                             )
                         cfg["STRIPE_API_KEY"] = ta
                     else:
@@ -494,7 +494,7 @@ def create_app(config_overrides=None):
     @app.route("/hls/status")
     @app.route("/api/hls-status")
     def hls_status():
-        """Debug JSON. Prefer /api/hls-status — /hls/status may be proxied to Liquidsoap if nginx has no exact match."""
+        """Debug JSON. Prefer /api/hls-status, /hls/status may be proxied to Liquidsoap if nginx has no exact match."""
         from flask import jsonify
 
         root = _hls_root()
@@ -788,7 +788,7 @@ def create_app(config_overrides=None):
         app.register_blueprint(news_bp, url_prefix='/routes2/news')
         app.register_blueprint(analytics_bp)
 
-        # Optional: Grok + X Search radio prep endpoint (self-contained — remove file + this try block anytime)
+        # Optional: Grok + X Search radio prep endpoint (self-contained, remove file + this try block anytime)
         try:
             from .xai_radio_research import register_xai_radio_research
             register_xai_radio_research(app)

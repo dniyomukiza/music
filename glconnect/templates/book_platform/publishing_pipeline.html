@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Self-publishing pipeline | Ink Studio</title>
+    <title>Self publishing pipeline | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -38,11 +38,11 @@
 
     <main class="container py-4 py-lg-5" id="ink-pub-main">
         <header class="mb-4 mb-lg-5">
-            <p class="small text-uppercase text-muted mb-2">Full-stack self-publishing</p>
+            <p class="small text-uppercase text-muted mb-2">Full stack self publishing</p>
             <h1 class="ink-mp-hero-title h2 mb-3">Publishing pipeline</h1>
             <p class="lead text-muted mb-0" style="max-width: 42rem;">
                 {% if is_author %}
-                Every stage below is built into Ink Studio—from patron discovery through ISBN assignment, marketplace listing under <strong>{{ platform_publisher }}</strong>, and post-launch publicity.
+                Every stage below is built into Ink Studio, from patron discovery through ISBN assignment, marketplace listing under <strong>{{ platform_publisher }}</strong>, and post-launch publicity.
                 {% else %}
                 Discover manuscripts, support authors, and follow books from proposal to publication. Authors use the same tools on the right column.
                 {% endif %}
@@ -57,7 +57,7 @@
                         <div class="ink-pub-stage-num">1</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2"><i class="fas fa-search text-warning me-2"></i>Scouting &amp; proposals</h2>
-                            <p class="small text-muted mb-3">Authors may run an <strong>optional patron campaign</strong> (pitch, sample, funding goal) for early support—or publish straight to the marketplace. Patrons browse active campaigns to find works in progress.</p>
+                            <p class="small text-muted mb-3">Authors may run an <strong>optional patron campaign</strong> (pitch, sample, funding goal) for early support, or publish straight to the marketplace. Patrons browse active campaigns to find works in progress.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-sm btn-ink-gold">Browse book campaigns</a>
                                 {% if is_author and first_book_id %}
@@ -104,7 +104,7 @@
                         <div class="ink-pub-stage-num">4</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2"><i class="fas fa-tasks text-success me-2"></i>Project management</h2>
-                            <p class="small text-muted mb-3"><strong>Self-published:</strong> track cover, manuscript, audiobook, and marketplace steps on each book studio page. <strong>Patron-funded:</strong> milestone releases and accountability when a campaign is funded.</p>
+                            <p class="small text-muted mb-3"><strong>Self published:</strong> track cover, manuscript, audiobook, and marketplace steps on each book studio page. <strong>Patron funded:</strong> milestone releases and accountability when a campaign is funded.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 {% if is_author and first_book_id %}
                                 <a href="{{ url_for('book_platform.view_book', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">Book studio</a>
@@ -151,8 +151,8 @@
                     <article class="ink-pub-stage">
                         <div class="ink-pub-stage-num">7</div>
                         <div class="ink-pub-stage-body">
-                            <h2 class="h5 mb-2"><i class="fas fa-headphones text-info me-2"></i>E-book &amp; audiobook production</h2>
-                            <p class="small text-muted mb-3">Upload <strong>EPUB or DOCX</strong> for reflowable in-app reading, or write in-studio. PDF works for download but usually does not reflow in the browser reader. Generate <strong>AI audiobook</strong> from extracted text. One listing can offer digital + audio on the marketplace.</p>
+                            <h2 class="h5 mb-2"><i class="fas fa-headphones text-info me-2"></i>Ebook &amp; audiobook production</h2>
+                            <p class="small text-muted mb-3">Upload <strong>EPUB or DOCX</strong> for reflowable in app reading, or write in studio. PDF works for download but usually does not reflow in the browser reader. Generate <strong>AI audiobook</strong> from extracted text. One listing can offer digital + audio on the marketplace.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.list_book') }}" class="btn btn-sm btn-outline-light">Upload ebook</a>
                                 {% if is_author and first_book_id %}
@@ -167,7 +167,7 @@
                         <div class="ink-pub-stage-num">8</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2"><i class="fas fa-barcode text-light me-2"></i>ISBN assignment</h2>
-                            <p class="small text-muted mb-3">On first marketplace listing, the platform assigns the next ISBN from its pool—<strong>one ISBN per title</strong> shared by ebook and audiobook. Listings show <strong>{{ platform_publisher }}</strong> as publisher imprint.</p>
+                            <p class="small text-muted mb-3">On first marketplace listing, the platform assigns the next ISBN from its pool, <strong>one ISBN per title</strong> shared by ebook and audiobook. Listings show <strong>{{ platform_publisher }}</strong> as publisher imprint.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 {% if is_author and first_book_id %}
                                 <a href="{{ url_for('book_platform.edit_book', book_id=first_book_id) }}" class="btn btn-sm btn-outline-light">ISBN &amp; publish settings</a>
@@ -227,7 +227,7 @@
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
                         <h3 class="h6 text-primary mb-3"><i class="fas fa-bullhorn me-2"></i>After launch</h3>
-                        <p class="small text-muted">Press kits, live interviews, reviews, and blog features—all in the publicity hub.</p>
+                        <p class="small text-muted">Press kits, live interviews, reviews, and blog features, all in the publicity hub.</p>
                         <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-outline-light w-100">Publicity &amp; promotion</a>
                     </div>
                 </div>

@@ -578,7 +578,7 @@
             if (!takedown) return null;
             let aiRights = false;
             if (confirm('Was AI used in creating this work? If yes, you will be asked to confirm commercial rights to that output.')) {
-                aiRights = confirm('Confirm you have commercial rights to AI-assisted output.');
+                aiRights = confirm('Confirm you have commercial rights to AI assisted output.');
                 if (!aiRights) return null;
             }
             return {

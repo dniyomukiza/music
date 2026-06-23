@@ -180,14 +180,14 @@ Tentative timeline: {tentative_timeline}
             ),
         )
         if not response.parts:
-            return {'success': False, 'error': 'Translation failed — empty AI response'}
+            return {'success': False, 'error': 'Translation failed, empty AI response'}
 
         raw = response.text.strip()
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
         if json_match:
             data = json.loads(json_match.group())
         else:
-            return {'success': False, 'error': 'Translation failed — could not parse response'}
+            return {'success': False, 'error': 'Translation failed, could not parse response'}
     except Exception as exc:
         logger.error('Campaign translation failed for campaign %s: %s', campaign.id, exc, exc_info=True)
         return {'success': False, 'error': 'Translation failed. Please try again.'}

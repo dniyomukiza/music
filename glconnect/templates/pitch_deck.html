@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ndotonic Pitch Deck | GLC Media</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='pitch-deck.css') }}?v=2">
+</head>
+<body class="pd-body">
+
+    <div class="pd-bg" aria-hidden="true"></div>
+    <p class="pd-hint">← → to navigate · P to print</p>
+
+    <div class="pd-deck" id="deck">
+
+        <!-- 1 Title -->
+        <section class="pd-slide pd-slide--title is-active" data-slide="1">
+            <p class="pd-logo-text">Ndotonic</p>
+            <h1 class="pd-title">Turning <em>stories</em> into published books</h1>
+            <p class="pd-subtitle pd-subtitle--center">
+                Ndotonic builds the AI native author platform. <strong>GLC Media</strong> is our radio &amp; TV stream promoting stories and books.
+            </p>
+            <p class="pd-meta-line">Investor &amp; partner deck · {{ deck_year }}</p>
+        </section>
+
+        <!-- 2 Problem -->
+        <section class="pd-slide" data-slide="2">
+            <p class="pd-kicker">The problem</p>
+            <h2 class="pd-title pd-title--wide">Independent authors are forced to <em>stitch together</em> a dozen tools</h2>
+            <div class="pd-grid-2">
+                <div class="pd-card">
+                    <h3>Discovery &amp; funding</h3>
+                    <p>Campaigns live on one platform, pitches on another. Patrons and producers never see the full story.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Writing &amp; editing</h3>
+                    <p>Manuscript tools, AI assistants, and human editors are disconnected, voice and continuity suffer.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Publishing</h3>
+                    <p>ISBN, ebook, print, and audiobook each require separate workflows, vendors, and fee structures.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Promotion &amp; sales</h3>
+                    <p>Authors lack owned broadcast channels. Radio, TV, marketplace, and direct sales rarely connect under one company.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3 Solution -->
+        <section class="pd-slide" data-slide="3">
+            <p class="pd-kicker">Our solution</p>
+            <h2 class="pd-title"><em>Ndotonic</em> is the full author stack</h2>
+            <p class="pd-subtitle">One company from first pitch to paying reader, with <strong>GLC Media</strong> (radio &amp; TV) built in to promote every story and book.</p>
+            <div class="pd-flow">
+                <span class="pd-flow-step">Pitch</span>
+                <span class="pd-flow-arrow">→</span>
+                <span class="pd-flow-step">Fund</span>
+                <span class="pd-flow-arrow">→</span>
+                <span class="pd-flow-step">Write</span>
+                <span class="pd-flow-arrow">→</span>
+                <span class="pd-flow-step">Edit with AI</span>
+                <span class="pd-flow-arrow">→</span>
+                <span class="pd-flow-step">Publish</span>
+                <span class="pd-flow-arrow">→</span>
+                <span class="pd-flow-step">GLC Media</span>
+                <span class="pd-flow-arrow">→</span>
+                <span class="pd-flow-step">Monetize</span>
+            </div>
+        </section>
+
+        <!-- 4 Product pillars -->
+        <section class="pd-slide" data-slide="4">
+            <p class="pd-kicker">Product</p>
+            <h2 class="pd-title pd-title--wide">Four pillars of <em>Why Ndotonic</em></h2>
+            <div class="pd-grid-2">
+                <div class="pd-card pd-card--accent">
+                    <p class="pd-num">01</p>
+                    <h3>Get Discovered</h3>
+                    <p>Upload a pitch and launch patron book funding campaigns. Early supporters back work in progress.</p>
+                </div>
+                <div class="pd-card pd-card--accent">
+                    <p class="pd-num">02</p>
+                    <h3>Promote Your Story</h3>
+                    <p><strong>GLC Media</strong>, our radio &amp; TV stream promoting authors' stories and books to a live audience.</p>
+                </div>
+                <div class="pd-card pd-card--accent">
+                    <p class="pd-num">03</p>
+                    <h3>Self publish</h3>
+                    <p>Ink Studio writing environment, AI author editing toolkit, ISBN assignment, ebook · print · audiobook.</p>
+                </div>
+                <div class="pd-card pd-card--accent">
+                    <p class="pd-num">04</p>
+                    <h3>Monetize your work</h3>
+                    <p>Integrated marketplace, sell digital editions, audiobooks, and ship print to customers worldwide.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5 Ink Studio + AI -->
+        <section class="pd-slide" data-slide="5">
+            <p class="pd-kicker">Differentiator</p>
+            <h2 class="pd-title">AI native <em>author editing</em>, not generic chat</h2>
+            <p class="pd-subtitle">Purpose built tools inside Ink Studio, tuned for manuscript craft, not homework answers.</p>
+            <div class="pd-grid-3">
+                <div class="pd-card">
+                    <h3>Copy editing</h3>
+                    <ul>
+                        <li>Grammar &amp; punctuation</li>
+                        <li>Spelling</li>
+                        <li>Common linguistic errors</li>
+                    </ul>
+                </div>
+                <div class="pd-card">
+                    <h3>Craft review</h3>
+                    <ul>
+                        <li>Plot continuity</li>
+                        <li>Pacing &amp; tension</li>
+                        <li>Narrative style</li>
+                    </ul>
+                </div>
+                <div class="pd-card">
+                    <h3>Author workflow</h3>
+                    <ul>
+                        <li>Chapter editor + versions</li>
+                        <li>Collaborators &amp; beta readers</li>
+                        <li>Publishing pipeline end to end</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6 Market -->
+        <section class="pd-slide" data-slide="6">
+            <p class="pd-kicker">Market</p>
+            <h2 class="pd-title pd-title--wide">A massive, <em>fragmented</em> creator economy</h2>
+            <div class="pd-grid-3">
+                <div class="pd-card pd-stat">
+                    <strong>$1.8B+</strong>
+                    <span>Self publishing market (US, growing ~8% CAGR)</span>
+                </div>
+                <div class="pd-card pd-stat">
+                    <strong>4M+</strong>
+                    <span>New ISBNs / self published titles annually worldwide</span>
+                </div>
+                <div class="pd-card pd-stat">
+                    <strong>AI shift</strong>
+                    <span>Authors expect AI editing &amp; production tools inside their publisher, not bolted on</span>
+                </div>
+            </div>
+            <p class="pd-subtitle" style="margin-top:1.5rem;margin-bottom:0;font-size:0.95rem;">
+                Ndotonic targets independent authors who want discovery, craft-quality tools, Multi format publishing, and broadcast promotion through GLC Media, without assembling five vendors.
+            </p>
+        </section>
+
+        <!-- 7 Business model -->
+        <section class="pd-slide" data-slide="7">
+            <p class="pd-kicker">Business model</p>
+            <h2 class="pd-title">Revenue at <em>every stage</em> of the author journey</h2>
+            <div class="pd-grid-2">
+                <div class="pd-card">
+                    <h3>Platform fees</h3>
+                    <p>Transaction fee on marketplace sales (ebook, audiobook, print, bundles), with author incentive coupons for cross format listing.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Campaigns &amp; patronage</h3>
+                    <p>Book funding campaigns connect authors with early supporters; platform participates in the patron/investment flow.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Publishing services</h3>
+                    <p>ISBN pool, print fulfillment, AI audiobook generation, cover &amp; listing tools, value add beyond raw marketplace take rate.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>GLC Media</h3>
+                    <p>Owned radio &amp; TV streaming that promotes authors' stories and books, a distribution channel competitors cannot replicate.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8 Traction -->
+        <section class="pd-slide" data-slide="8">
+            <p class="pd-kicker">Traction &amp; platform</p>
+            <h2 class="pd-title pd-title--wide">Live at <em>glc.cool</em></h2>
+            <div class="pd-grid-2">
+                <div class="pd-card">
+                    <h3>Ndotonic platform</h3>
+                    <ul>
+                        <li>Ink Studio, write, edit, collaborate</li>
+                        <li>Patron book campaigns</li>
+                        <li>Marketplace (digital + audio + print)</li>
+                        <li>AI author editing assistant (6 modes)</li>
+                        <li>Author dashboard &amp; payout via Stripe</li>
+                        <li>End to end publishing pipeline</li>
+                    </ul>
+                </div>
+                <div class="pd-card">
+                    <h3>GLC Media</h3>
+                    <ul>
+                        <li>Radio &amp; TV stream promoting stories &amp; books</li>
+                        <li>Live broadcast &amp; on air author features</li>
+                        <li>Editorial &amp; blog amplification</li>
+                        <li>Music &amp; creator content hub</li>
+                        <li>Cross format listing incentives</li>
+                        <li>Publicity &amp; media relations tools</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9 Competition -->
+        <section class="pd-slide" data-slide="9">
+            <p class="pd-kicker">Competition</p>
+            <h2 class="pd-title pd-title--wide">We combine what others <em>split apart</em></h2>
+            <table class="pd-table">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th>Ndotonic</th>
+                        <th>KDP / Ingram</th>
+                        <th>Kickstarter</th>
+                        <th>Storyrocket</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Patron / pitch campaigns</td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Integrated writing studio</td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                    </tr>
+                    <tr>
+                        <td>AI craft editing (in manuscript)</td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                    </tr>
+                    <tr>
+                        <td>Multi format marketplace</td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                    </tr>
+                    <tr>
+                        <td>Owned radio/TV promotion (GLC Media)</td>
+                        <td class="pd-check">✓</td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                        <td class="pd-dash">, </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 10 Vision -->
+        <section class="pd-slide" data-slide="10">
+            <p class="pd-kicker">Vision</p>
+            <h2 class="pd-title">The epicenter of <em>premium</em> independent publishing</h2>
+            <p class="pd-subtitle">
+                Ndotonic becomes where serious authors build audience, craft manuscripts with AI assistance,
+                fund their work, and reach readers, while <strong>GLC Media</strong> streams and promotes their
+                stories and books on radio &amp; TV.
+            </p>
+            <div class="pd-grid-3">
+                <div class="pd-card pd-stat">
+                    <strong>Year 1</strong>
+                    <span>Author acquisition · campaign GMV · marketplace liquidity</span>
+                </div>
+                <div class="pd-card pd-stat">
+                    <strong>Year 2</strong>
+                    <span>GLC Media audience growth · audiobook scale · print volume</span>
+                </div>
+                <div class="pd-card pd-stat">
+                    <strong>Year 3</strong>
+                    <span>Rights &amp; adaptation pipeline · producer discovery layer</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 11 Team -->
+        <section class="pd-slide" data-slide="11">
+            <p class="pd-kicker">Team</p>
+            <h2 class="pd-title"><em>Ndotonic</em> &amp; GLC Media</h2>
+            <p class="pd-subtitle"><strong>Ndotonic</strong> is the company. <strong>GLC Media</strong> is our radio &amp; TV stream, promoting stories and books to a live audience.</p>
+            <div class="pd-grid-2">
+                <div class="pd-card">
+                    <h3>Ndotonic</h3>
+                    <p>The company behind Ink Studio, patron campaigns, marketplace, and AI author tools, turning stories into published books.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>GLC Media</h3>
+                    <p>Radio &amp; TV streaming that promotes authors' stories and books, live broadcast, interviews, and editorial reach.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Mission</h3>
+                    <p>Uncover hidden potential and amplify unheard voices. Bridge creators and opportunity with exposure, connection, and tools to ship.</p>
+                </div>
+                <div class="pd-card">
+                    <h3>Hiring</h3>
+                    <p>Co founder CTO, AI agent engineers, QA, security, building the platform authors deserve in the AI boom.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 12 Ask -->
+        <section class="pd-slide pd-slide--title" data-slide="12">
+            <p class="pd-kicker">The ask</p>
+            <h2 class="pd-title">Let's build the future of <em>author publishing</em></h2>
+            <div class="pd-ask-box">
+                <h3>Partner with Ndotonic</h3>
+                <ul>
+                    <li>Strategic investment to scale the author platform &amp; GLC Media</li>
+                    <li>Publishing &amp; distribution partnerships</li>
+                    <li>Broadcast &amp; media amplification via GLC Media</li>
+                </ul>
+                <p class="pd-contact">
+                    glc.cool · {{ url_for('blog.contact', _external=True) }}<br>
+                    @GLConnect_cool
+                </p>
+            </div>
+        </section>
+
+    </div>
+
+    <div class="pd-chrome">
+        <div class="pd-progress" aria-hidden="true">
+            <div class="pd-progress-bar" id="progressBar" style="width: 8.33%"></div>
+        </div>
+        <span class="pd-counter" id="counter">1 / 12</span>
+        <div class="pd-nav-btns">
+            <button type="button" class="pd-nav-btn" id="prevBtn" aria-label="Previous slide" disabled>
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button type="button" class="pd-nav-btn" id="nextBtn" aria-label="Next slide">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var slides = Array.prototype.slice.call(document.querySelectorAll('.pd-slide'));
+        var total = slides.length;
+        var current = 0;
+        var prevBtn = document.getElementById('prevBtn');
+        var nextBtn = document.getElementById('nextBtn');
+        var counter = document.getElementById('counter');
+        var progressBar = document.getElementById('progressBar');
+
+        function goTo(index) {
+            if (index < 0 || index >= total) return;
+            slides[current].classList.remove('is-active', 'is-prev');
+            if (index > current) slides[current].classList.add('is-prev');
+            current = index;
+            slides[current].classList.add('is-active');
+            slides[current].classList.remove('is-prev');
+            counter.textContent = (current + 1) + ' / ' + total;
+            progressBar.style.width = (((current + 1) / total) * 100) + '%';
+            prevBtn.disabled = current === 0;
+            nextBtn.disabled = current === total - 1;
+        }
+
+        prevBtn.addEventListener('click', function () { goTo(current - 1); });
+        nextBtn.addEventListener('click', function () { goTo(current + 1); });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+                e.preventDefault();
+                goTo(current + 1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault();
+                goTo(current - 1);
+            } else if (e.key === 'Home') {
+                goTo(0);
+            } else if (e.key === 'End') {
+                goTo(total - 1);
+            } else if (e.key === 'p' || e.key === 'P') {
+                window.print();
+            }
+        });
+
+        var touchStartX = 0;
+        document.addEventListener('touchstart', function (e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        document.addEventListener('touchend', function (e) {
+            var dx = e.changedTouches[0].screenX - touchStartX;
+            if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+        }, { passive: true });
+    })();
+    </script>
+</body>
+</html>

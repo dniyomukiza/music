@@ -236,7 +236,7 @@ def get_timezone_info() -> dict:
 # Simple TTS cache to avoid regenerating identical content
 _tts_cache = {}
 
-# --- Define the Text-to-Speech Tool (as a callable function) ---
+# --- Define the Text to Speech Tool (as a callable function) ---
 def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_rate: float = 1.0, pitch: float = 0.0) -> dict:
     """
     Converts text into an audio file (MP3 format) and returns its path.
@@ -431,7 +431,7 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             
         return {"audio_filepath": full_path}
     except Exception as e:
-        print(f"ERROR during Text-to-Speech for {output_filename}: {e}")
+        print(f"ERROR during Text to Speech for {output_filename}: {e}")
         print(f"DEBUG: Exception type: {type(e)}")
         print(f"DEBUG: Exception details: {str(e)}")
         # Instead of returning an error string, raise the exception to be handled by the calling function
@@ -439,7 +439,7 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
 
 def clean_text_for_speech(text: str) -> str:
     """
-    Cleans text to make it suitable for text-to-speech conversion.
+    Cleans text to make it suitable for text to speech conversion.
     Removes numbers, asterisks, and other characters that shouldn't be spoken.
     """
     if not text:
@@ -635,7 +635,7 @@ def generate_intelligent_fallback_content(topic: str) -> str:
             print(f"DEBUG: Generated intelligent fallback for {topic} (category: {analysis.get('category', 'unknown')})")
             return cleaned_content
         else:
-            # If AI-generated content fails validation, use a generic professional template
+            # If AI generated content fails validation, use a generic professional template
             return generate_generic_fallback(topic)
             
     except Exception as e:
@@ -1180,7 +1180,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
     import psutil
     import os
     
-    print("DEBUG: Using memory-optimized sequential processing")
+    print("DEBUG: Using memory optimized sequential processing")
     
     # Check memory before starting
     try:
@@ -1821,7 +1821,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             name=f"tts_{category}_reporter",
             description=f"Converts {category} report to audio.",
             instruction=f"""
-                Convert the following {category} report to audio using Google Cloud Text-to-Speech.
+                Convert the following {category} report to audio using Google Cloud Text to Speech.
                 Use the voice: {voice}
                 The report content is: {cleaned_script}
                 
@@ -1934,7 +1934,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         name="tts_intro",
         description="Converts intro to audio.",
         instruction=f"""
-            Convert the following intro text to audio using Google Cloud Text-to-Speech.
+            Convert the following intro text to audio using Google Cloud Text to Speech.
             Use the voice: {ANCHOR_VOICE}
             The intro text is: {intro_text}
             
@@ -1950,7 +1950,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         name="tts_outro",
         description="Converts outro to audio.",
         instruction=f"""
-            Convert the following outro text to audio using Google Cloud Text-to-Speech.
+            Convert the following outro text to audio using Google Cloud Text to Speech.
             Use the voice: {ANCHOR_VOICE}
             The outro text is: {outro_text}
             
@@ -1966,7 +1966,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         name="tts_thank_you",
         description="Converts thank you message to audio.",
         instruction=f"""
-            Convert the following thank you message to audio using Google Cloud Text-to-Speech.
+            Convert the following thank you message to audio using Google Cloud Text to Speech.
             Use the voice: {ANCHOR_VOICE}
             The thank you text is: Thank you for that report.
             
@@ -1988,7 +1988,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             name=agent_name,
             description=f"Converts transition {i+1} to audio.",
             instruction=f"""
-                Convert the following transition text to audio using Google Cloud Text-to-Speech.
+                Convert the following transition text to audio using Google Cloud Text to Speech.
                 Use the voice: {ANCHOR_VOICE}
                 The transition text is: {transition_text}
                 

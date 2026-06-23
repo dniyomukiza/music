@@ -200,7 +200,7 @@ def agent_marketing(book_id):
     
     session_service = InMemorySessionService()
     runner = Runner(app_name="book_agents", agent=marketing_agent, session_service=session_service)
-    message = Content(role="user", parts=[Part(text="Generate the final marketing metadata including Synopsis, Tagline, and comma-separated Tags.")])
+    message = Content(role="user", parts=[Part(text="Generate the final marketing metadata including Synopsis, Tagline, and Comma separated Tags.")])
     
     import asyncio
     async def run_marketing():

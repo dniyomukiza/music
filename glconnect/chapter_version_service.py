@@ -1,5 +1,5 @@
 """
-Chapter version snapshots for Ink Studio — track edits during collaboration and allow rollbacks.
+Chapter version snapshots for Ink Studio, track edits during collaboration and allow rollbacks.
 """
 from __future__ import annotations
 

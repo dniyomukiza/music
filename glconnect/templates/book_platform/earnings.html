@@ -101,7 +101,7 @@
         <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" role="status">
             <div>
                 <strong><i class="fas fa-wallet me-1"></i>Link your payout account</strong>
-                <p class="mb-0 small">Connect Stripe so book sales can be paid to your bank (destination charges). You can complete this anytime—it’s also offered when you publish.</p>
+                <p class="mb-0 small">Connect Stripe so book sales can be paid to your bank (destination charges). You can complete this anytime, it’s also offered when you publish.</p>
             </div>
             <a class="btn btn-sm btn-ink-gold text-nowrap" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Set up Stripe payouts</a>
         </div>
@@ -214,7 +214,7 @@
                             <tr>
                                 <td>{{ investment.book_project.title }}</td>
                                 <td>${{ "%.2f"|format(investment.amount) }}</td>
-                                <td>{{ investment.invested_at.strftime('%B %d, %Y') if investment.invested_at else '—' }}</td>
+                                <td>{{ investment.invested_at.strftime('%B %d, %Y') if investment.invested_at else ', ' }}</td>
                                 <td>
                                     {% if investment.status.value == 'pending' %}
                                     <span class="badge bg-warning text-dark">Payment pending</span>

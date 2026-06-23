@@ -1,5 +1,5 @@
 """
-Optional dev endpoint: X API v2 Recent Search + OpenAI for radio prep briefs / on-air scripts.
+Optional dev endpoint: X API v2 Recent Search + OpenAI for radio prep briefs / on air scripts.
 
 - Posts: GET https://api.x.com/2/tweets/search/recent (Bearer), then if the time window
   matches full-archive fallback rules and there are no hits, GET …/2/tweets/search/all
@@ -43,13 +43,13 @@ _TOPIC_MAX_WORDS = 32
 
 _SCOPE_BRIEF = """**Scope lock:** Stay strictly within the topic(s) listed above. Summarize only discussion that clearly ties to those themes using the CONTEXT posts; skip unrelated pile-ons."""
 
-_THIN_RESULTS_BRIEF = """**If CONTEXT is thin:** Do not write "no tweets" or meta about APIs. Give a tight brief on why the themes still matter and what to listen for—hedged, without inventing posts not in CONTEXT."""
+_THIN_RESULTS_BRIEF = """**If CONTEXT is thin:** Do not write "no tweets" or meta about APIs. Give a tight brief on why the themes still matter and what to listen for, hedged, without inventing posts not in CONTEXT."""
 
 _SCOPE_SCRIPT = """**Scope lock (critical):** **Topic 1** and **Topic 2** are the **only** subjects. Use **only** CONTEXT below for concrete quotes and attributions; never invent tweet text."""
 
 _THIN_RESULTS_SCRIPT = """**If CONTEXT is thin (automation-safe):**
 - **Never** say "no tweets found", "search empty", "API", etc.
-- **Do** a smooth segment on why **Topic 1** and **Topic 2** still matter—hedged general language—without fake quotes. No verbatim lines unless they appear in CONTEXT."""
+- **Do** a smooth segment on why **Topic 1** and **Topic 2** still matter, hedged general language, without fake quotes. No verbatim lines unless they appear in CONTEXT."""
 
 
 def register_xai_radio_research(app):
@@ -479,7 +479,7 @@ _HEALTH_HTML = r"""<!DOCTYPE html>
 </head>
 <body>
   <h1>X API + OpenAI (radio dev)</h1>
-  <p class="sub">POST uses <code>X Recent Search</code> (with optional <a href="https://docs.x.com/x-api/posts/search-all-posts" rel="noopener">full-archive</a> fallback when 48h has no hits) + <code>OpenAI</code> chat — not xAI. Env: <code>X_BEARER_TOKEN</code>, <code>OPENAI_AI_KEY</code>, <code>ENABLE_XAI_RADIO_RESEARCH=1</code>.</p>
+  <p class="sub">POST uses <code>X Recent Search</code> (with optional <a href="https://docs.x.com/x-api/posts/search-all-posts" rel="noopener">full-archive</a> fallback when 48h has no hits) + <code>OpenAI</code> chat, not xAI. Env: <code>X_BEARER_TOKEN</code>, <code>OPENAI_AI_KEY</code>, <code>ENABLE_XAI_RADIO_RESEARCH=1</code>.</p>
   <div class="card">
     <dl>
       <dt>Feature</dt>
@@ -498,7 +498,7 @@ _HEALTH_HTML = r"""<!DOCTYPE html>
     <input type="text" id="topic1" placeholder="Short phrase" autocomplete="off" maxlength="300">
     <label>Topic 2</label>
     <input type="text" id="topic2" placeholder="Second angle" autocomplete="off" maxlength="300">
-    <label>Approx. on-air length (seconds)</label>
+    <label>Approx. on air length (seconds)</label>
     <input type="text" id="duration" value="120" inputmode="numeric" style="max-width:8rem">
     <label>Time window</label>
     <select id="recencyHours" style="max-width:100%;padding:0.45rem;border-radius:6px;background:rgba(0,0,0,.25);color:inherit;">
@@ -743,11 +743,11 @@ def whats_happening_brief():
 {_THIN_RESULTS_BRIEF}
 
 ---
-CONTEXT (raw X posts from search — recent or full-archive fallback; use only this for specifics):
+CONTEXT (raw X posts from search, recent or full-archive fallback; use only this for specifics):
 {context}
 ---
 
-Produce a **radio host prep brief** (not on-air script):
+Produce a **radio host prep brief** (not on air script):
 - Per topic: current narrative, thread/reply themes if visible in CONTEXT, 3–5 talking points, flag rumors.
 - Where CONTEXT shows focal posts vs replies, call that out.
 - Reference attribution as @username + paraphrase. No URLs or tweet IDs on air."""
@@ -838,7 +838,7 @@ CONTEXT (X search + optional replies block):
 {quotes_rules}
 
 Rules:
-- One continuous **on-air script** for a music/culture "what's happening" segment.
+- One continuous **on air script** for a music/culture "what's happening" segment.
 - Natural spoken English; [PAUSE] sparingly.
 - **No** footnotes, markdown links, or x.com URLs in output.
 - Do not mention APIs, searches failing, or "no tweets".

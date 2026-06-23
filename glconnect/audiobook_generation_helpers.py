@@ -70,7 +70,7 @@ def build_audiobook_source(
         if not os.path.exists(digital_file_path):
             return {
                 "success": False,
-                "error": "Digital book file not found. Please re-upload the book.",
+                "error": "Digital book file not found. Please re upload the book.",
                 "full_text": "",
                 "chapters_for_audio": [],
                 "source_hash": "",

@@ -190,7 +190,7 @@ class BookProject(db.Model):
     print_handling_days = db.Column(db.Integer, nullable=True, default=7)
     print_description = db.Column(db.Text, nullable=True)
 
-    # Per-format platform fee overrides (set when author redeems cross-format listing coupon)
+    # Per-format platform fee overrides (set when author redeems cross format listing coupon)
     platform_fee_percent_ebook = db.Column(db.Float, nullable=True)
     platform_fee_percent_audiobook = db.Column(db.Float, nullable=True)
     platform_fee_percent_print = db.Column(db.Float, nullable=True)
@@ -576,7 +576,7 @@ class BookPurchase(db.Model):
 
 
 class BookPrintOrder(db.Model):
-    """Physical print order — author ships; platform collected payment via BookPurchase."""
+    """Physical print order, author ships; platform collected payment via BookPurchase."""
 
     __tablename__ = 'book_print_orders'
 
@@ -628,7 +628,7 @@ class LibraryBookHide(db.Model):
 
 
 class ReaderAnnotation(db.Model):
-    """User highlights, section bookmarks, and optional notes on the in-browser library reader (synced per account)."""
+    """User highlights, section bookmarks, and optional notes on the in browser library reader (synced per account)."""
 
     __tablename__ = 'reader_annotations'
 
@@ -691,7 +691,7 @@ class AudioGenerationTask(db.Model):
     # Relationships
     book_project = db.relationship('BookProject', backref='audio_generation_tasks')
 
-# Real-time Session Model (for WebSocket connections)
+# Real time Session Model (for WebSocket connections)
 class RealtimeSession(db.Model):
     __tablename__ = 'realtime_sessions'
     
@@ -1197,7 +1197,7 @@ class AuthorCampaignPayoutRequest(db.Model):
 
 
 class AuthorFormatListingCoupon(db.Model):
-    """Cross-format listing coupon: earn by publishing one format, redeem when listing another."""
+    """Cross format listing coupon: earn by publishing one format, redeem when listing another."""
 
     __tablename__ = "author_format_listing_coupons"
     __table_args__ = (

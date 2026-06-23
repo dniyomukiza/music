@@ -1,5 +1,5 @@
 """
-Platform ISBN pool for self-publishing: assign one ISBN per listed title (ebook + audiobook share it).
+Platform ISBN pool for self publishing: assign one ISBN per listed title (ebook + audiobook share it).
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def validate_isbn13(raw: str) -> str:
     if len(cleaned) != 13 or not cleaned.isdigit():
         raise IsbnValidationError("Enter a valid 13-digit ISBN (hyphens optional).")
     if cleaned[-1] != isbn13_check_digit(cleaned[:12]):
-        raise IsbnValidationError("That ISBN check digit is invalid — double-check the number.")
+        raise IsbnValidationError("That ISBN check digit is invalid, double check the number.")
     return cleaned
 
 

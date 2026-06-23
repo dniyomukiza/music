@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Back {{ book.title if book else campaign.title }} — a patron campaign on Ink Studio. Help an indie author finish and publish their book.">
+    <meta name="description" content="Back {{ book.title if book else campaign.title }}, a patron campaign on Ink Studio. Help an indie author finish and publish their book.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta property="og:title" content="{{ campaign.title }} — {{ book.title if book else 'Book campaign' }}">
+    <meta property="og:title" content="{{ campaign.title }}, {{ book.title if book else 'Book campaign' }}">
     <meta property="og:description" content="{{ pitch_plain or 'Support this author before publication on Ink Studio.' }}">
     {% if book and book_has_listing_cover(book) %}
     <meta property="og:image" content="{{ marketplace_cover_url(book, true) }}">
     {% endif %}
-    <title>{{ campaign.title }} — Book campaign | Ink Studio</title>
+    <title>{{ campaign.title }}, Book campaign | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
     {% if preview_mode %}
     <div class="container pt-3 position-relative" style="z-index:2;">
         <div class="alert alert-warning border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-0" role="status">
-            <span><strong>Preview</strong> — how patrons see this page.</span>
+            <span><strong>Preview</strong>, how patrons see this page.</span>
             <div class="d-flex flex-wrap gap-2">
                 <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=campaign.id) }}" class="btn btn-sm btn-dark">Edit</a>
                 <a href="{{ url_for('book_platform.campaign_detail', campaign_id=campaign.id) }}" class="btn btn-sm btn-outline-dark">Exit</a>
@@ -233,7 +233,7 @@
                                     Support this book
                                 </a>
                                 <p class="small text-white-50 mt-3 mb-0">
-                                    A patron gift—not an investment. If the goal is not fully funded within 2 years, pledges are refunded.
+                                    A patron gift, not an investment. If the goal is not fully funded within 2 years, pledges are refunded.
                                 </p>
                                 {% if current_user.is_authenticated %}
                                 <div class="d-flex gap-2 mt-3">

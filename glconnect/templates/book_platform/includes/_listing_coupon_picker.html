@@ -1,4 +1,4 @@
-{# Cross-format listing coupon picker — redeem when listing a new format on the same title.
+{# Cross format listing coupon picker, redeem when listing a new format on the same title.
    expects: redeemable_coupons (list), target_format, coupon_platform_fee_after, field_name optional #}
 {% set fname = field_name|default('listing_coupon_id') %}
 {% if redeemable_coupons %}
@@ -8,7 +8,7 @@
     <div class="d-flex flex-column gap-2">
         <div class="form-check">
             <input class="form-check-input" type="radio" name="{{ fname }}" id="{{ fname }}None" value="" checked>
-            <label class="form-check-label small" for="{{ fname }}None">No coupon — standard platform fee</label>
+            <label class="form-check-label small" for="{{ fname }}None">No coupon, standard platform fee</label>
         </div>
         {% for c in redeemable_coupons %}
         <div class="form-check">

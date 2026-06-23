@@ -68,18 +68,18 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="genre" class="form-label">Genre</label>
-                                        {% set standard_genres = ['fiction','non-fiction','mystery','romance','sci-fi','fantasy','thriller','biography','self-help','business','history','other'] %}
+                                        {% set standard_genres = ['fiction','non-fiction','mystery','romance','sci fi','fantasy','thriller','biography','self-help','business','history','other'] %}
                                         <select class="form-select" id="genre" name="genre">
                                             <option value="">Select a genre</option>
                                             <option value="fiction" {% if book.genre == 'fiction' %}selected{% endif %}>Fiction</option>
-                                            <option value="non-fiction" {% if book.genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                                            <option value="non-fiction" {% if book.genre == 'non-fiction' %}selected{% endif %}>Nonfiction</option>
                                             <option value="mystery" {% if book.genre == 'mystery' %}selected{% endif %}>Mystery</option>
                                             <option value="romance" {% if book.genre == 'romance' %}selected{% endif %}>Romance</option>
-                                            <option value="sci-fi" {% if book.genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
+                                            <option value="sci fi" {% if book.genre == 'sci fi' %}selected{% endif %}>Science Fiction</option>
                                             <option value="fantasy" {% if book.genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
                                             <option value="thriller" {% if book.genre == 'thriller' %}selected{% endif %}>Thriller</option>
                                             <option value="biography" {% if book.genre == 'biography' %}selected{% endif %}>Biography</option>
-                                            <option value="self-help" {% if book.genre == 'self-help' %}selected{% endif %}>Self-Help</option>
+                                            <option value="self-help" {% if book.genre == 'self-help' %}selected{% endif %}>Self Help</option>
                                             <option value="business" {% if book.genre == 'business' %}selected{% endif %}>Business</option>
                                             <option value="history" {% if book.genre == 'history' %}selected{% endif %}>History</option>
                                             <option value="other" {% if book.genre == 'other' %}selected{% endif %}>Other</option>
@@ -252,7 +252,7 @@
                                 <div class="mb-2">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
                                 <div class="mb-2">
                                     <label for="ai_cover_art_brief_edit" class="form-label small text-muted">Art direction for this generation (optional)</label>
-                                    <textarea class="form-control form-control-sm" id="ai_cover_art_brief_edit" rows="2" placeholder="e.g. moody sci-fi, amber glow, lone figure"></textarea>
+                                    <textarea class="form-control form-control-sm" id="ai_cover_art_brief_edit" rows="2" placeholder="e.g. moody sci fi, amber glow, lone figure"></textarea>
                                 </div>
                                 <div class="d-flex flex-wrap gap-2 mb-2">
                                     <button type="button" class="btn btn-outline-primary btn-sm" id="btnEditAiCoverGenerate"><i class="fas fa-magic me-1"></i>Generate preview</button>
@@ -300,7 +300,7 @@
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div>
                                         <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author Publishing Agreement</h6>
-                                        <small class="text-muted">One-time listing attestation for this title (v{{ listing_attestation_version }}) — covers all formats.</small>
+                                        <small class="text-muted">One time listing attestation for this title (v{{ listing_attestation_version }}), covers all formats.</small>
                                     </div>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(true); return false;">
                                         Review and accept terms
@@ -325,14 +325,14 @@
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on" disabled>
                                         <label class="form-check-label small text-dark" for="listing_ai_rights_confirm">
-                                            If AI-assisted, I confirm I have commercial rights to use the generated output.
+                                            If AI assisted, I confirm I have commercial rights to use the generated output.
                                         </label>
                                     </div>
                                     <div class="mt-3">
                                         <button type="button" class="btn btn-secondary btn-sm" id="btnConfirmListingTerms" disabled title="Check each required box above first">
                                             <i class="fas fa-check-circle me-1"></i>Agree to terms
                                         </button>
-                                        <small class="text-muted d-block mt-2">Checking the boxes alone is not enough — click Agree to terms before publishing.</small>
+                                        <small class="text-muted d-block mt-2">Checking the boxes alone is not enough, click Agree to terms before publishing.</small>
                                     </div>
                                 </div>
                                 <div id="listingTermsConfirmedNote" class="alert alert-success mt-3 d-none small mb-0">
@@ -607,7 +607,7 @@
             }
             if (!listingTermsConfirmed) {
                 openListingTermsPanel(false);
-                showNotification('Almost there — click “Agree to terms” after checking each box.', 'error');
+                showNotification('Almost there, click “Agree to terms” after checking each box.', 'error');
                 return false;
             }
             return true;

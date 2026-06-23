@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.title }} - Premium Content Store</title>
+    <title>{{ book.title }} | Premium Content Store</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -245,7 +245,7 @@
                     {% if book.has_audiobook %}
                     <div class="audio-player-card">
                         <h5 class="mb-2" style="color:var(--text-main)!important"><i class="fas fa-play me-2" style="color:var(--accent-primary)"></i>Listen to Sample</h5>
-                        <p class="small text-muted mb-0">AI-narrated ({{ book.audiobook_voice or 'Standard' }})</p>
+                        <p class="small text-muted mb-0">AI narrated ({{ book.audiobook_voice or 'Standard' }})</p>
                         <audio controls controlslist="nodownload">
                             <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
                             Your browser does not support the audio element.

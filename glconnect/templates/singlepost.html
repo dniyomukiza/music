@@ -375,7 +375,7 @@
         {% endif %}
     }
 
-    // Real-time metrics updates
+    // Real time metrics updates
     function updatePostMetrics(postId) {
         fetch(`/blog/post/${postId}/metrics`)
             .then(response => response.json())
@@ -407,7 +407,7 @@
             .catch(error => console.error('Error updating metrics:', error));
     }
 
-    // Set up real-time updates via polling (every 5 seconds)
+    // Set up Real time updates via polling (every 5 seconds)
     const postId = {{ post.id }};
     setInterval(() => {
         updatePostMetrics(postId);

@@ -84,10 +84,10 @@ ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
 PROJECT_MEDIA_STATIC_PREFIX = "/static/project_media/"
 
 MEDIA_GUIDE = {
-    "images": f"JPEG, PNG, or WebP — max 5 MB, up to {PROJECT_IMAGE_MAX_WIDTH}×{PROJECT_IMAGE_MAX_HEIGHT}px "
+    "images": f"JPEG, PNG, or WebP, max 5 MB, up to {PROJECT_IMAGE_MAX_WIDTH}×{PROJECT_IMAGE_MAX_HEIGHT}px "
     f"(displayed at {PROJECT_IMAGE_DISPLAY_MAX_WIDTH}px wide)",
-    "audio": "MP3, M4A, OGG, or WAV — max 15 MB",
-    "video_files": "MP4 or WebM — max 100 MB",
+    "audio": "MP3, M4A, OGG, or WAV, max 15 MB",
+    "video_files": "MP4 or WebM, max 100 MB",
     "video_embeds": "YouTube or Vimeo page links (we embed the official player)",
     "links": "Standard https:// links open in a new tab",
 }

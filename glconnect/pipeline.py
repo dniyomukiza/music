@@ -617,7 +617,7 @@ def _write_videolist_hls_m3u(video_dir, program_paths):
     """
     Write video/videolist_hls.m3u for Liquidsoap HLS (scripts/video.liq).
     Interleaves tv_jingles.m3u entries as 1 bumper every 2 program tracks so a single
-    playlist() is used — avoids rotate() never selecting the jingle branch for video.
+    playlist() is used, avoids rotate() never selecting the jingle branch for video.
     """
     out_hls = os.path.join(video_dir, "videolist_hls.m3u")
     jingle_paths = _read_tv_jingle_paths(video_dir)
@@ -628,7 +628,7 @@ def _write_videolist_hls_m3u(video_dir, program_paths):
         f.write(
             "# Interleaved 1 bumper : 2 programs for Liquidsoap HLS. "
             "Regenerated when videolist sync runs (Admin TV or sync_tv_videolist_from_db). "
-            "Edit tv_jingles.m3u + videolist sources, then sync — do not hand-edit paths here.\n"
+            "Edit tv_jingles.m3u + videolist sources, then sync, do not hand-edit paths here.\n"
         )
         for p in interleaved:
             f.write(p + "\n")

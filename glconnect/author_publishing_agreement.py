@@ -1,10 +1,10 @@
-"""Author Publishing Agreement — version constants and acceptance helpers."""
+"""Author Publishing Agreement, version constants and acceptance helpers."""
 
 from datetime import datetime, timezone
 from typing import Any, Optional, Tuple
 
 
-# Bump when account-level agreement text changes materially; authors must re-accept.
+# Bump when account level agreement text changes materially; authors must re-accept.
 AUTHOR_PUBLISHING_AGREEMENT_VERSION = "1.0"
 
 # Bump when per-listing attestation text changes materially.
@@ -20,7 +20,7 @@ def _as_bool(v: Any) -> bool:
 
 
 def author_has_accepted_agreement(bp_user: Any) -> bool:
-    """True if author accepted the current account-level publishing agreement."""
+    """True if author accepted the current account level publishing agreement."""
     if not bp_user:
         return False
     version = getattr(bp_user, "author_agreement_version", None)
@@ -32,7 +32,7 @@ def author_has_accepted_agreement(bp_user: Any) -> bool:
 
 
 def author_requires_publishing_agreement(user_id: int, bp_user: Any = None) -> bool:
-    """True until the author accepts the current account-level agreement."""
+    """True until the author accepts the current account level agreement."""
     if bp_user is None:
         from glconnect.book_platform_models import BookPlatformUser
 
@@ -41,7 +41,7 @@ def author_requires_publishing_agreement(user_id: int, bp_user: Any = None) -> b
 
 
 def record_author_agreement_acceptance(bp_user: Any) -> None:
-    """Persist account-level agreement acceptance for the current version."""
+    """Persist account level agreement acceptance for the current version."""
     bp_user.author_agreement_version = AUTHOR_PUBLISHING_AGREEMENT_VERSION
     bp_user.author_agreement_accepted_at = datetime.now(timezone.utc)
 

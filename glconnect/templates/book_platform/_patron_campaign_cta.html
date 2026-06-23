@@ -1,4 +1,4 @@
-{# Patron campaign entry — optional; author accounts + ink-written books only.
+{# Patron campaign entry, optional; author accounts + ink-written books only.
    Vars: book, investment_readiness, investment_campaign (optional), cta_style: compact|panel #}
 {% set _style = cta_style|default('compact') %}
 {% if ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
@@ -33,7 +33,7 @@
     {% else %}
         {% if investment_readiness.is_ready %}
             {% if not book.has_investment_campaign or not investment_campaign %}
-            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-success btn-sm" title="Optional — launch patron funding; not required to sell on the marketplace">
+            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-success btn-sm" title="Optional, launch patron funding; not required to sell on the marketplace">
                 <i class="fas fa-seedling me-1" aria-hidden="true"></i>Campaign
             </a>
             {% else %}

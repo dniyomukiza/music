@@ -27,7 +27,7 @@ blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
 # Blog routes are part of Ink Studio's public digital space
-# Accessible to ALL logged-in users (general accounts), not just authors/writers
+# Accessible to ALL logged in users (general accounts), not just authors/writers
 # No author/writer profile required - just a regular user account
 
 @blog.route("/blogpost",methods=['GET','POST'])
@@ -655,7 +655,7 @@ def track_post_view(post_id):
             session['session_id'] = session_id
         
         # Check if this is a unique view
-        # For logged-in users: check by user_id
+        # For logged in users: check by user_id
         if user_id:
             existing_view = PostView.query.filter_by(
                 post_id=post_id,
@@ -690,7 +690,7 @@ def track_post_view(post_id):
             
             logger.info(f"Tracked view for post {post_id}: impressions_count = {actual_count}")
             
-            # Emit real-time update via WebSocket if available
+            # Emit Real time update via WebSocket if available
             try:
                 from glconnect.book_platform_integration import socketio
                 if socketio:
@@ -735,7 +735,7 @@ def like_post(post_id):
             action = 'unliked'
             user_has_liked = False
         else:
-            # Double-check to prevent race conditions (check again before adding)
+            # Double check to prevent race conditions (check again before adding)
             duplicate_check = PostLike.query.filter_by(
                 post_id=post_id,
                 user_id=current_user.user_id
@@ -790,7 +790,7 @@ def like_post(post_id):
         post.likes_count = actual_likes_count
         db.session.commit()
         
-        # Emit real-time update via WebSocket if available
+        # Emit Real time update via WebSocket if available
         try:
             from glconnect.book_platform_integration import socketio
             if socketio:
@@ -830,7 +830,7 @@ def like_post(post_id):
 
 @blog.route("/post/<int:post_id>/metrics")
 def get_post_metrics(post_id):
-    """Get current metrics for a post (for real-time updates)"""
+    """Get current metrics for a post (for Real time updates)"""
     try:
         post = Post.query.get_or_404(post_id)
         

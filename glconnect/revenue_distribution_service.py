@@ -73,7 +73,7 @@ def distribute_revenue(book_sale, db):
         db.session.add(platform_dist)
         distributions.append(('platform', platform_amount))
         
-        # 2. Reviewer Distributions — retired (no new payouts from sales)
+        # 2. Reviewer Distributions, retired (no new payouts from sales)
         reviewer_total = 0.0
         published_reviews = []
         if REVIEWER_POOL_PERCENTAGE > 0 and published_reviews:
@@ -123,7 +123,7 @@ def distribute_revenue(book_sale, db):
                     reviewer_total += reviewer_share
                     distributions.append(('reviewer', reviewer_share))
         
-        # 3. Funder pool retired — patrons do not receive sale revenue
+        # 3. Funder pool retired, patrons do not receive sale revenue
         investor_total = 0.0
 
         # 4. Author gets the remainder

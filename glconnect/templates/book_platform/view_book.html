@@ -172,7 +172,7 @@
                         <div class="ink-empty-manuscript">
                             <div class="empty-icon-wrap"><i class="fas fa-pen-fancy" aria-hidden="true"></i></div>
                             <h3 class="h5 mb-2">Your story starts here</h3>
-                            <p class="text-muted mb-3">Chapters live in Ink Studio — write, revise, and publish one piece at a time.</p>
+                            <p class="text-muted mb-3">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
                             {% if is_author|default(True) %}
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-ink-gold">
                                 <i class="fas fa-plus me-2"></i>Add first section
@@ -189,7 +189,7 @@
                         <div class="audio-wave-icon"><i class="fas fa-wave-square" aria-hidden="true"></i></div>
                         <div class="flex-grow-1">
                             <h2 id="audio-spotlight-heading" class="h5 mb-1">Your audiobook</h2>
-                            <p class="small text-muted mb-0">More than a listing — listeners experience your work in your voice. {{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} min · {{ book.audiobook_voice or 'Default voice' }}</p>
+                            <p class="small text-muted mb-0">More than a listing, listeners experience your work in your voice. {{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} min · {{ book.audiobook_voice or 'Default voice' }}</p>
                         </div>
                         <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-sm btn-outline-success">
                             <i class="fas fa-download me-1"></i>Download
@@ -264,7 +264,7 @@
                                     <span class="fs-5 {% if has_listing_cover %}text-success{% else %}text-warning{% endif %}">{% if has_listing_cover %}<i class="fas fa-check-circle"></i>{% else %}<i class="fas fa-image"></i>{% endif %}</span>
                                     <div>
                                         <div class="fw-semibold small">Cover</div>
-                                        <div class="small text-muted mb-0">{% if has_listing_cover %}{% if cover_is_ai %}AI cover saved{% else %}Uploaded{% endif %}{% else %}Missing — Book settings{% endif %}</div>
+                                        <div class="small text-muted mb-0">{% if has_listing_cover %}{% if cover_is_ai %}AI cover saved{% else %}Uploaded{% endif %}{% else %}Missing, Book settings{% endif %}</div>
                                     </div>
                                 </div>
                             </div>
@@ -304,7 +304,7 @@
                                     <span class="fs-5 text-secondary"><i class="fas fa-headphones"></i></span>
                                     <div class="flex-grow-1">
                                         <div class="fw-semibold small">Audiobook</div>
-                                        <div class="small text-muted mb-0" data-a11y-status-body>Not started — <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">Open audiobook studio</a></div>
+                                        <div class="small text-muted mb-0" data-a11y-status-body>Not started, <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">Open audiobook studio</a></div>
                                     </div>
                                     {% endif %}
                                 </div>
@@ -367,7 +367,7 @@
                             <h3 class="mb-0 h6"><i class="fas fa-seedling me-2 text-success"></i>Patron campaign <span class="badge bg-secondary fw-normal ms-1">Optional</span></h3>
                         </div>
                         <div class="ink-studio-panel-body">
-                            <p class="small text-muted mb-3">Skip this if you only want to sell on the marketplace—use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Edit manuscript</a> to set price and publish when ready.</p>
+                            <p class="small text-muted mb-3">Skip this if you only want to sell on the marketplace, use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Edit manuscript</a> to set price and publish when ready.</p>
                             {% if investment_readiness.is_ready %}
                             <p class="small text-muted mb-3">Your book meets the minimum to launch optional patron funding.</p>
                             {% if not book.has_investment_campaign or not investment_campaign %}
@@ -422,7 +422,7 @@
                             <p class="mb-2"><strong class="text-light">Genre</strong><br>{{ book.genre or 'Not set' }}</p>
                             <p class="mb-2"><strong class="text-light">Audience</strong><br>{{ book.target_audience or 'Not set' }}</p>
                             {% if book.language %}<p class="mb-2"><strong class="text-light">Language</strong><br>{{ book.language|upper }}</p>{% endif %}
-                            <p class="mb-0"><strong class="text-light">Created</strong><br>{{ book.created_at.strftime('%B %d, %Y') if book.created_at else '—' }}</p>
+                            <p class="mb-0"><strong class="text-light">Created</strong><br>{{ book.created_at.strftime('%B %d, %Y') if book.created_at else ', ' }}</p>
                         </div>
                     </div>
                     {% endif %}
@@ -445,7 +445,7 @@
             if (!takedown) return null;
             let aiRights = false;
             if (confirm('Was AI used in creating this work? If yes, you will be asked to confirm commercial rights to that output.')) {
-                aiRights = confirm('Confirm you have commercial rights to AI-assisted output.');
+                aiRights = confirm('Confirm you have commercial rights to AI assisted output.');
                 if (!aiRights) return null;
             }
             return {
@@ -536,8 +536,8 @@
                     wrap.innerHTML = '<span class="fs-5 text-primary"><i class="fas fa-spinner fa-spin"></i></span><div class="flex-grow-1"><div class="fw-semibold small">Audiobook</div><div class="small text-primary mb-1">Generating… ' + pct + '%</div><div class="progress" style="height:6px"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:' + pct + '%"></div></div></div>';
                     return;
                 }
-                setJourney('', 'Optional — cultural layer');
-                wrap.innerHTML = '<span class="fs-5 text-secondary"><i class="fas fa-headphones"></i></span><div class="flex-grow-1"><div class="fw-semibold small">Audiobook</div><div class="small text-muted mb-0">Not started — Book settings → Audiobook</div></div>';
+                setJourney('', 'Optional, cultural layer');
+                wrap.innerHTML = '<span class="fs-5 text-secondary"><i class="fas fa-headphones"></i></span><div class="flex-grow-1"><div class="fw-semibold small">Audiobook</div><div class="small text-muted mb-0">Not started, Book settings → Audiobook</div></div>';
             }
             async function tick() {
                 try {

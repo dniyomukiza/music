@@ -20,7 +20,7 @@ PATRON_LISTING_NOTIFICATION_TYPE = 'campaign_listed'
 def ensure_patron_book_platform_user(user_id: int, db: Any):
     """
     Return (or create) a minimal BookPlatformUser row so any signed-in account
-    can fund campaigns and track supported projects — including author accounts.
+    can fund campaigns and track supported projects, including author accounts.
     """
     from glconnect.book_platform_models import BookPlatformUser
     from glconnect.models import User, Writer
@@ -179,7 +179,7 @@ def _send_patron_listing_email(bp_user: Any, book: Any, marketplace_url: str) ->
     body = '\n'.join([
         'Good news from Ink Studio!',
         '',
-        f'"{book.title}" — a project you supported as a patron — is now listed on the marketplace.',
+        f'"{book.title}", a project you supported as a patron, is now listed on the marketplace.',
         '',
         f'View it here: {marketplace_url}',
         '',

@@ -561,7 +561,7 @@
                 {% if chapters %}
                 Select a chapter or press play to start
                 {% else %}
-                Continuous audiobook — press play to start
+                Continuous audiobook, press play to start
                 {% endif %}
             </p>
 
@@ -570,7 +570,7 @@
                 <div class="ab-progress" id="progressBar" role="slider" tabindex="0" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div class="ab-progress-fill" id="progressFill"></div>
                 </div>
-                <span id="timeDuration" aria-hidden="true">—</span>
+                <span id="timeDuration" aria-hidden="true">, </span>
             </div>
 
             <div class="ab-transport">
@@ -600,7 +600,7 @@
                 {% if chapter_tracklist|length > 1 %}
                 <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" id="autoAdvance" checked>
-                    <label class="form-check-label small" for="autoAdvance">Auto-play next chapter</label>
+                    <label class="form-check-label small" for="autoAdvance">Auto play next chapter</label>
                 </div>
                 {% endif %}
             </div>
@@ -640,7 +640,7 @@
                             {% if ch.duration_seconds %}
                             {{ (ch.duration_seconds // 60) }}:{{ "%02d"|format(ch.duration_seconds % 60) }}
                             {% else %}
-                            —
+                            , 
                             {% endif %}
                         </div>
                     </div>
@@ -706,7 +706,7 @@
                     if (timeDuration) timeDuration.textContent = formatTime(d);
                 } else {
                     progressFill.style.width = '0%';
-                    if (timeDuration && (!d || !isFinite(d))) timeDuration.textContent = '—';
+                    if (timeDuration && (!d || !isFinite(d))) timeDuration.textContent = ', ';
                 }
                 if (timeCurrent) timeCurrent.textContent = formatTime(c);
             }

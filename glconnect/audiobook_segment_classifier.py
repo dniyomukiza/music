@@ -45,17 +45,17 @@ def heuristic_section_include(
     """Fast rule-based suggestion when Gemini is unavailable."""
     kind = section_kind or manuscript_section_kind(title)
     if kind == 'chapter':
-        return True, "Content chapter — each included chapter becomes its own audio track"
+        return True, "Content chapter, each included chapter becomes its own audio track"
     if kind == 'back':
-        return False, "Back matter — usually skipped for audio (appendix, index, etc.)"
+        return False, "Back matter, usually skipped for audio (appendix, index, etc.)"
     if kind == 'front':
-        return True, "Front matter — included by default; uncheck if you do not want it narrated"
+        return True, "Front matter, included by default; uncheck if you do not want it narrated"
     t = (title or "").strip()
     if BACK_MATTER_TITLE.search(t):
         return False, "Title matches common back-matter / reference pattern"
     if re.search(r"(?i)\b(index|appendix|endnotes?|bibliography)\b", t) and len(t) < 100:
         return False, "Short heading suggests reference / back matter"
-    return audiobook_default_include(kind), "Non-chapter section — review whether it should be spoken"
+    return audiobook_default_include(kind), "Non-chapter section, review whether it should be spoken"
 
 
 def _parse_sections_json(content: str, expected_indices: List[int]) -> Optional[Dict[int, Dict[str, Any]]]:
@@ -153,9 +153,9 @@ def classify_sections_gemini(
     instruction = (
         "You label sections of a book for audiobook narration only. "
         "The print/ebook edition may keep index, footnotes, tables, and appendix; this task is only what should be spoken.\n"
-        "Each section has section_kind: chapter (main narrative — defines audio start/stop tracks), "
+        "Each section has section_kind: chapter (main narrative, defines audio start/stop tracks), "
         "front (foreword/preface), back (afterword/appendix/index), or other.\n"
-        "For section_kind=chapter, strongly prefer include=true — these are the story boundaries.\n"
+        "For section_kind=chapter, strongly prefer include=true, these are the story boundaries.\n"
         "For section_kind=back, prefer include=false unless the preview is short and narrative.\n"
         "For section_kind=front, include=true is common but optional.\n"
         "Set include=false for index, appendix, endnotes, footnote collections, long data tables, "

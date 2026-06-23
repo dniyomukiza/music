@@ -1,6 +1,6 @@
 /**
  * Ink Studio JavaScript
- * Handles rich text editing, real-time collaboration, and other interactive features
+ * Handles rich text editing, Real time collaboration, and other interactive features
  */
 
 class BookPlatform {

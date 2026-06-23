@@ -23,7 +23,7 @@ _CHAPTER_HEADING = re.compile(
     r'chapter|ch\.?|part|book|episode|section|act'
     r')\s+'
     r'(?:[0-9]{1,4}|[IVXLCDM]{1,8}|[A-Z]|[a-z]+)\b'
-    r'(?:\s*[:\.\-–—]\s*|\s+)',
+    r'(?:\s*[:\.\-–, ]\s*|\s+)',
     re.IGNORECASE | re.MULTILINE,
 )
 # Simpler: "Chapter 1" on its own line
@@ -139,7 +139,7 @@ def build_uploaded_book_audiobook_chapters(
         len(chapters) == 1 and substantial >= 1 and _word_count(chapters[0]['text']) >= 1200
     )
     if not use_heading_chapters:
-        # No reliable headings — split by word budget (Audible-style "parts")
+        # No reliable headings, split by word budget (Audible-style "parts")
         chapters = []
         for i, part_text in enumerate(_split_by_word_budget(cleaned, part_words), start=1):
             if not part_text.strip():

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 class AIConfig:
     """AI configuration settings"""
     
-    # Gemini Configuration (text model — change here if you need a different ID)
+    # Gemini Configuration (text model, change here if you need a different ID)
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
     GEMINI_MODEL = "gemini-2.5-flash"
     GEMINI_MAX_TOKENS = int(os.getenv('GEMINI_MAX_TOKENS', '1000'))
@@ -69,7 +69,7 @@ class AIConfig:
             'temperature': 0.8,
             'genres': [
                 'fiction', 'non-fiction', 'mystery', 'romance',
-                'sci-fi', 'fantasy', 'thriller', 'biography',
+                'sci fi', 'fantasy', 'thriller', 'biography',
                 'self-help', 'business', 'history'
             ]
         }

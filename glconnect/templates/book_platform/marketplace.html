@@ -6,10 +6,10 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="description" content="Turning real experiences into published books—browse and buy books, ebooks, and audiobooks. Check out securely from the catalog.">
+    <meta name="description" content="Turning real experiences into published books, browse and buy books, ebooks, and audiobooks. Check out securely from the catalog.">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Marketplace — Books, ebooks &amp; audiobooks</title>
+    <title>Marketplace, Books, ebooks &amp; audiobooks</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -117,7 +117,7 @@
                         {% if ink_show_author_workspace|default(false) %}
                         <span class="d-block mt-2">As an author you can <strong>list on the marketplace</strong> anytime (upload or Ink Studio → edit → publish). <strong>Book campaigns</strong> are <em>optional</em> if you want early patron support before or while you finish.</span>
                         {% else %}
-                        <span class="d-block mt-2">Browse and buy finished books here. To <strong>fund a work in progress</strong>, use <strong>Book campaigns</strong> in the menu (optional for authors—they can also publish straight to the marketplace).</span>
+                        <span class="d-block mt-2">Browse and buy finished books here. To <strong>fund a work in progress</strong>, use <strong>Book campaigns</strong> in the menu (optional for authors, they can also publish straight to the marketplace).</span>
                         {% endif %}
                     </p>
 
@@ -320,14 +320,14 @@
                                         {% endfor %}
                                     {% else %}
                                         <option value="fiction" {% if selected_genre == 'fiction' %}selected{% endif %}>Fiction</option>
-                                        <option value="non-fiction" {% if selected_genre == 'non-fiction' %}selected{% endif %}>Non-Fiction</option>
+                                        <option value="non-fiction" {% if selected_genre == 'non-fiction' %}selected{% endif %}>Nonfiction</option>
                                         <option value="mystery" {% if selected_genre == 'mystery' %}selected{% endif %}>Mystery</option>
                                         <option value="romance" {% if selected_genre == 'romance' %}selected{% endif %}>Romance</option>
-                                        <option value="sci-fi" {% if selected_genre == 'sci-fi' %}selected{% endif %}>Science Fiction</option>
+                                        <option value="sci fi" {% if selected_genre == 'sci fi' %}selected{% endif %}>Science Fiction</option>
                                         <option value="fantasy" {% if selected_genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
                                         <option value="thriller" {% if selected_genre == 'thriller' %}selected{% endif %}>Thriller</option>
                                         <option value="biography" {% if selected_genre == 'biography' %}selected{% endif %}>Biography</option>
-                                        <option value="self-help" {% if selected_genre == 'self-help' %}selected{% endif %}>Self-Help</option>
+                                        <option value="self-help" {% if selected_genre == 'self-help' %}selected{% endif %}>Self Help</option>
                                         <option value="business" {% if selected_genre == 'business' %}selected{% endif %}>Business</option>
                                         <option value="history" {% if selected_genre == 'history' %}selected{% endif %}>History</option>
                                         <option value="poetry" {% if selected_genre == 'poetry' %}selected{% endif %}>Poetry</option>
@@ -338,7 +338,7 @@
                                         <option value="{{ selected_genre }}" selected>{{ selected_genre|title }}</option>
                                     {% endif %}
                                 </select>
-                                <p id="genre-help" class="form-text small mb-0">Replaces the old category button row—counts match the catalog.</p>
+                                <p id="genre-help" class="form-text small mb-0">Replaces the old category button row, counts match the catalog.</p>
                             </div>
 
                             <!-- Search -->
@@ -756,7 +756,7 @@
 
                     let investBadge = '';
                     if (b.investment && (b.investment.active || b.investment.funded)) {
-                        investBadge = '<span class="badge bg-success ms-1">Community-funded</span>';
+                        investBadge = '<span class="badge bg-success ms-1">Community funded</span>';
                     }
 
                     const purchaseOpts = {
@@ -776,19 +776,19 @@
                     if (hasPaidFormats) {
                         pickerHtml = '<div class="mt-4 pt-3 border-top"><p class="small text-muted mb-2"><strong>Choose formats to purchase</strong></p><div id="bookDetailsFormatPicker">';
                         if (hasPaidDigital) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfDigital" value="digital" checked><label class="form-check-label" for="bdfDigital">Ebook' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + ' — <strong>$' + purchaseOpts.digital.toFixed(2) + '</strong></label></div>';
+                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfDigital" value="digital" checked><label class="form-check-label" for="bdfDigital">Ebook' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + ', <strong>$' + purchaseOpts.digital.toFixed(2) + '</strong></label></div>';
                         }
                         if (hasPaidAudio) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfAudiobook" value="audiobook" checked><label class="form-check-label" for="bdfAudiobook">Audiobook — <strong>$' + purchaseOpts.audiobook.toFixed(2) + '</strong></label></div>';
+                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfAudiobook" value="audiobook" checked><label class="form-check-label" for="bdfAudiobook">Audiobook, <strong>$' + purchaseOpts.audiobook.toFixed(2) + '</strong></label></div>';
                         }
                         if (hasPaidPrint) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfPrint" value="print" checked><label class="form-check-label" for="bdfPrint">Print — <strong>$' + purchaseOpts.print_price.toFixed(2) + '</strong> + <strong>$' + purchaseOpts.print_shipping.toFixed(2) + '</strong> shipping' + (b.print_handling_days ? ' · ships in ~' + Number(b.print_handling_days) + ' days' : '') + '</label></div>';
+                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfPrint" value="print" checked><label class="form-check-label" for="bdfPrint">Print, <strong>$' + purchaseOpts.print_price.toFixed(2) + '</strong> + <strong>$' + purchaseOpts.print_shipping.toFixed(2) + '</strong> shipping' + (b.print_handling_days ? ' · ships in ~' + Number(b.print_handling_days) + ' days' : '') + '</label></div>';
                         }
                         pickerHtml += '</div><p class="small text-muted mt-2 mb-0" id="bookDetailsFormatHint"></p></div>';
                     } else {
                         pickerHtml = '<div class="mt-4 pt-3 border-top"><p class="small text-muted mb-1"><strong>Formats</strong></p><ul class="small mb-0">' +
-                            (fmtDigital ? '<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + ' — <strong>Free</strong></li>' : '') +
-                            (fmtAudio ? '<li>Audiobook — <strong>Free</strong></li>' : '') +
+                            (fmtDigital ? '<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + ', <strong>Free</strong></li>' : '') +
+                            (fmtAudio ? '<li>Audiobook, <strong>Free</strong></li>' : '') +
                             (!fmtDigital && !fmtAudio && !fmtPrint ? '<li class="text-muted">See listing for availability.</li>' : '') +
                             '</ul></div>';
                     }

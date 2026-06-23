@@ -118,7 +118,7 @@ def manuscript_section_rows(chapters):
 
 
 def manuscript_section_heading(title: str, chapter_number: int) -> str:
-    """Subtitle for a section view — use the section title, not 'Chapter N' for foreword etc."""
+    """Subtitle for a section view, use the section title, not 'Chapter N' for foreword etc."""
     t = (title or '').strip()
     if t:
         return t

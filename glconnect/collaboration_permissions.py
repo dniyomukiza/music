@@ -9,7 +9,7 @@ from glconnect.book_platform_models import BookCollaboration, CollaborationRole
 ROLE_ALIASES = {
     "co_author": "co_author",
     "coauthor": "co_author",
-    "co-author": "co_author",
+    "Co author": "co_author",
     "author": "author",
     "editor": "editor",
     "reviewer": "reviewer",

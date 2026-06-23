@@ -77,14 +77,13 @@
 .ab-wordmark {
   font-family: "Syne", sans-serif;
   font-weight: 800;
-  font-size: 1.05rem;
-  letter-spacing: 0.28em;
+  font-size: 0.95rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: #e8ece9;
   text-decoration: none;
   justify-self: center;
 }
-
-.ab-wordmark span { color: #c9a227; }
 
 .ab-nav-right {
   display: flex;
@@ -163,7 +162,7 @@
   --ab-max: 1180px;
   position: relative;
   z-index: 10;
-  padding-top: 4.25rem;
+  padding-top: clamp(2rem, 5vw, 3rem);
 }
 
 .about-wrap {
@@ -198,10 +197,7 @@
   gap: clamp(2.5rem, 6vw, 4rem);
   align-items: center;
   width: 100%;
-}
-
-@media (min-width: 960px) {
-  .about-hero-grid { grid-template-columns: 1.05fr 0.95fr; }
+  max-width: 42rem;
 }
 
 .about-eyebrow {
@@ -253,6 +249,12 @@
   font-size: clamp(1.05rem, 2.1vw, 1.3rem);
   line-height: 1.65;
   color: var(--ab-muted);
+}
+
+.about-lede strong,
+.about-intro-panel strong {
+  color: #e0bc3a;
+  font-weight: 600;
 }
 
 .about-hero-cta {
@@ -849,24 +851,18 @@
   gap: 0.75rem;
 }
 
-.about-contact-actions .about-btn { width: 100%; justify-content: center; }
-
-.about-insta {
-  display: inline-flex;
-  align-items: center;
+.about-contact-actions .about-btn {
+  width: 100%;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.65rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ab-gold) !important;
-  text-decoration: none;
-  border: 1px solid rgba(201,162,39,0.2);
-  background: rgba(255,255,255,0.03);
+  box-sizing: border-box;
+  min-height: 3.1rem;
 }
 
-.about-insta img { width: 20px; height: 20px; }
+.about-contact-actions .about-btn img {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
 
 /* ── Scroll reveal ── */
 .about-reveal {

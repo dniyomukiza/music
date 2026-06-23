@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ category }} - News Analytics</title>
+    <title>{{ category }} | News Analytics</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
     <style>
         .container {
@@ -148,7 +148,7 @@
                 <span class="stat-value">{{ category_confidence.category_total }}</span>
             </div>
             <div class="stat">
-                <span class="stat-label">AI-Powered</span>
+                <span class="stat-label">AI Powered</span>
                 <span class="stat-value">{{ category_confidence.ai_categorizations }}</span>
             </div>
             <div class="stat">

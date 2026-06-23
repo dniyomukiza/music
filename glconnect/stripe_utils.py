@@ -50,7 +50,7 @@ def author_needs_stripe_payout_setup(bp_user) -> bool:
     """True when the author must still complete Stripe Connect (no acct, or onboarding incomplete).
 
     If we cannot **verify** completion with Stripe, we treat payout setup as required and keep
-    redirecting authors to onboarding—never assume "done" on errors or missing data.
+    redirecting authors to onboarding, never assume "done" on errors or missing data.
     """
     if stripe_connect_allow_platform_only():
         return False
@@ -118,7 +118,7 @@ def get_stripe_server_secret_key(app) -> Optional[str]:
     """
     Return the first valid Stripe **Secret** key (sk_...) for server API calls.
     Checks Flask `app.config` and then `os.environ` (Docker/systemd/Render set vars here even if
-    `create_app` read empty — e.g. .env not found on the server but `env` was injected at boot).
+    `create_app` read empty, e.g. .env not found on the server but `env` was injected at boot).
     Never returns a publishable (pk_...) key.
     """
     if app is not None and hasattr(app, "config"):
@@ -192,7 +192,7 @@ def describe_stripe_checkout_error(
             d["hint"] = (
                 "Checkout runs on the author's Stripe Connect account. A public business name is usually "
                 "collected in Stripe Express onboarding (Ink Studio → Payout account → continue to Stripe). "
-                "If the author skipped steps or closed onboarding early, the account can still be incomplete—"
+                "If the author skipped steps or closed onboarding early, the account can still be incomplete, "
                 "they should complete payout setup again, or you open Dashboard → Connect → Accounts → that "
                 "seller → Business settings. https://dashboard.stripe.com/connect/accounts"
             )
@@ -293,7 +293,7 @@ def purchase_checkout_unavailable_response(
                     "error": "No valid Stripe secret key (sk_...) in server configuration.",
                     "error_code": "STRIPE_KEY_MISSING",
                     "hint": "Set a Stripe *secret* key (starts with sk_) in the server environment: "
-                    "STRIPE_SECRET_KEY, STRIPE_API_KEY, STRIPE_KEY, or STRIPE_PRIVATE_KEY — then restart the app. "
+                    "STRIPE_SECRET_KEY, STRIPE_API_KEY, STRIPE_KEY, or STRIPE_PRIVATE_KEY, then restart the app. "
                     "Use Dashboard → Developers → API keys → Secret key (not the publishable pk_). "
                     "If you use Docker, set env in compose or the host; a local .env is not used unless mounted.",
                 }
@@ -424,7 +424,7 @@ def marketplace_book_payment_intent_data(
     When the author has a Stripe Connect account, uses a **direct charge** on that
     account: ``application_fee_amount`` only (platform share). The caller must
     create the Checkout Session with ``stripe_account=<author acct id>`` so the
-    charge settles on the connected account—receipts and Checkout show the
+    charge settles on the connected account, receipts and Checkout show the
     **author’s** Stripe business profile, not the platform’s.
 
     When there is no linked account, returns (None, None) so Checkout uses a normal

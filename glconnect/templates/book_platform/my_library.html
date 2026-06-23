@@ -93,7 +93,7 @@
         .ink-lib-nav .nav-link:hover { color: #fff; background: var(--lib-accent-soft); }
         .ink-lib-nav .nav-link.active { color: #060807; background: linear-gradient(145deg, #e0bc3a, #c9a227); }
 
-        /* Account menu: global book_platform.css uses dark .dropdown-item on our dark menu — fix contrast */
+        /* Account menu: global book_platform.css uses dark .dropdown-item on our dark menu, fix contrast */
         .ink-lib-topbar .dropdown-menu {
             background: var(--lib-elevated) !important;
             border: 1px solid var(--lib-border) !important;
@@ -499,7 +499,7 @@
         <div class="ink-lib-hero">
             <p class="small fw-bold text-uppercase mb-1" style="letter-spacing:0.12em;color:var(--lib-accent);">Your shelf</p>
             <h1>{% if current_user.is_authenticated %}Hi, {{ current_user.username }}{% else %}My library{% endif %}</h1>
-            <p class="ink-lib-hero-lead">Everything you’ve bought lives here—read, listen, or download anytime. You can hide <strong>ebook</strong> or <strong>audiobook</strong> separately from this list; your purchases stay on file.</p>
+            <p class="ink-lib-hero-lead">Everything you’ve bought lives here, read, listen, or download anytime. You can hide <strong>ebook</strong> or <strong>audiobook</strong> separately from this list; your purchases stay on file.</p>
 
             {% if items %}
             {% set lib_stats = namespace(n=0, d=0, a=0) %}
@@ -540,7 +540,7 @@
         <div class="ink-lib-empty">
             <div class="ink-lib-empty-icon" aria-hidden="true"><i class="fas fa-book-open"></i></div>
             <h2>Your library is waiting</h2>
-            <p>Pick up indie ebooks and audiobooks from the marketplace—your purchases show up here automatically.</p>
+            <p>Pick up indie ebooks and audiobooks from the marketplace, your purchases show up here automatically.</p>
             <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-lib-primary btn-lg px-4">Explore books</a>
         </div>
         {% else %}

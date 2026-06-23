@@ -53,7 +53,7 @@
                         <div class="ink-pub-stage-num">1</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2">Press releases &amp; media pitches</h2>
-                            <p class="small text-muted mb-3">Draft distribution-ready press releases and journalist pitch emails from your manuscript. Use before launch or when announcing a patron campaign.</p>
+                            <p class="small text-muted mb-3">Draft distribution ready press releases and journalist pitch emails from your manuscript. Use before launch or when announcing a patron campaign.</p>
                             {% if is_author and authored_books %}
                             <div class="mb-3">
                                 <label for="publicityBookSelect" class="form-label small text-muted">Book for AI press kit</label>
@@ -79,8 +79,8 @@
                     <article class="ink-pub-stage">
                         <div class="ink-pub-stage-num">2</div>
                         <div class="ink-pub-stage-body">
-                            <h2 class="h5 mb-2">Author interviews — TV, radio &amp; podcasts</h2>
-                            <p class="small text-muted mb-3">GLC runs <strong>live HLS TV</strong> and <strong>Icecast radio</strong> programming that includes author interviews and book talk. Upload podcast episodes or use the news studio for broadcast-style segments.</p>
+                            <h2 class="h5 mb-2">Author interviews, TV, radio &amp; podcasts</h2>
+                            <p class="small text-muted mb-3">GLC runs <strong>live HLS TV</strong> and <strong>Icecast radio</strong> programming that includes author interviews and book talk. Upload podcast episodes or use the news studio for broadcast style segments.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.content_hub') }}" class="btn btn-sm btn-ink-gold">Content hub</a>
                                 <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-sm btn-outline-light">Podcast library</a>
@@ -97,7 +97,7 @@
                         <div class="ink-pub-stage-num">3</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2">Book reviews</h2>
-                            <p class="small text-muted mb-3">Reviews reach readers through the <strong>marketplace listing</strong>, <strong>live radio</strong> book-review segments, patron campaign pages, and your dashboard when reviewers respond.</p>
+                            <p class="small text-muted mb-3">Reviews reach readers through the <strong>marketplace listing</strong>, <strong>live radio</strong> book review segments, patron campaign pages, and your dashboard when reviewers respond.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-sm btn-outline-light">Marketplace</a>
                                 {% if is_author %}<a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-sm btn-outline-light">Dashboard → reviews</a>{% endif %}
@@ -112,7 +112,7 @@
                         <div class="ink-pub-stage-num">4</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2">Feature articles &amp; blogs</h2>
-                            <p class="small text-muted mb-3">Freelance journalists and bloggers publish long-form features and editorials on GLC. Authors can pitch via press kit angles; bloggers and freelancers post through the editorial feed.</p>
+                            <p class="small text-muted mb-3">Freelance journalists and bloggers publish long form features and editorials on GLC. Authors can pitch via press kit angles; bloggers and freelancers post through the editorial feed.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.stories_redirect') }}" class="btn btn-sm btn-outline-light">Global stories</a>
                                 <a href="{{ url_for('book_platform.blogs_redirect') }}" class="btn btn-sm btn-outline-light">All blogs</a>
@@ -129,7 +129,7 @@
                         <div class="ink-pub-stage-num">5</div>
                         <div class="ink-pub-stage-body">
                             <h2 class="h5 mb-2">Launch copy &amp; campaign buzz</h2>
-                            <p class="small text-muted mb-3">Auto-publicist pitch for patron campaigns and marketing metadata (tagline, synopsis, SEO tags) for marketplace launches.</p>
+                            <p class="small text-muted mb-3">Auto publicist pitch for patron campaigns and marketing metadata (tagline, synopsis, SEO tags) for marketplace launches.</p>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-sm btn-outline-light">Book campaigns</a>
                                 {% if is_author and first_book_id %}
@@ -147,10 +147,10 @@
                     <div class="card-body">
                         <h3 class="h6 text-primary mb-3"><i class="fas fa-broadcast-tower me-2"></i>GLC media channels</h3>
                         <ul class="small text-muted mb-0 ps-3">
-                            <li class="mb-2"><strong>Live radio</strong> — book reviews &amp; author interviews (<code>/station</code>)</li>
-                            <li class="mb-2"><strong>Live TV</strong> — HLS stream on Content hub &amp; this page</li>
-                            <li class="mb-2"><strong>Podcasts &amp; news</strong> — AI and human audio broadcasts</li>
-                            <li><strong>Editorial</strong> — blogs &amp; freelance journalism</li>
+                            <li class="mb-2"><strong>Live radio</strong>, book reviews &amp; author interviews (<code>/station</code>)</li>
+                            <li class="mb-2"><strong>Live TV</strong>, HLS stream on Content hub &amp; this page</li>
+                            <li class="mb-2"><strong>Podcasts &amp; news</strong>, AI and human audio broadcasts</li>
+                            <li><strong>Editorial</strong>, blogs &amp; freelance journalism</li>
                         </ul>
                     </div>
                 </div>
@@ -195,7 +195,7 @@
                 if (data.success && data.publicity_kit) {
                     out.textContent = data.publicity_kit;
                     out.style.display = 'block';
-                    status.textContent = 'Done — copy sections into your outreach.';
+                    status.textContent = 'Done, copy sections into your outreach.';
                 } else {
                     status.textContent = data.error || 'Could not generate press kit.';
                 }

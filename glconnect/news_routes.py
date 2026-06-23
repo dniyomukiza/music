@@ -385,7 +385,7 @@ def _gemini_text_api_key() -> str:
 
 def _parse_gemini_yes_no(text: str) -> str:
     """
-    Gemini often returns 'YES.' or 'YES — because...' instead of exactly 'YES'.
+    Gemini often returns 'YES.' or 'YES, because...' instead of exactly 'YES'.
     Returns 'YES', 'NO', or 'UNCLEAR'.
     """
     if text is None:
@@ -799,7 +799,7 @@ class NewsTopicValidationAgent:
 
             # Accept without calling Gemini when heuristics already match a news subject. The model
             # often returns NO, UNCLEAR, or empty/blocked content for sensitive geopolitical/military
-            # topics (e.g. "war in Iran") even though they are valid news — same indicators as
+            # topics (e.g. "war in Iran") even though they are valid news, same indicators as
             # has_strong_news_indicators() used elsewhere in this module.
             if has_strong_news_indicators(topic):
                 print(
@@ -1609,7 +1609,7 @@ def run_generate_broadcast(task_id, topics):
             # Update progress before calling
             update_task_in_db(task_id, 
                              progress=10,
-                             current_step='Starting memory-optimized news generation...',
+                             current_step='Starting memory optimized news generation...',
                              last_heartbeat=datetime.now())
             
             output = generate_broadcast(topics, task_id=task_id)
@@ -2249,7 +2249,7 @@ def broadcast():
         print(f"DEBUG: Starting DIRECT news generation for task {task_id}")
         
         try:
-            # Call our memory-optimized function directly
+            # Call our memory optimized function directly
             from glconnect.news_agent import generate_broadcast
             result = generate_broadcast(relevant_topics, task_id=task_id)
             
@@ -2893,9 +2893,9 @@ def task_status(task_id):
             audio_file_path = None
             summary = ""
             
-            # Handle the memory-optimized result structure
+            # Handle the memory optimized result structure
             if isinstance(result, dict):
-                # Check for memory-optimized structure first
+                # Check for memory optimized structure first
                 if 'audio_file' in result:
                     audio_file_path = result['audio_file']
                     summary = result.get('summary', '')
@@ -2912,13 +2912,13 @@ def task_status(task_id):
                 if not summary and 'content' in result:
                     summary = f"Generated news content for {len(result['content'])} topics"
             
-            # For memory-optimized version, we don't have actual audio files yet
+            # For memory optimized version, we don't have actual audio files yet
             # Just return success with the summary
             if audio_file_path == 'simple_news_broadcast.mp3':
                 return jsonify({
                     'status': 'completed',
                     'content': result.get('content', []),
-                    'message': 'News generation completed successfully (memory-optimized version)'
+                    'message': 'News generation completed successfully (memory optimized version)'
                 })
             
             # Verify the audio file exists before returning it (for old structure)

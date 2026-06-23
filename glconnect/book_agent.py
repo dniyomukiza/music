@@ -130,7 +130,7 @@ def create_marketing_agent(book_text_compiled: str, genre: str) -> Agent:
         Your job is to read the compiled text (or summaries) and return a dynamic markdown payload containing:
         1. "TAGLINE": A short, punchy tagline (1 sentence).
         2. "SYNOPSIS": A compelling synopsis for the back cover or marketplace page (2 paragraphs).
-        3. "TAGS": A comma-separated list of 5 SEO-optimized tags.
+        3. "TAGS": A Comma separated list of 5 SEO-optimized tags.
 
         Here is the manuscript context:
         {book_text_compiled}

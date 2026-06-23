@@ -40,7 +40,7 @@ class AIWritingAssistant {
             'linguistic-errors': {
                 category: 'linguistic_errors',
                 title: 'Linguistic errors',
-                hint: 'Flags wrong-word usage, tense shifts, agreement, and similar issues.',
+                hint: 'Flags wrong word usage, tense shifts, agreement, and similar issues.',
                 icon: 'fa-language',
                 btnClass: 'ai-action-btn-success',
                 needsSelection: false
@@ -64,7 +64,7 @@ class AIWritingAssistant {
             'narrative-style': {
                 category: 'narrative_style',
                 title: 'Narrative style',
-                hint: 'Assesses voice, POV, tone, and show-vs-tell balance.',
+                hint: 'Assesses voice, POV, tone, and show vs tell balance.',
                 icon: 'fa-feather-alt',
                 btnClass: 'ai-action-btn-info',
                 needsSelection: false
@@ -152,7 +152,7 @@ class AIWritingAssistant {
                     <div class="ai-help-text">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Developmental</strong> adds or expands prose. <strong>Author editing</strong> polishes or reviews what you wrote — highlight a passage first when you want targeted feedback.
+                            <strong>Developmental</strong> adds or expands prose. <strong>Author editing</strong> polishes or reviews what you wrote, highlight a passage first when you want targeted feedback.
                         </small>
                     </div>
                     <div class="ai-section">
@@ -192,13 +192,13 @@ class AIWritingAssistant {
                         </button>
                         <button type="button" class="ai-action-btn ai-action-btn-info" data-ai-action="narrative-style" title="Review narrative style">
                             <span class="ai-action-label"><i class="fas fa-feather-alt" aria-hidden="true"></i><span>Narrative style</span></span>
-                            <span class="ai-action-desc">Assess POV, voice, tone, and show-vs-tell balance.</span>
+                            <span class="ai-action-desc">Assess POV, voice, tone, and show vs tell balance.</span>
                         </button>
                     </div>
                 </div>
                 <div class="ai-panel-chat hidden" data-ai-panel="chat" hidden>
                     <p class="ai-chat-intro small text-muted">
-                        Ask about grammar, plot, pacing, style, research, or anything else. For in-manuscript edits, use the Author editing tools.
+                        Ask about grammar, plot, pacing, style, research, or anything else. For in manuscript edits, use the Author editing tools.
                     </p>
                     <div class="ai-chat-messages" id="ai-chat-messages" aria-live="polite"></div>
                     <div class="ai-chat-compose">
@@ -911,7 +911,7 @@ class AIWritingAssistant {
         const container = document.getElementById('ai-chat-messages');
         if (!container) return;
         if (!this.chatHistory.length) {
-            container.innerHTML = '<div class="ai-chat-bubble assistant">Hi — ask me anything. I can help with writing, research, or general questions, not just this chapter.</div>';
+            container.innerHTML = '<div class="ai-chat-bubble assistant">Hi, ask me anything. I can help with writing, research, or general questions, not just this chapter.</div>';
             return;
         }
         container.innerHTML = this.chatHistory.map((m) => {
@@ -1065,7 +1065,7 @@ class AIWritingAssistant {
         const selected = this.getSelectedText();
         const text = selected || this.getCurrentText();
         if (!text || !text.trim()) {
-            this.showNotification('No text to review — select a passage or open a chapter', 'warning');
+            this.showNotification('No text to review, select a passage or open a chapter', 'warning');
             return;
         }
 

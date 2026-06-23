@@ -12,7 +12,7 @@ from glconnect.forms import CareerApplicationForm
 logger = logging.getLogger(__name__)
 
 CAREER_POSITIONS = (
-    "Co-founder CTO",
+    "Co founder CTO",
     "Board Member",
     "AI Agent Engineer",
     "Quality Testing",
@@ -37,8 +37,13 @@ def marketplace():
     return redirect(url_for('book_platform.marketplace'))
 
 @bp.route('/about')
+@login_required
 def about():
     return render_template('about.html')
+
+@bp.route('/pitch-deck')
+def pitch_deck():
+    return render_template('pitch_deck.html', deck_year=datetime.now(timezone.utc).year)
 
 @bp.route('/careers')
 def careers():

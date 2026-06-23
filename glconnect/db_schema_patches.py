@@ -2,7 +2,7 @@
 Idempotent PostgreSQL patches for schema drift (model ahead of migrated DB).
 
 Production was missing investment_campaigns milestone columns while SQLAlchemy
-still mapped them — causing ProgrammingError on any query touching InvestmentCampaign.
+still mapped them, causing ProgrammingError on any query touching InvestmentCampaign.
 See add_campaign_fund_release.sql (same DDL).
 """
 
@@ -40,7 +40,7 @@ def ensure_investment_campaign_milestone_schema(db) -> None:
         db.session.rollback()
         return
 
-    logger.info("Applying investment_campaign milestone columns (one-time schema catch-up).")
+    logger.info("Applying investment_campaign milestone columns (One time schema catch-up).")
 
     statements = [
         "ALTER TABLE investment_campaigns ADD COLUMN IF NOT EXISTS author_first_draft_released BOOLEAN DEFAULT FALSE",

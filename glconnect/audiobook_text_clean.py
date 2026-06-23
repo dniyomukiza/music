@@ -1,5 +1,5 @@
 """
-Normalize and validate plain text before Google Cloud Text-to-Speech.
+Normalize and validate plain text before Google Cloud Text to Speech.
 
 Conservative cleaning (Unicode, whitespace, common PDF quirks) plus lightweight
 checks to avoid burning TTS on empty or clearly broken extractions.

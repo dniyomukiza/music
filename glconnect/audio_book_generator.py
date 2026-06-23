@@ -1,5 +1,5 @@
 """
-Audio Book Generator - Converts extracted text to audio using Google Cloud Text-to-Speech
+Audio Book Generator - Converts extracted text to audio using Google Cloud Text to Speech
 Integrates with the existing TTS infrastructure used for news broadcasts
 """
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class AudioBookGenerator:
-    """Generates audio books from text using Google Cloud Text-to-Speech"""
+    """Generates audio books from text using Google Cloud Text to Speech"""
     
     def __init__(self):
         self.client = None
@@ -288,7 +288,7 @@ class AudioBookGenerator:
     def _tts_model_name_for_voice(self, voice_name: str) -> str:
         """
         Google Cloud TTS now requires VoiceSelectionParams.model_name for most voice families.
-        See: https://cloud.google.com/text-to-speech/docs/list-voices-and-types
+        See: https://cloud.google.com/text to speech/docs/list-voices-and-types
         """
         vn = voice_name.lower()
         if "chirp3" in vn and "hd" in vn:
@@ -496,7 +496,7 @@ class AudioBookGenerator:
         if not self._ensure_client():
             return {
                 'success': False,
-                'error': 'TTS client not available. Please ensure tts.json credentials file exists in the project root. The voice preview feature requires Google Cloud Text-to-Speech credentials.',
+                'error': 'TTS client not available. Please ensure tts.json credentials file exists in the project root. The voice preview feature requires Google Cloud Text to Speech credentials.',
                 'voices': {}
             }
         
@@ -613,7 +613,7 @@ class AudioBookGenerator:
         if not self._ensure_client():
             return {
                 'success': False,
-                'error': 'TTS client not available. Please ensure tts.json credentials file exists in the project root. The voice preview feature requires Google Cloud Text-to-Speech credentials.',
+                'error': 'TTS client not available. Please ensure tts.json credentials file exists in the project root. The voice preview feature requires Google Cloud Text to Speech credentials.',
                 'audio_url': None
             }
         

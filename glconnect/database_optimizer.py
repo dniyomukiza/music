@@ -109,7 +109,7 @@ class DatabaseOptimizer:
     @staticmethod
     def marketplace_books_base_query(genre=None, language=None, search_term=None, price_range=None):
         """
-        Base query for marketplace listings (no eager load — safe for count).
+        Base query for marketplace listings (no eager load, safe for count).
         Search matches title, description, pen name, username, first/last name.
         """
         from .book_platform_models import BookProject, BookPlatformUser
