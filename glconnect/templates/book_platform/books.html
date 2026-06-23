@@ -26,13 +26,13 @@
                 <p class="ink-page-subtitle text-muted mb-2">Upload finished manuscripts to sell, or write chapter-by-chapter in Ink Studio.</p>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ url_for('book_platform.list_book') }}" class="btn btn-ink-gold btn-sm">
-                        <i class="fas fa-file-upload me-1" aria-hidden="true"></i>List your book
+                        List your book
                     </a>
                     <a href="{{ url_for('book_platform.create_book') }}" class="btn btn-ink-ghost btn-sm">
-                        <i class="fas fa-pen me-1" aria-hidden="true"></i>Write in Ink Studio
+                        Write in Ink Studio
                     </a>
                     <a href="{{ url_for('book_platform.campaigns') }}" class="btn btn-ink-ghost btn-sm">
-                        <i class="fas fa-seedling me-1" aria-hidden="true"></i>Book campaigns
+                        Book campaigns
                     </a>
                 </div>
             </div>
@@ -68,8 +68,14 @@
                     </div>
                     <div class="ink-stat-cell is-accent">
                         <div class="ink-stat-value" data-stat="author_earnings">${{ "%.2f"|format(summary_earnings) }}</div>
-                        <div class="ink-stat-label">Net</div>
+                        <div class="ink-stat-label">Your net</div>
                     </div>
+                    {% if author_dashboard_stats and author_dashboard_stats.summary %}
+                    <div class="ink-stat-cell">
+                        <div class="ink-stat-value" data-stat="total_platform_fees">${{ "%.2f"|format(author_dashboard_stats.summary.total_platform_fees) }}</div>
+                        <div class="ink-stat-label">Platform fees</div>
+                    </div>
+                    {% endif %}
                     <div class="ink-stat-cell is-info">
                         <div class="ink-stat-value" data-stat="total_views">{{ summary_views }}</div>
                         <div class="ink-stat-label">Views</div>
@@ -91,16 +97,37 @@
                     </div>
                 </div>
                 <h3 class="h6 text-secondary mb-2">Recent sales</h3>
+                <p class="small text-muted mb-2">Buyer total is before any sales tax. Tax is collected from the buyer at checkout (when applicable) and is not deducted from your royalty.</p>
                 <div id="authorRecentSales">
                     {% if author_dashboard_stats and author_dashboard_stats.recent_sales %}
-                    <ul class="list-group list-group-flush rounded border border-secondary border-opacity-25">
-                        {% for s in author_dashboard_stats.recent_sales %}
-                        <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">
-                            <span><strong>{{ s.book_title }}</strong> <span class="text-muted small">· {{ s.format }}</span></span>
-                            <span class="text-success small fw-semibold">${{ "%.2f"|format(s.net_amount) }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0 ink-dash-sales-table">
+                            <thead>
+                                <tr class="text-muted small">
+                                    <th>Date</th>
+                                    <th>Book</th>
+                                    <th>Format</th>
+                                    <th class="text-end">Buyer paid</th>
+                                    <th class="text-end">Platform fee</th>
+                                    <th class="text-end">Your net</th>
+                                    <th class="text-end">Sales tax</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in author_dashboard_stats.recent_sales %}
+                                <tr>
+                                    <td class="small text-muted">{{ s.at_label or '—' }}</td>
+                                    <td><strong>{{ s.book_title }}</strong></td>
+                                    <td class="small text-muted">{{ s.format }}</td>
+                                    <td class="text-end">${{ "%.2f"|format(s.gross_amount) }}</td>
+                                    <td class="text-end text-warning">${{ "%.2f"|format(s.platform_fee) }}</td>
+                                    <td class="text-end text-success fw-semibold">${{ "%.2f"|format(s.net_amount) }}</td>
+                                    <td class="text-end text-muted small">—</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% else %}
                     <p class="small text-muted mb-0">No completed sales yet.</p>
                     {% endif %}
@@ -108,11 +135,67 @@
             </div>
         </section>
 
+        {% if author_dashboard_stats and author_dashboard_stats.sales_breakdown %}
+        <section class="ink-panel mb-4" id="authorSalesTransparency">
+            <div class="ink-panel-head">
+                <h2 class="ink-panel-title">Sales transparency</h2>
+                <span class="ink-panel-meta">{{ author_dashboard_stats.summary.marketplace_platform_fee_percent|default(10)|int }}% platform fee on list price</span>
+            </div>
+            <div class="ink-panel-body pt-0 px-0 pb-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 ink-dash-sales-table">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th class="ps-3">Date</th>
+                                <th>Book</th>
+                                <th>Format</th>
+                                <th class="text-end">Buyer paid</th>
+                                <th class="text-end">Platform fee</th>
+                                <th class="text-end">Fee %</th>
+                                <th class="text-end">Your net</th>
+                                <th class="text-end">Sales tax</th>
+                                <th class="pe-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="authorSalesBreakdownBody">
+                            {% for s in author_dashboard_stats.sales_breakdown %}
+                            <tr>
+                                <td class="ps-3 small text-muted">{{ s.at_label or '—' }}</td>
+                                <td><strong>{{ s.book_title }}</strong></td>
+                                <td class="small text-muted">{{ s.format }}</td>
+                                <td class="text-end">${{ "%.2f"|format(s.gross_amount) }}</td>
+                                <td class="text-end text-warning">${{ "%.2f"|format(s.platform_fee) }}</td>
+                                <td class="text-end small text-muted">{{ "%.1f"|format(s.platform_fee_percent) }}%</td>
+                                <td class="text-end text-success fw-semibold">${{ "%.2f"|format(s.net_amount) }}</td>
+                                <td class="text-end text-muted small" title="Collected from buyer at checkout when applicable; not deducted from your royalty">—</td>
+                                <td class="text-end pe-3">
+                                    <a href="{{ url_for('book_platform.book_sales_transparency', book_id=s.book_id) }}" class="small text-decoration-none">Details</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-secondary table-secondary border-opacity-25">
+                                <th class="ps-3" colspan="3">Totals ({{ author_dashboard_stats.sales_breakdown|length }} sale{{ 's' if author_dashboard_stats.sales_breakdown|length != 1 else '' }})</th>
+                                <th class="text-end">${{ "%.2f"|format(author_dashboard_stats.summary.total_gross) }}</th>
+                                <th class="text-end text-warning">${{ "%.2f"|format(author_dashboard_stats.summary.total_platform_fees) }}</th>
+                                <th></th>
+                                <th class="text-end text-success">${{ "%.2f"|format(author_dashboard_stats.summary.author_earnings) }}</th>
+                                <th class="text-end text-muted">—</th>
+                                <th class="pe-3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="small text-muted px-3 pb-3 mb-0">Platform fee applies to the list price for each format. Shipping and tips go to you in full. Sales tax (if charged) is paid by the buyer and handled by Stripe at checkout.</p>
+            </div>
+        </section>
+
         {% if author_dashboard_stats and author_dashboard_stats.books %}
         <section class="ink-panel mb-4">
             <div class="ink-panel-head">
                 <h2 class="ink-panel-title">Pricing</h2>
-                <span class="ink-panel-meta">~70% royalty on list price</span>
+                <span class="ink-panel-meta">{{ author_dashboard_stats.summary.marketplace_platform_fee_percent|default(10)|int }}% platform fee · 90% author share on list price</span>
             </div>
             <div class="ink-panel-body pt-0 px-0 pb-0">
                 <div class="table-responsive">
@@ -125,7 +208,9 @@
                                 <th>Bundle</th>
                                 <th>Print</th>
                                 <th>Sales</th>
-                                <th>Net</th>
+                                <th>Gross</th>
+                                <th>Platform fees</th>
+                                <th>Your net</th>
                                 <th class="pe-3"></th>
                             </tr>
                         </thead>
@@ -141,8 +226,13 @@
                                 <td>{% if row.price_bundle_label != 'Free' %}{{ row.price_bundle_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                                 <td>{% if row.print_listed %}{{ row.price_print_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                                 <td>{{ row.sales }}</td>
+                                <td>${{ "%.2f"|format(row.gross) }}</td>
+                                <td class="text-warning">${{ "%.2f"|format(row.platform_fees) }}</td>
                                 <td class="text-success">${{ "%.2f"|format(row.earnings) }}</td>
                                 <td class="text-end pe-3">
+                                    {% if row.sales %}
+                                    <a href="{{ url_for('book_platform.book_sales_transparency', book_id=row.id) }}" class="btn btn-sm btn-outline-light me-1">Sales</a>
+                                    {% endif %}
                                     <a href="{{ url_for('book_platform.edit_book', book_id=row.id) }}" class="btn btn-sm btn-outline-light">Edit</a>
                                 </td>
                             </tr>
@@ -190,6 +280,9 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2 mt-2">
                                             <a href="{{ url_for('book_platform.book_analytics', book_id=book.id) }}" class="small text-decoration-none">Analytics</a>
+                                            {% if listing.completed_sales %}
+                                            <a href="{{ url_for('book_platform.book_sales_transparency', book_id=book.id) }}" class="small text-decoration-none">Sales breakdown</a>
+                                            {% endif %}
                                             {% if listing_live %}
                                             <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="small text-decoration-none">Store preview</a>
                                             {% endif %}
@@ -260,6 +353,13 @@
             const statsUrl = '{{ url_for("book_platform.api_author_dashboard_stats") }}';
             const updatedEl = document.getElementById('authorStatsUpdated');
             const recentEl = document.getElementById('authorRecentSales');
+            const breakdownBody = document.getElementById('authorSalesBreakdownBody');
+
+            const transparencyUrlTpl = {{ url_for('book_platform.book_sales_transparency', book_id=0)|tojson }};
+
+            function transparencyUrl(bookId) {
+                return transparencyUrlTpl.replace('/0/', '/' + bookId + '/');
+            }
 
             function fmtMoney(n) {
                 return '$' + Number(n || 0).toFixed(2);
@@ -271,18 +371,58 @@
                 return d.innerHTML;
             }
 
+            function formatDateLabel(iso) {
+                if (!iso) return '—';
+                try {
+                    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                } catch (e) {
+                    return '—';
+                }
+            }
+
+            function saleRowHtml(s, opts) {
+                opts = opts || {};
+                const detailLink = opts.detailLink
+                    ? '<td class="text-end pe-3"><a href="' + escapeHtml(transparencyUrl(s.book_id)) + '" class="small text-decoration-none">Details</a></td>'
+                    : '<td class="text-end text-muted small">—</td>';
+                const feePctCell = opts.showFeePct
+                    ? '<td class="text-end small text-muted">' + Number(s.platform_fee_percent || 0).toFixed(1) + '%</td>'
+                    : '';
+                return '<tr>' +
+                    '<td class="' + (opts.detailLink ? 'ps-3 ' : '') + 'small text-muted">' + escapeHtml(s.at_label || formatDateLabel(s.at)) + '</td>' +
+                    '<td><strong>' + escapeHtml(s.book_title) + '</strong></td>' +
+                    '<td class="small text-muted">' + escapeHtml(s.format || 'digital') + '</td>' +
+                    '<td class="text-end">' + fmtMoney(s.gross_amount) + '</td>' +
+                    '<td class="text-end text-warning">' + fmtMoney(s.platform_fee) + '</td>' +
+                    feePctCell +
+                    '<td class="text-end text-success fw-semibold">' + fmtMoney(s.net_amount) + '</td>' +
+                    '<td class="text-end text-muted small" title="Collected from buyer at checkout when applicable">—</td>' +
+                    (opts.detailLink ? detailLink : '') +
+                    '</tr>';
+            }
+
             function renderRecent(sales) {
                 if (!recentEl) return;
                 if (!sales || !sales.length) {
                     recentEl.innerHTML = '<p class="small text-muted mb-0">No completed sales yet — stats refresh automatically when readers buy.</p>';
                     return;
                 }
-                recentEl.innerHTML = '<ul class="list-group list-group-flush rounded border border-secondary border-opacity-25">' +
-                    sales.map(function (s) {
-                        return '<li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-2">' +
-                            '<span><strong>' + escapeHtml(s.book_title) + '</strong> <span class="text-muted small">· ' + escapeHtml(s.format || 'digital') + '</span></span>' +
-                            '<span class="text-success small fw-semibold">' + fmtMoney(s.net_amount) + '</span></li>';
-                    }).join('') + '</ul>';
+                recentEl.innerHTML = '<div class="table-responsive"><table class="table table-sm align-middle mb-0 ink-dash-sales-table">' +
+                    '<thead><tr class="text-muted small"><th>Date</th><th>Book</th><th>Format</th>' +
+                    '<th class="text-end">Buyer paid</th><th class="text-end">Platform fee</th><th class="text-end">Your net</th><th class="text-end">Sales tax</th></tr></thead><tbody>' +
+                    sales.map(function (s) { return saleRowHtml(s, {}); }).join('') +
+                    '</tbody></table></div>';
+            }
+
+            function renderBreakdown(sales) {
+                if (!breakdownBody) return;
+                if (!sales || !sales.length) {
+                    breakdownBody.innerHTML = '';
+                    return;
+                }
+                breakdownBody.innerHTML = sales.map(function (s) {
+                    return saleRowHtml(s, { detailLink: true, showFeePct: true });
+                }).join('');
             }
 
             async function refreshAuthorStats() {
@@ -293,6 +433,7 @@
                     const map = {
                         total_sales: data.summary.total_sales,
                         author_earnings: fmtMoney(data.summary.author_earnings),
+                        total_platform_fees: fmtMoney(data.summary.total_platform_fees),
                         total_views: data.summary.total_views,
                         total_downloads: data.summary.total_downloads,
                     };
@@ -301,6 +442,7 @@
                         if (el) el.textContent = map[key];
                     });
                     renderRecent(data.recent_sales);
+                    renderBreakdown(data.sales_breakdown);
                     if (updatedEl && data.updated_at) {
                         updatedEl.textContent = 'Updated ' + new Date(data.updated_at).toLocaleTimeString();
                     }
