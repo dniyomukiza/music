@@ -3723,7 +3723,7 @@ def send_book_purchase_receipt_email(book, purchase):
         view_url = dl_url = player_url = ""
 
     lines = [
-        "Thank you for your purchase on Ink Studio.",
+        "Thank you for your purchase on ndotonic.",
         "",
         f"Book: {book.title}",
         f"Format: {fmt}",
@@ -3740,7 +3740,7 @@ def send_book_purchase_receipt_email(book, purchase):
 
     try:
         msg = Mail(
-            sender=Address(email=sender, name="Ink Studio"),
+            sender=Address(email=sender, name="ndotonic"),
             to=[Address(email=to_email)],
             subject=f"Receipt: {book.title}",
             text=body,
