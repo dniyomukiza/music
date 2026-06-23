@@ -514,7 +514,7 @@
                 </div>
                 <div class="modal-body">
                     <p class="mb-2">Choose one or more formats (ebook, audiobook, print), then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
-                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to your address. Ebook + audiobook together receive a 20% bundle discount.</p>
+                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to a <strong>US address</strong> only. Ebook + audiobook together receive a 20% bundle discount.</p>
                     <div class="mb-3 d-none" id="purchaseTypeBlock">
                         <label class="form-label fw-bold d-block mb-2">Choose format(s)</label>
                         <div class="form-check">
@@ -687,7 +687,7 @@
                 } else if (!selected.length) {
                     hint.textContent = 'Select one or more formats to checkout.';
                 } else if (selected.indexOf('print') >= 0) {
-                    hint.textContent = 'Print includes shipping; you will enter your address on Stripe.';
+                    hint.textContent = 'Print includes shipping to a US address; you will enter it on Stripe.';
                 } else if (selected.indexOf('digital') >= 0 && selected.indexOf('audiobook') >= 0) {
                     hint.textContent = 'Ebook + audiobook receive a 20% bundle discount.';
                 } else {
@@ -1140,7 +1140,7 @@
                                     </div>
                                     <div class="modal-body">
                                         <p class="mb-2">Choose one or more formats (ebook, audiobook, print), then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
-                                        <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to your address. Ebook + audiobook together receive a 20% bundle discount.</p>
+                                        <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to a <strong>US address</strong> only. Ebook + audiobook together receive a 20% bundle discount.</p>
                                         <div class="mb-3 d-none" id="purchaseTypeBlock">
                                             <label class="form-label fw-bold d-block mb-2">Choose format(s)</label>
                                             <div class="form-check">
@@ -1503,7 +1503,7 @@
             const isPrint = purchaseType === 'print';
             const label = purchaseType === 'bundle' ? 'bundle' : (purchaseType === 'audiobook' ? 'audiobook' : (isPrint ? 'print book' : 'ebook'));
             const message = isPrint
-                ? 'If you completed your print purchase, the author will ship to your address. Check your email for confirmation.'
+                ? 'If you completed your print purchase, the author will ship to your US address. Check your email for confirmation.'
                 : ('If you completed your ' + label + ' purchase, please refresh the page to access your content.');
             const notification = document.createElement('div');
             notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';

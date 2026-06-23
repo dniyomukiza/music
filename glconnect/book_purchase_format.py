@@ -154,8 +154,8 @@ def revenue_split_for_purchase(
     return base_price, extra_amount, royalty_amount, platform_fee
 
 
-# Stripe Checkout shipping_address_collection allowed_countries (common markets)
+# Stripe Checkout shipping_address_collection allowed_countries (print only).
+# US-only at launch; expand STRIPE_PRINT_SHIPPING_COUNTRIES when demand warrants.
 STRIPE_PRINT_SHIPPING_COUNTRIES = [
-    "US", "CA", "GB", "AU", "NZ", "IE", "FR", "DE", "IT", "ES", "NL", "BE", "SE", "NO", "DK", "FI",
-    "CH", "AT", "PT", "PL", "ZA", "IN", "SG", "HK", "JP", "MX", "BR",
+    "US",
 ]
