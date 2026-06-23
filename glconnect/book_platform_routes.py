@@ -80,7 +80,19 @@ from glconnect.author_publishing_agreement import (
     record_author_agreement_acceptance,
     validate_listing_terms_payload,
     record_listing_attestation,
+    book_has_listing_attestation,
+    ensure_listing_attestation,
     agreement_context_for_templates,
+)
+from glconnect.author_listing_coupon_policy import (
+    LISTING_FORMAT_AUDIOBOOK,
+    LISTING_FORMAT_EBOOK,
+    LISTING_FORMAT_PRINT,
+    COUPON_PLATFORM_FEE_PERCENT,
+    issue_coupon_on_format_publish,
+    list_redeemable_coupons,
+    coupons_summary_for_books,
+    try_redeem_coupon_from_form,
 )
 from glconnect.author_display import (
     marketplace_author_display_name,
@@ -308,6 +320,16 @@ def book_has_listing_cover(book):
         return False
     c = getattr(book, 'cover_image', None)
     return bool(c and str(c).strip())
+
+
+def _issue_listing_coupons_for_formats(book, formats):
+    """Earn cross-format coupons after first publish of each format."""
+    issued = []
+    for fmt in formats:
+        coupon = issue_coupon_on_format_publish(book, fmt)
+        if coupon:
+            issued.append(coupon)
+    return issued
 
 
 def safe_mybook_next_path(candidate, default_path):
@@ -1330,6 +1352,7 @@ def books(user_profile, profile_type):
         'book_platform/books.html',
         books_with_readiness=books_with_readiness,
         book_campaigns=book_campaigns,
+        coupon_summary=coupons_summary_for_books(books_q),
         summary_live=summary_live,
         summary_total_books=len(books_q),
         summary_units=summary_units,
@@ -1917,6 +1940,14 @@ def edit_book(book_id, user_profile, profile_type):
             book.price = float(data.get('price', 0)) if data.get('price') else None
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
+            if book.digital_file_path and data.get('audiobook_price') not in (None, ''):
+                try:
+                    book.audiobook_price = float(data.get('audiobook_price'))
+                except (TypeError, ValueError):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Audiobook price must be a valid number.',
+                    }), 400
             cover_upload = request.files.get('cover_upload')
             if cover_upload and cover_upload.filename:
                 saved_cover = save_book_cover_file(cover_upload)
@@ -1943,9 +1974,6 @@ def edit_book(book_id, user_profile, profile_type):
                     (publish_digital and not book.digital_book_published)
                     or (publish_audiobook and not book.audiobook_published)
                 ):
-                    terms_error = validate_listing_terms_payload(data)
-                    if terms_error:
-                        return jsonify({'success': False, 'error': terms_error}), 400
                     newly_listing = True
                 # Handle digital book publishing
                 if publish_digital:
@@ -1982,11 +2010,11 @@ def edit_book(book_id, user_profile, profile_type):
                                 'publishing it to the marketplace.'
                             ),
                         }), 400
-                    audiobook_price_value = book.audiobook_price if book.audiobook_price else 0
-                    if not audiobook_price_value or audiobook_price_value < 0:
+                    audiobook_price_value = float(book.audiobook_price) if book.audiobook_price is not None else None
+                    if audiobook_price_value is None or audiobook_price_value < 0:
                         return jsonify({
                             'success': False, 
-                            'error': 'Please set an audiobook price before publishing it to the marketplace.'
+                            'error': 'Please set an audiobook price before publishing it to the marketplace (use 0 for free).'
                         }), 400
                     if not book_has_listing_cover(book):
                         return jsonify({
@@ -2001,6 +2029,11 @@ def edit_book(book_id, user_profile, profile_type):
                     if book.audiobook_published:
                         book.audiobook_published = False
                         logger.info(f"Audiobook {book_id} unpublished via edit form")
+
+                if publish_audiobook and not _prev_audiobook_pub:
+                    coupon_err = try_redeem_coupon_from_form(book, LISTING_FORMAT_AUDIOBOOK, data)
+                    if coupon_err:
+                        return jsonify({'success': False, 'error': coupon_err}), 400
             else:
                 # For platform-created books, use the old status-based publishing
                 is_published_flag = (
@@ -2014,9 +2047,6 @@ def edit_book(book_id, user_profile, profile_type):
                 
                 if is_published_flag:
                     if book.status != BookStatus.PUBLISHED:
-                        terms_error = validate_listing_terms_payload(data)
-                        if terms_error:
-                            return jsonify({'success': False, 'error': terms_error}), 400
                         newly_listing = True
                     price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
                     if not price_value or price_value <= 0:
@@ -2047,14 +2077,11 @@ def edit_book(book_id, user_profile, profile_type):
             )
 
             if newly_listing or (
-                not getattr(book, 'listing_attestation_accepted_at', None)
-                and print_listed(book)
+                print_listed(book) and not book_has_listing_attestation(book)
             ):
-                if not newly_listing:
-                    terms_error = validate_listing_terms_payload(data)
-                    if terms_error:
-                        return jsonify({'success': False, 'error': terms_error}), 400
-                record_listing_attestation(book)
+                attestation_error = ensure_listing_attestation(book, data)
+                if attestation_error:
+                    return jsonify({'success': False, 'error': attestation_error}), 400
 
             try:
                 apply_listing_isbn(
@@ -2081,6 +2108,18 @@ def edit_book(book_id, user_profile, profile_type):
             just_published_chapter_book = (
                 book.status == BookStatus.PUBLISHED and _prev_status != BookStatus.PUBLISHED
             )
+
+            earn_formats = []
+            if just_published_digital:
+                earn_formats.append(LISTING_FORMAT_EBOOK)
+            if just_published_audiobook:
+                earn_formats.append(LISTING_FORMAT_AUDIOBOOK)
+            if just_published_chapter_book:
+                earn_formats.append(LISTING_FORMAT_EBOOK)
+            if earn_formats:
+                _issue_listing_coupons_for_formats(book, earn_formats)
+                db.session.commit()
+
             just_published = (
                 just_published_digital or just_published_audiobook or just_published_chapter_book
             )
@@ -2172,6 +2211,8 @@ def book_audiobook(book_id, user_profile, profile_type):
         investment_campaign=campaign,
         investment_readiness=investment_readiness,
         audiobook_voice_label=audiobook_voice_label or book.audiobook_voice,
+        redeemable_coupons=list_redeemable_coupons(book, LISTING_FORMAT_AUDIOBOOK),
+        coupon_platform_fee_after=COUPON_PLATFORM_FEE_PERCENT,
     )
 
 # Chapter management routes
@@ -2674,11 +2715,21 @@ def generate_audiobook_for_book(book_id):
         logger.error(f"Error parsing JSON request: {str(e)}")
         return jsonify({'success': False, 'error': 'Invalid JSON in request'}), 400
     
-    audiobook_price = data.get('audiobook_price', 0.0)
-    voice_name = data.get('voice_name', 'en-US-Neural2-A')
-    
+    if 'audiobook_price' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Audiobook price is required (use 0 for free).',
+        }), 400
+    try:
+        audiobook_price = float(data.get('audiobook_price'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Audiobook price must be a valid number.'}), 400
+    if audiobook_price < 0:
+        return jsonify({'success': False, 'error': 'Audiobook price cannot be negative.'}), 400
+
+    voice_name = (data.get('voice_name') or '').strip()
     if not voice_name:
-        return jsonify({'success': False, 'error': 'Voice name is required'}), 400
+        return jsonify({'success': False, 'error': 'Voice selection is required.'}), 400
     
     try:
         src = build_audiobook_source(book, current_app.root_path)
@@ -2692,37 +2743,44 @@ def generate_audiobook_for_book(book_id):
         source_hash_payload = data.get('source_hash')
         segment_includes_payload = data.get('segment_includes')
 
-        if source_hash_payload:
-            if source_hash_payload != source_hash:
+        if not source_hash_payload:
+            return jsonify({
+                'success': False,
+                'error': 'Review sections for audiobook before generating.',
+            }), 400
+        if source_hash_payload != source_hash:
+            return jsonify({
+                'success': False,
+                'error': 'Your book text changed since you reviewed sections. Please click Review sections again.',
+                'stale_segment_plan': True,
+            }), 409
+        if not isinstance(segment_includes_payload, list) or not segment_includes_payload:
+            return jsonify({
+                'success': False,
+                'error': 'segment_includes must be a list of booleans, one per section.',
+            }), 400
+        segment_bools = []
+        for x in segment_includes_payload:
+            if isinstance(x, bool):
+                segment_bools.append(x)
+            elif isinstance(x, (int, float)) and int(x) in (0, 1):
+                segment_bools.append(bool(int(x)))
+            elif isinstance(x, str) and x.strip().lower() in ('true', 'false', '1', '0', 'yes', 'no'):
+                segment_bools.append(x.strip().lower() in ('true', '1', 'yes'))
+            else:
                 return jsonify({
                     'success': False,
-                    'error': 'Your book text changed since you reviewed sections. Please click Review sections again.',
-                    'stale_segment_plan': True,
-                }), 409
-            if not isinstance(segment_includes_payload, list):
-                return jsonify({
-                    'success': False,
-                    'error': 'segment_includes must be a list of booleans, one per section.',
+                    'error': 'segment_includes entries must be true/false for each section.',
                 }), 400
-            segment_bools = []
-            for x in segment_includes_payload:
-                if isinstance(x, bool):
-                    segment_bools.append(x)
-                elif isinstance(x, (int, float)) and int(x) in (0, 1):
-                    segment_bools.append(bool(int(x)))
-                elif isinstance(x, str) and x.strip().lower() in ('true', 'false', '1', '0', 'yes', 'no'):
-                    segment_bools.append(x.strip().lower() in ('true', '1', 'yes'))
-                else:
-                    return jsonify({
-                        'success': False,
-                        'error': 'segment_includes entries must be true/false for each section.',
-                    }), 400
-            filtered, ferr = filter_and_renumber_chapters(chapters_for_audio, segment_bools)
-            if ferr:
-                return jsonify({'success': False, 'error': ferr}), 400
-            chapters_for_audio_thread = filtered
-        else:
-            chapters_for_audio_thread = list(chapters_for_audio)
+        if not any(segment_bools):
+            return jsonify({
+                'success': False,
+                'error': 'Select at least one section to include in the audiobook.',
+            }), 400
+        filtered, ferr = filter_and_renumber_chapters(chapters_for_audio, segment_bools)
+        if ferr:
+            return jsonify({'success': False, 'error': ferr}), 400
+        chapters_for_audio_thread = filtered
 
         # Create audio generation task
         audio_task = AudioGenerationTask(
@@ -3980,10 +4038,9 @@ def publish_book(book_id):
         return str(v).strip().lower() in ("1", "true", "yes", "on")
 
     payload = request.get_json(silent=True) if request.is_json else request.form
-    terms_error = validate_listing_terms_payload(payload or {})
-    if terms_error:
-        return jsonify({'error': terms_error}), 400
-    record_listing_attestation(book)
+    attestation_error = ensure_listing_attestation(book, payload or {})
+    if attestation_error:
+        return jsonify({'error': attestation_error}), 400
 
     # Validate book is ready for publishing
     if not book.price or book.price <= 0:
@@ -4020,6 +4077,9 @@ def publish_book(book_id):
     
     db.session.commit()
 
+    _issue_listing_coupons_for_formats(book, [LISTING_FORMAT_EBOOK])
+    db.session.commit()
+
     if not was_already_published:
         from glconnect.patron_support_service import notify_patrons_book_listed
         try:
@@ -4041,6 +4101,172 @@ def publish_book(book_id):
         resp['payout_setup_required'] = True
         resp['redirect'] = url_for('book_platform.author_payout_setup', next=view_path)
     return jsonify(resp)
+
+
+def _author_owns_book_project(book, user_profile, profile_type) -> bool:
+    author_id = get_profile_id(user_profile, profile_type)
+    return bool(book and author_id and book.author_id == author_id)
+
+
+def _can_add_print_edition(book) -> bool:
+    """Print can be added to a live title that already has marketplace cover art."""
+    if not book or getattr(book, "print_enabled", False):
+        return False
+    if not book_has_listing_cover(book):
+        return False
+    return is_book_published(book)
+
+
+@book_bp.route('/books/<int:book_id>/add-print-edition', methods=['GET', 'POST'])
+@writer_or_book_platform_required
+def add_print_edition(book_id, user_profile, profile_type):
+    """Enable print on an existing listed title — reuses cover and ISBN (one per title)."""
+    if _author_needs_publishing_agreement(current_user.user_id):
+        flash('Accept the Author Publishing Agreement before listing books.', 'warning')
+        return _redirect_to_publishing_agreement(
+            url_for('book_platform.add_print_edition', book_id=book_id)
+        )
+
+    book = BookProject.query.get_or_404(book_id)
+    if not _author_owns_book_project(book, user_profile, profile_type):
+        flash('Only the author can add a print edition.', 'error')
+        return redirect(url_for('book_platform.books'))
+
+    if getattr(book, "print_enabled", False):
+        flash('Print is already enabled for this title.', 'info')
+        return redirect(url_for('book_platform.edit_book', book_id=book_id))
+
+    if not book_has_listing_cover(book):
+        flash('Add a marketplace cover in Edit book before offering a print edition.', 'warning')
+        return redirect(url_for('book_platform.edit_book', book_id=book_id))
+
+    if not is_book_published(book):
+        flash('Publish your ebook (or other edition) on the marketplace first, then add print.', 'warning')
+        return redirect(url_for('book_platform.edit_book', book_id=book_id))
+
+    needs_attestation = not book_has_listing_attestation(book)
+    needs_isbn = not (book.isbn and str(book.isbn).strip())
+
+    if request.method == 'POST':
+        try:
+            print_price_val = float(request.form.get('print_price') or 0)
+        except (TypeError, ValueError):
+            flash('Enter a valid print book price.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html',
+                book=book,
+                cover_url=_marketplace_cover_url(book),
+                needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn,
+                **agreement_context_for_templates(),
+            )
+        if print_price_val <= 0:
+            flash('Set a print book price before listing a printed edition.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html',
+                book=book,
+                cover_url=_marketplace_cover_url(book),
+                needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn,
+                **agreement_context_for_templates(),
+            )
+
+        try:
+            print_shipping = max(0.0, float(request.form.get('print_shipping_price') or 5))
+        except (TypeError, ValueError):
+            print_shipping = 5.0
+        try:
+            print_handling = max(1, min(60, int(request.form.get('print_handling_days') or 7)))
+        except (TypeError, ValueError):
+            print_handling = 7
+        print_description = (request.form.get('print_description') or '').strip() or None
+
+        coupon_err = try_redeem_coupon_from_form(book, LISTING_FORMAT_PRINT, request.form)
+        if coupon_err:
+            flash(coupon_err, 'error')
+            return render_template(
+                'book_platform/add_print_edition.html',
+                book=book,
+                cover_url=_marketplace_cover_url(book),
+                needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn,
+                redeemable_coupons=list_redeemable_coupons(book, LISTING_FORMAT_PRINT),
+                coupon_platform_fee_after=COUPON_PLATFORM_FEE_PERCENT,
+                **agreement_context_for_templates(),
+            )
+
+        if needs_attestation:
+            attestation_error = ensure_listing_attestation(book, request.form)
+            if attestation_error:
+                flash(attestation_error, 'error')
+                return render_template(
+                    'book_platform/add_print_edition.html',
+                    book=book,
+                    cover_url=_marketplace_cover_url(book),
+                    needs_attestation=True,
+                    needs_isbn=needs_isbn,
+                    **agreement_context_for_templates(),
+                )
+
+        from glconnect.isbn_pool_service import apply_listing_isbn, IsbnPoolError, IsbnValidationError
+
+        try:
+            apply_listing_isbn(
+                book,
+                request.form.get('isbn_source') if needs_isbn else None,
+                request.form.get('isbn_manual') if needs_isbn else None,
+            )
+        except IsbnValidationError as e:
+            db.session.rollback()
+            flash(str(e), 'error')
+            return render_template(
+                'book_platform/add_print_edition.html',
+                book=book,
+                cover_url=_marketplace_cover_url(book),
+                needs_attestation=needs_attestation,
+                needs_isbn=True,
+                **agreement_context_for_templates(),
+            )
+        except IsbnPoolError as e:
+            db.session.rollback()
+            flash(str(e), 'error')
+            return render_template(
+                'book_platform/add_print_edition.html',
+                book=book,
+                cover_url=_marketplace_cover_url(book),
+                needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn,
+                **agreement_context_for_templates(),
+            )
+
+        book.print_enabled = True
+        book.print_price = print_price_val
+        book.print_shipping_price = print_shipping
+        book.print_handling_days = print_handling
+        book.print_description = print_description
+        book.updated_at = datetime.now(timezone.utc)
+        if book.status != BookStatus.PUBLISHED:
+            book.status = BookStatus.PUBLISHED
+            if not book.published_at:
+                book.published_at = datetime.now(timezone.utc)
+
+        db.session.commit()
+        _issue_listing_coupons_for_formats(book, [LISTING_FORMAT_PRINT])
+        db.session.commit()
+        flash('Print edition is live — same cover and ISBN as your other formats.', 'success')
+        return redirect(url_for('book_platform.books'))
+
+    redeemable = list_redeemable_coupons(book, LISTING_FORMAT_PRINT)
+    return render_template(
+        'book_platform/add_print_edition.html',
+        book=book,
+        cover_url=_marketplace_cover_url(book),
+        needs_attestation=needs_attestation,
+        needs_isbn=needs_isbn,
+        redeemable_coupons=redeemable,
+        coupon_platform_fee_after=COUPON_PLATFORM_FEE_PERCENT,
+        **agreement_context_for_templates(),
+    )
 
 
 @book_bp.route('/books/<int:book_id>/print-orders', methods=['GET'])
@@ -5069,10 +5295,12 @@ def purchase_book(book_id):
             if not existing_sale:
                 sale_format = getattr(purchase, 'purchase_format', None) or purchase_type
                 purchase_amount = getattr(purchase, 'amount', total_checkout_amount(book, sale_format))
-                base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+                base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                     book, sale_format, purchase_amount
                 )
-                royalty_percentage = marketplace_author_royalty_fraction()
+                royalty_percentage = (
+                    (100.0 - fee_pct_applied) / 100.0 if fee_pct_applied else marketplace_author_royalty_fraction()
+                )
                 
                 logger.info(f"📊 Calculating revenue split:")
                 logger.info(f"   Format: {sale_format}")
@@ -5094,7 +5322,8 @@ def purchase_book(book_id):
                     currency=book.currency or 'USD',
                     status=TransactionStatus.PENDING,  # Sale status matches purchase status
                     paid_at=None,  # Will be set when purchase is completed
-                    sale_format=sale_format  # digital, audiobook, or bundle - investors earn from all
+                    sale_format=sale_format,
+                    platform_fee_percent_applied=fee_pct_applied,
                 )
                 logger.info(f"✅ BookSale object created (not yet in DB)")
                 logger.info(f"   seller_id={sale.seller_id}, purchase_id={sale.purchase_id}, royalty_amount=${sale.royalty_amount}")
@@ -5637,10 +5866,10 @@ def purchase_book(book_id):
                     
                     if not existing_sale:
                         sale_format = getattr(purchase, 'purchase_format', None) or purchase_type
-                        base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+                        base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                             book, sale_format, payment_amount
                         )
-                        royalty_percentage = marketplace_author_royalty_fraction()
+                        royalty_percentage = (100.0 - fee_pct_applied) / 100.0
                         
                         logger.info(f"Creating BookSale for purchase {purchase.id} (fallback, {sale_format}): base=${base_price:.2f}, total=${payment_amount:.2f}")
                         
@@ -5654,8 +5883,8 @@ def purchase_book(book_id):
                             net_amount=royalty_amount,
                             currency=book.currency,
                             status=TransactionStatus.PENDING,
-                            paid_at=None,
-                            sale_format=sale_format
+                            sale_format=sale_format,
+                            platform_fee_percent_applied=fee_pct_applied,
                         )
                         db.session.add(sale)
                         db.session.commit()
@@ -6026,10 +6255,10 @@ def purchase_success():
         else:
             # Create sale record - use purchase_format for correct sale type
             sale_format = normalize_purchase_format(getattr(purchase, 'purchase_format', None))
-            base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+            base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                 book, sale_format, purchase.amount
             )
-            royalty_percentage = 0.7
+            royalty_percentage = (100.0 - fee_pct_applied) / 100.0
             
             logger.info(f"Revenue split for purchase {purchase.id} ({sale_format}): base=${base_price:.2f}, total=${purchase.amount:.2f}")
             
@@ -6044,7 +6273,8 @@ def purchase_success():
                 currency=book.currency,
                 status=TransactionStatus.COMPLETED,
                 paid_at=datetime.now(timezone.utc),
-                sale_format=sale_format  # digital, audiobook, or bundle
+                sale_format=sale_format,
+                platform_fee_percent_applied=fee_pct_applied,
             )
             db.session.add(sale)
             db.session.flush()  # Get sale.id before committing
@@ -6375,10 +6605,10 @@ def stripe_webhook():
             existing_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
             if not existing_sale:
                 sale_format = normalize_purchase_format(getattr(purchase, 'purchase_format', None))
-                base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+                base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                     book, sale_format, purchase.amount
                 )
-                royalty_percentage = marketplace_author_royalty_fraction()
+                royalty_percentage = (100.0 - fee_pct_applied) / 100.0
                 
                 logger.info(f"Revenue split for purchase {purchase.id} ({sale_format}): base=${base_price:.2f}, extra=${extra_amount:.2f}, total=${purchase.amount:.2f}")
                 
@@ -6393,7 +6623,8 @@ def stripe_webhook():
                     currency=purchase.currency,
                     status=TransactionStatus.COMPLETED,
                     paid_at=datetime.now(timezone.utc),
-                    sale_format=sale_format  # digital, audiobook, or bundle - investors earn from all
+                    sale_format=sale_format,
+                    platform_fee_percent_applied=fee_pct_applied,
                 )
                 db.session.add(sale)
                 db.session.flush()
@@ -6778,7 +7009,7 @@ def stripe_webhook():
                                         db.session.flush()
                                         
                                         # Revenue sharing: 90% author / 10% platform on list price; extras to author
-                                        base_price, extra_amount, royalty_amount, platform_fee = revenue_split_for_purchase(
+                                        base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                                             book, 'digital', actual_amount
                                         )
                                         
@@ -6787,13 +7018,14 @@ def stripe_webhook():
                                             book_project_id=book_id,
                                             purchase_id=purchase.id,
                                             royalty_amount=royalty_amount,
-                                            royalty_percentage=marketplace_author_royalty_fraction(),
+                                            royalty_percentage=(100.0 - fee_pct_applied) / 100.0,
                                             platform_fee=platform_fee,
                                             net_amount=royalty_amount,
                                             currency=book.currency,
                                             status=TransactionStatus.COMPLETED,
                                             paid_at=datetime.now(timezone.utc),
-                                            sale_format='digital'  # Earnings account for digital copy sales
+                                            sale_format='digital',
+                                            platform_fee_percent_applied=fee_pct_applied,
                                         )
                                         db.session.add(sale)
                                         db.session.commit()
@@ -7510,6 +7742,15 @@ def upload_digital_book():
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
 
+            earned_formats = []
+            if wants_ebook:
+                earned_formats.append(LISTING_FORMAT_EBOOK)
+            if wants_print:
+                earned_formats.append(LISTING_FORMAT_PRINT)
+            if earned_formats:
+                _issue_listing_coupons_for_formats(book, earned_formats)
+                db.session.commit()
+
             if wants_print and not wants_ebook:
                 flash(
                     "Your print listing is live. When someone orders, you'll get their shipping address to fulfill.",
@@ -7563,6 +7804,17 @@ def upload_digital_book():
         listing_format = _normalize_listing_format(request.args.get('listing'), default='')
         if listing_format not in LISTING_FORMATS:
             return redirect(url_for('book_platform.list_book'))
+        book_id_arg = request.args.get('book_id', type=int)
+        if book_id_arg and listing_format == 'print':
+            book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+            if book_user:
+                existing = BookProject.query.get(book_id_arg)
+                if (
+                    existing
+                    and existing.author_id == book_user.id
+                    and _can_add_print_edition(existing)
+                ):
+                    return redirect(url_for('book_platform.add_print_edition', book_id=book_id_arg))
         logger.info("Showing upload digital book form (listing=%s)", listing_format)
         return _render_upload_digital_book_form(form, listing_format)
 

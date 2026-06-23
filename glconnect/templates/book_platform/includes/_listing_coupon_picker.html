@@ -1,0 +1,24 @@
+{# Cross-format listing coupon picker — redeem when listing a new format on the same title.
+   expects: redeemable_coupons (list), target_format, coupon_platform_fee_after, field_name optional #}
+{% set fname = field_name|default('listing_coupon_id') %}
+{% if redeemable_coupons %}
+<div class="ink-coupon-picker rounded-3 p-3 mb-3" style="border: 1px solid rgba(201, 162, 39, 0.35); background: rgba(8, 10, 9, 0.35);">
+    <p class="small fw-semibold mb-2"><i class="fas fa-ticket-alt me-1 text-warning"></i>Listing coupon</p>
+    <p class="small text-muted mb-3">Use a coupon earned from another format on this title. Lowers the <strong>platform fee</strong> on {{ target_format }} sales to <strong>{{ coupon_platform_fee_after|default(5)|int }}%</strong> (buyer prices unchanged).</p>
+    <div class="d-flex flex-column gap-2">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="{{ fname }}" id="{{ fname }}None" value="" checked>
+            <label class="form-check-label small" for="{{ fname }}None">No coupon — standard platform fee</label>
+        </div>
+        {% for c in redeemable_coupons %}
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="{{ fname }}" id="{{ fname }}{{ c.id }}" value="{{ c.id }}">
+            <label class="form-check-label small" for="{{ fname }}{{ c.id }}">
+                From <strong>{{ c.earned_from_format }}</strong> listing
+                {% if c.expires_at %}<span class="text-muted">· expires {{ c.expires_at.strftime('%b %d, %Y') }}</span>{% endif %}
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

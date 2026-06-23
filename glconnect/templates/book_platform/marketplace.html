@@ -801,7 +801,7 @@
                         (b.author.marketplace_book_count > 1 ? ' <span class="small">(' + b.author.marketplace_book_count + ' titles)</span>' : '') +
                         '</p>' +
                         (b.publisher_name ? '<p class="small text-muted mb-2"><i class="fas fa-building me-1"></i>Publisher: <strong>' + escapeHtml(b.publisher_name) + '</strong></p>' : '') +
-                        (b.isbn_display || b.isbn ? '<p class="small text-muted mb-2"><i class="fas fa-barcode me-1"></i>ISBN: <strong>' + escapeHtml(b.isbn_display || b.isbn) + '</strong> <span class="text-muted">(ebook &amp; audiobook)</span></p>' : '') +
+                        (b.isbn_display || b.isbn ? '<p class="small text-muted mb-2"><i class="fas fa-barcode me-1"></i>ISBN: <strong>' + escapeHtml(b.isbn_display || b.isbn) + '</strong> <span class="text-muted">(ebook, print &amp; audiobook)</span></p>' : '') +
                         '<div class="d-flex flex-wrap gap-1 mb-3">' +
                         (b.genre ? '<span class="badge bg-primary">' + escapeHtml(b.genre) + '</span>' : '') +
                         '<span class="badge bg-secondary">' + escapeHtml(b.language_label || b.language || '') + '</span>' +

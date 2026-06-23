@@ -1206,3 +1206,139 @@ CREATE TABLE IF NOT EXISTS campaign_translations (
         db.session.rollback()
         logger.error("Could not create campaign_translations table: %s", e, exc_info=True)
 
+
+def _book_sales_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'book_sales'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(book_sales)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def ensure_author_format_listing_coupons_schema(db) -> None:
+    """Per-format fee overrides, sale audit column, and author_format_listing_coupons table."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("author format listing coupons schema patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    try:
+        book_cols = _book_projects_existing_columns(db, dialect)
+        if book_cols:
+            fee_patches = [
+                ("platform_fee_percent_ebook", "FLOAT"),
+                ("platform_fee_percent_audiobook", "FLOAT"),
+                ("platform_fee_percent_print", "FLOAT"),
+            ]
+            added = []
+            for col, typedef in fee_patches:
+                if col in book_cols:
+                    continue
+                if dialect == "postgresql":
+                    db.session.execute(
+                        text(f"ALTER TABLE book_projects ADD COLUMN IF NOT EXISTS {col} {typedef}")
+                    )
+                else:
+                    db.session.execute(text(f"ALTER TABLE book_projects ADD COLUMN {col} {typedef}"))
+                added.append(col)
+            if added:
+                db.session.commit()
+                logger.info(
+                    "book_projects fee override columns added (%s): %s",
+                    dialect,
+                    ", ".join(added),
+                )
+
+        sale_cols = _book_sales_existing_columns(db, dialect)
+        if sale_cols and "platform_fee_percent_applied" not in sale_cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(
+                        "ALTER TABLE book_sales ADD COLUMN IF NOT EXISTS "
+                        "platform_fee_percent_applied FLOAT"
+                    )
+                )
+            else:
+                db.session.execute(
+                    text("ALTER TABLE book_sales ADD COLUMN platform_fee_percent_applied FLOAT")
+                )
+            db.session.commit()
+            logger.info("book_sales.platform_fee_percent_applied added (%s)", dialect)
+
+        exists = db.session.execute(
+            text(
+                "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' "
+                "AND table_name = 'author_format_listing_coupons'"
+                if dialect == "postgresql"
+                else "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name='author_format_listing_coupons'"
+            )
+        ).fetchone()
+        db.session.rollback()
+        if exists:
+            return
+
+        if dialect == "postgresql":
+            create_sql = """
+CREATE TABLE IF NOT EXISTS author_format_listing_coupons (
+    id SERIAL PRIMARY KEY,
+    author_id INTEGER NOT NULL REFERENCES book_platform_users(id) ON DELETE CASCADE,
+    book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+    earned_from_format VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'available',
+    earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,
+    redeemed_at TIMESTAMP,
+    redeemed_for_format VARCHAR(20),
+    platform_fee_percent_after FLOAT,
+    CONSTRAINT uq_author_format_coupon_book_earned UNIQUE (book_project_id, earned_from_format)
+)
+"""
+        else:
+            create_sql = """
+CREATE TABLE IF NOT EXISTS author_format_listing_coupons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author_id INTEGER NOT NULL REFERENCES book_platform_users(id) ON DELETE CASCADE,
+    book_project_id INTEGER NOT NULL REFERENCES book_projects(id) ON DELETE CASCADE,
+    earned_from_format VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'available',
+    earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP,
+    redeemed_at TIMESTAMP,
+    redeemed_for_format VARCHAR(20),
+    platform_fee_percent_after FLOAT,
+    UNIQUE (book_project_id, earned_from_format)
+)
+"""
+        db.session.execute(text(create_sql))
+        db.session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_author_format_coupons_author "
+                "ON author_format_listing_coupons(author_id)"
+            )
+        )
+        db.session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_author_format_coupons_book "
+                "ON author_format_listing_coupons(book_project_id)"
+            )
+        )
+        db.session.commit()
+        logger.info("author_format_listing_coupons table created (%s).", dialect)
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch author format listing coupons schema: %s", e, exc_info=True)
+

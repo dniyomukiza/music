@@ -1,169 +1,309 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GLC by Ndotonic — Turning stories into published books. Pitch, fund, write with AI in Ink Studio, promote through GLC media, and sell every format.">
+    <title>About | GLC — Turning stories into published books</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=2">
+</head>
+<body class="about-body">
 
-{% block salutation %}
-{% endblock %}
+    <div class="ab-page-bg" aria-hidden="true"></div>
+    <div class="ab-scanline" aria-hidden="true"></div>
+    <div class="ab-mesh" aria-hidden="true"></div>
 
-{% block images %}
-<div class="info-sections">
+    <header class="ab-header">
+        <div class="ab-nav-left">
+            <nav class="ab-nav" aria-label="Primary">
+                <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+                <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
+                <a href="{{ url_for('news_bp.index') }}">News</a>
+            </nav>
+        </div>
+        <a class="ab-wordmark" href="{{ url_for('routes.index') }}" aria-label="GLC home">GL<span>C</span></a>
+        <div class="ab-nav-right">
+            <a href="{{ url_for('book_platform.ink_studio_access') }}" class="ab-header-cta">Ink Studio</a>
+            <button type="button" class="ab-menu-btn" onclick="toggleAboutMenu()" aria-expanded="false" aria-controls="abMobileNav" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
 
-    <div class="info-box">
-        <h3>About Us</h3>
-        <p>
-    GLC is a dynamic multimedia initiative and a subsidiary of 
-    Ndotonic. 
-    It fosters engagement by delivering intentional, high-quality content. 
-    We empower creatives by providing them with space to connect with their niche audience, 
-    share their unique talents, and amplify their potential.
-</p>
-    </div>
+    <nav class="ab-mobile-nav" id="abMobileNav" aria-label="Mobile">
+        <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+        <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
+        <a href="{{ url_for('news_bp.index') }}">News</a>
+        <a href="{{ url_for('book_platform.ink_studio_access') }}">Ink Studio</a>
+        <a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
+    </nav>
 
-    <div class="info-box">
-        <h3>Mission</h3>
-        <p>
-            Our mission is to uncover hidden potential and amplify unheard voices. We bridge the gap
-            between creators and opportunity providing exposure and connection.
-            GLC is where brand building meets meaningful content delivery.
-        </p>
-        <p>
-            We envision to be the ultimate platform where undiscovered talent thrives empowering independent creators
-            to share their voices, ideas, and art with the world.
-        </p>
-        <a href="{{ url_for('routes.careers') }}" class="join-mission-button">Join Our Mission</a>
-    </div>
+    <main class="about-page">
 
-    <div class="info-box call-to-action">
-    <h3>Contact Us</h3>
-    <p>
-        Whether you're a creator: artist, author, researcher, or an independent thinker looking to reach the right audience to grow your presence, come work with us. Collaborate on strategy and leverage our platform to amplify your impact. Leave us feedback on how to improve.
-    </p>
-    
-    <a href="{{ url_for('blog.contact') }}" class="btn">Get in Touch</a>
-    <a href="https://www.instagram.com/glc_cool" class="insta-link" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; margin-left: 10px; text-decoration: none;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
-        alt="Instagram" style="width: 20px; height: 20px; margin-right: 6px;">
-    @GLConnect_cool
-    </a>
-    </div>
+        <section class="about-hero about-wrap" aria-labelledby="about-hero-heading">
+            <div class="about-hero-grid">
+                <div class="about-hero-copy">
+                    <p class="about-eyebrow ab-enter ab-enter-1">
+                        <span class="about-eyebrow-dot" aria-hidden="true"></span>
+                        AI-native publishing · Ndotonic
+                    </p>
+                    <h1 id="about-hero-heading" class="about-headline ab-enter ab-enter-2">
+                        Turning <em>stories</em> into published books
+                    </h1>
+                    <p class="about-lede ab-enter ab-enter-3">
+                        GLC is the author stack for the AI era — pitch and fund your book, write in Ink Studio with
+                        intelligent editing, reach GLC media, and sell every format from one platform.
+                    </p>
+                    <div class="about-hero-cta ab-enter ab-enter-4">
+                        <a href="{{ url_for('book_platform.ink_studio_access') }}" class="about-btn about-btn--primary about-btn--shimmer">
+                            <i class="fas fa-pen-nib" aria-hidden="true"></i> Start in Ink Studio
+                        </a>
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="about-btn about-btn--ghost">
+                            Explore marketplace
+                        </a>
+                    </div>
+                    <dl class="about-metrics ab-enter ab-enter-5">
+                        <div class="about-metric">
+                            <dt>Formats</dt>
+                            <dd>Ebook · Audio · Print</dd>
+                        </div>
+                        <div class="about-metric">
+                            <dt>Toolkit</dt>
+                            <dd>AI author editing</dd>
+                        </div>
+                        <div class="about-metric">
+                            <dt>Reach</dt>
+                            <dd>GLC media + campaigns</dd>
+                        </div>
+                    </dl>
+                </div>
 
-    <style>
-        .info-sections {
-            max-width: 1100px;
-            margin: 4rem auto;
-            padding: 0 1.5rem;
-            font-family: 'DM Sans', system-ui, sans-serif;
-            color: #e8ece9;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-        
-        .info-box {
-            background: rgba(12, 15, 14, 0.92);
-            padding: 2.5rem 2rem;
-            border-radius: 12px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-            border: 1px solid rgba(201, 162, 39, 0.2);
-        }
-        
-        .info-box:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
-            border-color: rgba(201, 162, 39, 0.35);
-        }
-        
-        .info-box h3 {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.65rem;
-            color: #e8ece9;
-            margin-bottom: 1rem;
-            position: relative;
-        }
-        
-        .info-box h3::after {
-            content: "";
-            display: block;
-            width: 50px;
-            height: 3px;
-            background: linear-gradient(90deg, #c9a227, #e0bc3a);
-            margin-top: 0.5rem;
-            border-radius: 2px;
-        }
-        
-        .info-box p {
-            font-size: 1.05rem;
-            line-height: 1.7;
-            color: #9aa8a0;
-        }
-        
-        /* Black underline off; glc-theme's `main a:not(.btn)` otherwise wins on color */
-        main a.join-mission-button,
-        .join-mission-button {
-            display: inline-block;
-            background-color: #c9a227;
-            color: #0a0b0a !important;
-            padding: 15px 40px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 1.05em;
-            font-weight: 700;
-            margin-top: 20px;
-            transition: background-color 0.3s ease, filter 0.3s ease, color 0.3s ease;
-            border: 2px solid #c9a227;
+                <div class="about-hero-visual ab-enter ab-enter-3" aria-hidden="true">
+                    <div class="about-showcase">
+                        <div class="about-showcase-glow"></div>
+                        <div class="about-showcase-frame">
+                            <div class="about-showcase-bar">
+                                <span class="about-showcase-dots"><i></i><i></i><i></i></span>
+                                <span class="about-showcase-url">ink.studio / manuscript</span>
+                                <span class="about-showcase-live">Live</span>
+                            </div>
+                            <div class="about-showcase-body">
+                                <aside class="about-showcase-cover">
+                                    <img src="{{ url_for('static', filename='book_covers/GLC_0e011da7.jpg') }}" alt="">
+                                </aside>
+                                <div class="about-showcase-editor">
+                                    <p class="about-showcase-chapter">Chapter IV — The turning point</p>
+                                    <p>She opened the manuscript and let the words find their rhythm again…</p>
+                                    <p class="about-showcase-muted">The corridor smelled of rain and old paper.</p>
+                                    <div class="about-ai-toolbar">
+                                        <span><i class="fas fa-check-double"></i> Grammar</span>
+                                        <span><i class="fas fa-heartbeat"></i> Pacing</span>
+                                        <span class="is-active"><i class="fas fa-wand-magic-sparkles"></i> AI edit</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="about-ticker" aria-hidden="true">
+            <div class="about-ticker-track">
+                <div class="about-ticker-group">
+                    <span class="about-ticker-item"><i class="fas fa-bullhorn"></i> Pitch</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-hand-holding-heart"></i> Fund</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-pen"></i> Write</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-robot"></i> Edit with AI</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-book-open"></i> Publish</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-coins"></i> Monetize</span>
+                </div>
+                <div class="about-ticker-group" aria-hidden="true">
+                    <span class="about-ticker-item"><i class="fas fa-bullhorn"></i> Pitch</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-hand-holding-heart"></i> Fund</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-pen"></i> Write</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-robot"></i> Edit with AI</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-book-open"></i> Publish</span>
+                    <span class="about-ticker-sep"></span>
+                    <span class="about-ticker-item"><i class="fas fa-coins"></i> Monetize</span>
+                </div>
+            </div>
+        </div>
+
+        <section class="about-intro about-wrap about-reveal" aria-label="Platform overview">
+            <div class="about-intro-panel">
+                <p>
+                    Without a platform built for independent authors, getting discovered, funded, and published
+                    can feel out of reach. Ndotonic powers GLC so you can pitch your book, run patron campaigns,
+                    polish your manuscript with AI editing tools, and monetize every format from one place.
+                </p>
+            </div>
+        </section>
+
+        <section class="about-why about-wrap" aria-labelledby="why-ndotonic-heading">
+            <header class="about-section-head about-reveal">
+                <span class="about-section-kicker">The full author journey</span>
+                <h2 id="why-ndotonic-heading" class="about-section-title">Why Ndotonic</h2>
+                <p class="about-section-sub">
+                    Four connected capabilities — from first pitch to paid reader — designed for creators who ship.
+                </p>
+            </header>
+
+            <div class="about-bento">
+                <article class="about-bento-card about-bento-card--discover about-reveal about-reveal--delay-1" data-spotlight data-tilt>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">01</span>
+                        <div class="about-bento-icon"><i class="fas fa-rocket" aria-hidden="true"></i></div>
+                    </div>
+                    <h3>Get Discovered</h3>
+                    <p>Upload a pitch and launch your book funding campaign.</p>
+                    <a href="{{ url_for('book_platform.campaigns') }}" class="about-bento-link">
+                        Browse campaigns <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+
+                <article class="about-bento-card about-bento-card--promote about-reveal about-reveal--delay-2" data-spotlight data-tilt>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">02</span>
+                        <div class="about-bento-icon"><i class="fas fa-broadcast-tower" aria-hidden="true"></i></div>
+                    </div>
+                    <h3>Promote Your Story</h3>
+                    <p>Share your story with GLC media.</p>
+                    <a href="{{ url_for('book_platform.publicity_promotion') }}" class="about-bento-link">
+                        Publicity &amp; media <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+
+                <article class="about-bento-card about-bento-card--featured about-reveal about-reveal--delay-3" data-spotlight data-tilt>
+                    <div class="about-bento-glow-ring" aria-hidden="true"></div>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">03</span>
+                        <div class="about-bento-icon"><i class="fas fa-pen-nib" aria-hidden="true"></i></div>
+                    </div>
+                    <h3>Self publish</h3>
+                    <p>Write your book in Ink studio, use AI toolkit for editing, get ISBN and publish.</p>
+                    <div class="about-bento-tags">
+                        <span class="about-tag">Ink Studio</span>
+                        <span class="about-tag">AI editing</span>
+                        <span class="about-tag">ISBN ready</span>
+                    </div>
+                    <a href="{{ url_for('book_platform.ink_studio_access') }}" class="about-bento-link">
+                        Start writing in Ink Studio <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+
+                <article class="about-bento-card about-bento-card--monetize about-reveal about-reveal--delay-4" data-spotlight data-tilt>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">04</span>
+                        <div class="about-bento-icon"><i class="fas fa-store" aria-hidden="true"></i></div>
+                    </div>
+                    <h3>Monetize your work</h3>
+                    <p>Sell your ebook, audiobook or ship to your customer.</p>
+                    <a href="{{ url_for('book_platform.marketplace') }}" class="about-bento-link">
+                        Marketplace <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+            </div>
+        </section>
+
+        <section class="about-pipeline about-wrap about-reveal" aria-label="Author workflow">
+            <div class="about-pipeline-shell">
+                <div class="about-pipeline-track">
+                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Pitch</strong><span>Campaign &amp; funding</span></div>
+                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Promote</strong><span>GLC media reach</span></div>
+                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Publish</strong><span>Ink Studio + AI</span></div>
+                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Monetize</strong><span>Ebook · audio · print</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-contact-wrap about-wrap" aria-labelledby="contact-heading">
+            <div class="about-contact about-reveal">
+                <div class="about-contact-copy">
+                    <span class="about-section-kicker">Let's build together</span>
+                    <h3 id="contact-heading">Contact Us</h3>
+                    <p>
+                        Whether you're a creator — artist, author, researcher, or independent thinker — looking to
+                        reach the right audience and grow your presence, come work with us. Collaborate on strategy,
+                        leverage our platform to amplify your impact, and leave us feedback on how to improve.
+                    </p>
+                </div>
+                <div class="about-contact-actions">
+                    <a href="{{ url_for('routes.careers') }}" class="about-btn about-btn--primary about-btn--shimmer">Join Our Mission</a>
+                    <a href="{{ url_for('blog.contact') }}" class="about-btn about-btn--ghost">Get in Touch</a>
+                    <a href="https://www.instagram.com/glc_cool" class="about-insta" target="_blank" rel="noopener noreferrer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="">
+                        @GLConnect_cool
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+    function toggleAboutMenu() {
+        var nav = document.getElementById('abMobileNav');
+        var btn = document.querySelector('.ab-menu-btn');
+        var open = nav.classList.toggle('is-open');
+        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    (function () {
+        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        document.querySelectorAll('.ab-enter').forEach(function (el) {
+            el.classList.add('is-in');
+        });
+
+        if (!reduced && 'IntersectionObserver' in window) {
+            var observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+            document.querySelectorAll('.about-reveal').forEach(function (el) { observer.observe(el); });
+        } else {
+            document.querySelectorAll('.about-reveal').forEach(function (el) { el.classList.add('is-visible'); });
         }
 
-        main a.join-mission-button:hover,
-        .join-mission-button:hover {
-            background-color: #e0bc3a;
-            border-color: #e0bc3a;
-            color: #000000 !important;
-            filter: brightness(1.05);
+        if (!reduced) {
+            document.querySelectorAll('[data-spotlight]').forEach(function (card) {
+                card.addEventListener('mousemove', function (e) {
+                    var r = card.getBoundingClientRect();
+                    card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+                    card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+                });
+            });
+            document.querySelectorAll('[data-tilt]').forEach(function (card) {
+                card.addEventListener('mousemove', function (e) {
+                    var r = card.getBoundingClientRect();
+                    var x = (e.clientX - r.left) / r.width - 0.5;
+                    var y = (e.clientY - r.top) / r.height - 0.5;
+                    card.style.transform = 'perspective(900px) rotateX(' + (-y * 6) + 'deg) rotateY(' + (x * 6) + 'deg) translateY(-6px)';
+                });
+                card.addEventListener('mouseleave', function () {
+                    card.style.transform = '';
+                });
+            });
         }
-        
-        .call-to-action {
-            background: rgba(12, 15, 14, 0.95);
-            border: 1px solid rgba(201, 162, 39, 0.28);
-        }
-        
-        .call-to-action .btn {
-            display: inline-block;
-            margin-top: 1.5rem;
-            padding: 0.75rem 1.5rem;
-            background: #c9a227;
-            color: #0a0b0a;
-            font-weight: 600;
-            border-radius: 8px;
-            text-decoration: none;
-            transition: background 0.3s ease;
-        }
-        
-        .call-to-action .btn:hover {
-            background: #e0bc3a;
-        }
-        
-        .insta-link { color: #e0bc3a !important; }
-        .insta-link:hover { color: #f0e6b8 !important; }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .info-box {
-                padding: 2rem 1.5rem;
-            }
-        
-            .info-box h3 {
-                font-size: 1.5rem;
-            }
-        
-            .info-box p {
-                font-size: 1rem;
-            }
-        
-            .call-to-action .btn {
-                width: 100%;
-                text-align: center;
-            }
-        }
-        </style>
-
-</div>
-{% endblock %}
+    })();
+    </script>
+</body>
+</html>

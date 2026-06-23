@@ -68,6 +68,33 @@ def record_listing_attestation(book: Any) -> None:
     book.listing_attestation_accepted_at = datetime.now(timezone.utc)
 
 
+def book_has_listing_attestation(book: Any) -> bool:
+    """
+    True when the author already accepted per-title listing terms for this book.
+    One attestation covers ebook, audiobook, and print on the same title.
+    """
+    if not book:
+        return False
+    if not getattr(book, "listing_attestation_accepted_at", None):
+        return False
+    version = getattr(book, "listing_attestation_version", None)
+    return version == LISTING_ATTESTATION_VERSION
+
+
+def ensure_listing_attestation(book: Any, payload: Any) -> Optional[str]:
+    """
+    Validate and record listing attestation if not yet accepted for this title.
+    Returns an error message, or None when attestation is satisfied.
+    """
+    if book_has_listing_attestation(book):
+        return None
+    terms_error = validate_listing_terms_payload(payload)
+    if terms_error:
+        return terms_error
+    record_listing_attestation(book)
+    return None
+
+
 def agreement_context_for_templates() -> dict:
     """Shared template context for agreement version labels."""
     return {

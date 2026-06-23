@@ -28,17 +28,30 @@ class AIConfig:
             'max_tokens': 800,
             'temperature': 0.5,
             'improvement_types': [
-                'general', 'grammar', 'style', 'clarity', 
+                'general', 'grammar', 'style', 'clarity',
                 'description', 'flow'
             ]
+        },
+        'author_review': {
+            'enabled': True,
+            'max_tokens': 2000,
+            'temperature': 0.3,
+            'categories': [
+                'grammar_punctuation',
+                'spelling',
+                'linguistic_errors',
+                'plot_continuity',
+                'pacing_tension',
+                'narrative_style',
+            ],
         },
         'text_analysis': {
             'enabled': True,
             'max_tokens': 600,
             'temperature': 0.3,
             'analysis_types': [
-                'readability', 'sentiment', 'style', 'consistency',
-                'character_development', 'plot_structure'
+                'plot_continuity', 'pacing_tension', 'narrative_style',
+                'readability', 'character_development'
             ]
         },
         'proofreading': {
@@ -46,8 +59,8 @@ class AIConfig:
             'max_tokens': 1000,
             'temperature': 0.2,
             'check_types': [
-                'grammar', 'spelling', 'punctuation', 
-                'sentence_structure', 'word_choice'
+                'grammar_punctuation', 'spelling', 'linguistic_errors',
+                'punctuation', 'sentence_structure'
             ]
         },
         'idea_generation': {
@@ -216,6 +229,31 @@ Improve:
 - Emotional impact
 - Reader engagement
 - Visual clarity"""
+    }
+    
+    AUTHOR_REVIEW = {
+        'grammar_punctuation': """Fix grammar and punctuation only. Preserve voice and meaning. Return only the corrected passage:
+
+{text}""",
+        'spelling': """Correct misspellings and typos only. Do not change grammar or wording unless required by the typo:
+
+{text}""",
+        'linguistic_errors': """List common linguistic errors (wrong words, tense shifts, agreement, modifiers) with brief fixes. Do not rewrite the whole passage:
+
+{text}""",
+        'plot_continuity': """Review plot continuity using this context:
+
+{context}
+
+Passage:
+
+{text}""",
+        'pacing_tension': """Analyze pacing and tension with specific, actionable notes:
+
+{text}""",
+        'narrative_style': """Assess narrative style (POV, voice, tone, show vs tell) with targeted suggestions:
+
+{text}""",
     }
     
     ANALYSIS = {

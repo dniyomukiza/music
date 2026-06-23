@@ -294,7 +294,7 @@
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-barcode"></i></span>
                             <div>
                                 <h2 id="heading-isbn" class="h5 mb-1">ISBN</h2>
-                                <p class="small text-muted mb-0">For your listing{% if listing_format != 'print' %} (ebook{% if listing_format == 'both' %}, print{% endif %}{% if listing_format == 'ebook' %} — print &amp; audiobook use the same number later{% endif %}){% endif %}.</p>
+                                <p class="small text-muted mb-0">One ISBN per title — shared by <strong>ebook</strong>, <strong>print</strong>, and <strong>audiobook</strong>{% if listing_format == 'ebook' %} when you add those formats later{% endif %}.</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">
@@ -307,7 +307,7 @@
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-scale-balanced"></i></span>
                             <div>
                                 <h2 id="heading-terms" class="h5 mb-1">Author Publishing Agreement</h2>
-                                <p class="small text-muted mb-0">Listing attestation (v{{ listing_attestation_version }}) — required before your ebook goes live.</p>
+                                <p class="small text-muted mb-0">One-time listing attestation (v{{ listing_attestation_version }}) — applies to ebook, audiobook, and print on this title.</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">

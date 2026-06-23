@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Add print edition — {{ book.title }} | Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body class="ink-upload-book ink-books-ui">
+<div class="ink-upload-page-bg" aria-hidden="true"></div>
+<nav class="navbar navbar-dark ink-mp-sticky-nav ink-upload-nav border-bottom border-white border-opacity-10 mb-0">
+    <div class="container-fluid py-1 px-3 px-md-4">
+        <a class="navbar-brand ink-mp-nav-brand" href="{{ url_for('book_platform.books') }}">Ink Studio</a>
+        <a class="nav-link ms-auto" href="{{ url_for('book_platform.books') }}">My books</a>
+    </div>
+</nav>
+
+<header class="ink-upload-hero">
+    <div class="container-fluid px-3 px-md-4 px-xl-5 py-4">
+        <p class="small text-muted mb-2"><a href="{{ url_for('book_platform.books') }}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>My books</a></p>
+        <h1 class="ink-upload-title h2 mb-2">Add print edition</h1>
+        <p class="ink-upload-lead mb-0">Offer a physical copy of <strong>{{ book.title }}</strong> for US buyers. Your existing <strong>cover</strong>{% if book.isbn %} and <strong>ISBN</strong>{% endif %} apply to print as well — no re-upload or new barcode.</p>
+    </div>
+</header>
+
+<main class="pb-5 ink-upload-main" id="main-content">
+    <div class="container-fluid px-3 px-md-4 px-xl-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-xl-8">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{% if category == 'error' %}danger{% elif category == 'success' %}success{% elif category == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show mt-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" class="ink-upload-form mt-3" id="addPrintForm" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <section class="ink-upload-card mb-4">
+                        <div class="ink-upload-card-head">
+                            <span class="ink-upload-badge" aria-hidden="true">1</span>
+                            <div>
+                                <h2 class="h5 mb-1">Cover &amp; ISBN</h2>
+                                <p class="small text-muted mb-0">Shared across ebook, print, and audiobook on this title.</p>
+                            </div>
+                        </div>
+                        <div class="ink-upload-card-body">
+                            <div class="row g-4 align-items-start">
+                                <div class="col-md-5">
+                                    <p class="small fw-semibold mb-2">Marketplace cover</p>
+                                    <img src="{{ cover_url }}" alt="Cover for {{ book.title }}" class="img-fluid rounded border" style="max-height: 240px;">
+                                    <p class="form-text mt-2 mb-0">To change the cover, use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Edit book</a> before adding print.</p>
+                                </div>
+                                <div class="col-md-7">
+                                    <p class="small fw-semibold mb-2">ISBN &amp; publisher</p>
+                                    {% include 'book_platform/includes/_isbn_listing_choice.html' %}
+                                    {% if book_has_listing_attestation(book) %}
+                                    <div class="mt-3">
+                                        {% include 'book_platform/includes/_listing_attestation_status.html' %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="ink-upload-card mb-4">
+                        <div class="ink-upload-card-head">
+                            <span class="ink-upload-badge" aria-hidden="true">2</span>
+                            <div>
+                                <h2 class="h5 mb-1">Print pricing <span class="text-muted fw-normal">(you ship)</span></h2>
+                                <p class="small text-muted mb-0">Ink collects payment and sends you the buyer’s US shipping address.</p>
+                            </div>
+                        </div>
+                        <div class="ink-upload-card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="print_price" class="form-label">Print book price (USD) <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control ink-upload-control" id="print_price" name="print_price" min="0" step="0.01" placeholder="18.00" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="print_shipping_price" class="form-label">Flat shipping (USD)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control ink-upload-control" id="print_shipping_price" name="print_shipping_price" value="5.00" min="0" step="0.01">
+                                    </div>
+                                    <div class="form-text">You keep 100% of shipping.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="print_handling_days" class="form-label">Ships within (days)</label>
+                                    <input type="number" class="form-control ink-upload-control" id="print_handling_days" name="print_handling_days" value="7" min="1" max="60">
+                                </div>
+                                <div class="col-12">
+                                    <label for="print_description" class="form-label">Print details (optional)</label>
+                                    <textarea class="form-control ink-upload-control" id="print_description" name="print_description" rows="2" placeholder="Paperback, signed copy, dimensions, etc."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {% with target_format='print' %}
+                    {% include 'book_platform/includes/_listing_coupon_picker.html' %}
+                    {% endwith %}
+
+                    {% if needs_attestation %}
+                    <section class="ink-upload-card mb-4">
+                        <div class="ink-upload-card-head">
+                            <span class="ink-upload-badge" aria-hidden="true">3</span>
+                            <div>
+                                <h2 class="h5 mb-1">Author Publishing Agreement</h2>
+                                <p class="small text-muted mb-0">Listing attestation (v{{ listing_attestation_version }}) — required before print goes live.</p>
+                            </div>
+                        </div>
+                        <div class="ink-upload-card-body">
+                            {% set terms_scroll_id = 'listingTermsScrollAddPrint' %}
+                            {% set terms_hint_id = 'listingTermsScrollHintAddPrint' %}
+                            {% include 'book_platform/_author_listing_terms_scroll.html' %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on" required>
+                                <label class="form-check-label small" for="listing_terms_rights_warranty">
+                                    I confirm I own or hold all rights/licenses to publish and sell this work.
+                                </label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on" required>
+                                <label class="form-check-label small" for="listing_terms_takedown_consent">
+                                    I agree this listing may be removed immediately upon a credible infringement claim.
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <a href="{{ url_for('book_platform.books') }}" class="btn btn-ink-ghost">Cancel</a>
+                        <button type="submit" class="btn btn-ink-gold">List print edition</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

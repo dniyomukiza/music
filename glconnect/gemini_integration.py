@@ -20,6 +20,69 @@ from glconnect.book_platform_models import (
 # Create AI blueprint
 gemini_bp = Blueprint('gemini_ai', __name__, url_prefix='/mybook/ai')
 
+AUTHOR_REVIEW_CATEGORIES = {
+    "grammar_punctuation": {
+        "mode": "correct",
+        "label": "Grammar & punctuation",
+        "instruction": (
+            "You are a professional copy editor. Fix grammar and punctuation only in the passage below. "
+            "Preserve the author's voice, word choice, and meaning. Do not rewrite for style or clarity "
+            "unless a change is required for grammatical correctness. Return only the corrected passage."
+        ),
+    },
+    "spelling": {
+        "mode": "correct",
+        "label": "Spelling",
+        "instruction": (
+            "You are a proofreader. Correct misspellings and obvious typos only. "
+            "Do not change grammar, punctuation, wording, or sentence structure unless a typo cannot be "
+            "fixed without it. Return only the corrected passage."
+        ),
+    },
+    "linguistic_errors": {
+        "mode": "feedback",
+        "label": "Common linguistic errors",
+        "instruction": (
+            "You are a copy editor helping an author. Review the passage for common linguistic errors such as "
+            "wrong-word usage (e.g. affect/effect), tense shifts, subject-verb disagreement, pronoun ambiguity, "
+            "dangling or misplaced modifiers, redundant phrasing, and awkward idioms. "
+            "For each issue: quote the problematic phrase, explain the error briefly, and give a concrete fix. "
+            "If no issues are found, say so clearly. Do not rewrite the whole passage."
+        ),
+    },
+    "plot_continuity": {
+        "mode": "feedback",
+        "label": "Plot continuity",
+        "instruction": (
+            "You are a developmental editor focused on continuity. Using the manuscript context provided "
+            "(book title, section title, and any summary notes), check the passage for plot and story continuity "
+            "issues: timeline contradictions, character knowledge or motivation gaps, inconsistent names or details, "
+            "geography or setting slips, and events that contradict earlier setup. "
+            "Cite specific lines or phrases. Rate severity (minor / moderate / major) for each finding. "
+            "If context is limited, note assumptions and still flag internal inconsistencies within the passage."
+        ),
+    },
+    "pacing_tension": {
+        "mode": "feedback",
+        "label": "Pacing & tension",
+        "instruction": (
+            "You are a fiction coach analyzing pacing and tension. Evaluate how the passage builds and releases "
+            "tension, scene rhythm, hook strength, stakes clarity, and whether beats land too fast or drag. "
+            "Give specific, actionable notes tied to sentences or paragraphs. "
+            "Suggest one or two high-impact revisions without rewriting the full text."
+        ),
+    },
+    "narrative_style": {
+        "mode": "feedback",
+        "label": "Narrative style",
+        "instruction": (
+            "You are a writing coach focused on narrative style. Assess point of view consistency, tone, voice, "
+            "sentence rhythm, show-vs-tell balance, and whether the prose fits the apparent genre. "
+            "Highlight what works and what feels uneven. Give targeted suggestions; do not rewrite the entire passage."
+        ),
+    },
+}
+
 class GeminiWritingAssistant:
     """Gemini-powered writing assistant for the book platform"""
     
@@ -234,10 +297,10 @@ class GeminiWritingAssistant:
             # Readability analysis (simplified)
             avg_words_per_sentence = word_count / sentence_count if sentence_count > 0 else 0
             
-            # Gemini-powered analysis with simplified prompt
-            analysis_prompt = f"""Analyze this text briefly:
+            analysis_prompt = f"""You are an editorial coach for authors. Analyze this passage for readability,
+pacing, tone, and structure. Note strengths and give 3–5 specific improvement suggestions.
 
-{text[:500]}
+{text[:4000]}
 
 Analysis:"""
             
@@ -297,13 +360,69 @@ Analysis:"""
         except Exception as e:
             return {"success": False, "error": str(e)}
     
+    def author_review(self, text: str, category: str, context: str = "") -> Dict:
+        """Focused author review: copy edits or craft feedback by category."""
+        meta = AUTHOR_REVIEW_CATEGORIES.get(category)
+        if not meta:
+            return {"success": False, "error": f"Unknown review category: {category}"}
+
+        context_block = ""
+        if context.strip():
+            context_block = f"\nManuscript context:\n{context.strip()}\n"
+
+        prompt = (
+            f"{meta['instruction']}\n"
+            f"{context_block}\n"
+            f"Passage to review:\n{text}\n"
+        )
+        if meta["mode"] == "correct":
+            prompt += "\nCorrected passage:"
+        else:
+            prompt += "\nEditorial notes:"
+
+        temperature = 0.2 if meta["mode"] == "correct" else 0.4
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=2000,
+                    temperature=temperature,
+                    top_p=0.8,
+                    top_k=40,
+                ),
+            )
+            if response.parts and len(response.parts) > 0:
+                content = response.text
+                return {
+                    "success": True,
+                    "content": content,
+                    "category": category,
+                    "review_mode": meta["mode"],
+                    "label": meta["label"],
+                    "usage": {
+                        "prompt_tokens": len(prompt.split()),
+                        "completion_tokens": len(content.split()),
+                        "total_tokens": len(prompt.split()) + len(content.split()),
+                    },
+                }
+            finish = (
+                response.candidates[0].finish_reason
+                if response.candidates
+                else "Unknown"
+            )
+            return {"success": False, "error": f"No content generated (finish: {finish})"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def proofread(self, text: str) -> Dict:
-        """Comprehensive proofreading"""
-        prompt = f"""Proofread and correct this text. Return only the corrected version:
+        """Comprehensive proofreading (grammar, spelling, punctuation)"""
+        prompt = f"""You are a professional proofreader for fiction and nonfiction manuscripts.
+Correct grammar, spelling, and punctuation while preserving the author's voice and meaning.
+Return only the corrected passage — no commentary.
 
 {text}
 
-Corrected text:"""
+Corrected passage:"""
         
         try:
             response = self.model.generate_content(
@@ -358,7 +477,9 @@ Corrected text:"""
     
     def suggest_improvements(self, text: str) -> Dict:
         """Suggest specific improvements for text"""
-        prompt = f"""Suggest improvements for this text. Be specific and concise:
+        prompt = f"""You are a developmental editor. Suggest concrete improvements for this passage covering
+grammar, clarity, pacing, and narrative style. Use a numbered checklist; quote short phrases where helpful.
+Do not rewrite the full passage.
 
 {text}
 
@@ -434,11 +555,13 @@ Suggestions:"""
                 gemini_history.append({"role": "model", "parts": [content]})
 
         system_instruction = (
-            "You are a friendly, knowledgeable assistant in Ink Studio, a platform for authors. "
-            "The author may ask you anything: writing craft, research, brainstorming, grammar, "
-            "publishing, productivity, or completely unrelated topics. "
-            "Answer clearly and helpfully. You are not limited to their current book or chapter. "
-            "If they need book-specific edits, suggest using the writing tools in the sidebar."
+            "You are a friendly, knowledgeable writing assistant in Ink Studio, a platform for authors. "
+            "Help with craft questions: grammar and punctuation, spelling, common linguistic errors, "
+            "plot continuity, pacing and tension, and narrative style — plus research, brainstorming, "
+            "publishing, and general topics. Answer clearly and helpfully. "
+            "For passage-level edits on their manuscript, suggest the dedicated Writing tools: "
+            "Grammar & punctuation, Spelling, Linguistic errors, Plot continuity, Pacing & tension, "
+            "and Narrative style."
         )
 
         try:
@@ -509,8 +632,8 @@ def ai_status():
                 'text_analysis': True,
                 'proofreading': True,
                 'idea_generation': True,
-                'dialogue_generation': True,
-                'scene_expansion': True,
+                'author_review': True,
+                'author_review_categories': list(AUTHOR_REVIEW_CATEGORIES.keys()),
                 'suggestions': True,
                 'chat': True,
             }
@@ -630,6 +753,30 @@ def proofread():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@gemini_bp.route('/author-review', methods=['POST'])
+@login_required
+def author_review():
+    """Category-focused author review (copy edit or craft feedback)."""
+    try:
+        data = request.get_json() or {}
+        text = data.get("text")
+        category = data.get("category", "")
+        context = data.get("context", "")
+
+        if not text:
+            return jsonify({"success": False, "error": "Text is required"}), 400
+        if category not in AUTHOR_REVIEW_CATEGORIES:
+            return jsonify({"success": False, "error": "Invalid review category"}), 400
+
+        assistant = get_gemini_assistant()
+        if not assistant:
+            return jsonify({"success": False, "error": "Gemini AI service not configured"}), 500
+
+        result = assistant.author_review(text, category, context)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @gemini_bp.route('/suggest-improvements', methods=['POST'])
 @login_required

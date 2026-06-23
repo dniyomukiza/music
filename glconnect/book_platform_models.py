@@ -190,6 +190,11 @@ class BookProject(db.Model):
     print_handling_days = db.Column(db.Integer, nullable=True, default=7)
     print_description = db.Column(db.Text, nullable=True)
 
+    # Per-format platform fee overrides (set when author redeems cross-format listing coupon)
+    platform_fee_percent_ebook = db.Column(db.Float, nullable=True)
+    platform_fee_percent_audiobook = db.Column(db.Float, nullable=True)
+    platform_fee_percent_print = db.Column(db.Float, nullable=True)
+
     # Per-title listing attestation (Layer 2 of Author Publishing Agreement)
     listing_attestation_version = db.Column(db.String(20), nullable=True)
     listing_attestation_accepted_at = db.Column(db.DateTime, nullable=True)
@@ -659,6 +664,7 @@ class BookSale(db.Model):
     
     # Sale format: 'digital' (ebook/digital copy), 'audiobook', 'bundle'. Used so earnings account for digital and audio.
     sale_format = db.Column(db.String(20), default='digital', nullable=True)
+    platform_fee_percent_applied = db.Column(db.Float, nullable=True)
     
     # Revenue Distribution Tracking
     distributed_to_reviewers = db.Column(db.Float, default=0.0)
@@ -1188,6 +1194,39 @@ class AuthorCampaignPayoutRequest(db.Model):
     
     campaign = db.relationship('InvestmentCampaign', backref='author_payout_requests')
     approved_by = db.relationship('BookPlatformUser', foreign_keys=[approved_by_id])
+
+
+class AuthorFormatListingCoupon(db.Model):
+    """Cross-format listing coupon: earn by publishing one format, redeem when listing another."""
+
+    __tablename__ = "author_format_listing_coupons"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "book_project_id",
+            "earned_from_format",
+            name="uq_author_format_coupon_book_earned",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(
+        db.Integer, db.ForeignKey("book_platform_users.id", ondelete="CASCADE"), nullable=False
+    )
+    book_project_id = db.Column(
+        db.Integer, db.ForeignKey("book_projects.id", ondelete="CASCADE"), nullable=False
+    )
+    earned_from_format = db.Column(db.String(20), nullable=False)  # ebook | audiobook | print
+    status = db.Column(db.String(20), default="available", nullable=False)
+    earned_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime, nullable=True)
+    redeemed_at = db.Column(db.DateTime, nullable=True)
+    redeemed_for_format = db.Column(db.String(20), nullable=True)
+    platform_fee_percent_after = db.Column(db.Float, nullable=True)
+
+    author = db.relationship("BookPlatformUser", backref="format_listing_coupons")
+    book_project = db.relationship(
+        "BookProject", backref=db.backref("format_listing_coupons", lazy=True)
+    )
 
 
 class IsbnPoolStatus(PyEnum):

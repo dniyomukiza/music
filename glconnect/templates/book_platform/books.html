@@ -190,6 +190,7 @@
                 <p class="small text-muted px-3 pb-3 mb-0">Platform fee applies to the list price for each format. Shipping and tips go to you in full. Sales tax (if charged) is paid by the buyer and handled by Stripe at checkout.</p>
             </div>
         </section>
+        {% endif %}
 
         {% if author_dashboard_stats and author_dashboard_stats.books %}
         <section class="ink-panel mb-4">
@@ -268,6 +269,11 @@
                                             · {% if book.word_count %}{{ book.word_count }} words{% else %}— words{% endif %}
                                             · {% if book.digital_file_path %}Uploaded{% else %}Platform{% endif %}
                                         </p>
+                                        {% set csum = (coupon_summary|default({})).get(book.id) %}
+                                        {% if csum and csum.available_count %}
+                                        <p class="small mb-2"><span class="badge rounded-pill text-bg-warning text-dark"><i class="fas fa-ticket-alt me-1"></i>{{ csum.available_count }} coupon{{ 's' if csum.available_count != 1 else '' }}</span>
+                                        <span class="text-muted">Use when you add {% if 'print' in csum.redeemable_for %}print{% endif %}{% if 'audiobook' in csum.redeemable_for %}{% if 'print' in csum.redeemable_for %}, {% endif %}audiobook{% endif %}{% if 'ebook' in csum.redeemable_for %}{% if csum.redeemable_for|length > 1 %}, {% endif %}ebook{% endif %} — lower platform fee</span></p>
+                                        {% endif %}
                                         {% if ink_is_author_account|default(false) and not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
                                         <p class="small text-muted mb-2"><i class="fas fa-seedling me-1"></i>Optional: ready to launch patron campaign</p>
                                         {% elif ink_is_author_account|default(false) and not book.digital_file_path and book.has_investment_campaign %}
@@ -285,6 +291,9 @@
                                             {% endif %}
                                             {% if listing_live %}
                                             <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="small text-decoration-none">Store preview</a>
+                                            {% endif %}
+                                            {% if listing_live and not book.print_enabled %}
+                                            <a href="{{ url_for('book_platform.add_print_edition', book_id=book.id) }}" class="small text-decoration-none">Add print edition</a>
                                             {% endif %}
                                             {% if ink_is_author_account|default(false) and not book.digital_file_path and investment_readiness.is_ready and not book.has_investment_campaign %}
                                             <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="small text-decoration-none">Start campaign (optional)</a>

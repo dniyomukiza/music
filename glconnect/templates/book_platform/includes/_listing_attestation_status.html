@@ -1,0 +1,24 @@
+{# Compact status when per-title listing terms are already on file (all formats). #}
+{# expects: book #}
+<div class="ink-attestation-status rounded-3 p-3 mb-0" role="status" style="border: 1px solid rgba(72, 187, 120, 0.35); background: rgba(72, 187, 120, 0.08);">
+    <div class="d-flex gap-3 align-items-start">
+        <span class="flex-shrink-0 text-success mt-1" aria-hidden="true" style="font-size: 1.35rem;">
+            <i class="fas fa-check-circle"></i>
+        </span>
+        <div class="min-w-0">
+            <p class="fw-semibold mb-1 mb-md-2">Listing terms on file for this title</p>
+            <p class="small text-muted mb-0">
+                Your agreement applies to <strong>ebook</strong>, <strong>audiobook</strong>, and <strong>print</strong> on this book.
+                Adding another format won't ask you to accept again.
+            </p>
+            {% if book and book.listing_attestation_accepted_at %}
+            <p class="small text-muted mb-0 mt-2">
+                Accepted {{ book.listing_attestation_accepted_at.strftime('%b %d, %Y') }}
+                {% if book.listing_attestation_version or listing_attestation_version is defined %}
+                · v{{ book.listing_attestation_version or listing_attestation_version }}
+                {% endif %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>

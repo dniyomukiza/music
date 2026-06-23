@@ -187,7 +187,7 @@ def seed_dummy_isbn_pool(db, count: int = 100, force: bool = False) -> int:
 def assign_marketplace_isbn_if_needed(book) -> Tuple[Optional[str], str]:
     """
     When a book is listed on the marketplace, assign the next pool ISBN once.
-    Same ISBN applies to ebook and audiobook formats on that title.
+    Same ISBN applies to ebook, print, and audiobook formats on that title.
     Returns (isbn, publisher_name). Raises IsbnPoolError if pool empty and ISBN required.
     """
     from glconnect.book_utils import is_book_published

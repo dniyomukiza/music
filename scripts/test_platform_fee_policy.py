@@ -45,11 +45,11 @@ def main():
         failures.append('author marketplace fraction should be 0.9')
 
     book = MockBook(1, price=20.0, audiobook_price=15.0, print_price=25.0, print_shipping_price=5.0)
-    base, extra, royalty, platform = revenue_split_for_purchase(book, 'digital', 20.0)
+    base, extra, royalty, platform, _ = revenue_split_for_purchase(book, 'digital', 20.0)
     if abs(royalty - 18.0) > 0.01 or abs(platform - 2.0) > 0.01:
         failures.append(f'digital split wrong: royalty={royalty}, platform={platform}')
 
-    base, extra, royalty, platform = revenue_split_for_purchase(book, 'digital', 25.0)
+    base, extra, royalty, platform, _ = revenue_split_for_purchase(book, 'digital', 25.0)
     if abs(royalty - 23.0) > 0.01 or abs(platform - 2.0) > 0.01:
         failures.append(f'extra-to-author split wrong: royalty={royalty}, platform={platform}')
 

@@ -135,23 +135,62 @@ def total_checkout_amount(book: Any, purchase_format: str) -> float:
 
 
 def revenue_split_for_purchase(
+    book: Any,
+    purchase_format: str,
+    purchase_amount: float,
+    royalty_percentage: float | None = None,
+) -> Tuple[float, float, float, float, float]:
+    """
+    Returns (base_price, extra_amount, royalty_amount, platform_fee, platform_fee_percent_applied).
+    Extra amount (e.g. shipping, tip) goes 100% to author; platform fee only on base list portions.
+    Per-format fee overrides (from cross-format coupons) apply via author_listing_coupon_policy.
+    """
+    from glconnect.author_listing_coupon_policy import (
+        effective_platform_fee_percent,
+        royalty_fraction_for_fee_percent,
+        _format_base_portions,
+    )
+
+    pt = normalize_purchase_format(purchase_format)
+    base_price = base_price_for_format(book, pt)
+    extra_amount = max(0.0, float(purchase_amount) - base_price)
+
+    if pt.startswith("combo:") or pt == "bundle":
+        fmts = formats_from_purchase_format(pt)
+        portions = _format_base_portions(book, fmts)
+        platform_fee = 0.0
+        base_royalty = 0.0
+        for fmt_key, portion in portions.items():
+            if portion <= 0:
+                continue
+            fee_pct = effective_platform_fee_percent(book, fmt_key)
+            frac = royalty_fraction_for_fee_percent(fee_pct)
+            platform_fee += portion * (fee_pct / 100.0)
+            base_royalty += portion * frac
+        fee_pct_applied = (
+            round(platform_fee / base_price * 100, 2) if base_price > 0 else effective_platform_fee_percent(book, pt)
+        )
+    else:
+        fee_pct_applied = effective_platform_fee_percent(book, pt)
+        if royalty_percentage is None:
+            royalty_fraction = royalty_fraction_for_fee_percent(fee_pct_applied)
+        else:
+            royalty_fraction = float(royalty_percentage)
+        base_royalty = base_price * royalty_fraction
+        platform_fee = base_price - base_royalty
+
+    royalty_amount = base_royalty + extra_amount
+    return base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied
+
+
+def revenue_split_legacy_tuple(
     book: Any, purchase_format: str, purchase_amount: float, royalty_percentage: float | None = None
 ) -> Tuple[float, float, float, float]:
-    """
-    Returns (base_price, extra_amount, royalty_amount, platform_fee).
-    Extra amount (e.g. shipping, tip) goes 100% to author; platform fee only on base list.
-    Default author share is 90% (10% marketplace platform fee).
-    """
-    if royalty_percentage is None:
-        from glconnect.platform_fee_policy import marketplace_author_royalty_fraction
-        royalty_percentage = marketplace_author_royalty_fraction()
-    base_price = base_price_for_format(book, purchase_format)
-    extra_amount = max(0.0, float(purchase_amount) - base_price)
-    base_royalty = base_price * royalty_percentage
-    base_platform_fee = base_price - base_royalty
-    royalty_amount = base_royalty + extra_amount
-    platform_fee = base_platform_fee
-    return base_price, extra_amount, royalty_amount, platform_fee
+    """Backward-compatible 4-tuple return (without fee percent)."""
+    base, extra, royalty, platform, _ = revenue_split_for_purchase(
+        book, purchase_format, purchase_amount, royalty_percentage
+    )
+    return base, extra, royalty, platform
 
 
 # Stripe Checkout shipping_address_collection allowed_countries (print only).

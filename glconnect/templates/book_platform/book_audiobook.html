@@ -61,13 +61,14 @@
                     <input type="hidden" name="tags" value="{{ book.tags or '' }}">
                     <input type="hidden" name="target_audience" value="{{ book.target_audience or '' }}">
                     <input type="hidden" name="word_count_target" value="{{ book.word_count_target or '' }}">
-                    <input type="hidden" name="cover_image" value="{{ book.cover_image or '' }}">
+                    <input type="hidden" name="audiobook_price" id="audiobook_price_field" value="{{ book.audiobook_price if book.audiobook_price is not none else '' }}">
                     {% if book.digital_file_path %}
                     <input type="hidden" name="publish_digital_book" id="publish_digital_book" value="on" data-was-published="1">
                     <input type="hidden" name="publish_audiobook" id="publish_audiobook" value="{% if book.audiobook_published %}on{% endif %}" data-was-published="{% if book.audiobook_published %}1{% else %}0{% endif %}">
                     <input type="hidden" name="confirm_audiobook_publish" id="confirm_audiobook_publish_field" value="">
                     <input type="hidden" name="listing_terms_rights_warranty" id="listing_terms_rights_warranty_field" value="">
                     <input type="hidden" name="listing_terms_takedown_consent" id="listing_terms_takedown_consent_field" value="">
+                    <input type="hidden" name="listing_coupon_id" id="listing_coupon_id_field" value="">
                     {% else %}
                     <input type="hidden" name="is_published" id="is_published" value="{% if book.status.value == 'published' %}on{% endif %}" data-was-published="{% if book.status.value == 'published' %}1{% else %}0{% endif %}">
                     {% endif %}
@@ -104,10 +105,19 @@
                                         <i class="fas fa-microphone me-1"></i>
                                         Voice: {{ audiobook_voice_label|default(book.audiobook_voice or 'Default voice', true) }}
                                     </p>
-                                    <p class="text-muted mb-2">
-                                        <i class="fas fa-dollar-sign me-1"></i>
-                                        Price: ${{ "%.2f"|format(book.audiobook_price) if book.audiobook_price else "Free" }}
-                                    </p>
+                                    <div class="mb-3">
+                                        <label for="audiobookPricePostGen" class="form-label">
+                                            <i class="fas fa-dollar-sign me-1"></i>Audiobook price (USD) <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group" style="max-width: 14rem;">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="audiobookPricePostGen"
+                                                   name="audiobook_price_display" step="0.01" min="0" required
+                                                   value="{{ book.audiobook_price if book.audiobook_price is not none else '' }}"
+                                                   placeholder="0.00">
+                                        </div>
+                                        <div class="form-text">Required before publishing. Use <strong>0</strong> for free.</div>
+                                    </div>
                                     <p class="text-muted mb-3">
                                         <i class="fas fa-calendar me-1"></i>
                                         Generated: {{ book.audiobook_generated_at.strftime('%B %d, %Y at %I:%M %p') if book.audiobook_generated_at else 'Unknown' }}
@@ -169,17 +179,17 @@
                                     </div>
                                     
                                     <div class="mb-3">
-                                        <label for="audiobookPrice" class="form-label">Audiobook Price (USD)</label>
+                                        <label for="audiobookPrice" class="form-label">Audiobook Price (USD) <span class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
-                                            <input type="number" class="form-control" id="audiobookPrice" 
-                                                   placeholder="0.00" step="0.01" min="0" value="0">
+                                            <input type="number" class="form-control" id="audiobookPrice" required
+                                                   placeholder="0.00" step="0.01" min="0" value="">
                                         </div>
-                                        <div class="form-text">Leave as 0 for free audiobook</div>
+                                        <div class="form-text">Required. Enter <strong>0</strong> for a free audiobook.</div>
                                     </div>
                                     
                                     <div class="mb-3">
-                                        <label class="form-label">Voice Selection</label>
+                                        <label class="form-label">Voice Selection <span class="text-danger">*</span></label>
                                         <p class="small mb-2 ink-voice-picker-hint">Preview different voices to find the perfect one for your audiobook</p>
                                         
                                         <!-- Voice Type Tabs (display names — not Google product labels) -->
@@ -261,15 +271,23 @@
                 <div class="card border-primary mt-3" id="audiobook-publish-actions">
                     <div class="card-body">
                         <ol class="small text-muted mb-3 ps-3 mb-0" id="listingPublishSteps">
-                            <li id="listingStepTerms" class="mb-1"><strong>Step 1:</strong> Scroll the agreement, check each box, then click <strong>Agree to terms</strong>.</li>
+                            {% if book_has_listing_attestation(book) %}
+                            <li id="listingStepPreview" class="mb-1"><strong>Step 1:</strong> Preview the audiobook and check the approval box.</li>
+                            <li id="listingStepPublish" class="mb-2"><strong>Step 2:</strong> Click <strong>Publish audiobook now</strong>.</li>
+                            {% else %}
+                            <li id="listingStepTerms" class="mb-1"><strong>Step 1:</strong> Scroll the agreement, check each box, then click <strong>Agree to terms</strong> (once per title).</li>
                             <li id="listingStepPreview" class="mb-1"><strong>Step 2:</strong> Preview the audiobook and check the approval box.</li>
                             <li id="listingStepPublish" class="mb-2"><strong>Step 3:</strong> Click <strong>Publish audiobook now</strong>.</li>
+                            {% endif %}
                         </ol>
                         <div class="mb-3 border rounded p-3 bg-light listing-terms-section">
+                            {% if book_has_listing_attestation(book) %}
+                            {% include 'book_platform/includes/_listing_attestation_status.html' %}
+                            {% else %}
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div>
                                     <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author Publishing Agreement</h6>
-                                    <small class="text-muted d-block">Listing attestation (v{{ listing_attestation_version }}) when publishing audiobook.</small>
+                                    <small class="text-muted d-block">One-time listing attestation (v{{ listing_attestation_version }}) for this title — covers ebook, audiobook, and print.</small>
                                     <small class="text-muted">Scroll to the bottom to unlock the checkboxes, then click Agree to terms.</small>
                                 </div>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(true); return false;">
@@ -308,7 +326,13 @@
                             <div id="listingTermsConfirmedNote" class="alert alert-success mt-3 d-none small mb-0">
                                 <i class="fas fa-check me-1"></i>Step 1 complete — terms accepted. Continue with Step 2 below.
                             </div>
+                            {% endif %}
                         </div>
+                        {% if not book.audiobook_published %}
+                        {% with target_format='audiobook' %}
+                        {% include 'book_platform/includes/_listing_coupon_picker.html' %}
+                        {% endwith %}
+                        {% endif %}
                         <p id="listingAudiobookPublishHint" class="small text-muted mb-3" role="status" aria-live="polite"></p>
                         {% if not book.audiobook_published %}
                         <div id="listingAudiobookConfirmWrap" class="form-check mb-3{% if not book.has_audiobook %} d-none{% endif %}">
@@ -322,9 +346,11 @@
                             <button type="button" class="btn btn-primary btn-sm" id="btnQuickPublishAudiobook" onclick="quickPublishBoth()" {% if not book.has_audiobook %}disabled{% endif %}>
                                 <i class="fas fa-layer-group me-1"></i>Publish audiobook now
                             </button>
+                            {% if not book_has_listing_attestation(book) %}
                             <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtnStep2" onclick="openListingTermsPanel(true); return false;">
                                 <i class="fas fa-scale-balanced me-1"></i>Review and accept terms
                             </button>
+                            {% endif %}
                             <a href="{{ url_for('book_platform.books') }}" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-columns me-1"></i>Skip audiobook for now
                             </a>
@@ -341,8 +367,53 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        let listingTermsConfirmed = false;
+        let listingTermsConfirmed = {{ book_has_listing_attestation(book)|tojson }};
+        const listingAttestationComplete = {{ book_has_listing_attestation(book)|tojson }};
         let audiobookReadyForPublish = {{ 'true' if book.has_audiobook else 'false' }};
+
+        function syncAudiobookPriceToForm() {
+            const priceEl = document.getElementById('audiobookPricePostGen') || document.getElementById('audiobookPrice');
+            const hidden = document.getElementById('audiobook_price_field');
+            if (!priceEl || !hidden) return true;
+            const raw = (priceEl.value || '').trim();
+            if (raw === '') {
+                showNotification('Enter an audiobook price (use 0 for free).', 'error');
+                priceEl.focus();
+                return false;
+            }
+            const val = parseFloat(raw);
+            if (Number.isNaN(val) || val < 0) {
+                showNotification('Audiobook price must be 0 or higher.', 'error');
+                priceEl.focus();
+                return false;
+            }
+            hidden.value = String(val);
+            return true;
+        }
+
+        function readAudiobookPriceForGeneration() {
+            const priceEl = document.getElementById('audiobookPrice');
+            if (!priceEl) {
+                return { ok: false, error: 'Price field is missing.' };
+            }
+            const raw = (priceEl.value || '').trim();
+            if (raw === '') {
+                return { ok: false, error: 'Enter an audiobook price (use 0 for free).' };
+            }
+            const val = parseFloat(raw);
+            if (Number.isNaN(val) || val < 0) {
+                return { ok: false, error: 'Audiobook price must be 0 or higher.' };
+            }
+            return { ok: true, value: val };
+        }
+
+        function syncListingCouponToForm() {
+            const field = document.getElementById('listing_coupon_id_field');
+            const picked = document.querySelector('input[name="listing_coupon_id"]:checked');
+            if (field && picked) {
+                field.value = picked.value || '';
+            }
+        }
 
         function syncListingTermsToForm() {
             const rights = document.getElementById('listing_terms_rights_warranty');
@@ -386,17 +457,18 @@
             const stepPreview = document.getElementById('listingStepPreview');
             const stepPublish = document.getElementById('listingStepPublish');
             const previewCb = document.getElementById('confirm_audiobook_publish_cb');
+            const termsOk = listingAttestationComplete || listingTermsConfirmed;
             if (stepTerms) {
-                stepTerms.classList.toggle('text-success', listingTermsConfirmed);
-                stepTerms.classList.toggle('text-muted', !listingTermsConfirmed);
+                stepTerms.classList.toggle('text-success', termsOk);
+                stepTerms.classList.toggle('text-muted', !termsOk);
             }
             const previewDone = !previewCb || previewCb.checked;
             if (stepPreview) {
-                stepPreview.classList.toggle('text-success', listingTermsConfirmed && previewDone);
-                stepPreview.classList.toggle('text-muted', !(listingTermsConfirmed && previewDone));
+                stepPreview.classList.toggle('text-success', termsOk && previewDone);
+                stepPreview.classList.toggle('text-muted', !(termsOk && previewDone));
             }
             if (stepPublish) {
-                const ready = listingTermsConfirmed && previewDone && audiobookReadyForPublish;
+                const ready = termsOk && previewDone && audiobookReadyForPublish;
                 stepPublish.classList.toggle('text-success', ready);
                 stepPublish.classList.toggle('text-muted', !ready);
             }
@@ -414,8 +486,9 @@
         function updatePublishButtonsUx() {
             const quickPubBtn = document.getElementById('btnQuickPublishAudiobook');
             if (!quickPubBtn) return;
-            quickPubBtn.disabled = !(audiobookReadyForPublish && listingTermsConfirmed);
-            if (!listingTermsConfirmed) {
+            const termsOk = listingAttestationComplete || listingTermsConfirmed;
+            quickPubBtn.disabled = !(audiobookReadyForPublish && termsOk);
+            if (!termsOk) {
                 quickPubBtn.title = 'Complete Step 1: scroll the agreement, check each box, then click Agree to terms.';
             } else if (!audiobookReadyForPublish) {
                 quickPubBtn.title = 'Publish unlocks after the audiobook is generated successfully.';
@@ -442,6 +515,7 @@
         }
 
         function shouldRequireListingTerms() {
+            if (listingAttestationComplete) return false;
             const digital = document.getElementById('publish_digital_book');
             const audio = document.getElementById('publish_audiobook');
             const published = document.getElementById('is_published');
@@ -581,6 +655,8 @@
             if (shouldRequireListingTerms()) {
                 if (!validateListingTermsForm()) return;
             }
+            if (!syncAudiobookPriceToForm()) return;
+            syncListingCouponToForm();
             
             const formData = new FormData(this);
             syncListingTermsToForm();
@@ -843,6 +919,8 @@
                     return;
                 }
             }
+            if (!syncAudiobookPriceToForm()) return;
+            syncListingCouponToForm();
             dbgLog('H5', 'book_audiobook:quickPublishBoth', 'submitting form', {
                 state: listingTermsCheckboxState(),
                 requireTerms: shouldRequireListingTerms(),
@@ -1216,18 +1294,20 @@
 
         // Audiobook generation functions
         async function generateAudiobook() {
-            const price = document.getElementById('audiobookPrice').value;
+            const priceResult = readAudiobookPriceForGeneration();
             const voiceInput = document.getElementById('audiobookVoice');
-            const voice = voiceInput ? voiceInput.value : null;
+            const voice = voiceInput ? (voiceInput.value || '').trim() : '';
             const generateBtn = document.getElementById('generateBtn');
             
-            if (!price || price < 0) {
-                showNotification('Please enter a valid price (0 or higher)', 'error');
+            if (!priceResult.ok) {
+                showNotification(priceResult.error, 'error');
+                const priceEl = document.getElementById('audiobookPrice');
+                if (priceEl) priceEl.focus();
                 return;
             }
             
             if (!voice) {
-                showNotification('Please select a voice for your audiobook', 'error');
+                showNotification('Select a voice for your audiobook.', 'error');
                 return;
             }
 
@@ -1241,6 +1321,10 @@
                 const cb = document.getElementById('audiobook-seg-' + i);
                 segment_includes.push(cb ? cb.checked : !!(window._audiobookSegmentState.segments[i] && window._audiobookSegmentState.segments[i].include));
             }
+            if (!segment_includes.some(Boolean)) {
+                showNotification('Select at least one section to include in the audiobook.', 'error');
+                return;
+            }
             
             // Disable button and show loading
             generateBtn.disabled = true;
@@ -1253,7 +1337,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        audiobook_price: parseFloat(price),
+                        audiobook_price: priceResult.value,
                         voice_name: voice,
                         source_hash: window._audiobookSegmentState.sourceHash,
                         segment_includes: segment_includes

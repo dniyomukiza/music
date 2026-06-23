@@ -25,9 +25,13 @@ def _sale_transparency_row(sale: BookSale, title_by_id: Dict[int, str]) -> Dict[
     gross = round(net + platform_fee, 2)
     when = sale.paid_at or sale.created_at
     fee_pct = (
-        round(platform_fee / gross * 100, 1)
-        if gross > 0
-        else MARKETPLACE_PLATFORM_FEE_PERCENT
+        round(float(sale.platform_fee_percent_applied), 1)
+        if getattr(sale, "platform_fee_percent_applied", None) is not None
+        else (
+            round(platform_fee / gross * 100, 1)
+            if gross > 0
+            else MARKETPLACE_PLATFORM_FEE_PERCENT
+        )
     )
     return {
         "sale_id": sale.id,

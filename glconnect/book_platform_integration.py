@@ -123,6 +123,12 @@ def init_book_platform(app):
         }
 
     @app.context_processor
+    def inject_listing_attestation_helpers():
+        from glconnect.author_publishing_agreement import book_has_listing_attestation
+
+        return {"book_has_listing_attestation": book_has_listing_attestation}
+
+    @app.context_processor
     def inject_author_display_helpers():
         from glconnect.author_display import marketplace_author_display_name
 

@@ -16,12 +16,59 @@ class AIWritingAssistant {
         this._positionStorageKey = 'inkStudioAiToolbarPosition';
         this.aiFeatures = {
             generateContent: true,
-            improveText: true,
-            analyzeText: true,
-            proofread: true,
+            authorReview: true,
             generateIdeas: true,
-            suggestImprovements: true,
             chat: true
+        };
+        this.authorReviewCategories = {
+            'grammar-punctuation': {
+                category: 'grammar_punctuation',
+                title: 'Grammar & punctuation',
+                hint: 'Fixes grammar and punctuation while keeping your voice.',
+                icon: 'fa-check-double',
+                btnClass: 'ai-action-btn-success',
+                needsSelection: false
+            },
+            'spelling': {
+                category: 'spelling',
+                title: 'Spelling',
+                hint: 'Corrects misspellings and typos only.',
+                icon: 'fa-spell-check',
+                btnClass: 'ai-action-btn-success',
+                needsSelection: false
+            },
+            'linguistic-errors': {
+                category: 'linguistic_errors',
+                title: 'Linguistic errors',
+                hint: 'Flags wrong-word usage, tense shifts, agreement, and similar issues.',
+                icon: 'fa-language',
+                btnClass: 'ai-action-btn-success',
+                needsSelection: false
+            },
+            'plot-continuity': {
+                category: 'plot_continuity',
+                title: 'Plot continuity',
+                hint: 'Checks timeline, character facts, and story consistency.',
+                icon: 'fa-project-diagram',
+                btnClass: 'ai-action-btn-info',
+                needsSelection: false
+            },
+            'pacing-tension': {
+                category: 'pacing_tension',
+                title: 'Pacing & tension',
+                hint: 'Reviews scene rhythm, stakes, hooks, and tension.',
+                icon: 'fa-heartbeat',
+                btnClass: 'ai-action-btn-info',
+                needsSelection: false
+            },
+            'narrative-style': {
+                category: 'narrative_style',
+                title: 'Narrative style',
+                hint: 'Assesses voice, POV, tone, and show-vs-tell balance.',
+                icon: 'fa-feather-alt',
+                btnClass: 'ai-action-btn-info',
+                needsSelection: false
+            }
         };
     }
 
@@ -73,17 +120,9 @@ class AIWritingAssistant {
                         e.preventDefault();
                         this.generateContent();
                         break;
-                    case 'i':
-                        e.preventDefault();
-                        this.improveText();
-                        break;
-                    case 'a':
-                        e.preventDefault();
-                        this.analyzeText();
-                        break;
                     case 'p':
                         e.preventDefault();
-                        this.proofread();
+                        this.authorReview('grammar-punctuation');
                         break;
                 }
             }
@@ -113,7 +152,7 @@ class AIWritingAssistant {
                     <div class="ai-help-text">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Developmental</strong> adds or expands prose. <strong>Copy edit</strong> fixes what you already wrote—select text first when noted.
+                            <strong>Developmental</strong> adds or expands prose. <strong>Author editing</strong> polishes or reviews what you wrote — highlight a passage first when you want targeted feedback.
                         </small>
                     </div>
                     <div class="ai-section">
@@ -129,33 +168,37 @@ class AIWritingAssistant {
                         </button>
                     </div>
                     <div class="ai-section">
-                        <h6>Copyediting &amp; proofreading</h6>
-                        <p class="ai-section-hint">Polish existing text. Highlight a passage first when possible.</p>
-                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="improve-text" title="Rewrite selected text for clarity or style">
-                            <span class="ai-action-label"><i class="fas fa-edit" aria-hidden="true"></i><span>Improve text</span></span>
-                            <span class="ai-action-desc">Rewrite selection for grammar, style, clarity, dialogue, or description.</span>
+                        <h6>Author editing</h6>
+                        <p class="ai-section-hint">Copy edits and craft review for your manuscript.</p>
+                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="grammar-punctuation" title="Fix grammar and punctuation">
+                            <span class="ai-action-label"><i class="fas fa-check-double" aria-hidden="true"></i><span>Grammar &amp; punctuation</span></span>
+                            <span class="ai-action-desc">Correct grammar and punctuation; keeps your wording and voice.</span>
                         </button>
-                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="proofread" title="Fix spelling and grammar">
-                            <span class="ai-action-label"><i class="fas fa-spell-check" aria-hidden="true"></i><span>Proofread</span></span>
-                            <span class="ai-action-desc">Correct spelling, punctuation, and grammar (selection or full chapter).</span>
+                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="spelling" title="Fix spelling and typos">
+                            <span class="ai-action-label"><i class="fas fa-spell-check" aria-hidden="true"></i><span>Spelling</span></span>
+                            <span class="ai-action-desc">Fix misspellings and typos without rewriting sentences.</span>
                         </button>
-                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="suggest-improvements" title="List specific edits to consider">
-                            <span class="ai-action-label"><i class="fas fa-tools" aria-hidden="true"></i><span>Suggestions</span></span>
-                            <span class="ai-action-desc">Get a checklist of targeted edits without auto-rewriting.</span>
+                        <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="linguistic-errors" title="Find common linguistic mistakes">
+                            <span class="ai-action-label"><i class="fas fa-language" aria-hidden="true"></i><span>Common linguistic errors</span></span>
+                            <span class="ai-action-desc">Spot wrong words, tense shifts, agreement issues, and awkward phrasing.</span>
                         </button>
-                    </div>
-                    <div class="ai-section">
-                        <h6>Analysis</h6>
-                        <p class="ai-section-hint">Understand how the writing reads.</p>
-                        <button type="button" class="ai-action-btn ai-action-btn-info" data-ai-action="analyze-text" title="Analyze tone, pacing, and readability">
-                            <span class="ai-action-label"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Analyze text</span></span>
-                            <span class="ai-action-desc">Report on tone, pacing, readability, and structure (selection or full chapter).</span>
+                        <button type="button" class="ai-action-btn ai-action-btn-info" data-ai-action="plot-continuity" title="Check plot and story continuity">
+                            <span class="ai-action-label"><i class="fas fa-project-diagram" aria-hidden="true"></i><span>Plot continuity</span></span>
+                            <span class="ai-action-desc">Flag timeline slips, character inconsistencies, and contradictions.</span>
+                        </button>
+                        <button type="button" class="ai-action-btn ai-action-btn-info" data-ai-action="pacing-tension" title="Review pacing and tension">
+                            <span class="ai-action-label"><i class="fas fa-heartbeat" aria-hidden="true"></i><span>Pacing &amp; tension</span></span>
+                            <span class="ai-action-desc">Evaluate scene rhythm, stakes, hooks, and where tension sags or rushes.</span>
+                        </button>
+                        <button type="button" class="ai-action-btn ai-action-btn-info" data-ai-action="narrative-style" title="Review narrative style">
+                            <span class="ai-action-label"><i class="fas fa-feather-alt" aria-hidden="true"></i><span>Narrative style</span></span>
+                            <span class="ai-action-desc">Assess POV, voice, tone, and show-vs-tell balance.</span>
                         </button>
                     </div>
                 </div>
                 <div class="ai-panel-chat hidden" data-ai-panel="chat" hidden>
                     <p class="ai-chat-intro small text-muted">
-                        Ask anything — research, grammar, ideas, or topics unrelated to this book.
+                        Ask about grammar, plot, pacing, style, research, or anything else. For in-manuscript edits, use the Author editing tools.
                     </p>
                     <div class="ai-chat-messages" id="ai-chat-messages" aria-live="polite"></div>
                     <div class="ai-chat-compose">
@@ -972,25 +1015,79 @@ class AIWritingAssistant {
             return;
         }
 
+        if (this.authorReviewCategories[action]) {
+            await this.authorReview(action);
+            return;
+        }
+
         switch (action) {
             case 'generate-content':
                 await this.generateContent();
                 break;
-            case 'improve-text':
-                await this.improveText();
-                break;
-            case 'analyze-text':
-                await this.analyzeText();
-                break;
-            case 'proofread':
-                await this.proofread();
-                break;
             case 'generate-ideas':
                 await this.generateIdeas();
                 break;
-            case 'suggest-improvements':
-                await this.suggestImprovements();
-                break;
+        }
+    }
+
+    /**
+     * Build manuscript context for plot continuity and craft reviews.
+     */
+    getAuthorContext() {
+        const parts = [];
+        const titleInput = document.getElementById('title');
+        const summaryInput = document.getElementById('summary');
+        const headerHint = document.querySelector('.card-header small.text-muted');
+
+        if (headerHint) {
+            const match = headerHint.textContent.match(/Editing "(.+)" in "(.+)"/);
+            if (match) {
+                parts.push(`Book: ${match[2]}`);
+                parts.push(`Section: ${match[1]}`);
+            }
+        }
+        if (titleInput && titleInput.value.trim()) {
+            parts.push(`Section title: ${titleInput.value.trim()}`);
+        }
+        if (summaryInput && summaryInput.value.trim()) {
+            parts.push(`Section summary / notes: ${summaryInput.value.trim()}`);
+        }
+        return parts.join('\n');
+    }
+
+    /**
+     * Run a category-focused author review.
+     */
+    async authorReview(actionKey) {
+        const config = this.authorReviewCategories[actionKey];
+        if (!config) return;
+
+        const selected = this.getSelectedText();
+        const text = selected || this.getCurrentText();
+        if (!text || !text.trim()) {
+            this.showNotification('No text to review — select a passage or open a chapter', 'warning');
+            return;
+        }
+
+        this.showAIModal(`Reviewing: ${config.title}…`, 'loading');
+
+        try {
+            const payload = {
+                text,
+                category: config.category,
+                context: this.getAuthorContext()
+            };
+            const response = await fetch('/mybook/ai/author-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await this.handleAIResponse(response);
+            if (result) {
+                this.showAIResult(result, config.title);
+            }
+        } catch (error) {
+            this.showAIResult({ success: false, error: error.message }, 'Error');
         }
     }
 
@@ -1379,9 +1476,11 @@ class AIWritingAssistant {
         const rawContent = result.success ? 
             (result.content || result.ai_analysis || JSON.stringify(result, null, 2)) : 
             result.error;
+        const canApply = result.success && result.review_mode === 'correct';
         
-        // Clean the content for display (remove asterisks and formatting symbols)
-        const cleanedContent = this.cleanAIText(rawContent);
+        const cleanedContent = result.review_mode === 'feedback'
+            ? String(rawContent || '').trim()
+            : this.cleanAIText(rawContent);
         
         modal.innerHTML = `
             <div class="ai-modal-content">
@@ -1392,7 +1491,7 @@ class AIWritingAssistant {
                 </div>
                 ${result.success ? `
                     <div style="margin-top: 16px;">
-                        <button class="btn btn-primary" id="ai-use-result">Use This</button>
+                        ${canApply ? '<button class="btn btn-primary" id="ai-use-result">Use This</button>' : ''}
                         <button class="btn btn-secondary" id="ai-copy-result">Copy</button>
                     </div>
                 ` : ''}
