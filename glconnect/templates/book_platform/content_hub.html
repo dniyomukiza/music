@@ -175,7 +175,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-ch-topnav border-bottom border-white border-opacity-10" aria-label="Content hub">
         <div class="container py-1">
             <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ _dash_url }}">
-                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
+                Ink Studio
             </a>
             <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -184,54 +184,54 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ _dash_url }}">
-                            <i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard
+                            Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" href="{{ url_for('book_platform.content_hub') }}" aria-current="page">
-                            <i class="fas fa-compass me-1" aria-hidden="true"></i>Content
+                            Content
                         </a>
                     </li>
                     {% if ink_nav_show_author_nav|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.create_book') }}">
-                            <i class="fas fa-book-open me-1" aria-hidden="true"></i>Start book
+                            Start book
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">
-                            <i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace
+                            Marketplace
                         </a>
                     </li>
                     {% if ink_nav_show_my_library|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">
-                            <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
+                            My library
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.campaigns') }}">
-                            <i class="fas fa-seedling me-1" aria-hidden="true"></i>Book campaigns
+                            Book campaigns
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">
-                            <i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Earnings
+                            Earnings
                         </a>
                     </li>
                     {% if ink_nav_show_author_nav|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">
-                            <i class="fas fa-wallet me-1" aria-hidden="true"></i>Payout
+                            Payout
                         </a>
                     </li>
                     {% endif %}
                     {% if current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">
-                            <i class="fas fa-cogs me-1" aria-hidden="true"></i>Admin
+                            Admin
                         </a>
                     </li>
                     {% endif %}

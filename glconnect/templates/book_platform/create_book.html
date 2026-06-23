@@ -20,7 +20,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-upload-nav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
         <div class="container-fluid py-1 px-3 px-md-4">
             <a class="navbar-brand ink-mp-nav-brand me-2" href="{{ url_for('book_platform.dashboard') }}">
-                <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
+                Ink Studio
             </a>
             <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#createBookNav" aria-controls="createBookNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -28,39 +28,39 @@
             <div class="collapse navbar-collapse" id="createBookNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-home me-1" aria-hidden="true"></i>Dashboard</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}"><i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Content</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">Content</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open me-1" aria-hidden="true"></i>My books</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.books') }}">My books</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
                     </li>
                     {% if ink_nav_show_my_library|default(false) %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.my_library') }}"><i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.my_library') }}">My library</a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.campaigns') }}"><i class="fas fa-seedling me-1" aria-hidden="true"></i>Book campaigns</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.campaigns') }}">Book campaigns</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}"><i class="fas fa-dollar-sign me-1" aria-hidden="true"></i>Earnings</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">Earnings</a>
                     </li>
                     {% if ink_nav_show_author_nav|default(false) %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales"><i class="fas fa-wallet me-1" aria-hidden="true"></i>Payout</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">Payout</a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('book_platform.create_book') }}" aria-current="page"><i class="fas fa-plus me-1" aria-hidden="true"></i>Create book</a>
+                        <a class="nav-link active" href="{{ url_for('book_platform.create_book') }}" aria-current="page">Create book</a>
                     </li>
                     {% if current_user.role == 'admin' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}"><i class="fas fa-cogs me-1" aria-hidden="true"></i>Admin</a>
+                        <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">Admin</a>
                     </li>
                     {% endif %}
                 </ul>

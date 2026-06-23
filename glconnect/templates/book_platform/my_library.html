@@ -468,13 +468,13 @@
         <div class="container">
             <a class="ink-lib-brand" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace</a>
             <nav class="ink-lib-nav navbar-nav flex-row" aria-label="Main">
-                <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}"><i class="fas fa-store me-1" aria-hidden="true"></i>Marketplace</a>
+                <a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
                 {% if ink_nav_show_my_library|default(false) %}
-                <a class="nav-link active" aria-current="page" href="{{ url_for('book_platform.my_library') }}"><i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library</a>
+                <a class="nav-link active" aria-current="page" href="{{ url_for('book_platform.my_library') }}">My library</a>
                 {% endif %}
                 {% if ink_nav_show_author_nav|default(false) %}
-                <a class="nav-link" href="{{ url_for('book_platform.books') }}"><i class="fas fa-book-open me-1" aria-hidden="true"></i>My books</a>
-                <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales"><i class="fas fa-wallet me-1" aria-hidden="true"></i>Payout</a>
+                <a class="nav-link" href="{{ url_for('book_platform.books') }}">My books</a>
+                <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">Payout</a>
                 {% endif %}
                 {% if current_user.is_authenticated %}
                 <div class="nav-item dropdown d-inline-flex align-items-center">
@@ -484,11 +484,11 @@
                     <ul class="dropdown-menu dropdown-menu-end ink-lib-account-menu" aria-labelledby="libraryNavAccount">
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                         <li><hr class="dropdown-divider border-white border-opacity-25"></li>
-                        <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}"><i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sign out</a></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign out</a></li>
                     </ul>
                 </div>
                 {% else %}
-                <a class="nav-link" href="{{ url_for('routes1.login', next=request.url) }}"><i class="fas fa-sign-in-alt me-1" aria-hidden="true"></i>Sign in</a>
+                <a class="nav-link" href="{{ url_for('routes1.login', next=request.url) }}">Sign in</a>
                 <a class="nav-link" href="{{ url_for('routes1.register') }}">Register</a>
                 {% endif %}
             </nav>

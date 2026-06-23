@@ -19,17 +19,17 @@
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('book_platform.books') }}">
-                                <i class="fas fa-book"></i> My Books
+                                My Books
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link active" href="{{ url_for('book_platform.collaborate', book_id=book.id) }}">
-                                <i class="fas fa-users"></i> Collaborators
+                                Collaborators
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
-                                <i class="fas fa-arrow-left"></i> Back to Book
+                                Back to Book
                             </a>
                         </li>
                     </ul>

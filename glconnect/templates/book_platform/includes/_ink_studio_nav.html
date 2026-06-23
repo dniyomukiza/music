@@ -6,7 +6,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark ink-mp-sticky-nav ink-workspace-nav border-bottom border-white border-opacity-10" aria-label="Ink Studio">
     <div class="container-fluid ink-workspace-nav-inner px-3 px-lg-4">
         <a class="navbar-brand ink-mp-nav-brand" href="{{ url_for('book_platform.marketplace') if _v1 else _dash_url }}">
-            <i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio
+            Ink Studio
         </a>
         <button class="navbar-toggler rounded-3 border shadow-none ink-mp-nav-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#inkStudioNav" aria-controls="inkStudioNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -81,7 +81,7 @@
                 {% if current_user.is_authenticated %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="inkStudioAccount" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {{ current_user.username }}
+                        <i class="fas fa-user-circle me-1" aria-hidden="true"></i>{{ current_user.username }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown" aria-labelledby="inkStudioAccount">
                         <li><a class="dropdown-item" href="{{ url_for('book_platform.marketplace') if _v1 else _dash_url }}">{% if _v1 %}Marketplace{% elif _author %}Dashboard{% else %}My library{% endif %}</a></li>
