@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
+<footer class="company-footer" aria-label="Site footer">
+    <div class="company-footer-inner">
+        <span class="company-footer-brand">Ndotonic</span>
+        <div class="company-footer-menu">
+            <button type="button"
+                    class="company-footer-toggle"
+                    id="companyFooterToggle"
+                    aria-expanded="false"
+                    aria-controls="companyFooterDropdown">
+                Company <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="company-footer-dropdown" id="companyFooterDropdown" hidden>
+                <li><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
+                <li><a href="{{ url_for('blog.contact') }}">Get in Touch</a></li>
+                <li>
+                    <a href="https://www.instagram.com/glc_cool" target="_blank" rel="noopener noreferrer">
+                        Instagram @GLConnect_cool
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</footer>
+<script>
+(function () {
+    var toggle = document.getElementById('companyFooterToggle');
+    var menu = document.getElementById('companyFooterDropdown');
+    if (!toggle || !menu) return;
+
+    function closeMenu() {
+        menu.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    toggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = menu.hidden;
+        menu.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!menu.hidden && !menu.contains(e.target) && e.target !== toggle) {
+            closeMenu();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeMenu();
+    });
+})();
+</script>

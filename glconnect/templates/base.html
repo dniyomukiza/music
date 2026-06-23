@@ -221,7 +221,9 @@
 
     <nav>
       <ul>
-        <li><a href="https://glc.cool/about">About</a></li>
+        {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('routes.about') }}">About</a></li>
+        {% endif %}
         <li><a href="https://glc.cool/home">Home</a></li>
         <li><a href="{{ url_for('book_platform.ink_studio_access') }}">GLC</a></li>
         {% if ink_nav_show_my_library|default(false) %}

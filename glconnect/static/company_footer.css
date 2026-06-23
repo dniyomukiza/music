@@ -1,0 +1,99 @@
+.company-footer {
+  position: relative;
+  z-index: 10;
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  padding: 1.25rem clamp(1rem, 4vw, 2rem) clamp(1.75rem, 4vw, 2.25rem);
+  border-top: 1px solid rgba(201, 162, 39, 0.18);
+  background: rgba(3, 4, 4, 0.92);
+}
+
+.company-footer-inner {
+  width: min(100% - 2rem, 1180px);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.company-footer-brand {
+  font-family: "Syne", "Segoe UI", system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c9a227;
+}
+
+.company-footer-menu {
+  position: relative;
+}
+
+.company-footer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: 4px;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  background: rgba(201, 162, 39, 0.08);
+  color: #e8ece9;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.company-footer-toggle i {
+  font-size: 0.65rem;
+  color: #e0bc3a;
+  transition: transform 0.2s ease;
+}
+
+.company-footer-toggle[aria-expanded="true"] i {
+  transform: rotate(180deg);
+}
+
+.company-footer-dropdown {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.45rem);
+  min-width: 15rem;
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  border-radius: 8px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: #0c0f0e;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+
+.company-footer-dropdown a {
+  display: block;
+  padding: 0.65rem 1rem;
+  color: #e8ece9;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.company-footer-dropdown a:hover {
+  background: rgba(201, 162, 39, 0.12);
+  color: #e0bc3a;
+}
+
+@media (max-width: 540px) {
+  .company-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .company-footer-dropdown {
+    left: 0;
+    right: auto;
+    min-width: 100%;
+  }
+}

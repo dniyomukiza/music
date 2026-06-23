@@ -802,7 +802,7 @@
 
 .about-pipeline-step span { font-size: 0.82rem; color: var(--ab-muted); }
 
-/* ── Contact ── */
+/* ── Contact (legacy, unused) ── */
 .about-contact-wrap { padding-bottom: clamp(4rem, 10vw, 6rem); }
 
 .about-contact {
