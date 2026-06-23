@@ -83,6 +83,16 @@ def author_needs_stripe_payout_setup(bp_user) -> bool:
         return True
 
 
+def checkout_ready_author_connect_id(author) -> str:
+    """Use Connect for Checkout only when onboarding is complete (charges_enabled + details_submitted)."""
+    if not author:
+        return ""
+    raw = str(getattr(author, "stripe_connect_account_id", None) or "").strip()
+    if not raw or author_needs_stripe_payout_setup(author):
+        return ""
+    return raw
+
+
 def normalize_stripe_secret_candidate(val: Optional[str]) -> str:
     """Strip whitespace, UTF-8 BOM, and a single layer of surrounding quotes (common in dashboards)."""
     if not val or not isinstance(val, str):
@@ -193,6 +203,10 @@ def describe_stripe_checkout_error(
                 "and set your platform business or account name; complete any onboarding prompts."
             )
         d["operator_error_code"] = "STRIPE_BUSINESS_NAME_REQUIRED"
+        d["patron_message"] = (
+            "Checkout is not ready for this book's seller. "
+            "The author must complete Stripe payout setup, then try again."
+        )
 
     if "does not allow requests from your ip" in msg or (
         "ip address" in msg and "api key" in msg

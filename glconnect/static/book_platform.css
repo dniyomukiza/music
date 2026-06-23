@@ -3166,13 +3166,7 @@ body.ink-campaign-detail .ink-camp-hero-actions {
 }
 
 body.ink-campaign-detail .ink-camp-jump {
-    position: sticky;
-    top: 56px;
-    z-index: 20;
-    background: rgba(6, 8, 7, 0.92);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(201, 162, 39, 0.15);
-    padding: 0.65rem 0;
+    display: none;
 }
 
 body.ink-campaign-detail .ink-camp-jump-inner {
@@ -3215,25 +3209,21 @@ body.ink-campaign-detail .ink-camp-main {
 
 body.ink-campaign-detail .ink-camp-panel {
     background: rgba(12, 15, 14, 0.88);
-    border: 1px solid rgba(201, 162, 39, 0.18);
-    border-radius: 18px;
-    padding: 1.35rem 1.35rem 1.5rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(42, 61, 50, 0.5);
+    border-radius: 16px;
+    padding: 1.2rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: none;
 }
 
 body.ink-campaign-detail .ink-camp-panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    display: none;
 }
 
 body.ink-campaign-detail .ink-camp-panel-title {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     margin: 0;
     color: #f5f7f6;
 }
@@ -3462,10 +3452,10 @@ body.ink-campaign-detail .ink-camp-sidebar {
 
 body.ink-campaign-detail .ink-camp-side-card {
     background: rgba(12, 15, 14, 0.95);
-    border: 1px solid rgba(201, 162, 39, 0.28);
-    border-radius: 18px;
-    padding: 1.35rem;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(42, 61, 50, 0.55);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: none;
 }
 
 body.ink-campaign-detail .ink-camp-side-note {

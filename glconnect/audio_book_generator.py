@@ -511,9 +511,11 @@ class AudioBookGenerator:
                     # Return cached data, but filter for requested language
                     cached_voices = cache['data']
                     filtered_voices = self._filter_voices_by_language(cached_voices, language_filter)
+                    from glconnect.voice_display_names import enrich_voices_with_display_names
+
                     return {
                         'success': True,
-                        'voices': filtered_voices,
+                        'voices': enrich_voices_with_display_names(filtered_voices),
                         'cached': True
                     }
             
@@ -549,10 +551,12 @@ class AudioBookGenerator:
             # Update cache
             self._voices_cache['data'] = voices_by_type
             self._voices_cache['timestamp'] = current_time
-            
+
+            from glconnect.voice_display_names import enrich_voices_with_display_names
+
             return {
                 'success': True,
-                'voices': voices_by_type,
+                'voices': enrich_voices_with_display_names(voices_by_type),
                 'cached': False
             }
             

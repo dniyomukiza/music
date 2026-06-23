@@ -7,7 +7,7 @@
 {% set use_wtforms = use_wtforms|default(false) %}
 
 <div class="ink-cover-source mb-3">
-    <p class="small text-muted mb-2 mb-md-3">Add marketplace cover art — <strong>upload your own image</strong> or <strong>generate with AI</strong>. AI covers always include your <strong>book title</strong> and <strong>author name</strong>. Use the optional prompt below to say what you want and how it should look; if you skip it, the AI still adds title and author but may choose style and imagery on its own.</p>
+    <p class="small text-muted mb-2 mb-md-3">Add marketplace cover art — <strong>upload your own image</strong> or <strong>generate with AI</strong>. AI covers always include your <strong>book title</strong> and <strong>author name</strong>. For AI, you can skip the prompt and click <strong>Generate preview</strong> for an auto-generated cover, or describe what you want in the optional field below.</p>
     <div class="row g-2 ink-cover-source-pick" role="radiogroup" aria-label="Cover source">
         <div class="col-sm-6">
             <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeUpload" value="upload" autocomplete="off" checked data-cover-uid="{{ uid }}">
@@ -20,7 +20,7 @@
             <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeAi" value="ai" autocomplete="off" data-cover-uid="{{ uid }}">
             <label class="btn btn-outline-light w-100 text-start py-3 px-3" for="{{ uid }}CoverModeAi">
                 <i class="fas fa-magic me-2 text-warning" aria-hidden="true"></i><strong>Generate with AI</strong>
-                <span class="d-block small text-white-50 mt-1 mb-0">Title + author on cover; add a prompt or preview</span>
+                <span class="d-block small text-white-50 mt-1 mb-0">Preview auto-generates from your listing—or add a prompt</span>
             </label>
         </div>
     </div>
@@ -47,11 +47,11 @@
     <div id="{% if uid == 'create' %}coverArtBriefCreateWrap{% else %}coverArtBriefBlock{% endif %}" class="mb-3">
         <label for="cover_art_brief" class="form-label">Art direction <span class="text-muted fw-normal">(optional prompt)</span></label>
         {% if use_wtforms %}
-        {{ form.cover_art_brief(class="form-control ink-upload-control", rows="3", placeholder="Describe what you want and how—e.g. warm literary fiction, watercolor sunset, lone figure on a road; teal and gold palette; title large at top") }}
+        {{ form.cover_art_brief(class="form-control ink-upload-control", rows="3", placeholder="Optional — describe mood, colors, setting, and style. Or leave blank and click Generate preview below for an auto-generated cover from your title and listing details.") }}
         {% else %}
-        <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="3" placeholder="Describe what you want and how—e.g. moody noir, rain-soaked city, neon accents; bold title typography"></textarea>
+        <textarea class="form-control" id="cover_art_brief" name="cover_art_brief" rows="3" placeholder="Optional — describe mood, colors, setting, and style. Or leave blank and click Generate preview below for an auto-generated cover from your title and listing details."></textarea>
         {% endif %}
-        <div class="form-text">Minimum on every AI cover: your <strong>book title</strong> and <strong>author name</strong> (from your listing). Add mood, colors, setting, and style here so generation is not random—otherwise the AI picks the look on its own while still showing title and author. Generate a preview, then confirm before listing.</div>
+        <div class="form-text">You don’t need to write anything here. <strong>Click Generate preview</strong> with this field empty and the AI will build a cover from your title, description, and category (title and author name are always included). Add art direction only if you want a specific look—then preview again and choose <strong>Use this cover</strong> before listing.</div>
     </div>
     <div id="{% if uid == 'create' %}aiCreateCoverPreviewWrap{% else %}aiListingCoverPreviewWrap{% endif %}" class="mb-3 border rounded-3 p-3" style="border-color: rgba(201, 162, 39, 0.35) !important; background: rgba(8, 10, 9, 0.35);">
         <p class="small fw-semibold mb-1"><i class="fas fa-image me-1 text-warning"></i>AI cover preview</p>

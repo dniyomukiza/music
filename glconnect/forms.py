@@ -160,7 +160,7 @@ class DigitalBookUploadForm(FlaskForm):
         default='en',
     )
     digital_book_file = FileField('Digital Book File', validators=[
-        DataRequired(),
+        Optional(),
         FileAllowed(
             ['epub', 'docx', 'txt', 'pdf'],
             'Use EPUB, DOCX, or TXT for the best in-app reading experience. PDF is accepted for download but often does not reflow well in the browser reader.',
@@ -176,7 +176,7 @@ class DigitalBookUploadForm(FlaskForm):
     # Pricing
     digital_price = FloatField(
         'Digital Book Price (USD)',
-        validators=[InputRequired(message='Price is required.'), NumberRange(min=0, message='Price cannot be negative.')],
+        validators=[Optional(), NumberRange(min=0, message='Price cannot be negative.')],
     )
 
     submit = SubmitField('List on marketplace')

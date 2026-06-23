@@ -70,7 +70,7 @@
                 </li>
                 {% endif %}
                 <li class="nav-item">
-                    <a class="nav-link active" href="{{ url_for('book_platform.upload_digital_book') }}" aria-current="page"><i class="fas fa-file-upload me-1" aria-hidden="true"></i>List your book</a>
+                    <a class="nav-link active" href="{{ url_for('book_platform.list_book') }}" aria-current="page"><i class="fas fa-file-upload me-1" aria-hidden="true"></i>List your book</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('book_platform.create_book') }}"><i class="fas fa-pen me-1" aria-hidden="true"></i>Write in Ink Studio</a>
@@ -105,7 +105,14 @@
         <div class="row align-items-end g-4">
             <div class="col-lg-8">
                 <h1 class="ink-upload-title mb-3">Publish · List your book</h1>
-                <p class="ink-upload-lead mb-0">Like Kindle Direct Publishing: upload your finished ebook file, set cover and price, and go live. <strong>Step 1:</strong> manuscript + listing details. <strong>Step 2:</strong> optional AI audiobook.</p>
+                {% if listing_format == 'print' %}
+                <p class="ink-upload-lead mb-0">List a printed edition you ship yourself. Add cover, pricing, and shipping—buyers pay on Ink and you fulfill orders.</p>
+                {% elif listing_format == 'both' %}
+                <p class="ink-upload-lead mb-0">Upload your ebook and offer a print edition in one listing. <strong>Step 1:</strong> details, files, and pricing. <strong>Step 2:</strong> optional audiobook.</p>
+                {% else %}
+                <p class="ink-upload-lead mb-0">Upload your finished ebook file, set cover and price, and go live. <strong>Step 1:</strong> manuscript + listing details. <strong>Step 2:</strong> optional AI audiobook.</p>
+                {% endif %}
+                <p class="small mt-2 mb-0"><a href="{{ url_for('book_platform.list_book') }}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Change format (ebook / print / both)</a></p>
             </div>
         </div>
         <ol class="ink-upload-steps list-unstyled d-flex flex-wrap gap-2 gap-md-3 mt-4 mb-0" aria-label="Form sections">
@@ -137,6 +144,7 @@
                 <div id="uploadSubmitError" class="alert alert-danger d-none" role="alert"></div>
                 <form method="POST" enctype="multipart/form-data" id="digitalBookForm" class="ink-upload-form" aria-label="List book on marketplace" novalidate>
                     {{ form.hidden_tag() }}
+                    <input type="hidden" name="listing_format" id="listing_format" value="{{ listing_format }}">
 
                     <section class="ink-upload-card mb-4" id="section-details" aria-labelledby="heading-details">
                         <div class="ink-upload-card-head">
@@ -168,7 +176,7 @@
                                     {{ form.description(class="form-control ink-upload-control", rows="4", placeholder="Blurb for the listing—used for search, AI cover context, and optional voice preview samples.") }}
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="ebook_language" class="form-label">Language of the manuscript <span class="text-danger">*</span></label>
+                                    <label for="ebook_language" class="form-label">{% if listing_format == 'print' %}Language{% else %}Language of the manuscript{% endif %} <span class="text-danger">*</span></label>
                                     {{ form.ebook_language(class="form-select ink-upload-control", id="ebook_language") }}
                                     <div class="form-text">Must match the text inside your file. Drives voice options when you add an audiobook.</div>
                                     {% if form.ebook_language.errors %}
@@ -179,17 +187,17 @@
                         </div>
                     </section>
 
-                    <section class="ink-upload-card mb-4" id="section-files" aria-labelledby="heading-files">
+                    <section class="ink-upload-card mb-4" id="section-ebook-file" aria-labelledby="heading-files">
                         <div class="ink-upload-card-head">
                             <span class="ink-upload-badge" aria-hidden="true">2</span>
                             <div>
-                                <h2 id="heading-files" class="h5 mb-1">Ebook &amp; cover</h2>
-                                <p class="small text-muted mb-0">Upload your manuscript and add cover art (upload or AI).</p>
+                                <h2 id="heading-files" class="h5 mb-1">{% if listing_format == 'print' %}Cover art{% else %}Ebook &amp; cover{% endif %}</h2>
+                                <p class="small text-muted mb-0" id="heading-files-lead">{% if listing_format == 'print' %}Marketplace cover for your print listing (upload or AI).{% else %}Upload your manuscript and add cover art (upload or AI).{% endif %}</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">
                             <div class="row g-4">
-                                <div class="col-md-6">
+                                <div class="col-md-6{% if listing_format == 'print' %} d-none{% endif %}" id="ebookFileCol">
                                     <label class="form-label">Ebook file <span class="text-danger">*</span></label>
                                     <label class="ink-file-drop mb-0" for="digital_book_file_input">
                                         <input type="file" name="digital_book_file" id="digital_book_file_input" class="ink-file-drop-input" accept=".epub,.docx,.txt,.pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/pdf">
@@ -206,7 +214,7 @@
                                         <div class="invalid-feedback d-block">{% for error in form.digital_book_file.errors %}{{ error }}{% endfor %}</div>
                                     {% endif %}
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-6{% if listing_format == 'print' %} col-12{% endif %}" id="coverFileCol">
                                     <div class="d-flex align-items-center gap-2 mb-2">
                                         <h3 class="h6 mb-0">Cover art</h3>
                                         <span class="badge rounded-pill ink-upload-pill">Upload or AI</span>
@@ -219,17 +227,7 @@
                         </div>
                     </section>
 
-                    <section class="ink-upload-card mb-4 border border-primary border-opacity-25" id="step2-next" aria-labelledby="heading-next-step">
-                        <div class="ink-upload-card-head">
-                            <span class="ink-upload-badge bg-primary bg-opacity-25 text-primary" aria-hidden="true"><i class="fas fa-forward"></i></span>
-                            <div>
-                                <h2 id="heading-next-step" class="h5 mb-1">After you submit (step 2)</h2>
-                                <p class="small text-muted mb-0">Next page is audiobook-only. Publish audiobook now or skip.</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="ink-upload-card mb-4" id="section-price" aria-labelledby="heading-price">
+                    <section class="ink-upload-card mb-4{% if listing_format == 'print' %} d-none{% endif %}" id="section-price-ebook" aria-labelledby="heading-price">
                         <div class="ink-upload-card-head">
                             <span class="ink-upload-badge" aria-hidden="true">3</span>
                             <div>
@@ -243,12 +241,49 @@
                                     <label for="digital_price" class="form-label">Price (USD) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text">$</span>
-                                        {{ form.digital_price(class="form-control ink-upload-control", placeholder="0.00", step="0.01", min="0", required=true) }}
+                                        {{ form.digital_price(class="form-control ink-upload-control", placeholder="0.00", step="0.01", min="0") }}
                                     </div>
-                                    <div class="form-text">Required. Use <strong>0.00</strong> if you want a free ebook.</div>
+                                    <div class="form-text">Use <strong>0.00</strong> for a free ebook.</div>
                                     {% if form.digital_price.errors %}
                                         <div class="invalid-feedback d-block">{% for error in form.digital_price.errors %}{{ error }}{% endfor %}</div>
                                     {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="ink-upload-card mb-4{% if listing_format == 'ebook' %} d-none{% endif %}" id="section-price-print" aria-labelledby="heading-print-price">
+                        <div class="ink-upload-card-head">
+                            <span class="ink-upload-badge" aria-hidden="true">{% if listing_format == 'print' %}3{% else %}4{% endif %}</span>
+                            <div>
+                                <h2 id="heading-print-price" class="h5 mb-1">Print edition <span class="text-muted fw-normal">(you ship)</span></h2>
+                                <p class="small text-muted mb-0">Ink collects payment and sends you the buyer’s shipping address. You print and mail the book.</p>
+                            </div>
+                        </div>
+                        <div class="ink-upload-card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="print_price" class="form-label">Print book price (USD) <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control ink-upload-control" id="print_price" name="print_price" min="0" step="0.01" placeholder="18.00">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="print_shipping_price" class="form-label">Flat shipping (USD)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control ink-upload-control" id="print_shipping_price" name="print_shipping_price" value="5.00" min="0" step="0.01">
+                                    </div>
+                                    <div class="form-text">Covers postage—you keep 100% of shipping.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="print_handling_days" class="form-label">Ships within (days)</label>
+                                    <input type="number" class="form-control ink-upload-control" id="print_handling_days" name="print_handling_days" value="7" min="1" max="60">
+                                </div>
+                                <div class="col-12">
+                                    <label for="print_description" class="form-label">Print details (optional)</label>
+                                    <textarea class="form-control ink-upload-control" id="print_description" name="print_description" rows="2" placeholder="Paperback, signed copy, dimensions, etc."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -259,7 +294,7 @@
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-barcode"></i></span>
                             <div>
                                 <h2 id="heading-isbn" class="h5 mb-1">ISBN</h2>
-                                <p class="small text-muted mb-0">For ebook listing (print &amp; audiobook use the same number later).</p>
+                                <p class="small text-muted mb-0">For your listing{% if listing_format != 'print' %} (ebook{% if listing_format == 'both' %}, print{% endif %}{% if listing_format == 'ebook' %} — print &amp; audiobook use the same number later{% endif %}){% endif %}.</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">
@@ -318,11 +353,19 @@
                     </section>
 
                     <div class="ink-upload-mobile-hint d-xl-none rounded-3 p-3 mb-3 border" style="border-color: rgba(201, 162, 39, 0.25) !important; background: rgba(8, 10, 9, 0.5);">
-                        <p class="small fw-semibold mb-2"><i class="fas fa-clipboard-check me-2 text-primary"></i>Before you submit (step 1 only)</p>
+                        <p class="small fw-semibold mb-2"><i class="fas fa-clipboard-check me-2 text-primary"></i>Before you submit</p>
                         <ul class="small text-muted mb-0 ps-3">
-                            <li>Language &amp; category (Real Life or Nonfiction) match your file</li>
-                            <li>Cover: upload and/or AI preview (this submit)</li>
-                            <li>Next page: generate audiobook and choose publish mode</li>
+                            <li>Language &amp; category (Real Life or Nonfiction) match your listing</li>
+                            <li>Cover: upload and/or AI preview</li>
+                            {% if listing_format == 'print' %}
+                            <li>Print price + flat shipping for orders you fulfill</li>
+                            {% elif listing_format == 'both' %}
+                            <li>Ebook file + digital and print pricing</li>
+                            <li>Next page: optional audiobook</li>
+                            {% else %}
+                            <li>Ebook file uploaded</li>
+                            <li>Next page: optional audiobook</li>
+                            {% endif %}
                         </ul>
                     </div>
 
@@ -333,7 +376,9 @@
                                 <i class="fas fa-paper-plane me-2" aria-hidden="true"></i>List on marketplace
                             </button>
                         </div>
-                        <p class="small text-muted mb-0 mt-3 text-center text-md-start">Publish ebook now, then continue to audiobook step.</p>
+                        <p class="small text-muted mb-0 mt-3 text-center text-md-start" id="uploadSubmitHint">
+                            {% if listing_format == 'print' %}Your print listing goes live after you submit.{% elif listing_format == 'both' %}Publish ebook + print now, then continue to audiobook step.{% else %}Publish ebook now, then continue to audiobook step.{% endif %}
+                        </p>
                     </div>
                 </form>
             </div>
@@ -674,9 +719,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function runDigitalUploadClientChecks() {
-        const digitalFile = digitalFileInput || document.querySelector('input[name="digital_book_file"]');
-        if (!digitalFile || !digitalFile.files.length) {
-            return { ok: false, focus: digitalFile, msg: 'Please choose your ebook file (EPUB or DOCX recommended; TXT or PDF also accepted).' };
+        const listingFormatEl = document.getElementById('listing_format');
+        const listingFormat = listingFormatEl ? String(listingFormatEl.value || 'ebook') : 'ebook';
+        const wantsEbook = listingFormat === 'ebook' || listingFormat === 'both';
+        const wantsPrint = listingFormat === 'print' || listingFormat === 'both';
+
+        if (wantsEbook) {
+            const digitalFile = digitalFileInput || document.querySelector('input[name="digital_book_file"]');
+            if (!digitalFile || !digitalFile.files.length) {
+                return { ok: false, focus: digitalFile, msg: 'Please choose your ebook file (EPUB or DOCX recommended; TXT or PDF also accepted).' };
+            }
         }
         const coverModeAi = document.getElementById('listingCoverModeAi') && document.getElementById('listingCoverModeAi').checked;
         const ai = coverModeAi || (useAiCover && useAiCover.checked);
@@ -687,14 +739,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!hasCoverFile && ai && !listingCoverAccepted) {
             return { ok: false, focus: null, msg: 'Generate an AI preview and tap “Use this cover” before submitting.' };
         }
-        const digitalPriceEl = document.getElementById('digital_price') || document.querySelector('input[name="digital_price"]');
-        const rawPrice = digitalPriceEl ? String(digitalPriceEl.value || '').trim() : '';
-        const parsedPrice = rawPrice === '' ? NaN : Number(rawPrice);
-        if (rawPrice === '' || Number.isNaN(parsedPrice)) {
-            return { ok: false, focus: digitalPriceEl, msg: 'Set a digital ebook price before creating the listing.' };
+        if (wantsEbook) {
+            const digitalPriceEl = document.getElementById('digital_price') || document.querySelector('input[name="digital_price"]');
+            const rawPrice = digitalPriceEl ? String(digitalPriceEl.value || '').trim() : '';
+            const parsedPrice = rawPrice === '' ? NaN : Number(rawPrice);
+            if (rawPrice === '' || Number.isNaN(parsedPrice)) {
+                return { ok: false, focus: digitalPriceEl, msg: 'Set a digital ebook price before creating the listing.' };
+            }
+            if (parsedPrice < 0) {
+                return { ok: false, focus: digitalPriceEl, msg: 'Price cannot be negative.' };
+            }
         }
-        if (parsedPrice < 0) {
-            return { ok: false, focus: digitalPriceEl, msg: 'Price cannot be negative.' };
+        if (wantsPrint) {
+            const printPriceEl = document.getElementById('print_price');
+            const rawPrint = printPriceEl ? String(printPriceEl.value || '').trim() : '';
+            const parsedPrint = rawPrint === '' ? NaN : Number(rawPrint);
+            if (rawPrint === '' || Number.isNaN(parsedPrint) || parsedPrint <= 0) {
+                return { ok: false, focus: printPriceEl, msg: 'Set a print book price before listing a printed edition.' };
+            }
         }
         const genreEl = document.getElementById('genre');
         const genreVal = genreEl ? String(genreEl.value || '').trim() : '';

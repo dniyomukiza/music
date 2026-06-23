@@ -185,6 +185,13 @@ def is_book_published(book):
         return True
     if getattr(book, 'audiobook_published', False):
         return True
+    try:
+        from glconnect.book_purchase_format import print_listed
+
+        if print_listed(book):
+            return True
+    except Exception:
+        pass
     return False
 
 

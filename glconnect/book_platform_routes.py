@@ -115,6 +115,7 @@ from glconnect.stripe_utils import (
     checkout_customer_email_for_user,
     marketplace_book_payment_intent_data,
     author_needs_stripe_payout_setup,
+    checkout_ready_author_connect_id,
 )
 from glconnect.book_utils import (
     audiobook_ready_for_marketplace_publish,
@@ -1887,17 +1888,6 @@ def edit_book(book_id, user_profile, profile_type):
                 book.language = data.get('language', '')
             book.target_audience = data.get('target_audience', '')
             book.price = float(data.get('price', 0)) if data.get('price') else None
-            book.print_enabled = _as_bool(data.get('print_enabled'))
-            if data.get('print_price'):
-                book.print_price = float(data.get('print_price'))
-            elif not book.print_enabled:
-                book.print_price = None
-            book.print_shipping_price = float(data.get('print_shipping_price') or 0) if data.get('print_shipping_price') else 0.0
-            if data.get('print_handling_days'):
-                book.print_handling_days = max(1, int(data.get('print_handling_days')))
-            book.print_description = (data.get('print_description') or '').strip() or None
-            if book.print_enabled and (not book.print_price or book.print_price <= 0):
-                return jsonify({'success': False, 'error': 'Set a print book price before enabling print sales.'}), 400
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
             cover_upload = request.files.get('cover_upload')
@@ -2030,9 +2020,8 @@ def edit_book(book_id, user_profile, profile_type):
             )
 
             if newly_listing or (
-                book.print_enabled
-                and not getattr(book, 'listing_attestation_accepted_at', None)
-                and _as_bool(data.get('print_enabled'))
+                not getattr(book, 'listing_attestation_accepted_at', None)
+                and print_listed(book)
             ):
                 if not newly_listing:
                     terms_error = validate_listing_terms_payload(data)
@@ -2136,12 +2125,26 @@ def book_audiobook(book_id, user_profile, profile_type):
     except Exception:
         investment_readiness = None
 
+    audiobook_voice_label = None
+    if book.audiobook_voice:
+        from glconnect.book_language_tts import tts_voice_list_prefix
+        from glconnect.voice_display_names import lookup_display_name
+
+        voice_result = audio_book_generator.get_available_voices(
+            language_filter=tts_voice_list_prefix(book.language or "en")
+        )
+        if voice_result.get("success"):
+            audiobook_voice_label = lookup_display_name(
+                book.audiobook_voice, voice_result.get("voices") or {}
+            )
+
     return render_template(
         'book_platform/book_audiobook.html',
         book=book,
         ebook_language_label=language_label(book.language),
         investment_campaign=campaign,
         investment_readiness=investment_readiness,
+        audiobook_voice_label=audiobook_voice_label or book.audiobook_voice,
     )
 
 # Chapter management routes
@@ -2609,9 +2612,7 @@ def prepare_audiobook_segments(book_id):
         'segments': segments,
         'notice': (
             'Your ebook listing is unchanged—footnotes, index, tables, and appendix stay in the digital edition. '
-            'Here you only choose what is read for the audiobook. Uncheck sections you do not want narrated. '
-            'Suggestions use Gemini when GEMINI_API_KEY or GOOGLE_API_KEY is set (same as news), '
-            'otherwise title-based rules only.'
+            'Here you only choose what is read for the audiobook. Uncheck sections you do not want narrated.'
         ),
     })
 
@@ -4752,12 +4753,24 @@ def purchase_book(book_id):
             payment_amount = list_checkout_total
             logger.info(f"Using checkout total for {purchase_type}: ${payment_amount:.2f}")
         
-        # Stripe Connect: require author connected account unless dev fallback is enabled
-        author_connect_id = (
+        # Stripe Connect: use author account only when onboarding is complete
+        raw_author_connect_id = (
             (book.author.stripe_connect_account_id or "").strip()
             if book.author
             else ""
         )
+        author_connect_id = checkout_ready_author_connect_id(book.author)
+        if raw_author_connect_id and not author_connect_id:
+            _debug_patron_log(
+                "H2",
+                "book_platform_routes.py:purchase_book",
+                "skipped incomplete Connect account; using platform checkout",
+                {
+                    "book_id": book_id,
+                    "raw_connect_set": True,
+                    "author_payout_setup_needed": True,
+                },
+            )
         payment_intent_data, connect_checkout_error = marketplace_book_payment_intent_data(
             book=book,
             purchase_type=purchase_type,
@@ -5498,7 +5511,7 @@ def purchase_book(book_id):
                 if not book:
                     return jsonify({'error': 'Book not found'}), 404
                 
-                _cid_fb = (book.author.stripe_connect_account_id or "").strip() if book.author else ""
+                _cid_fb = checkout_ready_author_connect_id(book.author) if book.author else ""
                 _pi_fb, _connect_err_fb = marketplace_book_payment_intent_data(
                     book=book,
                     purchase_type=purchase_type,
@@ -7130,10 +7143,27 @@ def get_chapter_images(book_id, user_profile, profile_type):
 
 # Digital Book Upload Routes
 
-def _render_upload_digital_book_form(form):
+LISTING_FORMATS = frozenset({"ebook", "print", "both"})
+
+
+def _normalize_listing_format(value, default="ebook"):
+    fmt = (value or default).strip().lower()
+    return fmt if fmt in LISTING_FORMATS else default
+
+
+def _listing_wants_ebook(listing_format: str) -> bool:
+    return listing_format in ("ebook", "both")
+
+
+def _listing_wants_print(listing_format: str) -> bool:
+    return listing_format in ("print", "both")
+
+
+def _render_upload_digital_book_form(form, listing_format="ebook"):
     return render_template(
         "book_platform/upload_digital_book.html",
         form=form,
+        listing_format=_normalize_listing_format(listing_format),
     )
 
 
@@ -7145,7 +7175,7 @@ def _upload_digital_book_accepts_json():
     return "application/json" in accept
 
 
-def _upload_digital_book_validation_response(form):
+def _upload_digital_book_validation_response(form, listing_format="ebook"):
     import os as _os
 
     lines = []
@@ -7160,14 +7190,24 @@ def _upload_digital_book_validation_response(form):
         for error in errors:
             if field != "recap" or _os.getenv("FLASK_ENV") != "development":
                 flash(f"{field}: {error}", "error")
-    return _render_upload_digital_book_form(form)
+    return _render_upload_digital_book_form(form, listing_format)
 
 
-def _upload_digital_book_error(form, message, status_code=400):
+def _upload_digital_book_error(form, message, status_code=400, listing_format="ebook"):
     if _upload_digital_book_accepts_json():
         return jsonify(success=False, error=message), status_code
     flash(message, "error")
-    return _render_upload_digital_book_form(form)
+    return _render_upload_digital_book_form(form, listing_format)
+
+
+@book_bp.route('/list-book', methods=['GET'])
+@book_platform_required
+def list_book():
+    """Choose ebook, print, or both before the listing form."""
+    if _author_needs_publishing_agreement(current_user.user_id):
+        flash('Accept the Author Publishing Agreement before listing books.', 'warning')
+        return _redirect_to_publishing_agreement(url_for('book_platform.list_book'))
+    return render_template('book_platform/list_book.html')
 
 
 @book_bp.route('/upload-digital-book', methods=['GET', 'POST'])
@@ -7211,7 +7251,12 @@ def upload_digital_book():
             for field, errors in form.errors.items():
                 for error in errors:
                     logger.warning(f"  {field}: {error}")
-            return _upload_digital_book_validation_response(form)
+            return _upload_digital_book_validation_response(
+                form,
+                _normalize_listing_format(
+                    request.form.get('listing_format') or request.args.get('listing')
+                ),
+            )
         else:
             logger.info("Form validation passed")
     
@@ -7223,8 +7268,13 @@ def upload_digital_book():
         return str(v).strip().lower() in ("1", "true", "yes", "on")
 
     if form.validate_on_submit():
+        listing_format = _normalize_listing_format(
+            request.form.get('listing_format') or request.args.get('listing')
+        )
+        wants_ebook = _listing_wants_ebook(listing_format)
+        wants_print = _listing_wants_print(listing_format)
         try:
-            logger.info("Starting digital book upload process")
+            logger.info("Starting book listing upload (format=%s)", listing_format)
             
             # Get user profile
             user_profile, profile_type = get_user_profile()
@@ -7233,7 +7283,9 @@ def upload_digital_book():
             if not user_profile:
                 logger.error("No user profile found")
                 return _upload_digital_book_error(
-                    form, "Please ensure you have an Ink Studio or Writer profile."
+                    form,
+                    "Please ensure you have an Ink Studio or Writer profile.",
+                    listing_format=listing_format,
                 )
             
             author_id = get_profile_id(user_profile, profile_type)
@@ -7244,53 +7296,88 @@ def upload_digital_book():
                 return _upload_digital_book_error(
                     form,
                     "Could not determine author ID. Please ensure your profile is set up correctly.",
+                    listing_format=listing_format,
                 )
 
             terms_error = validate_listing_terms_payload(request.form or {})
             if terms_error:
-                return _upload_digital_book_error(form, terms_error)
+                return _upload_digital_book_error(form, terms_error, listing_format=listing_format)
 
             if not is_valid_ink_upload_genre(form.genre.data or ''):
                 return _upload_digital_book_error(
                     form,
                     "Select Real Life or Nonfiction as the book category.",
+                    listing_format=listing_format,
                 )
+
+            print_price_val = None
+            print_shipping = 0.0
+            print_handling = 7
+            print_description = None
+            if wants_print:
+                try:
+                    print_price_val = float(request.form.get('print_price') or 0)
+                except (TypeError, ValueError):
+                    return _upload_digital_book_error(
+                        form,
+                        "Enter a valid print book price.",
+                        listing_format=listing_format,
+                    )
+                if print_price_val <= 0:
+                    return _upload_digital_book_error(
+                        form,
+                        "Set a print book price before listing a printed edition.",
+                        listing_format=listing_format,
+                    )
+                try:
+                    print_shipping = max(0.0, float(request.form.get('print_shipping_price') or 5))
+                except (TypeError, ValueError):
+                    print_shipping = 5.0
+                try:
+                    print_handling = max(1, min(60, int(request.form.get('print_handling_days') or 7)))
+                except (TypeError, ValueError):
+                    print_handling = 7
+                print_description = (request.form.get('print_description') or '').strip() or None
             
-            # Handle file uploads
             digital_file = form.digital_book_file.data
             cover_image = form.cover_image.data
             
-            logger.info(f"Digital file: {digital_file.filename if digital_file else 'None'}")
+            logger.info(f"Digital file: {digital_file.filename if digital_file and getattr(digital_file, 'filename', None) else 'None'}")
             logger.info(f"Cover image: {cover_image.filename if cover_image else 'None'}")
             logger.info(f"Title: {form.title.data}")
             
-            # Create upload directories
             digital_books_dir = os.path.join(current_app.root_path, 'static', 'digital_books')
             covers_dir = os.path.join(current_app.root_path, 'static', 'book_covers')
             os.makedirs(digital_books_dir, exist_ok=True)
             os.makedirs(covers_dir, exist_ok=True)
-            
-            # Save digital book file
-            digital_filename = secure_filename(digital_file.filename)
-            name, ext = os.path.splitext(digital_filename)
-            unique_digital_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
-            digital_file_path = os.path.join(digital_books_dir, unique_digital_filename)
-            digital_file.save(digital_file_path)
-            
-            # Get file info
-            file_stat = os.stat(digital_file_path)
-            file_type = ext.lower().lstrip('.')
-            
-            # Extract text from digital book (before cover AI so we fail fast on bad files)
-            extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
-            
-            if not extraction_result['success']:
-                return _upload_digital_book_error(
-                    form,
-                    f"Failed to extract text from file: {extraction_result['error']}",
-                )
 
-            # Cover: author file, or optional AI (Gemini); at least one required for marketplace rules
+            unique_digital_filename = None
+            file_type = None
+            file_stat = None
+            extraction_result = {'word_count': 0, 'success': True}
+
+            if wants_ebook:
+                if not digital_file or not getattr(digital_file, 'filename', None):
+                    return _upload_digital_book_error(
+                        form,
+                        "Please choose your ebook file (EPUB or DOCX recommended).",
+                        listing_format=listing_format,
+                    )
+                digital_filename = secure_filename(digital_file.filename)
+                name, ext = os.path.splitext(digital_filename)
+                unique_digital_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+                digital_file_path = os.path.join(digital_books_dir, unique_digital_filename)
+                digital_file.save(digital_file_path)
+                file_stat = os.stat(digital_file_path)
+                file_type = ext.lower().lstrip('.')
+                extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
+                if not extraction_result['success']:
+                    return _upload_digital_book_error(
+                        form,
+                        f"Failed to extract text from file: {extraction_result['error']}",
+                        listing_format=listing_format,
+                    )
+
             cover_path = None
             has_cover_file = bool(cover_image and getattr(cover_image, "filename", None))
             if has_cover_file:
@@ -7307,28 +7394,39 @@ def upload_digital_book():
                         form,
                         "Generate an AI cover preview and choose “Use this cover” before listing your book, "
                         "or upload a cover image instead.",
+                        listing_format=listing_format,
                     )
             else:
                 return _upload_digital_book_error(
                     form,
                     "Please upload a cover image or choose Generate with AI and confirm a preview.",
+                    listing_format=listing_format,
                 )
 
             primary_lang = (form.ebook_language.data or "en").lower().strip()
             if primary_lang not in TTS_BOOK_LANGUAGES:
                 return _upload_digital_book_error(
-                    form, "Choose a supported ebook language from the list."
-                )
-            if form.digital_price.data is None:
-                return _upload_digital_book_error(
-                    form, "Set a digital ebook price before creating the listing."
-                )
-            if form.digital_price.data < 0:
-                return _upload_digital_book_error(
-                    form, "Price cannot be negative."
+                    form,
+                    "Choose a supported language from the list.",
+                    listing_format=listing_format,
                 )
 
-            # Create book project
+            digital_price = None
+            if wants_ebook:
+                if form.digital_price.data is None:
+                    return _upload_digital_book_error(
+                        form,
+                        "Set a digital ebook price before creating the listing.",
+                        listing_format=listing_format,
+                    )
+                if form.digital_price.data < 0:
+                    return _upload_digital_book_error(
+                        form,
+                        "Price cannot be negative.",
+                        listing_format=listing_format,
+                    )
+                digital_price = form.digital_price.data
+
             logger.info(f"Creating book project: {form.title.data}")
             book = BookProject(
                 title=form.title.data,
@@ -7336,22 +7434,35 @@ def upload_digital_book():
                 genre=form.genre.data,
                 language=primary_lang,
                 author_id=author_id,
-                word_count=extraction_result['word_count'],
-                price=form.digital_price.data,
+                word_count=extraction_result.get('word_count') or 0,
+                price=digital_price,
                 cover_image=cover_path,
-                digital_file_path=f"digital_books/{unique_digital_filename}",
-                digital_file_type=file_type,
-                digital_file_size=file_stat.st_size,
-                digital_file_uploaded_at=datetime.now(timezone.utc),
-                status=BookStatus.DRAFT
+                status=BookStatus.DRAFT,
             )
-            # Step 1 auto-publishes ebook listing; step 2 is audiobook-only tasks.
-            book.digital_book_published = True
-            book.digital_book_published_at = datetime.now(timezone.utc)
+            if wants_ebook and unique_digital_filename:
+                book.digital_file_path = f"digital_books/{unique_digital_filename}"
+                book.digital_file_type = file_type
+                book.digital_file_size = file_stat.st_size if file_stat else None
+                book.digital_file_uploaded_at = datetime.now(timezone.utc)
+                book.digital_book_published = True
+                book.digital_book_published_at = datetime.now(timezone.utc)
+            else:
+                book.digital_book_published = False
+
+            if wants_print:
+                book.print_enabled = True
+                book.print_price = print_price_val
+                book.print_shipping_price = print_shipping
+                book.print_handling_days = print_handling
+                book.print_description = print_description
+                if not wants_ebook:
+                    book.status = BookStatus.PUBLISHED
+                    book.published_at = datetime.now(timezone.utc)
+
             record_listing_attestation(book)
             
             db.session.add(book)
-            db.session.flush()  # Flush to get book.id
+            db.session.flush()
             logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
 
             from glconnect.isbn_pool_service import apply_listing_isbn, IsbnPoolError, IsbnValidationError
@@ -7364,26 +7475,39 @@ def upload_digital_book():
                 )
             except IsbnValidationError as e:
                 db.session.rollback()
-                return _upload_digital_book_error(form, str(e))
+                return _upload_digital_book_error(form, str(e), listing_format=listing_format)
             except IsbnPoolError as e:
                 db.session.rollback()
-                return _upload_digital_book_error(form, str(e))
+                return _upload_digital_book_error(form, str(e), listing_format=listing_format)
 
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
 
-            flash(
-                "Step 1 complete: ebook is now live. Next: generate audiobook or skip for now."
-                + (
-                    " Note: PDF listings often read poorly in-browser; consider also offering EPUB or DOCX for reflowable reading."
-                    if file_type == "pdf"
-                    else ""
-                ),
-                "success",
-            )
+            if wants_print and not wants_ebook:
+                flash(
+                    "Your print listing is live. When someone orders, you'll get their shipping address to fulfill.",
+                    "success",
+                )
+                next_step_url = url_for("book_platform.books")
+            elif wants_ebook:
+                parts = ["Step 1 complete: ebook is now live."]
+                if wants_print:
+                    parts.append("Print edition is also listed.")
+                parts.append("Next: generate audiobook or skip for now.")
+                flash(
+                    " ".join(parts)
+                    + (
+                        " Note: PDF listings often read poorly in-browser; consider also offering EPUB or DOCX for reflowable reading."
+                        if file_type == "pdf"
+                        else ""
+                    ),
+                    "success",
+                )
+                next_step_url = url_for("book_platform.book_audiobook", book_id=book.id)
+            else:
+                next_step_url = url_for("book_platform.books")
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
-            next_step_url = url_for("book_platform.book_audiobook", book_id=book.id)
             if _upload_digital_book_accepts_json():
                 return jsonify(
                     success=True,
@@ -7399,13 +7523,26 @@ def upload_digital_book():
             logger.error(f"Traceback: {traceback.format_exc()}")
             print(f"ERROR in upload_digital_book: {str(e)}")
             traceback.print_exc()
-            return _upload_digital_book_error(form, error_msg, 500)
+            return _upload_digital_book_error(
+                form,
+                error_msg,
+                500,
+                listing_format=_normalize_listing_format(
+                    request.form.get('listing_format') or request.args.get('listing')
+                ),
+            )
     
-    # GET request - show form
     if request.method == 'GET':
-        logger.info("Showing upload digital book form")
-    
-    return _render_upload_digital_book_form(form)
+        listing_format = _normalize_listing_format(request.args.get('listing'), default='')
+        if listing_format not in LISTING_FORMATS:
+            return redirect(url_for('book_platform.list_book'))
+        logger.info("Showing upload digital book form (listing=%s)", listing_format)
+        return _render_upload_digital_book_form(form, listing_format)
+
+    listing_format = _normalize_listing_format(
+        request.form.get('listing_format') or request.args.get('listing')
+    )
+    return _render_upload_digital_book_form(form, listing_format)
 
 @book_bp.route('/debug/check-upload', methods=['GET'])
 @book_platform_required

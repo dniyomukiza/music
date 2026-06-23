@@ -28,9 +28,9 @@
                     <p class="small text-white-50 text-uppercase ink-dash-kicker mb-2 mb-md-3">Welcome back</p>
                     {% if is_author and current_user.role == 'author' %}
                     <h1 class="ink-mp-hero-title mb-3">{{ user_profile.pen_name or current_user.first_name or current_user.username }}</h1>
-                    <p class="lead mb-4 ink-mp-hero-lead">Upload finished manuscripts to sell—like Kindle—or write chapter-by-chapter in Ink Studio when you need a built-in editor.</p>
+                    <p class="lead mb-4 ink-mp-hero-lead">List ebooks, printed books you ship, or both—then write chapter-by-chapter in Ink Studio when you need a built-in editor.</p>
                     <div class="d-flex flex-wrap ink-dash-cta-row gap-2">
-                        <a href="{{ url_for('book_platform.upload_digital_book') }}" class="btn btn-lg btn-ink-gold">
+                        <a href="{{ url_for('book_platform.list_book') }}" class="btn btn-lg btn-ink-gold">
                             <i class="fas fa-file-upload me-2" aria-hidden="true"></i>List your book
                         </a>
                         <a href="{{ url_for('book_platform.books') }}" class="btn btn-lg ink-mp-cta">

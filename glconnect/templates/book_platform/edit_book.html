@@ -219,52 +219,6 @@
                             </div>
                             {% endif %}
 
-                            <div class="card mb-4 border-secondary">
-                                <div class="card-header bg-dark text-white">
-                                    <h6 class="mb-0"><i class="fas fa-book me-2"></i>Print edition (you ship)</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p class="small text-muted">Ink collects payment and sends you the buyer’s shipping address. You print and mail the book yourself.</p>
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="print_enabled" name="print_enabled" value="on"
-                                               {% if book.print_enabled %}checked{% endif %}>
-                                        <label class="form-check-label" for="print_enabled">Offer print edition on marketplace</label>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-4 mb-3">
-                                            <label for="print_price" class="form-label">Print book price (USD)</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" class="form-control" id="print_price" name="print_price"
-                                                       value="{{ book.print_price or '' }}" min="0" step="0.01" placeholder="18.00">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 mb-3">
-                                            <label for="print_shipping_price" class="form-label">Flat shipping (USD)</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" class="form-control" id="print_shipping_price" name="print_shipping_price"
-                                                       value="{{ book.print_shipping_price if book.print_shipping_price is not none else '5.00' }}" min="0" step="0.01">
-                                            </div>
-                                            <div class="form-text">You keep 100% of shipping to cover postage.</div>
-                                        </div>
-                                        <div class="col-md-4 mb-3">
-                                            <label for="print_handling_days" class="form-label">Ships within (days)</label>
-                                            <input type="number" class="form-control" id="print_handling_days" name="print_handling_days"
-                                                   value="{{ book.print_handling_days or 7 }}" min="1" max="60">
-                                        </div>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label for="print_description" class="form-label">Print details (optional)</label>
-                                        <textarea class="form-control" id="print_description" name="print_description" rows="2"
-                                                  placeholder="Paperback, signed copy, etc.">{{ book.print_description or '' }}</textarea>
-                                    </div>
-                                    <a href="{{ url_for('book_platform.book_print_orders', book_id=book.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-shipping-fast me-1"></i>Print orders to fulfill
-                                    </a>
-                                </div>
-                            </div>
-
                             <div class="mb-3">
                                 <label for="tags" class="form-label">Tags</label>
                                 <input type="text" class="form-control" id="tags" name="tags" 

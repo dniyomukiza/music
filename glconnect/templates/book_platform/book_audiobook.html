@@ -102,7 +102,7 @@
                                     </p>
                                     <p class="text-muted mb-2">
                                         <i class="fas fa-microphone me-1"></i>
-                                        Voice: {{ book.audiobook_voice or 'en-US-Neural2-A' }}
+                                        Voice: {{ audiobook_voice_label|default(book.audiobook_voice or 'Default voice', true) }}
                                     </p>
                                     <p class="text-muted mb-2">
                                         <i class="fas fa-dollar-sign me-1"></i>
@@ -918,13 +918,24 @@
             });
         }
         
+        function voiceDisplayName(voice) {
+            return (voice && voice.display_name) ? voice.display_name : (voice ? voice.name : '');
+        }
+
+        function getDisplayNameForVoiceId(voiceName) {
+            for (const type of ['Neural2', 'Studio', 'Chirp3']) {
+                const match = (availableVoices[type] || []).find(function (v) { return v.name === voiceName; });
+                if (match) return voiceDisplayName(match);
+            }
+            return voiceName;
+        }
+        
         // Create a voice card element
         function createVoiceCard(voice, voiceType) {
             const col = document.createElement('div');
             col.className = 'col-md-6 col-lg-4';
             
-            const genderIcon = voice.gender === 'FEMALE' ? 'fa-venus' : 'fa-mars';
-            const genderText = voice.gender === 'FEMALE' ? 'Female' : 'Male';
+            const label = voiceDisplayName(voice);
             const isSelected = selectedVoice === voice.name;
             
             col.innerHTML = `
@@ -932,11 +943,7 @@
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h6 class="card-title mb-1 small">${voice.name}</h6>
-                                <small class="text-muted">
-                                    <i class="fas ${genderIcon} me-1"></i>${genderText}
-                                    <span class="badge bg-secondary ms-2">${voiceCategoryLabel(voiceType)}</span>
-                                </small>
+                                <h6 class="card-title mb-1">${label}</h6>
                             </div>
                             ${isSelected ? '<i class="fas fa-check-circle text-primary"></i>' : ''}
                         </div>
@@ -960,7 +967,7 @@
             // Update selected voice display
             const display = document.getElementById('selectedVoiceDisplay');
             const nameSpan = document.getElementById('selectedVoiceName');
-            nameSpan.textContent = voiceName + ` (${voiceCategoryLabel(voiceType)})`;
+            nameSpan.textContent = getDisplayNameForVoiceId(voiceName);
             nameSpan.style.color = '';
             display.style.display = 'block';
             
@@ -1192,7 +1199,9 @@
                 if (panel) panel.classList.remove('d-none');
                 if (badge) {
                     badge.classList.remove('d-none');
-                    badge.textContent = result.classifier === 'gemini' ? 'Suggestions: Gemini' : 'Suggestions: title rules (set GEMINI_API_KEY or GOOGLE_API_KEY for Gemini)';
+                    badge.textContent = result.classifier === 'gemini'
+                        ? 'Suggestions: AI'
+                        : 'Suggestions: section titles';
                 }
                 if (statusEl) statusEl.textContent = result.segment_count + ' section(s) — adjust toggles, then generate.';
                 showNotification('Sections loaded. Adjust checkboxes if needed, then generate.', 'success');

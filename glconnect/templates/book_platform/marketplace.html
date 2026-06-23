@@ -63,7 +63,7 @@
                             More
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10 mt-1" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="marketplaceNavMore">
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.upload_digital_book') }}"><i class="fas fa-file-upload me-2" aria-hidden="true"></i>List your book</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('book_platform.list_book') }}"><i class="fas fa-file-upload me-2" aria-hidden="true"></i>List your book</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}"><i class="fas fa-wallet me-2" aria-hidden="true"></i>Payouts</a></li>
                         </ul>
@@ -1401,7 +1401,9 @@
                 if (!response.ok) {
                     return response.json().then(data => {
                         console.error('Server returned error:', data);
-                        throw new Error(data.error || data.message || 'Server error: ' + response.status);
+                        const code = data.error_code || data.operator_error_code;
+                        const detailMsg = data.error || data.message || ('Server error: ' + response.status);
+                        throw new Error(code ? ('[' + code + '] ' + detailMsg) : detailMsg);
                     });
                 }
                 return response.json();
@@ -1430,7 +1432,9 @@
                         alert('Purchase link not available. Please try again.');
                     }
                 } else {
-                    alert('Purchase failed: ' + (data.error || 'Unknown error'));
+                    const code = data.error_code || data.operator_error_code;
+                    const msg = data.error || 'Unknown error';
+                    alert('Purchase failed: ' + (code ? ('[' + code + '] ') : '') + msg);
                 }
             })
             .catch(error => {

@@ -99,6 +99,11 @@ class DatabaseOptimizer:
             BookProject.status == BookStatus.PUBLISHED,
             BookProject.digital_book_published == True,
             BookProject.audiobook_published == True,
+            and_(
+                BookProject.print_enabled == True,
+                BookProject.print_price.isnot(None),
+                BookProject.print_price > 0,
+            ),
         )
 
     @staticmethod
