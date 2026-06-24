@@ -1,7 +1,6 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=5">
 <footer class="company-footer" aria-label="Site footer">
     <div class="company-footer-inner">
-        <span class="company-footer-brand">Ndotonic</span>
         <div class="company-footer-menu">
             <button type="button"
                     class="company-footer-toggle"
@@ -11,9 +10,9 @@
                 Company <i class="fas fa-chevron-down" aria-hidden="true"></i>
             </button>
             <ul class="company-footer-dropdown" id="companyFooterDropdown" hidden>
-                <li><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
-                <li><a href="{{ url_for('blog.contact') }}">Get in Touch</a></li>
-                <li><span class="company-footer-handle">@GLConnect_cool</span></li>
+                <li class="company-footer-item"><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
+                <li class="company-footer-item"><a href="{{ url_for('blog.contact') }}">Get in Touch</a></li>
+                <li class="company-footer-item"><span class="company-footer-handle">@GLConnect_cool</span></li>
             </ul>
         </div>
     </div>
