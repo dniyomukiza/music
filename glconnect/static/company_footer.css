@@ -85,6 +85,13 @@
   color: #e0bc3a;
 }
 
+.company-footer-handle {
+  display: block;
+  padding: 0.65rem 1rem;
+  color: #9aa8a0;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 540px) {
   .company-footer-inner {
     flex-direction: column;

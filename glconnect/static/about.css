@@ -162,7 +162,7 @@
   --ab-max: 1180px;
   position: relative;
   z-index: 10;
-  padding-top: clamp(2rem, 5vw, 3rem);
+  padding-top: clamp(0.75rem, 2vw, 1.25rem);
 }
 
 .about-wrap {
@@ -185,17 +185,17 @@
 
 /* ── Hero ── */
 .about-hero {
-  min-height: calc(100vh - 4.25rem);
   display: flex;
-  align-items: center;
-  padding: clamp(2rem, 5vw, 4rem) 0;
+  flex-direction: column;
+  align-items: stretch;
+  padding: clamp(0.5rem, 2vw, 1rem) 0 clamp(1.5rem, 4vw, 2rem);
 }
 
 .about-hero-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(2.5rem, 6vw, 4rem);
-  align-items: center;
+  gap: 0;
+  align-items: start;
   width: 100%;
   max-width: 42rem;
 }
@@ -231,7 +231,7 @@
   font-size: clamp(2.75rem, 8vw, 5.25rem);
   line-height: 0.92;
   letter-spacing: -0.035em;
-  margin: 0 0 1.25rem;
+  margin: 0 0 0.5rem;
 }
 
 .about-headline em {
@@ -477,6 +477,10 @@
 .about-ai-toolbar span.is-active i { color: #7dd3a8; }
 
 /* ── Ticker ── */
+.about-hero .about-ticker {
+  margin-top: clamp(0.5rem, 1.5vw, 0.85rem);
+}
+
 .about-ticker {
   border-block: 1px solid rgba(201,162,39,0.12);
   background: rgba(6,8,7,0.9);

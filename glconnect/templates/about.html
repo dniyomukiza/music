@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=9">
     <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
 </head>
 <body class="about-body">
@@ -20,21 +20,21 @@
 
     <main class="about-page">
 
-        <section class="about-hero about-wrap" aria-labelledby="about-hero-heading">
-            <div class="about-hero-grid">
-                <div class="about-hero-copy">
-                    <p class="about-eyebrow ab-enter ab-enter-1">
-                        <span class="about-eyebrow-dot" aria-hidden="true"></span>
-                        Ndotonic
-                    </p>
-                    <h1 id="about-hero-heading" class="about-headline ab-enter ab-enter-2">
-                        Turning <em>stories</em> into published books
-                    </h1>
+        <section class="about-hero" aria-labelledby="about-hero-heading">
+            <div class="about-wrap">
+                <div class="about-hero-grid">
+                    <div class="about-hero-copy">
+                        <p class="about-eyebrow ab-enter ab-enter-1">
+                            <span class="about-eyebrow-dot" aria-hidden="true"></span>
+                            Ndotonic
+                        </p>
+                        <h1 id="about-hero-heading" class="about-headline ab-enter ab-enter-2">
+                            Turning <em>stories</em> into published books
+                        </h1>
+                    </div>
                 </div>
             </div>
-        </section>
-
-        <div class="about-ticker" aria-hidden="true">
+            <div class="about-ticker" aria-hidden="true">
             <div class="about-ticker-track">
                 <div class="about-ticker-group">
                     <span class="about-ticker-item"><i class="fas fa-bullhorn"></i> Pitch</span>
@@ -63,7 +63,8 @@
                     <span class="about-ticker-item"><i class="fas fa-coins"></i> Monetize</span>
                 </div>
             </div>
-        </div>
+            </div>
+        </section>
 
         <section class="about-why about-wrap" aria-labelledby="why-ndotonic-heading">
             <header class="about-section-head about-reveal">

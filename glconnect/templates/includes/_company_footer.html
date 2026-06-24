@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=2">
 <footer class="company-footer" aria-label="Site footer">
     <div class="company-footer-inner">
         <span class="company-footer-brand">Ndotonic</span>
@@ -13,11 +13,7 @@
             <ul class="company-footer-dropdown" id="companyFooterDropdown" hidden>
                 <li><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
                 <li><a href="{{ url_for('blog.contact') }}">Get in Touch</a></li>
-                <li>
-                    <a href="https://www.instagram.com/glc_cool" target="_blank" rel="noopener noreferrer">
-                        Instagram @GLConnect_cool
-                    </a>
-                </li>
+                <li><span class="company-footer-handle">@GLConnect_cool</span></li>
             </ul>
         </div>
     </div>
