@@ -156,6 +156,22 @@ if file_changed nginx.conf; then
   save_hash nginx.conf
 fi
 
+if file_changed docker-compose.yml; then
+  echo "--- docker-compose.yml changed; recreating nginx (cert/webroot volumes) ---"
+  "${COMPOSE[@]}" up -d --no-build nginx
+  save_hash docker-compose.yml
+fi
+
+echo "--- SSL certificate (Let's Encrypt auto-renew) ---"
+chmod +x scripts/ssl-renew.sh 2>/dev/null || true
+if COMPOSE="docker compose --profile video" \
+   COMPOSE_SSL="docker compose --profile video --profile ssl" \
+   bash scripts/ssl-renew.sh; then
+  echo "SSL renew OK."
+else
+  echo "--- Warning: SSL renew failed — check certbot logs; HTTPS may show ERR_CERT_DATE_INVALID ---"
+fi
+
 if [ "$FAST_DEPLOY" = 1 ]; then
   save_all_hashes
 fi
