@@ -11,7 +11,9 @@ COMPOSE="${COMPOSE:-docker compose --profile video}"
 COMPOSE_SSL="${COMPOSE_SSL:-docker compose --profile video --profile ssl}"
 WEBROOT="/var/www/certbot"
 EMAIL="${SSL_CONTACT_EMAIL:-didyom1@gmail.com}"
-CERT_PATH="/etc/letsencrypt/live/www.glc.cool/fullchain.pem"
+DOMAIN="glc.cool"
+CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
+LEGACY_CERT_PATH="/etc/letsencrypt/live/www.glc.cool/fullchain.pem"
 DEBUG_LOG="${SSL_DEBUG_LOG:-$ROOT/.cursor/debug-fe2ff6.log}"
 RUN_ID="${SSL_RUN_ID:-pre-fix}"
 
@@ -31,18 +33,29 @@ _ssl_log() {
 mkdir -p certbot/www
 
 #region agent log
-_ssl_log "H1" "ssl-renew.sh:start" "ssl-renew invoked" "{\"certPath\":\"$CERT_PATH\",\"webroot\":\"$WEBROOT\"}"
+_ssl_log "H1" "ssl-renew.sh:start" "ssl-renew invoked" "{\"domain\":\"$DOMAIN\",\"certPath\":\"$CERT_PATH\",\"webroot\":\"$WEBROOT\"}"
 #endregion
 
 cert_status="missing"
 cert_not_after=""
-if [[ -f "$CERT_PATH" ]]; then
-  cert_not_after="$(openssl x509 -in "$CERT_PATH" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
-  if openssl x509 -checkend 0 -noout -in "$CERT_PATH" 2>/dev/null; then
-    cert_status="valid"
-  elif openssl x509 -checkend 86400 -noout -in "$CERT_PATH" 2>/dev/null; then
-    cert_status="expiring_soon"
-  else
+check_path="$CERT_PATH"
+if [[ ! -f "$check_path" && -f "$LEGACY_CERT_PATH" ]]; then
+  check_path="$LEGACY_CERT_PATH"
+  cert_status="expired_or_expiring"
+fi
+if [[ -f "$check_path" ]]; then
+  cert_not_after="$(openssl x509 -in "$check_path" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
+  if [[ "$cert_status" != "expired_or_expiring" ]]; then
+    if openssl x509 -checkend 0 -noout -in "$check_path" 2>/dev/null; then
+      cert_status="valid"
+    elif openssl x509 -checkend 86400 -noout -in "$check_path" 2>/dev/null; then
+      cert_status="expiring_soon"
+    else
+      cert_status="expired_or_expiring"
+    fi
+  fi
+  # Legacy www cert path: always re-issue under glc.cool only.
+  if [[ "$check_path" == "$LEGACY_CERT_PATH" && ! -f "$CERT_PATH" ]]; then
     cert_status="expired_or_expiring"
   fi
 fi
@@ -54,8 +67,13 @@ _ssl_log "H2" "ssl-renew.sh:cert-check" "host cert state before renew" \
 
 #region agent log
 acme_code="$(curl -sf -o /dev/null -w '%{http_code}' --max-time 8 -H 'Host: glc.cool' http://127.0.0.1/.well-known/acme-challenge/ssl-probe 2>/dev/null || echo '000')"
+glc_dns="$(dig +short A glc.cool 2>/dev/null | head -1 || true)"
+www_dns="$(dig +short A www.glc.cool 2>/dev/null | head -1 || true)"
 _ssl_log "H3" "ssl-renew.sh:acme-probe" "HTTP acme webroot probe from host" "{\"httpStatus\":\"$acme_code\"}"
+_ssl_log "H6" "ssl-renew.sh:dns" "DNS A records for cert domains" "{\"glcCool\":\"$glc_dns\",\"wwwGlcCool\":\"$www_dns\"}"
 #endregion
+
+certbot_domains=(-d "$DOMAIN")
 
 renew_rc=0
 if [[ "$cert_status" == "missing" ]]; then
@@ -63,7 +81,7 @@ if [[ "$cert_status" == "missing" ]]; then
   if ! $COMPOSE_SSL run --rm --no-deps --entrypoint certbot certbot certonly \
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
-    -d www.glc.cool -d glc.cool 2>"$ROOT/.deploy-cache/certbot-last.err"; then
+    "${certbot_domains[@]}" 2>"$ROOT/.deploy-cache/certbot-last.err"; then
     renew_rc=1
   fi
 elif [[ "$cert_status" == "expired_or_expiring" ]] || [[ "${FORCE:-}" == "1" ]]; then
@@ -72,7 +90,7 @@ elif [[ "$cert_status" == "expired_or_expiring" ]] || [[ "${FORCE:-}" == "1" ]];
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
     --force-renewal \
-    -d www.glc.cool -d glc.cool 2>"$ROOT/.deploy-cache/certbot-last.err"; then
+    "${certbot_domains[@]}" 2>"$ROOT/.deploy-cache/certbot-last.err"; then
     renew_rc=1
   fi
 else
