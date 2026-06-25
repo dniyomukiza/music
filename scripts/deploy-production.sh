@@ -164,16 +164,10 @@ fi
 
 echo "--- SSL certificate (Let's Encrypt auto-renew) ---"
 chmod +x scripts/ssl-renew.sh 2>/dev/null || true
-mkdir -p .cursor .deploy-cache
-SSL_RUN_ID="deploy-${DEPLOY_START}" \
+mkdir -p .deploy-cache
 COMPOSE="docker compose --profile video" \
 COMPOSE_SSL="docker compose --profile video --profile ssl" \
 bash scripts/ssl-renew.sh
-echo "SSL renew OK."
-if [ -f .deploy-cache/ssl-renew-debug.ndjson ]; then
-  echo "--- SSL renew debug (last 5 lines) ---"
-  tail -5 .deploy-cache/ssl-renew-debug.ndjson || true
-fi
 
 if [ "$FAST_DEPLOY" = 1 ]; then
   save_all_hashes

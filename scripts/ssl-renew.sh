@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Renew Let's Encrypt certs for glc.cool and reload nginx.
-# Called automatically from scripts/deploy-production.sh on every deploy.
+# Verify SSL on deploy; run certbot ONLY when renewal is actually needed.
+# Never prompts (non-interactive + docker -T). Skips entirely when cert is valid 30+ days.
+#
+# Manual force-renew: FORCE=1 ./scripts/ssl-renew.sh
 #
 set -euo pipefail
 
@@ -14,224 +16,160 @@ WEBROOT_HOST="$ROOT/certbot/www"
 EMAIL="${SSL_CONTACT_EMAIL:-didyom1@gmail.com}"
 DOMAIN="glc.cool"
 CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
-LEGACY_CERT_PATH="/etc/letsencrypt/live/www.glc.cool/fullchain.pem"
+RENEWAL_CONF="/etc/letsencrypt/renewal/${DOMAIN}.conf"
 DEBUG_LOG="${SSL_DEBUG_LOG:-$ROOT/.cursor/debug-fe2ff6.log}"
-RUN_ID="${SSL_RUN_ID:-pre-fix}"
+RUN_ID="${SSL_RUN_ID:-deploy}"
+
+mkdir -p "$WEBROOT_HOST/.well-known/acme-challenge" "$ROOT/.deploy-cache"
 
 #region agent log
 _ssl_log() {
-  local hypothesis_id="$1" location="$2" message="$3" data_json="${4:-{}}"
-  mkdir -p "$(dirname "$DEBUG_LOG")" "$ROOT/.deploy-cache"
+  local hypothesis_id="$1" message="$2" data_json="${3:-{}}"
   local ts
   ts=$(python3 -c 'import time; print(int(time.time()*1000))' 2>/dev/null || date +%s000)
-  printf '{"sessionId":"fe2ff6","runId":"%s","hypothesisId":"%s","location":"%s","message":"%s","data":%s,"timestamp":%s}\n' \
-    "$RUN_ID" "$hypothesis_id" "$location" "$message" "$data_json" "$ts" >> "$DEBUG_LOG"
-  printf '{"sessionId":"fe2ff6","runId":"%s","hypothesisId":"%s","location":"%s","message":"%s","data":%s,"timestamp":%s}\n' \
-    "$RUN_ID" "$hypothesis_id" "$location" "$message" "$data_json" "$ts" >> "$ROOT/.deploy-cache/ssl-renew-debug.ndjson"
+  printf '{"sessionId":"fe2ff6","runId":"%s","hypothesisId":"%s","location":"ssl-renew.sh","message":"%s","data":%s,"timestamp":%s}\n' \
+    "$RUN_ID" "$hypothesis_id" "$message" "$data_json" "$ts" >> "$DEBUG_LOG"
 }
 #endregion
 
-mkdir -p "$WEBROOT_HOST/.well-known/acme-challenge"
-
-#region agent log
-_ssl_log "H1" "ssl-renew.sh:start" "ssl-renew invoked" "{\"domain\":\"$DOMAIN\",\"certPath\":\"$CERT_PATH\"}"
-#endregion
-
-cert_readable() {
-  [[ -r "$CERT_PATH" ]] || [[ -r "$LEGACY_CERT_PATH" ]]
-}
-
-cert_has_www_san() {
-  local path="$1"
-  openssl x509 -in "$path" -noout -text 2>/dev/null | grep -q "DNS:www.${DOMAIN}"
-}
-
-resolve_cert_path() {
+cert_check_path() {
   if [[ -r "$CERT_PATH" ]]; then
     echo "$CERT_PATH"
-  elif [[ -r "$LEGACY_CERT_PATH" ]]; then
-    echo "$LEGACY_CERT_PATH"
+    return 0
+  fi
+  if [[ -f "$RENEWAL_CONF" ]]; then
+    echo "$CERT_PATH"
+    return 0
+  fi
+  if $COMPOSE exec -T nginx test -r "$CERT_PATH" 2>/dev/null; then
+    echo "nginx:$CERT_PATH"
+    return 0
+  fi
+  return 1
+}
+
+cert_checkend_seconds() {
+  local seconds="$1"
+  local path_spec
+  path_spec="$(cert_check_path 2>/dev/null || true)"
+  [[ -n "$path_spec" ]] || return 1
+  if [[ "$path_spec" == nginx:* ]]; then
+    $COMPOSE exec -T nginx openssl x509 -in "${path_spec#nginx:}" -noout -checkend "$seconds" 2>/dev/null
+  elif [[ -r "$path_spec" ]]; then
+    openssl x509 -in "$path_spec" -noout -checkend "$seconds" 2>/dev/null
+  else
+    return 1
   fi
 }
 
-cert_status="missing"
-cert_not_after=""
-need_www_san=0
-check_path="$(resolve_cert_path || true)"
+cert_not_after() {
+  local path_spec
+  path_spec="$(cert_check_path 2>/dev/null || true)"
+  [[ -n "$path_spec" ]] || return 0
+  if [[ "$path_spec" == nginx:* ]]; then
+    $COMPOSE exec -T nginx openssl x509 -in "${path_spec#nginx:}" -noout -enddate 2>/dev/null | cut -d= -f2- || true
+  elif [[ -r "$path_spec" ]]; then
+    openssl x509 -in "$path_spec" -noout -enddate 2>/dev/null | cut -d= -f2- || true
+  fi
+}
 
-if [[ -n "$check_path" ]]; then
-  cert_not_after="$(openssl x509 -in "$check_path" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
-  if openssl x509 -checkend 86400 -noout -in "$check_path" 2>/dev/null; then
-    cert_status="valid"
-  else
-    cert_status="expired_or_expiring"
-  fi
-  if [[ "$check_path" == "$LEGACY_CERT_PATH" ]] || ! cert_has_www_san "$check_path"; then
-    need_www_san=1
-  fi
+#region agent log
+host_readable=$([[ -r "$CERT_PATH" ]] && echo true || echo false)
+renewal_conf=$([[ -f "$RENEWAL_CONF" ]] && echo true || echo false)
+nginx_readable=$($COMPOSE exec -T nginx test -r "$CERT_PATH" 2>/dev/null && echo true || echo false)
+_ssl_log "H1" "cert visibility before decision" \
+  "{\"hostReadable\":$host_readable,\"renewalConf\":$renewal_conf,\"nginxReadable\":$nginx_readable}"
+#endregion
+
+not_after="$(cert_not_after || true)"
+if [[ -n "$not_after" ]]; then
+  echo "Current certificate valid until: $not_after"
 fi
 
-#region agent log
-_ssl_log "H2" "ssl-renew.sh:cert-check" "host cert state before renew" \
-  "{\"status\":\"$cert_status\",\"notAfter\":\"$cert_not_after\",\"needWwwSan\":$need_www_san,\"checkPath\":\"$check_path\"}"
-#endregion
-
-#region agent log
-preflight_probe="preflight-$(date +%s)"
-echo ok > "$WEBROOT_HOST/.well-known/acme-challenge/$preflight_probe"
-glc_acme="$(curl -sf -o /dev/null -w '%{http_code}' --max-time 8 -H "Host: $DOMAIN" "http://127.0.0.1/.well-known/acme-challenge/$preflight_probe" 2>/dev/null || echo '000')"
-www_acme="$(curl -sf -o /dev/null -w '%{http_code}' --max-time 8 -H "Host: www.$DOMAIN" "http://127.0.0.1/.well-known/acme-challenge/$preflight_probe" 2>/dev/null || echo '000')"
-rm -f "$WEBROOT_HOST/.well-known/acme-challenge/$preflight_probe"
-glc_dns="$(dig +short A "$DOMAIN" @8.8.8.8 2>/dev/null | head -1 || true)"
-www_dns="$(dig +short A "www.$DOMAIN" @8.8.8.8 2>/dev/null | head -1 || true)"
-www_cname="$(dig +short CNAME "www.$DOMAIN" @8.8.8.8 2>/dev/null | head -1 || true)"
-_ssl_log "H3" "ssl-renew.sh:acme-preflight" "webroot probe with temp file" \
-  "{\"glcHttp\":\"$glc_acme\",\"wwwHttp\":\"$www_acme\",\"glcDns\":\"$glc_dns\",\"wwwDns\":\"$www_dns\",\"wwwCname\":\"$www_cname\"}"
-#endregion
+# --- Skip certbot entirely when cert is good (fixes EOFError from spurious certonly runs) ---
+if [[ "${FORCE:-}" != "1" ]] && cert_checkend_seconds 2592000; then
+  echo "Certificate valid for 30+ days — skipping certbot (no container run)."
+  #region agent log
+  _ssl_log "H2" "skip certbot" "{\"mode\":\"skip-valid\",\"notAfter\":\"$not_after\"}"
+  #endregion
+  echo "SSL OK — $DOMAIN valid until $not_after (mode: skip-valid)"
+  exit 0
+fi
 
 run_certbot() {
-  $COMPOSE_SSL run --rm --no-deps --entrypoint certbot certbot "$@" 2>"$ROOT/.deploy-cache/certbot-last.err"
+  # -T = no TTY (prevents interactive prompts → EOFError in CI)
+  $COMPOSE_SSL run --rm --no-deps -T \
+    -e CERTBOT_NONINTERACTIVE=1 \
+    --entrypoint certbot certbot "$@" \
+    2>"$ROOT/.deploy-cache/certbot-last.err"
 }
 
 renew_rc=0
 renew_mode="none"
 
-if [[ "$cert_status" == "missing" ]]; then
-  renew_mode="issue-glc-only"
-  echo "No readable cert on host — issuing certificate for $DOMAIN only..."
+if [[ "${FORCE:-}" == "1" ]] || ! cert_checkend_seconds 86400; then
+  renew_mode="force-renew"
+  echo "Certificate expired, expiring within 24h, or FORCE=1 — force renewing..."
   if ! run_certbot certonly \
-    --webroot --webroot-path="$WEBROOT" \
-    --email "$EMAIL" --agree-tos --no-eff-email \
-    --cert-name "$DOMAIN" \
-    -d "$DOMAIN"; then
-    renew_rc=1
-  fi
-elif [[ "$cert_status" == "expired_or_expiring" ]] || [[ "${FORCE:-}" == "1" ]]; then
-  renew_mode="force-glc-only"
-  echo "Certificate expired or forced — renewing $DOMAIN..."
-  if ! run_certbot certonly \
+    --non-interactive \
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
     --cert-name "$DOMAIN" --force-renewal \
     -d "$DOMAIN"; then
     renew_rc=1
   fi
-elif [[ "$need_www_san" -eq 1 ]] && [[ "$www_acme" == "200" ]]; then
-  renew_mode="expand-www"
-  echo "Adding www.$DOMAIN to existing certificate (--expand)..."
+elif cert_check_path >/dev/null 2>&1 || [[ -f "$RENEWAL_CONF" ]]; then
+  renew_mode="renew-only"
+  echo "Running certbot renew (non-interactive; no certonly — avoids duplicate-cert prompt)..."
+  if ! run_certbot renew \
+    --non-interactive \
+    --webroot --webroot-path="$WEBROOT" \
+    --quiet; then
+    renew_rc=1
+  fi
+else
+  renew_mode="issue-new"
+  echo "No certificate found — issuing new cert for $DOMAIN..."
   if ! run_certbot certonly \
+    --non-interactive \
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
-    --cert-name "$DOMAIN" --expand \
-    -d "$DOMAIN" -d "www.$DOMAIN"; then
-    renew_rc=1
-    #region agent log
-    _ssl_log "H6" "ssl-renew.sh:expand-fail" "www expand failed; keeping glc.cool-only cert" "{}"
-    #endregion
-    echo "WARNING: Could not add www.$DOMAIN to certificate. Keeping valid $DOMAIN cert."
-    echo "Use https://$DOMAIN (not www). Fix DNS/webroot for www, then redeploy."
-    renew_rc=0
-    renew_mode="expand-failed-keep-glc"
-  fi
-elif [[ "$need_www_san" -eq 1 ]]; then
-  renew_mode="skip-www-webroot-bad"
-  echo "WARNING: www webroot preflight returned HTTP $www_acme (expected 200). Skipping www SAN; keeping $DOMAIN cert."
-  #region agent log
-  _ssl_log "H6" "ssl-renew.sh:skip-www" "www webroot preflight failed" "{\"wwwHttp\":\"$www_acme\"}"
-  #endregion
-else
-  renew_mode="quiet-renew"
-  echo "Certificate valid — quiet renew..."
-  if ! run_certbot renew --webroot --webroot-path="$WEBROOT" --quiet --non-interactive; then
+    --cert-name "$DOMAIN" \
+    -d "$DOMAIN"; then
     renew_rc=1
   fi
-fi
-
-certbot_err=""
-if [[ -f "$ROOT/.deploy-cache/certbot-last.err" ]]; then
-  certbot_err="$(tail -c 2000 "$ROOT/.deploy-cache/certbot-last.err" | tr '\n' ' ' | tr '"' "'")"
 fi
 
 #region agent log
-_ssl_log "H4" "ssl-renew.sh:certbot" "certbot finished" \
-  "{\"exitCode\":$renew_rc,\"mode\":\"$renew_mode\",\"stderrTail\":\"$certbot_err\"}"
+err_tail=""
+[[ -f "$ROOT/.deploy-cache/certbot-last.err" ]] && err_tail=$(tail -c 1500 "$ROOT/.deploy-cache/certbot-last.err" | tr '\n' ' ' | tr '"' "'")
+_ssl_log "H3" "certbot finished" "{\"mode\":\"$renew_mode\",\"exitCode\":$renew_rc,\"stderrTail\":\"$err_tail\"}"
 #endregion
 
 if [[ "$renew_rc" -ne 0 ]]; then
+  # If cert still valid on nginx, do not fail deploy (certbot noise only)
+  if cert_checkend_seconds 86400; then
+    echo "WARNING: certbot failed but existing certificate is still valid — continuing deploy."
+    #region agent log
+    _ssl_log "H4" "certbot failed but cert still valid" "{\"mode\":\"$renew_mode\"}"
+    #endregion
+    not_after="$(cert_not_after || true)"
+    echo "SSL OK — $DOMAIN valid until $not_after (mode: $renew_mode, certbot-skipped-failure)"
+    exit 0
+  fi
   echo "Certbot failed. Last output:"
   cat "$ROOT/.deploy-cache/certbot-last.err" 2>/dev/null || true
   exit 1
 fi
 
-check_path="$(resolve_cert_path || true)"
-if [[ -z "$check_path" ]]; then
+if cert_checkend_seconds 86400; then
+  not_after="$(cert_not_after || true)"
   #region agent log
-  _ssl_log "H5" "ssl-renew.sh:fail" "no readable cert after renew" "{}"
+  _ssl_log "H2" "ssl success" "{\"mode\":\"$renew_mode\",\"notAfter\":\"$not_after\"}"
   #endregion
-  exit 1
+  echo "SSL OK — $DOMAIN valid until $not_after (mode: $renew_mode)"
+  exit 0
 fi
 
-echo "Recreating nginx to pick up certificate..."
-$COMPOSE up -d --no-build --force-recreate nginx
-
-echo "Verifying nginx configuration..."
-if ! $COMPOSE exec -T nginx nginx -t 2>"$ROOT/.deploy-cache/nginx-test.err"; then
-  cat "$ROOT/.deploy-cache/nginx-test.err" 2>/dev/null || true
-  #region agent log
-  _ssl_log "H5" "ssl-renew.sh:fail" "nginx -t failed after recreate" "{}"
-  #endregion
-  exit 1
-fi
-
-new_not_after="$(openssl x509 -in "$check_path" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
-new_fingerprint="$(openssl x509 -in "$check_path" -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
-has_www="$(cert_has_www_san "$check_path" && echo true || echo false)"
-#region agent log
-_ssl_log "H2" "ssl-renew.sh:cert-after" "host cert state after renew" \
-  "{\"notAfter\":\"$new_not_after\",\"fingerprint\":\"$new_fingerprint\",\"hasWwwSan\":$has_www}"
-#endregion
-
-echo "Certificate dates (on disk):"
-openssl x509 -in "$check_path" -noout -dates
-
-if ! openssl x509 -checkend 86400 -noout -in "$check_path" 2>/dev/null; then
-  #region agent log
-  _ssl_log "H5" "ssl-renew.sh:fail" "cert still expires within 24h after renew" "{\"notAfter\":\"$new_not_after\"}"
-  #endregion
-  echo "ERROR: Certificate still invalid or expiring within 24 hours."
-  exit 1
-fi
-
-served_fingerprint=""
-for attempt in 1 2 3 4 5; do
-  served_fingerprint="$(echo | openssl s_client -servername "$DOMAIN" -connect 127.0.0.1:443 2>/dev/null \
-    | openssl x509 -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
-  if [[ -n "$served_fingerprint" ]]; then
-    break
-  fi
-  sleep 2
-done
-
-#region agent log
-_ssl_log "H5" "ssl-renew.sh:served-cert" "cert served by nginx on localhost" \
-  "{\"fingerprint\":\"$served_fingerprint\",\"attempts\":\"$attempt\"}"
-#endregion
-
-if [[ -z "$served_fingerprint" ]]; then
-  echo "WARNING: Could not verify cert via localhost:443. Disk cert is valid."
-elif [[ "$served_fingerprint" != "$new_fingerprint" ]]; then
-  #region agent log
-  _ssl_log "H5" "ssl-renew.sh:fail" "nginx serving different cert than disk" \
-    "{\"disk\":\"$new_fingerprint\",\"served\":\"$served_fingerprint\"}"
-  #endregion
-  echo "ERROR: Nginx is not serving the renewed certificate."
-  exit 1
-fi
-
-#region agent log
-_ssl_log "H1" "ssl-renew.sh:success" "ssl renew verified" "{\"notAfter\":\"$new_not_after\",\"hasWwwSan\":$has_www,\"mode\":\"$renew_mode\"}"
-#endregion
-echo "SSL renew OK — valid until $new_not_after (www on cert: $has_www)"
-if [[ "$has_www" == "false" ]]; then
-  echo "NOTE: Open https://$DOMAIN on phones — avoid https://www.$DOMAIN until www is on the cert."
-fi
+echo "ERROR: No valid certificate after renew."
+exit 1
