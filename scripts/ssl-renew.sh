@@ -58,6 +58,13 @@ if [[ -f "$check_path" ]]; then
   if [[ "$check_path" == "$LEGACY_CERT_PATH" && ! -f "$CERT_PATH" ]]; then
     cert_status="expired_or_expiring"
   fi
+  # Cert valid for glc.cool but missing www SAN (phones/Safari often hit www first).
+  if [[ -f "$CERT_PATH" ]] && ! openssl x509 -in "$CERT_PATH" -noout -text 2>/dev/null | grep -q "DNS:www.${DOMAIN}"; then
+    cert_status="expired_or_expiring"
+    #region agent log
+    _ssl_log "H6" "ssl-renew.sh:san" "cert missing www SAN — will reissue" "{}"
+    #endregion
+  fi
 fi
 
 #region agent log
@@ -73,7 +80,7 @@ _ssl_log "H3" "ssl-renew.sh:acme-probe" "HTTP acme webroot probe from host" "{\"
 _ssl_log "H6" "ssl-renew.sh:dns" "DNS A records for cert domains" "{\"glcCool\":\"$glc_dns\",\"wwwGlcCool\":\"$www_dns\"}"
 #endregion
 
-certbot_domains=(-d "$DOMAIN")
+certbot_domains=(-d "$DOMAIN" -d "www.$DOMAIN")
 
 renew_rc=0
 if [[ "$cert_status" == "missing" ]]; then
@@ -120,8 +127,14 @@ fi
 echo "Recreating nginx to pick up renewed certificate..."
 $COMPOSE up -d --no-build --force-recreate nginx
 
-echo "Reloading nginx..."
-$COMPOSE exec -T nginx nginx -s reload
+echo "Verifying nginx configuration..."
+if ! $COMPOSE exec -T nginx nginx -t 2>"$ROOT/.deploy-cache/nginx-test.err"; then
+  cat "$ROOT/.deploy-cache/nginx-test.err" 2>/dev/null || true
+  #region agent log
+  _ssl_log "H5" "ssl-renew.sh:fail" "nginx -t failed after recreate" "{}"
+  #endregion
+  exit 1
+fi
 
 if [[ ! -f "$CERT_PATH" ]]; then
   #region agent log
@@ -131,13 +144,10 @@ if [[ ! -f "$CERT_PATH" ]]; then
 fi
 
 new_not_after="$(openssl x509 -in "$CERT_PATH" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
+new_fingerprint="$(openssl x509 -in "$CERT_PATH" -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
 #region agent log
-_ssl_log "H2" "ssl-renew.sh:cert-after" "host cert state after renew" "{\"notAfter\":\"$new_not_after\"}"
-#endregion
-
-#region agent log
-served_not_after="$(echo | openssl s_client -servername glc.cool -connect 127.0.0.1:443 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
-_ssl_log "H5" "ssl-renew.sh:served-cert" "cert served by nginx on localhost" "{\"notAfter\":\"$served_not_after\"}"
+_ssl_log "H2" "ssl-renew.sh:cert-after" "host cert state after renew" \
+  "{\"notAfter\":\"$new_not_after\",\"fingerprint\":\"$new_fingerprint\"}"
 #endregion
 
 echo "Certificate dates (on disk):"
@@ -151,10 +161,30 @@ if ! openssl x509 -checkend 86400 -noout -in "$CERT_PATH" 2>/dev/null; then
   exit 1
 fi
 
-if [[ -n "$served_not_after" && "$served_not_after" != "$new_not_after" ]]; then
+served_fingerprint=""
+served_not_after=""
+for attempt in 1 2 3 4 5; do
+  served_fingerprint="$(echo | openssl s_client -servername glc.cool -connect 127.0.0.1:443 2>/dev/null \
+    | openssl x509 -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
+  served_not_after="$(echo | openssl s_client -servername glc.cool -connect 127.0.0.1:443 2>/dev/null \
+    | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
+  if [[ -n "$served_fingerprint" ]]; then
+    break
+  fi
+  sleep 2
+done
+
+#region agent log
+_ssl_log "H5" "ssl-renew.sh:served-cert" "cert served by nginx on localhost" \
+  "{\"notAfter\":\"$served_not_after\",\"fingerprint\":\"$served_fingerprint\",\"attempts\":\"$attempt\"}"
+#endregion
+
+if [[ -z "$served_fingerprint" ]]; then
+  echo "WARNING: Could not verify cert via localhost:443 (nginx may still be starting). Disk cert is valid."
+elif [[ "$served_fingerprint" != "$new_fingerprint" ]]; then
   #region agent log
   _ssl_log "H5" "ssl-renew.sh:fail" "nginx serving different cert than disk" \
-    "{\"disk\":\"$new_not_after\",\"served\":\"$served_not_after\"}"
+    "{\"disk\":\"$new_fingerprint\",\"served\":\"$served_fingerprint\"}"
   #endregion
   echo "ERROR: Nginx is not serving the renewed certificate."
   exit 1
