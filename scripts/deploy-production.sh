@@ -164,12 +164,15 @@ fi
 
 echo "--- SSL certificate (Let's Encrypt auto-renew) ---"
 chmod +x scripts/ssl-renew.sh 2>/dev/null || true
-if COMPOSE="docker compose --profile video" \
-   COMPOSE_SSL="docker compose --profile video --profile ssl" \
-   bash scripts/ssl-renew.sh; then
-  echo "SSL renew OK."
-else
-  echo "--- Warning: SSL renew failed — check certbot logs; HTTPS may show ERR_CERT_DATE_INVALID ---"
+mkdir -p .cursor .deploy-cache
+SSL_RUN_ID="deploy-${DEPLOY_START}" \
+COMPOSE="docker compose --profile video" \
+COMPOSE_SSL="docker compose --profile video --profile ssl" \
+bash scripts/ssl-renew.sh
+echo "SSL renew OK."
+if [ -f .deploy-cache/ssl-renew-debug.ndjson ]; then
+  echo "--- SSL renew debug (last 5 lines) ---"
+  tail -5 .deploy-cache/ssl-renew-debug.ndjson || true
 fi
 
 if [ "$FAST_DEPLOY" = 1 ]; then
