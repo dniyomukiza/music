@@ -1,2 +1,0 @@
-{"sessionId": "f3d0e1", "runId": "post-fix", "hypothesisId": "A", "location": "writer.py:writer_profile:post", "message": "writer profile POST received", "data": {"has_recap_in_form": false, "recap_in_request": false, "form_error_fields": [], "form_errors": {}}, "timestamp": 1781297233140}
-{"sessionId": "f3d0e1", "runId": "post-fix", "hypothesisId": "A", "location": "writer.py:writer_profile:validate", "message": "validate_on_submit result", "data": {"validated": true, "form_errors": {}}, "timestamp": 1781297233142}
