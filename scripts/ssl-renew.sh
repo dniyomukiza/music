@@ -10,6 +10,7 @@ cd "$ROOT"
 COMPOSE="${COMPOSE:-docker compose --profile video}"
 COMPOSE_SSL="${COMPOSE_SSL:-docker compose --profile video --profile ssl}"
 WEBROOT="/var/www/certbot"
+WEBROOT_HOST="$ROOT/certbot/www"
 EMAIL="${SSL_CONTACT_EMAIL:-didyom1@gmail.com}"
 DOMAIN="glc.cool"
 CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
@@ -30,80 +31,118 @@ _ssl_log() {
 }
 #endregion
 
-mkdir -p certbot/www
+mkdir -p "$WEBROOT_HOST/.well-known/acme-challenge"
 
 #region agent log
-_ssl_log "H1" "ssl-renew.sh:start" "ssl-renew invoked" "{\"domain\":\"$DOMAIN\",\"certPath\":\"$CERT_PATH\",\"webroot\":\"$WEBROOT\"}"
+_ssl_log "H1" "ssl-renew.sh:start" "ssl-renew invoked" "{\"domain\":\"$DOMAIN\",\"certPath\":\"$CERT_PATH\"}"
 #endregion
+
+cert_readable() {
+  [[ -r "$CERT_PATH" ]] || [[ -r "$LEGACY_CERT_PATH" ]]
+}
+
+cert_has_www_san() {
+  local path="$1"
+  openssl x509 -in "$path" -noout -text 2>/dev/null | grep -q "DNS:www.${DOMAIN}"
+}
+
+resolve_cert_path() {
+  if [[ -r "$CERT_PATH" ]]; then
+    echo "$CERT_PATH"
+  elif [[ -r "$LEGACY_CERT_PATH" ]]; then
+    echo "$LEGACY_CERT_PATH"
+  fi
+}
 
 cert_status="missing"
 cert_not_after=""
-check_path="$CERT_PATH"
-if [[ ! -f "$check_path" && -f "$LEGACY_CERT_PATH" ]]; then
-  check_path="$LEGACY_CERT_PATH"
-  cert_status="expired_or_expiring"
-fi
-if [[ -f "$check_path" ]]; then
+need_www_san=0
+check_path="$(resolve_cert_path || true)"
+
+if [[ -n "$check_path" ]]; then
   cert_not_after="$(openssl x509 -in "$check_path" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
-  if [[ "$cert_status" != "expired_or_expiring" ]]; then
-    if openssl x509 -checkend 0 -noout -in "$check_path" 2>/dev/null; then
-      cert_status="valid"
-    elif openssl x509 -checkend 86400 -noout -in "$check_path" 2>/dev/null; then
-      cert_status="expiring_soon"
-    else
-      cert_status="expired_or_expiring"
-    fi
-  fi
-  # Legacy www cert path: always re-issue under glc.cool only.
-  if [[ "$check_path" == "$LEGACY_CERT_PATH" && ! -f "$CERT_PATH" ]]; then
+  if openssl x509 -checkend 86400 -noout -in "$check_path" 2>/dev/null; then
+    cert_status="valid"
+  else
     cert_status="expired_or_expiring"
   fi
-  # Cert valid for glc.cool but missing www SAN (phones/Safari often hit www first).
-  if [[ -f "$CERT_PATH" ]] && ! openssl x509 -in "$CERT_PATH" -noout -text 2>/dev/null | grep -q "DNS:www.${DOMAIN}"; then
-    cert_status="expired_or_expiring"
-    #region agent log
-    _ssl_log "H6" "ssl-renew.sh:san" "cert missing www SAN — will reissue" "{}"
-    #endregion
+  if [[ "$check_path" == "$LEGACY_CERT_PATH" ]] || ! cert_has_www_san "$check_path"; then
+    need_www_san=1
   fi
 fi
 
 #region agent log
 _ssl_log "H2" "ssl-renew.sh:cert-check" "host cert state before renew" \
-  "{\"status\":\"$cert_status\",\"notAfter\":\"$cert_not_after\"}"
+  "{\"status\":\"$cert_status\",\"notAfter\":\"$cert_not_after\",\"needWwwSan\":$need_www_san,\"checkPath\":\"$check_path\"}"
 #endregion
 
 #region agent log
-acme_code="$(curl -sf -o /dev/null -w '%{http_code}' --max-time 8 -H 'Host: glc.cool' http://127.0.0.1/.well-known/acme-challenge/ssl-probe 2>/dev/null || echo '000')"
-glc_dns="$(dig +short A glc.cool 2>/dev/null | head -1 || true)"
-www_dns="$(dig +short A www.glc.cool 2>/dev/null | head -1 || true)"
-_ssl_log "H3" "ssl-renew.sh:acme-probe" "HTTP acme webroot probe from host" "{\"httpStatus\":\"$acme_code\"}"
-_ssl_log "H6" "ssl-renew.sh:dns" "DNS A records for cert domains" "{\"glcCool\":\"$glc_dns\",\"wwwGlcCool\":\"$www_dns\"}"
+preflight_probe="preflight-$(date +%s)"
+echo ok > "$WEBROOT_HOST/.well-known/acme-challenge/$preflight_probe"
+glc_acme="$(curl -sf -o /dev/null -w '%{http_code}' --max-time 8 -H "Host: $DOMAIN" "http://127.0.0.1/.well-known/acme-challenge/$preflight_probe" 2>/dev/null || echo '000')"
+www_acme="$(curl -sf -o /dev/null -w '%{http_code}' --max-time 8 -H "Host: www.$DOMAIN" "http://127.0.0.1/.well-known/acme-challenge/$preflight_probe" 2>/dev/null || echo '000')"
+rm -f "$WEBROOT_HOST/.well-known/acme-challenge/$preflight_probe"
+glc_dns="$(dig +short A "$DOMAIN" @8.8.8.8 2>/dev/null | head -1 || true)"
+www_dns="$(dig +short A "www.$DOMAIN" @8.8.8.8 2>/dev/null | head -1 || true)"
+www_cname="$(dig +short CNAME "www.$DOMAIN" @8.8.8.8 2>/dev/null | head -1 || true)"
+_ssl_log "H3" "ssl-renew.sh:acme-preflight" "webroot probe with temp file" \
+  "{\"glcHttp\":\"$glc_acme\",\"wwwHttp\":\"$www_acme\",\"glcDns\":\"$glc_dns\",\"wwwDns\":\"$www_dns\",\"wwwCname\":\"$www_cname\"}"
 #endregion
 
-certbot_domains=(-d "$DOMAIN" -d "www.$DOMAIN")
+run_certbot() {
+  $COMPOSE_SSL run --rm --no-deps --entrypoint certbot certbot "$@" 2>"$ROOT/.deploy-cache/certbot-last.err"
+}
 
 renew_rc=0
+renew_mode="none"
+
 if [[ "$cert_status" == "missing" ]]; then
-  echo "No cert — issuing first certificate..."
-  if ! $COMPOSE_SSL run --rm --no-deps --entrypoint certbot certbot certonly \
+  renew_mode="issue-glc-only"
+  echo "No readable cert on host — issuing certificate for $DOMAIN only..."
+  if ! run_certbot certonly \
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
-    "${certbot_domains[@]}" 2>"$ROOT/.deploy-cache/certbot-last.err"; then
+    --cert-name "$DOMAIN" \
+    -d "$DOMAIN"; then
     renew_rc=1
   fi
 elif [[ "$cert_status" == "expired_or_expiring" ]] || [[ "${FORCE:-}" == "1" ]]; then
-  echo "Certificate expired or expiring — certonly force-renewal..."
-  if ! $COMPOSE_SSL run --rm --no-deps --entrypoint certbot certbot certonly \
+  renew_mode="force-glc-only"
+  echo "Certificate expired or forced — renewing $DOMAIN..."
+  if ! run_certbot certonly \
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
-    --force-renewal \
-    "${certbot_domains[@]}" 2>"$ROOT/.deploy-cache/certbot-last.err"; then
+    --cert-name "$DOMAIN" --force-renewal \
+    -d "$DOMAIN"; then
     renew_rc=1
   fi
+elif [[ "$need_www_san" -eq 1 ]] && [[ "$www_acme" == "200" ]]; then
+  renew_mode="expand-www"
+  echo "Adding www.$DOMAIN to existing certificate (--expand)..."
+  if ! run_certbot certonly \
+    --webroot --webroot-path="$WEBROOT" \
+    --email "$EMAIL" --agree-tos --no-eff-email \
+    --cert-name "$DOMAIN" --expand \
+    -d "$DOMAIN" -d "www.$DOMAIN"; then
+    renew_rc=1
+    #region agent log
+    _ssl_log "H6" "ssl-renew.sh:expand-fail" "www expand failed; keeping glc.cool-only cert" "{}"
+    #endregion
+    echo "WARNING: Could not add www.$DOMAIN to certificate. Keeping valid $DOMAIN cert."
+    echo "Use https://$DOMAIN (not www). Fix DNS/webroot for www, then redeploy."
+    renew_rc=0
+    renew_mode="expand-failed-keep-glc"
+  fi
+elif [[ "$need_www_san" -eq 1 ]]; then
+  renew_mode="skip-www-webroot-bad"
+  echo "WARNING: www webroot preflight returned HTTP $www_acme (expected 200). Skipping www SAN; keeping $DOMAIN cert."
+  #region agent log
+  _ssl_log "H6" "ssl-renew.sh:skip-www" "www webroot preflight failed" "{\"wwwHttp\":\"$www_acme\"}"
+  #endregion
 else
+  renew_mode="quiet-renew"
   echo "Certificate valid — quiet renew..."
-  if ! $COMPOSE_SSL run --rm --no-deps --entrypoint certbot certbot renew \
-    --webroot --webroot-path="$WEBROOT" --quiet --non-interactive 2>"$ROOT/.deploy-cache/certbot-last.err"; then
+  if ! run_certbot renew --webroot --webroot-path="$WEBROOT" --quiet --non-interactive; then
     renew_rc=1
   fi
 fi
@@ -115,7 +154,7 @@ fi
 
 #region agent log
 _ssl_log "H4" "ssl-renew.sh:certbot" "certbot finished" \
-  "{\"exitCode\":$renew_rc,\"stderrTail\":\"$certbot_err\"}"
+  "{\"exitCode\":$renew_rc,\"mode\":\"$renew_mode\",\"stderrTail\":\"$certbot_err\"}"
 #endregion
 
 if [[ "$renew_rc" -ne 0 ]]; then
@@ -124,7 +163,15 @@ if [[ "$renew_rc" -ne 0 ]]; then
   exit 1
 fi
 
-echo "Recreating nginx to pick up renewed certificate..."
+check_path="$(resolve_cert_path || true)"
+if [[ -z "$check_path" ]]; then
+  #region agent log
+  _ssl_log "H5" "ssl-renew.sh:fail" "no readable cert after renew" "{}"
+  #endregion
+  exit 1
+fi
+
+echo "Recreating nginx to pick up certificate..."
 $COMPOSE up -d --no-build --force-recreate nginx
 
 echo "Verifying nginx configuration..."
@@ -136,24 +183,18 @@ if ! $COMPOSE exec -T nginx nginx -t 2>"$ROOT/.deploy-cache/nginx-test.err"; the
   exit 1
 fi
 
-if [[ ! -f "$CERT_PATH" ]]; then
-  #region agent log
-  _ssl_log "H5" "ssl-renew.sh:fail" "cert file missing after renew" "{}"
-  #endregion
-  exit 1
-fi
-
-new_not_after="$(openssl x509 -in "$CERT_PATH" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
-new_fingerprint="$(openssl x509 -in "$CERT_PATH" -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
+new_not_after="$(openssl x509 -in "$check_path" -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
+new_fingerprint="$(openssl x509 -in "$check_path" -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
+has_www="$(cert_has_www_san "$check_path" && echo true || echo false)"
 #region agent log
 _ssl_log "H2" "ssl-renew.sh:cert-after" "host cert state after renew" \
-  "{\"notAfter\":\"$new_not_after\",\"fingerprint\":\"$new_fingerprint\"}"
+  "{\"notAfter\":\"$new_not_after\",\"fingerprint\":\"$new_fingerprint\",\"hasWwwSan\":$has_www}"
 #endregion
 
 echo "Certificate dates (on disk):"
-openssl x509 -in "$CERT_PATH" -noout -dates
+openssl x509 -in "$check_path" -noout -dates
 
-if ! openssl x509 -checkend 86400 -noout -in "$CERT_PATH" 2>/dev/null; then
+if ! openssl x509 -checkend 86400 -noout -in "$check_path" 2>/dev/null; then
   #region agent log
   _ssl_log "H5" "ssl-renew.sh:fail" "cert still expires within 24h after renew" "{\"notAfter\":\"$new_not_after\"}"
   #endregion
@@ -162,12 +203,9 @@ if ! openssl x509 -checkend 86400 -noout -in "$CERT_PATH" 2>/dev/null; then
 fi
 
 served_fingerprint=""
-served_not_after=""
 for attempt in 1 2 3 4 5; do
-  served_fingerprint="$(echo | openssl s_client -servername glc.cool -connect 127.0.0.1:443 2>/dev/null \
+  served_fingerprint="$(echo | openssl s_client -servername "$DOMAIN" -connect 127.0.0.1:443 2>/dev/null \
     | openssl x509 -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2- || true)"
-  served_not_after="$(echo | openssl s_client -servername glc.cool -connect 127.0.0.1:443 2>/dev/null \
-    | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2- || true)"
   if [[ -n "$served_fingerprint" ]]; then
     break
   fi
@@ -176,11 +214,11 @@ done
 
 #region agent log
 _ssl_log "H5" "ssl-renew.sh:served-cert" "cert served by nginx on localhost" \
-  "{\"notAfter\":\"$served_not_after\",\"fingerprint\":\"$served_fingerprint\",\"attempts\":\"$attempt\"}"
+  "{\"fingerprint\":\"$served_fingerprint\",\"attempts\":\"$attempt\"}"
 #endregion
 
 if [[ -z "$served_fingerprint" ]]; then
-  echo "WARNING: Could not verify cert via localhost:443 (nginx may still be starting). Disk cert is valid."
+  echo "WARNING: Could not verify cert via localhost:443. Disk cert is valid."
 elif [[ "$served_fingerprint" != "$new_fingerprint" ]]; then
   #region agent log
   _ssl_log "H5" "ssl-renew.sh:fail" "nginx serving different cert than disk" \
@@ -191,6 +229,9 @@ elif [[ "$served_fingerprint" != "$new_fingerprint" ]]; then
 fi
 
 #region agent log
-_ssl_log "H1" "ssl-renew.sh:success" "ssl renew verified" "{\"notAfter\":\"$new_not_after\"}"
+_ssl_log "H1" "ssl-renew.sh:success" "ssl renew verified" "{\"notAfter\":\"$new_not_after\",\"hasWwwSan\":$has_www,\"mode\":\"$renew_mode\"}"
 #endregion
-echo "SSL renew OK — valid until $new_not_after"
+echo "SSL renew OK — valid until $new_not_after (www on cert: $has_www)"
+if [[ "$has_www" == "false" ]]; then
+  echo "NOTE: Open https://$DOMAIN on phones — avoid https://www.$DOMAIN until www is on the cert."
+fi
