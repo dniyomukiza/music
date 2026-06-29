@@ -35,15 +35,19 @@ _ssl_log() {
 #endregion
 
 cert_check_path() {
+  # Prefer the nginx container: it has /etc/letsencrypt mounted and can read
+  # live/ certs regardless of host-side root-only perms. The deploy user
+  # (non-root) usually CANNOT read live/ or archive/, so a host-path check
+  # gives false negatives once a renewal.conf exists → "No valid certificate".
+  if $COMPOSE exec -T nginx test -r "$CERT_PATH" 2>/dev/null; then
+    echo "nginx:$CERT_PATH"
+    return 0
+  fi
   if [[ -r "$CERT_PATH" ]]; then
     echo "$CERT_PATH"
     return 0
   fi
   if [[ -f "$RENEWAL_CONF" ]]; then
-    echo "$CERT_PATH"
-    return 0
-  fi
-  if $COMPOSE exec -T nginx test -r "$CERT_PATH" 2>/dev/null; then
     echo "nginx:$CERT_PATH"
     return 0
   fi
@@ -117,7 +121,7 @@ if [[ "${FORCE:-}" == "1" ]] || ! cert_checkend_seconds 86400; then
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
     --cert-name "$DOMAIN" --force-renewal \
-    -d "$DOMAIN"; then
+    -d "$DOMAIN" -d "www.$DOMAIN"; then
     renew_rc=1
   fi
 elif cert_check_path >/dev/null 2>&1 || [[ -f "$RENEWAL_CONF" ]]; then
@@ -137,7 +141,7 @@ else
     --webroot --webroot-path="$WEBROOT" \
     --email "$EMAIL" --agree-tos --no-eff-email \
     --cert-name "$DOMAIN" \
-    -d "$DOMAIN"; then
+    -d "$DOMAIN" -d "www.$DOMAIN"; then
     renew_rc=1
   fi
 fi
