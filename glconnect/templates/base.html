@@ -216,7 +216,7 @@
 
 <header>
   <div class="nav-container">
-    <a href="/home" style="text-decoration: none;">
+    <a href="{% if current_user.is_authenticated %}{{ url_for('routes.about') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.about')) }}{% endif %}" style="text-decoration: none;">
       <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic logo" class="logo-img">
     </a>
 
@@ -225,11 +225,7 @@
         {% if current_user.is_authenticated %}
         <li><a href="{{ url_for('routes.about') }}">About</a></li>
         {% endif %}
-        <li><a href="/home">Home</a></li>
-        <li><a href="{{ url_for('book_platform.ink_studio_access') }}">Ndotonic</a></li>
-        {% if ink_nav_show_my_library|default(false) %}
-        <li><a href="{{ url_for('book_platform.my_library') }}">My Library</a></li>
-        {% endif %}
+        <li><a href="{{ url_for('routes.index') }}">Home</a></li>
         {% if ink_nav_show_author_nav|default(false) %}
         <li><a href="{{ url_for('book_platform.books') }}">My Books</a></li>
         <li><a href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout account</a></li>

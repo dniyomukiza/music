@@ -3,41 +3,74 @@
 {% block title %}Login | Ndotonic{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
 {% endblock %}
 
 {% block salutation %}
-<div class="login-container">
-    {% include 'messages.html' %}
-    <h2>Welcome back</h2>
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        {% set login_next = request.args.get('next') %}
-        {% if login_next %}
-        <input type="hidden" name="next" value="{{ login_next }}">
-        {% endif %}
-        <label for="username" class="visually-hidden">Username</label>
-        {{ form.username(placeholder="Username", id="username", autocomplete="username", autocapitalize="none", autocorrect="off", spellcheck="false") }}
-        <label for="password" class="visually-hidden">Password</label>
-        <div class="login-password">
-            {{ form.password(placeholder="Password", id="password", autocomplete="current-password") }}
-            <button type="button" class="login-password-toggle" data-target="password" aria-label="Show password" aria-pressed="false">
-                <i class="fas fa-eye" aria-hidden="true"></i>
-            </button>
-        </div>
-        <div class="remember-me">
-            {{ form.remember_me() }} {{ form.remember_me.label }}
-        </div>
-        {{ form.submit(class="btn") }}
-    </form>
-    {% set login_next = request.args.get('next') %}
-    <p>Don't have an account? {% if login_next %}<a href="{{ url_for('routes1.register', next=login_next) }}">Register</a>{% else %}<a href="{{ url_for('routes1.register') }}">Register</a>{% endif %}</p>
-    <p><a href="{{ url_for('routes1.reset_password_request') }}">Forgot Password?</a></p>
+<div class="auth-page-shell">
+    <div class="auth-card">
+        {% include 'messages.html' %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="auth-flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
 
+        <p class="auth-eyebrow"><span class="auth-eyebrow-dot" aria-hidden="true"></span> Ndotonic</p>
+        <h2>Welcome back</h2>
+        <p class="auth-lead">Sign in to Ink Studio, your library, and creator tools.</p>
+
+        <form method="POST" action="" class="auth-form">
+            {{ form.hidden_tag() }}
+            {% set login_next = request.args.get('next') %}
+            {% if login_next %}
+            <input type="hidden" name="next" value="{{ login_next }}">
+            {% endif %}
+
+            <div class="auth-field">
+                <label for="username">Username</label>
+                {{ form.username(placeholder="Username", id="username", class="auth-input", autocomplete="username", autocapitalize="none", autocorrect="off", spellcheck="false") }}
+            </div>
+            <div class="auth-field">
+                <label for="password">Password</label>
+                <div class="auth-password">
+                    {{ form.password(placeholder="Password", id="password", class="auth-input", autocomplete="current-password") }}
+                    <button type="button" class="auth-password-toggle" data-target="password" aria-label="Show password" aria-pressed="false">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="auth-remember">
+                {{ form.remember_me() }} {{ form.remember_me.label }}
+            </div>
+            <div class="auth-field auth-field--submit">
+                {{ form.submit(class="btn auth-submit") }}
+            </div>
+        </form>
+
+        {% set login_next = request.args.get('next') %}
+        <p class="auth-footer">
+            Don't have an account?
+            {% if login_next %}
+            <a href="{{ url_for('routes1.register', next=login_next) }}">Create account</a>
+            {% else %}
+            <a href="{{ url_for('routes1.register') }}">Create account</a>
+            {% endif %}
+        </p>
+        <p class="auth-footer auth-footer--muted">
+            <a href="{{ url_for('routes1.reset_password_request') }}">Forgot password?</a>
+            ·
+            <a href="{{ url_for('routes.index') }}">Back to homepage</a>
+        </p>
+    </div>
 </div>
 <script>
 (function () {
-    var btn = document.querySelector('.login-password-toggle');
+    var btn = document.querySelector('.auth-password-toggle');
     if (!btn) return;
     btn.addEventListener('click', function () {
         var input = document.getElementById(btn.getAttribute('data-target'));

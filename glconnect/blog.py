@@ -317,6 +317,9 @@ def contact():
             return render_template("contact.html", form=form)
 
         flash("Thank you for reaching out. We will get back to you ASAP.", "success")
+        next_url = (request.form.get("next") or request.args.get("next") or "").strip()
+        if next_url.startswith("/") and not next_url.startswith("//"):
+            return redirect(next_url)
         return redirect(url_for("blog.contact"))
 
     return render_template("contact.html", form=form)

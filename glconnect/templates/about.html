@@ -10,19 +10,20 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/ndotonic.png') }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Ndotonic">
-    <meta property="og:title" content="Ndotonic  ‚Äî  Turning stories into published books">
+    <meta property="og:title" content="Ndotonic  ù  Turning stories into published books">
     <meta property="og:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media promotes your stories and books on radio &amp; TV.">
     <meta property="og:url" content="https://ndotonic.com/about">
     <meta property="og:image" content="{{ url_for('static', filename='images/ndotonic.png', _external=True) }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Ndotonic  ‚Äî  Turning stories into published books">
+    <meta name="twitter:title" content="Ndotonic  ù  Turning stories into published books">
     <meta name="twitter:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media promotes your stories and books on radio &amp; TV.">
     <meta name="twitter:image" content="{{ url_for('static', filename='images/ndotonic.png', _external=True) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=10">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=12">
+    <link rel="stylesheet" href="{{ url_for('static', filename='contact.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
 </head>
 <body class="about-body">
@@ -30,28 +31,6 @@
     <div class="ab-page-bg" aria-hidden="true"></div>
     <div class="ab-scanline" aria-hidden="true"></div>
     <div class="ab-mesh" aria-hidden="true"></div>
-
-    <header class="ab-header">
-        <nav class="ab-nav" aria-label="Primary">
-            <a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
-            <a href="{{ url_for('book_platform.campaigns') }}">Campaigns</a>
-            <a href="{{ url_for('book_platform.content_hub') }}">Creators</a>
-        </nav>
-        <a class="ab-wordmark" href="/home" aria-label="Ndotonic home">
-            <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic" class="ab-wordmark-img" width="150" height="38">
-        </a>
-        <div class="ab-nav-right">
-            <button type="button" class="ab-menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="abMobileNav" onclick="abToggleMenu()">
-                <span></span><span></span><span></span>
-            </button>
-        </div>
-    </header>
-
-    <nav class="ab-mobile-nav" id="abMobileNav" aria-label="Mobile">
-        <a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
-        <a href="{{ url_for('book_platform.campaigns') }}">Campaigns</a>
-        <a href="{{ url_for('book_platform.content_hub') }}">Creators</a>
-    </nav>
 
     <main class="about-page">
 
@@ -73,8 +52,8 @@
                             <a class="about-cta about-cta--primary" href="{{ url_for('routes1.register') }}">
                                 Sign up for free <i class="fas fa-arrow-right" aria-hidden="true"></i>
                             </a>
-                            <a class="about-cta about-cta--secondary" href="{{ url_for('book_platform.marketplace') }}">
-                                Browse the marketplace
+                            <a class="about-cta about-cta--secondary" href="#about-contact">
+                                Contact Us
                             </a>
                         </div>
                     </div>
@@ -114,7 +93,6 @@
 
         <section class="about-why about-wrap" aria-labelledby="why-ndotonic-heading">
             <header class="about-section-head about-reveal">
-                <span class="about-section-kicker">The full author journey</span>
                 <h2 id="why-ndotonic-heading" class="about-section-title">Why Ndotonic</h2>
                 <p class="about-section-sub">
                     Four connected capabilities, from first pitch to paid reader, designed for creators who ship.
@@ -178,10 +156,34 @@
             <div class="about-pipeline-shell">
                 <div class="about-pipeline-track">
                     <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Pitch</strong><span>Campaign &amp; funding</span></div>
-                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Promote</strong><span>GLC Media  ‚Äî  radio &amp; TV</span></div>
+                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Promote</strong><span>GLC Media  ù  radio &amp; TV</span></div>
                     <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Publish</strong><span>Ink Studio + AI</span></div>
-                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Monetize</strong><span>Ebook  ‚Äî  audio  ‚Äî  print</span></div>
+                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Monetize</strong><span>Ebook  ù  audio  ù  print</span></div>
                 </div>
+            </div>
+        </section>
+
+        <section class="about-contact about-wrap about-reveal" id="about-contact" aria-labelledby="about-contact-heading">
+            <header class="about-section-head">
+                <span class="about-section-kicker">Get in touch</span>
+                <h2 id="about-contact-heading" class="about-section-title">Contact Us</h2>
+                <p class="about-section-sub">
+                    Questions about Ink Studio, GLC Media, or partnerships? We read every message.
+                </p>
+            </header>
+            <div class="about-contact-panel">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul class="flashes">
+                            {% for category, message in messages %}
+                                <li class="{{ category }}">{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endwith %}
+                {% set contact_form_next = url_for('routes.about') ~ '#about-contact' %}
+                {% set contact_form_prefix = 'about-' %}
+                {% include 'includes/_contact_form_block.html' %}
             </div>
         </section>
 
@@ -190,13 +192,6 @@
     {% include 'includes/_company_footer.html' %}
 
     <script>
-    function abToggleMenu() {
-        var nav = document.getElementById('abMobileNav');
-        var btn = document.querySelector('.ab-menu-btn');
-        if (!nav) return;
-        var open = nav.classList.toggle('is-open');
-        if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
     (function () {
         var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

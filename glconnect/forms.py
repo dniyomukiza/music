@@ -45,7 +45,7 @@ class LoginForm(FlaskForm):
     username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Username"})
     password = StringField(validators=[DataRequired(), Length(min=2, max=20)], render_kw={"placeholder": "Password"})
     remember_me = BooleanField('Remember Me')
-    submit = SubmitField('Login')
+    submit = SubmitField('Sign in')
 
 class KeywordForm(FlaskForm):
     keyword = StringField('Enter keyyword', validators=[DataRequired()])

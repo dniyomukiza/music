@@ -1,0 +1,35 @@
+{# Shared contact form — used on /contact and /about #about-contact #}
+<div class="contact-form-block">
+    <p class="contact-email">
+        <a href="mailto:info@ndotonic.com">info@ndotonic.com</a>
+    </p>
+
+    <form method="POST" action="{{ contact_form_action|default(url_for('blog.contact')) }}" class="contact-form">
+        {{ contact_form.hidden_tag() }}
+        {% if contact_form_next %}
+        <input type="hidden" name="next" value="{{ contact_form_next }}">
+        {% endif %}
+        <div class="form-group">
+            <label for="{{ contact_form_prefix|default('') }}firstName">First name</label>
+            {{ contact_form.FirstName(class="form-input", id=(contact_form_prefix|default('')) ~ 'firstName', autocomplete="given-name") }}
+        </div>
+        <div class="form-group">
+            <label for="{{ contact_form_prefix|default('') }}lastName">Last name</label>
+            {{ contact_form.LastName(class="form-input", id=(contact_form_prefix|default('')) ~ 'lastName', autocomplete="family-name") }}
+        </div>
+        <div class="form-group">
+            <label for="{{ contact_form_prefix|default('') }}email">Email</label>
+            {{ contact_form.email(class="form-input", id=(contact_form_prefix|default('')) ~ 'email', autocomplete="email") }}
+        </div>
+        <div class="form-group">
+            <label for="{{ contact_form_prefix|default('') }}message">Message</label>
+            {{ contact_form.message(class="form-input", id=(contact_form_prefix|default('')) ~ 'message', rows="5") }}
+        </div>
+        <div class="form-group form-group--recap">
+            {{ contact_form.recap }}
+        </div>
+        <div class="form-group form-group--submit">
+            {{ contact_form.submit(class="btn contact-submit") }}
+        </div>
+    </form>
+</div>

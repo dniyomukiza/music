@@ -7,7 +7,7 @@ import logging
 
 from mailtrap import MailtrapClient, Mail, Address
 
-from glconnect.forms import CareerApplicationForm
+from glconnect.forms import CareerApplicationForm, ContactForm
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ def index():
 
 @bp.route('/home')
 def home():
-    return render_template('home.html')
+    """Legacy URL — landing page is at /."""
+    return redirect(url_for('routes.index'), code=301)
 
 @bp.route('/marketplace')
 @login_required
@@ -39,7 +40,7 @@ def marketplace():
 @bp.route('/about')
 @login_required
 def about():
-    return render_template('about.html')
+    return render_template('about.html', contact_form=ContactForm())
 
 @bp.route('/pitch-deck')
 def pitch_deck():

@@ -2,47 +2,105 @@
 
 {% block title %}Create Account | Ndotonic{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+{% endblock %}
+
 {% block salutation %}
-<div class="register-container">
-    {% include 'messages.html' %}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul class="flashes">
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+<div class="auth-page-shell">
+    <div class="auth-card">
+        {% include 'messages.html' %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="auth-flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
 
-    <h2>Create Account</h2>
-    <link rel="stylesheet" href="{{ url_for('static', filename='reg.css') }}">
+        <p class="auth-eyebrow"><span class="auth-eyebrow-dot" aria-hidden="true"></span> Ndotonic</p>
+        <h2>Create account</h2>
+        <p class="auth-lead">Pitch, publish, and connect with readers and creators.</p>
 
+        <form method="POST" action="" class="auth-form">
+            {{ form.hidden_tag() }}
+            {% if register_next %}
+            <input type="hidden" name="next" value="{{ register_next }}">
+            {% endif %}
 
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        {% if register_next %}
-        <input type="hidden" name="next" value="{{ register_next }}">
-        {% endif %}
-        <input type="text" id="fname" name="fname" placeholder="First Name" required>
-        <input type="text" id="lname" name="lname" placeholder="Last Name" required>
-        <input type="email" id="email" name="email" placeholder="Email" required>
-        <input type="text" id="username" name="username" placeholder="Username" required>
-        <input type="password" id="password" name="password" placeholder="Password" required>
-        <select id="role" name="role" required>
-            <option value="" disabled selected>Your role</option>
-            <option value="artist">Artist</option>
-            <option value="author">Author</option>
-            <option value="blogger">Blogger</option>
-            <option value="podcaster">Podcaster</option>
-            <option value="other">Other</option>
-        </select>
-        <input type="submit" value="Register" class="btn">
-         <div class="form-group">
+            <div class="auth-field">
+                <label for="fname">First name</label>
+                <input type="text" id="fname" name="fname" placeholder="First name" autocomplete="given-name" required>
+            </div>
+            <div class="auth-field">
+                <label for="lname">Last name</label>
+                <input type="text" id="lname" name="lname" placeholder="Last name" autocomplete="family-name" required>
+            </div>
+            <div class="auth-field">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+            </div>
+            <div class="auth-field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+            </div>
+            <div class="auth-field">
+                <label for="password">Password</label>
+                <div class="auth-password">
+                    <input type="password" id="password" name="password" placeholder="Password" autocomplete="new-password" required>
+                    <button type="button" class="auth-password-toggle" data-target="password" aria-label="Show password" aria-pressed="false">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="auth-field">
+                <label for="role">Your role</label>
+                <select id="role" name="role" required>
+                    <option value="" disabled selected>Select a role</option>
+                    <option value="artist">Artist</option>
+                    <option value="author">Author</option>
+                    <option value="blogger">Blogger</option>
+                    <option value="podcaster">Podcaster</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="auth-field auth-field--recap">
                 {{ form.recap }}
-     </div>
-    </form>
-     
-    <p><a href="{{ url_for('routes.home') }}">Homepage</a> Already have an account? {% if register_next %}<a href="{{ url_for('routes1.login', next=register_next) }}">Log in</a>{% else %}<a href="{{ url_for('routes1.login') }}">Log in</a>{% endif %}</p>
+            </div>
+            <div class="auth-field auth-field--submit">
+                <input type="submit" value="Create account" class="btn auth-submit">
+            </div>
+        </form>
+
+        <p class="auth-footer">
+            Already have an account?
+            {% if register_next %}
+            <a href="{{ url_for('routes1.login', next=register_next) }}">Sign in</a>
+            {% else %}
+            <a href="{{ url_for('routes1.login') }}">Sign in</a>
+            {% endif %}
+        </p>
+        <p class="auth-footer auth-footer--muted">
+            <a href="{{ url_for('routes.index') }}">Back to homepage</a>
+        </p>
+    </div>
 </div>
+<script>
+(function () {
+    var btn = document.querySelector('.auth-password-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('data-target'));
+        if (!input) return;
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        var icon = btn.querySelector('i');
+        if (icon) icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+    });
+})();
+</script>
 {% endblock %}

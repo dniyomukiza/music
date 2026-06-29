@@ -1,0 +1,291 @@
+/* Auth pages (login / register) — landing / about palette */
+
+.auth-page-shell {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  min-height: calc(100vh - 12rem);
+  padding: clamp(1.5rem, 5vw, 3rem) clamp(1rem, 4vw, 2rem) clamp(2.5rem, 6vw, 4rem);
+  box-sizing: border-box;
+}
+
+.auth-page-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(201, 162, 39, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 80%, rgba(42, 90, 68, 0.18), transparent 50%);
+  opacity: 0.9;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 26rem);
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2rem);
+  text-align: center;
+  color: #e8ece9;
+  background: rgba(12, 15, 14, 0.58);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.28),
+    0 0 80px rgba(201, 162, 39, 0.08);
+}
+
+.auth-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.85rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  background: rgba(201, 162, 39, 0.1);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #c9a227;
+}
+
+.auth-eyebrow-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #e0bc3a;
+  box-shadow: 0 0 12px rgba(224, 188, 58, 0.65);
+}
+
+.auth-card h2 {
+  margin: 0 0 0.5rem;
+  font-family: "Syne", sans-serif;
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #e8ece9;
+}
+
+.auth-lead {
+  margin: 0 0 1.35rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #9aa8a0;
+}
+
+.auth-flashes {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  text-align: left;
+}
+
+.auth-flashes li {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.auth-flashes li.error {
+  background: rgba(220, 53, 69, 0.18);
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  color: #ffb4bc;
+}
+
+.auth-flashes li.success {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  color: #9ae6c3;
+}
+
+.auth-form {
+  text-align: left;
+}
+
+.auth-field {
+  margin-bottom: 0.85rem;
+}
+
+.auth-field label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #9aa8a0;
+}
+
+.auth-field input[type="text"],
+.auth-field input[type="email"],
+.auth-field input[type="password"],
+.auth-field select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.72rem 0.85rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #e8ece9;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(42, 61, 50, 0.55);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.auth-field input::placeholder {
+  color: #7a8982;
+}
+
+.auth-field input:focus,
+.auth-field select:focus {
+  outline: none;
+  border-color: rgba(201, 162, 39, 0.65);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+}
+
+.auth-field select {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23c9a227' stroke-width='1.5' d='M1 4l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  cursor: pointer;
+}
+
+.auth-field select option {
+  background: #0c0f0e;
+  color: #e8ece9;
+}
+
+.auth-password {
+  position: relative;
+}
+
+.auth-password input {
+  padding-right: 2.75rem;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2.75rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #9aa8a0;
+  cursor: pointer;
+  border-radius: 0 8px 8px 0;
+  transition: color 0.2s ease;
+}
+
+.auth-password-toggle:hover {
+  color: #e0bc3a;
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid #c9a227;
+  outline-offset: 2px;
+}
+
+.auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.88rem;
+  color: #9aa8a0;
+}
+
+.auth-remember input {
+  accent-color: #c9a227;
+}
+
+.auth-field--recap {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.auth-field--submit {
+  margin-top: 1.1rem;
+  margin-bottom: 0;
+}
+
+.auth-submit.btn,
+.auth-submit {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0a0b0a;
+  background: linear-gradient(145deg, #c9a227, #e0bc3a);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.45), 0 12px 32px rgba(201, 162, 39, 0.2);
+  transition: transform 0.15s ease, filter 0.2s ease;
+}
+
+.auth-submit.btn:hover,
+.auth-submit:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.auth-submit.btn:focus-visible,
+.auth-submit:focus-visible {
+  outline: 2px solid #e0bc3a;
+  outline-offset: 3px;
+}
+
+.auth-footer {
+  margin: 1.25rem 0 0;
+  font-size: 0.92rem;
+  color: #9aa8a0;
+}
+
+.auth-footer--muted {
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+}
+
+.auth-footer a {
+  color: #e0bc3a;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-footer a:hover {
+  color: #fff6d0;
+}
+
+@media (max-width: 600px) {
+  .auth-page-shell {
+    min-height: auto;
+    padding-top: 1rem;
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 1.25rem;
+  }
+}
