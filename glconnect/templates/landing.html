@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="GLC, Turning real experiences into published books. Write, fund, and publish with Ink Studio, patron campaigns, and our marketplace.">
-    <title>GLC | Premium Content</title>
+    <meta name="description" content="Ndotonic, Turning real experiences into published books. Write, fund, and publish with Ink Studio, patron campaigns, and our marketplace.">
+    <title>Ndotonic</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -140,15 +140,31 @@
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
-            font-family: "Syne", sans-serif;
-            font-weight: 800;
-            font-size: 1.05rem;
-            letter-spacing: 0.28em;
-            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
             text-decoration: none;
+            line-height: 0;
         }
 
-        .wordmark span { color: var(--accent); }
+        .wordmark-img {
+            height: 2.5rem;
+            width: auto;
+            max-width: min(42vw, 11rem);
+            object-fit: contain;
+            border-radius: 8px;
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .wordmark:hover .wordmark-img {
+            transform: scale(1.03);
+            filter: brightness(1.06);
+        }
+
+        .wordmark:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 4px;
+            border-radius: 8px;
+        }
 
         .platform-button-container { display: flex; align-items: center; }
 
@@ -514,6 +530,11 @@
                 transform: none;
             }
 
+            .wordmark-img {
+                height: 2.25rem;
+                max-width: 9rem;
+            }
+
             .header { justify-content: space-between; }
 
             .slant { opacity: 0.35; }
@@ -535,7 +556,9 @@
                 <a href="{{ url_for('routes1.findwords') }}">Language</a>
             </nav>
         </div>
-        <a class="wordmark" href="/" aria-label="GLC home">GL<span>C</span></a>
+        <a class="wordmark" href="/" aria-label="Ndotonic home">
+            <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic" class="wordmark-img" width="160" height="40">
+        </a>
         <div class="platform-button-container">
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('routes.about') }}" class="platform-button">About</a>
@@ -602,7 +625,7 @@
         </div>
     </main>
 
-    <div class="live-broadcast-bar" role="region" aria-label="GLC live radio broadcast">
+    <div class="live-broadcast-bar" role="region" aria-label="GLC Media live radio broadcast">
         <div class="live-meta">
             <span class="live-dot" aria-hidden="true"></span>
             <span class="live-label">Live Radio</span>

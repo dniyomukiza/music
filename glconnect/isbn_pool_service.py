@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PUBLISHER_NAME = "GLC.COOL"
+DEFAULT_PUBLISHER_NAME = "Ndotonic"
 
 
 class IsbnPoolError(Exception):

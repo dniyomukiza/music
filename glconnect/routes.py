@@ -104,7 +104,7 @@ def careers_apply():
 
         try:
             mail = Mail(
-                sender=Address(email=sender, name="GLC Careers"),
+                sender=Address(email=sender, name="Ndotonic Careers"),
                 to=[Address(email=receiver)],
                 subject=f"Job application: {position}",
                 text=body,

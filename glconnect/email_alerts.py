@@ -34,7 +34,7 @@ class EmailAlertService:
         
         try:
             mail = Mail(
-                sender=Address(email=self.sender, name="GLC System Monitor"),
+                sender=Address(email=self.sender, name="Ndotonic System Monitor"),
                 to=[Address(email=self.receiver)],
                 subject=subject,
                 text=body,

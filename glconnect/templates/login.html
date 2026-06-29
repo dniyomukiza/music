@@ -1,19 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Login | GLC content streaming{% endblock %}
+{% block title %}Login | Ndotonic{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+{% endblock %}
 
 {% block salutation %}
 <div class="login-container">
     {% include 'messages.html' %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='../static/login.css') }}">
+    <h2>Welcome back</h2>
     <form method="POST" action="">
         {{ form.hidden_tag() }}
         {% set login_next = request.args.get('next') %}
         {% if login_next %}
         <input type="hidden" name="next" value="{{ login_next }}">
         {% endif %}
-        {{ form.username(placeholder="Username") }}
-        {{ form.password(placeholder="Password") }}
+        <label for="username" class="visually-hidden">Username</label>
+        {{ form.username(placeholder="Username", id="username", autocomplete="username", autocapitalize="none", autocorrect="off", spellcheck="false") }}
+        <label for="password" class="visually-hidden">Password</label>
+        <div class="login-password">
+            {{ form.password(placeholder="Password", id="password", autocomplete="current-password") }}
+            <button type="button" class="login-password-toggle" data-target="password" aria-label="Show password" aria-pressed="false">
+                <i class="fas fa-eye" aria-hidden="true"></i>
+            </button>
+        </div>
         <div class="remember-me">
             {{ form.remember_me() }} {{ form.remember_me.label }}
         </div>
@@ -24,4 +35,20 @@
     <p><a href="{{ url_for('routes1.reset_password_request') }}">Forgot Password?</a></p>
 
 </div>
+<script>
+(function () {
+    var btn = document.querySelector('.login-password-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('data-target'));
+        if (!input) return;
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        var icon = btn.querySelector('i');
+        if (icon) icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+    });
+})();
+</script>
 {% endblock %}

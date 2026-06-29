@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Contact Us | GLC content streaming{% endblock %}
+{% block title %}Contact Us | Ndotonic{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='contact.css') }}">
+{% endblock %}
 
 {% block salutation %}
 {% include 'messages.html' %}
@@ -16,39 +20,37 @@
     {% endwith %}
 
     <h2>Get in touch</h2>
-    <link rel="stylesheet" href="{{ url_for('static', filename='contact.css') }}">
+    <p class="contact-lead">Questions about Ink Studio, GLC Media, or partnerships? We read every message.</p>
+    <p class="contact-email">
+        <a href="mailto:info@ndotonic.com">info@ndotonic.com</a>
+    </p>
 
-    <form method="POST" action="" class="login-container">
+    <form method="POST" action="" class="contact-form">
         {{ form.hidden_tag() }}
-        <div class="container">
-            <div class="form-group">
-                <label for="firstName">First Name:</label>
-                {{ form.FirstName(class="form-input") }}
-            </div>
-            <div class="form-group">
-                <label for="lastName">Last Name:</label>
-                {{ form.LastName(class="form-input") }}
-            </div>
-            <div class="form-group">
-                <label for="email">Email:</label>
-                {{ form.email(class="form-input") }}
-            </div>
-            <div class="form-group">
-                <label for="message">Message:</label>
-                {{ form.message(class="form-input") }}
-            </div>
-            <div class="form-group">
-                {{ form.submit(class="btn") }}
-            </div>
-            <div class="form-group">
-                {{ form.recap }}
-            </div>
+        <div class="form-group">
+            <label for="firstName">First name</label>
+            {{ form.FirstName(class="form-input", id="firstName", autocomplete="given-name") }}
+        </div>
+        <div class="form-group">
+            <label for="lastName">Last name</label>
+            {{ form.LastName(class="form-input", id="lastName", autocomplete="family-name") }}
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            {{ form.email(class="form-input", id="email", autocomplete="email") }}
+        </div>
+        <div class="form-group">
+            <label for="message">Message</label>
+            {{ form.message(class="form-input", id="message", rows="5") }}
+        </div>
+        <div class="form-group form-group--recap">
+            {{ form.recap }}
+        </div>
+        <div class="form-group form-group--submit">
+            {{ form.submit(class="btn contact-submit") }}
         </div>
     </form>
 
-    <p><a href="{{ url_for('routes.home') }}">Back to Homepage</a></p>
+    <p class="contact-back"><a href="{{ url_for('routes.home') }}">Back to homepage</a></p>
 </div>
 {% endblock %}
-
-
-

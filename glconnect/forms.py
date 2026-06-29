@@ -65,7 +65,7 @@ class ContactForm(FlaskForm):
     LastName = StringField('Last Name', validators=[DataRequired(), Length(max=50)])
     email = StringField('Email', validators=[DataRequired(), Email()])
     message = TextAreaField('Message', validators=[DataRequired(), Length(max=500)])
-    submit = SubmitField('Submit')
+    submit = SubmitField('Contact Us')
     recap=RecaptchaField()
 
 

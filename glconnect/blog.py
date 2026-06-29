@@ -296,7 +296,7 @@ def contact():
 
         try:
             mail = Mail(
-                sender=Address(email=sender, name="Message form GLC user"),
+                sender=Address(email=sender, name="Message form Ndotonic user"),
                 to=[Address(email=receiver)],
                 subject="New Contact Form Submission",
                 text=(

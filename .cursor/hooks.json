@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/security-review-new-file.sh",
+        "matcher": "Write"
+      }
+    ]
+  }
+}

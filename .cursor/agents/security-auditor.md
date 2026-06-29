@@ -1,6 +1,6 @@
 ---
 name: security-auditor
-description: Security specialist. Use when pushing code to github
+description: Security specialist. Use when pushing code to github, when new files or code are written, or after the security-review hook flags issues.
 model: inherit
 readonly: true
 ---

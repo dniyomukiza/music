@@ -160,7 +160,7 @@ def create_media_publicist_agent(
         Return professional markdown with these exact section headers:
 
         ## Press release
-        (400–600 words, ready for media distribution: dateline, headline, lead, quotes placeholder for author, boilerplate about GLC/Ink Studio imprint)
+        (400–600 words, ready for media distribution: dateline, headline, lead, quotes placeholder for author, boilerplate about Ndotonic/Ink Studio imprint)
 
         ## Media pitch email
         (Short email to journalists/bloggers pitching coverage)
