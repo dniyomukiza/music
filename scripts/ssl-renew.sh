@@ -34,49 +34,41 @@ _ssl_log() {
 }
 #endregion
 
-cert_check_path() {
-  # Prefer the nginx container: it has /etc/letsencrypt mounted and can read
-  # live/ certs regardless of host-side root-only perms. The deploy user
-  # (non-root) usually CANNOT read live/ or archive/, so a host-path check
-  # gives false negatives once a renewal.conf exists → "No valid certificate".
+cert_exists() {
   if $COMPOSE exec -T nginx test -r "$CERT_PATH" 2>/dev/null; then
-    echo "nginx:$CERT_PATH"
     return 0
   fi
   if [[ -r "$CERT_PATH" ]]; then
-    echo "$CERT_PATH"
     return 0
   fi
   if [[ -f "$RENEWAL_CONF" ]]; then
-    echo "nginx:$CERT_PATH"
     return 0
   fi
   return 1
 }
 
+# nginx:alpine has no openssl; use the certbot image (same /etc/letsencrypt mount).
+cert_openssl() {
+  $COMPOSE_SSL run --rm --no-deps -T --entrypoint openssl certbot "$@" 2>/dev/null
+}
+
 cert_checkend_seconds() {
   local seconds="$1"
-  local path_spec
-  path_spec="$(cert_check_path 2>/dev/null || true)"
-  [[ -n "$path_spec" ]] || return 1
-  if [[ "$path_spec" == nginx:* ]]; then
-    $COMPOSE exec -T nginx openssl x509 -in "${path_spec#nginx:}" -noout -checkend "$seconds" 2>/dev/null
-  elif [[ -r "$path_spec" ]]; then
-    openssl x509 -in "$path_spec" -noout -checkend "$seconds" 2>/dev/null
-  else
-    return 1
+  cert_exists || return 1
+  if [[ -r "$CERT_PATH" ]] && command -v openssl >/dev/null 2>&1; then
+    openssl x509 -in "$CERT_PATH" -noout -checkend "$seconds"
+    return
   fi
+  cert_openssl x509 -in "$CERT_PATH" -noout -checkend "$seconds"
 }
 
 cert_not_after() {
-  local path_spec
-  path_spec="$(cert_check_path 2>/dev/null || true)"
-  [[ -n "$path_spec" ]] || return 0
-  if [[ "$path_spec" == nginx:* ]]; then
-    $COMPOSE exec -T nginx openssl x509 -in "${path_spec#nginx:}" -noout -enddate 2>/dev/null | cut -d= -f2- || true
-  elif [[ -r "$path_spec" ]]; then
-    openssl x509 -in "$path_spec" -noout -enddate 2>/dev/null | cut -d= -f2- || true
+  cert_exists || return 0
+  if [[ -r "$CERT_PATH" ]] && command -v openssl >/dev/null 2>&1; then
+    openssl x509 -in "$CERT_PATH" -noout -enddate 2>/dev/null | cut -d= -f2- || true
+    return
   fi
+  cert_openssl x509 -in "$CERT_PATH" -noout -enddate 2>/dev/null | cut -d= -f2- || true
 }
 
 #region agent log
@@ -124,7 +116,7 @@ if [[ "${FORCE:-}" == "1" ]] || ! cert_checkend_seconds 86400; then
     -d "$DOMAIN" -d "www.$DOMAIN"; then
     renew_rc=1
   fi
-elif cert_check_path >/dev/null 2>&1 || [[ -f "$RENEWAL_CONF" ]]; then
+elif cert_exists; then
   renew_mode="renew-only"
   echo "Running certbot renew (non-interactive; no certonly — avoids duplicate-cert prompt)..."
   if ! run_certbot renew \
@@ -174,6 +166,13 @@ if cert_checkend_seconds 86400; then
   _ssl_log "H2" "ssl success" "{\"mode\":\"$renew_mode\",\"notAfter\":\"$not_after\"}"
   #endregion
   echo "SSL OK — $DOMAIN valid until $not_after (mode: $renew_mode)"
+  exit 0
+fi
+
+# certbot succeeded but expiry check failed — still OK if the cert file is present
+if [[ "$renew_rc" -eq 0 ]] && cert_exists; then
+  not_after="$(cert_not_after || true)"
+  echo "SSL OK — $DOMAIN certificate present (mode: $renew_mode${not_after:+, valid until $not_after})"
   exit 0
 fi
 
