@@ -1510,7 +1510,7 @@
                                     <div class="audio-file-details">
                                         <div class="audio-file-name">${file.filename}</div>
                                         <div class="audio-file-meta">
-                                            ${fileSize} • ${modifiedDate} • ${fileType}
+                                            ${fileSize} â¢ ${modifiedDate} â¢ ${fileType}
                                         </div>
                                     </div>
                                 </div>
@@ -1705,7 +1705,7 @@
                             height: 30px;
                             cursor: pointer;
                             font-size: 16px;
-                        ">×</button>
+                        ">Ã</button>
                     </div>
                     <div style="margin-bottom: 20px;">
                         <strong>File:</strong> ${filename}
@@ -1875,7 +1875,7 @@
                 feedback.innerHTML = `
                     <div class="validation-success">
                         <i class="fas fa-check-circle"></i>
-                        <span>✅ ${message}</span>
+                        <span>â ${message}</span>
                     </div>
                 `;
                 input.classList.remove('invalid');
@@ -1885,7 +1885,7 @@
                 feedback.innerHTML = `
                     <div class="validation-error">
                         <i class="fas fa-exclamation-triangle"></i>
-                        <span>❌ ${errorMsg}</span>
+                        <span>â— ${errorMsg}</span>
                         <div class="validation-suggestions">
                             <strong>Try topics like:</strong>
                             <ul>

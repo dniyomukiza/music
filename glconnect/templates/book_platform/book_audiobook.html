@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Audiobook · {{ book.title }} | Ink Studio</title>
+    <title>Audiobook Â· {{ book.title }} | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -145,7 +145,7 @@
                                 <div id="audiobookSummaryStrip" class="alert alert-light border py-2 px-3 mb-3 small" role="status">
                                     <i class="fas fa-info-circle me-2 text-primary" aria-hidden="true"></i>
                                     <strong class="me-1">Current status:</strong>
-                                    <span id="audiobookSummaryText">Checking…</span>
+                                    <span id="audiobookSummaryText">Checkingâ¦</span>
                                 </div>
                                     <div class="alert alert-secondary border mb-3 small">
                                         <strong>Ebook vs. audiobook.</strong>
@@ -581,7 +581,7 @@
 
             if (!boxesOk) {
                 openListingTermsPanel(false);
-                showNotification('Scroll through the full terms, check each required box, then click “Agree to terms”.', 'error');
+                showNotification('Scroll through the full terms, check each required box, then click âAgree to termsâ—.', 'error');
                 if (scrollEl) scrollEl.focus();
                 dbgLog('H1', 'book_audiobook:validateListingTermsForm', 'failed: boxes not checked', {
                     resetArgPassed: listingTermsConfirmed,
@@ -591,7 +591,7 @@
             }
             if (!listingTermsConfirmed) {
                 openListingTermsPanel(false);
-                showNotification('Almost there, click “Agree to terms” after checking each box.', 'error');
+                showNotification('Almost there, click âAgree to termsâ— after checking each box.', 'error');
                 dbgLog('H4', 'book_audiobook:validateListingTermsForm', 'failed: not confirmed', {
                     stateAfter: listingTermsCheckboxState(),
                 });
@@ -795,7 +795,7 @@
                     } else if (result.status === 'failed') {
                         summaryText.textContent = 'Failed, ' + (result.error_message || 'see the red message below or try another voice.');
                     } else {
-                        summaryText.textContent = 'Working…';
+                        summaryText.textContent = 'Workingâ¦';
                     }
                 }
 
@@ -1223,7 +1223,7 @@
             const badge = document.getElementById('audiobookClassifierBadge');
             if (!btn) return;
             btn.disabled = true;
-            if (statusEl) statusEl.textContent = 'Loading…';
+            if (statusEl) statusEl.textContent = 'Loadingâ¦';
             try {
                 const response = await fetch('{{ url_for("book_platform.prepare_audiobook_segments", book_id=book.id) }}', {
                     method: 'POST',
@@ -1244,7 +1244,7 @@
                 if (list && result.segments) {
                     list.innerHTML = result.segments.map(function (seg) {
                         const prev = (seg.preview || '').slice(0, 320);
-                        const dots = (seg.preview || '').length > 320 ? '…' : '';
+                        const dots = (seg.preview || '').length > 320 ? 'â¦' : '';
                         const checked = seg.include ? ' checked' : '';
                         const aiNote = _escapeHtmlAudiobook((seg.ai_reason || '').slice(0, 200));
                         const aiLabel = seg.ai_include ? 'suggested include' : 'suggested skip';

@@ -155,10 +155,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 Analytics Dashboard</h1>
+        <h1>ð Analytics Dashboard</h1>
         <p class="subtitle">Comprehensive analytics for your app</p>
         
-        <button class="refresh-btn" id="refresh-btn" onclick="loadAllData()">🔄 Refresh Data</button>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadAllData()">ð Refresh Data</button>
         
         <div id="error-container"></div>
         
@@ -167,17 +167,17 @@
         </div>
         
         <div class="section">
-            <h2>🔝 Top endpoints</h2>
+            <h2>ð— Top endpoints</h2>
             <div id="top-pages" class="loading">Loading top endpoints...</div>
         </div>
         
         <div class="section">
-            <h2>🕒 Recent Activity</h2>
+            <h2>ð Recent Activity</h2>
             <div id="recent-activity" class="loading">Loading recent activity...</div>
         </div>
         
         <div class="section">
-            <h2>📱 Device statistics</h2>
+            <h2>ð± Device statistics</h2>
             <div id="device-stats" class="loading">Loading device stats...</div>
         </div>
     </div>
@@ -237,7 +237,7 @@
             
             // Disable button and show loading state
             refreshBtn.disabled = true;
-            refreshBtn.textContent = '⏳ Loading...';
+            refreshBtn.textContent = 'â³ Loading...';
             document.getElementById('error-container').innerHTML = '';
             setLoadingState(true);
             
@@ -256,13 +256,13 @@
                 displayRecentActivity(activityData.activities);
                 
                 setLoadingState(false);
-                refreshBtn.textContent = '✅ Data Loaded';
+                refreshBtn.textContent = 'â Data Loaded';
                 setTimeout(() => {
                     refreshBtn.textContent = originalText;
                 }, 2000);
             } catch (error) {
                 setLoadingState(false);
-                refreshBtn.textContent = '❌ Error';
+                refreshBtn.textContent = 'â— Error';
                 setTimeout(() => {
                     refreshBtn.textContent = originalText;
                 }, 3000);
@@ -375,7 +375,7 @@
                                     <td style="font-size: 11px;">${activity.ip_address}</td>
                                     <td>
                                         <span class="status-badge ${activity.is_authenticated ? 'authenticated' : 'anonymous'}">
-                                            ${activity.is_authenticated ? '✓ Auth' : 'Anonymous'}
+                                            ${activity.is_authenticated ? 'â Auth' : 'Anonymous'}
                                         </span>
                                     </td>
                                 </tr>

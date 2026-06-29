@@ -123,7 +123,7 @@
                                     {% set ink_preview_timeline_input_id = 'tentative_timeline' %}
                                     {% include 'book_platform/_project_description_preview.html' %}
                                     <p class="small text-muted mt-3 mb-0">
-                                        “About the project” comes from your
+                                        âAbout the projectâ— comes from your
                                         <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">book description</a>.
                                         Edit it there or after launch from <strong>Edit project</strong>.
                                     </p>
@@ -143,7 +143,7 @@
         if (about) {
             about.innerHTML = initialAbout && initialAbout.trim()
                 ? initialAbout
-                : '<p class="text-white-50 mb-0">Add a book description on the edit book page to show “About the project”.</p>';
+                : '<p class="text-white-50 mb-0">Add a book description on the edit book page to show âAbout the projectâ—.</p>';
         }
     })();
     </script>

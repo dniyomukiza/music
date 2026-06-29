@@ -104,7 +104,7 @@
     <div class="container-fluid px-3 px-md-4 px-xl-5 py-4 py-md-5">
         <div class="row align-items-end g-4">
             <div class="col-lg-8">
-                <h1 class="ink-upload-title mb-3">Publish · List your book</h1>
+                <h1 class="ink-upload-title mb-3">Publish Â· List your book</h1>
                 {% if listing_format == 'print' %}
                 <p class="ink-upload-lead mb-0">List a printed edition you ship yourself. Add cover, pricing, and shipping, buyers pay on Ink and you fulfill orders.</p>
                 {% elif listing_format == 'both' %}
@@ -257,7 +257,7 @@
                             <span class="ink-upload-badge" aria-hidden="true">{% if listing_format == 'print' %}3{% else %}4{% endif %}</span>
                             <div>
                                 <h2 id="heading-print-price" class="h5 mb-1">Print edition <span class="text-muted fw-normal">(you ship)</span></h2>
-                                <p class="small text-muted mb-0">Ink collects payment and sends you the buyer’s US shipping address. You print and mail the book.</p>
+                                <p class="small text-muted mb-0">Ink collects payment and sends you the buyerâs US shipping address. You print and mail the book.</p>
                             </div>
                         </div>
                         <div class="ink-upload-card-body">
@@ -598,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             listingCoverAccepted = false;
-            setListingCoverPreviewUi('Generating…', false);
+            setListingCoverPreviewUi('Generatingâ¦', false);
             if (btnListingCoverGenerate) btnListingCoverGenerate.disabled = true;
             const _coverGenT0 = Date.now();
             // #region agent log
@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'upload_digital_book.html:coverGen:end',message:'Generate preview response',data:{ok:res.ok,success:!!data.success,elapsedMs:_coverGenMs,error:(data.error||'').slice(0,200)},timestamp:Date.now(),hypothesisId:'H1,H2,H4'})}).catch(function(){});
                 // #endregion
                 if (res.ok && data.success) {
-                    setListingCoverPreviewUi('Preview ready, use “Use this cover” if you like it, or discard to try again.', true);
+                    setListingCoverPreviewUi('Preview ready, use âUse this coverâ— if you like it, or discard to try again.', true);
                 } else {
                     setListingCoverPreviewUi(data.error || 'Could not generate preview.', false);
                 }
@@ -745,7 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return { ok: false, focus: coverInput, msg: 'Choose Upload cover and select an image, or choose Generate with AI.' };
         }
         if (!hasCoverFile && ai && !listingCoverAccepted) {
-            return { ok: false, focus: null, msg: 'Generate an AI preview and tap “Use this cover” before submitting.' };
+            return { ok: false, focus: null, msg: 'Generate an AI preview and tap âUse this coverâ— before submitting.' };
         }
         if (wantsEbook) {
             const digitalPriceEl = document.getElementById('digital_price') || document.querySelector('input[name="digital_price"]');
@@ -776,18 +776,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isbnManualRadio && isbnManualRadio.checked) {
             const raw = isbnManualInput ? String(isbnManualInput.value || '').trim() : '';
             if (!raw) {
-                return { ok: false, focus: isbnManualInput, msg: 'Enter your ISBN or choose “Assign from platform pool”.' };
+                return { ok: false, focus: isbnManualInput, msg: 'Enter your ISBN or choose âAssign from platform poolâ—.' };
             }
         }
         const rights = document.getElementById('listing_terms_rights_warranty');
         const takedown = document.getElementById('listing_terms_takedown_consent');
         if (!listingTermsRequiredBoxesCheckedUpload()) {
             openListingTermsPanelUpload(listingTermsConfirmedUpload);
-            return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms, check each required box, then click “Agree to terms”.' };
+            return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms, check each required box, then click âAgree to termsâ—.' };
         }
         if (!listingTermsConfirmedUpload) {
             openListingTermsPanelUpload(false);
-            return { ok: false, focus: btnConfirmListingTermsUpload || showListingTermsBtnUpload, msg: 'Almost there, click “Agree to terms” after checking each box.' };
+            return { ok: false, focus: btnConfirmListingTermsUpload || showListingTermsBtnUpload, msg: 'Almost there, click âAgree to termsâ— after checking each box.' };
         }
         if (!rights || !rights.checked) {
             return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms text, then accept the rights warranty before listing.' };
@@ -816,8 +816,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = ai
-                ? '<i class="fas fa-spinner fa-spin me-2"></i>Working…'
-                : '<i class="fas fa-spinner fa-spin me-2"></i>Submitting…';
+                ? '<i class="fas fa-spinner fa-spin me-2"></i>Workingâ¦'
+                : '<i class="fas fa-spinner fa-spin me-2"></i>Submittingâ¦';
             setUploadProcessingVisible(true);
 
             try {
@@ -842,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 const data = await res.json();
                 if (res.ok && data.success && data.redirect) {
-                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Done, opening step 2…';
+                    submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>Done, opening step 2â¦';
                     window.location.href = data.redirect;
                     return;
                 }
@@ -871,8 +871,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = ai
-                    ? '<i class="fas fa-spinner fa-spin me-2"></i>Working…'
-                    : '<i class="fas fa-spinner fa-spin me-2"></i>Submitting…';
+                    ? '<i class="fas fa-spinner fa-spin me-2"></i>Workingâ¦'
+                    : '<i class="fas fa-spinner fa-spin me-2"></i>Submittingâ¦';
             }
             setUploadProcessingVisible(true);
         });
