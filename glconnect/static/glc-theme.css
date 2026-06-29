@@ -63,14 +63,14 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* Links — visible on dark */
-main a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link),
-.hero a:not(.btn) {
+main a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link):not(.about-cta):not(.about-btn),
+.hero a:not(.btn):not(.about-cta):not(.about-btn) {
   color: var(--glc-bronze-hot);
   text-decoration-color: rgba(201, 162, 39, 0.45);
 }
 
-main a:not(.btn):hover,
-.hero a:not(.btn):hover {
+main a:not(.btn):not(.about-cta):not(.about-btn):hover,
+.hero a:not(.btn):not(.about-cta):not(.about-btn):hover {
   color: #f0e6b8;
   text-decoration-color: var(--glc-bronze);
 }
@@ -311,7 +311,7 @@ main p, main li, .card-body {
 .reset-container .btn,
 .reset-password-container .btn,
 .upload-container button.upload-btn,
-main .btn:not(.btn-outline-light):not(.btn-outline-secondary):not(.btn-link) {
+main .btn:not(.btn-outline-light):not(.btn-outline-secondary):not(.btn-link):not(.contact-submit) {
   background: linear-gradient(145deg, var(--glc-bronze), var(--glc-bronze-hot)) !important;
   color: #0a0b0a !important;
   border: none !important;

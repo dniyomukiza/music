@@ -26,33 +26,21 @@
   line-height: 1.55;
   color: #9aa8a0;
   text-align: center;
-  margin: 0 0 0.5rem;
+  margin: 0 0 1.25rem;
 }
 
-.contact-email {
-  text-align: center;
-  margin: 0 0 1.5rem;
-}
-
-.contact-email a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 1rem;
-  font-weight: 600;
+.contact-lead-email {
   color: #e0bc3a;
-  text-decoration: none;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid rgba(201, 162, 39, 0.35);
-  background: rgba(201, 162, 39, 0.08);
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  text-decoration: underline;
+  text-decoration-color: rgba(201, 162, 39, 0.45);
+  text-underline-offset: 0.15em;
+  font-weight: 600;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
 }
 
-.contact-email a:hover {
+.contact-lead-email:hover {
   color: #fff6d0;
-  background: rgba(201, 162, 39, 0.16);
-  border-color: rgba(201, 162, 39, 0.55);
+  text-decoration-color: rgba(224, 188, 58, 0.75);
 }
 
 .flashes {
@@ -144,20 +132,26 @@
   font-family: inherit;
   font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #0a0b0a;
-  background: #c9a227;
-  border: 2px solid #c9a227;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: #060807 !important;
+  -webkit-text-fill-color: #060807;
+  background-color: #c9a227 !important;
+  background-image: none !important;
+  border: 1px solid rgba(10, 11, 10, 0.12) !important;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.35), 0 10px 28px rgba(0, 0, 0, 0.35);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .contact-submit.btn:hover {
-  background: #e0bc3a;
-  border-color: #e0bc3a;
+  color: #060807 !important;
+  -webkit-text-fill-color: #060807;
+  background-color: #e0bc3a !important;
+  border-color: rgba(10, 11, 10, 0.1) !important;
   transform: translateY(-1px);
+  filter: none;
 }
 
 .contact-submit.btn:focus-visible {
