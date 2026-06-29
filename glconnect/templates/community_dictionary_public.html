@@ -258,22 +258,22 @@ function forceMobileVisibility() {
     const mobileWordsList = document.getElementById('mobileWordsList');
     if (mobileWordsList && window.innerWidth <= 991) {
         // Force container visibility
-        mobileWordsList.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; height: auto !important; overflow: visible !important; background: white !important; padding: 10px !important;';
+        mobileWordsList.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; height: auto !important; overflow: visible !important; background: rgba(12, 15, 14, 0.92) !important; padding: 10px !important;';
         
         // Force all word cards visibility
         const wordCards = mobileWordsList.querySelectorAll('.word-card');
         wordCards.forEach(card => {
-            card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; margin-bottom: 15px !important; background: white !important; border: 1px solid #ddd !important; border-radius: 8px !important; padding: 10px !important;';
+            card.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; margin-bottom: 15px !important; background: rgba(12, 15, 14, 0.92) !important; border: 1px solid rgba(42, 61, 50, 0.55) !important; border-radius: 8px !important; padding: 10px !important;';
             
             // Force card and card-body visibility
             const cardElement = card.querySelector('.card');
             if (cardElement) {
-                cardElement.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: white !important;';
+                cardElement.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: rgba(12, 15, 14, 0.92) !important;';
             }
             
             const cardBody = card.querySelector('.card-body');
             if (cardBody) {
-                cardBody.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: white !important;';
+                cardBody.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 999 !important; background: rgba(12, 15, 14, 0.92) !important;';
             }
         });
     }
@@ -309,7 +309,7 @@ setInterval(forceMobileVisibility, 500);
 
 <style>
 .community-dictionary-page {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background: linear-gradient(135deg, #0c0f0e 0%, #1a221c 100%);
     min-height: 100vh;
     padding: 2rem 0;
     overflow-x: hidden;
@@ -318,7 +318,7 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .community-dictionary-page .container {
-    background: white;
+    background: rgba(12, 15, 14, 0.92);
     border-radius: 20px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     padding: 2rem;
@@ -328,7 +328,7 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .community-dictionary-page h2 {
-    color: #333;
+    color: #e8ece9;
     font-weight: 700;
     margin-bottom: 0.5rem;
     display: flex;
@@ -337,7 +337,7 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .community-dictionary-page h2 i {
-    color: #2c3e50;
+    color: #0c0f0e;
 }
 
 .card {
@@ -354,13 +354,13 @@ setInterval(forceMobileVisibility, 500);
 
 .card-header {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    border-bottom: 2px solid #2c3e50;
+    border-bottom: 2px solid #0c0f0e;
     border-radius: 15px 15px 0 0 !important;
     font-weight: 600;
 }
 
 .card-header h5 {
-    color: #333;
+    color: #e8ece9;
     margin: 0;
     display: flex;
     align-items: center;
@@ -368,7 +368,7 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .card-header h5 i {
-    color: #2c3e50;
+    color: #0c0f0e;
 }
 
 .table {
@@ -378,15 +378,15 @@ setInterval(forceMobileVisibility, 500);
 .table th {
     border-top: none;
     font-weight: 600;
-    background: #f8f9fa;
-    color: #333;
+    background: rgba(12, 15, 14, 0.75);
+    color: #e8ece9;
     padding: 1rem;
 }
 
 .table td {
     padding: 1rem;
     vertical-align: middle;
-    color: #333;
+    color: #e8ece9;
 }
 
 /* Mobile Card Styles */
@@ -549,7 +549,7 @@ setInterval(forceMobileVisibility, 500);
         height: auto !important;
         min-height: 300px !important;
         overflow: visible !important;
-        background: white !important;
+        background: rgba(12, 15, 14, 0.92) !important;
         padding: 10px !important;
         margin: 10px 0 !important;
     }
@@ -563,8 +563,8 @@ setInterval(forceMobileVisibility, 500);
         z-index: 999 !important;
         height: auto !important;
         min-height: 80px !important;
-        background: white !important;
-        border: 1px solid #ddd !important;
+        background: rgba(12, 15, 14, 0.92) !important;
+        border: 1px solid rgba(42, 61, 50, 0.55) !important;
         border-radius: 8px !important;
         padding: 10px !important;
     }
@@ -576,7 +576,7 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .word-card .card-title {
-    color: #333;
+    color: #e8ece9;
     font-size: 1.1rem;
     font-weight: 600;
 }
@@ -587,10 +587,10 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .word-card .example-section {
-    background: #f8f9fa;
+    background: rgba(12, 15, 14, 0.75);
     padding: 0.75rem;
     border-radius: 8px;
-    border-left: 3px solid #2c3e50;
+    border-left: 3px solid #0c0f0e;
 }
 
 .word-card .word-meta {
@@ -686,21 +686,21 @@ setInterval(forceMobileVisibility, 500);
         padding: 0.2rem 0.4rem;
     }
 }
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
 }
 
 .table tbody tr:hover {
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
 }
 
 .table tbody tr:hover td {
-    color: #333;
-    background-color: #f8f9fa;
+    color: #e8ece9;
+    background-color: rgba(12, 15, 14, 0.75);
 }
 
 /* Ensure text visibility in all table cells */
 .table td strong {
-    color: #333;
+    color: #e8ece9;
     font-weight: 600;
 }
 
@@ -780,7 +780,7 @@ setInterval(forceMobileVisibility, 500);
 .badge-secondary,
 .table td .badge-secondary,
 .badge.badge-secondary {
-    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    background: linear-gradient(135deg, #0c0f0e, #1a221c) !important;
     color: white !important;
     border: none !important;
 }
@@ -790,7 +790,7 @@ setInterval(forceMobileVisibility, 500);
     font-weight: 600;
     padding: 0.75rem 1.5rem;
     transition: all 0.3s ease;
-    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    background: linear-gradient(135deg, #0c0f0e, #1a221c) !important;
     border: none !important;
     color: white !important;
     text-decoration: none !important;
@@ -799,46 +799,46 @@ setInterval(forceMobileVisibility, 500);
 .btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    background: linear-gradient(135deg, #1a221c, #0c0f0e) !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    background: linear-gradient(135deg, #0c0f0e, #1a221c) !important;
     border: none !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    background: linear-gradient(135deg, #1a221c, #0c0f0e) !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    background: linear-gradient(135deg, #0c0f0e, #1a221c) !important;
     border: none !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-success:hover {
-    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    background: linear-gradient(135deg, #1a221c, #0c0f0e) !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-info {
-    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    background: linear-gradient(135deg, #0c0f0e, #1a221c) !important;
     border: none !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-info:hover {
-    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    background: linear-gradient(135deg, #1a221c, #0c0f0e) !important;
     color: white !important;
     text-decoration: none !important;
 }
@@ -851,7 +851,7 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .form-control:focus {
-    border-color: #2c3e50;
+    border-color: #0c0f0e;
     box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
 }
 
@@ -860,16 +860,16 @@ setInterval(forceMobileVisibility, 500);
 }
 
 .text-center.py-4 i {
-    color: #2c3e50 !important;
+    color: #0c0f0e !important;
 }
 
 .text-center.py-4 h5 {
-    color: #333 !important;
+    color: #e8ece9 !important;
     font-weight: 600;
 }
 
 .text-center.py-4 p {
-    color: #666 !important;
+    color: #9aa8a0 !important;
     font-size: 1.1rem;
 }
 
@@ -888,14 +888,14 @@ setInterval(forceMobileVisibility, 500);
     min-width: 150px;
     margin: 0 !important;
     border-radius: 10px !important;
-    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    background: linear-gradient(135deg, #0c0f0e, #1a221c) !important;
     border: none !important;
     color: white !important;
     text-decoration: none !important;
 }
 
 .btn-group .btn:hover {
-    background: linear-gradient(135deg, #34495e, #2c3e50) !important;
+    background: linear-gradient(135deg, #1a221c, #0c0f0e) !important;
     color: white !important;
     text-decoration: none !important;
     transform: translateY(-2px);

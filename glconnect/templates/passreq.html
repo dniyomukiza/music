@@ -3,11 +3,14 @@
 
 {% block title %}Reset Request | Ndotonic{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='request.css') }}">
+{% endblock %}
+
 {% block salutation %}
 <div class="reset-container">
     {% include 'messages.html' %}
     <h2>Reset Request</h2>
-    <link rel="stylesheet" href="{{ url_for('static', filename='request.css') }}">
 
     <!-- Form for requesting a password reset -->
     <form method="POST">

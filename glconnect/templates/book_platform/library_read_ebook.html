@@ -10,12 +10,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Lexend:wght@400;600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         /* Scoped reader: avoid global Ink Studio body styles fighting this page */
         .ink-reader-root {
             --ir-bg: #f4f1ea;
-            --ir-surface: #fffdf8;
+            --ir-surface: #0c0f0e;
             --ir-text: #1a1a1a;
             --ir-muted: #5c5c5c;
             --ir-accent: #1e4d3a;

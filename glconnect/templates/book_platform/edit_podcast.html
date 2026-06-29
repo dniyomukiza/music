@@ -12,21 +12,21 @@
             max-width: 800px;
             margin: 40px auto;
             padding: 30px;
-            background: white;
+            background: rgba(12, 15, 14, 0.92);
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .file-upload-area {
-            border: 2px dashed #007bff;
+            border: 2px dashed #c9a227;
             border-radius: 8px;
             padding: 40px;
             text-align: center;
-            background: #f8f9fa;
+            background: rgba(12, 15, 14, 0.75);
             transition: all 0.3s;
         }
         .file-upload-area:hover {
             background: #e9ecef;
-            border-color: #0056b3;
+            border-color: #a68520;
         }
         .file-upload-area.dragover {
             background: #d1ecf1;
@@ -34,7 +34,7 @@
         }
         .current-file {
             background: #e7f3ff;
-            border-left: 4px solid #007bff;
+            border-left: 4px solid #c9a227;
             padding: 15px;
             border-radius: 4px;
             margin-bottom: 20px;
@@ -42,6 +42,7 @@
     </style>
 </head>
 <body>
+    <div class="ndotonic-page-bg" aria-hidden="true"></div>
     {% include 'messages.html' %}
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ category }} | News Analytics</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='news.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
     <style>
         .container {
             max-width: 1200px;
@@ -12,8 +13,8 @@
             padding: 20px;
         }
         .card {
-            background: white;
-            border: 1px solid #ddd;
+            background: rgba(12, 15, 14, 0.92);
+            border: 1px solid rgba(42, 61, 50, 0.55);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
@@ -21,8 +22,8 @@
         }
         .card h3 {
             margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #007bff;
+            color: #e8ece9;
+            border-bottom: 2px solid #c9a227;
             padding-bottom: 10px;
         }
         .stat {
@@ -30,7 +31,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid rgba(42, 61, 50, 0.35);
         }
         .stat:last-child {
             border-bottom: none;
@@ -41,11 +42,11 @@
         .stat-value {
             font-size: 1.2em;
             font-weight: bold;
-            color: #007bff;
+            color: #c9a227;
         }
         .topic-item {
             padding: 8px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid rgba(42, 61, 50, 0.35);
             font-size: 0.9em;
         }
         .topic-item:last-child {
@@ -55,12 +56,12 @@
             font-weight: 500;
         }
         .topic-count {
-            color: #666;
+            color: #9aa8a0;
             font-size: 0.8em;
         }
         .search-item {
             padding: 8px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid rgba(42, 61, 50, 0.35);
             font-size: 0.9em;
         }
         .search-item:last-child {
@@ -70,13 +71,13 @@
             font-weight: 500;
         }
         .search-time {
-            color: #666;
+            color: #9aa8a0;
             font-size: 0.8em;
         }
         .back-link {
             display: inline-block;
             margin-bottom: 20px;
-            color: #007bff;
+            color: #c9a227;
             text-decoration: none;
         }
         .back-link:hover {

@@ -10,13 +10,13 @@
     <style>
         :root {
             --bg-dark: #060807;
-            --bg-panel: rgba(17, 24, 39, 0.6);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            --bg-panel: rgba(12, 15, 14, 0.92);
+            --text-main: #e8ece9;
+            --text-muted: #9aa8a0;
             --accent-primary: #c9a227;
             --accent-secondary: #e0bc3a;
-            --border-light: rgba(255, 255, 255, 0.08);
-            --glass-bg: rgba(15, 23, 42, 0.75);
+            --border-light: rgba(42, 61, 50, 0.45);
+            --glass-bg: rgba(6, 8, 7, 0.72);
             --gradient-accent: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
         }
 
@@ -47,7 +47,7 @@
         .nav-link:hover { color: #fff !important; }
         
         .page-title {
-            background: linear-gradient(135deg, #fff, #94a3b8);
+            background: linear-gradient(135deg, #e0bc3a, #e8ece9, #c9a227);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 700;
@@ -98,7 +98,8 @@
         .stat-icon { color: var(--accent-primary); margin-right: 8px; width: 16px; text-align: center; }
     </style>
 </head>
-<body>
+<body class="ink-books-ui">
+    <div class="ndotonic-page-bg" aria-hidden="true"></div>
     {% include 'messages.html' %}
     <nav class="navbar navbar-expand-lg">
         <div class="container">

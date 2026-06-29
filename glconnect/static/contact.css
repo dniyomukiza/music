@@ -1,3 +1,5 @@
+@import url("glc-theme.css");
+
 .contact-container {
   flex-grow: 1;
   width: min(100% - 2rem, 32rem);

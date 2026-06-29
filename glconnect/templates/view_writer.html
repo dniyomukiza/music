@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ writer.writer_name }}'s Profile</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='view_writer.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
 </head>
-<body>
+<body class="view-writer-page">
     {% include 'messages.html' %}
    
     <img src="{{ url_for('static', filename=writer.profile_picture or 'writer_uploads/default_writer.jpg') }}" alt="Profile Picture" width="150">

@@ -214,6 +214,8 @@
 </head>
 <body>
 
+<div class="ndotonic-page-bg" aria-hidden="true"></div>
+
 <header>
   <div class="nav-container">
     <a href="{% if current_user.is_authenticated %}{{ url_for('routes.about') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.about')) }}{% endif %}" style="text-decoration: none;">

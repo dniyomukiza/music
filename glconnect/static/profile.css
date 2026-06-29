@@ -1,3 +1,5 @@
+@import url("glc-theme.css");
+
 
 .search-bar {
     display: flex;
@@ -19,16 +21,17 @@
 .search-bar button {
     padding: 10px;
     margin-left: 10px;
-    background-color: #007bff;
-    color: white;
+    background: linear-gradient(145deg, var(--glc-bronze), var(--glc-bronze-hot));
+    color: #0a0b0a;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    font-weight: 700;
+    transition: filter 0.2s ease;
 }
 
 .search-bar button:hover {
-    background-color: #0056b3;
+    filter: brightness(1.06);
 }
 
 .search-playlist-container {
@@ -47,7 +50,7 @@
 .results-container {
     margin-top: 20px;
     padding: 15px;
-    color: #ff8c00;
+    color: var(--glc-bronze-hot);
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
@@ -58,11 +61,12 @@
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    background: #1e1e1e; 
-    color: white;
+    background: rgba(12, 15, 14, 0.92);
+    color: var(--glc-text);
     padding: 10px;
     margin-bottom: 10px;
-    border-radius: 5px;
+    border-radius: 8px;
+    border: 1px solid rgba(42, 61, 50, 0.45);
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
     flex-grow: 0;
     visibility: visible !important;
@@ -382,10 +386,11 @@ footer {
     bottom: 0;
     width: 100%;
     left: 0;
-    background-color:white;
-    color:black;
+    background-color: rgba(6, 8, 7, 0.92);
+    color: var(--glc-text-muted);
     text-align: center;
     padding: 20px 0;
+    border-top: 1px solid rgba(42, 61, 50, 0.45);
 }
 
 

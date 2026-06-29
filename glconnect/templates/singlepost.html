@@ -27,15 +27,15 @@
             font-size: 13px;
             color: #495057;
         }
-        .meta-badge.category { background: #007bff; color: white; }
+        .meta-badge.category { background: #c9a227; color: white; }
         .meta-badge.language { background: #28a745; color: white; }
-        .meta-badge.country { background: #ffc107; color: #333; }
+        .meta-badge.country { background: #ffc107; color: #e8ece9; }
         .translation-section {
             margin: 30px 0;
             padding: 20px;
-            background: #f8f9fa;
+            background: rgba(12, 15, 14, 0.75);
             border-radius: 8px;
-            border: 1px solid #dee2e6;
+            border: 1px solid rgba(42, 61, 50, 0.55);
         }
         .translation-controls {
             display: flex;
@@ -46,7 +46,7 @@
         }
         .translation-controls select {
             padding: 8px 12px;
-            border: 1px solid #ddd;
+            border: 1px solid rgba(42, 61, 50, 0.55);
             border-radius: 4px;
             font-size: 14px;
         }
@@ -83,7 +83,7 @@
             display: inline-block;
             margin: 5px 10px 5px 0;
             padding: 5px 12px;
-            background: white;
+            background: rgba(12, 15, 14, 0.92);
             border: 1px solid #17a2b8;
             border-radius: 4px;
             color: #17a2b8;
@@ -131,7 +131,7 @@
             <div id="post-content">{{ post.content | safe }}</div>
 
             <!-- Metrics and Actions Section -->
-            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+            <div style="margin: 30px 0; padding: 20px; background: rgba(12, 15, 14, 0.75); border-radius: 8px; border: 1px solid rgba(42, 61, 50, 0.55);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
                     <div style="display: flex; gap: 30px; align-items: center;">
                         <!-- Likes -->
@@ -144,23 +144,23 @@
                                 <i class="fas fa-heart" style="font-size: 24px; color: {% if user_has_liked %}#dc3545{% else %}#999{% endif %};"></i>
                             </button>
                             <div style="margin-top: 5px;">
-                                <span id="likes-count-{{ post.id }}" style="font-size: 18px; font-weight: bold; color: #333;">
+                                <span id="likes-count-{{ post.id }}" style="font-size: 18px; font-weight: bold; color: #e8ece9;">
                                     {{ post.likes_count if post.likes_count else 0 }}
                                 </span>
-                                <div style="font-size: 12px; color: #666;">Likes</div>
+                                <div style="font-size: 12px; color: #9aa8a0;">Likes</div>
                             </div>
                         </div>
                         
                         <!-- Impressions -->
                         <div style="text-align: center;">
                             <div style="padding: 10px;">
-                                <i class="fas fa-eye" style="font-size: 24px; color: #007bff;"></i>
+                                <i class="fas fa-eye" style="font-size: 24px; color: #c9a227;"></i>
                             </div>
                             <div style="margin-top: 5px;">
-                                <span id="impressions-count-{{ post.id }}" style="font-size: 18px; font-weight: bold; color: #333;">
+                                <span id="impressions-count-{{ post.id }}" style="font-size: 18px; font-weight: bold; color: #e8ece9;">
                                     {{ post.impressions_count if post.impressions_count else 0 }}
                                 </span>
-                                <div style="font-size: 12px; color: #666;">Views</div>
+                                <div style="font-size: 12px; color: #9aa8a0;">Views</div>
                             </div>
                         </div>
                     </div>

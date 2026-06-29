@@ -760,3 +760,139 @@ Traceback (most recent call last):
     raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
 Exception: TTS credentials file not found at tts.json or default 'tts.json'
 2026-06-12 13:16:12,349 - glconnect.book_platform_routes - ERROR - Error parsing JSON request: 415 Unsupported Media Type: Did not attempt to load JSON data because the request Content-Type was not 'application/json'.
+2026-06-29 14:52:49,993 - stripe - INFO - message='Request to Stripe api' method=get url=https://api.stripe.com/v1/balance
+2026-06-29 14:52:50,027 - stripe - INFO - message="Encountered a retryable error Unexpected error communicating with Stripe.  If this problem persists,\nlet us know at support@stripe.com.\n\n(Network error: ProxyError: HTTPSConnectionPool(host='api.stripe.com', port=443): Max retries exceeded with url: /v1/balance (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden'))))"
+2026-06-29 14:52:50,028 - stripe - INFO - message='Initiating retry 1 for request get https://api.stripe.com/v1/balance after sleeping 0.50 seconds.'
+2026-06-29 14:52:50,540 - stripe - INFO - message="Encountered a retryable error Unexpected error communicating with Stripe.  If this problem persists,\nlet us know at support@stripe.com.\n\n(Network error: ProxyError: HTTPSConnectionPool(host='api.stripe.com', port=443): Max retries exceeded with url: /v1/balance (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden'))))"
+2026-06-29 14:52:50,542 - stripe - INFO - message='Initiating retry 2 for request get https://api.stripe.com/v1/balance after sleeping 0.51 seconds.'
+2026-06-29 14:52:51,071 - glconnect - WARNING - Stripe secret key probe failed: stripe_api_error
+2026-06-29 14:52:51,193 - glconnect.isbn_pool_service - ERROR - ISBN pool schema patch failed: (psycopg2.OperationalError) could not translate host name "dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com" to address: nodename nor servname provided, or not known
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 179, in _do_get
+    with util.safe_reraise():
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com" to address: nodename nor servname provided, or not known
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Applications/untitled folder/music-1/glconnect/isbn_pool_service.py", line 119, in ensure_isbn_pool_schema
+    db.session.execute(text(stmt))
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/orm/scoping.py", line 778, in execute
+    return self._proxied.execute(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2237, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2106, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1189, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 148, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2442, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 179, in _do_get
+    with util.safe_reraise():
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nididier/.pyenv/versions/3.12.5/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate host name "dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com" to address: nodename nor servname provided, or not known
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-06-29 14:52:51,251 - glconnect.isbn_pool_service - WARNING - ISBN pool seed skipped: (psycopg2.OperationalError) could not translate host name "dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com" to address: nodename nor servname provided, or not known
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

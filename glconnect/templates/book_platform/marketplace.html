@@ -805,7 +805,7 @@
                         '<div class="d-flex flex-wrap gap-1 mb-3">' +
                         (b.genre ? '<span class="badge bg-primary">' + escapeHtml(b.genre) + '</span>' : '') +
                         '<span class="badge bg-secondary">' + escapeHtml(b.language_label || b.language || '') + '</span>' +
-                        (b.word_count ? '<span class="badge bg-light border" style="color:#000 !important;">' + b.word_count.toLocaleString() + ' words</span>' : '') +
+                        (b.word_count ? '<span class="badge bg-light border text-muted">' + b.word_count.toLocaleString() + ' words</span>' : '') +
                         investBadge +
                         '</div>' +
                         '<div class="book-description text-muted small" style="line-height:1.65">' + (descHtml || '<em>No description yet.</em>') + '</div>' +
@@ -1687,7 +1687,7 @@
                                     <img src="${imagePath}" 
                                          alt="${escapeHtmlMarketplace(author.name)}" 
                                          class="img-fluid rounded-circle shadow" 
-                                         style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #0d6efd;">
+                                         style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #c9a227;">
                                 </div>
                             `;
                         } else {

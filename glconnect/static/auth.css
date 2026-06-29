@@ -1,4 +1,5 @@
 /* Auth pages (login / register) — landing / about palette */
+@import url("glc-theme.css");
 
 .auth-page-shell {
   position: relative;

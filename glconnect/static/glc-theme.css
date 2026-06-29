@@ -2,6 +2,7 @@
  * Ndotonic global theme — aligned with landing page (void + bronze).
  * Load after home.css / book_platform.css to unify brand across the platform.
  */
+@import url("ndotonic-atmosphere.css");
 
 :root {
   --glc-void: #060807;
@@ -46,12 +47,13 @@ body {
   font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif !important;
   background-color: var(--glc-void) !important;
   background-image:
-    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.07), transparent 50%),
-    radial-gradient(ellipse 90% 70% at 100% 25%, rgba(42, 61, 50, 0.45), transparent 55%),
-    radial-gradient(circle at 50% 100%, rgba(201, 162, 39, 0.05), transparent 42%),
+    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.09), transparent 50%),
+    radial-gradient(ellipse 90% 70% at 100% 30%, rgba(42, 61, 50, 0.55), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(201, 162, 39, 0.07), transparent 45%),
     linear-gradient(180deg, var(--glc-void), #050605 100%) !important;
   background-attachment: fixed !important;
   color: var(--glc-text) !important;
+  position: relative;
 }
 
 h1, h2, h3, h4, h5, h6,
@@ -250,4 +252,266 @@ main p, main li, .card-body {
 ::selection {
   background: var(--glc-bronze-dim);
   color: var(--glc-text);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Legacy page shells — color-only alignment (layout unchanged)
+   ═══════════════════════════════════════════════════════════════ */
+
+.reset-container,
+.reset-password-container,
+.upload-container,
+.news-page .container,
+.view-writer-page,
+.playlist-page .container {
+  color: var(--glc-text);
+}
+
+.reset-container,
+.reset-password-container,
+.upload-container {
+  background: rgba(12, 15, 14, 0.58) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(201, 162, 39, 0.28) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.28) !important;
+}
+
+.reset-container h2,
+.reset-password-container h2,
+.upload-container h2 {
+  font-family: "Syne", sans-serif;
+  color: var(--glc-text) !important;
+}
+
+.reset-container label,
+.reset-password-container label,
+.upload-container label {
+  color: var(--glc-text-muted) !important;
+}
+
+.reset-container .form-control,
+.reset-password-container .form-control,
+.upload-container input[type="text"],
+.upload-container input[type="file"] {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(42, 61, 50, 0.55) !important;
+  color: var(--glc-text) !important;
+}
+
+.reset-container .form-control:focus,
+.reset-password-container .form-control:focus,
+.upload-container input:focus {
+  border-color: var(--glc-bronze) !important;
+  box-shadow: 0 0 0 3px var(--glc-bronze-dim) !important;
+}
+
+.reset-container .btn,
+.reset-password-container .btn,
+.upload-container button.upload-btn,
+main .btn:not(.btn-outline-light):not(.btn-outline-secondary):not(.btn-link) {
+  background: linear-gradient(145deg, var(--glc-bronze), var(--glc-bronze-hot)) !important;
+  color: #0a0b0a !important;
+  border: none !important;
+}
+
+.reset-container .btn:hover,
+.reset-password-container .btn:hover,
+.upload-container button.upload-btn:hover {
+  filter: brightness(1.06);
+}
+
+.reset-container p,
+.reset-password-container p,
+.upload-container p {
+  color: var(--glc-text-muted) !important;
+}
+
+.reset-container p a,
+.reset-password-container p a,
+.upload-container a {
+  color: var(--glc-bronze-hot) !important;
+}
+
+/* Secondary / outline buttons — bronze tint */
+.btn-outline-primary {
+  --bs-btn-color: var(--glc-bronze-hot);
+  --bs-btn-border-color: rgba(201, 162, 39, 0.55);
+  --bs-btn-hover-bg: var(--glc-bronze-dim);
+  --bs-btn-hover-border-color: var(--glc-bronze);
+  --bs-btn-hover-color: var(--glc-text);
+}
+
+.btn-secondary {
+  --bs-btn-bg: rgba(42, 61, 50, 0.55);
+  --bs-btn-border-color: rgba(42, 61, 50, 0.75);
+  --bs-btn-color: var(--glc-text);
+  --bs-btn-hover-bg: rgba(42, 61, 50, 0.85);
+  --bs-btn-hover-border-color: rgba(201, 162, 39, 0.35);
+}
+
+.btn-info {
+  --bs-btn-color: var(--glc-text);
+  --bs-btn-bg: rgba(92, 122, 110, 0.35);
+  --bs-btn-border-color: rgba(92, 122, 110, 0.55);
+}
+
+.btn-success {
+  --bs-btn-bg: #2d6a4f;
+  --bs-btn-border-color: #2d6a4f;
+}
+
+.btn-warning {
+  --bs-btn-color: #0a0b0a;
+  --bs-btn-bg: var(--glc-bronze-hot);
+  --bs-btn-border-color: var(--glc-bronze);
+}
+
+.btn-danger {
+  --bs-btn-bg: #a83a3a;
+  --bs-btn-border-color: #a83a3a;
+}
+
+.btn-link {
+  color: var(--glc-bronze-hot) !important;
+}
+
+/* Kill legacy blue bootstrap overrides inside book platform */
+.btn-outline-info,
+.text-info {
+  --bs-btn-color: var(--glc-teal, #5c7a6e);
+  color: #9ab8aa !important;
+}
+
+/* Light surfaces forced dark when not explicitly light content */
+.bg-white:not(.text-dark),
+.table-light,
+.list-group-item-light {
+  background-color: rgba(12, 15, 14, 0.92) !important;
+  color: var(--glc-text) !important;
+}
+
+.text-dark {
+  color: var(--glc-text) !important;
+}
+
+.border-light {
+  border-color: var(--border-light) !important;
+}
+
+.page-link {
+  background: rgba(12, 15, 14, 0.65) !important;
+  border-color: var(--border-light) !important;
+  color: var(--glc-text-muted) !important;
+}
+
+.page-link:hover,
+.page-item.active .page-link {
+  background: var(--glc-bronze-dim) !important;
+  border-color: rgba(201, 162, 39, 0.45) !important;
+  color: var(--glc-text) !important;
+}
+
+.nav-tabs .nav-link {
+  color: var(--glc-text-muted) !important;
+  border-color: var(--border-light) !important;
+}
+
+.nav-tabs .nav-link.active {
+  background: rgba(12, 15, 14, 0.92) !important;
+  color: var(--glc-bronze-hot) !important;
+  border-color: var(--border-light) var(--border-light) transparent !important;
+}
+
+.progress {
+  background: rgba(42, 61, 50, 0.45) !important;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, var(--glc-bronze), var(--glc-bronze-hot)) !important;
+}
+
+.breadcrumb-item,
+.breadcrumb-item a {
+  color: var(--glc-text-muted) !important;
+}
+
+.breadcrumb-item.active {
+  color: var(--glc-text) !important;
+}
+
+.offcanvas,
+.offcanvas-body {
+  background: var(--glc-elevated) !important;
+  color: var(--glc-text) !important;
+}
+
+.accordion-item {
+  background: rgba(12, 15, 14, 0.65) !important;
+  border-color: var(--border-light) !important;
+  color: var(--glc-text) !important;
+}
+
+.accordion-button {
+  background: rgba(6, 8, 7, 0.88) !important;
+  color: var(--glc-text) !important;
+}
+
+.accordion-button:not(.collapsed) {
+  background: var(--glc-bronze-dim) !important;
+  color: var(--glc-text) !important;
+}
+
+.tooltip-inner {
+  background: var(--glc-elevated) !important;
+  color: var(--glc-text) !important;
+  border: 1px solid var(--glass-border);
+}
+
+.popover {
+  background: var(--glc-elevated) !important;
+  border-color: var(--glass-border) !important;
+}
+
+.popover-header {
+  background: rgba(6, 8, 7, 0.88) !important;
+  color: var(--glc-text) !important;
+  border-color: var(--border-light) !important;
+}
+
+.popover-body {
+  color: var(--glc-text-muted) !important;
+}
+
+/* Inline style fallbacks (layout unchanged) */
+[style*="background: white"],
+[style*="background-color: white"],
+[style*="background: #fff"],
+[style*="background-color: #fff"],
+[style*="background: #ffffff"],
+[style*="background-color: #ffffff"],
+[style*="background: #f8f9fa"],
+[style*="background-color: #f8f9fa"],
+[style*="background: #f8fafc"],
+[style*="background-color: #f8fafc"] {
+  background: rgba(12, 15, 14, 0.92) !important;
+  background-color: rgba(12, 15, 14, 0.92) !important;
+}
+
+[style*="color: #007bff"],
+[style*="color:#007bff"],
+[style*="color: #0d6efd"] {
+  color: var(--glc-bronze-hot) !important;
+}
+
+[style*="border-left: 4px solid #007bff"],
+[style*="border-left:4px solid #007bff"],
+[style*="border-left: 4px solid #c9a227"] {
+  border-left-color: var(--glc-bronze) !important;
+}
+
+[style*="border-bottom: 2px solid #007bff"] {
+  border-bottom-color: var(--glc-bronze) !important;
 }

@@ -1,5 +1,6 @@
 /* Ink Studio - Professional Book Platform CSS */
 @import url("glc-theme.css");
+@import url("ndotonic-atmosphere.css");
 
 :root {
     --primary-color: #c9a227;
@@ -175,7 +176,7 @@ body {
 .book-cover-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background: linear-gradient(135deg, #0c0f0e 0%, #1a221c 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,7 +205,7 @@ body {
 }
 
 .notification-item:hover {
-    background-color: #f1f5f9 !important;
+    background-color: rgba(12, 15, 14, 0.65) !important;
     transform: translateX(4px);
 }
 
@@ -273,7 +274,7 @@ body {
 .book-cover-placeholder-large {
     width: 200px;
     height: 280px;
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background: linear-gradient(135deg, #0c0f0e 0%, #1a221c 100%);
     border-radius: var(--border-radius);
     display: flex;
     align-items: center;
@@ -297,7 +298,7 @@ body {
 .book-stats-grid .stat-card {
     padding: 0.75rem;
     border-radius: var(--border-radius-sm);
-    background: #f8fafc;
+    background: rgba(12, 15, 14, 0.75);
     transition: all 0.3s ease;
 }
 
@@ -338,7 +339,7 @@ body {
 .navbar .dropdown-item {
     position: relative;
     z-index: 10000;
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     pointer-events: auto !important;
     cursor: pointer;
 }
@@ -432,7 +433,7 @@ body {
 .book-cover-placeholder-small {
     width: 40px;
     height: 56px;
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background: linear-gradient(135deg, #0c0f0e 0%, #1a221c 100%);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -446,7 +447,7 @@ body {
 }
 
 .table-hover tbody tr:hover {
-    background-color: #f8fafc;
+    background-color: rgba(12, 15, 14, 0.75);
     transform: translateX(2px);
 }
 
@@ -542,7 +543,7 @@ body {
 }
 
 .card-header {
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     border-bottom: 1px solid #e9ecef;
     font-weight: 600;
 }
@@ -557,7 +558,7 @@ body {
     text-align: center;
     padding: 1rem;
     border-radius: var(--border-radius);
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
     margin-bottom: 1rem;
 }
 
@@ -578,7 +579,7 @@ body {
 
 /* Book Card Styles */
 .book-card {
-    background: white;
+    background: rgba(12, 15, 14, 0.92);
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--box-shadow);
@@ -601,7 +602,7 @@ body {
 .book-cover-placeholder {
     width: 100%;
     height: 200px;
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background: linear-gradient(135deg, #0c0f0e 0%, #1a221c 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -663,7 +664,7 @@ body {
 .notification-item {
     padding: 0.75rem;
     border-left: 3px solid var(--primary-color);
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
     margin-bottom: 0.5rem;
     border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
@@ -709,7 +710,7 @@ body {
 
 /* Book Info Styles */
 .book-info .stat-item {
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     border: 1px solid #e9ecef;
 }
 
@@ -728,7 +729,7 @@ body {
     border-radius: var(--border-radius);
     border: 1px solid #ced4da;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     color: #333;
 }
 
@@ -746,13 +747,13 @@ body {
 .rich-text-editor {
     border: 1px solid #ced4da;
     border-radius: var(--border-radius);
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     min-height: 400px;
     color: #333;
 }
 
 .editor-toolbar {
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
     border-bottom: 1px solid #ced4da;
     padding: 0.5rem;
     display: flex;
@@ -770,7 +771,7 @@ body {
 }
 
 .editor-toolbar button:hover {
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
 }
 
 .editor-toolbar button.active {
@@ -792,7 +793,7 @@ body {
 
 /* Comment Styles */
 .comment-item {
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     border: 1px solid #e9ecef;
     border-radius: var(--border-radius);
     padding: 1rem;
@@ -829,7 +830,7 @@ body {
 
 .comment-resolved {
     opacity: 0.7;
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
 }
 
 .comment-resolved::before {
@@ -883,7 +884,7 @@ body {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
     color: var(--primary-color);
     display: flex;
     align-items: center;
@@ -1167,7 +1168,7 @@ a:hover {
 }
 
 .dropdown-item:hover {
-    background-color: #f8f9fa !important;
+    background-color: rgba(12, 15, 14, 0.75) !important;
     color: var(--primary-color) !important;
 }
 
@@ -1228,7 +1229,7 @@ a:hover {
 }
 
 .bg-light {
-    background-color: white !important;
+    background-color: rgba(12, 15, 14, 0.92) !important;
 }
 
 .text-light {
@@ -1305,41 +1306,41 @@ a:hover {
     }
 }
 
-/* Dark Mode Support */
+/* Dark Mode Support — aligned with Ndotonic void + bronze */
 @media (prefers-color-scheme: dark) {
     :root {
-        --light-color: #212529;
-        --dark-color: #f8f9fa;
+        --light-color: #e8ece9;
+        --dark-color: #060807;
     }
-    
+
     body {
-        background-color: #121212;
-        color: var(--dark-color);
+        background-color: #060807;
+        color: var(--light-color);
     }
-    
+
     .card {
-        background-color: #1e1e1e;
-        color: var(--dark-color);
+        background-color: rgba(12, 15, 14, 0.92);
+        color: var(--light-color);
     }
-    
+
     .card-header {
-        background-color: #1e1e1e;
-        border-bottom-color: #333;
+        background-color: rgba(6, 8, 7, 0.88);
+        border-bottom-color: rgba(42, 61, 50, 0.55);
     }
-    
+
     .form-control, .form-select {
-        background-color: #2d2d2d;
-        border-color: #444;
-        color: var(--dark-color);
+        background-color: rgba(6, 8, 7, 0.65);
+        border-color: rgba(42, 61, 50, 0.55);
+        color: var(--light-color);
     }
-    
+
     .rich-text-editor {
-        background-color: #2d2d2d;
-        border-color: #444;
+        background-color: rgba(6, 8, 7, 0.65);
+        border-color: rgba(42, 61, 50, 0.55);
     }
-    
+
     .editor-content {
-        color: var(--dark-color);
+        color: var(--light-color);
     }
 }
 
@@ -1396,7 +1397,7 @@ a:hover {
 }
 
 .edit-book .chapter-card .card-header {
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
     border-bottom: 1px solid #dee2e6;
 }
 
@@ -1430,18 +1431,18 @@ a:hover {
 .book-card .btn-outline-warning {
     color: #333 !important;
     border-color: #ced4da !important;
-    background-color: white !important;
+    background-color: rgba(12, 15, 14, 0.92) !important;
 }
 
 .book-card .btn-outline-primary {
-    color: #007bff !important;
-    border-color: #007bff !important;
+    color: #c9a227 !important;
+    border-color: #c9a227 !important;
 }
 
 .book-card .btn-outline-primary:hover {
-    background-color: #007bff !important;
+    background-color: #c9a227 !important;
     color: white !important;
-    border-color: #007bff !important;
+    border-color: #c9a227 !important;
 }
 
 .book-card .btn-outline-secondary {
@@ -1501,20 +1502,20 @@ a:hover {
 .card-footer .btn-outline-warning {
     color: #333 !important;
     border-color: #ced4da !important;
-    background-color: white !important;
+    background-color: rgba(12, 15, 14, 0.92) !important;
 }
 
 .card-body .btn-outline-primary,
 .card-footer .btn-outline-primary {
-    color: #007bff !important;
-    border-color: #007bff !important;
+    color: #c9a227 !important;
+    border-color: #c9a227 !important;
 }
 
 .card-body .btn-outline-primary:hover,
 .card-footer .btn-outline-primary:hover {
-    background-color: #007bff !important;
+    background-color: #c9a227 !important;
     color: white !important;
-    border-color: #007bff !important;
+    border-color: #c9a227 !important;
 }
 
 .card-body .btn-outline-secondary,
@@ -1577,7 +1578,7 @@ a:hover {
 .book-card .card-footer .btn-outline-warning:hover,
 .book-card .card-footer .btn-outline-danger:hover {
     color: #000000 !important;
-    background-color: #f8f9fa !important;
+    background-color: rgba(12, 15, 14, 0.75) !important;
     border-color: #000000 !important;
 }
 
@@ -1600,7 +1601,7 @@ a:hover {
     align-items: center;
     border: 2px solid var(--primary-color);
     color: var(--primary-color);
-    background-color: white;
+    background-color: rgba(12, 15, 14, 0.92);
 }
 
 .category-btn:hover {
@@ -1636,7 +1637,7 @@ a:hover {
 
 /* Category Section Background */
 .category-container {
-    background-color: #f8f9fa;
+    background-color: rgba(12, 15, 14, 0.75);
     padding: 1.5rem;
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
@@ -4122,7 +4123,7 @@ body.ink-books-ui .form-check-label strong {
 .listing-terms-scrollbox {
     max-height: 280px;
     overflow-y: auto;
-    background: #f8fafc !important;
+    background: rgba(12, 15, 14, 0.75) !important;
     border-color: rgba(15, 23, 42, 0.14) !important;
     color: #1e293b !important;
 }
@@ -6323,3 +6324,175 @@ body.ink-workspace .ink-dash-cta-row .btn-lg {
     font-size: 0.95rem;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Brand alignment overrides — landing/about palette (layout unchanged)
+   ═══════════════════════════════════════════════════════════════ */
+
+.book-cover-placeholder,
+.empty-state-icon.bg-secondary {
+    background: linear-gradient(135deg, #0c0f0e 0%, #1a221c 100%) !important;
+}
+
+.bg-white,
+.table-light,
+.list-group-item-light,
+.card.bg-white,
+.modal-body.bg-white {
+    background-color: rgba(12, 15, 14, 0.92) !important;
+    color: var(--glc-text, #e8ece9) !important;
+}
+
+.bg-light,
+.bg-body-light,
+.notification-item.bg-light {
+    background-color: rgba(12, 15, 14, 0.75) !important;
+    color: var(--glc-text, #e8ece9) !important;
+}
+
+.text-bg-light {
+    background-color: rgba(42, 61, 50, 0.45) !important;
+    color: var(--glc-text, #e8ece9) !important;
+}
+
+[style*="background-color: rgba(12, 15, 14, 0.92)"],
+[style*="background: rgba(12, 15, 14, 0.92)"],
+[style*="background-color:#fff"],
+[style*="background:#fff"] {
+    background-color: rgba(12, 15, 14, 0.92) !important;
+}
+
+[style*="background-color: rgba(12, 15, 14, 0.75)"],
+[style*="background: rgba(12, 15, 14, 0.75)"],
+[style*="background-color:#f8f9fa"],
+[style*="background-color: rgba(12, 15, 14, 0.75)"],
+[style*="background: rgba(12, 15, 14, 0.65)"],
+[style*="background-color: rgba(12, 15, 14, 0.65)"] {
+    background-color: rgba(12, 15, 14, 0.75) !important;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #e0bc3a;
+    --bs-btn-border-color: rgba(201, 162, 39, 0.55);
+    --bs-btn-hover-bg: rgba(201, 162, 39, 0.14);
+    --bs-btn-hover-border-color: #c9a227;
+    --bs-btn-hover-color: #e8ece9;
+    --bs-btn-active-bg: rgba(201, 162, 39, 0.22);
+    --bs-btn-active-border-color: #c9a227;
+    --bs-btn-active-color: #e8ece9;
+}
+
+.btn-primary,
+.btn-info.text-white {
+    --bs-btn-bg: #c9a227;
+    --bs-btn-border-color: #c9a227;
+    --bs-btn-hover-bg: #e0bc3a;
+    --bs-btn-hover-border-color: #e0bc3a;
+    --bs-btn-color: #0a0b0a;
+}
+
+.text-info,
+.btn-outline-info {
+    color: #9ab8aa !important;
+    --bs-btn-color: #9ab8aa;
+    --bs-btn-border-color: rgba(92, 122, 110, 0.55);
+}
+
+.border-bottom.border-light,
+.border-top.border-light {
+    border-color: rgba(42, 61, 50, 0.45) !important;
+}
+
+.form-control.bg-white,
+.form-select.bg-white {
+    background-color: rgba(6, 8, 7, 0.65) !important;
+    color: #e8ece9 !important;
+}
+
+.spinner-border.text-primary {
+    color: #c9a227 !important;
+}
+
+a.text-primary,
+.text-primary:not(.btn) {
+    color: #e0bc3a !important;
+}
+
+.badge.bg-primary {
+    background-color: #c9a227 !important;
+    color: #0a0b0a !important;
+}
+
+.badge.bg-info {
+    background-color: rgba(92, 122, 110, 0.45) !important;
+    color: #e8ece9 !important;
+}
+
+.badge.bg-warning {
+    background-color: rgba(201, 162, 39, 0.25) !important;
+    color: #f5d76a !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: rgba(201, 162, 39, 0.18) !important;
+    color: #e8ece9 !important;
+}
+
+.ink-mp-page-bg {
+    background:
+        radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.09), transparent 50%),
+        radial-gradient(ellipse 90% 70% at 100% 30%, rgba(42, 61, 50, 0.55), transparent 55%),
+        radial-gradient(circle at 50% 100%, rgba(201, 162, 39, 0.07), transparent 45%),
+        #060807 !important;
+}
+
+/* Ink Studio workflow — marketplace, campaigns, library, books (readability) */
+body.ink-marketplace .text-dark,
+body.ink-invest .text-dark,
+body.ink-campaign-detail .text-dark,
+body.ink-workspace .text-dark,
+body.ink-books-ui .text-dark,
+body.ink-earnings .text-dark,
+body.ink-content-hub .text-dark {
+    color: #e8ece9 !important;
+}
+
+body.ink-marketplace .badge.bg-info.text-dark,
+body.ink-invest .badge.bg-info.text-dark,
+body.ink-marketplace .badge.bg-light,
+body.ink-invest .badge.bg-light,
+body.ink-books-ui .badge.bg-light.text-dark {
+    background-color: rgba(42, 61, 50, 0.55) !important;
+    color: #e8ece9 !important;
+    border-color: rgba(42, 61, 50, 0.75) !important;
+}
+
+body.ink-marketplace .badge.bg-light.text-muted,
+body.ink-invest .badge.bg-light.text-muted {
+    color: #9aa8a0 !important;
+}
+
+body.ink-marketplace .card-header.bg-white,
+body.ink-invest .card-header.bg-white,
+body.ink-books-ui .card-header.bg-white {
+    background: rgba(6, 8, 7, 0.95) !important;
+    color: #e0bc3a !important;
+}
+
+body.ink-workspace .ink-workspace-bg {
+    background:
+        radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.09), transparent 50%),
+        radial-gradient(ellipse 90% 70% at 100% 30%, rgba(42, 61, 50, 0.55), transparent 55%),
+        #060807 !important;
+}
+
+body.ink-edit-book-listing .edit-book .bg-light,
+body.ink-edit-book-listing .edit-book .listing-terms-section {
+    background: rgba(12, 15, 14, 0.75) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book label.text-dark,
+body.ink-edit-book-listing .edit-book .form-check-label.text-dark {
+    color: #e8ece9 !important;
+}

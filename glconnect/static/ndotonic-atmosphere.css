@@ -1,0 +1,252 @@
+/**
+ * Ndotonic atmosphere — landing / about parity for Ink Studio + shared surfaces.
+ * Import via book_platform.css and glc-theme.css.
+ */
+
+:root {
+  --ndotonic-void: #060807;
+  --ndotonic-elevated: #0c0f0e;
+  --ndotonic-text: #e8ece9;
+  --ndotonic-muted: #7a8982;
+  --ndotonic-muted-soft: #9aa8a0;
+  --ndotonic-bronze: #c9a227;
+  --ndotonic-bronze-hot: #e0bc3a;
+  --ndotonic-bronze-dim: rgba(201, 162, 39, 0.12);
+  --ndotonic-edge: #2a3d32;
+  --ndotonic-glass: rgba(6, 8, 7, 0.72);
+  --ndotonic-glass-border: rgba(42, 61, 50, 0.35);
+  --ndotonic-panel: rgba(12, 15, 14, 0.58);
+  --ndotonic-panel-solid: rgba(12, 15, 14, 0.92);
+  --ndotonic-panel-border: rgba(201, 162, 39, 0.28);
+}
+
+/* ── Fixed canvas (all page-bg class aliases) ── */
+.ndotonic-page-bg,
+.ink-mp-page-bg,
+.ink-workspace-bg,
+.ink-dash-page-bg,
+.ink-ch-page-bg,
+.ink-earn-page-bg,
+.ink-upload-page-bg,
+.ink-lib-bg,
+.ink-books-page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.09), transparent 50%),
+    radial-gradient(ellipse 90% 70% at 100% 30%, rgba(42, 61, 50, 0.55), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(201, 162, 39, 0.07), transparent 45%),
+    var(--ndotonic-void);
+}
+
+.ndotonic-page-bg::after,
+.ink-mp-page-bg::after,
+.ink-workspace-bg::after,
+.ink-dash-page-bg::after,
+.ink-ch-page-bg::after,
+.ink-earn-page-bg::after,
+.ink-upload-page-bg::after,
+.ink-lib-bg::after,
+.ink-books-page-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' pointer-events='none' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Any page with atmosphere layer — landing void canvas */
+body:has(> .ndotonic-page-bg) {
+  background: var(--ndotonic-void) !important;
+  color: var(--ndotonic-text) !important;
+  font-family: "DM Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body:has(> .ndotonic-page-bg) .card:not(.bg-transparent) {
+  background: var(--ndotonic-panel-solid) !important;
+  border: 1px solid rgba(42, 61, 50, 0.55) !important;
+  color: var(--ndotonic-text) !important;
+}
+
+body:has(> .ndotonic-page-bg) .text-dark {
+  color: var(--ndotonic-text) !important;
+}
+
+body:has(> .ndotonic-page-bg) .btn-primary {
+  background: linear-gradient(145deg, var(--ndotonic-bronze), var(--ndotonic-bronze-hot)) !important;
+  border: none !important;
+  color: #0a0b0a !important;
+}
+
+/* ── Ink Studio body shells (unified void + type) ── */
+body.ink-marketplace,
+body.ink-workspace,
+body.ink-dashboard,
+body.ink-invest,
+body.ink-campaign-detail,
+body.ink-earnings,
+body.ink-books-ui,
+body.ink-upload-book,
+body.ink-content-hub,
+body.ink-library-page,
+body.ink-book-studio,
+body.ink-publishing,
+body.ink-music-dashboard,
+body.ink-setup-profile,
+body.ink-edit-book-listing,
+body.ink-books-create,
+body.ink-books-list {
+  --lib-bg: var(--ndotonic-void);
+  --lib-surface: var(--ndotonic-panel-solid);
+  --lib-elevated: rgba(18, 22, 20, 0.96);
+  --lib-border: var(--ndotonic-panel-border);
+  --lib-accent: var(--ndotonic-bronze);
+  --lib-accent-soft: var(--ndotonic-bronze-dim);
+  --lib-text: var(--ndotonic-text);
+  --lib-muted: var(--ndotonic-muted-soft);
+  background: var(--ndotonic-void) !important;
+  color: var(--ndotonic-text) !important;
+  font-family: "DM Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Top bars — landing header parity */
+body[class*="ink-"] .ink-mp-sticky-nav,
+body[class*="ink-"] .ink-marketplace-nav,
+body[class*="ink-"] .ink-workspace-nav,
+body[class*="ink-"] .ink-lib-topbar,
+body[class*="ink-"] .navbar.ink-mp-topnav {
+  background: var(--ndotonic-glass) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--ndotonic-glass-border) !important;
+}
+
+body[class*="ink-"] .ink-mp-nav-brand,
+body[class*="ink-"] .ink-lib-brand {
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  color: var(--ndotonic-text) !important;
+}
+
+body[class*="ink-"] .navbar-dark .nav-link {
+  color: var(--ndotonic-muted) !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+body[class*="ink-"] .navbar-dark .nav-link:hover,
+body[class*="ink-"] .navbar-dark .nav-link:focus-visible {
+  color: var(--ndotonic-text) !important;
+}
+
+body[class*="ink-"] .ink-mp-nav-brand:hover,
+body[class*="ink-"] .ink-lib-brand:hover {
+  color: var(--ndotonic-bronze-hot) !important;
+}
+
+/* Glass panels sitewide in Ink Studio */
+body[class*="ink-"] .card:not(.bg-transparent),
+body[class*="ink-"] .ink-panel,
+body[class*="ink-"] .ink-filter-card,
+body[class*="ink-"] .ink-inv-campaign-card,
+body[class*="ink-"] .ink-camp-panel,
+body[class*="ink-"] .ink-camp-side-card,
+body[class*="ink-"] .content-card,
+body[class*="ink-"] .user-hero {
+  background: var(--ndotonic-panel-solid) !important;
+  border: 1px solid rgba(42, 61, 50, 0.55) !important;
+  color: var(--ndotonic-text) !important;
+}
+
+body[class*="ink-"] .card-header {
+  background: rgba(6, 8, 7, 0.88) !important;
+  border-bottom: 1px solid rgba(42, 61, 50, 0.55) !important;
+  color: var(--ndotonic-bronze-hot) !important;
+}
+
+/* Primary CTA — landing platform-button */
+body[class*="ink-"] .btn-primary,
+body[class*="ink-"] .ink-btn-primary,
+body[class*="ink-"] .btn-ink-gold,
+body[class*="ink-"] .ink-mp-cta {
+  background: linear-gradient(145deg, var(--ndotonic-bronze), var(--ndotonic-bronze-hot)) !important;
+  border: none !important;
+  color: #0a0b0a !important;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.45), 0 12px 32px rgba(201, 162, 39, 0.2);
+}
+
+body[class*="ink-"] .btn-primary:hover,
+body[class*="ink-"] .ink-btn-primary:hover,
+body[class*="ink-"] .btn-ink-gold:hover {
+  filter: brightness(1.06);
+}
+
+body[class*="ink-"] h1,
+body[class*="ink-"] h2,
+body[class*="ink-"] h3,
+body[class*="ink-"] .ink-page-title,
+body[class*="ink-"] .ink-mp-hero-title,
+body[class*="ink-"] .ink-camp-title {
+  font-family: "Syne", sans-serif;
+  color: var(--ndotonic-text);
+}
+
+body[class*="ink-"] .text-primary {
+  color: var(--ndotonic-bronze-hot) !important;
+}
+
+body[class*="ink-"] .text-muted {
+  color: var(--ndotonic-muted-soft) !important;
+}
+
+body[class*="ink-"] .text-dark {
+  color: var(--ndotonic-text) !important;
+}
+
+body[class*="ink-"] .form-control,
+body[class*="ink-"] .form-select {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(42, 61, 50, 0.55) !important;
+  color: var(--ndotonic-text) !important;
+}
+
+body[class*="ink-"] .form-control:focus,
+body[class*="ink-"] .form-select:focus {
+  border-color: var(--ndotonic-bronze) !important;
+  box-shadow: 0 0 0 3px var(--ndotonic-bronze-dim) !important;
+}
+
+/* Content hub — override inline block gradients */
+body.ink-content-hub .hub-header h1 {
+  background: linear-gradient(135deg, #e0bc3a 0%, #e8ece9 45%, #c9a227 85%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+body.ink-content-hub .content-card:hover {
+  background: rgba(12, 15, 14, 0.96) !important;
+  border-color: rgba(201, 162, 39, 0.35) !important;
+}
+
+/* Chapter / podcast inline-theme pages */
+body.ink-books-ui .hub-header h1,
+.chapters-page .display-heading,
+.podcast-library-page .hero-title {
+  background: linear-gradient(135deg, #e0bc3a 0%, #e8ece9 45%, #c9a227 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Ebook reader keeps sepia option — do not force void */
+body.ink-reader-page,
+body.ab-player-page {
+  /* reader/player keep their own immersive themes */
+}
