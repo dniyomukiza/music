@@ -3,12 +3,23 @@ WebSocket implementation for Real time collaboration in Ink Studio
 This module handles WebSocket connections for Real time editing, comments, and collaboration features.
 """
 
+import os
 from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room, disconnect
 from flask_login import current_user
 import json
 import logging
 from datetime import datetime, timezone
+
+# Env-driven allowed origins (shared default with the main app); always include local dev.
+_WS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "ALLOWED_ORIGINS",
+        "https://ndotonic.com,https://www.ndotonic.com,https://glc.cool,https://www.glc.cool",
+    ).split(",")
+    if o.strip()
+] + ["http://localhost:5000"]
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +31,7 @@ from glconnect.book_platform_models import (
 )
 
 # Initialize SocketIO (this should be done in your main app file)
-socketio = SocketIO(cors_allowed_origins=["https://glc.cool", "http://localhost:5000"], supports_credentials=True)
+socketio = SocketIO(cors_allowed_origins=_WS_ALLOWED_ORIGINS, supports_credentials=True)
 
 # Store active sessions
 active_sessions = {}

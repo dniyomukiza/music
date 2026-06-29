@@ -51,7 +51,7 @@ async def handle_music_live_websocket(
         return
 
     import os
-    base_url = base_url or os.getenv("FRONTEND_BASE_URL", "https://glc.cool")
+    base_url = base_url or os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com")
     try:
         uid = int(user_id) if user_id and user_id.isdigit() else None
     except ValueError:

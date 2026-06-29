@@ -215,7 +215,7 @@
 
 <header>
   <div class="nav-container">
-    <a href="https://glc.cool/home" style="text-decoration: none;">
+    <a href="/home" style="text-decoration: none;">
       <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="GLC Logo" class="logo-img">
     </a>
 
@@ -224,7 +224,7 @@
         {% if current_user.is_authenticated %}
         <li><a href="{{ url_for('routes.about') }}">About</a></li>
         {% endif %}
-        <li><a href="https://glc.cool/home">Home</a></li>
+        <li><a href="/home">Home</a></li>
         <li><a href="{{ url_for('book_platform.ink_studio_access') }}">GLC</a></li>
         {% if ink_nav_show_my_library|default(false) %}
         <li><a href="{{ url_for('book_platform.my_library') }}">My Library</a></li>

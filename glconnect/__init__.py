@@ -263,7 +263,17 @@ def create_app(config_overrides=None):
     """
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
-    CORS(app, origins=["https://glc.cool"], supports_credentials=True) # <-- ADD supports_credentials=True
+    # Allowed browser origins are env-driven so the same code serves prod and staging.
+    # ALLOWED_ORIGINS = comma-separated list; defaults cover ndotonic.com (+ legacy glc.cool during migration).
+    _allowed_origins = [
+        o.strip()
+        for o in os.getenv(
+            "ALLOWED_ORIGINS",
+            "https://ndotonic.com,https://www.ndotonic.com,https://glc.cool,https://www.glc.cool",
+        ).split(",")
+        if o.strip()
+    ]
+    CORS(app, origins=_allowed_origins, supports_credentials=True)
 
     # Detect if running in local development
     is_local_dev = os.getenv('FLASK_ENV') == 'development' or not os.path.exists('/.dockerenv')
@@ -515,7 +525,7 @@ def create_app(config_overrides=None):
             return (
                 jsonify(
                     mode="harbor",
-                    hint="HLS is at https://glc.cool/hls/live.m3u8 via liquidsoap_video:8920 (docker compose --profile video up -d)",
+                    hint="HLS is at https://ndotonic.com/hls/live.m3u8 via liquidsoap_video:8920 (docker compose --profile video up -d)",
                     hls_root_disk=root,
                     disk_error=str(exc),
                     files=[],

@@ -14,7 +14,9 @@ COMPOSE_SSL="${COMPOSE_SSL:-docker compose --profile video --profile ssl}"
 WEBROOT="/var/www/certbot"
 WEBROOT_HOST="$ROOT/certbot/www"
 EMAIL="${SSL_CONTACT_EMAIL:-didyom1@gmail.com}"
-DOMAIN="glc.cool"
+# Canonical domain. `certbot renew` (renew-only mode) still renews ALL certs found
+# under /etc/letsencrypt/renewal, so the legacy glc.cool cert keeps renewing too.
+DOMAIN="${SSL_DOMAIN:-ndotonic.com}"
 CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 RENEWAL_CONF="/etc/letsencrypt/renewal/${DOMAIN}.conf"
 DEBUG_LOG="${SSL_DEBUG_LOG:-$ROOT/.cursor/debug-fe2ff6.log}"

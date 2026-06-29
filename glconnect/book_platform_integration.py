@@ -15,7 +15,7 @@ from glconnect.models import db, User
 # Import Ink Studio components
 from glconnect.book_platform_models import *
 from glconnect.book_platform_routes import book_bp
-from glconnect.book_platform_websocket import socketio
+from glconnect.book_platform_websocket import socketio, _WS_ALLOWED_ORIGINS
 from glconnect.gemini_integration import gemini_bp
 from glconnect.book_agent_routes import book_agents_bp
 
@@ -162,7 +162,7 @@ def init_book_platform(app):
     # Initialize SocketIO with the app
     socketio.init_app(
         app,
-        cors_allowed_origins=["https://glc.cool", "http://localhost:5000"],
+        cors_allowed_origins=_WS_ALLOWED_ORIGINS,
         supports_credentials=True,
         async_mode="threading",
     )

@@ -11,7 +11,7 @@ cd "$ROOT"
 
 COMPOSE="${COMPOSE:-docker compose --profile video}"
 COMPOSE_SSL="${COMPOSE_SSL:-docker compose --profile video --profile ssl}"
-DOMAIN="glc.cool"
+DOMAIN="${SSL_DOMAIN:-ndotonic.com}"
 WEBROOT="/var/www/certbot"
 WEBROOT_HOST="$ROOT/certbot/www"
 EMAIL="${SSL_CONTACT_EMAIL:-didyom1@gmail.com}"

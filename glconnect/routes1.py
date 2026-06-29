@@ -18,7 +18,7 @@ config = {
     "MAIL_TRAP": os.getenv("MAIL_TRAP")
 }
 bp1 = Blueprint('routes1', __name__)
-API_URL = "https://glc.cool/word/"
+API_URL = os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com").rstrip("/") + "/word/"
 login_manager = LoginManager()
 # Set when user opens login/register with next=/mybook/marketplace (fallback if query is lost on POST).
 SESSION_AUTH_ENTRY_MARKETPLACE = "auth_entry_marketplace"
