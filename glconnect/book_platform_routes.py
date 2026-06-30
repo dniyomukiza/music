@@ -129,6 +129,7 @@ from glconnect.stripe_utils import (
     author_needs_stripe_payout_setup,
     checkout_ready_author_connect_id,
     print_checkout_shipping_kw,
+    create_marketplace_checkout_session,
     stripe_checkout_custom_field_values,
     merge_print_shipping_line2,
 )
@@ -4923,7 +4924,7 @@ def _create_print_order_from_checkout_session(purchase, book, session):
         return None
     custom_fields = stripe_checkout_custom_field_values(session)
     apt = custom_fields.get('shipping_apt')
-    shipping_note = (custom_fields.get('shipping_note') or '')[:500] or None
+    shipping_note = (custom_fields.get('shipping_note') or '')[:255] or None
     line2 = merge_print_shipping_line2(addr.get('line2'), apt)
     book_amt = float(book.print_price or 0)
     ship_amt = print_shipping_amount(book)
@@ -5701,7 +5702,11 @@ def purchase_book(book_id):
                     checkout_kw['payment_intent_data'] = payment_intent_data
                     if author_connect_id:
                         checkout_kw['stripe_account'] = author_connect_id
-                checkout_session = stripe.checkout.Session.create(**checkout_kw)
+                checkout_session = create_marketplace_checkout_session(
+                    checkout_kw,
+                    purchase_type=purchase_type,
+                    book_id=book_id,
+                )
                 stripe_checkout_url = checkout_session.url
         except Exception as stripe_err:
             stripe_session_error = stripe_err

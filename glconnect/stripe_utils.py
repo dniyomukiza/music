@@ -225,6 +225,12 @@ def describe_stripe_checkout_error(
             "Please try again later or contact the site operator."
         )
 
+    if "custom_fields" in msg and "maximum_length" in msg:
+        d["operator_error_code"] = "STRIPE_CHECKOUT_CUSTOM_FIELDS"
+        d["patron_message"] = (
+            "Payment could not be started. Please try again or contact support."
+        )
+
     return d
 
 
@@ -468,6 +474,7 @@ def marketplace_book_payment_intent_data(
 
 def stripe_print_checkout_custom_fields() -> List[Dict[str, Any]]:
     """Optional apartment and delivery note fields on Stripe Checkout (print shipping)."""
+    # Stripe text custom_fields allow maximum_length up to 255 only.
     return [
         {
             "key": "shipping_apt",
@@ -481,7 +488,7 @@ def stripe_print_checkout_custom_fields() -> List[Dict[str, Any]]:
             "label": {"type": "custom", "custom": "Note for the author (optional)"},
             "type": "text",
             "optional": True,
-            "text": {"maximum_length": 500},
+            "text": {"maximum_length": 255},
         },
     ]
 
@@ -489,6 +496,35 @@ def stripe_print_checkout_custom_fields() -> List[Dict[str, Any]]:
 def print_checkout_shipping_kw() -> Dict[str, Any]:
     """Extra Stripe Checkout kwargs when collecting a print shipping address."""
     return {"custom_fields": stripe_print_checkout_custom_fields()}
+
+
+def create_marketplace_checkout_session(
+    checkout_kw: Dict[str, Any],
+    *,
+    purchase_type: str,
+    book_id: Optional[int] = None,
+):
+    """
+    Create Stripe Checkout session for marketplace purchase.
+    If print custom_fields are rejected, retry without them (shipping still collected).
+    """
+    from glconnect.book_purchase_format import purchase_grants_format
+
+    init_stripe()
+    import stripe as stripe_mod
+
+    try:
+        return stripe_mod.checkout.Session.create(**checkout_kw)
+    except Exception as exc:
+        if not purchase_grants_format(purchase_type, "print") or not checkout_kw.get("custom_fields"):
+            raise
+        retry_kw = {k: v for k, v in checkout_kw.items() if k != "custom_fields"}
+        logger.warning(
+            "Stripe Checkout custom_fields rejected for book %s; retrying without them: %s",
+            book_id,
+            exc,
+        )
+        return stripe_mod.checkout.Session.create(**retry_kw)
 
 
 def stripe_checkout_custom_field_values(session: Any) -> Dict[str, str]:
