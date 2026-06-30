@@ -1,20 +1,74 @@
-@import url("glc-theme.css");
+/* Support / contact page — standalone (no @import; glc-theme loaded in template) */
+
+body.contact-page {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.contact-page-wrap {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background: rgba(12, 15, 14, 0.88);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.contact-header-brand img {
+  display: block;
+  border-radius: 10px;
+}
+
+.contact-header-back {
+  color: #9aa8a0;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.contact-header-back:hover {
+  color: #e0bc3a;
+}
+
+.contact-main {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1rem 2.5rem;
+}
 
 .contact-container {
-  flex-grow: 1;
-  width: min(100% - 2rem, 32rem);
-  margin: 1.5rem auto 2.5rem;
-  padding: clamp(1.5rem, 4vw, 2rem);
-  background: rgba(12, 15, 14, 0.92);
-  border: 1px solid rgba(201, 162, 39, 0.25);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  width: min(100%, 36rem);
+  margin: 0 auto;
   color: #e8ece9;
 }
 
-.contact-container h2 {
+.contact-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #c9a227;
+}
+
+.contact-container h1 {
   font-family: "Syne", sans-serif;
-  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 800;
   color: #e8ece9;
   text-align: center;
@@ -22,25 +76,69 @@
 }
 
 .contact-lead {
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.6;
   color: #9aa8a0;
   text-align: center;
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.5rem;
 }
 
-.contact-lead-email {
+.contact-info-card {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.35rem;
+  text-align: center;
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 12px;
+}
+
+.contact-info-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9aa8a0;
+}
+
+.contact-info-email {
+  display: inline-block;
+  font-family: "Syne", sans-serif;
+  font-size: clamp(1.15rem, 4vw, 1.45rem);
+  font-weight: 700;
   color: #e0bc3a;
-  text-decoration: underline;
-  text-decoration-color: rgba(201, 162, 39, 0.45);
-  text-underline-offset: 0.15em;
-  font-weight: 600;
-  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  text-decoration: none;
+  word-break: break-all;
 }
 
-.contact-lead-email:hover {
+.contact-info-email:hover {
   color: #fff6d0;
-  text-decoration-color: rgba(224, 188, 58, 0.75);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.contact-info-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #9aa8a0;
+}
+
+.contact-form-card {
+  padding: clamp(1.25rem, 4vw, 1.75rem);
+  background: rgba(12, 15, 14, 0.92);
+  border: 1px solid rgba(201, 162, 39, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.contact-form-heading {
+  font-family: "Syne", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e8ece9;
+  text-align: center;
+  margin: 0 0 1.25rem;
 }
 
 .flashes {
@@ -69,7 +167,7 @@
 }
 
 .contact-form {
-  margin-top: 0.5rem;
+  margin-top: 0;
 }
 
 .form-group {
@@ -113,6 +211,12 @@
 .form-input[rows] {
   resize: vertical;
   min-height: 120px;
+}
+
+.form-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #f87171;
 }
 
 .form-group--recap {
@@ -159,6 +263,23 @@
   outline-offset: 3px;
 }
 
+.contact-mail-fallback {
+  margin: 1.25rem 0 0;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #9aa8a0;
+}
+
+.contact-mail-fallback a {
+  color: #e0bc3a;
+  font-weight: 600;
+}
+
+.contact-mail-fallback a:hover {
+  color: #fff6d0;
+}
+
 .contact-back {
   margin-top: 1.5rem;
   text-align: center;
@@ -177,9 +298,11 @@
 }
 
 @media (max-width: 600px) {
-  .contact-container {
-    width: calc(100% - 1.25rem);
-    margin-inline: auto;
-    padding: 1.25rem;
+  .contact-main {
+    padding-inline: 0.75rem;
+  }
+
+  .contact-form-card {
+    padding: 1.15rem;
   }
 }

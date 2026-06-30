@@ -276,8 +276,10 @@ def update(post_id):
 @blog.route('/contact', methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
-    sender = (os.getenv("SENDER_MAIL") or config.get("SENDER_MAIL") or "").strip()
-    receiver = (os.getenv("RECEIVER_MAIL") or config.get("RECEIVER_MAIL") or "").strip()
+    if not current_app.config.get('RECAPTCHA_PUBLIC_KEY'):
+        form.recap.validators = []
+    sender = (os.getenv("SENDER_MAIL") or config.get("SENDER_MAIL") or "info@ndotonic.com").strip()
+    receiver = (os.getenv("RECEIVER_MAIL") or config.get("RECEIVER_MAIL") or "info@ndotonic.com").strip()
     api_key = (os.getenv("MAIL_TRAP") or config.get("MAIL_TRAP") or "").strip()
 
     if form.validate_on_submit():
