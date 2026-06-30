@@ -114,25 +114,11 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="genre" class="form-label">Genre</label>
-                                        <select class="form-select" id="genre" name="genre">
-                                            <option value="">Select a genre</option>
-                                            <option value="fiction">Fiction</option>
-                                            <option value="non-fiction">Nonfiction</option>
-                                            <option value="mystery">Mystery</option>
-                                            <option value="romance">Romance</option>
-                                            <option value="sci fi">Science Fiction</option>
-                                            <option value="fantasy">Fantasy</option>
-                                            <option value="thriller">Thriller</option>
-                                            <option value="biography">Biography</option>
-                                            <option value="self-help">Self Help</option>
-                                            <option value="business">Business</option>
-                                            <option value="history">History</option>
-                                            <option value="poetry">Poetry</option>
-                                            <option value="children">Children's</option>
-                                            <option value="young-adult">Young Adult</option>
-                                            <option value="other">Other</option>
-                                        </select>
+                                        <label for="genre" class="form-label">Category <span class="text-danger">*</span></label>
+                                        {% with required=true %}
+                                        {% include 'book_platform/includes/_ink_studio_genre_select.html' %}
+                                        {% endwith %}
+                                        <div class="form-text">Nonfiction only — stories drawn from real life and lived experience.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -228,8 +214,8 @@
                                 <strong>Already have a manuscript?</strong> Most authors upload a finished file. Use <a href="{{ url_for('book_platform.list_book') }}" aria-label="List your book on the marketplace">List your book</a> with <strong>EPUB or DOCX</strong> for the best reading experience. This page is for writing section-by-section inside Ink Studio instead.
                             </div>
 
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-ink-gold btn-lg">
+                            <div class="d-grid gap-2 ink-create-form-actions">
+                                <button type="submit" class="btn btn-ink-gold">
                                     <i class="fas fa-pen" aria-hidden="true"></i> Create project &amp; start writing
                                 </button>
                                 <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-ink-ghost">
@@ -415,8 +401,16 @@
                 return;
             }
 
+            const genreEl = document.getElementById('genre');
+            const genreVal = genreEl ? String(genreEl.value || '').trim() : '';
+            if (!genreVal) {
+                alert('Please select a nonfiction category for your book');
+                if (genreEl) genreEl.focus();
+                return;
+            }
+
             if (!coverFile && !ai) {
-                alert('Choose Upload cover and select an image, or choose Generate with AI.');
+                alert('Choose an image file, or switch to Generate with AI and create a preview.');
                 return;
             }
 

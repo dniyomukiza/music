@@ -14,7 +14,7 @@ from glconnect.book_platform_models import (
     TransactionStatus,
 )
 from glconnect.book_utils import is_book_published
-from glconnect.book_purchase_format import print_listed, print_shipping_amount
+from glconnect.book_purchase_format import print_listed, print_shipping_amount, ebook_listed
 from glconnect.platform_fee_policy import MARKETPLACE_PLATFORM_FEE_PERCENT
 
 
@@ -130,6 +130,7 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
             bundle_base = (float(book.price) + float(book.audiobook_price)) * 0.8
 
         print_on = print_listed(book)
+        ebook_on = ebook_listed(book)
         if print_on:
             pp = float(book.print_price or 0)
             ps = print_shipping_amount(book)
@@ -143,7 +144,8 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
                 "title": book.title,
                 "live": live,
                 "price_ebook": book.price,
-                "price_ebook_label": _fmt_price(book.price),
+                "ebook_listed": ebook_on,
+                "price_ebook_label": _fmt_price(book.price) if ebook_on else "—",
                 "price_audiobook": book.audiobook_price,
                 "price_audiobook_label": _fmt_price(book.audiobook_price),
                 "price_bundle_label": _fmt_price(bundle_base),

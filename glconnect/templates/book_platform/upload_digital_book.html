@@ -742,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const ai = coverModeAi || (useAiCover && useAiCover.checked);
         const hasCoverFile = !!(coverInput && coverInput.files && coverInput.files.length);
         if (!hasCoverFile && !ai) {
-            return { ok: false, focus: coverInput, msg: 'Choose Upload cover and select an image, or choose Generate with AI.' };
+            return { ok: false, focus: coverInput, msg: 'Choose an image file, or switch to Generate with AI and create a preview.' };
         }
         if (!hasCoverFile && ai && !listingCoverAccepted) {
             return { ok: false, focus: null, msg: 'Generate an AI preview and tap "Use this cover" before submitting.' };

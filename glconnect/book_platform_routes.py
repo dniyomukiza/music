@@ -159,6 +159,17 @@ from glconnect.chapter_version_service import (
     restore_chapter_version as apply_chapter_version_restore,
     snapshot_chapter,
 )
+from glconnect.chapter_suggestion_service import (
+    build_unified_diff_html,
+    count_pending_suggestions_for_book,
+    get_pending_suggestion,
+    mark_suggestion_reviewed,
+    notify_author_suggestion_pending,
+    pending_suggestions_for_book,
+    pending_suggestions_for_chapter,
+    submit_chapter_suggestion,
+    suggestion_to_review_dict,
+)
 import threading
 from werkzeug.utils import secure_filename
 
@@ -629,7 +640,7 @@ def ink_studio_home_url():
 
 
 def ink_studio_show_author_nav_links():
-    """My Books / Payout account in shared nav, same rules as dashboard ``is_author``."""
+    """My Books / Payout account in shared nav — authors who publish, not buyers."""
     if not current_user.is_authenticated:
         return False
     excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
@@ -642,10 +653,11 @@ def ink_studio_show_author_nav_links():
     has_authored_books = (
         BookProject.query.filter_by(author_id=author_id).count() > 0 if author_id else False
     )
-    if current_user.role == 'author' and profile_type in ('writer', 'book_platform'):
-        return True
     if has_authored_books:
         return True
+    # Role author with completed author-card setup (not auto-created buyer profile from checkout)
+    if current_user.role == 'author' and profile_type in ('writer', 'book_platform'):
+        return not _author_requires_setup_profile(current_user.user_id)
     return False
 
 
@@ -946,6 +958,33 @@ def _get_active_collaboration(book_id, book_user_id):
 def _author_can_manage_collaborations(book, user_profile, profile_type):
     author_id = get_profile_id(user_profile, profile_type)
     return author_id is not None and book.author_id == author_id
+
+
+def _book_studio_access(book, user_profile, profile_type):
+    """Resolve author vs collaborator access for a book studio page."""
+    from glconnect.collaboration_permissions import (
+        collaboration_can_comment,
+        collaboration_can_edit,
+    )
+
+    author_id = get_profile_id(user_profile, profile_type)
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    collaboration = None
+    if bp_user:
+        collaboration = _get_active_collaboration(book.id, bp_user.id)
+    is_book_author = author_id is not None and book.author_id == author_id
+    is_collaborator = collaboration is not None and not is_book_author
+    can_edit_manuscript = is_book_author or collaboration_can_edit(collaboration)
+    can_comment = is_book_author or collaboration_can_comment(collaboration)
+    return {
+        "author_id": author_id,
+        "bp_user": bp_user,
+        "collaboration": collaboration,
+        "is_book_author": is_book_author,
+        "is_collaborator": is_collaborator,
+        "can_edit_manuscript": can_edit_manuscript,
+        "can_comment": can_comment,
+    }
 
 
 @book_bp.route('/ink-studio')
@@ -1426,6 +1465,12 @@ def create_book(user_profile, profile_type):
             return jsonify({'success': False, 'error': 'Please select a language for your book.'}), 400
 
         genre_val = (request.form.get('genre') or '').strip()
+        if not genre_val:
+            return jsonify({'success': False, 'error': 'Please select a nonfiction category.'}), 400
+        from glconnect.ink_listing_genres import is_valid_ink_studio_genre
+        if not is_valid_ink_studio_genre(genre_val):
+            return jsonify({'success': False, 'error': 'Select a valid nonfiction category.'}), 400
+
         raw_description = (request.form.get('description') or '').strip()
         try:
             desc_val = sanitize_project_description(raw_description, book_id=None) if raw_description else None
@@ -1467,7 +1512,7 @@ def create_book(user_profile, profile_type):
         book = BookProject(
             title=title,
             description=desc_val,
-            genre=(request.form.get('genre') or '').strip() or None,
+            genre=genre_val or None,
             language=language,
             target_audience=(request.form.get('target_audience') or '').strip() or None,
             author_id=author_id,
@@ -1723,20 +1768,14 @@ def view_book(book_id, user_profile, profile_type):
         flash('Profile configuration error. Please ensure you have a Writer or Ink Studio profile.', 'error')
         return redirect(url_for('book_platform.books'))
     
-    # Check access
-    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
-    collaboration = None
-    if bp_user:
-        collaboration = BookCollaboration.query.filter_by(
-            book_project_id=book_id, 
-            collaborator_id=bp_user.id,
-            is_active=True
-        ).first()
-    
-    is_author = book.author_id == author_id
-    is_collaborator = collaboration is not None
-    
-    if not is_author and not is_collaborator:
+    access = _book_studio_access(book, user_profile, profile_type)
+    is_book_author = access["is_book_author"]
+    is_collaborator = access["is_collaborator"]
+    collaboration = access["collaboration"]
+    can_edit_manuscript = access["can_edit_manuscript"]
+    can_comment = access["can_comment"]
+
+    if not is_book_author and not is_collaborator:
         flash('Access denied', 'error')
         return redirect(url_for('book_platform.books'))
     
@@ -1803,7 +1842,10 @@ def view_book(book_id, user_profile, profile_type):
     latest_audio_task = None
     has_listing_cover = book_has_listing_cover(book)
     pending_invitation_count = 0
-    if is_author:
+    pending_suggestion_count = 0
+    pending_suggestions = []
+    chapter_pending_map = {}
+    if is_book_author:
         latest_audio_task = (
             AudioGenerationTask.query.filter_by(book_project_id=book_id)
             .order_by(AudioGenerationTask.created_at.desc())
@@ -1817,39 +1859,24 @@ def view_book(book_id, user_profile, profile_type):
             )
             .count()
         )
+        pending_suggestion_count = count_pending_suggestions_for_book(book_id)
+        pending_suggestions = pending_suggestions_for_book(book_id)
+        chapter_pending_map = {s.chapter_id: s for s in pending_suggestions}
 
-    # #region agent log
-    try:
-        import time
-        _cov_raw = (getattr(book, "cover_image", None) or "").strip()
-        _cov_resolved = _marketplace_cover_url(book)
-        _cov_exists = False
-        if _cov_raw and not _cov_raw.startswith(("http://", "https://")):
-            _cov_rel = _cov_raw.lstrip("/")
-            if _cov_rel.startswith("static/"):
-                _cov_rel = _cov_rel[7:]
-            _cov_abs = os.path.join(current_app.static_folder, _cov_rel)
-            _cov_exists = os.path.isfile(_cov_abs)
-        with open("/Applications/untitled folder/music-1/.cursor/debug-fe2ff6.log", "a") as _df:
-            _df.write(json.dumps({
-                "sessionId": "fe2ff6",
-                "runId": "pre-fix",
-                "hypothesisId": "A,B,C",
-                "location": "book_platform_routes.py:view_book",
-                "message": "cover path resolution",
-                "data": {
-                    "book_id": book_id,
-                    "cover_raw": _cov_raw or None,
-                    "cover_resolved": _cov_resolved,
-                    "file_exists": _cov_exists,
-                    "has_listing_cover": has_listing_cover,
-                    "template_uses_raw_src": bool(_cov_raw),
-                },
-                "timestamp": int(time.time() * 1000),
-            }) + "\n")
-    except Exception:
-        pass
-    # #endregion
+    if is_collaborator and access.get("bp_user"):
+        from glconnect.book_platform_models import BookChapter as _BC, ChapterSuggestion as _CS
+        collaborator_pending_by_chapter = {
+            row.chapter_id: row
+            for row in _CS.query.join(_BC, _CS.chapter_id == _BC.id)
+            .filter(
+                _BC.book_project_id == book_id,
+                _CS.suggested_by_id == access["bp_user"].id,
+                _CS.status == "pending",
+            )
+            .all()
+        }
+    else:
+        collaborator_pending_by_chapter = {}
 
     try:
         return render_template('book_platform/view_book.html', 
@@ -1857,13 +1884,21 @@ def view_book(book_id, user_profile, profile_type):
                              chapters=chapters,
                              collaborations=collaborations,
                              pending_invitation_count=pending_invitation_count,
-                             is_author=is_author,
+                             pending_suggestion_count=pending_suggestion_count,
+                             pending_suggestions=pending_suggestions,
+                             chapter_pending_map=chapter_pending_map,
+                             collaborator_pending_by_chapter=collaborator_pending_by_chapter,
+                             is_book_author=is_book_author,
                              is_collaborator=is_collaborator,
+                             collaboration=collaboration,
+                             can_edit_manuscript=can_edit_manuscript,
+                             can_comment=can_comment,
                              investment_readiness=investment_readiness,
                              investment_campaign=campaign,
                              digital_download_options=digital_download_options,
                              has_listing_cover=has_listing_cover,
-                             latest_audio_task=latest_audio_task)
+                             latest_audio_task=latest_audio_task,
+                             marketplace_cover_url=_marketplace_cover_url)
     except Exception as template_error:
         logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
         flash('Error loading book view. Please try again.', 'error')
@@ -2238,10 +2273,14 @@ def chapters(book_id):
     return render_template('book_platform/chapters.html', book=book, chapters=chapters)
 
 @book_bp.route('/books/<int:book_id>/chapters/create', methods=['GET', 'POST'])
-@book_platform_required
-def create_chapter(book_id):
+@writer_or_book_platform_required
+def create_chapter(book_id, user_profile, profile_type):
     """Create a new chapter"""
     book = BookProject.query.get_or_404(book_id)
+    access = _book_studio_access(book, user_profile, profile_type)
+    if not access["can_edit_manuscript"]:
+        flash('You do not have permission to add sections to this book.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     if request.method == 'POST':
         try:
@@ -2264,6 +2303,10 @@ def create_chapter(book_id):
             
             from glconnect.book_utils import normalize_section_kind_input
 
+            is_published = False
+            if access["is_book_author"]:
+                is_published = data.get('is_published') == 'on' or data.get('is_published') is True
+
             chapter = BookChapter(
                 title=data['title'],
                 content=content,
@@ -2273,7 +2316,7 @@ def create_chapter(book_id):
                 word_count=word_count,
                 word_count_target=int(data.get('word_count_target', 0)) if data.get('word_count_target') else None,
                 book_project_id=book_id,
-                is_published=data.get('is_published') == 'on' or data.get('is_published') == True
+                is_published=is_published,
             )
             
             db.session.add(chapter)
@@ -2301,26 +2344,42 @@ def create_chapter(book_id):
     
     return render_template('book_platform/create_chapter.html', 
                          book=book, 
-                         next_chapter_number=next_chapter_number)
+                         next_chapter_number=next_chapter_number,
+                         is_book_author=access["is_book_author"],
+                         can_edit_manuscript=access["can_edit_manuscript"])
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>')
-@book_platform_required
-def view_chapter(book_id, chapter_id):
-    """View and edit chapter"""
+@writer_or_book_platform_required
+def view_chapter(book_id, chapter_id, user_profile, profile_type):
+    """View chapter content"""
     book = BookProject.query.get_or_404(book_id)
     chapter = BookChapter.query.get_or_404(chapter_id)
     
     if chapter.book_project_id != book_id:
         flash('Chapter not found in this book', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
+
+    access = _book_studio_access(book, user_profile, profile_type)
+    if not access["is_book_author"] and not access["is_collaborator"]:
+        flash('Access denied', 'error')
+        return redirect(url_for('book_platform.books'))
     
     # Get comments for this chapter
     comments = BookComment.query.filter_by(chapter_id=chapter_id).order_by(BookComment.created_at).all()
+
+    pending_for_chapter = pending_suggestions_for_chapter(chapter_id)
+    my_pending = None
+    if access.get("bp_user") and not access["is_book_author"]:
+        my_pending = get_pending_suggestion(chapter_id, access["bp_user"].id)
     
     return render_template('book_platform/view_chapter.html', 
                          book=book, 
                          chapter=chapter,
-                         comments=comments)
+                         comments=comments,
+                         is_book_author=access["is_book_author"],
+                         can_edit_manuscript=access["can_edit_manuscript"],
+                         pending_suggestions=pending_for_chapter,
+                         my_pending_suggestion=my_pending)
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/edit', methods=['GET', 'POST'])
 @writer_or_book_platform_required
@@ -2329,12 +2388,9 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
     book = BookProject.query.get_or_404(book_id)
     chapter = BookChapter.query.get_or_404(chapter_id)
     
-    # Get the correct author ID based on profile type
-    author_id = get_profile_id(user_profile, profile_type)
-    
-    # Check if user is the author of the book
-    if book.author_id != author_id:
-        flash('You can only edit chapters in your own books', 'error')
+    access = _book_studio_access(book, user_profile, profile_type)
+    if not access["can_edit_manuscript"]:
+        flash('You do not have permission to edit this book.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
     # Check if chapter is published - if so, prevent editing
@@ -2353,6 +2409,33 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
+
+            merge_suggestion_id = data.get('merge_suggestion_id')
+            if merge_suggestion_id:
+                try:
+                    merge_suggestion_id = int(merge_suggestion_id)
+                except (TypeError, ValueError):
+                    merge_suggestion_id = None
+            
+            if not access["is_book_author"]:
+                book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+                if not book_user:
+                    flash('Ink Studio profile required.', 'error')
+                    return redirect(url_for('book_platform.view_book', book_id=book_id))
+                suggestion = submit_chapter_suggestion(chapter, book_user, data)
+                notify_author_suggestion_pending(book, suggestion, book_user)
+                db.session.commit()
+                if request.is_json:
+                    return jsonify({
+                        'success': True,
+                        'message': 'Edits submitted for author review.',
+                        'suggestion_id': suggestion.id,
+                    })
+                flash(
+                    'Your edits were submitted for author review. The live section stays unchanged until approved.',
+                    'success',
+                )
+                return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
             
             actor_id = resolve_version_actor_id(book, current_user.user_id)
             if actor_id:
@@ -2378,7 +2461,8 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             else:
                 chapter.word_count_target = None
             
-            chapter.is_published = data.get('is_published') == 'on' or data.get('is_published') == True
+            if access["is_book_author"]:
+                chapter.is_published = data.get('is_published') == 'on' or data.get('is_published') == True
             # Recalculate word count from content (strip HTML tags)
             content = data.get('content', '')
             if content:
@@ -2394,6 +2478,21 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             
             # Update book's total word count
             update_book_word_count(book)
+
+            if merge_suggestion_id and access["is_book_author"]:
+                from glconnect.book_platform_models import ChapterSuggestion
+                merged = ChapterSuggestion.query.filter_by(
+                    id=merge_suggestion_id,
+                    chapter_id=chapter.id,
+                    status='pending',
+                ).first()
+                if merged:
+                    mark_suggestion_reviewed(
+                        merged,
+                        status='approved',
+                        reviewer_id=actor_id or book.author_id,
+                        message='Merged with author edits',
+                    )
             
             db.session.commit()
             
@@ -2419,12 +2518,62 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 flash(f'An unexpected error occurred while editing chapter: {error_msg}', 'error')
     
     # GET request - show edit form
-    can_restore_versions = book.author_id == get_profile_id(user_profile, profile_type)
+    can_restore_versions = access["is_book_author"]
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    pending_suggestion = None
+    merge_suggestion = None
+    merge_suggestion_id = request.args.get('merge_suggestion_id', type=int)
+    form_chapter = chapter
+
+    if merge_suggestion_id and access["is_book_author"]:
+        from glconnect.book_platform_models import ChapterSuggestion
+        merge_suggestion = ChapterSuggestion.query.filter_by(
+            id=merge_suggestion_id,
+            chapter_id=chapter.id,
+            status='pending',
+        ).first()
+        if merge_suggestion:
+            class _FormChapter:
+                pass
+            form_chapter = _FormChapter()
+            form_chapter.id = chapter.id
+            form_chapter.title = merge_suggestion.suggested_title or chapter.title
+            form_chapter.content = merge_suggestion.suggested_content or chapter.content
+            form_chapter.summary = merge_suggestion.suggested_summary or chapter.summary
+            form_chapter.chapter_number = chapter.chapter_number
+            form_chapter.section_kind = chapter.section_kind
+            form_chapter.word_count_target = chapter.word_count_target
+            form_chapter.is_published = chapter.is_published
+            form_chapter.created_at = chapter.created_at
+            form_chapter.updated_at = chapter.updated_at
+    elif not access["is_book_author"] and book_user:
+        pending_suggestion = get_pending_suggestion(chapter.id, book_user.id)
+        if pending_suggestion:
+            class _FormChapter:
+                pass
+            form_chapter = _FormChapter()
+            form_chapter.id = chapter.id
+            form_chapter.title = pending_suggestion.suggested_title or chapter.title
+            form_chapter.content = pending_suggestion.suggested_content or chapter.content
+            form_chapter.summary = pending_suggestion.suggested_summary or chapter.summary
+            form_chapter.chapter_number = chapter.chapter_number
+            form_chapter.section_kind = chapter.section_kind
+            form_chapter.word_count_target = chapter.word_count_target
+            form_chapter.is_published = chapter.is_published
+            form_chapter.created_at = chapter.created_at
+            form_chapter.updated_at = chapter.updated_at
+
     return render_template(
         'book_platform/edit_chapter.html',
         book=book,
-        chapter=chapter,
+        chapter=form_chapter,
+        live_chapter=chapter,
         can_restore_versions=can_restore_versions,
+        is_book_author=access["is_book_author"],
+        can_edit_manuscript=access["can_edit_manuscript"],
+        submits_for_review=not access["is_book_author"],
+        pending_suggestion=pending_suggestion,
+        merge_suggestion=merge_suggestion,
     )
 
 
@@ -3138,25 +3287,14 @@ def suggest_chapter_edit(book_id, chapter_id, user_profile, profile_type):
     if not collaboration_can_view(collaboration):
         return jsonify({'error': 'You do not have permission to suggest edits'}), 403
     perms = collaboration.permissions or permissions_for_role(collaboration.role)
+    if collaboration_can_edit(collaboration):
+        return jsonify({'error': 'Use the section editor to submit edits for author review.'}), 400
     if not perms.get('can_comment'):
         return jsonify({'error': 'You have view-only access on this book'}), 403
-    if collaboration_can_edit(collaboration):
-        return jsonify({'error': 'You can edit directly. Save your changes in the editor.'}), 400
     
-    data = request.get_json()
-    
-    # Create suggestion
-    suggestion = ChapterSuggestion(
-        chapter_id=chapter_id,
-        suggested_by_id=book_user.id,
-        suggested_title=data.get('title', chapter.title),
-        suggested_content=data.get('content', chapter.content),
-        suggested_summary=data.get('summary', chapter.summary),
-        original_content=chapter.content,
-        status='pending'
-    )
-    
-    db.session.add(suggestion)
+    data = request.get_json() or {}
+    suggestion = submit_chapter_suggestion(chapter, book_user, data)
+    notify_author_suggestion_pending(book, suggestion, book_user)
     db.session.commit()
     
     return jsonify({
@@ -3164,6 +3302,24 @@ def suggest_chapter_edit(book_id, chapter_id, user_profile, profile_type):
         'message': 'Your suggested edits have been submitted for review',
         'suggestion_id': suggestion.id
     })
+
+@book_bp.route('/books/<int:book_id>/reviews')
+@writer_or_book_platform_required
+def book_pending_reviews(book_id, user_profile, profile_type):
+    """Author queue of collaborator edits awaiting approval."""
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    if book.author_id != author_id:
+        flash('Only the author can review pending edits.', 'error')
+        return redirect(url_for('book_platform.view_book', book_id=book_id))
+
+    suggestions = pending_suggestions_for_book(book_id)
+    return render_template(
+        'book_platform/book_reviews.html',
+        book=book,
+        suggestions=suggestions,
+    )
+
 
 @book_bp.route('/books/<int:book_id>/chapters/<int:chapter_id>/suggestions')
 @writer_or_book_platform_required
@@ -3178,7 +3334,12 @@ def view_suggestions(book_id, chapter_id, user_profile, profile_type):
         flash('Only the author can view suggestions', 'error')
         return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
     
-    suggestions = ChapterSuggestion.query.filter_by(chapter_id=chapter_id).order_by(
+    from glconnect.book_platform_models import BookPlatformUser, ChapterSuggestion
+    from sqlalchemy.orm import joinedload
+
+    suggestions = ChapterSuggestion.query.options(
+        joinedload(ChapterSuggestion.suggested_by).joinedload(BookPlatformUser.user),
+    ).filter_by(chapter_id=chapter_id).order_by(
         ChapterSuggestion.created_at.desc()
     ).all()
     
@@ -3222,7 +3383,7 @@ def approve_suggestion(suggestion_id, user_profile, profile_type):
     suggestion.status = 'approved'
     suggestion.reviewed_by_id = author_id
     suggestion.reviewed_at = datetime.now(timezone.utc)
-    suggestion.review_message = request.json.get('message', '')
+    suggestion.review_message = (request.json or {}).get('message', '') if request.is_json else ''
     
     db.session.commit()
     
@@ -3250,7 +3411,7 @@ def reject_suggestion(suggestion_id, user_profile, profile_type):
     suggestion.status = 'rejected'
     suggestion.reviewed_by_id = author_id
     suggestion.reviewed_at = datetime.now(timezone.utc)
-    suggestion.review_message = request.json.get('message', 'Rejected by author')
+    suggestion.review_message = (request.json or {}).get('message', 'Rejected by author') if request.is_json else 'Rejected by author'
     
     db.session.commit()
     
@@ -3272,10 +3433,15 @@ def view_suggestion(suggestion_id, user_profile, profile_type):
         flash('Only the author can view suggestions', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book.id))
     
-    return render_template('book_platform/view_suggestion.html',
-                         suggestion=suggestion,
-                         book=book,
-                         chapter=suggestion.chapter)
+    review = suggestion_to_review_dict(suggestion)
+    return render_template(
+        'book_platform/view_suggestion.html',
+        suggestion=suggestion,
+        book=book,
+        chapter=suggestion.chapter,
+        review=review,
+        diff_html=review['diff_html'],
+    )
 
 # Helper function to send collaboration invitation email
 def send_collaboration_invitation_email(invitation, book, inviter):
@@ -7315,15 +7481,13 @@ def chapter_content_api(book_id, chapter_id):
             return jsonify({'error': 'Ink Studio profile required'}), 403
         book = chapter.book_project
         if book.author_id != book_user.id:
-            from glconnect.collaboration_permissions import collaboration_can_edit
-
-            collaboration = _get_active_collaboration(book_id, book_user.id)
-            if not collaboration_can_edit(collaboration):
-                return jsonify({'error': 'You do not have edit permission for this book'}), 403
+            return jsonify({
+                'error': 'Collaborator edits must be submitted for author review. Use the section editor.',
+            }), 403
 
         actor_id = resolve_version_actor_id(chapter.book_project, current_user.user_id)
         if actor_id:
-            snapshot_chapter(chapter, actor_id, change_source='collaboration')
+            snapshot_chapter(chapter, actor_id, change_source='author_edit')
         
         # Update chapter content
         chapter.content = data.get('content', chapter.content)
@@ -7485,13 +7649,9 @@ def upload_chapter_image(book_id, chapter_id, user_profile, profile_type):
         return jsonify({'error': 'Chapter not found'}), 404
     
     # Check access permissions
-    author_id = get_profile_id(user_profile, profile_type)
-    if book.author_id != author_id:
-        from glconnect.collaboration_permissions import collaboration_can_edit
-
-        collaboration = _get_active_collaboration(book_id, author_id)
-        if not collaboration_can_edit(collaboration):
-            return jsonify({'error': 'You do not have edit permission for this book'}), 403
+    access = _book_studio_access(book, user_profile, profile_type)
+    if not access["can_edit_manuscript"]:
+        return jsonify({'error': 'You do not have edit permission for this book'}), 403
     
     if 'upload' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400

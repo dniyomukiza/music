@@ -83,47 +83,6 @@ body.contact-page {
   margin: 0 0 1.5rem;
 }
 
-.contact-info-card {
-  margin-bottom: 1.5rem;
-  padding: 1.25rem 1.35rem;
-  text-align: center;
-  background: rgba(201, 162, 39, 0.08);
-  border: 1px solid rgba(201, 162, 39, 0.35);
-  border-radius: 12px;
-}
-
-.contact-info-label {
-  margin: 0 0 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #9aa8a0;
-}
-
-.contact-info-email {
-  display: inline-block;
-  font-family: "Syne", sans-serif;
-  font-size: clamp(1.15rem, 4vw, 1.45rem);
-  font-weight: 700;
-  color: #e0bc3a;
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.contact-info-email:hover {
-  color: #fff6d0;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
-}
-
-.contact-info-note {
-  margin: 0.75rem 0 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: #9aa8a0;
-}
-
 .contact-form-card {
   padding: clamp(1.25rem, 4vw, 1.75rem);
   background: rgba(12, 15, 14, 0.92);

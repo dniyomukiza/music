@@ -310,6 +310,12 @@ def contact():
                 category="User Contact",
             )
             MailtrapClient(token=api_key).send(mail)
+            logger.info(
+                "Contact form submitted: from=%s to=%s subject=%s",
+                form.email.data,
+                receiver,
+                "New Contact Form Submission",
+            )
         except Exception:
             logger.exception("Contact form Mailtrap send failed")
             flash(

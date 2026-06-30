@@ -76,6 +76,31 @@ def print_listed(book: Any) -> bool:
     )
 
 
+def ebook_listed(book: Any) -> bool:
+    """True when digital ebook is offered on the marketplace (not merely price unset)."""
+    if not book:
+        return False
+    if getattr(book, "digital_book_published", False) and getattr(book, "digital_file_path", None):
+        return True
+    from glconnect.book_platform_models import BookStatus
+
+    if book.status == BookStatus.PUBLISHED and not getattr(book, "digital_file_path", None):
+        chapters = getattr(book, "chapters", None)
+        if chapters is not None:
+            return len(chapters) > 0
+        from glconnect.book_platform_models import BookChapter
+        from glconnect import db
+
+        return (
+            db.session.query(BookChapter.id)
+            .filter_by(book_project_id=book.id)
+            .limit(1)
+            .first()
+            is not None
+        )
+    return False
+
+
 def print_shipping_amount(book: Any) -> float:
     return max(0.0, float(getattr(book, "print_shipping_price", None) or 0))
 

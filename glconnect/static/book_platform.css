@@ -4058,7 +4058,73 @@ body.ink-books-create.ink-upload-book .text-secondary {
     color: #9aa8a0 !important;
 }
 
-/* Cover source toggle — avoid white-on-white when Upload/AI option is selected */
+body.ink-books-create .ink-create-form-actions {
+    width: 50%;
+    min-width: 11.5rem;
+    max-width: 16rem;
+}
+
+@media (max-width: 575.98px) {
+    body.ink-books-create .ink-create-form-actions {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+/* Cover source — compact tabs, then file picker or AI panel below */
+.ink-cover-mode-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.35rem;
+    border-radius: 12px;
+    background: rgba(8, 10, 9, 0.55);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+.ink-cover-mode-tab {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9aa8a0;
+    cursor: pointer;
+    transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    user-select: none;
+}
+
+.ink-cover-mode-tab:hover {
+    color: #e8ece9;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.ink-cover-mode-tabs .btn-check:checked + .ink-cover-mode-tab {
+    color: #060807;
+    background: linear-gradient(145deg, #e0bc3a, #c9a227);
+    box-shadow: 0 4px 14px rgba(201, 162, 39, 0.22);
+}
+
+.ink-cover-mode-tabs .btn-check:focus-visible + .ink-cover-mode-tab {
+    outline: 2px solid rgba(224, 188, 58, 0.65);
+    outline-offset: 2px;
+}
+
+.ink-cover-mode-body {
+    padding: 1rem 1.1rem;
+    border-radius: 12px;
+    background: rgba(12, 15, 14, 0.65);
+    border: 1px solid rgba(201, 162, 39, 0.18);
+}
+
+body.ink-upload-book .ink-cover-mode-body .form-label {
+    color: #e8ece9;
+    font-weight: 600;
+}
+
+/* Legacy cover card toggle (kept for any older markup) */
 body.ink-upload-book .ink-cover-source-pick .btn-outline-light {
     background: rgba(12, 15, 14, 0.92) !important;
     border-color: rgba(201, 162, 39, 0.32) !important;
@@ -6053,8 +6119,10 @@ body.ink-workspace .ink-workspace-nav .ink-workspace-dropdown {
 body.ink-workspace .ink-workspace-nav .ink-workspace-dropdown .dropdown-item {
     pointer-events: auto !important;
     cursor: pointer;
-    background-color: transparent !important;
     color: #e8ece9 !important;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
 body.ink-workspace .ink-workspace-nav-inner {
@@ -6076,25 +6144,52 @@ body.ink-workspace .ink-workspace-nav-primary .nav-link.active {
 
 body.ink-workspace .ink-workspace-more-toggle {
     color: rgba(232, 236, 233, 0.72) !important;
+    border-radius: 8px;
+    transition: color 0.18s ease, background-color 0.18s ease;
 }
 
-body.ink-workspace .ink-workspace-dropdown {
+body.ink-workspace .ink-workspace-more-toggle:hover,
+body.ink-workspace .ink-workspace-more-toggle:focus,
+body.ink-workspace .ink-workspace-more-toggle.show {
+    color: #f5d76a !important;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+body.ink-workspace .ink-workspace-dropdown,
+body.ink-marketplace .ink-workspace-dropdown {
     background: rgba(12, 15, 14, 0.98);
     border: 1px solid rgba(201, 162, 39, 0.22);
     border-radius: 12px;
     padding: 0.35rem;
 }
 
-body.ink-workspace .ink-workspace-dropdown .dropdown-item {
+body.ink-workspace .ink-workspace-dropdown .dropdown-item,
+body.ink-marketplace .ink-workspace-dropdown .dropdown-item {
     color: #e8ece9;
     border-radius: 8px;
     font-weight: 500;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
+body.ink-workspace .ink-workspace-nav .ink-workspace-dropdown .dropdown-item:hover,
+body.ink-workspace .ink-workspace-nav .ink-workspace-dropdown .dropdown-item:focus,
 body.ink-workspace .ink-workspace-dropdown .dropdown-item:hover,
-body.ink-workspace .ink-workspace-dropdown .dropdown-item.active {
-    background: rgba(201, 162, 39, 0.14);
-    color: #fff;
+body.ink-workspace .ink-workspace-dropdown .dropdown-item:focus,
+body.ink-workspace .ink-workspace-dropdown .dropdown-item.active,
+body.ink-marketplace .ink-workspace-dropdown .dropdown-item:hover,
+body.ink-marketplace .ink-workspace-dropdown .dropdown-item:focus,
+body.ink-marketplace .ink-workspace-dropdown .dropdown-item.active {
+    background-color: rgba(201, 162, 39, 0.16) !important;
+    color: #f5d76a !important;
+    transform: translateX(3px);
+}
+
+body.ink-workspace .ink-workspace-dropdown .dropdown-item.text-danger:hover,
+body.ink-workspace .ink-workspace-dropdown .dropdown-item.text-danger:focus,
+body.ink-marketplace .ink-workspace-dropdown .dropdown-item.text-danger:hover,
+body.ink-marketplace .ink-workspace-dropdown .dropdown-item.text-danger:focus {
+    background-color: rgba(239, 68, 68, 0.14) !important;
+    color: #fca5a5 !important;
 }
 
 body.ink-workspace .ink-workspace-main {
@@ -6525,4 +6620,48 @@ body.ink-edit-book-listing .edit-book .listing-terms-section {
 body.ink-edit-book-listing .edit-book label.text-dark,
 body.ink-edit-book-listing .edit-book .form-check-label.text-dark {
     color: #e8ece9 !important;
+}
+
+/* Collaborator edit review — diff & compare */
+.ink-diff-pre {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    padding: 1rem;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #c5d0ca;
+}
+.ink-diff-add { color: #6ee7a0; }
+.ink-diff-del { color: #f87171; }
+.ink-diff-hunk { color: #93c5fd; }
+.ink-review-content {
+    max-height: 420px;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Collaborator edit review — diff & compare */
+.ink-diff-pre {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    padding: 1rem;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #c5d0ca;
+}
+.ink-diff-add { color: #6ee7a0; }
+.ink-diff-del { color: #f87171; }
+.ink-diff-hunk { color: #93c5fd; }
+.ink-review-content {
+    max-height: 420px;
+    overflow-y: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
 }

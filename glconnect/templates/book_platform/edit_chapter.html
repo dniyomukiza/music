@@ -149,13 +149,28 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>
                             <h4 class="mb-1">
-                                <i class="fas fa-edit me-2 text-info"></i> Edit Manuscript
+                                <i class="fas fa-edit me-2 text-info"></i> {% if is_book_author|default(true) %}Edit section{% else %}Edit content{% endif %}
                             </h4>
-                            <small class="text-muted">Editing "{{ chapter.title }}" in "{{ book.title }}"</small>
+                            <small class="text-muted">Editing "{{ chapter.title }}" in "{{ book.title }}"{% if not is_book_author|default(true) %} · Collaborator editor{% endif %}</small>
                         </div>
                     </div>
                     <div class="card-body">
+                        {% if submits_for_review|default(false) %}
+                        <div class="alert alert-info border-info border-opacity-25 mb-4" role="status">
+                            <strong>Review before merge.</strong> Your edits are sent to the author for approval. The live section does not change until they approve, reject, or merge with their own edits.
+                            {% if pending_suggestion %}
+                            <div class="small mt-2 mb-0 text-warning"><i class="fas fa-clock me-1"></i>You already have a pending submission for this section — saving again will update that proposal.</div>
+                            {% endif %}
+                        </div>
+                        {% elif merge_suggestion %}
+                        <div class="alert alert-warning border-warning border-opacity-25 mb-4" role="status">
+                            <strong>Review &amp; merge.</strong> You are editing the collaborator's proposed text. Adjust anything you want, then save to apply your version and close this review.
+                        </div>
+                        {% endif %}
                         <form id="editChapterForm">
+                            {% if merge_suggestion %}
+                            <input type="hidden" name="merge_suggestion_id" value="{{ merge_suggestion.id }}">
+                            {% endif %}
                             <div class="row">
                                 <div class="col-md-9 mb-4">
                                     <label for="title" class="form-label">Section title *</label>
@@ -201,6 +216,7 @@
                                            min="0" value="{{ chapter.word_count_target or '' }}" placeholder="e.g. 3000">
                                 </div>
                                 <div class="col-md-8 mt-4 mt-md-0 d-flex flex-column align-items-md-end">
+                                    {% if is_book_author|default(true) %}
                                     <div class="form-check form-switch mt-md-4 me-3">
                                         <input class="form-check-input" type="checkbox" id="is_published" name="is_published"
                                                {% if chapter.is_published %}checked{% endif %} style="cursor:pointer;">
@@ -212,6 +228,9 @@
                                         <small><i class="fas fa-exclamation-triangle me-2"></i>
                                         <strong>Note:</strong> Completing the chapter locks it for editing.</small>
                                     </div>
+                                    {% else %}
+                                    <p class="small text-muted mt-md-4 mb-0 text-md-end">Only the author can mark a section complete or delete it. You can edit and save content here.</p>
+                                    {% endif %}
                                 </div>
                             </div>
 
@@ -247,7 +266,11 @@
                                     Cancel
                                 </a>
                                 <button type="submit" class="btn btn-primary">
+                                    {% if submits_for_review|default(false) %}
+                                    <i class="fas fa-paper-plane me-2"></i> Submit for review
+                                    {% else %}
                                     <i class="fas fa-check me-2"></i> Commit Changes
+                                    {% endif %}
                                 </button>
                             </div>
                         </form>
@@ -327,7 +350,7 @@
                 });
                 
                 if (response.redirected || response.status === 302) {
-                    showNotification('Chapter updated successfully!', 'success');
+                    showNotification('{% if submits_for_review|default(false) %}Edits submitted for author review!{% else %}Chapter updated successfully!{% endif %}', 'success');
                     setTimeout(() => window.location.href = '{{ url_for("book_platform.view_chapter", book_id=book.id, chapter_id=chapter.id) }}', 1500);
                     return;
                 }
@@ -336,7 +359,7 @@
                 if (contentType && contentType.includes('application/json')) {
                     const result = await response.json();
                     if (result.success) {
-                        showNotification('Chapter updated successfully!', 'success');
+                        showNotification('{% if submits_for_review|default(false) %}Edits submitted for author review!{% else %}Chapter updated successfully!{% endif %}', 'success');
                         setTimeout(() => window.location.href = '{{ url_for("book_platform.view_chapter", book_id=book.id, chapter_id=chapter.id) }}', 1500);
                     } else showNotification(result.error || 'Failed to update chapter', 'error');
                 } else {

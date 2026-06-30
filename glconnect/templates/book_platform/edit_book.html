@@ -68,26 +68,11 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="genre" class="form-label">Genre</label>
-                                        {% set standard_genres = ['fiction','non-fiction','mystery','romance','sci fi','fantasy','thriller','biography','self-help','business','history','other'] %}
-                                        <select class="form-select" id="genre" name="genre">
-                                            <option value="">Select a genre</option>
-                                            <option value="fiction" {% if book.genre == 'fiction' %}selected{% endif %}>Fiction</option>
-                                            <option value="non-fiction" {% if book.genre == 'non-fiction' %}selected{% endif %}>Nonfiction</option>
-                                            <option value="mystery" {% if book.genre == 'mystery' %}selected{% endif %}>Mystery</option>
-                                            <option value="romance" {% if book.genre == 'romance' %}selected{% endif %}>Romance</option>
-                                            <option value="sci fi" {% if book.genre == 'sci fi' %}selected{% endif %}>Science Fiction</option>
-                                            <option value="fantasy" {% if book.genre == 'fantasy' %}selected{% endif %}>Fantasy</option>
-                                            <option value="thriller" {% if book.genre == 'thriller' %}selected{% endif %}>Thriller</option>
-                                            <option value="biography" {% if book.genre == 'biography' %}selected{% endif %}>Biography</option>
-                                            <option value="self-help" {% if book.genre == 'self-help' %}selected{% endif %}>Self Help</option>
-                                            <option value="business" {% if book.genre == 'business' %}selected{% endif %}>Business</option>
-                                            <option value="history" {% if book.genre == 'history' %}selected{% endif %}>History</option>
-                                            <option value="other" {% if book.genre == 'other' %}selected{% endif %}>Other</option>
-                                            {% if book.genre and book.genre not in standard_genres %}
-                                            <option value="{{ book.genre }}" selected>{{ book.genre }}</option>
-                                            {% endif %}
-                                        </select>
+                                        <label for="genre" class="form-label">Category</label>
+                                        {% with selected_genre=book.genre or '' %}
+                                        {% include 'book_platform/includes/_ink_studio_genre_select.html' %}
+                                        {% endwith %}
+                                        <div class="form-text">Nonfiction categories only.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

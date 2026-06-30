@@ -48,6 +48,18 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        {% if is_book_author|default(false) and pending_suggestions %}
+                        <div class="alert alert-warning py-2 mb-3">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ pending_suggestions|length }} collaborator edit(s) awaiting your review.
+                            <a href="{{ url_for('book_platform.view_suggestion', suggestion_id=pending_suggestions[0].id) }}" class="alert-link">Review now</a>
+                        </div>
+                        {% elif my_pending_suggestion %}
+                        <div class="alert alert-info py-2 mb-3">
+                            <i class="fas fa-paper-plane me-1"></i>
+                            Your edits are with the author for review. The text below is still the live version.
+                        </div>
+                        {% endif %}
                         {% if chapter.summary %}
                         <div class="alert alert-info">
                             <h6><i class="fas fa-info-circle"></i> Chapter Summary</h6>
@@ -63,10 +75,10 @@
                                     <i class="fas fa-file-alt fa-3x mb-3"></i>
                                     <h5>No Content Yet</h5>
                                     <p>This chapter hasn't been written yet.</p>
-                                    {% if current_user.is_authenticated and (book.author and book.author.user_id == current_user.user_id or current_user.role == 'admin') %}
+                                    {% if current_user.is_authenticated and can_edit_manuscript|default(false) %}
                                         <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}" 
                                            class="btn btn-primary">
-                                            <i class="fas fa-edit"></i> Start Writing
+                                            <i class="fas fa-edit"></i> Start writing
                                         </a>
                                     {% endif %}
                                 </div>
@@ -152,8 +164,8 @@
                     </div>
                 </div>
 
-                <!-- Actions (only visible to the book's author or admins) -->
-                {% if current_user.is_authenticated and (book.author and book.author.user_id == current_user.user_id or current_user.role == 'admin') %}
+                <!-- Actions -->
+                {% if current_user.is_authenticated and (is_book_author|default(false) or can_edit_manuscript|default(false) or current_user.role == 'admin') %}
                 <div class="card mt-3">
                     <div class="card-header">
                         <h5><i class="fas fa-tools"></i> Actions</h5>
@@ -161,34 +173,34 @@
                     <div class="card-body">
                         <div class="d-grid gap-2">
                             {% if chapter.is_published %}
+                                {% if is_book_author|default(false) %}
                                 <button id="unpublishBtn" class="btn btn-warning" onclick="unpublishChapter()">
                                     <i class="fas fa-undo"></i> Reopen for editing
                                 </button>
+                                {% endif %}
                                 <div class="alert alert-info py-2 mb-0">
-                                    <small><i class="fas fa-lock"></i> Complete chapters are locked for editing</small>
+                                    <small><i class="fas fa-lock"></i> Complete sections are locked{% if not is_book_author|default(false) %} — ask the author to reopen{% endif %}</small>
                                 </div>
-                            {% else %}
+                            {% elif can_edit_manuscript|default(false) %}
                                 <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
                                    class="btn btn-primary">
-                                    <i class="fas fa-edit"></i> Edit Chapter
+                                    <i class="fas fa-edit"></i> {% if is_book_author|default(false) %}Edit content{% else %}Propose edits{% endif %}
                                 </a>
                             {% endif %}
-                            {% if not book.digital_file_path %}
+                            {% if can_edit_manuscript|default(false) and not book.digital_file_path %}
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}"
                                class="btn btn-outline-primary">
-                                <i class="fas fa-plus"></i> Add Chapter
+                                <i class="fas fa-plus"></i> Add section
                             </a>
                             {% endif %}
+                            {% if is_book_author|default(false) and not book.digital_file_path %}
                             <button class="btn btn-danger" onclick="confirmDeleteChapter()">
-                                <i class="fas fa-trash"></i> Delete Chapter
+                                <i class="fas fa-trash"></i> Delete section
                             </button>
-                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" 
-                               class="btn btn-outline-secondary">
-                                <i class="fas fa-list"></i> All Chapters
-                            </a>
+                            {% endif %}
                             <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
                                class="btn btn-outline-info">
-                                <i class="fas fa-book"></i> View Book
+                                <i class="fas fa-book"></i> Back to book
                             </a>
                         </div>
                     </div>

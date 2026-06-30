@@ -62,7 +62,7 @@
                         <a class="nav-link dropdown-toggle rounded px-lg-2" href="#" id="marketplaceNavMore" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             More
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10 mt-1" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="marketplaceNavMore">
+                        <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown border border-white border-opacity-10 mt-1" aria-labelledby="marketplaceNavMore">
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.list_book') }}">List your book</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">Ink Studio</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payouts</a></li>
@@ -73,7 +73,7 @@
                         <a class="nav-link dropdown-toggle rounded px-lg-2" href="#" id="marketplaceNavAccount" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu, signed in as {{ current_user.username }}">
                             <i class="fas fa-user-circle me-1" aria-hidden="true"></i><span class="d-none d-sm-inline">{{ current_user.username }}</span><span class="d-inline d-sm-none">Account</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end border border-white border-opacity-10 mt-1" style="background: rgba(12, 15, 14, 0.98);" aria-labelledby="marketplaceNavAccount">
+                        <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown border border-white border-opacity-10 mt-1" aria-labelledby="marketplaceNavAccount">
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.setup_profile') }}">Profile settings</a></li>
                             <li><hr class="dropdown-divider border-white border-opacity-25"></li>
                             <li><a class="dropdown-item text-danger" href="{{ url_for('blog.logout') }}">Sign out</a></li>

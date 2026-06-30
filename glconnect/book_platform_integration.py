@@ -85,12 +85,8 @@ def init_book_platform(app):
                 ink_studio_home_url,
                 ink_studio_show_author_nav_links,
             )
-            from glconnect.ink_studio_v1 import ink_show_author_workspace, ink_v1_books_launch
 
-            if ink_v1_books_launch(app):
-                ctx['ink_nav_show_author_nav'] = ink_show_author_workspace()
-            else:
-                ctx['ink_nav_show_author_nav'] = ink_studio_show_author_nav_links()
+            ctx['ink_nav_show_author_nav'] = ink_studio_show_author_nav_links()
             ctx['ink_studio_home_url'] = ink_studio_home_url()
         except Exception:
             ctx['ink_nav_show_author_nav'] = False
@@ -133,6 +129,20 @@ def init_book_platform(app):
         from glconnect.author_display import marketplace_author_display_name
 
         return {"author_display_name": marketplace_author_display_name}
+
+    @app.context_processor
+    def inject_ink_studio_genre_choices():
+        from glconnect.ink_listing_genres import (
+            INK_STUDIO_GENRE_CHOICES,
+            INK_STUDIO_GENRE_VALUES,
+            ink_studio_genre_label,
+        )
+
+        return {
+            "ink_studio_genre_choices": INK_STUDIO_GENRE_CHOICES,
+            "ink_studio_genre_values": INK_STUDIO_GENRE_VALUES,
+            "ink_studio_genre_label": ink_studio_genre_label,
+        }
 
     @app.context_processor
     def inject_manuscript_section_helpers():

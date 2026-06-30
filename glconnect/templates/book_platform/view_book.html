@@ -44,10 +44,10 @@
             <span aria-current="page">{{ book.title }}</span>
         </nav>
 
-        {# Resume chapter: most recently updated #}
+        {# Resume: most recently updated in-progress section only #}
         {% set resume_ch = namespace(chapter=None, ts=None) %}
         {% for ch in chapters %}
-            {% if ch.updated_at and (resume_ch.ts is none or ch.updated_at > resume_ch.ts) %}
+            {% if not ch.is_published and ch.updated_at and (resume_ch.ts is none or ch.updated_at > resume_ch.ts) %}
                 {% set resume_ch.chapter = ch %}
                 {% set resume_ch.ts = ch.updated_at %}
             {% endif %}
@@ -56,12 +56,25 @@
         {% set manuscript_ready = book.digital_file_path or (chapters and chapters|length > 0) %}
         {% set listing_ready = has_listing_cover and book.price and book.price > 0 %}
 
+        {% if is_collaborator and not is_book_author %}
+        <div class="alert alert-info border-info border-opacity-25 mb-4" role="status">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span><i class="fas fa-user-friends me-1" aria-hidden="true"></i>You are collaborating on this book{% if collaboration %} as <strong>{{ collaboration.role.value.replace('_', ' ').title() }}</strong>{% endif %}.</span>
+                {% if can_edit_manuscript %}
+                <span class="small text-muted">Open a section below to read or edit content.</span>
+                {% else %}
+                <span class="small text-muted">You can view sections{% if can_comment %} and leave comments{% endif %}.</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Hero: cover + title + primary actions -->
         <header class="ink-studio-hero">
             <div class="row g-4 align-items-center">
                 <div class="col-auto">
-                    {% if book.cover_image %}
-                        <img src="{{ book.cover_image }}" class="ink-studio-cover" alt="Cover for {{ book.title }}">
+                    {% if has_listing_cover %}
+                        <img src="{{ marketplace_cover_url(book) }}" class="ink-studio-cover" alt="Cover for {{ book.title }}">
                     {% else %}
                         <div class="ink-studio-cover-placeholder" aria-hidden="true">
                             <i class="fas fa-book fa-2x"></i>
@@ -90,7 +103,7 @@
                     <p class="text-muted mb-0 small" style="max-width: 42rem;">{{ book.description[:220] }}{% if book.description|length > 220 %}…{% endif %}</p>
                     {% endif %}
                 </div>
-                {% if is_author|default(True) %}
+                {% if is_book_author %}
                 {% set show_book_settings = book.digital_file_path %}
                 {% set show_unpublish = book.status.value == 'published' %}
                 {% if show_book_settings or show_unpublish %}
@@ -116,16 +129,26 @@
         <div class="row g-4">
             <!-- Primary workspace -->
             <div class="col-lg-8">
-                {% if is_author|default(True) and resume_ch.chapter and not book.digital_file_path %}
+                {% if can_edit_manuscript and resume_ch.chapter and not book.digital_file_path %}
                 <div class="ink-resume-banner" role="region" aria-label="Resume writing">
                     <div>
                         <div class="small text-uppercase fw-semibold text-warning mb-1">Pick up where you left off</div>
                         <div class="fw-semibold">{{ resume_ch.chapter.title }}</div>
                         <div class="small text-muted">Last updated {{ resume_ch.chapter.updated_at.strftime('%b %d, %Y at %I:%M %p') if resume_ch.chapter.updated_at else 'recently' }}</div>
                     </div>
-                    <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=resume_ch.chapter.id) }}" class="btn btn-ink-gold">
-                        <i class="fas fa-play me-2"></i>Resume chapter
+                    <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=resume_ch.chapter.id) if is_book_author else url_for('book_platform.view_chapter', book_id=book.id, chapter_id=resume_ch.chapter.id) }}" class="btn btn-ink-gold">
+                        <i class="fas fa-play me-2"></i>Resume section
                     </a>
+                </div>
+                {% endif %}
+
+                {% if is_book_author and pending_suggestion_count|default(0) > 0 %}
+                <div class="alert alert-warning border-warning border-opacity-25 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-2" role="status">
+                    <div>
+                        <strong><i class="fas fa-clipboard-check me-1"></i>{{ pending_suggestion_count }} edit submission(s) awaiting your review</strong>
+                        <div class="small text-muted mb-0">Collaborator changes are not live until you approve, reject, or merge them.</div>
+                    </div>
+                    <a href="{{ url_for('book_platform.book_pending_reviews', book_id=book.id) }}" class="btn btn-sm btn-ink-gold">Review now</a>
                 </div>
                 {% endif %}
 
@@ -139,7 +162,7 @@
                             <p class="small text-muted mb-0 mt-1">{{ format_manuscript_summary(chapters) }} in reading order</p>
                             {% endif %}
                         </div>
-                        {% if is_author|default(True) %}
+                        {% if can_edit_manuscript %}
                         <div class="d-flex gap-2 flex-wrap">
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-sm btn-outline-light">
                                 <i class="fas fa-plus me-1"></i>Add section
@@ -160,12 +183,39 @@
                                         <span class="text-muted">{{ row.kind_label }}</span>
                                         · {{ chapter.word_count or 0 }} words
                                         · {% if chapter.is_published %}<span class="text-success">Complete</span>{% else %}<span class="text-warning">In progress</span>{% endif %}
+                                        {% if is_book_author and chapter_pending_map.get(chapter.id) %}
+                                        · <span class="text-info">Review pending</span>
+                                        {% elif collaborator_pending_by_chapter.get(chapter.id) %}
+                                        · <span class="text-info">Submitted for review</span>
+                                        {% endif %}
                                         {% if chapter.updated_at %} · {{ chapter.updated_at.strftime('%b %d') }}{% endif %}
                                     </p>
                                 </div>
-                                <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}" class="btn btn-sm {% if resume_ch.chapter and chapter.id == resume_ch.chapter.id %}btn-ink-gold{% else %}btn-outline-light{% endif %}">
-                                    {% if resume_ch.chapter and chapter.id == resume_ch.chapter.id %}Resume{% else %}Open{% endif %}
+                                <div class="d-flex flex-column align-items-stretch gap-1">
+                                {% if is_book_author and chapter_pending_map.get(chapter.id) %}
+                                <a href="{{ url_for('book_platform.view_suggestion', suggestion_id=chapter_pending_map[chapter.id].id) }}" class="btn btn-sm btn-warning text-dark">
+                                    <i class="fas fa-eye me-1" aria-hidden="true"></i>Review edits
                                 </a>
+                                {% endif %}
+                                {% if can_edit_manuscript %}
+                                    {% set chapter_href = url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) if not chapter.is_published else url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) %}
+                                {% else %}
+                                    {% set chapter_href = url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) %}
+                                {% endif %}
+                                <a href="{{ chapter_href }}" class="btn btn-sm {% if resume_ch.chapter and chapter.id == resume_ch.chapter.id and not chapter.is_published and can_edit_manuscript %}btn-ink-gold{% else %}btn-outline-light{% endif %}">
+                                    {% if not can_edit_manuscript %}
+                                        <i class="fas fa-book-open me-1" aria-hidden="true"></i>View
+                                    {% elif chapter.is_published %}
+                                        <i class="fas fa-book-open me-1" aria-hidden="true"></i>View
+                                    {% elif resume_ch.chapter and chapter.id == resume_ch.chapter.id and not chapter.is_published %}
+                                        <i class="fas fa-play me-1" aria-hidden="true"></i>Resume
+                                    {% elif chapter.content %}
+                                        <i class="fas fa-pen me-1" aria-hidden="true"></i>{% if is_book_author %}Edit content{% else %}Propose edits{% endif %}
+                                    {% else %}
+                                        <i class="fas fa-pen me-1" aria-hidden="true"></i>{% if is_book_author %}Start writing{% else %}Propose edits{% endif %}
+                                    {% endif %}
+                                </a>
+                                </div>
                             </article>
                             {% endfor %}
                         </div>
@@ -174,7 +224,7 @@
                             <div class="empty-icon-wrap"><i class="fas fa-pen-fancy" aria-hidden="true"></i></div>
                             <h3 class="h5 mb-2">Your story starts here</h3>
                             <p class="text-muted mb-3">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
-                            {% if is_author|default(True) %}
+                            {% if can_edit_manuscript %}
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-ink-gold">
                                 <i class="fas fa-plus me-2"></i>Add first section
                             </a>
@@ -214,7 +264,7 @@
                             <strong>{{ book.digital_file_type.upper() if book.digital_file_type else 'File' }}</strong>
                             · {{ book.word_count or 0 }} words
                         </p>
-                        {% if book.digital_file_path and digital_download_options and is_author|default(True) %}
+                        {% if book.digital_file_path and digital_download_options and is_book_author %}
                         <div class="dropdown d-inline-block">
                             <button class="btn btn-ink-gold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-download me-2"></i>Download ebook
@@ -239,19 +289,18 @@
                                 <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
                             </audio>
                         </div>
-                        {% elif is_author|default(True) %}
+                        {% elif is_book_author %}
                         <p class="small text-muted mt-3 mb-0"><i class="fas fa-info-circle me-1"></i>Add an audiobook on the <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">audiobook page</a> to reach listeners who prefer audio.</p>
                         {% endif %}
                     </div>
                 </section>
                 {% endif %}
 
-                {% if is_author|default(True) %}
+                {% if is_book_author %}
                 <!-- Detailed status (audiobook poll target preserved) -->
                 <section class="ink-studio-panel" aria-labelledby="status-detail-heading">
                     <div class="ink-studio-panel-header">
                         <h3 id="status-detail-heading" class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Status details</h3>
-                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Edit manuscript</a>
                         <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Audiobook</a>
                         {% if book.print_enabled %}
                         <a href="{{ url_for('book_platform.book_print_orders', book_id=book.id) }}" class="btn btn-sm btn-outline-warning">Customer Orders</a>
@@ -328,7 +377,7 @@
             <!-- Right rail -->
             <div class="col-lg-4">
                 <aside class="ink-studio-rail">
-                    {% if is_author|default(True) %}
+                    {% if is_book_author %}
                     {% if not book.digital_file_path %}
                     <div class="ink-studio-panel">
                         <div class="ink-studio-panel-header">
@@ -362,13 +411,13 @@
                     </div>
                     {% endif %}
 
-                    {% if is_author|default(True) and ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
+                    {% if is_book_author and ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
                     <div class="ink-studio-panel" id="patron-campaign">
                         <div class="ink-studio-panel-header">
                             <h3 class="mb-0 h6"><i class="fas fa-seedling me-2 text-success"></i>Patron campaign <span class="badge bg-secondary fw-normal ms-1">Optional</span></h3>
                         </div>
                         <div class="ink-studio-panel-body">
-                            <p class="small text-muted mb-3">Skip this if you only want to sell on the marketplace, use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Edit manuscript</a> to set price and publish when ready.</p>
+                            <p class="small text-muted mb-3">Skip this if you only want to sell on the marketplace. Use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Book settings</a> to set price and publish when ready.</p>
                             {% if investment_readiness.is_ready %}
                             <p class="small text-muted mb-3">Your book meets the minimum to launch optional patron funding.</p>
                             {% if not book.has_investment_campaign or not investment_campaign %}
@@ -403,6 +452,25 @@
                         </div>
                     </div>
                     {% endif %}
+                    {% endif %}
+
+                    {% if is_collaborator and not is_book_author %}
+                    <div class="ink-studio-panel">
+                        <div class="ink-studio-panel-header">
+                            <h3 class="mb-0 h6"><i class="fas fa-user-friends me-2 text-info"></i>Your access</h3>
+                        </div>
+                        <div class="ink-studio-panel-body small text-muted">
+                            <p class="mb-2">You were invited to help with this manuscript{% if collaboration %} as <strong class="text-light">{{ collaboration.role.value.replace('_', ' ').title() }}</strong>{% endif %}.</p>
+                            {% if can_edit_manuscript %}
+                            <p class="mb-0">You can propose edits and add sections for author review. The live manuscript updates only after they approve or merge your changes.</p>
+                            {% elif can_comment %}
+                            <p class="mb-0">You can read sections and leave comments. Editing is limited to the author and editors.</p>
+                            {% else %}
+                            <p class="mb-0">You can read sections. Contact the author if you need edit access.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <div class="ink-studio-panel">
                         <div class="ink-studio-panel-header">
@@ -426,7 +494,6 @@
                             <p class="mb-0"><strong class="text-light">Created</strong><br>{{ book.created_at.strftime('%B %d, %Y') if book.created_at else ', ' }}</p>
                         </div>
                     </div>
-                    {% endif %}
                 </aside>
             </div>
         </div>
@@ -550,48 +617,6 @@
             tick();
             setInterval(tick, 5000);
         })();
-    </script>
-    <script>
-        // #region agent log
-        (function () {
-            var img = document.querySelector('.ink-studio-cover');
-            var payload = function (msg, hypothesisId, extra) {
-                return {
-                    sessionId: 'fe2ff6',
-                    runId: 'pre-fix',
-                    hypothesisId: hypothesisId,
-                    location: 'view_book.html:cover-img',
-                    message: msg,
-                    data: Object.assign({
-                        hasImg: !!img,
-                        src: img ? img.src : null,
-                        complete: img ? img.complete : null,
-                        naturalWidth: img ? img.naturalWidth : null,
-                        naturalHeight: img ? img.naturalHeight : null
-                    }, extra || {}),
-                    timestamp: Date.now()
-                };
-            };
-            var send = function (msg, hypothesisId, extra) {
-                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fe2ff6' },
-                    body: JSON.stringify(payload(msg, hypothesisId, extra))
-                }).catch(function () {});
-            };
-            send('cover img initial state', 'A,D');
-            if (img) {
-                img.addEventListener('load', function () {
-                    send('cover img loaded', 'A,D', { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight });
-                });
-                img.addEventListener('error', function () {
-                    send('cover img failed to load', 'A,C,D', { src: img.src });
-                });
-            } else {
-                send('cover placeholder shown (no img)', 'B,E');
-            }
-        })();
-        // #endregion
     </script>
     {% include 'includes/_ndotonic_mission_footer.html' %}
 

@@ -228,6 +228,9 @@
         <li><a href="{{ url_for('routes.about') }}">About</a></li>
         {% endif %}
         <li><a href="{{ url_for('routes.index') }}">Home</a></li>
+        {% if ink_nav_show_my_library|default(false) %}
+        <li><a href="{{ url_for('book_platform.my_library') }}">My Library</a></li>
+        {% endif %}
         {% if ink_nav_show_author_nav|default(false) %}
         <li><a href="{{ url_for('book_platform.books') }}">My Books</a></li>
         <li><a href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout account</a></li>

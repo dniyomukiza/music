@@ -1,0 +1,12 @@
+{# Nonfiction category select for Ink Studio create / edit. Optional: selected_genre, field_id, field_name, required #}
+{% set _gid = field_id|default('genre') %}
+{% set _gname = field_name|default('genre') %}
+{% set _sel = selected_genre|default('') %}
+<select class="form-select{% if select_class %} {{ select_class }}{% endif %}" id="{{ _gid }}" name="{{ _gname }}"{% if required|default(false) %} required{% endif %}>
+    {% for value, label in ink_studio_genre_choices %}
+    <option value="{{ value }}"{% if _sel == value %} selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+    {% if _sel and _sel not in ink_studio_genre_values %}
+    <option value="{{ _sel }}" selected>{{ ink_studio_genre_label(_sel) }} (legacy)</option>
+    {% endif %}
+</select>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suggestions · {{ chapter.title }} | Ink Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v=3.1" rel="stylesheet">
+</head>
+<body class="ink-book-studio">
+    <div class="ndotonic-page-bg" aria-hidden="true"></div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <a class="nav-link ms-auto" href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}">Back to section</a>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        <h1 class="h4 mb-4">Edit history · {{ chapter.title }}</h1>
+        <div class="list-group list-group-flush rounded border border-secondary border-opacity-25">
+            {% for s in suggestions %}
+            {% set submitter = s.suggested_by.pen_name or (s.suggested_by.user.username if s.suggested_by and s.suggested_by.user else 'Collaborator') %}
+            <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center gap-2">
+                <div>
+                    <strong>{{ submitter }}</strong>
+                    <span class="badge bg-{% if s.status == 'pending' %}warning text-dark{% elif s.status == 'approved' %}success{% else %}secondary{% endif %} ms-2">{{ s.status }}</span>
+                    <div class="small text-muted">{{ s.created_at.strftime('%b %d, %Y %I:%M %p') if s.created_at else '' }}</div>
+                </div>
+                {% if s.status == 'pending' %}
+                <a href="{{ url_for('book_platform.view_suggestion', suggestion_id=s.id) }}" class="btn btn-sm btn-ink-gold">Review</a>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="list-group-item bg-transparent text-muted">No submissions yet.</div>
+            {% endfor %}
+        </div>
+    </main>
+</body>
+</html>
