@@ -1,5 +1,5 @@
-{# Fixed live stream, same UX as landing page / (void bar; LIVE label gold, pulsing red dot).
-   Styles are inline so pages without book_platform.css (e.g. content_hub, storefront) still match. #}
+{# GLC Media live radio + TV — only include from content_hub.html with ink_show_live_tv=True. #}
+{% if ink_show_live_tv is defined and ink_show_live_tv %}
 <style>
 body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
 .live-broadcast-bar.ink-studio-live-radio {
@@ -74,7 +74,5 @@ body:has(.ink-studio-live-radio) { padding-bottom: 5.75rem; }
         <source src="/station" type="audio/mpeg">
     </audio>
 </div>
-{# TV only on pages that set ink_show_live_tv=True (homepage, landing, content page). Marketplace = radio only. #}
-{% if ink_show_live_tv is defined and ink_show_live_tv %}
 {% include 'book_platform/includes/live_tv_bar.html' %}
 {% endif %}

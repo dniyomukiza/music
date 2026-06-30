@@ -3761,47 +3761,85 @@ def _marketplace_cover_url(book, external=False):
     return url_for("static", filename=path, _external=external)
 
 
+def _mailtrap_credentials():
+    """Resolve Mailtrap sender + API key from env or app config (same as account emails)."""
+    sender = (
+        (os.getenv("SENDER_MAIL") or "").strip()
+        or (current_app.config.get("SENDER_MAIL") or "").strip()
+        or "info@ndotonic.com"
+    )
+    api_key = (
+        (os.getenv("MAIL_TRAP") or "").strip()
+        or (current_app.config.get("MAIL_TRAP") or "").strip()
+    )
+    return sender, api_key
+
+
+def _maybe_send_purchase_receipt(book, purchase):
+    """Send purchase receipt once per browser session (avoids duplicate on success-page refresh)."""
+    if purchase.status != TransactionStatus.COMPLETED:
+        return
+    key = f"_receipt_sent_purchase_{purchase.id}"
+    if session.get(key):
+        return
+    if send_book_purchase_receipt_email(book, purchase):
+        session[key] = True
+
+
 def send_book_purchase_receipt_email(book, purchase):
     """Send a text receipt via Mailtrap (same pattern as account confirmation in routes1)."""
     to_email = purchase.get_buyer_email()
     if not to_email:
         logger.warning("Purchase receipt skipped: no buyer email for purchase %s", purchase.id)
-        return
-    sender = os.getenv("SENDER_MAIL")
-    api_key = os.getenv("MAIL_TRAP")
-    if not sender or not api_key:
-        logger.warning("Purchase receipt skipped: SENDER_MAIL or MAIL_TRAP not set")
-        return
+        return False
+    sender, api_key = _mailtrap_credentials()
+    if not api_key:
+        logger.warning("Purchase receipt skipped: MAIL_TRAP not set (SENDER_MAIL=%s)", sender or "(empty)")
+        return False
 
     base = (current_app.config.get("FRONTEND_BASE_URL") or "").rstrip("/")
     fmt = getattr(purchase, "purchase_format", None) or "digital"
+    fmt_norm = normalize_purchase_format(fmt)
     currency = (purchase.currency or "USD").upper()
     try:
         if base:
+            library_url = f"{base}/mybook/library"
             view_url = f"{base}/mybook/books/{book.id}"
             dl_url = f"{base}/mybook/books/{book.id}/download-digital"
             player_url = f"{base}/mybook/audiobook/{book.id}/player"
         else:
+            library_url = url_for("book_platform.my_library", _external=True)
             view_url = url_for("book_platform.view_book", book_id=book.id, _external=True)
             dl_url = url_for("book_platform.download_digital_book", book_id=book.id, _external=True)
             player_url = url_for("book_platform.audiobook_player", book_id=book.id, _external=True)
     except Exception:
-        view_url = dl_url = player_url = ""
+        library_url = view_url = dl_url = player_url = ""
 
     lines = [
         "Thank you for your purchase on ndotonic.",
         "",
         f"Book: {book.title}",
-        f"Format: {fmt}",
+        f"Format: {fmt_norm}",
         f"Amount: {currency} {purchase.amount:.2f}",
         f"Order reference: #{purchase.id}",
         "",
-        f"Your book: {view_url}",
     ]
-    if purchase_grants_format(fmt, "digital") and dl_url:
+    if purchase_grants_format(fmt_norm, "print"):
+        handling_days = int(getattr(book, "print_handling_days", None) or 7)
+        lines.extend([
+            "This is a print edition. The author will ship your book to the address you provided at checkout.",
+            f"Typical handling time: about {handling_days} business days before shipment.",
+            f"Track your order anytime in My Library: {library_url}#print-orders",
+            "",
+        ])
+    if view_url:
+        lines.append(f"Your book: {view_url}")
+    if purchase_grants_format(fmt_norm, "digital") and dl_url:
         lines.append(f"Download digital copy: {dl_url}")
-    if purchase_grants_format(fmt, "audiobook") and player_url:
+    if purchase_grants_format(fmt_norm, "audiobook") and player_url:
         lines.append(f"Audiobook player: {player_url}")
+    if not purchase_grants_format(fmt_norm, "print") and library_url:
+        lines.extend(["", f"My Library: {library_url}"])
     body = "\n".join(lines)
 
     try:
@@ -3813,9 +3851,73 @@ def send_book_purchase_receipt_email(book, purchase):
             category="Book purchase",
         )
         MailtrapClient(token=api_key).send(msg)
-        logger.info("Sent purchase receipt for purchase %s", purchase.id)
+        logger.info("Sent purchase receipt for purchase %s to %s", purchase.id, to_email)
+        return True
     except Exception as e:
         logger.warning("Failed to send purchase receipt: %s", e, exc_info=True)
+        return False
+
+
+def send_print_order_shipped_email(book, purchase, order):
+    """Notify buyer that their print order shipped (tracking, carrier, delivery estimate)."""
+    to_email = purchase.get_buyer_email()
+    if not to_email:
+        logger.warning("Shipped email skipped: no buyer email for purchase %s", purchase.id)
+        return False
+    sender, api_key = _mailtrap_credentials()
+    if not api_key:
+        logger.warning("Shipped email skipped: MAIL_TRAP not set")
+        return False
+
+    base = (current_app.config.get("FRONTEND_BASE_URL") or "").rstrip("/")
+    try:
+        library_url = (
+            f"{base}/mybook/library#print-orders"
+            if base
+            else url_for("book_platform.my_library", _external=True) + "#print-orders"
+        )
+    except Exception:
+        library_url = ""
+
+    lines = [
+        "Good news — your print order has shipped!",
+        "",
+        f"Book: {book.title}",
+        f"Order reference: #{purchase.id}",
+        "",
+    ]
+    if order.shipping_carrier:
+        lines.append(f"Shipping company: {order.shipping_carrier}")
+    if order.tracking_number:
+        lines.append(f"Tracking number: {order.tracking_number}")
+    if order.expected_delivery_days:
+        days = int(order.expected_delivery_days)
+        unit = "business day" if days == 1 else "business days"
+        lines.append(f"Expected delivery: about {days} {unit} from ship date")
+    if order.shipped_at:
+        lines.append(f"Shipped on: {order.shipped_at.strftime('%Y-%m-%d')}")
+    lines.extend([
+        "",
+        f"View full order details in My Library: {library_url}",
+        "",
+        "Questions? Contact the author through ndotonic Support.",
+    ])
+    body = "\n".join(lines)
+
+    try:
+        msg = Mail(
+            sender=Address(email=sender, name="ndotonic"),
+            to=[Address(email=to_email)],
+            subject=f"Shipped: {book.title}",
+            text=body,
+            category="Print order shipped",
+        )
+        MailtrapClient(token=api_key).send(msg)
+        logger.info("Sent shipped email for print order %s to %s", order.id, to_email)
+        return True
+    except Exception as e:
+        logger.warning("Failed to send shipped email: %s", e, exc_info=True)
+        return False
 
 
 # Marketplace routes
@@ -4323,10 +4425,25 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
         return jsonify({'success': False, 'error': 'Order is not awaiting shipment'}), 400
     data = request.get_json(silent=True) or {}
     tracking = (data.get('tracking_number') or request.form.get('tracking_number') or '').strip()
+    carrier = (data.get('shipping_carrier') or request.form.get('shipping_carrier') or '').strip()
+    raw_days = data.get('expected_delivery_days', request.form.get('expected_delivery_days'))
     order.tracking_number = tracking[:200] if tracking else None
+    order.shipping_carrier = carrier[:100] if carrier else None
+    if raw_days is not None and str(raw_days).strip() != '':
+        try:
+            days = int(raw_days)
+            order.expected_delivery_days = days if days > 0 else None
+        except (TypeError, ValueError):
+            order.expected_delivery_days = None
     order.status = PrintOrderStatus.SHIPPED
     order.shipped_at = datetime.now(timezone.utc)
     db.session.commit()
+    purchase = order.purchase
+    if purchase:
+        try:
+            send_print_order_shipped_email(book, purchase, order)
+        except Exception as mail_err:
+            logger.warning("Shipped notification email failed: %s", mail_err, exc_info=True)
     return jsonify({
         'success': True,
         'message': 'Marked as shipped.' + (f' Tracking: {tracking}' if tracking else ''),
@@ -4594,12 +4711,31 @@ def my_library():
             row['latest_purchase_at'] = pt
 
     items = sorted(by_book.values(), key=lambda x: x['latest_purchase_at'] or datetime.now(timezone.utc), reverse=True)
+
+    print_purchase_ids = [
+        p.id for p in purchases
+        if purchase_grants_format(getattr(p, 'purchase_format', 'digital') or 'digital', 'print')
+    ]
+    print_orders = []
+    if print_purchase_ids:
+        print_orders = (
+            BookPrintOrder.query.filter(BookPrintOrder.book_purchase_id.in_(print_purchase_ids))
+            .options(
+                joinedload(BookPrintOrder.book_project).joinedload(BookProject.author).joinedload(BookPlatformUser.user),
+                joinedload(BookPrintOrder.purchase),
+            )
+            .order_by(BookPrintOrder.created_at.desc())
+            .all()
+        )
+
     highlight_book_id = request.args.get('book_id', type=int)
     return render_template(
         'book_platform/my_library.html',
         items=items,
+        print_orders=print_orders,
         marketplace_cover_url=_marketplace_cover_url,
         highlight_book_id=highlight_book_id,
+        PrintOrderStatus=PrintOrderStatus,
     )
 
 
@@ -6175,13 +6311,14 @@ def purchase_success():
     try:
         notify_receipt = False
         def _post_purchase_redirect(book_id: int, purchase_format: str):
-            """Route buyers after checkout, library for digital/audio, marketplace for print."""
+            """Route buyers after checkout — library for all formats (print orders live there too)."""
+            target = url_for('book_platform.my_library', book_id=book_id)
             if purchase_grants_format(purchase_format, 'print') and not (
                 purchase_grants_format(purchase_format, 'digital')
                 or purchase_grants_format(purchase_format, 'audiobook')
             ):
-                return redirect(url_for('book_platform.marketplace'))
-            return redirect(url_for('book_platform.my_library', book_id=book_id))
+                return redirect(target + '#print-orders')
+            return redirect(target)
 
         # Get purchase info from query params or session
         book_id = request.args.get('book_id') or request.form.get('book_id')
@@ -6383,9 +6520,9 @@ def purchase_success():
             # Don't fail the purchase - it's recorded, just needs manual distribution
             notify_receipt = True
 
-        if notify_receipt:
+        if purchase and purchase.status == TransactionStatus.COMPLETED:
             try:
-                send_book_purchase_receipt_email(book, purchase)
+                _maybe_send_purchase_receipt(book, purchase)
             except Exception as receipt_err:
                 logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
 

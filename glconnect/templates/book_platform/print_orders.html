@@ -51,16 +51,29 @@
                         {% endif %}
                         {% if order.status.value == 'pending_fulfillment' %}
                         <div class="d-flex flex-wrap gap-2 align-items-end">
-                            <div class="flex-grow-1" style="max-width: 20rem;">
-                                <label class="form-label small text-muted" for="tracking-{{ order.id }}">Tracking (optional)</label>
+                            <div style="max-width: 14rem;">
+                                <label class="form-label small text-muted" for="carrier-{{ order.id }}">Shipping company</label>
+                                <input type="text" class="form-control form-control-sm" id="carrier-{{ order.id }}" placeholder="e.g. USPS, UPS, FedEx">
+                            </div>
+                            <div style="max-width: 14rem;">
+                                <label class="form-label small text-muted" for="tracking-{{ order.id }}">Tracking number</label>
                                 <input type="text" class="form-control form-control-sm" id="tracking-{{ order.id }}" placeholder="Carrier tracking number">
+                            </div>
+                            <div style="max-width: 10rem;">
+                                <label class="form-label small text-muted" for="delivery-days-{{ order.id }}">Expected delivery</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" min="1" max="60" class="form-control" id="delivery-days-{{ order.id }}" placeholder="2">
+                                    <span class="input-group-text">business days</span>
+                                </div>
                             </div>
                             <button type="button" class="btn btn-success btn-sm btn-mark-shipped" data-order-id="{{ order.id }}">
                                 <i class="fas fa-shipping-fast me-1"></i>Mark shipped
                             </button>
                         </div>
-                        {% elif order.tracking_number %}
-                        <p class="small mb-0"><strong>Tracking:</strong> {{ order.tracking_number }}</p>
+                        {% elif order.status.value == 'shipped' or order.tracking_number or order.shipping_carrier %}
+                        {% if order.shipping_carrier %}<p class="small mb-1"><strong>Carrier:</strong> {{ order.shipping_carrier }}</p>{% endif %}
+                        {% if order.tracking_number %}<p class="small mb-1"><strong>Tracking:</strong> {{ order.tracking_number }}</p>{% endif %}
+                        {% if order.expected_delivery_days %}<p class="small mb-1"><strong>Expected delivery:</strong> about {{ order.expected_delivery_days }} business day{% if order.expected_delivery_days != 1 %}s{% endif %} from ship date</p>{% endif %}
                         {% if order.shipped_at %}<p class="small text-muted mb-0">Shipped {{ order.shipped_at.strftime('%Y-%m-%d') }}</p>{% endif %}
                         {% endif %}
                     </div>
@@ -89,11 +102,17 @@
             btn.addEventListener('click', function() {
                 const orderId = btn.getAttribute('data-order-id');
                 const tracking = document.getElementById('tracking-' + orderId)?.value || '';
+                const carrier = document.getElementById('carrier-' + orderId)?.value || '';
+                const deliveryDays = document.getElementById('delivery-days-' + orderId)?.value || '';
                 btn.disabled = true;
                 fetch('{{ url_for("book_platform.mark_print_order_shipped", book_id=book.id, order_id=0) }}'.replace('/0/ship', '/' + orderId + '/ship'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-                    body: JSON.stringify({ tracking_number: tracking })
+                    body: JSON.stringify({
+                        tracking_number: tracking,
+                        shipping_carrier: carrier,
+                        expected_delivery_days: deliveryDays || null
+                    })
                 }).then(r => r.json()).then(data => {
                     if (data.success) window.location.href = '{{ url_for("book_platform.books") }}';
                     else { alert(data.error || 'Failed'); btn.disabled = false; }

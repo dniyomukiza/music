@@ -600,6 +600,8 @@ class BookPrintOrder(db.Model):
     shipping_country = db.Column(db.String(2), nullable=False, default='US')
     status = db.Column(db.Enum(PrintOrderStatus), default=PrintOrderStatus.PENDING_FULFILLMENT)
     tracking_number = db.Column(db.String(200), nullable=True)
+    shipping_carrier = db.Column(db.String(100), nullable=True)
+    expected_delivery_days = db.Column(db.Integer, nullable=True)
     shipped_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(

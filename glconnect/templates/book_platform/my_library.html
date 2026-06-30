@@ -335,6 +335,19 @@
             border-color: rgba(45, 106, 79, 0.45);
         }
 
+        .ink-lib-badge.print { background: rgba(96, 165, 250, 0.15); color: #93c5fd; border-color: rgba(96, 165, 250, 0.35); }
+        .ink-lib-badge.pending { background: rgba(251, 191, 36, 0.12); color: #fcd34d; border-color: rgba(251, 191, 36, 0.35); }
+        .ink-lib-badge.shipped { background: rgba(52, 211, 153, 0.12); color: #6ee7b7; border-color: rgba(52, 211, 153, 0.35); }
+        .ink-lib-print-detail { font-size: 0.875rem; color: var(--lib-muted); margin: 0.35rem 0 0; }
+        .ink-lib-print-detail strong { color: var(--lib-text); font-weight: 600; }
+        .ink-lib-section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin: 2rem 0 1rem;
+            color: var(--lib-text);
+        }
+
         .ink-lib-actions {
             display: flex;
             flex-wrap: wrap;
@@ -499,7 +512,7 @@
         <div class="ink-lib-hero">
             <p class="small fw-bold text-uppercase mb-1" style="letter-spacing:0.12em;color:var(--lib-accent);">Your shelf</p>
             <h1>{% if current_user.is_authenticated %}Hi, {{ current_user.username }}{% else %}My library{% endif %}</h1>
-            <p class="ink-lib-hero-lead">Everything you’ve bought lives here, read, listen, or download anytime. You can hide <strong>ebook</strong> or <strong>audiobook</strong> separately from this list; your purchases stay on file.</p>
+            <p class="ink-lib-hero-lead">Everything you’ve bought lives here — read, listen, download, or track print orders. You can hide <strong>ebook</strong> or <strong>audiobook</strong> separately from this list; your purchases stay on file.</p>
 
             {% if items %}
             {% set lib_stats = namespace(n=0, d=0, a=0) %}
@@ -536,11 +549,52 @@
         {% endif %}
         {% endwith %}
 
-        {% if not items %}
+        {% if print_orders %}
+        <section id="print-orders" aria-labelledby="print-orders-heading">
+            <h2 class="ink-lib-section-title" id="print-orders-heading"><i class="fas fa-box me-2 opacity-75" aria-hidden="true"></i>Print orders</h2>
+            <div class="ink-lib-list" role="list">
+                {% for order in print_orders %}
+                {% set book = order.book_project %}
+                {% set author_name = author_display_name(book.author) if book and book.author else 'Author' %}
+                <article class="ink-lib-card {% if highlight_book_id and highlight_book_id == book.id %}highlight-purchase{% endif %}"
+                         role="listitem">
+                    <div class="d-flex gap-3 align-items-start">
+                        {% if book %}
+                        <img class="ink-lib-cover" src="{{ marketplace_cover_url(book) }}" alt="" width="84" height="126" loading="lazy">
+                        {% endif %}
+                        <div class="flex-grow-1 min-w-0">
+                            <h2 class="ink-lib-title">{{ book.title if book else 'Print order' }}</h2>
+                            <p class="ink-lib-meta"><i class="fas fa-user-pen me-1 opacity-75" aria-hidden="true"></i>{{ author_name }}{% if order.created_at %} · Ordered {{ order.created_at.strftime('%b %d, %Y') }}{% endif %}</p>
+                            <div class="ink-lib-badges mb-2">
+                                <span class="ink-lib-badge print">Print</span>
+                                {% if order.status.value == 'pending_fulfillment' %}
+                                <span class="ink-lib-badge pending">Preparing to ship</span>
+                                {% elif order.status.value == 'shipped' %}
+                                <span class="ink-lib-badge shipped">Shipped</span>
+                                {% endif %}
+                            </div>
+                            {% if order.status.value == 'pending_fulfillment' %}
+                            {% set handling = book.print_handling_days if book and book.print_handling_days else 7 %}
+                            <p class="ink-lib-print-detail mb-0">The author is preparing your book. Typical handling time is about <strong>{{ handling }} business day{% if handling != 1 %}s{% endif %}</strong> before shipment. We’ll email you when it ships.</p>
+                            {% else %}
+                            {% if order.shipping_carrier %}<p class="ink-lib-print-detail mb-1"><strong>Shipping company:</strong> {{ order.shipping_carrier }}</p>{% endif %}
+                            {% if order.tracking_number %}<p class="ink-lib-print-detail mb-1"><strong>Tracking number:</strong> {{ order.tracking_number }}</p>{% endif %}
+                            {% if order.expected_delivery_days %}<p class="ink-lib-print-detail mb-1"><strong>Expected delivery:</strong> about {{ order.expected_delivery_days }} business day{% if order.expected_delivery_days != 1 %}s{% endif %} from ship date</p>{% endif %}
+                            {% if order.shipped_at %}<p class="ink-lib-print-detail mb-0"><strong>Shipped:</strong> {{ order.shipped_at.strftime('%b %d, %Y') }}</p>{% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if not items and not print_orders %}
         <div class="ink-lib-empty">
             <div class="ink-lib-empty-icon" aria-hidden="true"><i class="fas fa-book-open"></i></div>
             <h2>Your library is waiting</h2>
-            <p>Pick up indie ebooks and audiobooks from the marketplace, your purchases show up here automatically.</p>
+            <p>Pick up indie ebooks and audiobooks from the marketplace — print orders show up here too.</p>
             <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-lib-primary btn-lg px-4">Explore books</a>
         </div>
         {% else %}

@@ -739,6 +739,7 @@ def create_app(config_overrides=None):
             ensure_print_edition_schema,
             ensure_book_print_orders_schema,
             ensure_book_print_order_shipping_note_column,
+            ensure_book_print_order_fulfillment_columns,
             ensure_author_format_listing_coupons_schema,
             ensure_author_publishing_agreement_schema,
             ensure_campaign_tentative_timeline_schema,
@@ -765,6 +766,7 @@ def create_app(config_overrides=None):
         ensure_print_edition_schema(db)
         ensure_book_print_orders_schema(db)
         ensure_book_print_order_shipping_note_column(db)
+        ensure_book_print_order_fulfillment_columns(db)
         ensure_author_format_listing_coupons_schema(db)
         ensure_author_publishing_agreement_schema(db)
         ensure_campaign_tentative_timeline_schema(db)
