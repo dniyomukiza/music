@@ -10,16 +10,10 @@
 </head>
 <body class="ink-dashboard">
     <div class="ink-dash-page-bg" aria-hidden="true"></div>
-    <nav class="navbar navbar-dark ink-dashboard-nav border-bottom border-white border-opacity-10 mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
-                {{ book.title }}
-            </a>
-        </div>
-    </nav>
-    <main class="container pb-5">
+    <main class="container pb-5 pt-4">
         <header class="mb-4">
-            <h1 class="h3 text-white">Customer Orders</h1>
+            <h1 class="h3 text-white mb-2">Customer Orders</h1>
+            <p class="text-white mb-1"><strong>{{ book.title }}</strong></p>
             <p class="text-muted mb-0">You ship these books yourself. Ink collected payment and shares the buyer’s address below.</p>
             {% if pending_count %}
             <p class="text-warning mt-2 mb-0"><strong>{{ pending_count }}</strong> awaiting shipment</p>
