@@ -29,6 +29,45 @@ def platform_publisher_name() -> str:
     return (os.getenv("INK_STUDIO_PUBLISHER_NAME") or DEFAULT_PUBLISHER_NAME).strip() or DEFAULT_PUBLISHER_NAME
 
 
+def is_legacy_platform_publisher(name: Optional[str]) -> bool:
+    """True for pre-rebrand platform imprint names stored on listed titles."""
+    if not name or not str(name).strip():
+        return False
+    key = re.sub(r"[^a-z0-9]", "", str(name).strip().lower())
+    return key in ("glccool", "glc", "glconnect", "glconnectcool")
+
+
+def marketplace_publisher_display(_stored: Optional[str] = None) -> str:
+    """Publisher imprint shown on marketplace listings and checkout."""
+    return platform_publisher_name()
+
+
+def refresh_legacy_publisher_names(db) -> int:
+    """One-time-safe migration: GLC.COOL → current platform imprint in DB."""
+    from glconnect.book_platform_models import BookProject
+
+    platform = platform_publisher_name()
+    try:
+        rows = (
+            db.session.query(BookProject)
+            .filter(BookProject.publisher_name.isnot(None))
+            .all()
+        )
+        updated = 0
+        for book in rows:
+            if is_legacy_platform_publisher(book.publisher_name):
+                book.publisher_name = platform
+                updated += 1
+        if updated:
+            db.session.commit()
+            logger.info("Updated legacy publisher_name on %s book(s) → %s", updated, platform)
+        return updated
+    except Exception as exc:
+        db.session.rollback()
+        logger.warning("Legacy publisher_name refresh skipped: %s", exc)
+        return 0
+
+
 def validate_isbn13(raw: str) -> str:
     """Validate ISBN-13 (or ISBN-10 converted to ISBN-13). Returns 13 digits."""
     cleaned = re.sub(r"[^0-9Xx]", "", (raw or "").strip()).upper()
@@ -199,9 +238,9 @@ def assign_marketplace_isbn_if_needed(book) -> Tuple[Optional[str], str]:
         return book.isbn if book else None, publisher
 
     if book.isbn:
-        if not getattr(book, "publisher_name", None):
+        if not getattr(book, "publisher_name", None) or is_legacy_platform_publisher(book.publisher_name):
             book.publisher_name = publisher
-        return book.isbn, book.publisher_name or publisher
+        return book.isbn, marketplace_publisher_display(book.publisher_name)
 
     q = (
         IsbnPoolEntry.query.filter_by(status=IsbnPoolStatus.AVAILABLE)
@@ -252,9 +291,9 @@ def apply_listing_isbn(book, source: Optional[str] = None, manual_raw: Optional[
         return (book.isbn if book else None), publisher
 
     if book.isbn:
-        if not getattr(book, "publisher_name", None):
+        if not getattr(book, "publisher_name", None) or is_legacy_platform_publisher(book.publisher_name):
             book.publisher_name = publisher
-        return book.isbn, book.publisher_name or publisher
+        return book.isbn, marketplace_publisher_display(book.publisher_name)
 
     mode = (source or "pool").strip().lower()
     if mode in ("manual", "author", "own"):
@@ -294,6 +333,7 @@ def apply_listing_isbn(book, source: Optional[str] = None, manual_raw: Optional[
 def bootstrap_isbn_pool(db) -> None:
     """Schema + seed on app startup."""
     ensure_isbn_pool_schema(db)
+    refresh_legacy_publisher_names(db)
     try:
         seed_dummy_isbn_pool(db, count=int(os.getenv("ISBN_POOL_SEED_COUNT", "100")))
     except Exception as e:

@@ -911,6 +911,7 @@ def ensure_book_print_orders_schema(db) -> None:
                         shipping_name VARCHAR(200),
                         shipping_line1 VARCHAR(200) NOT NULL,
                         shipping_line2 VARCHAR(200),
+                        shipping_note VARCHAR(500),
                         shipping_city VARCHAR(100) NOT NULL,
                         shipping_state VARCHAR(100),
                         shipping_postal VARCHAR(30) NOT NULL,
@@ -944,6 +945,7 @@ def ensure_book_print_orders_schema(db) -> None:
                         shipping_name VARCHAR(200),
                         shipping_line1 VARCHAR(200) NOT NULL,
                         shipping_line2 VARCHAR(200),
+                        shipping_note VARCHAR(500),
                         shipping_city VARCHAR(100) NOT NULL,
                         shipping_state VARCHAR(100),
                         shipping_postal VARCHAR(30) NOT NULL,
@@ -962,6 +964,59 @@ def ensure_book_print_orders_schema(db) -> None:
     except Exception as e:
         db.session.rollback()
         logger.error("Could not create book_print_orders table: %s", e, exc_info=True)
+
+
+def ensure_book_print_order_shipping_note_column(db) -> None:
+    """Add shipping_note to book_print_orders for delivery instructions from checkout."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("book_print_orders shipping_note patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    try:
+        exists = db.session.execute(
+            text(
+                "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' "
+                "AND table_name = 'book_print_orders'"
+                if dialect == "postgresql"
+                else "SELECT name FROM sqlite_master WHERE type='table' AND name='book_print_orders'"
+            )
+        ).fetchone()
+        db.session.rollback()
+        if not exists:
+            return
+        if dialect == "postgresql":
+            rows = db.session.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'book_print_orders'"
+                )
+            ).fetchall()
+            cols = {r[0].lower() for r in rows}
+        else:
+            rows = db.session.execute(text("PRAGMA table_info(book_print_orders)")).fetchall()
+            cols = {r[1].lower() for r in rows}
+        db.session.rollback()
+        if "shipping_note" in cols:
+            return
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    "ALTER TABLE book_print_orders ADD COLUMN IF NOT EXISTS "
+                    "shipping_note VARCHAR(500)"
+                )
+            )
+        else:
+            db.session.execute(text("ALTER TABLE book_print_orders ADD COLUMN shipping_note VARCHAR(500)"))
+        db.session.commit()
+        logger.info("book_print_orders.shipping_note column added (%s).", dialect)
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not add book_print_orders.shipping_note: %s", e, exc_info=True)
 
 
 def _book_platform_users_existing_columns(db, dialect: str) -> set:

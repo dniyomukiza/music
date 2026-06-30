@@ -593,6 +593,7 @@ class BookPrintOrder(db.Model):
     shipping_name = db.Column(db.String(200), nullable=True)
     shipping_line1 = db.Column(db.String(200), nullable=False)
     shipping_line2 = db.Column(db.String(200), nullable=True)
+    shipping_note = db.Column(db.String(500), nullable=True)
     shipping_city = db.Column(db.String(100), nullable=False)
     shipping_state = db.Column(db.String(100), nullable=True)
     shipping_postal = db.Column(db.String(30), nullable=False)

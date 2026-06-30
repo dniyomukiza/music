@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Edit manuscript Â· {{ book.title }} | Ink Studio</title>
+    <title>Edit manuscript - {{ book.title }} | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -249,7 +249,7 @@
                                 <div class="form-text">Uploading a file replaces the stored cover. URL is optional if you already use an uploaded file path. Change either any time before publishing to the marketplace.</div>
                                 <hr class="my-3">
                                 <p class="small fw-semibold mb-1"><i class="fas fa-magic me-1 text-primary"></i>New AI cover</p>
-                                <p class="small text-muted mb-2">Generate a preview from the title, description, and genre on this page (and optional art direction below). Your <strong>book title</strong> and <strong>author name</strong> (from this bookâs author profile) are placed on the cover automatically. <strong>Use this cover</strong> saves it as your marketplace cover and replaces the current setting. Previously uploaded file covers in our storage are removed; external URLs are overwritten by the new AI file path.</p>
+                                <p class="small text-muted mb-2">Generate a preview from the title, description, and genre on this page (and optional art direction below). Your <strong>book title</strong> and <strong>author name</strong> (from this book's author profile) are placed on the cover automatically. <strong>Use this cover</strong> saves it as your marketplace cover and replaces the current setting. Previously uploaded file covers in our storage are removed; external URLs are overwritten by the new AI file path.</p>
                                 <div class="mb-2">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
                                 <div class="mb-2">
                                     <label for="ai_cover_art_brief_edit" class="form-label small text-muted">Art direction for this generation (optional)</label>
@@ -602,13 +602,13 @@
 
             if (!listingTermsRequiredBoxesChecked()) {
                 openListingTermsPanel(false);
-                showNotification('Scroll through the full terms, check each required box, then click âAgree to termsâ—.', 'error');
+                showNotification('Scroll through the full terms, check each required box, then click "Agree to terms".', 'error');
                 if (scrollEl) scrollEl.focus();
                 return false;
             }
             if (!listingTermsConfirmed) {
                 openListingTermsPanel(false);
-                showNotification('Almost there, click âAgree to termsâ— after checking each box.', 'error');
+                showNotification('Almost there, click "Agree to terms" after checking each box.', 'error');
                 return false;
             }
             return true;
@@ -774,12 +774,12 @@ if (shouldRequireListingTerms()) {
                         showNotification('Add a book title before generating a cover.', 'error');
                         return;
                     }
-                    setUi('Generatingâ¦', false);
+                    setUi('Generating...', false);
                     btnGen.disabled = true;
                     try {
                         const { res, data } = await postJson(genUrl, payload);
                         if (res.ok && data.success) {
-                            setUi('Preview ready. Use âUse this coverâ— to save it, or discard to try again.', true);
+                            setUi('Preview ready. Use "Use this cover" to save it, or discard to try again.', true);
                         } else {
                             setUi(data.error || 'Could not generate preview.', false);
                             showNotification(data.error || 'Could not generate preview.', 'error');

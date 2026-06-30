@@ -29,6 +29,67 @@ def _delete_legacy_book_cart_rows(db, book_id: int) -> None:
         pass
 
 
+def delete_book_project_dependents(db, book_id: int) -> None:
+    """Remove commerce, coupons, ISBN assignment, and other FK rows for one book."""
+    from glconnect.book_platform_models import (
+        AuthorFormatListingCoupon,
+        AudiobookChapter,
+        BookInvestment,
+        BookPrintOrder,
+        BookPurchase,
+        BookSale,
+        DigitalBookEdition,
+        InvestmentPayout,
+        IsbnPoolEntry,
+        IsbnPoolStatus,
+        LibraryBookHide,
+        RevenueDistribution,
+        ReviewerEarning,
+        ReviewRequest,
+    )
+
+    bid = int(book_id)
+
+    BookPrintOrder.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+    LibraryBookHide.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+
+    sale_ids = [
+        row[0]
+        for row in db.session.query(BookSale.id).filter_by(book_project_id=bid).all()
+    ]
+    if sale_ids:
+        dist_ids = [
+            row[0]
+            for row in db.session.query(RevenueDistribution.id)
+            .filter(RevenueDistribution.source_sale_id.in_(sale_ids))
+            .all()
+        ]
+        if dist_ids:
+            InvestmentPayout.query.filter(
+                InvestmentPayout.distribution_id.in_(dist_ids)
+            ).delete(synchronize_session=False)
+            ReviewerEarning.query.filter(
+                ReviewerEarning.distribution_id.in_(dist_ids)
+            ).delete(synchronize_session=False)
+            RevenueDistribution.query.filter(
+                RevenueDistribution.id.in_(dist_ids)
+            ).delete(synchronize_session=False)
+        BookSale.query.filter(BookSale.id.in_(sale_ids)).delete(synchronize_session=False)
+
+    BookPurchase.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+    AuthorFormatListingCoupon.query.filter_by(book_project_id=bid).delete(
+        synchronize_session=False
+    )
+    BookInvestment.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+    ReviewRequest.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+    DigitalBookEdition.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+    AudiobookChapter.query.filter_by(book_project_id=bid).delete(synchronize_session=False)
+
+    for entry in IsbnPoolEntry.query.filter_by(book_project_id=bid).all():
+        entry.book_project_id = None
+        entry.status = IsbnPoolStatus.AVAILABLE
+
+
 def purge_book_projects_by_ids(
     db,
     book_ids: Sequence[int],
@@ -179,11 +240,32 @@ def purge_book_projects_by_ids(
         )
         summary["book_sales_deleted"] = n
 
+    from glconnect.book_platform_models import AuthorFormatListingCoupon, BookPrintOrder, IsbnPoolEntry, IsbnPoolStatus
+
+    n = (
+        BookPrintOrder.query.filter(BookPrintOrder.book_project_id.in_(book_ids))
+        .delete(synchronize_session=False)
+    )
+    summary["book_print_orders_deleted"] = n
+
     n = (
         BookPurchase.query.filter(BookPurchase.book_project_id.in_(book_ids))
         .delete(synchronize_session=False)
     )
     summary["book_purchases_deleted"] = n
+
+    n = (
+        AuthorFormatListingCoupon.query.filter(
+            AuthorFormatListingCoupon.book_project_id.in_(book_ids)
+        ).delete(synchronize_session=False)
+    )
+    summary["author_format_listing_coupons_deleted"] = n
+
+    for entry in IsbnPoolEntry.query.filter(
+        IsbnPoolEntry.book_project_id.in_(book_ids)
+    ).all():
+        entry.book_project_id = None
+        entry.status = IsbnPoolStatus.AVAILABLE
 
     review_ids = [
         r[0]

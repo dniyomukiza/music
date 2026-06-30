@@ -128,12 +128,16 @@ from glconnect.stripe_utils import (
     marketplace_book_payment_intent_data,
     author_needs_stripe_payout_setup,
     checkout_ready_author_connect_id,
+    print_checkout_shipping_kw,
+    stripe_checkout_custom_field_values,
+    merge_print_shipping_line2,
 )
 from glconnect.book_utils import (
     audiobook_ready_for_marketplace_publish,
     delete_book_chapter_version_graph_for_project,
     is_book_published,
 )
+from glconnect.book_platform_purge import delete_book_project_dependents
 from glconnect.author_dashboard_stats import build_author_dashboard_stats
 from glconnect.project_description_media import (
     MEDIA_GUIDE,
@@ -1865,9 +1869,17 @@ def view_book(book_id, user_profile, profile_type):
         return redirect(url_for('book_platform.books'))
 
 @book_bp.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
-@writer_or_book_platform_required
-def edit_book(book_id, user_profile, profile_type):
-    """Edit book details"""
+@login_required
+def edit_book(book_id):
+    """Edit book details (author only)."""
+    user_profile, profile_type = _profile_for_ink_permission_checks()
+    if not user_profile:
+        flash(
+            'Book settings are for authors only. Use Marketplace or My Library for purchases.',
+            'info',
+        )
+        return redirect(url_for('book_platform.marketplace'))
+
     # Ensure BookPlatformUser is accessible (import at function level to avoid scoping issues)
     from glconnect.book_platform_models import BookPlatformUser
     from sqlalchemy.orm import joinedload
@@ -1890,14 +1902,14 @@ def edit_book(book_id, user_profile, profile_type):
     # Debug logging
     if author_id is None:
         print(f"ERROR: get_profile_id returned None for user_id={current_user.user_id}, profile_type={profile_type}")
-        flash('Profile configuration error. Please ensure you have a Writer or Ink Studio profile.', 'error')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
+        flash('Complete your Ink Studio author profile to manage book settings.', 'warning')
+        return redirect(url_for('book_platform.setup_profile', next=request.path))
     
     # Only author can edit book details
     if book.author_id != author_id:
         print(f"Permission denied: book.author_id={book.author_id}, user author_id={author_id}, user_id={current_user.user_id}")
-        flash('Only the author can edit book details', 'error')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
+        flash('Only the author can edit book settings.', 'error')
+        return redirect(url_for('book_platform.books'))
     
     if request.method == 'POST':
         try:
@@ -2574,13 +2586,8 @@ def delete_book(book_id):
             # 3. Clean up investment campaign (references book_project_id)
             db.session.delete(campaign)
         
-        # 4. Clean up sales (they reference book_project_id and purchase_id)
-        # Note: BookSale has book_project_id as NOT NULL, so we must delete, not update
-        BookSale.query.filter_by(book_project_id=book_id).delete()
-        
-        # 5. Clean up purchases (they reference book_project_id)
-        # Note: BookPurchase has book_project_id as NOT NULL, so we must delete, not update
-        BookPurchase.query.filter_by(book_project_id=book_id).delete()
+        # 4–5. Commerce, coupons, ISBN, and other book_project_id dependents
+        delete_book_project_dependents(db, book_id)
         _delete_legacy_book_cart_rows(book_id)
         _delete_reader_annotations_for_book(book_id)
 
@@ -3919,7 +3926,7 @@ def marketplace():
 @login_required
 def api_marketplace_book_detail(book_id):
     """JSON detail for marketplace modal / future PDP (published books only)."""
-    from glconnect.isbn_pool_service import format_isbn_display, platform_publisher_name
+    from glconnect.isbn_pool_service import format_isbn_display, marketplace_publisher_display
 
     lang_labels = {
         'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
@@ -3975,7 +3982,7 @@ def api_marketplace_book_detail(book_id):
             'created_at': book.created_at.isoformat() if book.created_at else None,
             'isbn': book.isbn,
             'isbn_display': format_isbn_display(book.isbn) if book.isbn else None,
-            'publisher_name': book.publisher_name or platform_publisher_name(),
+            'publisher_name': marketplace_publisher_display(book.publisher_name),
             'formats': {
                 'digital': bool(book.digital_book_published and book.digital_file_path),
                 'audiobook': bool(book.audiobook_published and book.has_audiobook),
@@ -4270,14 +4277,18 @@ def add_print_edition(book_id, user_profile, profile_type):
 
 
 @book_bp.route('/books/<int:book_id>/print-orders', methods=['GET'])
-@writer_or_book_platform_required
-def book_print_orders(book_id, user_profile, profile_type):
+@login_required
+def book_print_orders(book_id):
     """Author: orders to fulfill for print edition."""
+    user_profile, profile_type = _profile_for_ink_permission_checks()
     book = BookProject.query.get_or_404(book_id)
+    if not user_profile:
+        flash('Customer Orders are for authors who fulfill print shipments.', 'info')
+        return redirect(url_for('book_platform.marketplace'))
     author_id = get_profile_id(user_profile, profile_type)
-    if book.author_id != author_id:
-        flash('Only the author can view print orders.', 'error')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
+    if not author_id or book.author_id != author_id:
+        flash('Customer Orders are only for the author of this title.', 'info')
+        return redirect(url_for('book_platform.books'))
     orders = (
         BookPrintOrder.query.filter_by(book_project_id=book_id)
         .join(BookPurchase, BookPrintOrder.book_purchase_id == BookPurchase.id)
@@ -4287,11 +4298,14 @@ def book_print_orders(book_id, user_profile, profile_type):
     pending_count = sum(
         1 for o in orders if o.status == PrintOrderStatus.PENDING_FULFILLMENT
     )
+    print_enabled = bool(getattr(book, 'print_enabled', False))
     return render_template(
         'book_platform/print_orders.html',
         book=book,
         orders=orders,
         pending_count=pending_count,
+        print_enabled=print_enabled,
+        can_add_print=_can_add_print_edition(book),
     )
 
 
@@ -4435,8 +4449,7 @@ def admin_delete_test_books():
                 BookInvestment.query.filter_by(campaign_id=campaign.id).delete()
                 AuthorCampaignPayoutRequest.query.filter_by(campaign_id=campaign.id).delete()
                 db.session.delete(campaign)
-            BookSale.query.filter_by(book_project_id=book_id).delete()
-            BookPurchase.query.filter_by(book_project_id=book_id).delete()
+            delete_book_project_dependents(db, book_id)
             _delete_legacy_book_cart_rows(book_id)
             _delete_reader_annotations_for_book(book_id)
             AudioGenerationTask.query.filter_by(book_project_id=book_id).delete()
@@ -4448,9 +4461,7 @@ def admin_delete_test_books():
             BookAnalytics.query.filter_by(book_project_id=book_id).delete()
             BookNotification.query.filter_by(book_project_id=book_id).delete()
             BookReview.query.filter_by(book_project_id=book_id).delete()
-            ReviewRequest.query.filter_by(book_project_id=book_id).delete()
             delete_book_chapter_version_graph_for_project(book_id)
-            AudiobookChapter.query.filter_by(book_project_id=book_id).delete()
             db.session.delete(book)
             deleted.append(title)
         except Exception as e:
@@ -4831,6 +4842,64 @@ def library_reader_search_index(book_id):
     return jsonify({'success': True, 'sections': sections})
 
 
+def _marketplace_purchase_success_url(book_id: int, purchase_id: int) -> str:
+    """Stripe Checkout success URL with session id placeholder (print shipping)."""
+    base = url_for(
+        'book_platform.purchase_success',
+        book_id=book_id,
+        purchase_id=purchase_id,
+        _external=True,
+    )
+    joiner = '&' if '?' in base else '?'
+    return f'{base}{joiner}session_id={{CHECKOUT_SESSION_ID}}'
+
+
+def _resolve_checkout_session_id(session_id, purchase):
+    """Session id from redirect query or stored checkout session reference."""
+    if session_id:
+        return str(session_id).strip() or None
+    tid = (getattr(purchase, 'transaction_id', None) or '').strip()
+    if tid.startswith('cs_'):
+        return tid
+    return None
+
+
+def _ensure_print_order_for_purchase(purchase, book, session_id=None, session_payload=None):
+    """Create BookPrintOrder when missing (idempotent)."""
+    if not purchase_grants_format(getattr(purchase, 'purchase_format', None), 'print'):
+        return None
+    existing = BookPrintOrder.query.filter_by(book_purchase_id=purchase.id).first()
+    if existing:
+        return existing
+    payload = session_payload
+    if payload is None:
+        sid = _resolve_checkout_session_id(session_id, purchase)
+        if not sid:
+            return None
+        try:
+            init_stripe()
+            import stripe
+            checkout_session = stripe.checkout.Session.retrieve(sid)
+            payload = (
+                checkout_session.to_dict()
+                if hasattr(checkout_session, 'to_dict')
+                else dict(checkout_session)
+            )
+        except Exception as err:
+            logger.warning(
+                "Could not retrieve Stripe checkout session %s for purchase %s: %s",
+                sid,
+                purchase.id,
+                err,
+                exc_info=True,
+            )
+            return None
+    order = _create_print_order_from_checkout_session(purchase, book, payload)
+    if order:
+        db.session.commit()
+    return order
+
+
 def _create_print_order_from_checkout_session(purchase, book, session):
     """Create BookPrintOrder from Stripe Checkout session shipping (print purchases only)."""
     if not purchase_grants_format(getattr(purchase, 'purchase_format', None), 'print'):
@@ -4852,6 +4921,10 @@ def _create_print_order_from_checkout_session(purchase, book, session):
     if not addr.get('line1'):
         logger.warning("Print purchase %s: no shipping address on Stripe session", purchase.id)
         return None
+    custom_fields = stripe_checkout_custom_field_values(session)
+    apt = custom_fields.get('shipping_apt')
+    shipping_note = (custom_fields.get('shipping_note') or '')[:500] or None
+    line2 = merge_print_shipping_line2(addr.get('line2'), apt)
     book_amt = float(book.print_price or 0)
     ship_amt = print_shipping_amount(book)
     order = BookPrintOrder(
@@ -4861,7 +4934,8 @@ def _create_print_order_from_checkout_session(purchase, book, session):
         shipping_amount=ship_amt,
         shipping_name=(ship_name or '')[:200] or None,
         shipping_line1=(addr.get('line1') or '')[:200],
-        shipping_line2=(addr.get('line2') or '')[:200] or None,
+        shipping_line2=line2,
+        shipping_note=shipping_note,
         shipping_city=(addr.get('city') or '')[:100],
         shipping_state=(addr.get('state') or '')[:100] or None,
         shipping_postal=(addr.get('postal_code') or addr.get('zip') or '')[:30],
@@ -5505,13 +5579,13 @@ def purchase_book(book_id):
         
         # Generate success and cancel URLs
         try:
-            success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase.id, _external=True)
+            success_url = _marketplace_purchase_success_url(book_id, purchase.id)
             cancel_url = url_for('book_platform.marketplace', _external=True)
             logger.info(f"✅ URLs generated: success={success_url}, cancel={cancel_url}")
         except Exception as url_error:
             logger.error(f"❌ Failed to generate URLs: {url_error}", exc_info=True)
             # Use fallback URLs
-            success_url = f"/mybook/purchase/success?book_id={book_id}&purchase_id={purchase.id}"
+            success_url = f"/mybook/purchase/success?book_id={book_id}&purchase_id={purchase.id}&session_id={{CHECKOUT_SESSION_ID}}"
             cancel_url = "/mybook/marketplace"
         
         logger.info(f"✅ Purchase {purchase.id} created (PENDING). Success URL: {success_url}")
@@ -5565,6 +5639,7 @@ def purchase_book(book_id):
                         checkout_kw['shipping_address_collection'] = {
                             'allowed_countries': STRIPE_PRINT_SHIPPING_COUNTRIES,
                         }
+                        checkout_kw.update(print_checkout_shipping_kw())
                     else:
                         book_amt = base_price_for_format(book, 'print')
                         ship_amt = print_shipping_amount(book)
@@ -5606,6 +5681,7 @@ def purchase_book(book_id):
                         checkout_kw['shipping_address_collection'] = {
                             'allowed_countries': STRIPE_PRINT_SHIPPING_COUNTRIES,
                         }
+                        checkout_kw.update(print_checkout_shipping_kw())
                 else:
                     checkout_kw['line_items'] = [{
                         'price_data': {
@@ -5917,7 +5993,7 @@ def purchase_book(book_id):
                     raise  # Re-raise to fail the purchase
                 
                 # Generate URLs
-                success_url = url_for('book_platform.purchase_success', book_id=book_id, purchase_id=purchase.id, _external=True)
+                success_url = _marketplace_purchase_success_url(book_id, purchase.id)
                 cancel_url = url_for('book_platform.marketplace', _external=True)
                 
                 logger.info(f"✅ SUCCESS (fallback): Purchase {purchase.id} created via raw SQL")
@@ -6309,21 +6385,11 @@ def purchase_success():
                 logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
 
         purchase_format = getattr(purchase, 'purchase_format', None) or 'digital'
-        if purchase_grants_format(purchase_format, 'print') and session_id:
-            try:
-                init_stripe()
-                import stripe
-                checkout_session = stripe.checkout.Session.retrieve(session_id)
-                session_payload = checkout_session.to_dict() if hasattr(checkout_session, 'to_dict') else dict(checkout_session)
-                _create_print_order_from_checkout_session(purchase, book, session_payload)
-                db.session.commit()
-            except Exception as print_order_err:
-                logger.warning(
-                    "Could not create print order from checkout session %s: %s",
-                    session_id,
-                    print_order_err,
-                    exc_info=True,
-                )
+        _ensure_print_order_for_purchase(
+            purchase,
+            book,
+            session_id=_resolve_checkout_session_id(session_id, purchase),
+        )
 
         has_print = purchase_grants_format(purchase_format, 'print')
         has_digital = purchase_grants_format(purchase_format, 'digital')
@@ -6888,9 +6954,13 @@ def stripe_webhook():
                         try:
                             purchase_id_int = int(purchase_id)
                             purchase = BookPurchase.query.get(purchase_id_int)
-                            if purchase and purchase.status == TransactionStatus.PENDING:
-                                logger.info(f"Found PENDING purchase {purchase_id} from webhook")
+                            if purchase:
                                 book_id = purchase.book_project_id
+                                logger.info(
+                                    "Found purchase %s from webhook (status=%s)",
+                                    purchase_id,
+                                    purchase.status,
+                                )
                         except (ValueError, TypeError):
                             pass
                     
@@ -6946,11 +7016,18 @@ def stripe_webhook():
                     if purchase:
                         if complete_purchase(purchase, payment_intent_id, amount_total):
                             logger.info(f"✅ Purchase {purchase.id} completed from checkout.session.completed webhook")
-                            if purchase_grants_format(getattr(purchase, 'purchase_format', None), 'print'):
-                                book_for_print = BookProject.query.get(purchase.book_project_id)
-                                if book_for_print:
-                                    _create_print_order_from_checkout_session(purchase, book_for_print, session)
-                                    db.session.commit()
+                        elif purchase.status == TransactionStatus.COMPLETED:
+                            logger.info(
+                                "Purchase %s already completed; ensuring print order if needed",
+                                purchase.id,
+                            )
+                        if purchase_grants_format(getattr(purchase, 'purchase_format', None), 'print'):
+                            book_for_print = BookProject.query.get(purchase.book_project_id)
+                            if book_for_print:
+                                _create_print_order_from_checkout_session(
+                                    purchase, book_for_print, session
+                                )
+                                db.session.commit()
                     # If no purchase found but we have book_id, create new purchase (fallback)
                     elif book_id:
                         logger.warning(f"⚠️  checkout.session.completed received but couldn't find matching purchase. book_id={book_id}, purchase_id={purchase_id}, amount=${amount_total}, email={customer_email}. Creating new purchase...")

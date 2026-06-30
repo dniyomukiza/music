@@ -63,14 +63,14 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* Links — visible on dark */
-main a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link):not(.about-cta):not(.about-btn),
-.hero a:not(.btn):not(.about-cta):not(.about-btn) {
+main a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link):not(.about-cta):not(.about-btn):not(.about-ticker-item):not(.about-pipeline-step),
+.hero a:not(.btn):not(.about-cta):not(.about-btn):not(.about-ticker-item):not(.about-pipeline-step) {
   color: var(--glc-bronze-hot);
   text-decoration-color: rgba(201, 162, 39, 0.45);
 }
 
-main a:not(.btn):not(.about-cta):not(.about-btn):hover,
-.hero a:not(.btn):not(.about-cta):not(.about-btn):hover {
+main a:not(.btn):not(.about-cta):not(.about-btn):not(.about-ticker-item):not(.about-pipeline-step):hover,
+.hero a:not(.btn):not(.about-cta):not(.about-btn):not(.about-ticker-item):not(.about-pipeline-step):hover {
   color: #f0e6b8;
   text-decoration-color: var(--glc-bronze);
 }

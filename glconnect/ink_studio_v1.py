@@ -224,3 +224,66 @@ def ink_studio_v1_context_defaults(app=None):
             "can_launch_campaigns": False,
         },
     }
+
+
+def about_scroll_nav_urls():
+    """
+    Scrolling about-page nav destinations.
+
+    Pitch / Fund → author campaigns (or author onboarding).
+    Write / Publish → Ink Studio / My books (or onboarding).
+    Promote → GLC Media (Content hub) for any signed-in user.
+    Sell → Marketplace for any signed-in user.
+    Guests → login with ``next`` preserved.
+    """
+    from flask import url_for
+
+    from glconnect.book_platform_routes import _author_requires_setup_profile
+
+    promote = url_for("book_platform.content_hub")
+    sell = url_for("book_platform.marketplace")
+    author_campaigns = url_for("book_platform.author_my_campaigns")
+    my_books = url_for("book_platform.books")
+    ink_studio = url_for("book_platform.ink_studio_access")
+
+    def _setup(next_path: str) -> str:
+        return url_for("book_platform.setup_profile", next=next_path)
+
+    if not getattr(current_user, "is_authenticated", False):
+        login = "routes1.login"
+        campaign_entry = _setup(author_campaigns)
+        books_entry = _setup(my_books)
+        return {
+            "pitch": url_for(login, next=campaign_entry),
+            "fund": url_for(login, next=campaign_entry),
+            "write": url_for(login, next=ink_studio),
+            "publish": url_for(login, next=books_entry),
+            "promote": url_for(login, next=promote),
+            "sell": url_for(login, next=sell),
+        }
+
+    uid = current_user.user_id
+    author_workspace = ink_show_author_workspace(uid)
+    needs_setup = _author_requires_setup_profile(uid)
+
+    if author_workspace and not needs_setup:
+        campaign_url = author_campaigns
+        write_url = ink_studio
+        publish_url = my_books
+    elif author_workspace or getattr(current_user, "role", None) == "author":
+        campaign_url = _setup(author_campaigns)
+        write_url = _setup(my_books)
+        publish_url = _setup(my_books)
+    else:
+        campaign_url = _setup(author_campaigns)
+        write_url = _setup(my_books)
+        publish_url = _setup(my_books)
+
+    return {
+        "pitch": campaign_url,
+        "fund": campaign_url,
+        "write": write_url,
+        "publish": publish_url,
+        "promote": promote,
+        "sell": sell,
+    }

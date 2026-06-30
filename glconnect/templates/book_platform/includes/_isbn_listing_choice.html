@@ -7,14 +7,14 @@
         <strong>ISBN:</strong> {{ format_isbn_display(book.isbn) if format_isbn_display is defined else book.isbn }}
         <span class="text-muted">(ebook, audiobook{% if book.print_enabled %}, print{% endif %})</span>
     </p>
-    <p class="small mb-1"><strong>Publisher on marketplace:</strong> {{ book.publisher_name or platform_publisher_name|default('Ndotonic') }}</p>
+    <p class="small mb-1"><strong>Publisher on marketplace:</strong> {{ platform_publisher_name|default('Ndotonic') }}</p>
     <p class="small text-muted mb-0">
         {% if book.isbn_source == 'author' %}
         You supplied this ISBN. It cannot be changed after listing.
         {% else %}
         Assigned from the platform pool when this title was first listed.
         {% endif %}
-        You keep copyright; {{ book.publisher_name or 'Ndotonic' }} is the marketplace publisher imprint.
+        You keep copyright; {{ platform_publisher_name|default('Ndotonic') }} is the marketplace publisher imprint.
     </p>
     {% else %}
     <p class="small text-muted mb-3">

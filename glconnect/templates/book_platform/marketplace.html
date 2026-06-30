@@ -115,7 +115,7 @@
                     <p class="ink-hero-lead mb-3 mb-lg-4 ink-mp-hero-lead">
                         Browse and buy finished books, ebooks, and audiobooks from the catalog below.
                         {% if ink_show_author_workspace|default(false) %}
-                        <span class="d-block mt-2">As an author you can <strong>list on the marketplace</strong> anytime (upload or Ink Studio â edit â publish). <strong>Book campaigns</strong> are <em>optional</em> if you want early patron support before or while you finish.</span>
+                        <span class="d-block mt-2">As an author you can <strong>list on the marketplace</strong> anytime (upload or Ink Studio -> edit -> publish). <strong>Book campaigns</strong> are <em>optional</em> if you want early patron support before or while you finish.</span>
                         {% else %}
                         <span class="d-block mt-2">Browse and buy finished books here. To <strong>fund a work in progress</strong>, use <strong>Book campaigns</strong> in the menu (optional for authors, they can also publish straight to the marketplace).</span>
                         {% endif %}
@@ -146,7 +146,7 @@
                                 </h2>
                                 <p class="text-muted small mb-0 ink-mp-results-blurb" id="results-range">
                                     {% if total_books %}
-                                        Showing <strong>{{ (page - 1) * per_page + 1 }}â{{ (page - 1) * per_page + books|length }}</strong>
+                                        Showing <strong>{{ (page - 1) * per_page + 1 }}-{{ (page - 1) * per_page + books|length }}</strong>
                                         of <strong>{{ total_books }}</strong>
                                         {% if selected_genre %} in <strong>{{ selected_genre|title }}</strong>{% endif %}
                                     {% else %}
@@ -158,7 +158,7 @@
                                 <div class="d-flex flex-column flex-sm-row gap-2 justify-content-lg-end align-items-stretch align-items-sm-center">
                                     <div class="input-group ink-toolbar-search flex-grow-1 flex-sm-grow-0" style="min-width: 0; max-width: 100%;">
                                         <span class="input-group-text bg-transparent border-end-0" id="search-addon"><i class="fas fa-search text-muted" aria-hidden="true"></i></span>
-                                        <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Quick search title or authorâ¦" value="{{ search_term or '' }}" aria-describedby="search-addon" autocomplete="off">
+                                        <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Quick search title or author..." value="{{ search_term or '' }}" aria-describedby="search-addon" autocomplete="off">
                                         <button class="btn btn-primary" type="button" onclick="searchBooks()">
                                             Search
                                         </button>
@@ -309,7 +309,7 @@
                         </div>
                         {% endif %}
                         <form id="filterForm" method="get" action="{{ url_for('book_platform.marketplace') }}">
-                            <!-- Category (same data as former âShop by categoryâ— strip) -->
+                            <!-- Category (same data as former "Shop by category" strip) -->
                             <div class="mb-4">
                                 <label for="genre" class="form-label fw-bold"><i class="fas fa-tags me-1 text-primary" aria-hidden="true"></i>Category</label>
                                 <select class="form-select" id="genre" name="genre" aria-describedby="genre-help">
@@ -348,7 +348,7 @@
                                     <span class="input-group-text bg-primary text-white">
                                         <i class="fas fa-search"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="search" name="search" placeholder="Title, author, or descriptionâ¦" value="{{ search_term or '' }}" autocomplete="off">
+                                    <input type="text" class="form-control" id="search" name="search" placeholder="Title, author, or description..." value="{{ search_term or '' }}" autocomplete="off">
                                 </div>
                                 <p class="form-text small mb-0">Synced with the quick search above the grid.</p>
                             </div>
@@ -401,9 +401,9 @@
                                 <label for="priceRange" class="form-label">Price Range</label>
                                 <select class="form-select" id="priceRange" name="price_range">
                                     <option value="" {% if not selected_price_range %}selected{% endif %}>Any price</option>
-                                    <option value="0-5" {% if selected_price_range == '0-5' %}selected{% endif %}>$0 â $5</option>
-                                    <option value="5-10" {% if selected_price_range == '5-10' %}selected{% endif %}>$5 â $10</option>
-                                    <option value="10-20" {% if selected_price_range == '10-20' %}selected{% endif %}>$10 â $20</option>
+                                    <option value="0-5" {% if selected_price_range == '0-5' %}selected{% endif %}>$0 - $5</option>
+                                    <option value="5-10" {% if selected_price_range == '5-10' %}selected{% endif %}>$5 - $10</option>
+                                    <option value="10-20" {% if selected_price_range == '10-20' %}selected{% endif %}>$10 - $20</option>
                                     <option value="20+" {% if selected_price_range == '20+' %}selected{% endif %}>$20+</option>
                                 </select>
                             </div>
@@ -415,7 +415,7 @@
                                     <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest first</option>
                                     <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
                                     <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
-                                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title AâZ</option>
+                                    <option value="title" {% if selected_sort == 'title' %}selected{% endif %}>Title A-Z</option>
                                     <option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>Bestselling</option>
                                 </select>
                             </div>
@@ -540,7 +540,7 @@
                         <small class="form-text text-muted">Minimum amount: $<span id="minAmount">0.00</span></small>
                     </div>
                     <div id="checkoutAccountBlock" class="mb-0 {% if current_user.is_authenticated %}d-none{% endif %}">
-                        <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Sign in</a> or create one below (same email youâll use at payment).</p>
+                        <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Sign in</a> or create one below (same email you'll use at payment).</p>
                         <label for="checkoutSignupEmail" class="form-label fw-bold">Email</label>
                         <input type="email" class="form-control" id="checkoutSignupEmail" placeholder="you@example.com" autocomplete="email">
                         <div class="mt-3 pt-2 border-top">
@@ -687,7 +687,7 @@
                 } else if (!selected.length) {
                     hint.textContent = 'Select one or more formats to checkout.';
                 } else if (selected.indexOf('print') >= 0) {
-                    hint.textContent = 'Print includes shipping to a US address; you will enter it on Stripe.';
+                    hint.textContent = 'Print includes shipping to a US address; you will enter it on Stripe (apartment and optional note for the author).';
                 } else if (selected.indexOf('digital') >= 0 && selected.indexOf('audiobook') >= 0) {
                     hint.textContent = 'Ebook + audiobook receive a 20% bundle discount.';
                 } else {
@@ -708,7 +708,7 @@
             const actionsEl = document.getElementById('bookDetailsActions');
             if (!bodyEl || !actionsEl) return;
 
-            if (titleEl) titleEl.textContent = 'Loadingâ¦';
+            if (titleEl) titleEl.textContent = 'Loading...';
             actionsEl.innerHTML = '';
             bookDetailsPurchaseState = null;
             const checkoutBtnReset = document.getElementById('bookDetailsCheckoutBtn');
@@ -721,8 +721,8 @@
             if (totalWrapReset) totalWrapReset.classList.add('d-none');
             bodyEl.innerHTML = `
                 <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loadingâ¦</span></div>
-                    <p class="mt-3 text-muted mb-0">Loading book detailsâ¦</p>
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                    <p class="mt-3 text-muted mb-0">Loading book details...</p>
                 </div>`;
             modal.show();
 
@@ -782,7 +782,7 @@
                             pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfAudiobook" value="audiobook" checked><label class="form-check-label" for="bdfAudiobook">Audiobook, <strong>$' + purchaseOpts.audiobook.toFixed(2) + '</strong></label></div>';
                         }
                         if (hasPaidPrint) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfPrint" value="print" checked><label class="form-check-label" for="bdfPrint">Print, <strong>$' + purchaseOpts.print_price.toFixed(2) + '</strong> + <strong>$' + purchaseOpts.print_shipping.toFixed(2) + '</strong> shipping' + (b.print_handling_days ? ' Â· ships in ~' + Number(b.print_handling_days) + ' days' : '') + '</label></div>';
+                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfPrint" value="print" checked><label class="form-check-label" for="bdfPrint">Print, <strong>$' + purchaseOpts.print_price.toFixed(2) + '</strong> + <strong>$' + purchaseOpts.print_shipping.toFixed(2) + '</strong> shipping' + (b.print_handling_days ? ', ships in ~' + Number(b.print_handling_days) + ' days' : '') + '</label></div>';
                         }
                         pickerHtml += '</div><p class="small text-muted mt-2 mb-0" id="bookDetailsFormatHint"></p></div>';
                     } else {
@@ -1072,7 +1072,7 @@
                 printNote.classList.toggle('d-none', !showPrintNote);
                 if (showPrintNote) {
                     const days = Number(opts.print_handling_days || 7);
-                    printNote.textContent = "You'll enter your shipping address on Stripe. The author ships within about " + days + ' business days.';
+                    printNote.textContent = "You'll enter your shipping address on Stripe (apartment and an optional note for the author). The author ships within about " + days + ' business days.';
                 }
             }
 
@@ -1275,7 +1275,7 @@
                     }
 
                     if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
-                        alert('Please sign in or use âCreate accountâ— in this window, then click Buy now again.');
+                        alert('Please sign in or use "Create account" in this window, then click Buy now again.');
                         return;
                     }
 
@@ -1345,7 +1345,7 @@
                     window.INK_MARKETPLACE_LOGGED_IN = true;
                     var gb = document.getElementById('checkoutAccountBlock');
                     if (gb) gb.classList.add('d-none');
-                    alert('Account created. Click âProceed to Paymentâ— to continue.');
+                    alert('Account created. Click "Proceed to Payment" to continue.');
                 })
                 .catch(function (err) {
                     alert(err.message || 'Could not create account.');

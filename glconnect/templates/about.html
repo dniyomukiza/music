@@ -23,7 +23,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=13">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=14">
 </head>
 <body class="about-body">
 
@@ -58,36 +58,7 @@
                     </div>
                 </div>
             </div>
-            <div class="about-ticker" aria-hidden="true">
-            <div class="about-ticker-track">
-                <div class="about-ticker-group">
-                    <span class="about-ticker-item"><i class="fas fa-bullhorn"></i> Pitch</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-hand-holding-heart"></i> Fund</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-pen"></i> Write</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-robot"></i> Edit with AI</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-book-open"></i> Publish</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-coins"></i> Monetize</span>
-                </div>
-                <div class="about-ticker-group" aria-hidden="true">
-                    <span class="about-ticker-item"><i class="fas fa-bullhorn"></i> Pitch</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-hand-holding-heart"></i> Fund</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-pen"></i> Write</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-robot"></i> Edit with AI</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-book-open"></i> Publish</span>
-                    <span class="about-ticker-sep"></span>
-                    <span class="about-ticker-item"><i class="fas fa-coins"></i> Monetize</span>
-                </div>
-            </div>
-            </div>
+            {% include 'includes/_about_ticker.html' %}
         </section>
 
         <section class="about-why about-wrap" aria-labelledby="why-ndotonic-heading">
@@ -154,10 +125,12 @@
         <section class="about-pipeline about-wrap about-reveal" aria-label="Author workflow">
             <div class="about-pipeline-shell">
                 <div class="about-pipeline-track">
-                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Pitch</strong><span>Campaign &amp; funding</span></div>
-                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Promote</strong><span>GLC Media — radio &amp; TV</span></div>
-                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Publish</strong><span>Ink Studio + AI</span></div>
-                    <div class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Monetize</strong><span>Ebook · audio · print</span></div>
+                    <a href="{{ about_nav.pitch }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Pitch</strong><span>Campaign &amp; funding</span></a>
+                    <a href="{{ about_nav.fund }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Fund</strong><span>Patron support</span></a>
+                    <a href="{{ about_nav.write }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Write</strong><span>Ink Studio</span></a>
+                    <a href="{{ about_nav.publish }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Publish</strong><span>ISBN &amp; formats</span></a>
+                    <a href="{{ about_nav.promote }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Promote</strong><span>GLC Media — radio &amp; TV</span></a>
+                    <a href="{{ about_nav.sell }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Sell</strong><span>Ebook · audio · print</span></a>
                 </div>
             </div>
         </section>

@@ -465,3 +465,68 @@ def marketplace_book_payment_intent_data(
     }
     return data, None
 
+
+def stripe_print_checkout_custom_fields() -> List[Dict[str, Any]]:
+    """Optional apartment and delivery note fields on Stripe Checkout (print shipping)."""
+    return [
+        {
+            "key": "shipping_apt",
+            "label": {"type": "custom", "custom": "Apartment, suite, unit (optional)"},
+            "type": "text",
+            "optional": True,
+            "text": {"maximum_length": 100},
+        },
+        {
+            "key": "shipping_note",
+            "label": {"type": "custom", "custom": "Note for the author (optional)"},
+            "type": "text",
+            "optional": True,
+            "text": {"maximum_length": 500},
+        },
+    ]
+
+
+def print_checkout_shipping_kw() -> Dict[str, Any]:
+    """Extra Stripe Checkout kwargs when collecting a print shipping address."""
+    return {"custom_fields": stripe_print_checkout_custom_fields()}
+
+
+def stripe_checkout_custom_field_values(session: Any) -> Dict[str, str]:
+    """Extract completed Stripe Checkout custom field values by key."""
+    if session is None:
+        return {}
+    if hasattr(session, "to_dict"):
+        try:
+            session = session.to_dict()
+        except Exception:
+            session = {}
+    elif not isinstance(session, dict):
+        session = {}
+
+    out: Dict[str, str] = {}
+    for cf in session.get("custom_fields") or []:
+        if not isinstance(cf, dict):
+            continue
+        key = cf.get("key")
+        text = cf.get("text")
+        val = ""
+        if isinstance(text, dict):
+            val = (text.get("value") or "").strip()
+        if key and val:
+            out[str(key)] = val
+    return out
+
+
+def merge_print_shipping_line2(
+    address_line2: Optional[str], apt: Optional[str]
+) -> Optional[str]:
+    """Combine Stripe address line2 with the apartment custom field."""
+    line2 = (address_line2 or "").strip()
+    unit = (apt or "").strip()
+    if line2 and unit:
+        merged = f"{line2}, {unit}"
+    else:
+        merged = unit or line2
+    merged = merged[:200]
+    return merged or None
+

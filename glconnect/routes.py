@@ -40,7 +40,9 @@ def marketplace():
 @bp.route('/about')
 @login_required
 def about():
-    return render_template('about.html')
+    from glconnect.ink_studio_v1 import about_scroll_nav_urls
+
+    return render_template('about.html', about_nav=about_scroll_nav_urls())
 
 @bp.route('/pitch-deck')
 def pitch_deck():

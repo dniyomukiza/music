@@ -309,12 +309,12 @@
                         return;
                     }
                     window.createCoverAccepted = false;
-                    setPreviewUi('Generatingâ¦', false);
+                    setPreviewUi('Generating...', false);
                     btnGen.disabled = true;
                     try {
                         const { res, data } = await postJson('{{ url_for("book_platform.ai_cover_preview_listing") }}', payload);
                         if (res.ok && data.success) {
-                            setPreviewUi('Preview ready. Use âUse this coverâ— to lock it in for this book.', true);
+                            setPreviewUi('Preview ready. Use "Use this cover" to lock it in for this book.', true);
                         } else {
                             setPreviewUi(data.error || 'Could not generate preview.', false);
                         }
@@ -421,7 +421,7 @@
             }
 
             if (!coverFile && ai && !window.createCoverAccepted) {
-                alert('Generate an AI preview and tap âUse this coverâ— before creating the book.');
+                alert('Generate an AI preview and tap "Use this cover" before creating the book.');
                 return;
             }
 

@@ -617,7 +617,21 @@
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  text-decoration: none;
   color: var(--ab-muted);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+a.about-ticker-item:hover,
+a.about-ticker-item:focus-visible {
+  color: var(--ab-gold);
+  transform: translateY(-1px);
+}
+
+a.about-ticker-item:focus-visible {
+  outline: 2px solid var(--ab-gold);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .about-ticker-item i { color: var(--ab-bronze); font-size: 0.65rem; }
@@ -875,13 +889,28 @@
 }
 
 @media (min-width: 900px) {
-  .about-pipeline-track { grid-template-columns: repeat(4, 1fr); }
+  .about-pipeline-track { grid-template-columns: repeat(6, 1fr); }
 }
 
 .about-pipeline-step {
   position: relative;
   padding: 1.25rem 1rem;
   text-align: center;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 12px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+a.about-pipeline-step:hover,
+a.about-pipeline-step:focus-visible {
+  background: rgba(201, 162, 39, 0.06);
+  transform: translateY(-2px);
+}
+
+a.about-pipeline-step:focus-visible {
+  outline: 2px solid var(--ab-gold);
+  outline-offset: 2px;
 }
 
 @media (min-width: 900px) {

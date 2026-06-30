@@ -4612,6 +4612,36 @@ body.ink-upload-book kbd {
     color: #f5d76a;
 }
 
+/* Author listing terms — white text on dark upload page */
+body.ink-upload-book .listing-terms-scrollbox {
+    background: rgba(8, 10, 9, 0.82) !important;
+    border-color: rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-upload-book .listing-terms-scrollbox p,
+body.ink-upload-book .listing-terms-scrollbox em,
+body.ink-upload-book .listing-terms-scrollbox .fw-semibold {
+    color: #e8ece9 !important;
+}
+
+body.ink-upload-book .listing-terms-scrollbox strong {
+    color: #ffffff !important;
+}
+
+body.ink-upload-book .listing-terms-scrollbox .text-muted {
+    color: #b8c4be !important;
+}
+
+body.ink-upload-book #section-terms .listing-terms-check-label,
+body.ink-upload-book #section-terms .form-check-label {
+    color: #e8ece9 !important;
+}
+
+body.ink-upload-book #section-terms .text-muted {
+    color: rgba(232, 236, 233, 0.82) !important;
+}
+
 @media (max-width: 1199.98px) {
     body.ink-upload-book .ink-upload-aside {
         position: static;

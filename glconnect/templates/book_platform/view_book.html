@@ -254,7 +254,7 @@
                         <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Edit manuscript</a>
                         <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Audiobook</a>
                         {% if book.print_enabled %}
-                        <a href="{{ url_for('book_platform.book_print_orders', book_id=book.id) }}" class="btn btn-sm btn-outline-warning">Print orders</a>
+                        <a href="{{ url_for('book_platform.book_print_orders', book_id=book.id) }}" class="btn btn-sm btn-outline-warning">Customer Orders</a>
                         {% endif %}
                     </div>
                     <div class="ink-studio-panel-body">
@@ -409,9 +409,9 @@
                             <h3 class="mb-0 h6">About this book</h3>
                         </div>
                         <div class="ink-studio-panel-body small text-muted">
-                            {% if book.isbn or book.publisher_name %}
+                            {% if book.isbn or platform_publisher_name %}
                             <p class="mb-2"><strong class="text-light">Listing</strong><br>
-                                {% if book.publisher_name %}Publisher: {{ book.publisher_name }}<br>{% endif %}
+                                Publisher: {{ platform_publisher_name|default('Ndotonic') }}<br>
                                 {% if book.isbn %}ISBN: {{ book.isbn }}
                                 <span class="text-muted">(
                                     {%- if book.digital_file_path or book.digital_book_published %}ebook{% endif -%}
