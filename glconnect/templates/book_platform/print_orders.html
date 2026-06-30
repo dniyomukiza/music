@@ -101,7 +101,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
                     body: JSON.stringify({ tracking_number: tracking })
                 }).then(r => r.json()).then(data => {
-                    if (data.success) location.reload();
+                    if (data.success) window.location.href = '{{ url_for("book_platform.books") }}';
                     else { alert(data.error || 'Failed'); btn.disabled = false; }
                 }).catch(() => { alert('Request failed'); btn.disabled = false; });
             });
