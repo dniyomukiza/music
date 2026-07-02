@@ -65,11 +65,13 @@ def _openai_key() -> str | None:
 
 
 def _health_payload() -> dict:
+    secret_configured = bool((os.getenv("XAI_RADIO_RESEARCH_SECRET") or "").strip())
     return {
         "feature_enabled": os.getenv("ENABLE_XAI_RADIO_RESEARCH") == "1",
         "x_bearer_configured": bool(_x_bearer()),
         "openai_configured": bool(_openai_key()),
-        "secret_required": bool(os.getenv("XAI_RADIO_RESEARCH_SECRET")),
+        "secret_required": True,
+        "secret_configured": secret_configured,
         "brief_post_url": "/api/dev/xai-radio-research/brief",
         "script_post_url": "/api/dev/xai-radio-research/script",
         "post_url": "/api/dev/xai-radio-research/brief",
@@ -117,8 +119,16 @@ def _auth_error() -> tuple | None:
             ),
             503,
         )
-    secret = os.getenv("XAI_RADIO_RESEARCH_SECRET")
-    if secret and request.headers.get("X-XAI-Radio-Research") != secret:
+    secret = (os.getenv("XAI_RADIO_RESEARCH_SECRET") or "").strip()
+    if not secret:
+        return (
+            jsonify(
+                error="missing_research_secret",
+                hint="Set XAI_RADIO_RESEARCH_SECRET before enabling this dev endpoint.",
+            ),
+            503,
+        )
+    if request.headers.get("X-XAI-Radio-Research") != secret:
         return (
             jsonify(
                 error="unauthorized",
@@ -766,8 +776,6 @@ Produce a **radio host prep brief** (not on air script):
         "brief": text,
         "context_char_count": len(context),
     }
-    if not os.getenv("XAI_RADIO_RESEARCH_SECRET"):
-        out["warning"] = "XAI_RADIO_RESEARCH_SECRET is not set; anyone who can reach this route can spend X/OpenAI quota."
     return jsonify(out), 200
 
 
@@ -863,6 +871,4 @@ Output **only** the script (optional one-line title, blank line, then script).""
         "script": script_text or None,
         "context_char_count": len(context),
     }
-    if not os.getenv("XAI_RADIO_RESEARCH_SECRET"):
-        out["warning"] = "XAI_RADIO_RESEARCH_SECRET is not set; anyone who can reach this route can spend X/OpenAI quota."
     return jsonify(out), 200

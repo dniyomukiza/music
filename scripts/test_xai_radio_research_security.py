@@ -22,6 +22,10 @@ def main():
         failures.append("test fixture secret should not appear in source")
     if 'id="researchSecret"' not in content:
         failures.append("dev page should keep an operator-entered research secret field")
+    if 'error="missing_research_secret"' not in content:
+        failures.append("POST auth should fail closed when XAI_RADIO_RESEARCH_SECRET is missing")
+    if "anyone who can reach this route can spend X/OpenAI quota" in content:
+        failures.append("unauthenticated quota-spend warning path should not remain reachable")
 
     if failures:
         print("FAILURES:")
