@@ -10,6 +10,8 @@ import os
 import re
 from typing import Any
 
+import bleach
+
 logger = logging.getLogger(__name__)
 
 TRANSLATION_LANGUAGE_NAMES: dict[str, str] = {
@@ -24,6 +26,32 @@ TRANSLATION_LANGUAGE_NAMES: dict[str, str] = {
     'sk': 'Slovak', 'sl': 'Slovenian', 'et': 'Estonian', 'lv': 'Latvian',
     'lt': 'Lithuanian', 'mt': 'Maltese', 'ga': 'Irish', 'cy': 'Welsh',
 }
+
+
+def _clean_translated_text(value: Any) -> str:
+    return bleach.clean(str(value or ''), tags=[], strip=True)
+
+
+def _clean_translated_html(value: Any) -> str:
+    from glconnect.project_description_media import ProjectDescriptionError, sanitize_project_description
+
+    raw = str(value or '')
+    try:
+        return sanitize_project_description(raw, book_id=None)
+    except ProjectDescriptionError:
+        logger.warning('Translated campaign HTML exceeded project description constraints; stripping tags.')
+        return bleach.clean(raw, tags=[], strip=True)
+
+
+def _sanitize_translation_fields(values: dict[str, Any]) -> dict[str, str]:
+    return {
+        'translated_title': _clean_translated_text(values.get('translated_title')),
+        'translated_book_title': _clean_translated_text(values.get('translated_book_title')),
+        'translated_author_bio': _clean_translated_text(values.get('translated_author_bio')),
+        'translated_book_description': _clean_translated_html(values.get('translated_book_description')),
+        'translated_campaign_description': _clean_translated_html(values.get('translated_campaign_description')),
+        'translated_tentative_timeline': _clean_translated_text(values.get('translated_tentative_timeline')),
+    }
 
 
 def campaign_translation_language_choices() -> list[dict[str, str]]:
@@ -75,13 +103,21 @@ def _get_gemini_model():
 
 
 def _translation_payload(record: Any) -> dict[str, str]:
+    values = _sanitize_translation_fields({
+        'translated_title': record.translated_title,
+        'translated_book_title': record.translated_book_title,
+        'translated_author_bio': record.translated_author_bio,
+        'translated_book_description': record.translated_book_description,
+        'translated_campaign_description': record.translated_campaign_description,
+        'translated_tentative_timeline': record.translated_tentative_timeline,
+    })
     return {
-        'title': record.translated_title or '',
-        'book_title': record.translated_book_title or '',
-        'author_bio': record.translated_author_bio or '',
-        'book_description': record.translated_book_description or '',
-        'campaign_description': record.translated_campaign_description or '',
-        'tentative_timeline': record.translated_tentative_timeline or '',
+        'title': values['translated_title'],
+        'book_title': values['translated_book_title'],
+        'author_bio': values['translated_author_bio'],
+        'book_description': values['translated_book_description'],
+        'campaign_description': values['translated_campaign_description'],
+        'tentative_timeline': values['translated_tentative_timeline'],
     }
 
 
@@ -192,15 +228,24 @@ Tentative timeline: {tentative_timeline}
         logger.error('Campaign translation failed for campaign %s: %s', campaign.id, exc, exc_info=True)
         return {'success': False, 'error': 'Translation failed. Please try again.'}
 
+    sanitized = _sanitize_translation_fields({
+        'translated_title': data.get('translated_title') or campaign.title,
+        'translated_book_title': data.get('translated_book_title') or (getattr(book, 'title', None) or ''),
+        'translated_author_bio': data.get('translated_author_bio') or author_bio,
+        'translated_book_description': data.get('translated_book_description') or book_description,
+        'translated_campaign_description': data.get('translated_campaign_description') or campaign_description,
+        'translated_tentative_timeline': data.get('translated_tentative_timeline') or tentative_timeline,
+    })
+
     record = CampaignTranslation(
         campaign_id=campaign.id,
         language=lang,
-        translated_title=data.get('translated_title') or campaign.title,
-        translated_book_title=data.get('translated_book_title') or (getattr(book, 'title', None) or ''),
-        translated_author_bio=data.get('translated_author_bio') or author_bio,
-        translated_book_description=data.get('translated_book_description') or book_description,
-        translated_campaign_description=data.get('translated_campaign_description') or campaign_description,
-        translated_tentative_timeline=data.get('translated_tentative_timeline') or tentative_timeline,
+        translated_title=sanitized['translated_title'],
+        translated_book_title=sanitized['translated_book_title'],
+        translated_author_bio=sanitized['translated_author_bio'],
+        translated_book_description=sanitized['translated_book_description'],
+        translated_campaign_description=sanitized['translated_campaign_description'],
+        translated_tentative_timeline=sanitized['translated_tentative_timeline'],
         translation_method='gemini',
     )
     db.session.add(record)
