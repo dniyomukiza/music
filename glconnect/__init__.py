@@ -283,7 +283,7 @@ def create_app(config_overrides=None):
     CORS(app, origins=_allowed_origins, supports_credentials=True)
 
     # Detect if running in local development
-    is_local_dev = os.getenv('FLASK_ENV') == 'development' or not os.path.exists('/.dockerenv')
+    is_local_dev = os.getenv('FLASK_ENV') == 'development'
 
     override_jwt_secret = (config_overrides or {}).get("JWT_SECRET_KEY")
     jwt_secret_key = (

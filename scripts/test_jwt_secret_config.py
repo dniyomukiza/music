@@ -36,6 +36,8 @@ def main():
     ]
     if "is_local_dev" in jwt_block or "/.dockerenv" in jwt_block:
         failures.append("JWT fallback should be limited to FLASK_ENV=development, not Docker detection")
+    if "is_local_dev = os.getenv('FLASK_ENV') == 'development' or not os.path.exists('/.dockerenv')" in app_content:
+        failures.append("session security mode should not treat every non-Docker host as local dev")
 
     if failures:
         print("FAILURES:")
