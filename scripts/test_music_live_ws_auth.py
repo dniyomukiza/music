@@ -19,7 +19,8 @@ def main():
 
     if "validate_music_live_ws_token(token, uid)" not in ws_content:
         failures.append("WebSocket handler should validate signed tokens for non-guest users")
-    if ws_content.find("validate_music_live_ws_token(token, uid)") > ws_content.find("_get_runner()"):
+    runner_call_index = ws_content.find("= _get_runner()")
+    if ws_content.find("validate_music_live_ws_token(token, uid)") > runner_call_index:
         failures.append("WebSocket auth should run before loading the ADK runner")
     if 'close(code=1008, reason="Unauthorized music session")' not in ws_content:
         failures.append("missing or mismatched tokens should close with policy violation")
