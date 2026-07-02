@@ -56,6 +56,7 @@ def _load_config():
         "SENDER_MAIL": (os.getenv("SENDER_MAIL") or "").strip() or None,
         "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
         "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
+        "JWT_SECRET_KEY": (os.getenv("JWT_SECRET_KEY") or "").strip() or None,
         "INK_STUDIO_V1_BOOKS_LAUNCH": os.getenv("INK_STUDIO_V1_BOOKS_LAUNCH", "").strip().lower()
         in ("1", "true", "yes", "on"),
     }
@@ -122,6 +123,10 @@ def _load_config():
                     )
                     if _rm:
                         cfg["RECEIVER_MAIL"] = _rm
+                if not cfg.get("JWT_SECRET_KEY"):
+                    _jwt_secret = _gl_first_nonempty(file_cfg, "JWT_SECRET_KEY")
+                    if _jwt_secret:
+                        cfg["JWT_SECRET_KEY"] = _jwt_secret
 
                 # Optional: Stripe *test* keys from glconfig only, override live/env secrets for the whole app.
                 # Same alias pattern as live keys: STRIPE_SECRET_KEY / STRIPE_KEY / STRIPE_PRIVATE_KEY maps to
@@ -223,6 +228,8 @@ if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
     os.environ["MAIL_TRAP"] = config["MAIL_TRAP"]
 if config.get("RECEIVER_MAIL") and not (os.getenv("RECEIVER_MAIL") or "").strip():
     os.environ["RECEIVER_MAIL"] = config["RECEIVER_MAIL"]
+if config.get("JWT_SECRET_KEY") and not (os.getenv("JWT_SECRET_KEY") or "").strip():
+    os.environ["JWT_SECRET_KEY"] = config["JWT_SECRET_KEY"]
 
 if STRIPE_TEST_KEYS_FROM_GLCONFIG:
     print(
@@ -277,6 +284,18 @@ def create_app(config_overrides=None):
 
     # Detect if running in local development
     is_local_dev = os.getenv('FLASK_ENV') == 'development' or not os.path.exists('/.dockerenv')
+
+    override_jwt_secret = (config_overrides or {}).get("JWT_SECRET_KEY")
+    jwt_secret_key = (
+        str(override_jwt_secret).strip()
+        if override_jwt_secret
+        else (config.get("JWT_SECRET_KEY") or "").strip()
+    )
+    if not jwt_secret_key:
+        if is_local_dev:
+            jwt_secret_key = "local-dev-secret-key-change-in-production"
+        else:
+            raise RuntimeError("JWT_SECRET_KEY is required in production.")
     
     # Secure session cookie configuration
     # For local development: use HTTP-compatible settings
@@ -312,7 +331,7 @@ def create_app(config_overrides=None):
         else True
     )
     app.config.update(
-        JWT_SECRET_KEY="abarayon",
+        JWT_SECRET_KEY=jwt_secret_key,
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
         STRIPE_SECRET_KEY=_sk,
@@ -401,8 +420,6 @@ def create_app(config_overrides=None):
         'pool_reset_on_return': 'commit',
         'connect_args': {'connect_timeout': 10},  # Don't hang when creating new connections
     }
-    app.config["JWT_SECRET_KEY"] = "abarayon"
-
     if config_overrides:
         app.config.update(config_overrides)
 

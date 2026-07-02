@@ -15,7 +15,10 @@ config = {
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config["JWT_SECRET_KEY"] = "abarayon"
+_jwt_secret_key = (os.getenv("JWT_SECRET_KEY") or "").strip()
+if not _jwt_secret_key:
+    raise RuntimeError("JWT_SECRET_KEY is required.")
+app.config["JWT_SECRET_KEY"] = _jwt_secret_key
 db.init_app(app)
 
 # Connect to existing database (don't create tables)
