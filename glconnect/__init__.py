@@ -292,7 +292,7 @@ def create_app(config_overrides=None):
         else (config.get("JWT_SECRET_KEY") or "").strip()
     )
     if not jwt_secret_key:
-        if is_local_dev:
+        if os.getenv('FLASK_ENV') == 'development':
             jwt_secret_key = "local-dev-secret-key-change-in-production"
         else:
             raise RuntimeError("JWT_SECRET_KEY is required in production.")

@@ -16,7 +16,7 @@ def _jwt_secret() -> str | None:
     secret = (os.getenv("JWT_SECRET_KEY") or "").strip()
     if secret:
         return secret
-    if os.getenv("FLASK_ENV") == "development" or not os.path.exists("/.dockerenv"):
+    if os.getenv("FLASK_ENV") == "development":
         return _LOCAL_DEV_SECRET
     return None
 

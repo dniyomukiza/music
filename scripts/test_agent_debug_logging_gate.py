@@ -12,12 +12,20 @@ PY_FILES = [
     "glconnect/author_display.py",
     "glconnect/book_cover_ai.py",
 ]
+SHELL_FILES = [
+    "scripts/ssl-renew.sh",
+]
 
 
 def main():
     failures = []
 
     for relative in PY_FILES:
+        content = (ROOT / relative).read_text(encoding="utf-8")
+        if "debug-fe2ff6.log" in content and "DEBUG_AGENT_LOG" not in content:
+            failures.append(f"{relative} writes debug-fe2ff6.log without DEBUG_AGENT_LOG gate")
+
+    for relative in SHELL_FILES:
         content = (ROOT / relative).read_text(encoding="utf-8")
         if "debug-fe2ff6.log" in content and "DEBUG_AGENT_LOG" not in content:
             failures.append(f"{relative} writes debug-fe2ff6.log without DEBUG_AGENT_LOG gate")

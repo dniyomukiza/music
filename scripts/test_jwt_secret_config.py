@@ -30,6 +30,12 @@ def main():
         failures.append("__init__.py should load JWT_SECRET_KEY through the existing config path")
     if 'raise RuntimeError("JWT_SECRET_KEY is required in production.")' not in app_content:
         failures.append("__init__.py should fail closed when JWT_SECRET_KEY is missing in production")
+    jwt_block = app_content[
+        app_content.find("override_jwt_secret"):
+        app_content.find("# Secure session cookie configuration")
+    ]
+    if "is_local_dev" in jwt_block or "/.dockerenv" in jwt_block:
+        failures.append("JWT fallback should be limited to FLASK_ENV=development, not Docker detection")
 
     if failures:
         print("FAILURES:")

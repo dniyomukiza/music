@@ -26,6 +26,10 @@ mkdir -p "$WEBROOT_HOST/.well-known/acme-challenge" "$ROOT/.deploy-cache"
 
 #region agent log
 _ssl_log() {
+  case "${DEBUG_AGENT_LOG:-}" in
+    1|true|TRUE|yes|YES|on|ON) ;;
+    *) return 0 ;;
+  esac
   local hypothesis_id="$1" message="$2" data_json="${3:-{}}"
   local ts
   ts=$(python3 -c 'import time; print(int(time.time()*1000))' 2>/dev/null || date +%s000)
