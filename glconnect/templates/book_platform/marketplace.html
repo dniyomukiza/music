@@ -65,7 +65,6 @@
                         <ul class="dropdown-menu dropdown-menu-end ink-workspace-dropdown border border-white border-opacity-10 mt-1" aria-labelledby="marketplaceNavMore">
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.list_book') }}">List your book</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('book_platform.create_book') }}">Ink Studio</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payouts</a></li>
                         </ul>
                     </li>
                     {% endif %}
@@ -203,7 +202,10 @@
                                                         {{ author_display_name(book.author) }}
                                                     </a>
                                                 </p>
-                                                <span class="book-price ink-mp-price" aria-label="Price">{% if book.price and book.price > 0 %}${{ "%.2f"|format(book.price) }}{% else %}Free{% endif %}</span>
+                                                {% set price_label = marketplace_card_price_label(book) %}
+                                                {% if price_label %}
+                                                <span class="book-price ink-mp-price" aria-label="Price">{{ price_label }}</span>
+                                                {% endif %}
                                             </div>
                                             <div class="book-meta mb-3">
                                                 <span class="badge bg-primary me-1 badge-info">{{ book.genre or 'No genre' }}</span>
@@ -554,6 +556,13 @@
                                 </div>
                             </div>
                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="checkoutRegisterBtn">Create account</button>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="checkoutSignupAcceptAll" value="on">
+                                <label class="form-check-label small" for="checkoutSignupAcceptAll">
+                                    I accept the Account Terms and Privacy Policy (v{{ account_terms_version|default('1.0') }}),
+                                    including age confirmation and data practices described at registration.
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -605,7 +614,18 @@
                 
                 // Price range filter
                 if (priceRange) {
-                    const bookPrice = parseFloat(price.replace('$', '').replace('Free', '0'));
+                    const priceEl = bookCard.querySelector('.book-price');
+                    const priceText = priceEl ? priceEl.textContent : '';
+                    let bookPrice = null;
+                    if (/free/i.test(priceText)) {
+                        bookPrice = 0;
+                    } else {
+                        const match = priceText.match(/\$([\d.]+)/);
+                        if (match) bookPrice = parseFloat(match[1]);
+                    }
+                    if (bookPrice === null) {
+                        show = false;
+                    } else {
                     switch(priceRange) {
                         case '0-5':
                             if (bookPrice > 5) show = false;
@@ -619,6 +639,7 @@
                         case '20+':
                             if (bookPrice < 20) show = false;
                             break;
+                    }
                     }
                 }
                 
@@ -754,9 +775,10 @@
                     const pricePrint = b.print_price != null ? Number(b.print_price) : null;
                     const pricePrintShip = b.print_shipping_price != null ? Number(b.print_shipping_price) : 0;
 
-                    let investBadge = '';
-                    if (b.investment && (b.investment.active || b.investment.funded)) {
-                        investBadge = '<span class="badge bg-success ms-1">Community funded</span>';
+                    function formatListingPrice(price) {
+                        if (price === 0) return ', <strong>Free</strong>';
+                        if (price != null && price > 0) return ', <strong>$' + price.toFixed(2) + '</strong>';
+                        return '';
                     }
 
                     const purchaseOpts = {
@@ -767,10 +789,17 @@
                         print_shipping: pricePrintShip || 0,
                         print_handling_days: Number(b.print_handling_days || 7),
                     };
-                    const hasPaidDigital = purchaseOpts.digital > 0;
-                    const hasPaidAudio = purchaseOpts.audiobook > 0;
+                    const hasPaidDigital = fmtDigital && priceDigital != null && priceDigital > 0;
+                    const hasPaidAudio = fmtAudio && priceAudio != null && priceAudio > 0;
                     const hasPaidPrint = purchaseOpts.print;
                     const hasPaidFormats = hasPaidDigital || hasPaidAudio || hasPaidPrint;
+                    const hasFreeDigital = fmtDigital && priceDigital === 0;
+                    const hasFreeAudio = fmtAudio && priceAudio === 0;
+
+                    let investBadge = '';
+                    if (b.investment && (b.investment.active || b.investment.funded)) {
+                        investBadge = '<span class="badge bg-success ms-1">Community funded</span>';
+                    }
 
                     let pickerHtml = '';
                     if (hasPaidFormats) {
@@ -786,10 +815,21 @@
                         }
                         pickerHtml += '</div><p class="small text-muted mt-2 mb-0" id="bookDetailsFormatHint"></p></div>';
                     } else {
+                        const formatLines = [];
+                        if (fmtDigital) {
+                            formatLines.push('<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + formatListingPrice(priceDigital) + '</li>');
+                        }
+                        if (fmtAudio) {
+                            formatLines.push('<li>Audiobook' + formatListingPrice(priceAudio) + '</li>');
+                        }
+                        if (fmtPrint && pricePrint != null && pricePrint > 0) {
+                            formatLines.push('<li>Print, <strong>$' + pricePrint.toFixed(2) + '</strong></li>');
+                        }
+                        if (!formatLines.length) {
+                            formatLines.push('<li class="text-muted">See listing for availability.</li>');
+                        }
                         pickerHtml = '<div class="mt-4 pt-3 border-top"><p class="small text-muted mb-1"><strong>Formats</strong></p><ul class="small mb-0">' +
-                            (fmtDigital ? '<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + ', <strong>Free</strong></li>' : '') +
-                            (fmtAudio ? '<li>Audiobook, <strong>Free</strong></li>' : '') +
-                            (!fmtDigital && !fmtAudio && !fmtPrint ? '<li class="text-muted">See listing for availability.</li>' : '') +
+                            formatLines.join('') +
                             '</ul></div>';
                     }
 
@@ -855,7 +895,7 @@
                         checkoutBtn.classList.add('d-none');
                     }
 
-                    if (fmtDigital && (priceDigital == null || priceDigital <= 0)) {
+                    if (hasFreeDigital) {
                         const btn = document.createElement('button');
                         btn.type = 'button';
                         btn.className = 'btn btn-outline-primary';
@@ -1324,6 +1364,12 @@
                 alert('Choose a username (at least 2 characters) and password (at least 8 characters).');
                 return;
             }
+            var termsEl = document.getElementById('checkoutSignupAcceptAll');
+            if (!termsEl || !termsEl.checked) {
+                alert('Please accept the Account Terms and Privacy Policy before creating an account.');
+                if (termsEl) termsEl.focus();
+                return;
+            }
             fetch('/mybook/checkout/quick-register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1333,6 +1379,7 @@
                     password: password,
                     first_name: 'Reader',
                     last_name: 'User',
+                    account_signup_accept_all: true,
                 }),
             })
                 .then(function (r) {

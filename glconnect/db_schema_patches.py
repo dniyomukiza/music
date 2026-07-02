@@ -1176,6 +1176,186 @@ def ensure_author_publishing_agreement_schema(db) -> None:
         logger.error("Could not patch author publishing agreement schema: %s", e, exc_info=True)
 
 
+def _users_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'users'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(users)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def ensure_user_account_terms_schema(db) -> None:
+    """Add account signup terms acceptance columns to users."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("user account terms schema patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    try:
+        user_cols = _users_existing_columns(db, dialect)
+        if not user_cols:
+            return
+        patches = [
+            ("account_terms_version", "VARCHAR(20)"),
+            ("account_terms_accepted_at", "TIMESTAMP"),
+        ]
+        added = []
+        for col, typedef in patches:
+            if col in user_cols:
+                continue
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {typedef}")
+                )
+            else:
+                db.session.execute(text(f"ALTER TABLE users ADD COLUMN {col} {typedef}"))
+            added.append(col)
+        if added:
+            db.session.commit()
+            logger.info("users account terms columns added (%s): %s", dialect, ", ".join(added))
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch users account terms schema: %s", e, exc_info=True)
+
+
+def _artists_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'artists'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(artists)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def _songs_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'songs'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(songs)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def _song_upload_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'song_upload'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(song_upload)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def _podcast_submissions_existing_columns(db, dialect: str) -> set:
+    if dialect == "postgresql":
+        rows = db.session.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'podcast_submissions'"
+            )
+        ).fetchall()
+        db.session.rollback()
+        return {r[0].lower() for r in rows}
+    if dialect == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(podcast_submissions)")).fetchall()
+        db.session.rollback()
+        return {r[1].lower() for r in rows}
+    return set()
+
+
+def ensure_glc_media_terms_schema(db) -> None:
+    """Add GLC Media terms columns to artists, songs, song_upload, users, and podcast_submissions."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        dialect = db.engine.dialect.name
+    except Exception as e:
+        logger.warning("glc media terms schema patch: dialect check failed: %s", e)
+        return
+    if dialect not in ("postgresql", "sqlite"):
+        return
+    patches = [
+        ("artists", _artists_existing_columns, [
+            ("glc_media_terms_version", "VARCHAR(20)"),
+            ("glc_media_terms_accepted_at", "TIMESTAMP"),
+        ]),
+        ("songs", _songs_existing_columns, [
+            ("glc_media_submission_version", "VARCHAR(20)"),
+            ("glc_media_submission_accepted_at", "TIMESTAMP"),
+        ]),
+        ("song_upload", _song_upload_existing_columns, [
+            ("glc_media_submission_version", "VARCHAR(20)"),
+            ("glc_media_submission_accepted_at", "TIMESTAMP"),
+        ]),
+        ("users", _users_existing_columns, [
+            ("glc_media_podcaster_terms_version", "VARCHAR(20)"),
+            ("glc_media_podcaster_terms_accepted_at", "TIMESTAMP"),
+        ]),
+        ("podcast_submissions", _podcast_submissions_existing_columns, [
+            ("glc_media_submission_version", "VARCHAR(20)"),
+            ("glc_media_submission_accepted_at", "TIMESTAMP"),
+        ]),
+    ]
+    try:
+        for table, cols_fn, col_defs in patches:
+            existing = cols_fn(db, dialect)
+            if not existing:
+                continue
+            added = []
+            for col, typedef in col_defs:
+                if col in existing:
+                    continue
+                if dialect == "postgresql":
+                    db.session.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {typedef}")
+                    )
+                else:
+                    db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}"))
+                added.append(col)
+            if added:
+                db.session.commit()
+                logger.info("%s glc media columns added (%s): %s", table, dialect, ", ".join(added))
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch glc media terms schema: %s", e, exc_info=True)
+
+
 def ensure_campaign_tentative_timeline_schema(db) -> None:
     """Add optional tentative_timeline on investment_campaigns."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":

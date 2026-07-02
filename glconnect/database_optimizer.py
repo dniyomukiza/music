@@ -213,11 +213,38 @@ class DatabaseOptimizer:
         total = DatabaseOptimizer.count_marketplace_books(
             genre=genre, language=language, search_term=search_term, price_range=price_range
         )
-        paid = DatabaseOptimizer.marketplace_books_base_query(
+        from .book_purchase_format import (
+            marketplace_is_explicitly_free,
+            marketplace_min_paid_price,
+            _marketplace_stats_row_as_book,
+        )
+
+        base = DatabaseOptimizer.marketplace_books_base_query(
             genre=genre, language=language, search_term=search_term, price_range=price_range
-        ).filter(BookProject.price > 0).count()
-        return {"total": total, "paid": paid, "free": max(0, total - paid)}
-    
+        )
+        rows = base.with_entities(
+            BookProject.id,
+            BookProject.price,
+            BookProject.digital_book_published,
+            BookProject.digital_file_path,
+            BookProject.audiobook_published,
+            BookProject.has_audiobook,
+            BookProject.audiobook_price,
+            BookProject.print_enabled,
+            BookProject.print_price,
+            BookProject.status,
+        ).all()
+        paid = 0
+        free = 0
+        for row in rows:
+            book = _marketplace_stats_row_as_book(row)
+            if marketplace_is_explicitly_free(book):
+                free += 1
+            elif marketplace_min_paid_price(book) is not None:
+                paid += 1
+
+        return {"total": total, "paid": paid, "free": free}
+
     @staticmethod
     @query_performance_monitor
     def get_available_languages():

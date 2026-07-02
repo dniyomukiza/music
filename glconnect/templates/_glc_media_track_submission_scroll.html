@@ -1,0 +1,20 @@
+{# GLC Media per-track submission attestation #}
+{# expects: terms_scroll_id, terms_hint_id, glc_media_track_submission_version #}
+<div class="glc-media-terms-scrollbox border rounded p-3 mb-2 small text-start"
+     id="{{ terms_scroll_id }}"
+     tabindex="0"
+     role="region"
+     aria-label="GLC Media track submission terms">
+    <p class="mb-2 fw-semibold">Track submission for GLC Media (v{{ glc_media_track_submission_version|default('1.0') }})</p>
+
+    <p class="mb-2">By submitting <strong>this track</strong>, you confirm it is offered for GLC Media promotion (radio, streaming features, TV/podcast segments, and related channels).</p>
+
+    <p class="mb-2"><strong>Rights.</strong> You confirm you control the rights needed to submit this recording and cover art, and that the track does not infringe any copyright, trademark, publicity, or privacy rights.</p>
+
+    <p class="mb-2"><strong>Play &amp; promote license.</strong> You authorize GLC Media to play, stream, broadcast, excerpt, and promote <strong>this track</strong> under the GLC Media Artist Agreement, until you withdraw <strong>this track in writing</strong> (clear identification of the track title and artist name required).</p>
+
+    <p class="mb-2"><strong>Liability.</strong> You accept personal responsibility for this submission and agree to indemnify Ndotonic / GLC Media for claims arising from this track, including copyright disputes, to the fullest extent permitted by law.</p>
+
+    <p class="mb-0"><strong>Review.</strong> Submitted tracks may be reviewed before appearing publicly. We may reject or remove tracks that do not meet technical, legal, or editorial standards.</p>
+</div>
+<p class="small text-muted mb-2 text-start" id="{{ terms_hint_id }}">Scroll through the attestation above to enable the checkboxes below.</p>

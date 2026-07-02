@@ -742,6 +742,8 @@ def create_app(config_overrides=None):
             ensure_book_print_order_fulfillment_columns,
             ensure_author_format_listing_coupons_schema,
             ensure_author_publishing_agreement_schema,
+            ensure_user_account_terms_schema,
+            ensure_glc_media_terms_schema,
             ensure_campaign_tentative_timeline_schema,
             ensure_saved_book_campaigns_schema,
             ensure_campaign_platform_fee_schema,
@@ -769,6 +771,8 @@ def create_app(config_overrides=None):
         ensure_book_print_order_fulfillment_columns(db)
         ensure_author_format_listing_coupons_schema(db)
         ensure_author_publishing_agreement_schema(db)
+        ensure_user_account_terms_schema(db)
+        ensure_glc_media_terms_schema(db)
         ensure_campaign_tentative_timeline_schema(db)
         ensure_saved_book_campaigns_schema(db)
         ensure_campaign_platform_fee_schema(db)

@@ -290,3 +290,45 @@
     padding: 1.25rem;
   }
 }
+
+.auth-card--register {
+  width: min(100%, 34rem);
+  text-align: left;
+}
+
+.auth-card--register h2,
+.auth-card--register .auth-lead,
+.auth-card--register .auth-eyebrow {
+  text-align: center;
+}
+
+.auth-field--terms {
+  margin-top: 0.5rem;
+}
+
+.account-terms-scrollbox {
+  max-height: 220px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(201, 162, 39, 0.25) !important;
+  color: #d8e0dc;
+}
+
+.account-terms-scrollbox p,
+.account-terms-scrollbox strong,
+.account-terms-scrollbox .fw-semibold {
+  color: #d8e0dc;
+}
+
+.account-terms-scrollbox strong {
+  color: #f0e6b8;
+}
+
+.auth-terms-checks .form-check-label {
+  color: #c5cdc8;
+  line-height: 1.45;
+}
+
+.auth-terms-checks .form-check-input:disabled + .form-check-label {
+  opacity: 0.55;
+}

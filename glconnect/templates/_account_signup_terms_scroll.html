@@ -1,0 +1,44 @@
+{# Account signup — Terms of Service + Privacy (all users) #}
+{# expects: terms_scroll_id (str), terms_hint_id (str) #}
+<div class="account-terms-scrollbox border rounded p-3 mb-2 small text-start"
+     id="{{ terms_scroll_id }}"
+     tabindex="0"
+     role="region"
+     aria-label="Account Terms and Privacy Policy">
+    <p class="mb-2 fw-semibold">Account Terms &amp; Privacy (v{{ account_terms_version|default('1.0') }})</p>
+
+    <p class="mb-2"><strong>Who we are.</strong> Ndotonic (“we,” “us,” “the platform”) operates Ink Studio, the marketplace, campaigns, and related creator tools. By creating an account, you enter a contract with us as an individual user—not as our employee, agent, or partner.</p>
+
+    <p class="mb-2"><strong>Your account.</strong> You must provide accurate registration information and keep your credentials secure. You are responsible for all activity under your account. Notify us promptly if you suspect unauthorized access. We may suspend or terminate accounts for abuse, fraud, or policy violations.</p>
+
+    <p class="mb-2"><strong>Age.</strong> You represent that you are at least <strong>18 years old</strong>, or the age of majority where you live, and legally able to enter this agreement. We do not knowingly collect personal data from children below applicable minimum ages.</p>
+
+    <p class="mb-2"><strong>Privacy — what we collect.</strong> We collect information you provide (name, email, username, role, profile and author card details, payment identifiers via Stripe, content you upload, and communications with support) and technical data needed to operate the service (device/browser data, logs, cookies or similar technologies, and security signals).</p>
+
+    <p class="mb-2"><strong>Privacy — how we use data.</strong> We use your data to create and secure your account, deliver features you request (publishing, purchases, payouts, collaboration, AI tools), process payments, send service and security messages, comply with law, and improve the platform. We do <strong>not</strong> sell your personal information as a standalone product.</p>
+
+    <p class="mb-2"><strong>Privacy — what is public vs private.</strong> Your <strong>email address and payment details are not shown publicly</strong> on marketplace listings. Information you choose to publish (pen name, bio, profile photo, book listings, reviews, comments, campaign pages, or media you upload) may be visible to other users and the public. You control much of what you publish; publish only what you are comfortable sharing.</p>
+
+    <p class="mb-2"><strong>Third-party services.</strong> We use service providers (e.g., payment processing, email delivery, hosting, analytics, and AI model providers) who process data on our behalf under their own terms and policies. Your use of AI features may involve sending prompts or content to third-party APIs. You consent to that processing when you use those features.</p>
+
+    <p class="mb-2"><strong>Your content and others’ privacy.</strong> You must not upload, publish, or generate content that unlawfully discloses another person’s private information (including contact details, financial data, or sensitive personal data) without lawful basis and consent. You are solely responsible for privacy and publicity rights in content you submit.</p>
+
+    <p class="mb-2"><strong>Security disclaimer.</strong> We use reasonable administrative, technical, and organizational measures to protect data, but <strong>no system is perfectly secure</strong>. You use the platform at your own risk regarding unauthorized access, interception, or loss of data beyond our reasonable control, to the fullest extent permitted by law.</p>
+
+    <p class="mb-2"><strong>Marketing.</strong> We may send transactional and service-related messages. Optional marketing messages, if offered, require your separate opt-in where required by law. You may opt out of non-essential marketing as described in those messages.</p>
+
+    <p class="mb-2"><strong>Data retention and deletion.</strong> We retain account and transaction records as needed to provide the service, meet legal obligations, resolve disputes, and enforce agreements. You may request account closure; some data may be retained where required by law or legitimate business needs (e.g., completed purchase records).</p>
+
+    <p class="mb-2"><strong>International users.</strong> If you access the platform from outside our primary operating region, you consent to processing and storage in jurisdictions where we and our providers operate, which may have different data protection rules than your home country, to the extent permitted by law.</p>
+
+    <p class="mb-2"><strong>Disclaimer of warranties.</strong> The platform is provided <strong>“as is”</strong> and <strong>“as available,”</strong> without warranties of any kind, express or implied, including uninterrupted or error-free operation, to the fullest extent permitted by law.</p>
+
+    <p class="mb-2"><strong>Limitation of liability.</strong> To the fullest extent permitted by applicable law, Ndotonic and its affiliates shall not be liable for indirect, incidental, special, consequential, or punitive damages, or loss of profits, data, or goodwill, arising from your account, your content, privacy incidents beyond our reasonable control, or third-party actions. Our aggregate liability for any claim relating to your account shall not exceed the greater of (i) amounts you paid us in the twelve (12) months before the claim, or (ii) one hundred U.S. dollars (USD $100), except where liability cannot be limited by law.</p>
+
+    <p class="mb-2"><strong>Indemnification.</strong> You agree to defend, indemnify, and hold harmless Ndotonic from claims, losses, and costs (including reasonable attorneys’ fees) arising from your account use, your content, your violation of others’ privacy or intellectual property rights, or your breach of these terms.</p>
+
+    <p class="mb-2"><strong>Authors and sellers.</strong> If you later use author, seller, or creator features, the separate <strong>Author Publishing Agreement</strong> and per-title listing attestations also apply in addition to this account agreement.</p>
+
+    <p class="mb-0"><strong>Changes.</strong> We may update these terms by posting a new version and, where required, asking you to re-accept. Continued use after notice may constitute acceptance of material changes where permitted by law.</p>
+</div>
+<p class="small text-muted mb-2 text-start" id="{{ terms_hint_id }}">Scroll through the terms above to enable the checkboxes below.</p>

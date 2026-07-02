@@ -487,7 +487,7 @@
                 {% endif %}
                 {% if ink_nav_show_author_nav|default(false) %}
                 <a class="nav-link" href="{{ url_for('book_platform.books') }}">My books</a>
-                <a class="nav-link" href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}" title="Stripe Connect for book sales">Payout</a>
+                <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">Sales &amp; payouts</a>
                 {% endif %}
                 {% if current_user.is_authenticated %}
                 <div class="nav-item dropdown d-inline-flex align-items-center">

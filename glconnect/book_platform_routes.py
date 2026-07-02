@@ -84,6 +84,23 @@ from glconnect.author_publishing_agreement import (
     ensure_listing_attestation,
     agreement_context_for_templates,
 )
+from glconnect.account_terms import (
+    account_terms_context,
+    record_account_terms_acceptance,
+    validate_account_signup_terms,
+)
+from glconnect.glc_media_artist_terms import (
+    artist_has_glc_media_terms,
+    ensure_podcaster_glc_media_terms,
+    glc_media_terms_context,
+    record_artist_glc_media_terms,
+    record_podcast_glc_media_submission,
+    record_track_glc_media_submission,
+    user_has_glc_media_podcaster_terms,
+    validate_glc_media_artist_terms,
+    validate_glc_media_podcast_submission_terms,
+    validate_glc_media_track_submission_terms,
+)
 from glconnect.author_listing_coupon_policy import (
     LISTING_FORMAT_AUDIOBOOK,
     LISTING_FORMAT_EBOOK,
@@ -179,7 +196,11 @@ book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
 @book_bp.context_processor
 def _inject_author_agreement_template_context():
-    return agreement_context_for_templates()
+    from glconnect.book_purchase_format import marketplace_card_price_label
+
+    ctx = agreement_context_for_templates()
+    ctx["marketplace_card_price_label"] = marketplace_card_price_label
+    return ctx
 
 
 @book_bp.after_request
@@ -4158,6 +4179,7 @@ def marketplace():
             available_languages=available_languages,
             search_term=search_term or '',
             marketplace_cover_url=_marketplace_cover_url,
+            **account_terms_context(),
         )
     except Exception as e:
         # Rollback any failed transaction to prevent "transaction aborted" errors
@@ -6449,6 +6471,10 @@ def checkout_quick_register():
     if not password or len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters.'}), 400
 
+    terms_err = validate_account_signup_terms(data)
+    if terms_err:
+        return jsonify({'error': terms_err}), 400
+
     if User.query.filter(func.lower(User.email) == email).first():
         return jsonify({'error': 'That email is already registered. Sign in instead.'}), 400
     if User.query.filter(func.lower(User.username) == username.lower()).first():
@@ -6462,6 +6488,7 @@ def checkout_quick_register():
         role='other',
     )
     user.set_password(password)
+    record_account_terms_acceptance(user)
     db.session.add(user)
     db.session.commit()
     login_user(user)
@@ -10989,7 +11016,9 @@ def content_hub():
                          recent_posts=recent_posts,
                          user_posts=user_posts,
                          has_artist_profile=artist_profile is not None,
-                         artist_profile=artist_profile)
+                         artist_profile=artist_profile,
+                         artist_needs_glc_terms=not artist_has_glc_media_terms(artist_profile),
+                         **glc_media_terms_context())
 
 @book_bp.route('/stories')
 @login_required
@@ -11040,23 +11069,22 @@ def music_dashboard():
     return render_template('book_platform/music_dashboard.html', 
                          has_artist_profile=artist_profile is not None, 
                          artist_profile=artist_profile,
-                         is_artist_account=is_artist_account)
+                         is_artist_account=is_artist_account,
+                         artist_needs_glc_terms=not artist_has_glc_media_terms(artist_profile),
+                         **glc_media_terms_context())
 
 @book_bp.route('/music/create-artist-profile', methods=['POST'])
 @login_required
 def create_artist_profile():
-    """Create an artist profile for the current user - only for users with 'artist' role"""
+    """Create an artist profile for GLC Media track submissions."""
     try:
         from glconnect.models import Artist
         import os
         from werkzeug.utils import secure_filename
-        
-        # Check if user has 'artist' role
-        if not hasattr(current_user, 'role') or current_user.role != 'artist':
-            return jsonify({
-                'success': False, 
-                'message': 'Only users with an artist account can create artist profiles. Please register with an artist account or contact support to change your account type.'
-            }), 403
+
+        terms_err = validate_glc_media_artist_terms(request.form)
+        if terms_err:
+            return jsonify({'success': False, 'message': terms_err}), 400
         
         # Check if user already has an artist profile
         existing_artist = Artist.query.filter_by(user_id=current_user.user_id).first()
@@ -11119,6 +11147,7 @@ def create_artist_profile():
             bio=bio or None,
             profile_pic=profile_pic_filename
         )
+        record_artist_glc_media_terms(new_artist)
         
         db.session.add(new_artist)
         db.session.commit()
@@ -11157,22 +11186,25 @@ def sanitize_url_music(url):
 @book_bp.route('/music/upload-song', methods=['POST'])
 @login_required
 def upload_song_music_dashboard():
-    """Upload a song from the music dashboard - only for users with 'artist' role"""
+    """Upload a song for GLC Media promotion review."""
     try:
         from glconnect.models import Artist, Song_upload
         import os
-        
-        # Check if user has 'artist' role
-        if not hasattr(current_user, 'role') or current_user.role != 'artist':
-            return jsonify({
-                'success': False, 
-                'message': 'Only users with an artist account can upload songs. Please register with an artist account or contact support to change your account type.'
-            }), 403
         
         # Check if user has an artist profile
         artist = Artist.query.filter_by(user_id=current_user.user_id).first()
         if not artist:
             return jsonify({'success': False, 'message': 'Please create an artist profile first.'}), 400
+
+        if not artist_has_glc_media_terms(artist):
+            artist_terms_err = validate_glc_media_artist_terms(request.form)
+            if artist_terms_err:
+                return jsonify({'success': False, 'message': artist_terms_err}), 400
+            record_artist_glc_media_terms(artist)
+
+        track_terms_err = validate_glc_media_track_submission_terms(request.form)
+        if track_terms_err:
+            return jsonify({'success': False, 'message': track_terms_err}), 400
         
         # Get form data
         song_name = sanitize_input_music(request.form.get('song_name', '').strip())
@@ -11273,13 +11305,14 @@ def upload_song_music_dashboard():
             artist_id=artist.artist_id,
             approval_status='pending'
         )
+        record_track_glc_media_submission(new_song, new_song_upload)
         db.session.add(new_song_upload)
         
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': 'Song uploaded successfully! It will be reviewed by an admin before appearing in search.',
+            'message': 'Track submitted for GLC Media review. We may play and promote it on GLC channels until you withdraw in writing.',
             'song_id': new_song.id
         })
         
@@ -11319,24 +11352,33 @@ def news_redirect():
 @book_bp.route('/podcasts/upload', methods=['GET', 'POST'])
 @login_required
 def upload_podcast():
-    """Upload a podcast (audio or video) - max 30 minutes, requires admin approval"""
-    # Only podcasters can upload podcasts
-    if current_user.role != 'podcaster':
-        flash('Only users with podcaster role can upload podcasts. Please contact admin to change your role.', 'error')
-        return redirect(url_for('book_platform.dashboard'))
-    
+    """Upload a podcast episode for GLC Media promotion — max 30 minutes, requires admin approval."""
     if request.method == 'GET':
         from glconnect.models import PodcastSubmission
-        # Get user's existing podcasts for replace option
         user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
             PodcastSubmission.submitted_at.desc()
         ).all()
-        return render_template('book_platform/upload_podcast.html', user_podcasts=user_podcasts)
+        return render_template(
+            'book_platform/upload_podcast.html',
+            user_podcasts=user_podcasts,
+            podcaster_needs_glc_terms=not user_has_glc_media_podcaster_terms(current_user),
+            **glc_media_terms_context(),
+        )
     
     try:
         from glconnect.models import PodcastSubmission
         import os
         from werkzeug.utils import secure_filename
+
+        podcaster_err = ensure_podcaster_glc_media_terms(current_user, request.form)
+        if podcaster_err:
+            flash(podcaster_err, 'error')
+            return redirect(url_for('book_platform.upload_podcast'))
+
+        episode_err = validate_glc_media_podcast_submission_terms(request.form)
+        if episode_err:
+            flash(episode_err, 'error')
+            return redirect(url_for('book_platform.upload_podcast'))
         
         # Try to import moviepy for duration checking
         try:
@@ -11457,10 +11499,15 @@ def upload_podcast():
             category=category if category else None,
             language=language
         )
+        record_podcast_glc_media_submission(podcast)
         db.session.add(podcast)
         db.session.commit()
         
-        flash('Podcast uploaded successfully! It will be reviewed by an admin before going live.', 'success')
+        flash(
+            'Episode submitted for GLC Media review. We may play and promote it on GLC radio and TV '
+            'until you withdraw in writing.',
+            'success',
+        )
         return redirect(url_for('book_platform.my_podcasts'))
         
     except Exception as e:
@@ -11472,12 +11519,7 @@ def upload_podcast():
 @book_bp.route('/podcasts/my-podcasts')
 @login_required
 def my_podcasts():
-    """View user's submitted podcasts - only for podcasters"""
-    # Only podcasters can view their podcasts
-    if current_user.role != 'podcaster':
-        flash('Only users with podcaster role can manage podcasts. Please contact admin to change your role.', 'error')
-        return redirect(url_for('book_platform.dashboard'))
-    
+    """View user's submitted podcast episodes."""
     from glconnect.models import PodcastSubmission
     
     podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
@@ -11506,11 +11548,16 @@ def edit_podcast(podcast_id):
         return redirect(url_for('book_platform.my_podcasts'))
     
     if request.method == 'GET':
-        # Get user's other podcasts for reference
         user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
             PodcastSubmission.submitted_at.desc()
         ).all()
-        return render_template('book_platform/edit_podcast.html', podcast=podcast, user_podcasts=user_podcasts)
+        return render_template(
+            'book_platform/edit_podcast.html',
+            podcast=podcast,
+            user_podcasts=user_podcasts,
+            podcaster_needs_glc_terms=not user_has_glc_media_podcaster_terms(current_user),
+            **glc_media_terms_context(),
+        )
     
     # Handle POST - update podcast
     try:
@@ -11528,6 +11575,17 @@ def edit_podcast(podcast_id):
         category = request.form.get('category', '').strip()
         language = request.form.get('language', 'en')
         file = request.files.get('podcast_file')
+        replacing_file = file and file.filename != ''
+
+        if replacing_file:
+            podcaster_err = ensure_podcaster_glc_media_terms(current_user, request.form)
+            if podcaster_err:
+                flash(podcaster_err, 'error')
+                return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
+            episode_err = validate_glc_media_podcast_submission_terms(request.form)
+            if episode_err:
+                flash(episode_err, 'error')
+                return redirect(url_for('book_platform.edit_podcast', podcast_id=podcast_id))
         
         # Validation
         if not title:
@@ -11541,7 +11599,7 @@ def edit_podcast(podcast_id):
         podcast.language = language
         
         # If new file is uploaded, replace the old one
-        if file and file.filename != '':
+        if replacing_file:
             # Check file extension
             allowed_extensions = {'.mp3', '.wav', '.m4a', '.ogg', '.mp4', '.mov', '.avi', '.mkv'}
             file_ext = os.path.splitext(file.filename)[1].lower()
@@ -11637,6 +11695,7 @@ def edit_podcast(podcast_id):
             if podcast.status == 'rejected':
                 podcast.status = 'pending'
                 podcast.rejection_reason = None
+            record_podcast_glc_media_submission(podcast)
         
         db.session.commit()
         flash('Podcast updated successfully! It will be reviewed by an admin if a new file was uploaded.', 'success')

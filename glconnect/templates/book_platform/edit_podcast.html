@@ -63,7 +63,8 @@
                 <i class="fas fa-edit me-2"></i>Edit Podcast
             </h2>
             <p class="text-muted mb-4">
-                Update your podcast information or replace the file. Maximum duration: 30 minutes. If you upload a new file, it will need admin review again.
+                Update episode details or replace the file for GLC Media. Maximum duration: 30 minutes.
+                If you upload a new file, you must re-accept the episode submission terms.
             </p>
 
             <div class="current-file">
@@ -142,9 +143,14 @@
                     </div>
                 </div>
 
+                <div id="editPodcastTermsWrap" class="d-none">
+                    {% set terms_id_suffix = 'Edit' %}
+                    {% include 'book_platform/_glc_media_podcast_terms_block.html' %}
+                </div>
+
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-save me-2"></i>Update Podcast
+                        <i class="fas fa-save me-2"></i>Update episode
                     </button>
                     <a href="{{ url_for('book_platform.my_podcasts') }}" class="btn btn-outline-secondary">
                         Cancel
@@ -188,12 +194,16 @@
                 const file = fileInput.files[0];
                 fileName.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
                 fileInfo.style.display = 'block';
+                var termsWrap = document.getElementById('editPodcastTermsWrap');
+                if (termsWrap) termsWrap.classList.remove('d-none');
             }
         }
 
         function clearFile() {
             fileInput.value = '';
             fileInfo.style.display = 'none';
+            var termsWrap = document.getElementById('editPodcastTermsWrap');
+            if (termsWrap) termsWrap.classList.add('d-none');
         }
 
         function formatFileSize(bytes) {
@@ -205,7 +215,16 @@
         }
 
         document.getElementById('editForm').addEventListener('submit', function(e) {
-            // Show loading state
+            var replacing = fileInput.files.length > 0;
+            if (replacing) {
+                var validateFn = window.glcPodcastTermsValidate && window.glcPodcastTermsValidate['Edit'];
+                var termsErr = validateFn ? validateFn(true) : null;
+                if (termsErr) {
+                    e.preventDefault();
+                    alert(termsErr);
+                    return false;
+                }
+            }
             const submitBtn = this.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';

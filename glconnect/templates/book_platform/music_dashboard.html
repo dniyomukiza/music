@@ -1367,6 +1367,43 @@
         }
 
         // Create Artist Profile
+        function glcTermsScrollGateMd(scrollId, hintId, checkboxSelector) {
+            var scrollEl = document.getElementById(scrollId);
+            if (!scrollEl) return;
+            var hintEl = hintId ? document.getElementById(hintId) : null;
+            var section = scrollEl.closest('.glc-media-terms-section') || scrollEl.parentElement;
+            function update() {
+                var boxes = section ? section.querySelectorAll(checkboxSelector) : [];
+                var needs = scrollEl.scrollHeight > scrollEl.clientHeight + 8;
+                var atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
+                boxes.forEach(function (cb) {
+                    cb.disabled = !atBottom;
+                    if (!atBottom) cb.checked = false;
+                });
+                if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+            }
+            scrollEl.addEventListener('scroll', update);
+            if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(scrollEl);
+            update();
+        }
+        glcTermsScrollGateMd('glcArtistTermsScrollMusicDash', 'glcArtistTermsHintMusicDash', '.glc-artist-term-cb-md');
+        glcTermsScrollGateMd('glcArtistTermsScrollUploadMusicDash', 'glcArtistTermsHintUploadMusicDash', '.glc-artist-upload-term-cb-md');
+        glcTermsScrollGateMd('glcTrackTermsScrollMusicDash', 'glcTrackTermsHintMusicDash', '.glc-track-term-cb-md');
+
+        function glcArtistTermsCheckedMd(mode) {
+            var suffix = mode === 'Upload' ? 'UploadMusicDash' : 'MusicDash';
+            return ['glcMediaTermsAccept', 'glcMediaRightsWarranty', 'glcMediaPlayLicense', 'glcMediaLiabilityWaiver'].every(function (id) {
+                var el = document.getElementById(id + suffix);
+                return el && el.checked;
+            });
+        }
+        function glcTrackTermsCheckedMd() {
+            return ['glcTrackRightsMusicDash', 'glcTrackPlayLicenseMusicDash', 'glcTrackLiabilityMusicDash'].every(function (id) {
+                var el = document.getElementById(id);
+                return el && el.checked;
+            });
+        }
+
         function createArtistProfile() {
             const artistName = document.getElementById('artistNameInput').value.trim();
             const bio = document.getElementById('artistBioInput').value.trim();
@@ -1374,6 +1411,10 @@
             
             if (!artistName) {
                 alert('Artist name is required.');
+                return;
+            }
+            if (!glcArtistTermsCheckedMd()) {
+                alert('Scroll through the GLC Media Artist Agreement and accept all required terms.');
                 return;
             }
             
@@ -1404,6 +1445,10 @@
             if (profilePicFile) {
                 formData.append('profile_pic', profilePicFile);
             }
+            formData.append('glc_media_terms_accept', 'on');
+            formData.append('glc_media_rights_warranty', 'on');
+            formData.append('glc_media_play_license', 'on');
+            formData.append('glc_media_liability_waiver', 'on');
             
             fetch('/mybook/music/create-artist-profile', {
                 method: 'POST',
@@ -1445,6 +1490,16 @@
         // Upload Song
         function uploadSong() {
             const form = document.getElementById('uploadSongForm');
+            {% if artist_needs_glc_terms|default(true) %}
+            if (!glcArtistTermsCheckedMd('Upload')) {
+                alert('Scroll through the GLC Media Artist Agreement and accept all required terms.');
+                return;
+            }
+            {% endif %}
+            if (!glcTrackTermsCheckedMd()) {
+                alert('Scroll through the track submission terms and accept all required checkboxes.');
+                return;
+            }
             const formData = new FormData(form);
             
             const submitBtn = document.getElementById('uploadSongBtn');
@@ -1514,10 +1569,10 @@
 
     <!-- Create Artist Profile Modal -->
     <div class="modal fade" id="createArtistModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header ink-music-modal-header border-0">
-                    <h5 class="modal-title"><i class="fas fa-user-plus me-2" aria-hidden="true"></i>Create artist profile</h5>
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2" aria-hidden="true"></i>GLC Media artist registration</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -1537,6 +1592,29 @@
                             <img id="profilePicPreviewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid rgba(42, 61, 50, 0.55);">
                         </div>
                     </div>
+                    <div class="glc-media-terms-section">
+                        {% set terms_scroll_id = 'glcArtistTermsScrollMusicDash' %}
+                        {% set terms_hint_id = 'glcArtistTermsHintMusicDash' %}
+                        {% include '_glc_media_artist_agreement_scroll.html' %}
+                        <div class="glc-media-terms-checks">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-artist-term-cb-md" type="checkbox" id="glcMediaTermsAcceptMusicDash" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaTermsAcceptMusicDash">I accept the GLC Media Artist Agreement.</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-artist-term-cb-md" type="checkbox" id="glcMediaRightsWarrantyMusicDash" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaRightsWarrantyMusicDash">I own or control all rights in music I will submit.</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-artist-term-cb-md" type="checkbox" id="glcMediaPlayLicenseMusicDash" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaPlayLicenseMusicDash">I authorize GLC Media playback and promotion until written withdrawal.</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input glc-artist-term-cb-md" type="checkbox" id="glcMediaLiabilityWaiverMusicDash" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaLiabilityWaiverMusicDash">I accept the copyright liability waiver and indemnification.</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -1550,10 +1628,10 @@
 
     <!-- Upload Song Modal -->
     <div class="modal fade" id="uploadSongModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header ink-music-modal-header border-0">
-                    <h5 class="modal-title"><i class="fas fa-upload me-2" aria-hidden="true"></i>Upload song</h5>
+                    <h5 class="modal-title"><i class="fas fa-upload me-2" aria-hidden="true"></i>Submit track for GLC Media</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -1591,12 +1669,60 @@
                                 <input type="url" class="form-control" id="apple_music" name="apple_music" placeholder="https://music.apple.com/...">
                             </div>
                         </div>
+
+                        {% if artist_needs_glc_terms|default(true) %}
+                        <div class="glc-media-terms-section mt-3 pt-3 border-top">
+                            <p class="small fw-semibold mb-2">Artist agreement (required once)</p>
+                            {% set terms_scroll_id = 'glcArtistTermsScrollUploadMusicDash' %}
+                            {% set terms_hint_id = 'glcArtistTermsHintUploadMusicDash' %}
+                            {% include '_glc_media_artist_agreement_scroll.html' %}
+                            <div class="glc-media-terms-checks mb-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input glc-artist-upload-term-cb-md" type="checkbox" name="glc_media_terms_accept" id="glcMediaTermsAcceptUploadMusicDash" value="on" disabled>
+                                    <label class="form-check-label" for="glcMediaTermsAcceptUploadMusicDash">I accept the GLC Media Artist Agreement.</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input glc-artist-upload-term-cb-md" type="checkbox" name="glc_media_rights_warranty" id="glcMediaRightsWarrantyUploadMusicDash" value="on" disabled>
+                                    <label class="form-check-label" for="glcMediaRightsWarrantyUploadMusicDash">I own or control all rights in music I submit.</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input glc-artist-upload-term-cb-md" type="checkbox" name="glc_media_play_license" id="glcMediaPlayLicenseUploadMusicDash" value="on" disabled>
+                                    <label class="form-check-label" for="glcMediaPlayLicenseUploadMusicDash">I authorize GLC Media playback and promotion until written withdrawal.</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input glc-artist-upload-term-cb-md" type="checkbox" name="glc_media_liability_waiver" id="glcMediaLiabilityWaiverUploadMusicDash" value="on" disabled>
+                                    <label class="form-check-label" for="glcMediaLiabilityWaiverUploadMusicDash">I accept the copyright liability waiver and indemnification.</label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="glc-media-terms-section mt-3 pt-3 border-top">
+                            <p class="small fw-semibold mb-2">This track submission</p>
+                            {% set terms_scroll_id = 'glcTrackTermsScrollMusicDash' %}
+                            {% set terms_hint_id = 'glcTrackTermsHintMusicDash' %}
+                            {% include '_glc_media_track_submission_scroll.html' %}
+                            <div class="glc-media-terms-checks">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input glc-track-term-cb-md" type="checkbox" name="glc_media_track_rights_confirm" id="glcTrackRightsMusicDash" value="on" disabled required>
+                                    <label class="form-check-label" for="glcTrackRightsMusicDash">I confirm rights to submit this track for GLC Media promotion.</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input glc-track-term-cb-md" type="checkbox" name="glc_media_track_play_license" id="glcTrackPlayLicenseMusicDash" value="on" disabled required>
+                                    <label class="form-check-label" for="glcTrackPlayLicenseMusicDash">I authorize GLC Media to play and promote this track until written withdrawal.</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input glc-track-term-cb-md" type="checkbox" name="glc_media_track_liability_waiver" id="glcTrackLiabilityMusicDash" value="on" disabled required>
+                                    <label class="form-check-label" for="glcTrackLiabilityMusicDash">I accept liability waiver and indemnification for this track.</label>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="uploadSongBtn" onclick="uploadSong()">
-                        <i class="fas fa-upload me-1" aria-hidden="true"></i>Upload song
+                        <i class="fas fa-broadcast-tower me-1" aria-hidden="true"></i>Submit for GLC Media
                     </button>
                 </div>
             </div>

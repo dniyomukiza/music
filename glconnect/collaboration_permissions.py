@@ -77,6 +77,22 @@ def collaboration_can_view(collaboration: Optional[BookCollaboration]) -> bool:
     return collaboration.role in MANAGEABLE_COLLAB_ROLES | {CollaborationRole.AUTHOR}
 
 
+def collaboration_can_comment(collaboration: Optional[BookCollaboration]) -> bool:
+    if not collaboration or not collaboration.is_active:
+        return False
+    if not collaboration_can_view(collaboration):
+        return False
+    perms = collaboration.permissions or {}
+    if "can_comment" in perms:
+        return bool(perms.get("can_comment"))
+    return collaboration.role in {
+        CollaborationRole.EDITOR,
+        CollaborationRole.REVIEWER,
+        CollaborationRole.CO_AUTHOR,
+        CollaborationRole.AUTHOR,
+    }
+
+
 def apply_role_to_collaboration(collaboration: BookCollaboration, role: CollaborationRole) -> None:
     collaboration.role = role
     collaboration.permissions = permissions_for_role(role)

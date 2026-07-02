@@ -4,6 +4,11 @@ import json
 from mailtrap import MailtrapClient, Mail, Address
 from glconnect.forms import *
 from glconnect.models import*
+from glconnect.account_terms import (
+    account_terms_context,
+    record_account_terms_acceptance,
+    validate_account_signup_terms,
+)
 from werkzeug.security import check_password_hash
 from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g,jsonify
 from itsdangerous import URLSafeTimedSerializer
@@ -121,63 +126,68 @@ def register():
     )
     sync_auth_entry_marketplace_from_next(raw_next)
 
-    if form.validate_on_submit():
-        new_user_username = form.username.data
-        new_user_password = form.password.data
-        new_user_email = form.email.data
-        new_user_fname = form.fname.data
-        new_user_lname = form.lname.data
-        new_user_role = form.role.data
+    if request.method == 'POST':
+        terms_err = validate_account_signup_terms(request.form)
+        if terms_err:
+            flash(terms_err, 'error')
+        elif form.validate_on_submit():
+            new_user_username = form.username.data
+            new_user_password = form.password.data
+            new_user_email = form.email.data
+            new_user_fname = form.fname.data
+            new_user_lname = form.lname.data
+            new_user_role = form.role.data
 
-        # Validate username and password
-        if len(new_user_username) < 5:
-            flash("Username must be at least 5 characters with one uppercase letter and a digit.", 'error')
-        elif len(new_user_password) < 8 \
-            or not re.search(r"[A-Z]", new_user_password) \
-            or not re.search(r"[^\w\s]", new_user_password):
-            flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
+            # Validate username and password
+            if len(new_user_username) < 5:
+                flash("Username must be at least 5 characters with one uppercase letter and a digit.", 'error')
+            elif len(new_user_password) < 8 \
+                or not re.search(r"[A-Z]", new_user_password) \
+                or not re.search(r"[^\w\s]", new_user_password):
+                flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
 
-        else:
-            # Create user without confirmation
-            new_user = User(
-                username=new_user_username,
-                email=new_user_email,
-                first_name=new_user_fname,
-                last_name=new_user_lname,
-                confirmed=False,
-                role=new_user_role
-            )
-            new_user.set_password(new_user_password)
-
-            try:
-                db.session.add(new_user)
-                db.session.commit()
-
-                # Generate email confirmation token
-                s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-                token = s.dumps(new_user.email, salt='email-confirm')
-                confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
-
-                # Send confirmation email (Mailtrap; configured via env / glconfig at app startup)
-                if not send_confirmation_email(new_user.email, confirm_url):
-                    flash(
-                        "Your account was created, but we couldn’t send the confirmation email. "
-                        "Please try again in a little while or contact support if this keeps happening.",
-                        "error",
-                    )
-
-                nxt = safe_post_auth_next(
-                    request.args.get("next") or request.form.get("next")
+            else:
+                # Create user without confirmation
+                new_user = User(
+                    username=new_user_username,
+                    email=new_user_email,
+                    first_name=new_user_fname,
+                    last_name=new_user_lname,
+                    confirmed=False,
+                    role=new_user_role
                 )
-                if nxt:
-                    session["post_confirm_next"] = nxt
+                new_user.set_password(new_user_password)
+                record_account_terms_acceptance(new_user)
 
-                # Redirect to a page telling the user to check their email
-                return redirect(url_for('routes1.check_email'))
+                try:
+                    db.session.add(new_user)
+                    db.session.commit()
 
-            except Exception as e:
-                db.session.rollback()
-                flash("An error occurred while creating your account. Please try again.", 'error')
+                    # Generate email confirmation token
+                    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+                    token = s.dumps(new_user.email, salt='email-confirm')
+                    confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
+
+                    # Send confirmation email (Mailtrap; configured via env / glconfig at app startup)
+                    if not send_confirmation_email(new_user.email, confirm_url):
+                        flash(
+                            "Your account was created, but we couldn’t send the confirmation email. "
+                            "Please try again in a little while or contact support if this keeps happening.",
+                            "error",
+                        )
+
+                    nxt = safe_post_auth_next(
+                        request.args.get("next") or request.form.get("next")
+                    )
+                    if nxt:
+                        session["post_confirm_next"] = nxt
+
+                    # Redirect to a page telling the user to check their email
+                    return redirect(url_for('routes1.check_email'))
+
+                except Exception as e:
+                    db.session.rollback()
+                    flash("An error occurred while creating your account. Please try again.", 'error')
 
     register_next = safe_post_auth_next(
         request.form.get("next") or request.args.get("next")
@@ -187,6 +197,7 @@ def register():
         title="Register",
         form=form,
         register_next=register_next,
+        **account_terms_context(),
     )
 
 def send_confirmation_email(to_email, confirm_url):

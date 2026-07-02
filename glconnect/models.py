@@ -19,6 +19,8 @@ class Song(db.Model):
     cover_image = db.Column(db.String(200), nullable=True)
     # Admin approval for artist uploads: 'pending', 'approved', 'rejected'. Default 'approved' for pipeline/legacy.
     approval_status = db.Column(db.String(20), default='approved', nullable=True)
+    glc_media_submission_version = db.Column(db.String(20), nullable=True)
+    glc_media_submission_accepted_at = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (
         db.Index('idx_song_name', 'name'),
@@ -146,6 +148,8 @@ class PodcastSubmission(db.Model):
     rejection_reason = db.Column(db.Text, nullable=True)  # Reason if rejected
     category = db.Column(db.String(100), nullable=True)  # e.g., News, Entertainment, Education
     language = db.Column(db.String(50), nullable=True, default='en')
+    glc_media_submission_version = db.Column(db.String(20), nullable=True)
+    glc_media_submission_accepted_at = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     user = db.relationship('User', foreign_keys=[user_id], backref='podcast_submissions')
@@ -169,7 +173,11 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), nullable=False)
     password = db.Column(db.String(255), nullable=False)
     confirmed = db.Column(db.Boolean, default=False)
-    role = db.Column(db.String(50), nullable=False, default='other') 
+    role = db.Column(db.String(50), nullable=False, default='other')
+    account_terms_version = db.Column(db.String(20), nullable=True)
+    account_terms_accepted_at = db.Column(db.DateTime, nullable=True)
+    glc_media_podcaster_terms_version = db.Column(db.String(20), nullable=True)
+    glc_media_podcaster_terms_accepted_at = db.Column(db.DateTime, nullable=True)
     posts = db.relationship('Post', backref='author', lazy=True, foreign_keys='Post.user_id')
 
 
@@ -245,6 +253,8 @@ class Artist(db.Model):
     artist_name = db.Column(db.String(100), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     profile_pic= db.Column(db.String(200), nullable=True, default="static/uploads/default.jpg")
+    glc_media_terms_version = db.Column(db.String(20), nullable=True)
+    glc_media_terms_accepted_at = db.Column(db.DateTime, nullable=True)
     user = db.relationship("User", backref=db.backref("artist_profile", uselist=False))
 
     def __repr__(self):
@@ -293,6 +303,8 @@ class Song_upload(db.Model):
     apple_music_link = db.Column(db.String(255), nullable=True)
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.artist_id'), nullable=True)
     approval_status = db.Column(db.String(20), default='approved', nullable=True)  # pending, approved, rejected
+    glc_media_submission_version = db.Column(db.String(20), nullable=True)
+    glc_media_submission_accepted_at = db.Column(db.DateTime, nullable=True)
     artist = db.relationship('Artist', backref='songs')
 
 class PictureGameItem(db.Model):

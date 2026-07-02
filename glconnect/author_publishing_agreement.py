@@ -5,10 +5,10 @@ from typing import Any, Optional, Tuple
 
 
 # Bump when account level agreement text changes materially; authors must re-accept.
-AUTHOR_PUBLISHING_AGREEMENT_VERSION = "1.0"
+AUTHOR_PUBLISHING_AGREEMENT_VERSION = "1.1"
 
 # Bump when per-listing attestation text changes materially.
-LISTING_ATTESTATION_VERSION = "1.0"
+LISTING_ATTESTATION_VERSION = "1.1"
 
 
 def _as_bool(v: Any) -> bool:
@@ -55,10 +55,16 @@ def validate_listing_terms_payload(payload: Any) -> Optional[str]:
         payload = {}
     rights_ok = _as_bool(payload.get("listing_terms_rights_warranty"))
     takedown_ok = _as_bool(payload.get("listing_terms_takedown_consent"))
+    ai_ok = _as_bool(payload.get("listing_ai_rights_confirm"))
     if not rights_ok:
         return "Please confirm you own (or licensed) rights to list and sell this work."
     if not takedown_ok:
         return "Please consent to immediate unlisting on credible infringement claims."
+    if not ai_ok:
+        return (
+            "Please confirm your responsibility for AI-assisted content, including "
+            "commercial rights to any AI-generated cover or edited text you list."
+        )
     return None
 
 

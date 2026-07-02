@@ -8,22 +8,24 @@
     <p class="mb-2 fw-semibold">Listing attestation (v{{ listing_attestation_version|default('1.0') }}), this title</p>
     <p class="mb-2 small text-muted">Accept once per book. The same attestation covers <strong>ebook</strong>, <strong>audiobook</strong>, and <strong>print</strong> on this title.</p>
 
-    <p class="mb-2"><strong>Platform role.</strong> Ndotonic (and its book platform) is a <strong>host and marketplace</strong> only. We do not create, edit, or legally review your manuscript, cover, audiobook, or other materials. We do not guarantee that any listing is non infringing or lawful.</p>
+    <p class="mb-2"><strong>Platform role.</strong> Ndotonic (and its book platform) is a <strong>host and marketplace</strong> only. We do not create, edit, legally review, or certify your manuscript, cover, audiobook, or other materials for this title. We do not guarantee that any listing is non-infringing, lawful, or suitable for any audience.</p>
 
-    <p class="mb-2"><strong>Your responsibility.</strong> By listing <em>this title</em>, you are solely responsible for your work and for obtaining all rights and permissions needed to publish, sell, and promote it (including text, cover art, images, audio, and metadata). You represent that this listing does not infringe anyone else’s copyright, trademark, trade secret, privacy, publicity, or other rights.</p>
+    <p class="mb-2"><strong>Your responsibility for this title.</strong> By listing <em>this title</em>, you are solely responsible for your work and for obtaining all rights and permissions needed to publish, sell, distribute, and promote it (including text, cover art, images, audio, and metadata). You represent that this listing does not infringe anyone else’s copyright, trademark, trade secret, privacy, publicity, or other rights, and that you have reviewed all content (including any AI-assisted content) before publication.</p>
 
-    <p class="mb-2"><strong>AI generated or AI assisted content.</strong> If you use platform tools to generate or assist content, including <strong>AI cover art</strong>, interior text, or narration, you alone are responsible for (a) having the right to use and commercialize that output, (b) compliance with applicable AI and copyright laws, and (c) any claim that the output copies or misuses another person’s work. Ndotonic does not warrant that AI outputs are original, accurate, or free of third party rights.</p>
+    {% include 'book_platform/_author_ai_tools_terms.html' %}
 
-    <p class="mb-2"><strong>No platform liability.</strong> To the fullest extent permitted by applicable law, Ndotonic and its directors, officers, employees, and agents shall <strong>not be liable</strong> for any claim, loss, or damage arising from your content, your use of AI tools, alleged infringement by this listing, or disputes between you and third parties, including reasonable attorneys’ fees, except where liability cannot be limited by law.</p>
+    <p class="mb-2"><strong>Release and assumption of risk.</strong> You knowingly use AI and publishing tools at your own risk. You release Ndotonic from claims arising from your decision to list AI-assisted or AI-generated elements of this title, to the fullest extent permitted by law.</p>
 
-    <p class="mb-2"><strong>Indemnification.</strong> To the fullest extent permitted by law, you agree to <strong>defend, indemnify, and hold harmless</strong> Ndotonic from claims, damages, and costs (including attorneys’ fees) arising from this title, your breach of these terms, or any rights violation connected to this listing.</p>
+    <p class="mb-2"><strong>Limitation of liability (this title).</strong> To the fullest extent permitted by applicable law, Ndotonic shall not be liable for any claim, loss, or damage arising from this title, your use of AI tools for this title, alleged infringement by this listing, or disputes between you and third parties, including reasonable attorneys’ fees, except where liability cannot be limited by law.</p>
 
-    <p class="mb-2"><strong>Takedown.</strong> If we receive a credible claim that this listing infringes third party rights or violates law, you agree it may be removed or restricted promptly while reviewed, without payment to you for that period.</p>
+    <p class="mb-2"><strong>Indemnification (this title).</strong> You agree to defend, indemnify, and hold harmless Ndotonic from claims, damages, and costs (including attorneys’ fees) arising from this title, your breach of these terms, your use of AI tools for this title, or any rights violation connected to this listing.</p>
 
-    <p class="mb-2"><strong>Accuracy.</strong> You are responsible for accurate titles, descriptions, categories, and pricing for this book. The platform may refuse, suspend, or remove listings that appear misleading, unsafe, or non compliant.</p>
+    <p class="mb-2"><strong>Takedown.</strong> If we receive a credible claim that this listing infringes third-party rights, misuses AI output, or violates law, you agree it may be removed or restricted promptly while reviewed, without payment to you for that period.</p>
+
+    <p class="mb-2"><strong>Accuracy.</strong> You are responsible for accurate titles, descriptions, categories, and pricing for this book. The platform may refuse, suspend, or remove listings that appear misleading, unsafe, or non-compliant.</p>
 
     {% include 'book_platform/_author_agreement_format_addenda.html' %}
 
-    <p class="mb-0">The checkboxes below restate key points you are confirming for <strong>this title</strong>. Your account level Author Publishing Agreement also applies.</p>
+    <p class="mb-0">The checkboxes below restate key points you are confirming for <strong>this title</strong>. Your account-level Author Publishing Agreement also applies.</p>
 </div>
 <p class="small text-muted mb-3" id="{{ terms_hint_id }}">Scroll through the attestation above to enable the checkboxes below.</p>

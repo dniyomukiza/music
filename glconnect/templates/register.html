@@ -8,7 +8,7 @@
 
 {% block salutation %}
 <div class="auth-page-shell">
-    <div class="auth-card">
+    <div class="auth-card auth-card--register">
         {% include 'messages.html' %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -24,7 +24,7 @@
         <h2>Create account</h2>
         <p class="auth-lead">Pitch, publish, and connect with readers and creators.</p>
 
-        <form method="POST" action="" class="auth-form">
+        <form method="POST" action="" class="auth-form" id="registerForm">
             {{ form.hidden_tag() }}
             {% if register_next %}
             <input type="hidden" name="next" value="{{ register_next }}">
@@ -66,11 +66,38 @@
                     <option value="other">Other</option>
                 </select>
             </div>
+
+            <div class="auth-field auth-field--terms">
+                {% set terms_scroll_id = 'accountTermsScrollRegister' %}
+                {% set terms_hint_id = 'accountTermsScrollHintRegister' %}
+                {% include '_account_signup_terms_scroll.html' %}
+                <div class="auth-terms-checks text-start">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="account_terms_accept" id="accountTermsAccept" value="on" disabled required>
+                        <label class="form-check-label small" for="accountTermsAccept">
+                            I accept the Account Terms of Service (v{{ account_terms_version|default('1.0') }}).
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="account_privacy_ack" id="accountPrivacyAck" value="on" disabled required>
+                        <label class="form-check-label small" for="accountPrivacyAck">
+                            I acknowledge the Privacy Policy and how my data may be processed and displayed.
+                        </label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="account_age_confirm" id="accountAgeConfirm" value="on" disabled required>
+                        <label class="form-check-label small" for="accountAgeConfirm">
+                            I am at least 18 years old, or the age of majority where I live.
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div class="auth-field auth-field--recap">
                 {{ form.recap }}
             </div>
             <div class="auth-field auth-field--submit">
-                <input type="submit" value="Create account" class="btn auth-submit">
+                <input type="submit" value="Create account" class="btn auth-submit" id="registerSubmitBtn">
             </div>
         </form>
 
@@ -90,17 +117,40 @@
 <script>
 (function () {
     var btn = document.querySelector('.auth-password-toggle');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-        var input = document.getElementById(btn.getAttribute('data-target'));
-        if (!input) return;
-        var show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
-        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-        var icon = btn.querySelector('i');
-        if (icon) icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
-    });
+    if (btn) {
+        btn.addEventListener('click', function () {
+            var input = document.getElementById(btn.getAttribute('data-target'));
+            if (!input) return;
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+            btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            var icon = btn.querySelector('i');
+            if (icon) icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+        });
+    }
+
+    var scrollEl = document.getElementById('accountTermsScrollRegister');
+    var hintEl = document.getElementById('accountTermsScrollHintRegister');
+    var termBoxes = ['accountTermsAccept', 'accountPrivacyAck', 'accountAgeConfirm']
+        .map(function (id) { return document.getElementById(id); })
+        .filter(Boolean);
+
+    function updateAccountTermsScrollGate() {
+        if (!scrollEl) return;
+        var needs = scrollEl.scrollHeight > scrollEl.clientHeight + 8;
+        var atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
+        termBoxes.forEach(function (cb) { cb.disabled = !atBottom; });
+        if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+    }
+
+    if (scrollEl) {
+        scrollEl.addEventListener('scroll', updateAccountTermsScrollGate);
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(updateAccountTermsScrollGate).observe(scrollEl);
+        }
+        updateAccountTermsScrollGate();
+    }
 })();
 </script>
 {% endblock %}

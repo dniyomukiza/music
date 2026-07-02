@@ -1,0 +1,111 @@
+{# GLC Media podcast upload terms — include on upload_podcast / edit_podcast #}
+{# expects: podcaster_needs_glc_terms, glc_media_* version vars; optional: terms_id_suffix (default '') #}
+{% set _suffix = terms_id_suffix|default('') %}
+
+<style>
+    .glc-media-terms-scrollbox {
+        max-height: 200px;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(201, 162, 39, 0.25) !important;
+        color: #cbd5e1;
+    }
+    .glc-media-terms-scrollbox strong,
+    .glc-media-terms-scrollbox .fw-semibold { color: #e8ece9; }
+    .glc-media-terms-checks .form-check-label { font-size: 0.9rem; line-height: 1.45; }
+    .glc-media-terms-checks .form-check-input:disabled + .form-check-label { opacity: 0.55; }
+</style>
+
+{% if podcaster_needs_glc_terms|default(true) %}
+<div class="glc-media-terms-section mb-4 pt-3 border-top">
+    <p class="small fw-semibold mb-2">GLC Media podcaster agreement (required once)</p>
+    {% set terms_scroll_id = 'glcPodcasterTermsScroll' ~ _suffix %}
+    {% set terms_hint_id = 'glcPodcasterTermsHint' ~ _suffix %}
+    {% include '_glc_media_podcaster_agreement_scroll.html' %}
+    <div class="glc-media-terms-checks">
+        <div class="form-check mb-2">
+            <input class="form-check-input glc-podcaster-term-cb{{ _suffix }}" type="checkbox" name="glc_media_terms_accept" id="glcMediaTermsAccept{{ _suffix }}" value="on" disabled>
+            <label class="form-check-label" for="glcMediaTermsAccept{{ _suffix }}">I accept the GLC Media Podcaster Agreement.</label>
+        </div>
+        <div class="form-check mb-2">
+            <input class="form-check-input glc-podcaster-term-cb{{ _suffix }}" type="checkbox" name="glc_media_rights_warranty" id="glcMediaRightsWarranty{{ _suffix }}" value="on" disabled>
+            <label class="form-check-label" for="glcMediaRightsWarranty{{ _suffix }}">I own or control all rights in podcast content I submit.</label>
+        </div>
+        <div class="form-check mb-2">
+            <input class="form-check-input glc-podcaster-term-cb{{ _suffix }}" type="checkbox" name="glc_media_play_license" id="glcMediaPlayLicense{{ _suffix }}" value="on" disabled>
+            <label class="form-check-label" for="glcMediaPlayLicense{{ _suffix }}">I authorize GLC Media to play and promote my episodes until written withdrawal.</label>
+        </div>
+        <div class="form-check mb-0">
+            <input class="form-check-input glc-podcaster-term-cb{{ _suffix }}" type="checkbox" name="glc_media_liability_waiver" id="glcMediaLiabilityWaiver{{ _suffix }}" value="on" disabled>
+            <label class="form-check-label" for="glcMediaLiabilityWaiver{{ _suffix }}">I accept the copyright liability waiver and indemnification.</label>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="glc-media-terms-section mb-4 pt-3 border-top" id="glcEpisodeTermsSection{{ _suffix }}">
+    <p class="small fw-semibold mb-2">This episode submission</p>
+    {% set terms_scroll_id = 'glcEpisodeTermsScroll' ~ _suffix %}
+    {% set terms_hint_id = 'glcEpisodeTermsHint' ~ _suffix %}
+    {% include '_glc_media_podcast_submission_scroll.html' %}
+    <div class="glc-media-terms-checks">
+        <div class="form-check mb-2">
+            <input class="form-check-input glc-episode-term-cb{{ _suffix }}" type="checkbox" name="glc_media_episode_rights_confirm" id="glcEpisodeRights{{ _suffix }}" value="on" disabled required>
+            <label class="form-check-label" for="glcEpisodeRights{{ _suffix }}">I confirm rights to submit this episode for GLC Media promotion.</label>
+        </div>
+        <div class="form-check mb-2">
+            <input class="form-check-input glc-episode-term-cb{{ _suffix }}" type="checkbox" name="glc_media_episode_play_license" id="glcEpisodePlayLicense{{ _suffix }}" value="on" disabled required>
+            <label class="form-check-label" for="glcEpisodePlayLicense{{ _suffix }}">I authorize GLC Media to play and promote this episode until written withdrawal.</label>
+        </div>
+        <div class="form-check mb-0">
+            <input class="form-check-input glc-episode-term-cb{{ _suffix }}" type="checkbox" name="glc_media_episode_liability_waiver" id="glcEpisodeLiability{{ _suffix }}" value="on" disabled required>
+            <label class="form-check-label" for="glcEpisodeLiability{{ _suffix }}">I accept liability waiver and indemnification for this episode.</label>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var suffix = {{ _suffix|tojson }};
+    function gate(scrollId, hintId, selector) {
+        var scrollEl = document.getElementById(scrollId);
+        if (!scrollEl) return;
+        var hintEl = hintId ? document.getElementById(hintId) : null;
+        var section = scrollEl.closest('.glc-media-terms-section') || scrollEl.parentElement;
+        function update() {
+            var boxes = section ? section.querySelectorAll(selector) : [];
+            var needs = scrollEl.scrollHeight > scrollEl.clientHeight + 8;
+            var atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
+            boxes.forEach(function (cb) {
+                cb.disabled = !atBottom;
+                if (!atBottom) cb.checked = false;
+            });
+            if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+        }
+        scrollEl.addEventListener('scroll', update);
+        if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(scrollEl);
+        update();
+    }
+    gate('glcPodcasterTermsScroll' + suffix, 'glcPodcasterTermsHint' + suffix, '.glc-podcaster-term-cb' + suffix);
+    gate('glcEpisodeTermsScroll' + suffix, 'glcEpisodeTermsHint' + suffix, '.glc-episode-term-cb' + suffix);
+
+    window.glcPodcastTermsValidate = window.glcPodcastTermsValidate || {};
+    window.glcPodcastTermsValidate[suffix || 'default'] = function (requireEpisode) {
+        if (requireEpisode === undefined) requireEpisode = true;
+        {% if podcaster_needs_glc_terms|default(true) %}
+        var podcasterOk = ['glcMediaTermsAccept', 'glcMediaRightsWarranty', 'glcMediaPlayLicense', 'glcMediaLiabilityWaiver'].every(function (id) {
+            var el = document.getElementById(id + suffix);
+            return el && el.checked;
+        });
+        if (!podcasterOk) return 'Scroll through the GLC Media Podcaster Agreement and accept all required terms.';
+        {% endif %}
+        if (!requireEpisode) return null;
+        var episodeOk = ['glcEpisodeRights', 'glcEpisodePlayLicense', 'glcEpisodeLiability'].every(function (id) {
+            var el = document.getElementById(id + suffix);
+            return el && el.checked;
+        });
+        if (!episodeOk) return 'Scroll through the episode submission terms and accept all required checkboxes.';
+        return null;
+    };
+})();
+</script>

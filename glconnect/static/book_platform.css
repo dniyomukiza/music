@@ -4204,6 +4204,24 @@ body.ink-books-ui .form-check-label strong {
     color: #0f172a !important;
 }
 
+.glc-media-terms-scrollbox {
+    max-height: 200px;
+    overflow-y: auto;
+    background: rgba(12, 15, 14, 0.75) !important;
+    border-color: rgba(15, 23, 42, 0.14) !important;
+    color: #cbd5e1 !important;
+}
+
+.glc-media-terms-scrollbox p,
+.glc-media-terms-scrollbox strong,
+.glc-media-terms-scrollbox .fw-semibold {
+    color: #cbd5e1 !important;
+}
+
+.glc-media-terms-scrollbox strong {
+    color: #f1f5f9 !important;
+}
+
 body.ink-books-ui .listing-terms-section {
     background: #eef2f6 !important;
     border-color: rgba(15, 23, 42, 0.12) !important;

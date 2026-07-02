@@ -76,6 +76,86 @@ def print_listed(book: Any) -> bool:
     )
 
 
+def _audiobook_listed(book: Any) -> bool:
+    return bool(
+        book
+        and getattr(book, "audiobook_published", False)
+        and getattr(book, "has_audiobook", False)
+    )
+
+
+def marketplace_listed_format_amounts(book: Any) -> List[float]:
+    """
+    Explicit list prices for each marketplace format (0.0 = author set free).
+    Formats with unset price (None) are omitted — unset is not free.
+    Print is included only when print_listed (price > 0).
+    """
+    amounts: List[float] = []
+    if ebook_listed(book):
+        digital_price = getattr(book, "price", None)
+        if digital_price is not None:
+            amounts.append(float(digital_price))
+    if _audiobook_listed(book):
+        audio_price = getattr(book, "audiobook_price", None)
+        if audio_price is not None:
+            amounts.append(float(audio_price))
+    if print_listed(book):
+        amounts.append(float(getattr(book, "print_price", None) or 0))
+    return amounts
+
+
+def marketplace_is_explicitly_free(book: Any) -> bool:
+    """True only when every listed format with a set price is exactly 0."""
+    amounts = marketplace_listed_format_amounts(book)
+    return bool(amounts) and all(a == 0 for a in amounts)
+
+
+def marketplace_min_paid_price(book: Any) -> float | None:
+    paid = [a for a in marketplace_listed_format_amounts(book) if a > 0]
+    return min(paid) if paid else None
+
+
+def marketplace_card_price_label(book: Any) -> str:
+    """
+    Short label for marketplace cards.
+    Never shows Free unless the author explicitly set all listed format prices to 0.
+    """
+    amounts = marketplace_listed_format_amounts(book)
+    paid = [a for a in amounts if a > 0]
+    if paid:
+        low = min(paid)
+        free_formats = [a for a in amounts if a == 0]
+        if len(paid) > 1 or free_formats:
+            return f"From ${low:.2f}"
+        return f"${low:.2f}"
+    if amounts and all(a == 0 for a in amounts):
+        return "Free"
+    return ""
+
+
+def _marketplace_stats_row_as_book(row: Any) -> Any:
+    """Adapt a slim SQLAlchemy row for marketplace pricing helpers."""
+
+    class _RowBook:
+        pass
+
+    book = _RowBook()
+    for attr in (
+        "price",
+        "digital_book_published",
+        "digital_file_path",
+        "audiobook_published",
+        "has_audiobook",
+        "audiobook_price",
+        "print_enabled",
+        "print_price",
+        "status",
+    ):
+        setattr(book, attr, getattr(row, attr, None))
+    book.chapters = None
+    return book
+
+
 def ebook_listed(book: Any) -> bool:
     """True when digital ebook is offered on the marketplace (not merely price unset)."""
     if not book:
