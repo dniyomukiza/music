@@ -16,19 +16,10 @@ def get_database_uri():
     """Get database URI from environment or config"""
     db_uri = os.getenv('DATABASE_URL') or os.getenv('DB_URL')
     if db_uri:
-        return db_uri
-    
-    # Fallback to the database URL from docker-compose.yml
-    db_uri = 'postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr'
-    
-    try:
-        engine = create_engine(db_uri)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return db_uri
-    except Exception as e:
-        print(f"Failed to connect to database: {e}")
-        return None
+        return db_uri.strip()
+
+    print("Set DATABASE_URL or DB_URL before running this script.")
+    return None
 
 def create_indexes():
     """Create database indexes for optimal performance"""

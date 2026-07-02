@@ -10,8 +10,10 @@ except ImportError:
 
 # Load configuration from environment variables
 config = {
-    "DB_URL": os.getenv("DB_URL", "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr")
+    "DB_URL": (os.getenv("DB_URL") or os.getenv("DATABASE_URL") or "").strip()
 }
+if not config["DB_URL"]:
+    raise RuntimeError("DB_URL or DATABASE_URL is required.")
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config.get('DB_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
