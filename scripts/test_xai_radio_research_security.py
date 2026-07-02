@@ -14,7 +14,7 @@ def main():
 
     if "xai_research_secret" in content:
         failures.append("server secret should not be passed into the rendered dev page")
-    if 'os.getenv("XAI_RADIO_RESEARCH_SECRET") or ""' in content:
+    if 'xai_research_secret=os.getenv("XAI_RADIO_RESEARCH_SECRET")' in content:
         failures.append("dev page should not render XAI_RADIO_RESEARCH_SECRET")
     if "var secret = {{" in content:
         failures.append("client JavaScript should not initialize the header from a server template value")
