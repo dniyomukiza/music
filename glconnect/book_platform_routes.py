@@ -6910,8 +6910,6 @@ def stripe_connect_onboard_return():
 @book_bp.route('/stripe/webhook', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhook events for payment confirmations"""
-    import json
-    
     try:
         # Try to import stripe (optional dependency)
         try:
@@ -6924,18 +6922,18 @@ def stripe_webhook():
         # Get webhook secret from config
         webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
         if not webhook_secret:
-            logger.warning("STRIPE_WEBHOOK_SECRET not configured - webhook verification skipped")
+            logger.warning("STRIPE_WEBHOOK_SECRET not configured - webhook verification unavailable")
         
         payload = request.get_data()
         sig_header = request.headers.get('Stripe-Signature')
         
-        # Production: never accept unsigned webhooks
-        if not current_app.debug and (not webhook_secret or not stripe_available or not sig_header):
-            logger.error("Stripe webhook rejected: signature verification required in production")
+        # Stripe webhooks must always be signed; accepting raw JSON lets attackers forge payments.
+        if not webhook_secret or not stripe_available or not sig_header:
+            logger.error("Stripe webhook rejected: signature verification required")
             _debug_patron_log(
                 "H1",
                 "book_platform_routes.py:stripe_webhook",
-                "webhook rejected in production",
+                "webhook rejected without verification",
                 {
                     "has_webhook_secret": bool(webhook_secret),
                     "stripe_available": stripe_available,
@@ -6945,21 +6943,16 @@ def stripe_webhook():
             )
             return jsonify({'error': 'Webhook verification required'}), 503
         
-        # Verify webhook signature (if secret is configured and stripe is available)
-        if webhook_secret and sig_header and stripe_available:
-            try:
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, webhook_secret
-                )
-            except ValueError:
-                logger.error("Invalid payload in Stripe webhook")
-                return jsonify({'error': 'Invalid payload'}), 400
-            except stripe.error.SignatureVerificationError:
-                logger.error("Invalid signature in Stripe webhook")
-                return jsonify({'error': 'Invalid signature'}), 400
-        else:
-            # Development only: parse JSON without verification when DEBUG is on
-            event = json.loads(payload)
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, webhook_secret
+            )
+        except ValueError:
+            logger.error("Invalid payload in Stripe webhook")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError:
+            logger.error("Invalid signature in Stripe webhook")
+            return jsonify({'error': 'Invalid signature'}), 400
         
         _debug_patron_log(
             "H1",
