@@ -14,7 +14,7 @@ def _read(relative_path):
 
 def main():
     failures = []
-    exposed_secret = "abarayon"
+    exposed_secret = "".join(("abara", "yon"))
 
     for relative_path in ("glconnect/__init__.py", "glconnect/pipeline.py"):
         content = _read(relative_path)
