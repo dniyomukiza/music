@@ -8913,7 +8913,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
                 title=form.title.data,
                 description=sanitize_project_description(form.description.data, book_id=book_id),
                 tentative_timeline=form.tentative_timeline.data or None,
-                pitch_video_url=form.pitch_video_url.data,
+                pitch_video_url=normalize_video_embed_url(form.pitch_video_url.data),
                 funding_goal=form.funding_goal.data,
                 minimum_investment=0.01,
                 maximum_investment=None,
@@ -8992,11 +8992,7 @@ def edit_campaign_project(campaign_id, user_profile, profile_type):
             )
             campaign.tentative_timeline = (form.tentative_timeline.data or '').strip() or None
             pitch_url = (form.pitch_video_url.data or '').strip() or None
-            if pitch_url:
-                embed = normalize_video_embed_url(pitch_url)
-                campaign.pitch_video_url = embed or pitch_url
-            else:
-                campaign.pitch_video_url = None
+            campaign.pitch_video_url = normalize_video_embed_url(pitch_url) if pitch_url else None
             db.session.commit()
             flash('Project updated. Preview your campaign page before sharing.', 'success')
             return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id, preview=1))
