@@ -386,6 +386,8 @@ def create_app(config_overrides=None):
 
     # Add hasattr to Jinja2 globals for use in templates
     app.jinja_env.globals['hasattr'] = hasattr
+    from .music_live_auth import generate_music_live_ws_token
+    app.jinja_env.globals['music_live_ws_token'] = generate_music_live_ws_token
 
     # CKEditor configuration
     ckeditor = CKEditor() 
