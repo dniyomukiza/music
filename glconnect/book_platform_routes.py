@@ -822,6 +822,8 @@ _DEBUG_LOG_PATH = os.path.join(
 
 def _debug_patron_log(hypothesis_id, location, message, data=None, run_id="pre-fix"):
     # #region agent log
+    if os.getenv("DEBUG_AGENT_LOG", "").strip().lower() not in ("1", "true", "yes", "on"):
+        return
     try:
         with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as fh:
             fh.write(json.dumps({

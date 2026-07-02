@@ -23,6 +23,8 @@ _DEBUG_LOG_PATH = os.path.join(
 
 def _agent_debug_log(hypothesis_id: str, message: str, data: dict | None = None) -> None:
     # #region agent log
+    if not _env_truthy("DEBUG_AGENT_LOG"):
+        return
     try:
         payload = {
             "sessionId": "fe2ff6",

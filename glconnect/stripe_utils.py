@@ -330,33 +330,34 @@ def purchase_checkout_unavailable_response(
             "details": details,
         }
         # #region agent log
-        try:
-            import json as _json
-            import os as _os
-            from datetime import datetime, timezone as _tz
-            _log_path = _os.path.join(
-                _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
-                ".cursor",
-                "debug-fe2ff6.log",
-            )
-            with open(_log_path, "a", encoding="utf-8") as _fh:
-                _fh.write(_json.dumps({
-                    "sessionId": "fe2ff6",
-                    "runId": "pre-fix",
-                    "hypothesisId": "H1,H2,H4,H5",
-                    "location": "stripe_utils.py:purchase_checkout_unavailable_response",
-                    "message": "checkout unavailable response",
-                    "data": {
-                        "error_code": payload["error_code"],
-                        "operator_error_code": details.get("operator_error_code"),
-                        "stripe_message": (details.get("message") or "")[:300],
-                        "connect_account_set": bool((stripe_connect_account_id or "").strip()),
-                        "stripe_configured": stripe_secret_configured(app),
-                    },
-                    "timestamp": int(datetime.now(_tz.utc).timestamp() * 1000),
-                }, default=str) + "\n")
-        except Exception:
-            pass
+        if os.getenv("DEBUG_AGENT_LOG", "").strip().lower() in ("1", "true", "yes", "on"):
+            try:
+                import json as _json
+                import os as _os
+                from datetime import datetime, timezone as _tz
+                _log_path = _os.path.join(
+                    _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+                    ".cursor",
+                    "debug-fe2ff6.log",
+                )
+                with open(_log_path, "a", encoding="utf-8") as _fh:
+                    _fh.write(_json.dumps({
+                        "sessionId": "fe2ff6",
+                        "runId": "pre-fix",
+                        "hypothesisId": "H1,H2,H4,H5",
+                        "location": "stripe_utils.py:purchase_checkout_unavailable_response",
+                        "message": "checkout unavailable response",
+                        "data": {
+                            "error_code": payload["error_code"],
+                            "operator_error_code": details.get("operator_error_code"),
+                            "stripe_message": (details.get("message") or "")[:300],
+                            "connect_account_set": bool((stripe_connect_account_id or "").strip()),
+                            "stripe_configured": stripe_secret_configured(app),
+                        },
+                        "timestamp": int(datetime.now(_tz.utc).timestamp() * 1000),
+                    }, default=str) + "\n")
+            except Exception:
+                pass
         # #endregion
         if details.get("hint"):
             payload["hint"] = details["hint"]

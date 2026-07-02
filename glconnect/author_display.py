@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Any, Optional
 
-_DEBUG_LOG_PATH = "/Applications/untitled folder/music-1/.cursor/debug-fe2ff6.log"
+_DEBUG_LOG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    ".cursor",
+    "debug-fe2ff6.log",
+)
 
 
 def looks_like_auto_author_name(name: Optional[str], username: Optional[str] = None) -> bool:
@@ -86,6 +91,8 @@ def marketplace_author_display_name(
 
     if log_context:
         # #region agent log
+        if os.getenv("DEBUG_AGENT_LOG", "").strip().lower() not in ("1", "true", "yes", "on"):
+            return result
         try:
             payload = {
                 "sessionId": "fe2ff6",

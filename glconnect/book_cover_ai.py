@@ -20,6 +20,8 @@ _DEBUG_COVER_LOG = os.path.join(
 
 def _debug_cover_log(hypothesis_id: str, location: str, message: str, data: Optional[dict] = None) -> None:
     # #region agent log
+    if os.getenv("DEBUG_AGENT_LOG", "").strip().lower() not in ("1", "true", "yes", "on"):
+        return
     try:
         import json as _json
         from datetime import datetime, timezone as _tz
