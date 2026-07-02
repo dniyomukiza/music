@@ -72,6 +72,7 @@ from glconnect.book_purchase_format import (
     revenue_split_for_purchase,
     STRIPE_PRINT_SHIPPING_COUNTRIES,
 )
+from glconnect.book_platform_security import rate_limit
 from glconnect.author_publishing_agreement import (
     AUTHOR_PUBLISHING_AGREEMENT_VERSION,
     LISTING_ATTESTATION_VERSION,
@@ -9251,6 +9252,7 @@ def supported_projects():
 
 @book_bp.route('/campaigns/<int:campaign_id>/translate', methods=['POST'])
 @login_required
+@rate_limit(max_requests=20, window_minutes=60)
 def translate_campaign_page(campaign_id):
     """AI-translate campaign page content for patrons (cached per language)."""
     campaign = InvestmentCampaign.query.options(
