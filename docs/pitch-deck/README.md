@@ -8,7 +8,7 @@ Downloadable pitch deck materials for **Ndotonic** (company) and **GLC Media** (
 |------|--------|-----|
 | `Ndotonic_Pitch_Deck.pptx` | PowerPoint | Open in PowerPoint, Keynote, or Google Slides (File → Import) |
 | `Ndotonic_Pitch_Deck.md` | Marp Markdown | Edit slides in VS Code + Marp, or export to PDF/PPTX |
-| `Ndotonic_Pitch_Deck.pdf` | PDF | Print or email (generate with commands below) |
+| `Ndotonic_Pitch_Deck.pdf` | PDF | Prit or email (generate with commands below) |
 
 ## Regenerate PowerPoint
 
