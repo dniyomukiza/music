@@ -54,7 +54,6 @@
         {% endfor %}
 
         {% set manuscript_ready = book.digital_file_path or (chapters and chapters|length > 0) %}
-        {% set listing_ready = has_listing_cover and book.price and book.price > 0 %}
 
         {% if is_collaborator and not is_book_author %}
         <div class="alert alert-info border-info border-opacity-25 mb-4" role="status">
@@ -216,7 +215,12 @@
                         <div class="ink-empty-manuscript">
                             <div class="empty-icon-wrap"><i class="fas fa-pen-fancy" aria-hidden="true"></i></div>
                             <h3 class="h5 mb-2">Your story starts here</h3>
-                            <p class="text-muted mb-0">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
+                            <p class="text-muted mb-3">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
+                            {% if can_edit_manuscript %}
+                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-ink-gold">
+                                <i class="fas fa-plus me-2"></i>Add first section
+                            </a>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -347,12 +351,9 @@
                                 </div>
                             </div>
                         </div>
-                        {% if book.status.value == 'draft' and not listing_ready %}
+                        {% if book.status.value == 'draft' and not has_listing_cover %}
                         <div class="alert alert-warning border-0 mt-3 mb-0 small">
-                            <strong>To publish:</strong>
-                            <ul class="mb-0 mt-2 ps-3">
-                                {% if not has_listing_cover %}<li>Add a cover in Book settings.</li>{% endif %}
-                            </ul>
+                            <strong>To publish:</strong> Add a cover in Book settings.
                         </div>
                         {% endif %}
                     </div>

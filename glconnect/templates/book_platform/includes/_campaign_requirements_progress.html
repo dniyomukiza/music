@@ -14,7 +14,8 @@
                 class="ink-campaign-req-toggle"
                 id="{{ _prefix }}-toggle"
                 aria-expanded="false"
-                aria-controls="{{ _prefix }}-panel">
+                aria-controls="{{ _prefix }}-panel"
+                title="View optional campaign requirements">
             requirements
         </button>
         met
@@ -68,6 +69,16 @@
                 e.stopPropagation();
                 if (panel.classList.contains('d-none')) openPanel();
                 else closePanel();
+            });
+            var hoverOpenTimer = null;
+            var hoverCloseTimer = null;
+            wrap.addEventListener('mouseenter', function () {
+                clearTimeout(hoverCloseTimer);
+                hoverOpenTimer = setTimeout(openPanel, 150);
+            });
+            wrap.addEventListener('mouseleave', function () {
+                clearTimeout(hoverOpenTimer);
+                hoverCloseTimer = setTimeout(closePanel, 220);
             });
             panel.addEventListener('click', function (e) {
                 e.stopPropagation();

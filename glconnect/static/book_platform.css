@@ -5748,15 +5748,20 @@ body.ink-book-studio .ink-studio-breadcrumb {
     font: inherit;
     font-weight: 600;
     color: var(--studio-accent, #c9a227);
-    text-decoration: none !important;
+    text-decoration: underline;
+    text-decoration-color: rgba(201, 162, 39, 0.5);
+    text-underline-offset: 0.18em;
     cursor: pointer;
     vertical-align: baseline;
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
 }
 
 .ink-campaign-req-toggle:hover,
-.ink-campaign-req-toggle.is-open {
+.ink-campaign-req-toggle.is-open,
+.ink-campaign-req-wrap:hover .ink-campaign-req-toggle {
     color: #e8c547;
-    text-decoration: none !important;
+    text-decoration: underline;
+    text-decoration-color: #e8c547;
 }
 
 .ink-campaign-req-toggle:focus-visible {
