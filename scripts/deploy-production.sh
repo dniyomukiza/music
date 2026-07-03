@@ -225,3 +225,9 @@ if [ "$APP_OK" = 1 ]; then
 else
   echo "--- Warning: app /health not OK; last_good_commit not updated (rollback unchanged) ---"
 fi
+
+echo "--- myapp container status ---"
+"${COMPOSE[@]}" ps app 2>/dev/null || docker ps -a --filter name=myapp --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+
+echo "--- myapp logs (last 200 lines) ---"
+docker logs myapp --tail 200 2>&1 || "${COMPOSE[@]}" logs app --tail 200 2>&1 || true
