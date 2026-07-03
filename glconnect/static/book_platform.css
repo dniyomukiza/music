@@ -4059,14 +4059,22 @@ body.ink-books-create.ink-upload-book .text-secondary {
 }
 
 body.ink-books-create .ink-create-form-actions {
-    width: 50%;
-    min-width: 11.5rem;
-    max-width: 16rem;
+    width: auto;
+    max-width: none;
+}
+
+body.ink-books-create .ink-create-action-btn {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 0.35rem 0.75rem;
+    line-height: 1.25;
+    white-space: nowrap;
 }
 
 @media (max-width: 575.98px) {
     body.ink-books-create .ink-create-form-actions {
-        width: 100%;
+        width: auto;
         max-width: none;
     }
 }
@@ -4202,6 +4210,21 @@ body.ink-books-ui .form-check-label strong {
 
 .listing-terms-scrollbox strong {
     color: #0f172a !important;
+}
+
+/* Author Publishing Agreement page — white text on dark background */
+body.author-agreement-page .listing-terms-scrollbox,
+body.author-agreement-page .listing-terms-scrollbox p,
+body.author-agreement-page .listing-terms-scrollbox strong,
+body.author-agreement-page .listing-terms-scrollbox .fw-semibold,
+body.author-agreement-page .listing-terms-scrollbox li,
+body.author-agreement-page .listing-terms-scrollbox ul {
+    color: #fff !important;
+}
+
+body.author-agreement-page .card-body,
+body.author-agreement-page .form-check-label {
+    color: #fff !important;
 }
 
 .glc-media-terms-scrollbox {
@@ -5714,6 +5737,62 @@ body.ink-book-studio .navbar.bg-primary {
 body.ink-book-studio .ink-studio-breadcrumb {
     font-size: 0.875rem;
     color: var(--studio-muted);
+}
+
+.ink-campaign-req-toggle {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--studio-accent, #c9a227);
+    text-decoration: none !important;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+
+.ink-campaign-req-toggle:hover,
+.ink-campaign-req-toggle.is-open {
+    color: #e8c547;
+    text-decoration: none !important;
+}
+
+.ink-campaign-req-toggle:focus-visible {
+    outline: 2px solid rgba(201, 162, 39, 0.55);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.ink-campaign-req-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    z-index: 20;
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.5rem;
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.ink-campaign-req-list li {
+    padding: 0.35rem 0;
+    line-height: 1.35;
+}
+
+.ink-campaign-req-list li.is-met {
+    color: #9fd4b0;
+}
+
+.ink-campaign-req-list li.is-unmet {
+    color: #d4b896;
+}
+
+.ink-campaign-req-wrap {
+    margin-bottom: 0.5rem;
 }
 
 body.ink-book-studio .ink-studio-breadcrumb a {

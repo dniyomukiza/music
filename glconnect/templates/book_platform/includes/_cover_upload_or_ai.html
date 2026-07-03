@@ -7,20 +7,11 @@
 {% set use_wtforms = use_wtforms|default(false) %}
 
 <div class="ink-cover-source mb-3">
-    <p class="small text-muted mb-2 mb-md-3">Add marketplace cover art — <strong>choose an image file</strong> or <strong>generate with AI</strong>. AI covers always include your <strong>book title</strong> and <strong>author name</strong>.</p>
+    <p class="small text-muted mb-2 mb-md-3">Add marketplace cover art — <strong>upload an image from your computer</strong> or <strong>generate with AI</strong>. AI covers always include your <strong>book title</strong> and <strong>author name</strong>.</p>
 
-    <div class="ink-cover-mode-tabs" role="radiogroup" aria-label="Cover source">
-        <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeUpload" value="upload" autocomplete="off" checked data-cover-uid="{{ uid }}">
-        <label class="ink-cover-mode-tab" for="{{ uid }}CoverModeUpload">
-            <i class="fas fa-image me-1" aria-hidden="true"></i>My image
-        </label>
-        <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeAi" value="ai" autocomplete="off" data-cover-uid="{{ uid }}">
-        <label class="ink-cover-mode-tab" for="{{ uid }}CoverModeAi">
-            <i class="fas fa-magic me-1" aria-hidden="true"></i>Generate with AI
-        </label>
-    </div>
+    <input type="radio" class="d-none ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeUpload" value="upload" autocomplete="off" checked data-cover-uid="{{ uid }}">
 
-    <div id="{{ uid }}CoverUploadPanel" class="ink-cover-mode-body mt-3">
+    <div id="{{ uid }}CoverUploadPanel" class="ink-cover-mode-body">
         <label for="cover_image" class="form-label mb-2">Choose image file</label>
         {% if use_wtforms %}
         {{ form.cover_image(class="form-control ink-upload-control", accept="image/png,image/jpeg,image/gif,image/webp", id="cover_image") }}
@@ -29,6 +20,16 @@
         {% endif %}
         <div class="form-text mt-2 mb-0">PNG, JPG, WebP, or GIF · portrait (about 2:3) works best. You can change the cover later in <strong>My books → Edit</strong>.</div>
         <img id="{{ uid }}CoverUploadPreview" alt="Selected cover preview" class="img-fluid rounded border d-none mt-3" style="max-height: 220px;">
+    </div>
+
+    <div class="ink-cover-mode-tabs mt-3" role="radiogroup" aria-label="Cover source">
+        <input type="radio" class="btn-check ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeAi" value="ai" autocomplete="off" data-cover-uid="{{ uid }}">
+        <label class="ink-cover-mode-tab" for="{{ uid }}CoverModeAi">
+            <i class="fas fa-magic me-1" aria-hidden="true"></i>Generate with AI instead
+        </label>
+        <button type="button" class="btn btn-link btn-sm ink-cover-back-upload d-none" data-cover-uid="{{ uid }}" id="{{ uid }}CoverBackUpload">
+            Upload from computer instead
+        </button>
     </div>
 
     <div id="{{ uid }}CoverAiPanel" class="ink-cover-mode-body mt-3 d-none">

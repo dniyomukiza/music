@@ -161,7 +161,7 @@
                                 <div class="col-md-6">
                                     <label for="genre" class="form-label">Category <span class="text-danger">*</span></label>
                                     {{ form.genre(class="form-select ink-upload-control", id="genre") }}
-                                    <div class="form-text">Real Life or Nonfiction only, stories drawn from lived experience.</div>
+                                    <div class="form-text">Nonfiction only — real stories and lived experience.</div>
                                     {% if form.genre.errors %}
                                         <div class="invalid-feedback d-block">{% for error in form.genre.errors %}{{ error }}{% endfor %}</div>
                                     {% endif %}
@@ -350,7 +350,7 @@
                     <div class="ink-upload-mobile-hint d-xl-none rounded-3 p-3 mb-3 border" style="border-color: rgba(201, 162, 39, 0.25) !important; background: rgba(8, 10, 9, 0.5);">
                         <p class="small fw-semibold mb-2"><i class="fas fa-clipboard-check me-2 text-primary"></i>Before you submit</p>
                         <ul class="small text-muted mb-0 ps-3">
-                            <li>Language &amp; category (Real Life or Nonfiction) match your listing</li>
+                            <li>Language &amp; category (Nonfiction) match your listing</li>
                             <li>Cover: upload and/or AI preview</li>
                             {% if listing_format == 'print' %}
                             <li>Print price + flat shipping for orders you fulfill</li>
@@ -381,7 +381,7 @@
                 <div class="ink-upload-aside sticky-top">
                     <h3 class="h6 text-uppercase letter-spacing-1 text-muted mb-3">Quick checklist</h3>
                     <ul class="list-unstyled ink-checklist mb-4">
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Real Life or Nonfiction category</li>
+                        <li><i class="fas fa-check-circle text-success me-2"></i>Nonfiction category</li>
                         <li><i class="fas fa-check-circle text-success me-2"></i>Clean ebook file + cover path chosen</li>
                         <li><i class="fas fa-check-circle text-success me-2"></i>Pricing reflects your strategy</li>
                         <li><i class="fas fa-headphones text-secondary me-2"></i>Step 2: audiobook (optional)</li>
@@ -645,21 +645,34 @@ document.addEventListener('DOMContentLoaded', function() {
     function bindCoverSourceMode(uid, useAiEl, onAiOff) {
         const uploadPanel = document.getElementById(uid + 'CoverUploadPanel');
         const aiPanel = document.getElementById(uid + 'CoverAiPanel');
+        const aiLabel = document.querySelector('label[for="' + uid + 'CoverModeAi"]');
+        const backUpload = document.getElementById(uid + 'CoverBackUpload');
+        const uploadRadio = document.getElementById(uid + 'CoverModeUpload');
+        const aiRadio = document.getElementById(uid + 'CoverModeAi');
+
+        function applyMode(isAi) {
+            if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+            if (aiLabel) aiLabel.classList.toggle('d-none', isAi);
+            if (backUpload) backUpload.classList.toggle('d-none', !isAi);
+            if (useAiEl) useAiEl.checked = isAi;
+            if (!isAi && onAiOff) onAiOff();
+        }
+
         document.querySelectorAll('input[name="' + uid + '_cover_mode"]').forEach(function (radio) {
             radio.addEventListener('change', function () {
                 if (!this.checked) return;
-                const isAi = this.value === 'ai';
-                if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
-                if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
-                if (useAiEl) useAiEl.checked = isAi;
-                if (!isAi && onAiOff) onAiOff();
+                applyMode(this.value === 'ai');
             });
         });
+        if (backUpload && uploadRadio) {
+            backUpload.addEventListener('click', function () {
+                uploadRadio.checked = true;
+                if (aiRadio) aiRadio.checked = false;
+                applyMode(false);
+            });
+        }
         const checked = document.querySelector('input[name="' + uid + '_cover_mode"]:checked');
-        const isAi = checked && checked.value === 'ai';
-        if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
-        if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
-        if (useAiEl) useAiEl.checked = !!isAi;
+        applyMode(checked && checked.value === 'ai');
     }
 
     bindCoverSourceMode('listing', useAiCover, function () {
@@ -761,11 +774,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return { ok: false, focus: printPriceEl, msg: 'Set a print book price before listing a printed edition.' };
             }
         }
-        const genreEl = document.getElementById('genre');
-        const genreVal = genreEl ? String(genreEl.value || '').trim() : '';
-        if (genreVal !== 'real-life' && genreVal !== 'nonfiction') {
-            return { ok: false, focus: genreEl, msg: 'Select Real Life or Nonfiction as the book category.' };
-        }
+            const genreEl = document.getElementById('genre');
+            const genreVal = genreEl ? String(genreEl.value || '').trim() : '';
+            if (genreVal !== 'nonfiction') {
+                return { ok: false, focus: genreEl, msg: 'Category must be Nonfiction.' };
+            }
         const isbnManualRadio = document.getElementById('isbnSourceManual');
         const isbnManualInput = document.getElementById('isbnManualInput');
         if (isbnManualRadio && isbnManualRadio.checked) {

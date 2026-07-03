@@ -796,10 +796,40 @@ def check_investment_readiness(book):
             "(write your first chapter for patrons to preview)"
         )
 
-    requirement_total = 5
+    requirements = [
+        {
+            'label': 'Book title (at least 3 characters)',
+            'met': bool(book.title and len(book.title.strip()) >= 3),
+        },
+        {
+            'label': 'Category selected',
+            'met': bool(book.genre),
+        },
+        {
+            'label': 'Language selected',
+            'met': bool(book.language),
+        },
+    ]
+    if has_digital_file and chapter_count == 0:
+        requirements.append({
+            'label': 'Ink Studio manuscript with at least one section',
+            'met': False,
+        })
+    else:
+        requirements.append({
+            'label': 'At least one section (patron preview)',
+            'met': chapter_count > 0,
+        })
+    requirements.append({
+        'label': f'At least {CAMPAIGN_READINESS_MIN_WORDS:,} words of content',
+        'met': chapter_count > 0 and word_count >= CAMPAIGN_READINESS_MIN_WORDS,
+    })
+
+    requirement_total = len(requirements)
     return {
         'is_ready': len(issues) == 0,
         'issues': issues,
+        'requirements': requirements,
         'chapter_count': chapter_count,
         'word_count': word_count,
         'requirement_total': requirement_total,
@@ -7967,7 +7997,7 @@ def upload_digital_book():
             if not is_valid_ink_upload_genre(form.genre.data or ''):
                 return _upload_digital_book_error(
                     form,
-                    "Select Real Life or Nonfiction as the book category.",
+                    "Category must be Nonfiction.",
                     listing_format=listing_format,
                 )
 

@@ -109,11 +109,10 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="genre" class="form-label">Category <span class="text-danger">*</span></label>
-                                        {% with required=true %}
-                                        {% include 'book_platform/includes/_ink_studio_genre_select.html' %}
-                                        {% endwith %}
-                                        <div class="form-text">Nonfiction only — stories drawn from real life and lived experience.</div>
+                                        <label class="form-label">Category</label>
+                                        <input type="hidden" id="genre" name="genre" value="nonfiction">
+                                        <p class="form-control-plaintext text-white mb-0 fw-semibold">Nonfiction</p>
+                                        <div class="form-text">All books on Ndotonic are nonfiction — real stories and lived experience.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -209,13 +208,9 @@
                                 <strong>Already have a manuscript?</strong> Most authors upload a finished file. Use <a href="{{ url_for('book_platform.list_book') }}" aria-label="List your book on the marketplace">List your book</a> with <strong>EPUB or DOCX</strong> for the best reading experience. This page is for writing section-by-section inside Ink Studio instead.
                             </div>
 
-                            <div class="d-grid gap-2 ink-create-form-actions">
-                                <button type="submit" class="btn btn-ink-gold">
-                                    <i class="fas fa-pen" aria-hidden="true"></i> Create project &amp; start writing
-                                </button>
-                                <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-ink-ghost">
-                                    <i class="fas fa-times" aria-hidden="true"></i> Cancel
-                                </a>
+                            <div class="d-flex flex-wrap gap-2 ink-create-form-actions">
+                                <button type="submit" class="btn btn-sm btn-ink-gold ink-create-action-btn">Start project</button>
+                                <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-sm btn-ink-ghost ink-create-action-btn">Cancel</a>
                             </div>
                         </form>
                     </div>
@@ -330,21 +325,34 @@
             function bindCoverSourceMode(uid, useAiEl, onAiOff) {
                 const uploadPanel = document.getElementById(uid + 'CoverUploadPanel');
                 const aiPanel = document.getElementById(uid + 'CoverAiPanel');
+                const aiLabel = document.querySelector('label[for="' + uid + 'CoverModeAi"]');
+                const backUpload = document.getElementById(uid + 'CoverBackUpload');
+                const uploadRadio = document.getElementById(uid + 'CoverModeUpload');
+                const aiRadio = document.getElementById(uid + 'CoverModeAi');
+
+                function applyMode(isAi) {
+                    if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+                    if (aiLabel) aiLabel.classList.toggle('d-none', isAi);
+                    if (backUpload) backUpload.classList.toggle('d-none', !isAi);
+                    if (useAiEl) useAiEl.checked = isAi;
+                    if (!isAi && onAiOff) onAiOff();
+                }
+
                 document.querySelectorAll('input[name="' + uid + '_cover_mode"]').forEach(function (radio) {
                     radio.addEventListener('change', function () {
                         if (!this.checked) return;
-                        const isAi = this.value === 'ai';
-                        if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
-                        if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
-                        if (useAiEl) useAiEl.checked = isAi;
-                        if (!isAi && onAiOff) onAiOff();
+                        applyMode(this.value === 'ai');
                     });
                 });
+                if (backUpload && uploadRadio) {
+                    backUpload.addEventListener('click', function () {
+                        uploadRadio.checked = true;
+                        if (aiRadio) aiRadio.checked = false;
+                        applyMode(false);
+                    });
+                }
                 const checked = document.querySelector('input[name="' + uid + '_cover_mode"]:checked');
-                const isAi = checked && checked.value === 'ai';
-                if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
-                if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
-                if (useAiEl) useAiEl.checked = !!isAi;
+                applyMode(checked && checked.value === 'ai');
             }
 
             bindCoverSourceMode('create', useAi, function () {

@@ -149,9 +149,9 @@ class DigitalBookUploadForm(FlaskForm):
     description = TextAreaField('Description', validators=[Optional()])
     genre = SelectField(
         'Category',
-        validators=[DataRequired(message='Select Real Life or Nonfiction.')],
+        validators=[DataRequired(message='Category is required.')],
         choices=INK_UPLOAD_GENRE_CHOICES,
-        default='',
+        default='nonfiction',
     )
     ebook_language = SelectField(
         'Original language of your ebook',

@@ -162,13 +162,6 @@
                             <p class="small text-muted mb-0 mt-1">{{ format_manuscript_summary(chapters) }} in reading order</p>
                             {% endif %}
                         </div>
-                        {% if can_edit_manuscript %}
-                        <div class="d-flex gap-2 flex-wrap">
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-sm btn-outline-light">
-                                <i class="fas fa-plus me-1"></i>Add section
-                            </a>
-                        </div>
-                        {% endif %}
                     </div>
                     <div class="ink-studio-panel-body">
                         {% if chapters %}
@@ -223,12 +216,7 @@
                         <div class="ink-empty-manuscript">
                             <div class="empty-icon-wrap"><i class="fas fa-pen-fancy" aria-hidden="true"></i></div>
                             <h3 class="h5 mb-2">Your story starts here</h3>
-                            <p class="text-muted mb-3">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
-                            {% if can_edit_manuscript %}
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-ink-gold">
-                                <i class="fas fa-plus me-2"></i>Add first section
-                            </a>
-                            {% endif %}
+                            <p class="text-muted mb-0">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
                         </div>
                         {% endif %}
                     </div>
@@ -301,7 +289,6 @@
                 <section class="ink-studio-panel" aria-labelledby="status-detail-heading">
                     <div class="ink-studio-panel-header">
                         <h3 id="status-detail-heading" class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Status details</h3>
-                        <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-sm btn-outline-light">Audiobook</a>
                         {% if book.print_enabled %}
                         <a href="{{ url_for('book_platform.book_print_orders', book_id=book.id) }}" class="btn btn-sm btn-outline-warning">Customer Orders</a>
                         {% endif %}
@@ -365,7 +352,6 @@
                             <strong>To publish:</strong>
                             <ul class="mb-0 mt-2 ps-3">
                                 {% if not has_listing_cover %}<li>Add a cover in Book settings.</li>{% endif %}
-                                {% if not book.price or book.price <= 0 %}<li>Set a price above $0.</li>{% endif %}
                             </ul>
                         </div>
                         {% endif %}
@@ -433,21 +419,9 @@
                             </a>
                             {% endif %}
                             {% else %}
-                            {% set total_requirements = investment_readiness.requirement_total|default(4) %}
-                            {% set completed = total_requirements - investment_readiness.issues|length %}
-                            {% set progress_pct = (completed / total_requirements * 100)|round %}
-                            <p class="small text-muted mb-2">If you want a campaign later: {{ completed }}/{{ total_requirements }} optional requirements met</p>
-                            <div class="progress mb-2" style="height: 6px;">
-                                <div class="progress-bar bg-warning" style="width: {{ progress_pct }}%"></div>
-                            </div>
-                            <ul class="small text-muted ps-3 mb-0">
-                                {% for issue in investment_readiness.issues[:4] %}
-                                <li>{{ issue }}</li>
-                                {% endfor %}
-                                {% if investment_readiness.issues|length > 4 %}
-                                <li>…and {{ investment_readiness.issues|length - 4 }} more</li>
-                                {% endif %}
-                            </ul>
+                            {% with prefix='book-' ~ book.id|string %}
+                            {% include 'book_platform/includes/_campaign_requirements_progress.html' %}
+                            {% endwith %}
                             {% endif %}
                         </div>
                     </div>

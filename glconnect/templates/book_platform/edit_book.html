@@ -68,11 +68,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="genre" class="form-label">Category</label>
-                                        {% with selected_genre=book.genre or '' %}
-                                        {% include 'book_platform/includes/_ink_studio_genre_select.html' %}
-                                        {% endwith %}
-                                        <div class="form-text">Nonfiction categories only.</div>
+                                        <label class="form-label">Category</label>
+                                        <input type="hidden" id="genre" name="genre" value="nonfiction">
+                                        <p class="form-control-plaintext mb-0 fw-semibold">Nonfiction</p>
+                                        {% if book.genre and book.genre != 'nonfiction' %}
+                                        <div class="form-text">Previously: {{ ink_studio_genre_label(book.genre) }}. All books are now Nonfiction.</div>
+                                        {% else %}
+                                        <div class="form-text">All books on Ndotonic are nonfiction.</div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="col-md-6">
