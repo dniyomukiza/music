@@ -2447,11 +2447,6 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
         flash('You do not have permission to edit this book.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
-    # Check if chapter is published - if so, prevent editing
-    if chapter.is_published:
-        flash('This chapter is marked complete and cannot be edited. Reopen it first to make changes.', 'warning')
-        return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
-    
     if chapter.book_project_id != book_id:
         flash('Chapter not found in this book', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))

@@ -30,9 +30,9 @@
                         <small class="opacity-75">Invite patrons who believe in your story. Contributions help you finish and publish, not financial returns for backers.</small>
                     </div>
                     <div class="card-body">
-                        <form method="POST" class="row g-4">
+                        <form method="POST">
                             {{ form.hidden_tag() }}
-                            <div class="col-lg-7">
+                            <div>
                             
                             <div class="mb-3">
                                 {{ form.title.label(class="form-label") }}
@@ -48,7 +48,6 @@
                                 {% set project_desc_field_id = 'description' %}
                                 {% set project_desc_book_id = book.id %}
                                 {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
-                                {% set project_desc_preview_target = 'inkPreviewCampaignPitch' %}
                                 {% set show_media_guide = false %}
                                 {% include 'book_platform/_project_description_editor.html' %}
                                 <div class="form-text">Tell patrons why they should back this project now.</div>
@@ -114,39 +113,12 @@
                                 {{ form.submit(class="btn btn-primary btn-lg") }}
                             </div>
                             </div>
-
-                            <div class="col-lg-5">
-                                <div class="ink-project-preview-sticky">
-                                    {% set ink_preview_about_id = 'inkPreviewAboutProject' %}
-                                    {% set ink_preview_pitch_id = 'inkPreviewCampaignPitch' %}
-                                    {% set ink_preview_timeline_id = 'inkPreviewTimeline' %}
-                                    {% set ink_preview_timeline_input_id = 'tentative_timeline' %}
-                                    {% include 'book_platform/_project_description_preview.html' %}
-                                    <p class="small text-muted mt-3 mb-0">
-                                        "About the project" comes from your
-                                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">book description</a>.
-                                        Edit it there or after launch from <strong>Edit project</strong>.
-                                    </p>
-                                </div>
-                            </div>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-    (function () {
-        var about = document.getElementById('inkPreviewAboutProject');
-        var initialAbout = {{ (book.description or '')|tojson }};
-        if (about) {
-            about.innerHTML = initialAbout && initialAbout.trim()
-                ? initialAbout
-                : '<p class="text-white-50 mb-0">Add a book description on the edit book page to show "About the project".</p>';
-        }
-    })();
-    </script>
 
     {% include 'includes/_ndotonic_mission_footer.html' %}
 

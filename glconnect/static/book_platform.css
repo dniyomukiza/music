@@ -5739,6 +5739,7 @@ body.ink-book-studio .ink-studio-breadcrumb {
     color: var(--studio-muted);
 }
 
+.ink-inline-gold-link,
 .ink-campaign-req-toggle {
     display: inline;
     padding: 0;
@@ -5748,20 +5749,19 @@ body.ink-book-studio .ink-studio-breadcrumb {
     font: inherit;
     font-weight: 600;
     color: var(--studio-accent, #c9a227);
-    text-decoration: underline;
-    text-decoration-color: rgba(201, 162, 39, 0.5);
-    text-underline-offset: 0.18em;
+    text-decoration: none !important;
     cursor: pointer;
     vertical-align: baseline;
-    transition: color 0.15s ease, text-decoration-color 0.15s ease;
+    transition: color 0.15s ease;
 }
 
+.ink-inline-gold-link:hover,
+.ink-inline-gold-link:focus,
 .ink-campaign-req-toggle:hover,
 .ink-campaign-req-toggle.is-open,
 .ink-campaign-req-wrap:hover .ink-campaign-req-toggle {
     color: #e8c547;
-    text-decoration: underline;
-    text-decoration-color: #e8c547;
+    text-decoration: none !important;
 }
 
 .ink-campaign-req-toggle:focus-visible {
@@ -5798,6 +5798,14 @@ body.ink-book-studio .ink-studio-breadcrumb {
 
 .ink-campaign-req-wrap {
     margin-bottom: 0.5rem;
+}
+
+.ink-campaign-req-static {
+    margin-top: 0.75rem;
+}
+
+.ink-campaign-req-static .ink-campaign-req-list li {
+    padding: 0.25rem 0;
 }
 
 body.ink-book-studio .ink-studio-breadcrumb a {
@@ -5872,6 +5880,19 @@ body.ink-book-studio .ink-studio-status-pill.is-draft {
     background: rgba(224, 188, 58, 0.15);
     color: #f5e6a6;
     border: 1px solid rgba(224, 188, 58, 0.35);
+}
+
+body.ink-book-studio a.ink-studio-status-pill-link {
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+body.ink-book-studio a.ink-studio-status-pill-link:hover,
+body.ink-book-studio a.ink-studio-status-pill-link:focus-visible {
+    background: rgba(224, 188, 58, 0.28);
+    border-color: rgba(224, 188, 58, 0.55);
+    color: #fff3c4;
 }
 
 body.ink-book-studio .ink-studio-meta-chip {

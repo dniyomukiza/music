@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <title>Edit manuscript - {{ book.title }} | Ink Studio</title>
+    <title>Book settings — {{ book.title }} | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -13,31 +13,41 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
 </head>
-<body class="ink-books-ui">
+<body class="ink-book-studio ink-edit-book-listing">
     <div class="ndotonic-page-bg" aria-hidden="true"></div>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">
-                Ink Studio
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('book_platform.view_book', book_id=book.id) }}">
-                    Back to Book
-                </a>
-                <a class="nav-link" href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">
-                    Audiobook
-                </a>
+    <div class="ink-studio-page-bg" aria-hidden="true"></div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary ink-mp-sticky-nav" aria-label="Ink Studio">
+        <div class="container-fluid px-3 px-lg-4">
+            <a class="navbar-brand" href="{{ url_for('book_platform.dashboard') }}">Ink Studio</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#studioNav" aria-controls="studioNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="studioNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.books') }}">My books</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">Publicity</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.content_hub') }}">Content</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('book_platform.marketplace') }}">Marketplace</a></li>
+                </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4 edit-book">
+    <main id="ink-studio-main" class="container-fluid px-3 px-lg-4 py-4" tabindex="-1">
+        <nav class="ink-studio-breadcrumb mb-3" aria-label="Breadcrumb">
+            <a href="{{ url_for('book_platform.books') }}">My books</a>
+            <span class="mx-2" aria-hidden="true">/</span>
+            <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}">{{ book.title }}</a>
+            <span class="mx-2" aria-hidden="true">/</span>
+            <span aria-current="page">Book settings</span>
+        </nav>
         <div class="row justify-content-center">
-            <div class="col-lg-8">
-<div class="card edit-book-details-card">
+            <div class="col-lg-8 edit-book">
+                <div class="card edit-book-details-card">
                     <div class="card-header">
-                        <h4 class="mb-0"><i class="fas fa-edit"></i> Edit manuscript</h4>
-                        <small class="text-muted">Update details, chapters, and cover for "{{ book.title }}". Audiobook is on a <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">separate page</a>.</small>
+                        <h4 class="mb-0"><i class="fas fa-sliders-h"></i> Book settings</h4>
+                        <small class="text-muted">Listing details, cover, price, and publish options for "{{ book.title }}".</small>
                     </div>
                     <div class="card-body">
                         <form id="editBookForm" method="post" enctype="multipart/form-data">
@@ -54,14 +64,9 @@
                                 {% set project_desc_field_id = 'description' %}
                                 {% set project_desc_book_id = book.id %}
                                 {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
-                                {% set project_desc_preview_target = 'inkPreviewBookDescription' %}
                                 {% include 'book_platform/_project_description_editor.html' %}
                                 <div class="form-text">Used on your marketplace listing and, if you choose, on an optional campaign page.{% if investment_campaign %}
                                     After saving, <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}">edit the full project</a> to preview both sections together.{% endif %}
-                                </div>
-                                {% set ink_preview_single_id = 'inkPreviewBookDescription' %}
-                                <div class="mt-3">
-                                    {% include 'book_platform/_project_description_preview.html' %}
                                 </div>
                             </div>
 
@@ -229,20 +234,15 @@
                                     {% endif %}
                                 </div>
                                 {% endif %}
-                                <label for="cover_upload" class="form-label small text-muted">Replace with uploaded file</label>
+                                <label for="cover_upload" class="form-label small text-muted">Upload your own</label>
                                 <input type="file" class="form-control mb-2" id="cover_upload" name="cover_upload" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
                                 <label for="cover_image" class="form-label small text-muted">Or cover image URL</label>
                                 <input type="url" class="form-control" id="cover_image" name="cover_image"
                                        value="{% if cov.startswith('http://') or cov.startswith('https://') %}{{ cov }}{% endif %}" placeholder="https://example.com/cover.jpg">
-                                <div class="form-text">Uploading a file replaces the stored cover. URL is optional if you already use an uploaded file path. Change either any time before publishing to the marketplace.</div>
                                 <hr class="my-3">
-                                <p class="small fw-semibold mb-1"><i class="fas fa-magic me-1 text-primary"></i>New AI cover</p>
-                                <p class="small text-muted mb-2">Generate a preview from the title, description, and genre on this page (and optional art direction below). Your <strong>book title</strong> and <strong>author name</strong> (from this book's author profile) are placed on the cover automatically. <strong>Use this cover</strong> saves it as your marketplace cover and replaces the current setting. Previously uploaded file covers in our storage are removed; external URLs are overwritten by the new AI file path.</p>
-                                <div class="mb-2">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
-                                <div class="mb-2">
-                                    <label for="ai_cover_art_brief_edit" class="form-label small text-muted">Art direction for this generation (optional)</label>
-                                    <textarea class="form-control form-control-sm" id="ai_cover_art_brief_edit" rows="2" placeholder="e.g. moody sci fi, amber glow, lone figure"></textarea>
-                                </div>
+                                <label for="ai_cover_art_brief_edit" class="form-label">Prompt AI</label>
+                                <div class="form-text mb-2">Get AI cover of your choice by prompting</div>
+                                <textarea class="form-control mb-2" id="ai_cover_art_brief_edit" rows="3" placeholder=""></textarea>
                                 <div class="d-flex flex-wrap gap-2 mb-2">
                                     <button type="button" class="btn btn-outline-primary btn-sm" id="btnEditAiCoverGenerate"><i class="fas fa-magic me-1"></i>Generate preview</button>
                                     <button type="button" class="btn btn-success btn-sm" id="btnEditAiCoverApply" disabled><i class="fas fa-check me-1"></i>Use this cover</button>
@@ -265,7 +265,7 @@
                                         <strong>Publish Digital Book</strong> - Make digital book available in marketplace
                                     </label>
                                 </div>
-                                <small class="text-muted d-block mb-3">Digital book will be available for purchase. Make sure you've set a price first. Publish audiobook from the <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}">audiobook page</a>.</small>
+                                <small class="text-muted d-block mb-3">Digital book will be available for purchase. Set a price before publishing.</small>
                                 {% endif %}
                             </div>
                             {% else %}
@@ -335,139 +335,23 @@
                                 {% include 'book_platform/includes/_isbn_listing_choice.html' %}
                             </div>
 
-                            {% if not book.digital_file_path %}
-                            <div class="mb-3 p-3 rounded border border-secondary border-opacity-25">
-                                <h6 class="mb-2"><i class="fas fa-users me-2"></i>Editors &amp; beta readers</h6>
-                                <p class="small text-muted mb-2">
-                                    Invite editors or beta readers to work on this manuscript before marketplace publish.
-                                </p>
-                                <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-user-plus me-1"></i>Invite &amp; manage team
-                                </a>
-                            </div>
-                            {% endif %}
-
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end align-items-center flex-wrap">
-                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
-                                   class="btn btn-secondary me-md-2">
-                                    <i class="fas fa-times"></i> Cancel
+                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-secondary me-md-2">
+                                    Cancel
                                 </a>
-                                <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-outline-primary me-md-2">
-                                    <i class="fas fa-headphones"></i> Audiobook studio
-                                </a>
-                                {% include 'book_platform/_patron_campaign_cta.html' %}
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Save Updates
+                                    <i class="fas fa-save"></i> Save
                                 </button>
-                                <button type="button" class="btn btn-danger" onclick="confirmDeleteBook()">
-                                    <i class="fas fa-trash"></i> Delete Book
+                                <button type="button" class="btn btn-outline-danger" onclick="confirmDeleteBook()">
+                                    Delete book
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
-
-                <!-- Chapter Management (Only for books created in platform) -->
-                {% if not book.digital_file_path %}
-                <div class="card mt-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list"></i> Chapter Management
-                        </h5>
-                        <div>
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-plus"></i> Add Chapter
-                            </a>
-                            <a href="{{ url_for('book_platform.chapters', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-list"></i> View All
-                            </a>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {% if book.chapters %}
-                            <div class="row">
-                                {% for chapter in book.chapters %}
-                                <div class="col-md-6 col-lg-4 mb-3">
-                                    <div class="card chapter-card h-100">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0">Chapter {{ chapter.chapter_number }}</h6>
-                                            {% if chapter.is_published %}
-                                                <span class="badge bg-success">Complete</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">Draft</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="card-body">
-                                            <h6 class="card-title">{{ chapter.title }}</h6>
-                                            
-                                            {% if chapter.content %}
-                                                <p class="card-text small">{{ chapter.content[:100]|striptags }}{% if chapter.content|length > 100 %}...{% endif %}</p>
-                                            {% else %}
-                                                <p class="card-text small text-muted">No content yet</p>
-                                            {% endif %}
-                                            
-                                            <div class="chapter-meta mb-2">
-                                                {% if chapter.word_count %}
-                                                    <span class="badge bg-info">{{ chapter.word_count }} words</span>
-                                                {% endif %}
-                                                {% if chapter.word_count_target %}
-                                                    <span class="badge bg-secondary">Target: {{ chapter.word_count_target }}</span>
-                                                {% endif %}
-                                            </div>
-
-                                            <div class="chapter-stats">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-calendar"></i> {{ chapter.created_at.strftime('%m/%d/%Y') }}
-                                                    {% if chapter.updated_at and chapter.updated_at != chapter.created_at %}
-                                                        <br><i class="fas fa-edit"></i> Updated: {{ chapter.updated_at.strftime('%m/%d/%Y') }}
-                                                    {% endif %}
-                                                </small>
-                                            </div>
-                                        </div>
-                               <div class="card-footer">
-                                   <div class="btn-group w-100" role="group">
-                                       <a href="{{ url_for('book_platform.view_chapter', book_id=book.id, chapter_id=chapter.id) }}"
-                                          class="btn btn-outline-primary btn-sm">
-                                           <i class="fas fa-eye"></i> View
-                                       </a>
-                                       {% if chapter.is_published %}
-                                           <button class="btn btn-outline-warning btn-sm" disabled title="Complete chapters are locked for editing">
-                                               <i class="fas fa-lock"></i> Locked
-                                           </button>
-                                       {% else %}
-                                           <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
-                                              class="btn btn-outline-secondary btn-sm">
-                                               <i class="fas fa-edit"></i> Edit
-                                           </a>
-                                       {% endif %}
-                                       <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteChapter({{ chapter.id }}, '{{ chapter.title }}')">
-                                           <i class="fas fa-trash"></i> Delete
-                                       </button>
-                                   </div>
-                               </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <!-- Empty State -->
-                            <div class="text-center py-4">
-                                <div class="empty-state">
-                                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-                                    <h5>No Chapters Yet</h5>
-                                    <p class="text-muted mb-3">Start writing your book by adding your first chapter.</p>
-                                    <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary">
-                                        <i class="fas fa-plus"></i> Add First Chapter
-                                    </a>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -476,18 +360,8 @@
     <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.5"></script>
     {% endif %}
     <script>
-        if (window.location.hash === '#audiobook-section') {
-            window.location.replace('{{ url_for("book_platform.book_audiobook", book_id=book.id) }}');
-        }
-
         let listingTermsConfirmed = {{ book_has_listing_attestation(book)|tojson }};
         const listingAttestationComplete = {{ book_has_listing_attestation(book)|tojson }};
-
-        function dbgLog(hypothesisId, location, message, data) {
-            // #region agent log
-            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',runId:'edit-scroll-fix',hypothesisId:hypothesisId,location:location,message:message,data:data,timestamp:Date.now()})}).catch(function(){});
-            // #endregion
-        }
 
         function listingTermsRequiredBoxesChecked() {
             const rights = document.getElementById('listing_terms_rights_warranty');
@@ -538,15 +412,6 @@
             boxes.forEach(function (cb) { cb.disabled = !atBottom; });
             if (hintEl) hintEl.classList.toggle('d-none', atBottom);
             updateListingTermsAgreeButton();
-            dbgLog('H1', 'edit_book:updateListingTermsScrollGateEdit', 'scroll gate evaluated', {
-                source: source || 'unknown',
-                scrollTop: scrollEl.scrollTop,
-                scrollHeight: scrollEl.scrollHeight,
-                clientHeight: scrollEl.clientHeight,
-                needsScroll: needs,
-                atBottom: atBottom,
-                boxesDisabled: boxes.map(function (cb) { return cb.disabled; }),
-            });
         }
 
         function openListingTermsPanel(reset) {
@@ -800,21 +665,6 @@ if (shouldRequireListingTerms()) {
             }
         })();
 
-        // Auto-save functionality
-        let autoSaveTimeout;
-        const form = document.getElementById('editBookForm');
-        const inputs = form.querySelectorAll('input, textarea, select');
-        
-        inputs.forEach(input => {
-            input.addEventListener('change', () => {
-                clearTimeout(autoSaveTimeout);
-                autoSaveTimeout = setTimeout(() => {
-                    // Auto-save logic could be implemented here
-                    console.log('Auto-save triggered');
-                }, 3000);
-            });
-        });
-
         // Delete book confirmation
         function confirmDeleteBook() {
             if (confirm('Are you sure you want to delete this book? This action cannot be undone and will delete all chapters and content.')) {
@@ -844,38 +694,6 @@ if (shouldRequireListingTerms()) {
             } catch (error) {
                 console.error('Error deleting book:', error);
                 showNotification('An error occurred while deleting the book', 'error');
-            }
-        }
-
-        // Delete chapter confirmation
-        function confirmDeleteChapter(chapterId, chapterTitle) {
-            if (confirm(`Are you sure you want to delete "${chapterTitle}"? This action cannot be undone.`)) {
-                deleteChapter(chapterId);
-            }
-        }
-
-        async function deleteChapter(chapterId) {
-            try {
-                const response = await fetch(`{{ url_for("book_platform.delete_chapter", book_id=book.id, chapter_id=0) }}`.replace('0', chapterId), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(result.message, 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showNotification(result.error || 'Failed to delete chapter', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting chapter:', error);
-                showNotification('An error occurred while deleting the chapter', 'error');
             }
         }
     </script>

@@ -100,8 +100,9 @@
                             </div>
 
                             <div class="mb-3">
-                                <h6 class="text-secondary">Cover for the marketplace</h6>
-                                {% with cover_uid='create', use_wtforms=false %}
+                                <h6 class="text-secondary mb-1">Book cover for the marketplace</h6>
+                                <p class="small text-muted mb-2 mb-md-3">Upload a cover from your computer or generate it with AI</p>
+                                {% with cover_uid='create', use_wtforms=false, suppress_cover_intro=true %}
                                 {% include 'book_platform/includes/_cover_upload_or_ai.html' %}
                                 {% endwith %}
                             </div>

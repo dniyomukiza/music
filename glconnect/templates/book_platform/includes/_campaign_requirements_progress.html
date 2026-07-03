@@ -1,32 +1,35 @@
-{# Campaign readiness progress + toggleable requirements list.
-   Vars: investment_readiness, prefix (unique id prefix, e.g. book id), intro_prefix (sentence before count) #}
+{# Campaign readiness progress + optional requirements list.
+   Vars: investment_readiness, prefix (unique id prefix), intro_prefix, requirements_interactive (default true) #}
 {% set total_requirements = investment_readiness.requirement_total|default(investment_readiness.requirements|length|default(5)) %}
 {% set reqs = investment_readiness.requirements|default([]) %}
 {% set completed = reqs|selectattr('met')|list|length if reqs else (total_requirements - investment_readiness.issues|length) %}
 {% set progress_pct = (completed / total_requirements * 100)|round if total_requirements else 0 %}
 {% set _prefix = prefix|default('campaign-req') %}
 {% set _intro = intro_prefix|default('If you want a campaign later:') %}
+{% set _interactive = requirements_interactive|default(true) %}
 
-<div class="ink-campaign-req-wrap position-relative" data-campaign-req-wrap="{{ _prefix }}">
+<div class="ink-campaign-req-wrap{% if not _interactive %} ink-campaign-req-wrap--static{% endif %}{% if _interactive %} position-relative{% endif %}"{% if _interactive %} data-campaign-req-wrap="{{ _prefix }}"{% endif %}>
     <p class="small text-muted mb-2">
         {{ _intro }} {{ completed }}/{{ total_requirements }} optional
+        {% if _interactive %}
         <button type="button"
                 class="ink-campaign-req-toggle"
                 id="{{ _prefix }}-toggle"
                 aria-expanded="false"
-                aria-controls="{{ _prefix }}-panel"
-                title="View optional campaign requirements">
+                aria-controls="{{ _prefix }}-panel">
             requirements
         </button>
+        {% else %}
+        requirements
+        {% endif %}
         met
     </p>
     <div class="progress mb-0" style="height: 6px;">
         <div class="progress-bar bg-warning" style="width: {{ progress_pct }}%"></div>
     </div>
-    <div class="ink-campaign-req-panel d-none"
+    <div class="{% if _interactive %}ink-campaign-req-panel d-none{% else %}ink-campaign-req-static{% endif %}"
          id="{{ _prefix }}-panel"
-         role="region"
-         aria-labelledby="{{ _prefix }}-toggle">
+         {% if _interactive %}role="region" aria-labelledby="{{ _prefix }}-toggle"{% endif %}>
         <p class="small fw-semibold text-light mb-2 mb-md-2">Optional campaign requirements</p>
         <ul class="list-unstyled small mb-0 ink-campaign-req-list">
             {% for req in reqs %}
@@ -43,6 +46,7 @@
         </ul>
     </div>
 </div>
+{% if _interactive %}
 <script>
 (function () {
     if (window.__inkCampaignReqBound) return;
@@ -98,3 +102,4 @@
     }
 })();
 </script>
+{% endif %}

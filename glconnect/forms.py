@@ -171,7 +171,7 @@ class DigitalBookUploadForm(FlaskForm):
         FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Cover must be JPG, PNG, GIF, or WebP.')
     ])
     use_ai_cover = BooleanField('Generate cover with AI')
-    cover_art_brief = TextAreaField('Cover art direction (for AI)', validators=[Optional(), Length(max=2000)])
+    cover_art_brief = TextAreaField('Prompt AI', validators=[Optional(), Length(max=2000)])
 
     # Pricing
     digital_price = FloatField(

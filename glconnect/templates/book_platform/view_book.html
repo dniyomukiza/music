@@ -84,6 +84,10 @@
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                         {% if book.status.value == 'published' %}
                             <span class="ink-studio-status-pill is-published"><i class="fas fa-globe"></i> Live on marketplace</span>
+                        {% elif is_book_author %}
+                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="ink-studio-status-pill is-draft ink-studio-status-pill-link" title="Book settings">
+                                <i class="fas fa-pen"></i> Draft
+                            </a>
                         {% else %}
                             <span class="ink-studio-status-pill is-draft"><i class="fas fa-pen"></i> Draft</span>
                         {% endif %}
@@ -103,7 +107,7 @@
                     {% endif %}
                 </div>
                 {% if is_book_author %}
-                {% set show_book_settings = book.digital_file_path %}
+                {% set show_book_settings = true %}
                 {% set show_unpublish = book.status.value == 'published' %}
                 {% if show_book_settings or show_unpublish %}
                 <div class="col-lg-auto">
@@ -218,7 +222,7 @@
                             <p class="text-muted mb-3">Chapters live in Ink Studio, write, revise, and publish one piece at a time.</p>
                             {% if can_edit_manuscript %}
                             <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-ink-gold">
-                                <i class="fas fa-plus me-2"></i>Add first section
+                                <i class="fas fa-plus me-2"></i>Add New Section
                             </a>
                             {% endif %}
                         </div>
@@ -305,7 +309,7 @@
                                     <span class="fs-5 {% if has_listing_cover %}text-success{% else %}text-warning{% endif %}">{% if has_listing_cover %}<i class="fas fa-check-circle"></i>{% else %}<i class="fas fa-image"></i>{% endif %}</span>
                                     <div>
                                         <div class="fw-semibold small">Cover</div>
-                                        <div class="small text-muted mb-0">{% if has_listing_cover %}{% if cover_is_ai %}AI cover saved{% else %}Uploaded{% endif %}{% else %}Missing, Book settings{% endif %}</div>
+                                        <div class="small text-muted mb-0">{% if has_listing_cover %}{% if cover_is_ai %}AI cover saved{% else %}Uploaded{% endif %}{% else %}Missing, <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="ink-inline-gold-link">Book settings</a>{% endif %}</div>
                                     </div>
                                 </div>
                             </div>
@@ -353,7 +357,7 @@
                         </div>
                         {% if book.status.value == 'draft' and not has_listing_cover %}
                         <div class="alert alert-warning border-0 mt-3 mb-0 small">
-                            <strong>To publish:</strong> Add a cover in Book settings.
+                            <strong>To publish:</strong> Add a cover in <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="ink-inline-gold-link">Book settings</a>.
                         </div>
                         {% endif %}
                     </div>
@@ -391,39 +395,9 @@
                                 <i class="fas fa-envelope me-1"></i>{{ pending_invitation_count }} pending invitation(s)
                             </p>
                             {% endif %}
-                            <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-primary btn-sm w-100">
+                            <a href="{{ url_for('book_platform.collaborate', book_id=book.id) }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-user-plus me-1"></i>Invite &amp; manage
                             </a>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if is_book_author and ink_is_author_account|default(false) and investment_readiness and not book.digital_file_path %}
-                    <div class="ink-studio-panel" id="patron-campaign">
-                        <div class="ink-studio-panel-header">
-                            <h3 class="mb-0 h6"><i class="fas fa-seedling me-2 text-success"></i>Patron campaign <span class="badge bg-secondary fw-normal ms-1">Optional</span></h3>
-                        </div>
-                        <div class="ink-studio-panel-body">
-                            <p class="small text-muted mb-3">Skip this if you only want to sell on the marketplace. Use <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">Book settings</a> to set price and publish when ready.</p>
-                            {% if investment_readiness.is_ready %}
-                            <p class="small text-muted mb-3">Your book meets the minimum to launch optional patron funding.</p>
-                            {% if not book.has_investment_campaign or not investment_campaign %}
-                            <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-success w-100 btn-sm">
-                                Launch campaign (optional)
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-primary w-100 btn-sm mb-2">
-                                View campaign
-                            </a>
-                            <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}" class="btn btn-outline-light w-100 btn-sm">
-                                Edit &amp; preview project
-                            </a>
-                            {% endif %}
-                            {% else %}
-                            {% with prefix='book-' ~ book.id|string %}
-                            {% include 'book_platform/includes/_campaign_requirements_progress.html' %}
-                            {% endwith %}
-                            {% endif %}
                         </div>
                     </div>
                     {% endif %}

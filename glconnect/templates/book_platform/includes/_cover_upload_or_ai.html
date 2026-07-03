@@ -7,7 +7,9 @@
 {% set use_wtforms = use_wtforms|default(false) %}
 
 <div class="ink-cover-source mb-3">
+    {% if not suppress_cover_intro|default(false) %}
     <p class="small text-muted mb-2 mb-md-3">Add marketplace cover art — <strong>upload an image from your computer</strong> or <strong>generate with AI</strong>. AI covers always include your <strong>book title</strong> and <strong>author name</strong>.</p>
+    {% endif %}
 
     <input type="radio" class="d-none ink-cover-mode-radio" name="{{ uid }}_cover_mode" id="{{ uid }}CoverModeUpload" value="upload" autocomplete="off" checked data-cover-uid="{{ uid }}">
 
@@ -38,18 +40,16 @@
         {% else %}
         <input type="checkbox" class="d-none" name="use_ai_cover" value="on" id="useAiCoverCreate">
         {% endif %}
-        <div class="mb-3">{% include 'book_platform/_platform_content_liability_notice.html' %}</div>
         <div id="{% if uid == 'create' %}coverArtBriefCreateWrap{% else %}coverArtBriefBlock{% endif %}" class="mb-3">
-            <label for="cover_art_brief" class="form-label">Art direction <span class="text-muted fw-normal">(optional prompt)</span></label>
+            <label for="cover_art_brief" class="form-label">Prompt AI</label>
+            <div class="form-text mb-2">Get AI cover of your choice by prompting</div>
             {% if use_wtforms %}
-            {{ form.cover_art_brief(class="form-control ink-upload-control", rows="3", placeholder="Optional — describe mood, colors, setting, and style. Or leave blank and click Generate preview below.") }}
+            {{ form.cover_art_brief(class="form-control ink-upload-control", rows="3", placeholder="") }}
             {% else %}
-            <textarea class="form-control ink-upload-control" id="cover_art_brief" name="cover_art_brief" rows="3" placeholder="Optional — describe mood, colors, setting, and style. Or leave blank and click Generate preview below."></textarea>
+            <textarea class="form-control ink-upload-control" id="cover_art_brief" name="cover_art_brief" rows="3" placeholder=""></textarea>
             {% endif %}
-            <div class="form-text">Leave blank and click <strong>Generate preview</strong> for an auto cover from your title and listing details, or add art direction for a specific look.</div>
         </div>
-        <div id="{% if uid == 'create' %}aiCreateCoverPreviewWrap{% else %}aiListingCoverPreviewWrap{% endif %}" class="border rounded-3 p-3" style="border-color: rgba(201, 162, 39, 0.35) !important; background: rgba(8, 10, 9, 0.35);">
-            <p class="small fw-semibold mb-1"><i class="fas fa-image me-1 text-warning"></i>AI cover preview</p>
+        <div id="{% if uid == 'create' %}aiCreateCoverPreviewWrap{% else %}aiListingCoverPreviewWrap{% endif %}">
             <div class="d-flex flex-wrap gap-2 mb-2">
                 <button type="button" class="btn btn-ink-ghost btn-sm" id="{% if uid == 'create' %}btnCreateCoverGenerate{% else %}btnListingCoverGenerate{% endif %}"><i class="fas fa-magic me-1" aria-hidden="true"></i>Generate preview</button>
                 <button type="button" class="btn btn-ink-sage btn-sm" id="{% if uid == 'create' %}btnCreateCoverAccept{% else %}btnListingCoverAccept{% endif %}" disabled><i class="fas fa-check me-1" aria-hidden="true"></i>Use this cover</button>

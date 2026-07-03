@@ -17,23 +17,40 @@ The target branch is enhancements. Pushes to this branch deploy to production at
 
 STEP 1 — FIND THE DIFF (DO THIS FIRST)
 
-Before reviewing anything, figure out exactly what this push changed.
+Your primary job is to review all code added or changed since the last successful security scan, not just the latest commit.
 
-If the task gives you before_sha and after_sha (or GitHub before and after values), run:
+Always start with:
+  git fetch origin enhancements
+  git fetch origin refs/security-scan/last-reviewed:refs/security-scan/last-reviewed
+
+1.1 If refs/security-scan/last-reviewed exists:
+  last_reviewed_sha = the commit that ref points to
+  diff_range = last_reviewed_sha..HEAD
+  Run:
+    git diff --no-color last_reviewed_sha..HEAD
+    git diff --stat last_reviewed_sha..HEAD
+  If last_reviewed_sha is not in local history, deepen first:
+    git fetch origin enhancements --deepen=200
+  (Repeat with a larger deepen value if the SHA is still missing.)
+
+1.2 If the ref does not exist (first run):
+  Use before_sha and after_sha from the task if given; otherwise diff_range = HEAD~1..HEAD
+  State in the report that this is a first-run baseline.
+
+1.3 List changed files with git diff --name-only before you start reviewing.
+
+1.4 If you cannot reliably determine the full diff range:
+  Say so clearly in the report.
+  Review only the files named in the task — do not scan the entire repository.
+  This is a partial run (see MARKER RULES below).
+
+If the task gives you before_sha and after_sha (or GitHub before and after values) and you are not using the last-reviewed ref, run:
   git diff --no-color before_sha..after_sha
   git diff --stat before_sha..after_sha
 
-If there is only one new commit at the branch tip, run:
+If there is only one new commit at the branch tip and no marker ref, run:
   git log -2 --oneline
   git diff --no-color HEAD~1..HEAD
-
-If the clone is shallow and history is missing, fetch more history first:
-  git fetch origin enhancements --depth=20
-Then compare HEAD~1 to HEAD, or compare to the previous remote tip if you know it.
-
-List changed files with git diff --name-only before you start reviewing.
-
-If you cannot reliably determine the diff, say so clearly and review only the files named in the task. Do not scan the entire repository.
 
 STEP 2 — WHAT TO REVIEW
 
@@ -147,6 +164,7 @@ End every run with a summary that includes:
   Count of findings at each severity
   Overall assessment: safe to deploy, deploy with caution (Medium or Low only), or block deploy
   What you reviewed: diff range, number of files, and whether you used the docs-only fast path
+  Whether the last-reviewed marker should advance (see MARKER RULES)
 
 End with a valid JSON verdict block exactly in this shape:
 
@@ -157,10 +175,32 @@ End with a valid JSON verdict block exactly in this shape:
   "low": 0,
   "informational": 0,
   "verdict": "pass",
-  "diff_method": "HEAD~1..HEAD",
+  "diff_method": "last_reviewed_sha..HEAD",
+  "diff_range": "abc123..def456",
   "files_reviewed": 0,
-  "trivial_skip": false
+  "trivial_skip": false,
+  "marker_advance": false,
+  "marker_advance_reason": "Partial run: could not resolve full diff at Step 1.4"
 }
+
+MARKER RULES (READ-ONLY — YOU DO NOT PUSH THE REF)
+
+Automation (GitHub Actions) owns refs/security-scan/last-reviewed. You never commit, push, or update git refs.
+
+Recommend marker_advance: true only when ALL of the following are true:
+  You completed a full review of the entire diff range (not a partial or named-files-only scope).
+  You produced findings and a verdict for that full range.
+  Verdict is pass or warn (never advance on block).
+
+Recommend marker_advance: false when ANY of the following apply:
+  You bailed out at Step 1.4 (no reliable diff).
+  You reviewed only files named in the task instead of the full diff range.
+  The run was cut short before you could finish reviewing the full range.
+  Verdict is block.
+
+When marker_advance is false, set marker_advance_reason to a short plain-English explanation so the next run still picks up the full gap.
+
+Always note in the report summary whether the marker should advance and why.
 
 Verdict rules:
   block — any Critical finding, or any High finding with a plausible exploit path
