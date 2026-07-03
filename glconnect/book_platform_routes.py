@@ -72,6 +72,7 @@ from glconnect.book_purchase_format import (
     revenue_split_for_purchase,
     STRIPE_PRINT_SHIPPING_COUNTRIES,
 )
+from glconnect.book_platform_security import rate_limit
 from glconnect.author_publishing_agreement import (
     AUTHOR_PUBLISHING_AGREEMENT_VERSION,
     LISTING_ATTESTATION_VERSION,
@@ -821,6 +822,8 @@ _DEBUG_LOG_PATH = os.path.join(
 
 def _debug_patron_log(hypothesis_id, location, message, data=None, run_id="pre-fix"):
     # #region agent log
+    if os.getenv("DEBUG_AGENT_LOG", "").strip().lower() not in ("1", "true", "yes", "on"):
+        return
     try:
         with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as fh:
             fh.write(json.dumps({
@@ -6909,8 +6912,6 @@ def stripe_connect_onboard_return():
 @book_bp.route('/stripe/webhook', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhook events for payment confirmations"""
-    import json
-    
     try:
         # Try to import stripe (optional dependency)
         try:
@@ -6923,18 +6924,18 @@ def stripe_webhook():
         # Get webhook secret from config
         webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
         if not webhook_secret:
-            logger.warning("STRIPE_WEBHOOK_SECRET not configured - webhook verification skipped")
+            logger.warning("STRIPE_WEBHOOK_SECRET not configured - webhook verification unavailable")
         
         payload = request.get_data()
         sig_header = request.headers.get('Stripe-Signature')
         
-        # Production: never accept unsigned webhooks
-        if not current_app.debug and (not webhook_secret or not stripe_available or not sig_header):
-            logger.error("Stripe webhook rejected: signature verification required in production")
+        # Stripe webhooks must always be signed; accepting raw JSON lets attackers forge payments.
+        if not webhook_secret or not stripe_available or not sig_header:
+            logger.error("Stripe webhook rejected: signature verification required")
             _debug_patron_log(
                 "H1",
                 "book_platform_routes.py:stripe_webhook",
-                "webhook rejected in production",
+                "webhook rejected without verification",
                 {
                     "has_webhook_secret": bool(webhook_secret),
                     "stripe_available": stripe_available,
@@ -6944,21 +6945,16 @@ def stripe_webhook():
             )
             return jsonify({'error': 'Webhook verification required'}), 503
         
-        # Verify webhook signature (if secret is configured and stripe is available)
-        if webhook_secret and sig_header and stripe_available:
-            try:
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, webhook_secret
-                )
-            except ValueError:
-                logger.error("Invalid payload in Stripe webhook")
-                return jsonify({'error': 'Invalid payload'}), 400
-            except stripe.error.SignatureVerificationError:
-                logger.error("Invalid signature in Stripe webhook")
-                return jsonify({'error': 'Invalid signature'}), 400
-        else:
-            # Development only: parse JSON without verification when DEBUG is on
-            event = json.loads(payload)
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, webhook_secret
+            )
+        except ValueError:
+            logger.error("Invalid payload in Stripe webhook")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError:
+            logger.error("Invalid signature in Stripe webhook")
+            return jsonify({'error': 'Invalid signature'}), 400
         
         _debug_patron_log(
             "H1",
@@ -8912,7 +8908,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
                 title=form.title.data,
                 description=sanitize_project_description(form.description.data, book_id=book_id),
                 tentative_timeline=form.tentative_timeline.data or None,
-                pitch_video_url=form.pitch_video_url.data,
+                pitch_video_url=normalize_video_embed_url(form.pitch_video_url.data),
                 funding_goal=form.funding_goal.data,
                 minimum_investment=0.01,
                 maximum_investment=None,
@@ -8991,11 +8987,7 @@ def edit_campaign_project(campaign_id, user_profile, profile_type):
             )
             campaign.tentative_timeline = (form.tentative_timeline.data or '').strip() or None
             pitch_url = (form.pitch_video_url.data or '').strip() or None
-            if pitch_url:
-                embed = normalize_video_embed_url(pitch_url)
-                campaign.pitch_video_url = embed or pitch_url
-            else:
-                campaign.pitch_video_url = None
+            campaign.pitch_video_url = normalize_video_embed_url(pitch_url) if pitch_url else None
             db.session.commit()
             flash('Project updated. Preview your campaign page before sharing.', 'success')
             return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id, preview=1))
@@ -9251,6 +9243,7 @@ def supported_projects():
 
 @book_bp.route('/campaigns/<int:campaign_id>/translate', methods=['POST'])
 @login_required
+@rate_limit(max_requests=20, window_minutes=60)
 def translate_campaign_page(campaign_id):
     """AI-translate campaign page content for patrons (cached per language)."""
     campaign = InvestmentCampaign.query.options(

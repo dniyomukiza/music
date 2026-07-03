@@ -27,7 +27,7 @@ Run the migration script `add_accountability_columns.sql` on your PostgreSQL dat
 Or manually:
 
 ```bash
-psql "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr" -f add_accountability_columns.sql
+psql "$DATABASE_URL" -f add_accountability_columns.sql
 ```
 
 ---
@@ -37,13 +37,11 @@ psql "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u
 Create and run this Python script:
 
 ```python
+import os
 import psycopg2
-from psycopg2 import sql
 
 # Database connection
-conn = psycopg2.connect(
-    "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr"
-)
+conn = psycopg2.connect(os.environ["DATABASE_URL"])
 
 cur = conn.cursor()
 

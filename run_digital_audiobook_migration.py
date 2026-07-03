@@ -8,8 +8,10 @@ import psycopg2
 import sys
 import os
 
-# Database connection string (from docker-compose.yml or environment)
-DB_URL = os.getenv("DB_URL", "postgresql://music_owqr_user:D8SRPZ7ubYN79Pdh6E8aKzg4O2yirBrL@dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com/music_owqr")
+DB_URL = (os.getenv("DB_URL") or os.getenv("DATABASE_URL") or "").strip()
+if not DB_URL:
+    print("❌ Set DB_URL or DATABASE_URL before running this migration.")
+    sys.exit(1)
 
 def check_column_exists(cursor, table_name, column_name):
     """Check if a column exists in a table"""

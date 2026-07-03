@@ -43,6 +43,24 @@ async def handle_music_live_websocket(
 ) -> None:
     """Handle WebSocket connection for music Live API."""
     try:
+        uid = int(user_id) if user_id and user_id.isdigit() else None
+    except ValueError:
+        uid = None
+
+    if uid is None:
+        await websocket.accept()
+        await websocket.close(code=1008, reason="Invalid music session user")
+        return
+    if uid != 0:
+        from glconnect.music_live_auth import validate_music_live_ws_token
+
+        token = websocket.query_params.get("token")
+        if not validate_music_live_ws_token(token, uid):
+            await websocket.accept()
+            await websocket.close(code=1008, reason="Unauthorized music session")
+            return
+
+    try:
         runner, session_service, types, LiveRequestQueue, RunConfig, StreamingMode, set_music_live_context, ToolThreadPoolConfig = _get_runner()
     except Exception as e:
         logger.error(f"Failed to load music Live ADK: {e}")
@@ -52,11 +70,7 @@ async def handle_music_live_websocket(
 
     import os
     base_url = base_url or os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com")
-    try:
-        uid = int(user_id) if user_id and user_id.isdigit() else None
-    except ValueError:
-        uid = None
-    set_music_live_context(uid, base_url)
+    set_music_live_context(uid if uid != 0 else None, base_url)
 
     await websocket.accept()
     logger.debug(f"Music Live WebSocket accepted: user_id={user_id}, session_id={session_id}")

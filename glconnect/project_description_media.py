@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import uuid
+from html import escape
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 
@@ -144,16 +145,16 @@ def normalize_video_embed_url(url: str | None) -> str | None:
 
     if "youtu.be" in parsed.netloc:
         video_id = parsed.path.lstrip("/").split("/")[0]
-        if video_id:
+        if _is_safe_youtube_video_id(video_id):
             return f"https://www.youtube.com/embed/{video_id}"
 
     if "youtube.com" in parsed.netloc:
         if parsed.path == "/watch":
             video_id = (parse_qs(parsed.query).get("v") or [None])[0]
-            if video_id:
+            if _is_safe_youtube_video_id(video_id):
                 return f"https://www.youtube.com/embed/{video_id}"
         match = re.match(r"^/(embed|shorts)/([^/?#]+)", parsed.path)
-        if match:
+        if match and _is_safe_youtube_video_id(match.group(2)):
             return f"https://www.youtube.com/embed/{match.group(2)}"
 
     if "vimeo.com" in parsed.netloc:
@@ -164,10 +165,15 @@ def normalize_video_embed_url(url: str | None) -> str | None:
     return None
 
 
+def _is_safe_youtube_video_id(video_id: str | None) -> bool:
+    return bool(video_id and re.fullmatch(r"[A-Za-z0-9_-]{6,32}", video_id))
+
+
 def build_video_iframe_html(embed_url: str) -> str:
+    safe_embed_url = escape(embed_url, quote=True)
     return (
         f'<div class="ink-project-embed ink-project-embed--video">'
-        f'<iframe src="{embed_url}" title="Project video" width="560" height="315" '
+        f'<iframe src="{safe_embed_url}" title="Project video" width="560" height="315" '
         f'frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; '
         f'gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
     )

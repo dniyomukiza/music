@@ -18,6 +18,10 @@
         campaign_description: document.querySelector('[data-ink-translate="campaign_description"]'),
         tentative_timeline: document.querySelector('[data-ink-translate="tentative_timeline"]')
     };
+    var htmlFields = {
+        book_description: true,
+        campaign_description: true
+    };
 
     Object.keys(fields).forEach(function (key) {
         var el = fields[key];
@@ -38,8 +42,10 @@
         if (!el || value == null) return;
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
             el.value = value;
-        } else {
+        } else if (htmlFields[key]) {
             el.innerHTML = value;
+        } else {
+            el.textContent = value;
         }
     }
 

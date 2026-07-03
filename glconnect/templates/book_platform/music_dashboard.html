@@ -1045,6 +1045,7 @@
         let voiceLivePlayerNode = null;
         let voiceLiveMicStream = null;
         const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
+        const VOICE_WS_TOKEN = {{ (music_live_ws_token(current_user.user_id) if current_user.is_authenticated else '') | tojson }};
         let voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
 
         let voiceTranscriptLog = [];
@@ -1216,7 +1217,8 @@
             }
 
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
+            let wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
+            if (VOICE_WS_TOKEN) wsUrl += '?token=' + encodeURIComponent(VOICE_WS_TOKEN);
 
             try {
                 voiceLiveWs = new WebSocket(wsUrl);
