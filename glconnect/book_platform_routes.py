@@ -199,10 +199,18 @@ book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
 @book_bp.context_processor
 def _inject_author_agreement_template_context():
-    from glconnect.book_purchase_format import marketplace_card_price_label
+    from glconnect.book_purchase_format import (
+        marketplace_card_price_label,
+        ebook_listed,
+        audiobook_listed,
+        marketplace_buyable,
+    )
 
     ctx = agreement_context_for_templates()
     ctx["marketplace_card_price_label"] = marketplace_card_price_label
+    ctx["ebook_listed"] = ebook_listed
+    ctx["audiobook_listed"] = audiobook_listed
+    ctx["marketplace_buyable"] = marketplace_buyable
     ctx["is_ebook_marketplace_listed"] = is_ebook_marketplace_listed
     return ctx
 
@@ -219,29 +227,6 @@ def _ink_studio_disable_page_cache(response):
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-_DEBUG_LOG_592C32 = "/Applications/untitled folder/music-1/.cursor/debug-592c32.log"
-
-
-def _debug_log_592c32(location, message, data, hypothesis_id, run_id="pre-fix"):
-    # #region agent log
-    import json
-    import time
-    payload = {
-        "sessionId": "592c32",
-        "location": location,
-        "message": message,
-        "data": data,
-        "hypothesisId": hypothesis_id,
-        "timestamp": int(time.time() * 1000),
-        "runId": run_id,
-    }
-    try:
-        with open(_DEBUG_LOG_592C32, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(payload, default=str) + "\n")
-    except Exception:
-        pass
-    # #endregion
-
 
 def _marketplace_visibility_snapshot(book):
     """Diagnostic snapshot for why a title does or does not appear on the marketplace."""
@@ -249,7 +234,9 @@ def _marketplace_visibility_snapshot(book):
     from glconnect.book_purchase_format import (
         ebook_listed,
         marketplace_listed_format_amounts,
+        marketplace_buyable,
         print_listed,
+        audiobook_listed,
     )
 
     chapter_count = (
@@ -263,9 +250,7 @@ def _marketplace_visibility_snapshot(book):
         if book
         else False
     )
-    api_digital_flag = bool(
-        getattr(book, "digital_book_published", False) and getattr(book, "digital_file_path", None)
-    )
+    api_digital_flag = ebook_listed(book) if book else False
     return {
         "book_id": book.id if book else None,
         "title": book.title if book else None,
@@ -280,11 +265,8 @@ def _marketplace_visibility_snapshot(book):
         "chapter_count": chapter_count,
         "is_book_published": is_book_published(book) if book else False,
         "ebook_listed": ebook_listed(book) if book else False,
-        "audiobook_listed": bool(
-            book
-            and getattr(book, "audiobook_published", False)
-            and getattr(book, "has_audiobook", False)
-        ),
+        "audiobook_listed": audiobook_listed(book) if book else False,
+        "marketplace_buyable": marketplace_buyable(book) if book else False,
         "marketplace_query_match": in_query,
         "format_amounts": marketplace_listed_format_amounts(book) if book else [],
         "api_formats_digital_flag": api_digital_flag,
@@ -2009,8 +1991,12 @@ def view_book(book_id, user_profile, profile_type):
     else:
         collaborator_pending_by_chapter = {}
 
+    from glconnect.book_purchase_format import marketplace_buyable
+    listing_live = is_book_published(book)
+    marketplace_buyable_flag = marketplace_buyable(book)
+
     try:
-        return render_template('book_platform/view_book.html', 
+        return render_template('book_platform/view_book.html',
                              book=book, 
                              chapters=chapters,
                              collaborations=collaborations,
@@ -2029,7 +2015,9 @@ def view_book(book_id, user_profile, profile_type):
                              digital_download_options=digital_download_options,
                              has_listing_cover=has_listing_cover,
                              latest_audio_task=latest_audio_task,
-                             marketplace_cover_url=_marketplace_cover_url)
+                             marketplace_cover_url=_marketplace_cover_url,
+                             listing_live=listing_live,
+                             marketplace_buyable=marketplace_buyable_flag)
     except Exception as template_error:
         logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
         flash('Error loading book view. Please try again.', 'error')
@@ -2216,10 +2204,9 @@ def edit_book(book_id):
             else:
                 # For platform-created books, use the old status-based publishing
                 is_published_flag = (
-                    data.get('is_published') == 'on' or 
-                    data.get('is_published') == True or 
-                    data.get('is_published') == 'true' or
-                    'is_published' in data
+                    data.get('is_published') == 'on'
+                    or data.get('is_published') is True
+                    or str(data.get('is_published', '')).strip().lower() == 'true'
                 )
                 
                 logger.info(f"Edit book {book_id} - is_published_flag: {is_published_flag}, price: {book.price}")
@@ -4345,36 +4332,14 @@ def marketplace():
         total_books = DatabaseOptimizer.count_marketplace_books(
             genre=genre, language=language, search_term=search_term, price_range=price_range
         )
-        list_stats = DatabaseOptimizer.get_marketplace_list_stats(
-            genre=genre, language=language, search_term=search_term, price_range=price_range
-        )
+        try:
+            list_stats = DatabaseOptimizer.get_marketplace_list_stats(
+                genre=genre, language=language, search_term=search_term, price_range=price_range
+            )
+        except Exception as stats_exc:
+            logger.warning("Marketplace list stats failed: %s", stats_exc)
+            list_stats = {"total": total_books, "paid": 0, "free": 0}
         total_pages = max(1, (total_books + per_page - 1) // per_page) if total_books else 1
-
-        debug_book_id = request.args.get('debug_book', type=int)
-        if debug_book_id:
-            dbg_book = BookProject.query.get(debug_book_id)
-            snap = _marketplace_visibility_snapshot(dbg_book)
-            snap["page_book_ids"] = [b.id for b in books]
-            snap["total_books"] = total_books
-            snap["filters"] = {
-                "genre": genre,
-                "language": language,
-                "search_term": search_term,
-                "price_range": price_range,
-            }
-            snap["on_current_page"] = debug_book_id in snap["page_book_ids"]
-            _debug_log_592c32(
-                "book_platform_routes.py:marketplace",
-                "marketplace debug_book snapshot",
-                snap,
-                "B",
-            )
-            _debug_log_592c32(
-                "book_platform_routes.py:marketplace",
-                "marketplace query totals",
-                {"total_books": total_books, "page": page, "returned_count": len(books)},
-                "B",
-            )
 
         available_genres = DatabaseOptimizer.get_available_genres()
         available_languages = DatabaseOptimizer.get_available_languages()
@@ -4420,13 +4385,6 @@ def marketplace():
             db.session.rollback()
         except Exception:
             pass  # Ignore rollback errors
-
-        _debug_log_592c32(
-            "book_platform_routes.py:marketplace",
-            "marketplace route exception",
-            {"error": str(e), "type": type(e).__name__},
-            "B",
-        )
         
         logger.error(f"Marketplace error: {str(e)}", exc_info=True)
         import traceback
@@ -4464,38 +4422,6 @@ def marketplace_visibility_debug(book_id, user_profile, profile_type):
 
     snap = _marketplace_visibility_snapshot(book)
     snap["in_marketplace_count"] = DatabaseOptimizer.count_marketplace_books()
-    _debug_log_592c32(
-        "book_platform_routes.py:marketplace_visibility_debug",
-        "author visibility diagnostic",
-        snap,
-        "A",
-    )
-    if not snap["marketplace_query_match"]:
-        _debug_log_592c32(
-            "book_platform_routes.py:marketplace_visibility_debug",
-            "book excluded from marketplace base query",
-            {
-                "status": snap["status"],
-                "digital_book_published": snap["digital_book_published"],
-                "audiobook_published": snap["audiobook_published"],
-                "print_listed": snap["print_listed"],
-            },
-            "A",
-        )
-    if snap.get("api_formats_digital_mismatch"):
-        _debug_log_592c32(
-            "book_platform_routes.py:marketplace_visibility_debug",
-            "ebook_listed true but API digital flag false (Ink Studio manuscript)",
-            {"ebook_listed": snap["ebook_listed"], "api_formats_digital_flag": snap["api_formats_digital_flag"]},
-            "D",
-        )
-    if snap["marketplace_query_match"] and not snap["format_amounts"]:
-        _debug_log_592c32(
-            "book_platform_routes.py:marketplace_visibility_debug",
-            "book in marketplace query but no priced formats",
-            {"ebook_listed": snap["ebook_listed"], "audiobook_listed": snap["audiobook_listed"]},
-            "E",
-        )
     return jsonify({'success': True, 'diagnostic': snap})
 
 
@@ -4504,6 +4430,8 @@ def marketplace_visibility_debug(book_id, user_profile, profile_type):
 def api_marketplace_book_detail(book_id):
     """JSON detail for marketplace modal / future PDP (published books only)."""
     from glconnect.isbn_pool_service import format_isbn_display, marketplace_publisher_display
+    from glconnect.book_purchase_format import ebook_listed, audiobook_listed, print_listed
+    from glconnect.book_platform_models import BookStatus
 
     lang_labels = {
         'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
@@ -4532,15 +4460,25 @@ def api_marketplace_book_detail(book_id):
 
     primary_lc = (book.language or "en").lower()
     digital_editions_payload = []
-    if book.digital_book_published and book.digital_file_path:
-        digital_editions_payload.append(
-            {
-                "language": primary_lc,
-                "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
-                "file_format": (book.digital_file_type or "").upper() or None,
-                "kind": "original",
-            }
-        )
+    if ebook_listed(book):
+        if book.digital_file_path and book.digital_book_published:
+            digital_editions_payload.append(
+                {
+                    "language": primary_lc,
+                    "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
+                    "file_format": (book.digital_file_type or "").upper() or None,
+                    "kind": "original",
+                }
+            )
+        elif book.status == BookStatus.PUBLISHED and not book.digital_file_path:
+            digital_editions_payload.append(
+                {
+                    "language": primary_lc,
+                    "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
+                    "file_format": "INK",
+                    "kind": "platform",
+                }
+            )
     payload = {
         'success': True,
         'book': {
@@ -4561,8 +4499,8 @@ def api_marketplace_book_detail(book_id):
             'isbn_display': format_isbn_display(book.isbn) if book.isbn else None,
             'publisher_name': marketplace_publisher_display(book.publisher_name),
             'formats': {
-                'digital': bool(book.digital_book_published and book.digital_file_path),
-                'audiobook': bool(book.audiobook_published and book.has_audiobook),
+                'digital': ebook_listed(book),
+                'audiobook': audiobook_listed(book),
                 'print': print_listed(book),
             },
             'print_price': float(book.print_price) if print_listed(book) else None,
@@ -4927,7 +4865,9 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
 @book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
 @login_required
 def unpublish_book(book_id):
-    """Unpublish a book from marketplace (change status to DRAFT)"""
+    """Unpublish all marketplace formats for this title."""
+    from glconnect.book_utils import clear_marketplace_listing_flags
+
     book = BookProject.query.get_or_404(book_id)
 
     if current_user.role != 'admin':
@@ -4939,15 +4879,15 @@ def unpublish_book(book_id):
             return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
         if book.author_id != author_id:
             return jsonify({'error': 'Only the author or admin can unpublish the book'}), 403
-    
-    # Only unpublish if currently published
-    if book.status != BookStatus.PUBLISHED:
+
+    if not is_book_published(book):
         return jsonify({'error': 'Book is not currently published'}), 400
-    
-    # Change status to DRAFT (removes from marketplace but keeps the book)
-    book.status = BookStatus.DRAFT
+
+    if not clear_marketplace_listing_flags(book):
+        return jsonify({'error': 'Book is not currently published'}), 400
+
     book.updated_at = datetime.now(timezone.utc)
-    
+
     try:
         db.session.commit()
         return jsonify({'success': True, 'message': 'Book unpublished successfully. It has been removed from the marketplace but can be republished anytime.'})
@@ -4973,17 +4913,10 @@ def remove_listing(book_id):
             return jsonify({'error': 'Only the author or admin can remove this listing'}), 403
 
     listing_was_live = False
-    if book.digital_file_path:
-        if book.digital_book_published:
-            book.digital_book_published = False
-            listing_was_live = True
-        if book.audiobook_published:
-            book.audiobook_published = False
-            listing_was_live = True
-    else:
-        if book.status == BookStatus.PUBLISHED:
-            book.status = BookStatus.DRAFT
-            listing_was_live = True
+    from glconnect.book_utils import clear_marketplace_listing_flags
+
+    if clear_marketplace_listing_flags(book):
+        listing_was_live = True
 
     if not listing_was_live:
         return jsonify({'error': 'This book is not currently live in the marketplace'}), 400
@@ -5559,19 +5492,21 @@ def _create_print_order_from_checkout_session(purchase, book, session):
 
 def _validate_marketplace_format_selection(book, formats):
     """Ensure each requested format is listed and priced on this book."""
+    from glconnect.book_purchase_format import ebook_listed, audiobook_listed
+
     fmts = parse_selected_formats(formats)
     if not fmts:
         return None, "Choose at least one format to purchase."
     for fmt in fmts:
         if fmt == "digital":
-            if not book.digital_book_published and book.status != BookStatus.PUBLISHED:
+            if not ebook_listed(book):
                 return None, "Digital ebook is not available for this title."
-            if not book.price or book.price <= 0:
+            if book.price is None or book.price < 0:
                 return None, "Digital ebook price is not set for this book."
         elif fmt == "audiobook":
-            if not book.has_audiobook or not book.audiobook_published:
+            if not audiobook_listed(book):
                 return None, "Audiobook is not available for this title."
-            if not book.audiobook_price or book.audiobook_price <= 0:
+            if book.audiobook_price is None or book.audiobook_price < 0:
                 return None, "Audiobook price is not set for this book."
         elif fmt == "print":
             if not print_listed(book):

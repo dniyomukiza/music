@@ -224,6 +224,30 @@ def is_ebook_marketplace_listed(book):
     return book.status == BookStatus.PUBLISHED
 
 
+def clear_marketplace_listing_flags(book) -> bool:
+    """Remove all marketplace listing flags. Returns True if anything was live."""
+    if not book:
+        return False
+    from glconnect.book_platform_models import BookStatus
+
+    listing_was_live = False
+    if getattr(book, "digital_file_path", None):
+        if getattr(book, "digital_book_published", False):
+            book.digital_book_published = False
+            listing_was_live = True
+        if getattr(book, "audiobook_published", False):
+            book.audiobook_published = False
+            listing_was_live = True
+    else:
+        if book.status == BookStatus.PUBLISHED:
+            book.status = BookStatus.DRAFT
+            listing_was_live = True
+        if getattr(book, "audiobook_published", False):
+            book.audiobook_published = False
+            listing_was_live = True
+    return listing_was_live
+
+
 def delete_book_chapter_version_graph_for_project(book_project_id: int) -> None:
     """
     Remove chapter rows and version-control rows for one book in FK-safe order.

@@ -220,7 +220,7 @@
                                     {% if row.live %}<span class="ink-status-pill is-live ms-1">Live</span>{% else %}<span class="ink-status-pill is-draft ms-1">Draft</span>{% endif %}
                                 </td>
                                 <td>{% if row.ebook_listed %}{{ row.price_ebook_label }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
-                                <td>{% if row.has_audiobook %}{{ row.price_audiobook_label }}{% else %}<span class="text-muted">, </span>{% endif %}</td>
+                                <td>{% if row.audiobook_listed %}{{ row.price_audiobook_label }}{% elif row.has_audiobook %}<span class="text-muted" title="Generated but not published to marketplace">Draft</span>{% else %}<span class="text-muted">, </span>{% endif %}</td>
                                 <td>{% if row.price_bundle_label != 'Free' %}{{ row.price_bundle_label }}{% else %}<span class="text-muted">, </span>{% endif %}</td>
                                 <td>{% if row.print_listed %}{{ row.price_print_label }}{% else %}<span class="text-muted">, </span>{% endif %}</td>
                                 <td>{{ row.sales }}</td>

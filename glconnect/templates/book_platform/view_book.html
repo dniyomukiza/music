@@ -82,8 +82,10 @@
                 </div>
                 <div class="col">
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                        {% if book.status.value == 'published' %}
+                        {% if marketplace_buyable|default(false) %}
                             <span class="ink-studio-status-pill is-published"><i class="fas fa-globe"></i> Live on marketplace</span>
+                        {% elif listing_live|default(false) %}
+                            <span class="ink-studio-status-pill is-draft" title="Published flags are set but no buyable format yet — add sections, prices, or publish audiobook in Book settings."><i class="fas fa-exclamation-circle"></i> Listed (not buyable yet)</span>
                         {% elif is_book_author %}
                             <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="ink-studio-status-pill is-draft ink-studio-status-pill-link" title="Book settings">
                                 <i class="fas fa-pen"></i> Draft
@@ -108,7 +110,7 @@
                 </div>
                 {% if is_book_author %}
                 {% set show_add_section = not book.digital_file_path and can_edit_manuscript %}
-                {% set show_unpublish = book.status.value == 'published' %}
+                {% set show_unpublish = listing_live|default(false) %}
                 {% if show_add_section or show_unpublish %}
                 <div class="col-lg-auto">
                     <div class="d-flex flex-column gap-2">

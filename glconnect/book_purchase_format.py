@@ -84,6 +84,11 @@ def _audiobook_listed(book: Any) -> bool:
     )
 
 
+def audiobook_listed(book: Any) -> bool:
+    """Public alias for marketplace and purchase checks."""
+    return _audiobook_listed(book)
+
+
 def marketplace_listed_format_amounts(book: Any) -> List[float]:
     """
     Explicit list prices for each marketplace format (0.0 = author set free).
@@ -141,6 +146,7 @@ def _marketplace_stats_row_as_book(row: Any) -> Any:
 
     book = _RowBook()
     for attr in (
+        "id",
         "price",
         "digital_book_published",
         "digital_file_path",
@@ -179,6 +185,11 @@ def ebook_listed(book: Any) -> bool:
             is not None
         )
     return False
+
+
+def marketplace_buyable(book: Any) -> bool:
+    """True when at least one marketplace format can be purchased."""
+    return bool(ebook_listed(book) or _audiobook_listed(book) or print_listed(book))
 
 
 def print_shipping_amount(book: Any) -> float:

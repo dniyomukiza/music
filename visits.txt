@@ -27142,3 +27142,33 @@
     Device: Desktop
     User-Agent: Python-urllib/3.10
 --------------------------------------------------------------------------------
+[2026-07-04 02:45:24 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-07-04 02:46:41 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-07-04 02:46:44 UTC] GET /mybook/books/89
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-07-04 02:52:13 UTC] GET /mybook/marketplace
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------
+[2026-07-04 02:52:16 UTC] GET /mybook/books/89
+    IP: 127.0.0.1
+    Browser: Unknown
+    Device: Desktop
+    User-Agent: Werkzeug/3.1.3
+--------------------------------------------------------------------------------

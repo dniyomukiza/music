@@ -215,6 +215,12 @@
                                             </div>
                                             
                                             <div class="book-meta-extra mb-3 d-flex flex-wrap gap-1 align-items-center">
+                                                {% if ebook_listed(book) %}
+                                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Ebook</span>
+                                                {% endif %}
+                                                {% if audiobook_listed(book) %}
+                                                    <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">Audiobook</span>
+                                                {% endif %}
                                                 {% if book.language %}
                                                     <span class="badge rounded-pill bg-info text-dark">{{ book.language|upper }}</span>
                                                 {% endif %}
@@ -715,9 +721,6 @@
                     hint.textContent = 'Select additional formats to combine your purchase.';
                 }
             }
-            // #region agent log
-            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:syncBookDetailsCheckoutUi',message:'View book format selection',data:{bookId:state.bookId,selectedFormats:selected,total:total,hasPaidFormats:state.hasPaidFormats},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
-            // #endregion
         }
 
         function viewBook(bookId) {
@@ -851,10 +854,6 @@
                         '<div class="book-description text-muted small" style="line-height:1.65">' + (descHtml || '<em>No description yet.</em>') + '</div>' +
                         pickerHtml +
                         '</div></div>';
-
-                    // #region agent log
-                    fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:viewBook',message:'Book loaded for View Book modal',data:{bookId:b.id,hasPaidDigital:hasPaidDigital,hasPaidAudio:hasPaidAudio,hasPaidPrint:hasPaidPrint,hasPaidFormats:hasPaidFormats},timestamp:Date.now(),hypothesisId:'H1'})}).catch(function(){});
-                    // #endregion
 
                     actionsEl.innerHTML = '';
                     const closeModal = function () {
@@ -1418,10 +1417,6 @@
                 requestBody.purchase_type = purchaseType || 'digital';
             }
 
-            // #region agent log
-            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:buyWithStripeLink',message:'Purchase request payload',data:{bookId:bookId,requestBody:requestBody},timestamp:Date.now(),hypothesisId:'H3'})}).catch(function(){});
-            // #endregion
-
             if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
                 alert('Sign in or create an account from the purchase window before paying.');
                 return;
@@ -1456,9 +1451,6 @@
                 return response.json();
             })
             .then(data => {
-                // #region agent log
-                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:buyWithStripeLink:response',message:'Purchase API response',data:{success:!!data.success,error:data.error,error_code:data.error_code,operator_error_code:data.operator_error_code,hint:!!data.hint},timestamp:Date.now(),hypothesisId:'H1,H2,H4,H5'})}).catch(function(){});
-                // #endregion
                 if (data.success) {
                     // Store purchase info for success callback
                     if (data.success_url) {
