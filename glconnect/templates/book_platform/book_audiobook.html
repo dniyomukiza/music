@@ -143,10 +143,6 @@
                                         <span class="badge bg-success align-self-md-end py-2 px-3">
                                             <i class="fas fa-check me-1"></i>Audiobook live on marketplace
                                         </span>
-                                        {% else %}
-                                        <button type="button" class="btn btn-primary btn-sm" id="btnPublishAudiobookReady" onclick="scrollToAudiobookPublish()">
-                                            <i class="fas fa-store me-1"></i>Publish audiobook
-                                        </button>
                                         {% endif %}
                                         <button type="button" class="btn btn-outline-warning btn-sm" onclick="startAudiobookRegeneration()">
                                             <i class="fas fa-redo me-1"></i>Regenerate
@@ -1478,17 +1474,6 @@
             }
         }
         
-        function scrollToAudiobookPublish() {
-            const target = document.getElementById('audiobook-publish-actions');
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-            const confirmWrap = document.getElementById('listingAudiobookConfirmWrap');
-            if (confirmWrap) {
-                confirmWrap.classList.remove('d-none');
-            }
-        }
-
         async function startAudiobookRegeneration() {
             if (!confirm(
                 'Regenerate audiobook? The current audio will be removed. You will choose sections, price, and voice again.'

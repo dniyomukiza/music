@@ -219,6 +219,80 @@ def _ink_studio_disable_page_cache(response):
 # Initialize logger
 logger = logging.getLogger(__name__)
 
+_DEBUG_LOG_592C32 = "/Applications/untitled folder/music-1/.cursor/debug-592c32.log"
+
+
+def _debug_log_592c32(location, message, data, hypothesis_id, run_id="pre-fix"):
+    # #region agent log
+    import json
+    import time
+    payload = {
+        "sessionId": "592c32",
+        "location": location,
+        "message": message,
+        "data": data,
+        "hypothesisId": hypothesis_id,
+        "timestamp": int(time.time() * 1000),
+        "runId": run_id,
+    }
+    try:
+        with open(_DEBUG_LOG_592C32, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, default=str) + "\n")
+    except Exception:
+        pass
+    # #endregion
+
+
+def _marketplace_visibility_snapshot(book):
+    """Diagnostic snapshot for why a title does or does not appear on the marketplace."""
+    from glconnect.book_platform_models import BookChapter
+    from glconnect.book_purchase_format import (
+        ebook_listed,
+        marketplace_listed_format_amounts,
+        print_listed,
+    )
+
+    chapter_count = (
+        BookChapter.query.filter_by(book_project_id=book.id).count() if book else 0
+    )
+    in_query = (
+        DatabaseOptimizer.marketplace_books_base_query()
+        .filter(BookProject.id == book.id)
+        .count()
+        > 0
+        if book
+        else False
+    )
+    api_digital_flag = bool(
+        getattr(book, "digital_book_published", False) and getattr(book, "digital_file_path", None)
+    )
+    return {
+        "book_id": book.id if book else None,
+        "title": book.title if book else None,
+        "status": book.status.value if book and book.status else None,
+        "digital_file_path": bool(getattr(book, "digital_file_path", None)) if book else None,
+        "digital_book_published": bool(getattr(book, "digital_book_published", False)) if book else None,
+        "audiobook_published": bool(getattr(book, "audiobook_published", False)) if book else None,
+        "has_audiobook": bool(getattr(book, "has_audiobook", False)) if book else None,
+        "audiobook_price": getattr(book, "audiobook_price", None) if book else None,
+        "price": getattr(book, "price", None) if book else None,
+        "print_listed": print_listed(book) if book else False,
+        "chapter_count": chapter_count,
+        "is_book_published": is_book_published(book) if book else False,
+        "ebook_listed": ebook_listed(book) if book else False,
+        "audiobook_listed": bool(
+            book
+            and getattr(book, "audiobook_published", False)
+            and getattr(book, "has_audiobook", False)
+        ),
+        "marketplace_query_match": in_query,
+        "format_amounts": marketplace_listed_format_amounts(book) if book else [],
+        "api_formats_digital_flag": api_digital_flag,
+        "api_formats_digital_mismatch": (
+            ebook_listed(book) and not api_digital_flag if book else False
+        ),
+    }
+
 
 # Image upload configuration
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
@@ -4276,6 +4350,32 @@ def marketplace():
         )
         total_pages = max(1, (total_books + per_page - 1) // per_page) if total_books else 1
 
+        debug_book_id = request.args.get('debug_book', type=int)
+        if debug_book_id:
+            dbg_book = BookProject.query.get(debug_book_id)
+            snap = _marketplace_visibility_snapshot(dbg_book)
+            snap["page_book_ids"] = [b.id for b in books]
+            snap["total_books"] = total_books
+            snap["filters"] = {
+                "genre": genre,
+                "language": language,
+                "search_term": search_term,
+                "price_range": price_range,
+            }
+            snap["on_current_page"] = debug_book_id in snap["page_book_ids"]
+            _debug_log_592c32(
+                "book_platform_routes.py:marketplace",
+                "marketplace debug_book snapshot",
+                snap,
+                "B",
+            )
+            _debug_log_592c32(
+                "book_platform_routes.py:marketplace",
+                "marketplace query totals",
+                {"total_books": total_books, "page": page, "returned_count": len(books)},
+                "B",
+            )
+
         available_genres = DatabaseOptimizer.get_available_genres()
         available_languages = DatabaseOptimizer.get_available_languages()
 
@@ -4320,6 +4420,13 @@ def marketplace():
             db.session.rollback()
         except Exception:
             pass  # Ignore rollback errors
+
+        _debug_log_592c32(
+            "book_platform_routes.py:marketplace",
+            "marketplace route exception",
+            {"error": str(e), "type": type(e).__name__},
+            "B",
+        )
         
         logger.error(f"Marketplace error: {str(e)}", exc_info=True)
         import traceback
@@ -4344,6 +4451,52 @@ def marketplace():
             search_term='',
             marketplace_cover_url=_marketplace_cover_url,
         )
+
+
+@book_bp.route('/books/<int:book_id>/marketplace-visibility-debug', methods=['GET'])
+@writer_or_book_platform_required
+def marketplace_visibility_debug(book_id, user_profile, profile_type):
+    """Author-only diagnostic: why a title does or does not appear on the marketplace."""
+    author_id = get_profile_id(user_profile, profile_type)
+    book = BookProject.query.get_or_404(book_id)
+    if author_id is None or book.author_id != author_id:
+        return jsonify({'success': False, 'error': 'Only the author can view this diagnostic.'}), 403
+
+    snap = _marketplace_visibility_snapshot(book)
+    snap["in_marketplace_count"] = DatabaseOptimizer.count_marketplace_books()
+    _debug_log_592c32(
+        "book_platform_routes.py:marketplace_visibility_debug",
+        "author visibility diagnostic",
+        snap,
+        "A",
+    )
+    if not snap["marketplace_query_match"]:
+        _debug_log_592c32(
+            "book_platform_routes.py:marketplace_visibility_debug",
+            "book excluded from marketplace base query",
+            {
+                "status": snap["status"],
+                "digital_book_published": snap["digital_book_published"],
+                "audiobook_published": snap["audiobook_published"],
+                "print_listed": snap["print_listed"],
+            },
+            "A",
+        )
+    if snap.get("api_formats_digital_mismatch"):
+        _debug_log_592c32(
+            "book_platform_routes.py:marketplace_visibility_debug",
+            "ebook_listed true but API digital flag false (Ink Studio manuscript)",
+            {"ebook_listed": snap["ebook_listed"], "api_formats_digital_flag": snap["api_formats_digital_flag"]},
+            "D",
+        )
+    if snap["marketplace_query_match"] and not snap["format_amounts"]:
+        _debug_log_592c32(
+            "book_platform_routes.py:marketplace_visibility_debug",
+            "book in marketplace query but no priced formats",
+            {"ebook_listed": snap["ebook_listed"], "audiobook_listed": snap["audiobook_listed"]},
+            "E",
+        )
+    return jsonify({'success': True, 'diagnostic': snap})
 
 
 @book_bp.route('/api/marketplace/books/<int:book_id>', methods=['GET'])
