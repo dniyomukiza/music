@@ -155,6 +155,7 @@ from glconnect.book_utils import (
     audiobook_ready_for_marketplace_publish,
     delete_book_chapter_version_graph_for_project,
     is_book_published,
+    is_ebook_marketplace_listed,
 )
 from glconnect.book_platform_purge import delete_book_project_dependents
 from glconnect.author_dashboard_stats import build_author_dashboard_stats
@@ -201,6 +202,7 @@ def _inject_author_agreement_template_context():
 
     ctx = agreement_context_for_templates()
     ctx["marketplace_card_price_label"] = marketplace_card_price_label
+    ctx["is_ebook_marketplace_listed"] = is_ebook_marketplace_listed
     return ctx
 
 
@@ -2286,6 +2288,10 @@ def book_audiobook(book_id, user_profile, profile_type):
         flash('Only the author can manage the audiobook', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
 
+    if not is_ebook_marketplace_listed(book):
+        flash('Publish your ebook to the marketplace first to use Audiobook studio.', 'warning')
+        return redirect(url_for('book_platform.edit_book', book_id=book_id))
+
     campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
     try:
         investment_readiness = check_investment_readiness(book)
@@ -2548,7 +2554,7 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             if request.is_json:
                 return jsonify({'success': True, 'word_count': chapter.word_count})
             else:
-                flash('Chapter updated successfully!', 'success')
+                flash('Section updated successfully!', 'success')
                 return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
                 
         except Exception as e:
@@ -2564,7 +2570,7 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             if request.is_json:
                 return jsonify({'success': False, 'error': f'An unexpected error occurred: {error_msg}'}), 500
             else:
-                flash(f'An unexpected error occurred while editing chapter: {error_msg}', 'error')
+                flash(f'An unexpected error occurred while editing section: {error_msg}', 'error')
     
     # GET request - show edit form
     can_restore_versions = access["is_book_author"]
@@ -2856,6 +2862,11 @@ def prepare_audiobook_segments(book_id):
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user or book.author_id != book_user.id:
         return jsonify({'success': False, 'error': 'You can only prepare audiobooks for your own books'}), 403
+    if not is_ebook_marketplace_listed(book):
+        return jsonify({
+            'success': False,
+            'error': 'Publish your ebook to the marketplace first to use Audiobook studio.',
+        }), 403
     if book.has_audiobook:
         return jsonify({'success': False, 'error': 'This book already has an audiobook version'}), 400
 
@@ -2909,6 +2920,12 @@ def generate_audiobook_for_book(book_id):
     # Check if user is the author of the book
     if book.author_id != book_user.id:
         return jsonify({'success': False, 'error': 'You can only generate audiobooks for your own books'}), 403
+
+    if not is_ebook_marketplace_listed(book):
+        return jsonify({
+            'success': False,
+            'error': 'Publish your ebook to the marketplace first to use Audiobook studio.',
+        }), 403
     
     # Check if book already has audiobook
     if book.has_audiobook:

@@ -134,7 +134,7 @@ def build_audiobook_source(
                         f"You have {unpublished_count} in-progress section(s) with content. "
                     )
                 error_msg += (
-                    'Mark each section you want in audio as "Chapter complete" before generating an audiobook.'
+                    'Mark each section you want in audio as "Section complete" before generating an audiobook.'
                 )
                 return {
                     "success": False,

@@ -282,6 +282,21 @@
                             </div>
                             {% endif %}
 
+                            <div class="mb-3 pt-3 border-top border-secondary border-opacity-25">
+                                <h6 class="mb-2"><i class="fas fa-headphones me-2"></i>Audiobook studio</h6>
+                                {% if is_ebook_marketplace_listed(book) %}
+                                <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-headphones me-1"></i>Open Audiobook studio
+                                </a>
+                                <small class="text-muted d-block mt-2">Generate narration and publish your audiobook after your ebook is on the marketplace.</small>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
+                                    <i class="fas fa-headphones me-1"></i>Audiobook studio
+                                </button>
+                                <small class="text-muted d-block mt-2">Publish your ebook to the marketplace first to unlock Audiobook studio.</small>
+                                {% endif %}
+                            </div>
+
                             <div class="mb-3 border rounded p-3 bg-light listing-terms-section">
                                 {% if book_has_listing_attestation(book) %}
                                 {% include 'book_platform/includes/_listing_attestation_status.html' %}
@@ -295,25 +310,25 @@
                                         Review and accept terms
                                     </button>
                                 </div>
-                                <div id="listingTermsPanel" class="mt-3 d-none text-dark">
+                                <div id="listingTermsPanel" class="mt-3 d-none">
                                     {% set terms_scroll_id = 'listingTermsScrollEdit' %}
                                     {% set terms_hint_id = 'listingTermsScrollHintEdit' %}
                                     {% include 'book_platform/_author_listing_terms_scroll.html' %}
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" id="listing_terms_rights_warranty" name="listing_terms_rights_warranty" value="on" disabled>
-                                        <label class="form-check-label small text-dark" for="listing_terms_rights_warranty">
+                                        <label class="form-check-label small" for="listing_terms_rights_warranty">
                                             I confirm I own or hold all rights/licenses to publish and sell this work.
                                         </label>
                                     </div>
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="listing_terms_takedown_consent" name="listing_terms_takedown_consent" value="on" disabled>
-                                        <label class="form-check-label small text-dark" for="listing_terms_takedown_consent">
+                                        <label class="form-check-label small" for="listing_terms_takedown_consent">
                                             I agree this listing may be removed immediately upon a credible infringement claim.
                                         </label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="listing_ai_rights_confirm" name="listing_ai_rights_confirm" value="on" disabled>
-                                        <label class="form-check-label small text-dark" for="listing_ai_rights_confirm">
+                                        <label class="form-check-label small" for="listing_ai_rights_confirm">
                                             I accept full responsibility for any AI-generated or AI-edited content in this title (cover, text, or audio), including commercial rights and non-infringement. Ndotonic is not liable for AI output I choose to list.
                                         </label>
                                     </div>

@@ -6738,6 +6738,41 @@ body.ink-edit-book-listing .edit-book .bg-light,
 body.ink-edit-book-listing .edit-book .listing-terms-section {
     background: rgba(12, 15, 14, 0.75) !important;
     color: #e8ece9 !important;
+    border-color: rgba(201, 162, 39, 0.22) !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-section h6,
+body.ink-edit-book-listing .edit-book .listing-terms-section .text-muted,
+body.ink-edit-book-listing .edit-book .listing-terms-section .form-check-label,
+body.ink-edit-book-listing .edit-book .listing-terms-section #listingTermsPanel,
+body.ink-edit-book-listing .edit-book .listing-terms-section #listingTermsPanel small {
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-section h6 i {
+    color: #e0bc3a !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox {
+    background: rgba(8, 10, 9, 0.82) !important;
+    border-color: rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox p,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox em,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox .fw-semibold,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox li,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox ul {
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox strong {
+    color: #ffffff !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox .text-muted {
+    color: #b8c4be !important;
 }
 
 body.ink-edit-book-listing .edit-book label.text-dark,

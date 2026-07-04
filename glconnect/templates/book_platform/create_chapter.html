@@ -236,11 +236,11 @@
                                     <div class="form-check form-switch mt-md-4 d-inline-block text-start">
                                         <input class="form-check-input" type="checkbox" id="is_published" name="is_published" style="cursor:pointer">
                                         <label class="form-check-label" for="is_published" style="cursor:pointer">
-                                            Chapter complete
+                                            Section complete
                                         </label>
                                     </div>
                                     <p class="form-text text-muted small mb-0 mt-1" style="max-width: 22rem; margin-left: auto;">
-                                        Lock marks a complete chapter ready for audiobook.
+                                        Lock marks a complete section ready for audiobook.
                                     </p>
                                     {% else %}
                                     <p class="small text-muted mt-md-4 mb-0">New sections you add stay in progress until the author marks them complete.</p>
@@ -254,7 +254,7 @@
                                     Cancel
                                 </a>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i> Save Chapter
+                                    <i class="fas fa-save me-2"></i> Save section
                                 </button>
                             </div>
                         </form>
@@ -328,10 +328,10 @@
                 });
                 const result = await response.json();
                 if (result.success) {
-                    showNotification('Chapter created successfully!', 'success');
+                    showNotification('Section created successfully!', 'success');
                     setTimeout(() => window.location.href = result.redirect || '{{ url_for("book_platform.view_book", book_id=book.id) }}', 1500);
-                } else showNotification(result.error || 'Failed to create chapter', 'error');
-            } catch (error) { showNotification('Error creating chapter', 'error'); }
+                } else showNotification(result.error || 'Failed to create section', 'error');
+            } catch (error) { showNotification('Error creating section', 'error'); }
         });
 
         function showNotification(message, type = 'info') {

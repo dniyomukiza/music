@@ -39,6 +39,24 @@ class ListingCouponError(Exception):
     """Invalid earn/redeem operation."""
 
 
+def _aware_utc(dt: datetime | None) -> datetime | None:
+    """Normalize DB datetimes (often naive UTC) for safe comparison."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _utc_now_naive() -> datetime:
+    """Naive UTC for SQLAlchemy filters on timezone-less DateTime columns."""
+    return _utc_now().replace(tzinfo=None)
+
+
 def _clamp_fee_percent(percent: float) -> float:
     return max(MIN_PLATFORM_FEE_PERCENT, min(BASE_PLATFORM_FEE_PERCENT, float(percent)))
 
@@ -162,7 +180,7 @@ def issue_coupon_on_format_publish(book: Any, earned_from_format: str) -> Option
     if existing:
         return existing
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now()
     coupon = AuthorFormatListingCoupon(
         author_id=book.author_id,
         book_project_id=book.id,
@@ -188,13 +206,13 @@ def expire_stale_coupons_for_book(book_id: int) -> None:
     from glconnect import db
     from glconnect.book_platform_models import AuthorFormatListingCoupon
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now()
     rows = AuthorFormatListingCoupon.query.filter_by(
         book_project_id=book_id,
         status=COUPON_STATUS_AVAILABLE,
     ).all()
     for row in rows:
-        if row.expires_at and row.expires_at < now:
+        if row.expires_at and _aware_utc(row.expires_at) < now:
             row.status = COUPON_STATUS_EXPIRED
 
 
@@ -207,7 +225,7 @@ def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
         return []
 
     expire_stale_coupons_for_book(book.id)
-    now = datetime.now(timezone.utc)
+    now = _utc_now()
     rows = (
         AuthorFormatListingCoupon.query.filter_by(
             book_project_id=book.id,
@@ -220,7 +238,7 @@ def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
     for row in rows:
         if row.earned_from_format == target:
             continue
-        if row.expires_at and row.expires_at < now:
+        if row.expires_at and _aware_utc(row.expires_at) < now:
             row.status = COUPON_STATUS_EXPIRED
             continue
         out.append(row)
@@ -230,7 +248,7 @@ def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
 def count_available_coupons_for_author(author_id: int) -> int:
     from glconnect.book_platform_models import AuthorFormatListingCoupon
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now_naive()
     return (
         AuthorFormatListingCoupon.query.filter_by(
             author_id=author_id,
@@ -251,7 +269,7 @@ def coupons_summary_for_books(books: List[Any]) -> Dict[int, Dict[str, Any]]:
     if not books:
         return {}
     book_ids = [b.id for b in books]
-    now = datetime.now(timezone.utc)
+    now = _utc_now_naive()
     rows = (
         AuthorFormatListingCoupon.query.filter(
             AuthorFormatListingCoupon.book_project_id.in_(book_ids),
@@ -314,8 +332,8 @@ def redeem_coupon(coupon_id: int, book: Any, target_format: str) -> Any:
             f"Use a coupon earned from a different format (not {_format_label(target)})."
         )
 
-    now = datetime.now(timezone.utc)
-    if coupon.expires_at and coupon.expires_at < now:
+    now = _utc_now()
+    if coupon.expires_at and _aware_utc(coupon.expires_at) < now:
         coupon.status = COUPON_STATUS_EXPIRED
         db.session.flush()
         raise ListingCouponError("This coupon has expired.")

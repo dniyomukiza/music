@@ -170,21 +170,21 @@
                                     <i class="fas fa-edit"></i> {% if is_book_author|default(false) %}Edit content{% else %}Propose edits{% endif %}
                                 </a>
                             {% endif %}
-                            {% if can_edit_manuscript|default(false) and not book.digital_file_path %}
-                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}"
-                               class="btn btn-outline-primary">
-                                <i class="fas fa-plus"></i> Add New Section
-                            </a>
-                            {% endif %}
                             {% if is_book_author|default(false) and not book.digital_file_path %}
                             <button class="btn btn-danger" onclick="confirmDeleteChapter()">
                                 <i class="fas fa-trash"></i> Delete section
                             </button>
                             {% endif %}
-                            <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" 
+                            <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" 
                                class="btn btn-outline-info">
-                                <i class="fas fa-book"></i> View Book
+                                <i class="fas fa-sliders-h"></i> Book settings
                             </a>
+                            {% if can_edit_manuscript|default(false) and not book.digital_file_path %}
+                            <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}"
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-plus"></i> Add section
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
