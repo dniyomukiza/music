@@ -169,6 +169,25 @@ def audiobook_ready_for_marketplace_publish(book):
     )
 
 
+def clear_audiobook_generation(book, *, unpublish: bool = True) -> None:
+    """Remove generated audiobook assets so the author can regenerate from scratch."""
+    from glconnect import db
+    from glconnect.book_platform_models import AudiobookChapter
+
+    if not book:
+        return
+    AudiobookChapter.query.filter_by(book_project_id=book.id).delete(synchronize_session=False)
+    book.has_audiobook = False
+    book.audiobook_file_path = None
+    book.audiobook_duration = None
+    book.audiobook_generated_at = None
+    book.audiobook_voice = None
+    book.audiobook_segment_plan = None
+    if unpublish:
+        book.audiobook_published = False
+    db.session.flush()
+
+
 def is_book_published(book):
     """
     Unified check: book is published if:

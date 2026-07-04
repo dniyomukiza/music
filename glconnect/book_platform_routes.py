@@ -153,6 +153,7 @@ from glconnect.stripe_utils import (
 )
 from glconnect.book_utils import (
     audiobook_ready_for_marketplace_publish,
+    clear_audiobook_generation,
     delete_book_chapter_version_graph_for_project,
     is_book_published,
     is_ebook_marketplace_listed,
@@ -2044,7 +2045,7 @@ def edit_book(book_id):
             book.price = float(data.get('price', 0)) if data.get('price') else None
             book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
-            if book.digital_file_path and data.get('audiobook_price') not in (None, ''):
+            if data.get('audiobook_price') not in (None, ''):
                 try:
                     book.audiobook_price = float(data.get('audiobook_price'))
                 except (TypeError, ValueError):
@@ -2173,6 +2174,46 @@ def edit_book(book_id):
                     if is_book_published(book):
                         book.status = BookStatus.DRAFT
                         logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
+
+                publish_audiobook = data.get('publish_audiobook') == 'on'
+                if publish_audiobook and not book.audiobook_published:
+                    newly_listing = True
+                if publish_audiobook:
+                    ok_audio, audio_err = audiobook_ready_for_marketplace_publish(book)
+                    if not ok_audio:
+                        return jsonify({'success': False, 'error': audio_err}), 400
+                    if not book.audiobook_published and data.get('confirm_audiobook_publish') != 'on':
+                        return jsonify({
+                            'success': False,
+                            'error': (
+                                'Confirm that you have previewed the audiobook and approve '
+                                'publishing it to the marketplace.'
+                            ),
+                        }), 400
+                    audiobook_price_value = float(book.audiobook_price) if book.audiobook_price is not None else None
+                    if audiobook_price_value is None or audiobook_price_value < 0:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please set an audiobook price before publishing it to the marketplace (use 0 for free).'
+                        }), 400
+                    if not book_has_listing_cover(book):
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please add a cover image before publishing the audiobook to the marketplace.'
+                        }), 400
+                    if not book.audiobook_published:
+                        book.audiobook_published = True
+                        book.audiobook_published_at = datetime.now(timezone.utc)
+                        logger.info(f"Audiobook {book_id} published via edit form (Ink Studio book)")
+                elif data.get('publish_audiobook') is not None and publish_audiobook is False:
+                    if book.audiobook_published:
+                        book.audiobook_published = False
+                        logger.info(f"Audiobook {book_id} unpublished via edit form (Ink Studio book)")
+
+                if publish_audiobook and not _prev_audiobook_pub:
+                    coupon_err = try_redeem_coupon_from_form(book, LISTING_FORMAT_AUDIOBOOK, data)
+                    if coupon_err:
+                        return jsonify({'success': False, 'error': coupon_err}), 400
 
             from glconnect.isbn_pool_service import (
                 apply_listing_isbn,
@@ -2847,6 +2888,31 @@ def delete_book(book_id):
         logger.error(f"Error deleting book {book_id}: {str(e)}\n{error_trace}")
         return jsonify({'error': f'Failed to delete book: {str(e)}'}), 500
 
+@book_bp.route('/books/<int:book_id>/reset-audiobook', methods=['POST'])
+@book_platform_required
+def reset_audiobook(book_id):
+    """Clear generated audiobook so the author can run generation again."""
+    book = BookProject.query.get_or_404(book_id)
+    if not current_user or not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user or book.author_id != book_user.id:
+        return jsonify({'success': False, 'error': 'Only the author can reset the audiobook'}), 403
+    if not is_ebook_marketplace_listed(book):
+        return jsonify({
+            'success': False,
+            'error': 'Publish your ebook to the marketplace first.',
+        }), 403
+    if not book.has_audiobook:
+        return jsonify({'success': True, 'message': 'Ready to generate a new audiobook.'})
+
+    clear_audiobook_generation(book, unpublish=True)
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'message': 'Previous audiobook cleared. Choose sections, voice, and price to generate again.',
+    })
+
 @book_bp.route('/books/<int:book_id>/prepare-audiobook-segments', methods=['POST'])
 @book_platform_required
 def prepare_audiobook_segments(book_id):
@@ -2943,8 +3009,14 @@ def generate_audiobook_for_book(book_id):
             'success': False,
             'error': 'Audiobook price is required (use 0 for free).',
         }), 400
+    raw_price = data.get('audiobook_price')
+    if raw_price is None or (isinstance(raw_price, str) and not str(raw_price).strip()):
+        return jsonify({
+            'success': False,
+            'error': 'Audiobook price is required (use 0 for free).',
+        }), 400
     try:
-        audiobook_price = float(data.get('audiobook_price'))
+        audiobook_price = float(raw_price)
     except (TypeError, ValueError):
         return jsonify({'success': False, 'error': 'Audiobook price must be a valid number.'}), 400
     if audiobook_price < 0:
@@ -2966,12 +3038,19 @@ def generate_audiobook_for_book(book_id):
         source_hash_payload = data.get('source_hash')
         segment_includes_payload = data.get('segment_includes')
 
+        plan = book.audiobook_segment_plan if isinstance(getattr(book, 'audiobook_segment_plan', None), dict) else {}
+        if not plan.get('source_hash') or not plan.get('segments'):
+            return jsonify({
+                'success': False,
+                'error': 'Review sections for audiobook and choose which parts to include before generating.',
+            }), 400
+
         if not source_hash_payload:
             return jsonify({
                 'success': False,
                 'error': 'Review sections for audiobook before generating.',
             }), 400
-        if source_hash_payload != source_hash:
+        if source_hash_payload != source_hash or plan.get('source_hash') != source_hash:
             return jsonify({
                 'success': False,
                 'error': 'Your book text changed since you reviewed sections. Please click Review sections again.',
@@ -2980,8 +3059,14 @@ def generate_audiobook_for_book(book_id):
         if not isinstance(segment_includes_payload, list) or not segment_includes_payload:
             return jsonify({
                 'success': False,
-                'error': 'segment_includes must be a list of booleans, one per section.',
+                'error': 'Choose which sections to include in the audiobook before generating.',
             }), 400
+        if len(segment_includes_payload) != len(plan.get('segments') or []):
+            return jsonify({
+                'success': False,
+                'error': 'Section selection is out of date. Click Review sections for audiobook again.',
+                'stale_segment_plan': True,
+            }), 409
         segment_bools = []
         for x in segment_includes_payload:
             if isinstance(x, bool):
@@ -3036,19 +3121,22 @@ def generate_audiobook_for_book(book_id):
                     audio_task.progress = 10
                     db.session.commit()
                     
-                    # Always chapter-based when we have segments (platform chapters or upload parts)
-                    if chapters_for_audio_thread:
-                        audio_result = audio_book_generator.generate_audiobook_by_chapters(
-                            chapters_for_audio_thread,
+                    # Chapter-based only — segments and price are required before generation starts.
+                    if not chapters_for_audio_thread:
+                        audio_task.status = 'failed'
+                        audio_task.error_message = 'No sections selected for audiobook generation.'
+                        db.session.commit()
+                        logger.error(
+                            "Audiobook generation for book %s aborted: no sections after filter",
                             book.id,
-                            voice_name_for_thread
                         )
-                    else:
-                        audio_result = audio_book_generator.generate_audiobook(
-                            full_text_for_thread,
-                            book.id,
-                            voice_name_for_thread
-                        )
+                        return
+
+                    audio_result = audio_book_generator.generate_audiobook_by_chapters(
+                        chapters_for_audio_thread,
+                        book.id,
+                        voice_name_for_thread
+                    )
                     
                     if audio_result['success']:
                         book.has_audiobook = True

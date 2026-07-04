@@ -71,6 +71,11 @@
                     <input type="hidden" name="listing_coupon_id" id="listing_coupon_id_field" value="">
                     {% else %}
                     <input type="hidden" name="is_published" id="is_published" value="{% if book.status.value == 'published' %}on{% endif %}" data-was-published="{% if book.status.value == 'published' %}1{% else %}0{% endif %}">
+                    <input type="hidden" name="publish_audiobook" id="publish_audiobook" value="{% if book.audiobook_published %}on{% endif %}" data-was-published="{% if book.audiobook_published %}1{% else %}0{% endif %}">
+                    <input type="hidden" name="confirm_audiobook_publish" id="confirm_audiobook_publish_field" value="">
+                    <input type="hidden" name="listing_terms_rights_warranty" id="listing_terms_rights_warranty_field" value="">
+                    <input type="hidden" name="listing_terms_takedown_consent" id="listing_terms_takedown_consent_field" value="">
+                    <input type="hidden" name="listing_coupon_id" id="listing_coupon_id_field" value="">
                     {% endif %}
                 </form>
 
@@ -132,10 +137,22 @@
                                         </audio>
                                     </div>
                                 </div>
-                                <div class="col-md-4 text-end">
-                                    <button class="btn btn-outline-danger btn-sm" onclick="regenerateAudiobook()">
-                                        <i class="fas fa-redo"></i> Regenerate
-                                    </button>
+                                <div class="col-md-4">
+                                    <div class="d-flex flex-column gap-2">
+                                        {% if book.audiobook_published %}
+                                        <span class="badge bg-success align-self-md-end py-2 px-3">
+                                            <i class="fas fa-check me-1"></i>Audiobook live on marketplace
+                                        </span>
+                                        {% else %}
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnPublishAudiobookReady" onclick="scrollToAudiobookPublish()">
+                                            <i class="fas fa-store me-1"></i>Publish audiobook
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="startAudiobookRegeneration()">
+                                            <i class="fas fa-redo me-1"></i>Regenerate
+                                        </button>
+                                        <small class="text-muted">Regenerate clears this audio and returns you to section and voice selection.</small>
+                                    </div>
                                 </div>
                             </div>
                         {% else %}
@@ -256,20 +273,29 @@
                                         <div id="voiceError" class="alert alert-danger mt-2" style="display: none;"></div>
                                     </div>
                                     
-                                    <!-- Generate Button - Appears after voice selection -->
+                                    <!-- Generate Button - enabled only when price, sections, and voice are set -->
                                     <div class="mt-4 text-center">
-                                        <button class="btn btn-primary btn-lg" onclick="generateAudiobook()" id="generateBtn">
+                                        <button class="btn btn-primary btn-lg" onclick="generateAudiobook()" id="generateBtn" disabled aria-disabled="true">
                                             <i class="fas fa-headphones"></i> Generate Audiobook
                                         </button>
+                                        <p id="audiobookGenerateHint" class="small text-muted mt-2 mb-0">
+                                            Before generating: review sections and select at least one part, set a price (0 for free), choose a voice.
+                                        </p>
                                     </div>
                             </div>
 
                         {% endif %}
                     </div>
                 </div>
-                {% if book.digital_file_path %}
+                {% if book.has_audiobook %}
                 <div class="card border-primary mt-3" id="audiobook-publish-actions">
                     <div class="card-body">
+                        {% if book.audiobook_published %}
+                        <div class="alert alert-success mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Audiobook is live</strong> on the marketplace. Use <strong>Regenerate</strong> above to replace the audio, then publish again.
+                        </div>
+                        {% else %}
                         <ol class="small text-muted mb-3 ps-3 mb-0" id="listingPublishSteps">
                             {% if book_has_listing_attestation(book) %}
                             <li id="listingStepPreview" class="mb-1"><strong>Step 1:</strong> Preview the audiobook and check the approval box.</li>
@@ -355,7 +381,8 @@
                                 <i class="fas fa-columns me-1"></i>Skip audiobook for now
                             </a>
                         </div>
-                        <small class="text-muted d-block mt-2">Ebook is already published from step 1.</small>
+                        <small class="text-muted d-block mt-2">Your ebook is already on the marketplace. Publish the audiobook when you are satisfied with the preview.</small>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -405,6 +432,66 @@
                 return { ok: false, error: 'Audiobook price must be 0 or higher.' };
             }
             return { ok: true, value: val };
+        }
+
+        function audiobookHasValidPrice() {
+            return readAudiobookPriceForGeneration().ok;
+        }
+
+        function audiobookHasIncludedSections() {
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.sourceHash) {
+                return false;
+            }
+            const segments = window._audiobookSegmentState.segments || [];
+            if (!segments.length) {
+                return false;
+            }
+            for (let i = 0; i < segments.length; i++) {
+                const cb = document.getElementById('audiobook-seg-' + i);
+                if (cb && cb.checked) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function audiobookHasSelectedVoice() {
+            const voiceInput = document.getElementById('audiobookVoice');
+            return !!(voiceInput && (voiceInput.value || '').trim());
+        }
+
+        function updateAudiobookGenerateReady() {
+            const btn = document.getElementById('generateBtn');
+            const hint = document.getElementById('audiobookGenerateHint');
+            if (!btn) {
+                return;
+            }
+            const priceOk = audiobookHasValidPrice();
+            const sectionsOk = audiobookHasIncludedSections();
+            const voiceOk = audiobookHasSelectedVoice();
+            const ready = priceOk && sectionsOk && voiceOk;
+            btn.disabled = !ready;
+            btn.setAttribute('aria-disabled', ready ? 'false' : 'true');
+            if (!hint) {
+                return;
+            }
+            if (ready) {
+                hint.textContent = '';
+                hint.classList.add('d-none');
+                return;
+            }
+            const missing = [];
+            if (!sectionsOk) {
+                missing.push('review sections and select at least one part');
+            }
+            if (!priceOk) {
+                missing.push('set a price (0 for free)');
+            }
+            if (!voiceOk) {
+                missing.push('choose a voice');
+            }
+            hint.textContent = 'Before generating: ' + missing.join(', ') + '.';
+            hint.classList.remove('d-none');
         }
 
         function syncListingCouponToForm() {
@@ -721,6 +808,12 @@
             }
             {% if not book.has_audiobook %}
             loadAvailableVoices();
+            const priceInput = document.getElementById('audiobookPrice');
+            if (priceInput) {
+                priceInput.addEventListener('input', updateAudiobookGenerateReady);
+                priceInput.addEventListener('change', updateAudiobookGenerateReady);
+            }
+            updateAudiobookGenerateReady();
             {% endif %}
             updatePublishButtonsUx();
             
@@ -1051,6 +1144,7 @@
             
             // Re-render to show selection
             renderVoices();
+            updateAudiobookGenerateReady();
         }
         
         // Preload sample previews for each voice category
@@ -1273,6 +1367,11 @@
                             '</div></div>'
                         );
                     }).join('');
+                    list.addEventListener('change', function (e) {
+                        if (e.target && e.target.classList.contains('audiobook-seg-include')) {
+                            updateAudiobookGenerateReady();
+                        }
+                    });
                 }
                 if (panel) panel.classList.remove('d-none');
                 if (badge) {
@@ -1283,6 +1382,7 @@
                 }
                 if (statusEl) statusEl.textContent = result.segment_count + ' section(s), adjust toggles, then generate.';
                 showNotification('Sections loaded. Adjust checkboxes if needed, then generate.', 'success');
+                updateAudiobookGenerateReady();
             } catch (e) {
                 console.error(e);
                 showNotification('Failed to load sections', 'error');
@@ -1315,11 +1415,15 @@
                 showNotification('Click "Review sections for audiobook" first, then generate.', 'error');
                 return;
             }
+            if (!audiobookHasIncludedSections()) {
+                showNotification('Select at least one section to include in the audiobook.', 'error');
+                return;
+            }
             const n = window._audiobookSegmentState.segments.length;
             const segment_includes = [];
             for (let i = 0; i < n; i++) {
                 const cb = document.getElementById('audiobook-seg-' + i);
-                segment_includes.push(cb ? cb.checked : !!(window._audiobookSegmentState.segments[i] && window._audiobookSegmentState.segments[i].include));
+                segment_includes.push(!!(cb && cb.checked));
             }
             if (!segment_includes.some(Boolean)) {
                 showNotification('Select at least one section to include in the audiobook.', 'error');
@@ -1352,6 +1456,7 @@
                     if (segPanel) segPanel.classList.add('d-none');
                     var prepSt = document.getElementById('audiobookPrepareStatus');
                     if (prepSt) prepSt.textContent = '';
+                    updateAudiobookGenerateReady();
                 }
                 
                 if (result.success) {
@@ -1362,48 +1467,52 @@
                     }, 2000);
                 } else {
                     showNotification(result.error || 'Failed to start audiobook generation', 'error');
-                    // Re-enable button
-                    generateBtn.disabled = false;
+                    updateAudiobookGenerateReady();
                     generateBtn.innerHTML = '<i class="fas fa-headphones"></i> Generate Audiobook';
                 }
             } catch (error) {
                 console.error('Error generating audiobook:', error);
                 showNotification('An error occurred while starting audiobook generation', 'error');
-                // Re-enable button
-                generateBtn.disabled = false;
+                updateAudiobookGenerateReady();
                 generateBtn.innerHTML = '<i class="fas fa-headphones"></i> Generate Audiobook';
             }
         }
         
-        async function regenerateAudiobook() {
-            if (confirm('Are you sure you want to regenerate the audiobook? This will replace the existing version.')) {
-                // Reset audiobook status
-                try {
-                    const response = await fetch('{{ url_for("book_platform.generate_audiobook_for_book", book_id=book.id) }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            audiobook_price: {{ book.audiobook_price or 0 }},
-                            voice_name: '{{ book.audiobook_voice or "en-US-Neural2-A" }}'
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        showNotification('Audiobook regeneration started', 'success');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    } else {
-                        showNotification(result.error || 'Failed to start audiobook regeneration', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error regenerating audiobook:', error);
-                    showNotification('An error occurred while starting audiobook regeneration', 'error');
+        function scrollToAudiobookPublish() {
+            const target = document.getElementById('audiobook-publish-actions');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            const confirmWrap = document.getElementById('listingAudiobookConfirmWrap');
+            if (confirmWrap) {
+                confirmWrap.classList.remove('d-none');
+            }
+        }
+
+        async function startAudiobookRegeneration() {
+            if (!confirm(
+                'Regenerate audiobook? The current audio will be removed. You will choose sections, price, and voice again.'
+            )) {
+                return;
+            }
+            try {
+                const response = await fetch('{{ url_for("book_platform.reset_audiobook", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showNotification(result.message || 'Ready to regenerate audiobook.', 'success');
+                    setTimeout(function () {
+                        window.location.href = '{{ url_for("book_platform.book_audiobook", book_id=book.id) }}';
+                    }, 800);
+                } else {
+                    showNotification(result.error || 'Could not reset audiobook', 'error');
                 }
+            } catch (error) {
+                console.error('Error resetting audiobook:', error);
+                showNotification('An error occurred while resetting the audiobook', 'error');
             }
         }
 
