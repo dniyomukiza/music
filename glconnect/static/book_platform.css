@@ -4403,6 +4403,32 @@ body.ink-upload-book .ink-upload-lead {
     line-height: 1.55;
 }
 
+body.ink-upload-book .ink-audiobook-author-preview .list-group-item.active {
+    background: rgba(201, 162, 39, 0.14);
+    border-color: rgba(201, 162, 39, 0.35);
+}
+
+body.ink-upload-book .ink-audiobook-author-preview .ink-audiobook-chapter-btn {
+    color: #e8ece9;
+}
+
+body.ink-upload-book .ink-audiobook-author-preview .ink-audiobook-chapter-btn:hover {
+    color: #f5d76a;
+}
+
+body.ink-book-studio .ink-audiobook-author-preview .list-group-item.active {
+    background: rgba(201, 162, 39, 0.14);
+    border-color: rgba(201, 162, 39, 0.35);
+}
+
+body.ink-book-studio .ink-audiobook-author-preview .ink-audiobook-chapter-btn {
+    color: #e8ece9;
+}
+
+body.ink-book-studio .ink-audiobook-author-preview .ink-audiobook-chapter-btn:hover {
+    color: #f5d76a;
+}
+
 body.ink-upload-book .ink-upload-main .alert {
     border-radius: 14px;
 }
@@ -6311,6 +6337,84 @@ body.ink-workspace .ink-workspace-dropdown .dropdown-item.text-danger:hover,
 body.ink-workspace .ink-workspace-dropdown .dropdown-item.text-danger:focus,
 body.ink-marketplace .ink-workspace-dropdown .dropdown-item.text-danger:hover,
 body.ink-marketplace .ink-workspace-dropdown .dropdown-item.text-danger:focus {
+    background-color: rgba(239, 68, 68, 0.14) !important;
+    color: #fca5a5 !important;
+}
+
+/* Shared Ink Studio top nav — not tied to body.ink-workspace (audiobook, uploads, etc.) */
+.ink-workspace-nav {
+    background: rgba(6, 8, 7, 0.94) !important;
+    backdrop-filter: blur(10px);
+    z-index: 1040;
+    isolation: isolate;
+    overflow: visible !important;
+}
+
+.ink-workspace-nav .navbar-collapse,
+.ink-workspace-nav .ink-workspace-nav-secondary {
+    overflow: visible !important;
+}
+
+.ink-workspace-nav .dropdown-menu,
+.ink-workspace-nav .ink-workspace-dropdown {
+    z-index: 1055 !important;
+    pointer-events: auto !important;
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    border-radius: 12px;
+    padding: 0.35rem;
+}
+
+.ink-workspace-nav .ink-workspace-nav-primary .nav-link {
+    color: rgba(232, 236, 233, 0.78) !important;
+    font-weight: 600;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+}
+
+.ink-workspace-nav .ink-workspace-nav-primary .nav-link:hover,
+.ink-workspace-nav .ink-workspace-nav-primary .nav-link.active {
+    color: #f5d76a !important;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.ink-workspace-nav .ink-workspace-more-toggle,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle {
+    color: rgba(232, 236, 233, 0.78) !important;
+    border-radius: 8px;
+    transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.ink-workspace-nav .ink-workspace-more-toggle:hover,
+.ink-workspace-nav .ink-workspace-more-toggle:focus,
+.ink-workspace-nav .ink-workspace-more-toggle.show,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle:hover,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle:focus,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle.show {
+    color: #f5d76a !important;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item {
+    pointer-events: auto !important;
+    cursor: pointer;
+    color: #e8ece9 !important;
+    border-radius: 8px;
+    font-weight: 500;
+    background-color: transparent;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item:hover,
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item:focus,
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item.active {
+    background-color: rgba(201, 162, 39, 0.16) !important;
+    color: #f5d76a !important;
+    transform: translateX(3px);
+}
+
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item.text-danger:hover,
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item.text-danger:focus {
     background-color: rgba(239, 68, 68, 0.14) !important;
     color: #fca5a5 !important;
 }

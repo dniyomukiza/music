@@ -1994,11 +1994,13 @@ def view_book(book_id, user_profile, profile_type):
     from glconnect.book_purchase_format import marketplace_buyable
     listing_live = is_book_published(book)
     marketplace_buyable_flag = marketplace_buyable(book)
+    audiobook_chapter_tracklist = _build_audiobook_chapter_tracklist(book) if book.has_audiobook else []
 
     try:
         return render_template('book_platform/view_book.html',
                              book=book, 
                              chapters=chapters,
+                             audiobook_chapter_tracklist=audiobook_chapter_tracklist,
                              collaborations=collaborations,
                              pending_invitation_count=pending_invitation_count,
                              pending_suggestion_count=pending_suggestion_count,
@@ -2364,6 +2366,7 @@ def edit_book(book_id):
         media_guide=MEDIA_GUIDE,
         investment_campaign=campaign,
         investment_readiness=investment_readiness,
+        project_desc_audio_enabled=is_book_published(book),
     )
 
 @book_bp.route('/books/<int:book_id>/audiobook', methods=['GET'])
@@ -2414,6 +2417,8 @@ def book_audiobook(book_id, user_profile, profile_type):
                 book.audiobook_voice, voice_result.get("voices") or {}
             )
 
+    audiobook_chapter_tracklist = _build_audiobook_chapter_tracklist(book) if book.has_audiobook else []
+
     return render_template(
         'book_platform/book_audiobook.html',
         book=book,
@@ -2421,6 +2426,7 @@ def book_audiobook(book_id, user_profile, profile_type):
         investment_campaign=campaign,
         investment_readiness=investment_readiness,
         audiobook_voice_label=audiobook_voice_label or book.audiobook_voice,
+        audiobook_chapter_tracklist=audiobook_chapter_tracklist,
         redeemable_coupons=list_redeemable_coupons(book, LISTING_FORMAT_AUDIOBOOK),
         coupon_platform_fee_after=COUPON_PLATFORM_FEE_PERCENT,
     )
@@ -7964,6 +7970,10 @@ def upload_project_description_media(book_id, user_profile, profile_type):
         return ckeditor_upload_response(error='No file selected')
 
     media_type = (request.form.get('media_type') or 'image').strip().lower()
+    if media_type == 'audio' and not is_book_published(book):
+        return ckeditor_upload_response(
+            error='Publish your book before adding audio clips to the description.'
+        )
     try:
         public_url, filename = save_project_media_file(
             file,
@@ -8715,6 +8725,28 @@ def serve_audiobook_chapter_file(book_id, chapter_id):
     )
 
 
+def _build_audiobook_chapter_tracklist(book):
+    """Ordered chapter audio URLs for multi-track audiobooks."""
+    chapters = (
+        AudiobookChapter.query.filter_by(book_project_id=book.id)
+        .order_by(AudiobookChapter.chapter_number)
+        .all()
+    )
+    tracklist = []
+    for ch in chapters:
+        tracklist.append({
+            'id': ch.id,
+            'title': ch.title,
+            'seconds': ch.duration_seconds or 0,
+            'src': url_for(
+                'book_platform.serve_audiobook_chapter_file',
+                book_id=book.id,
+                chapter_id=ch.id,
+            ),
+        })
+    return tracklist
+
+
 @book_bp.route('/audiobook/<int:book_id>/player')
 @login_required
 def audiobook_player(book_id):
@@ -8731,20 +8763,12 @@ def audiobook_player(book_id):
         flash("You must purchase the audiobook to listen.", "error")
         return redirect(url_for('book_platform.marketplace'))
     
-    chapters = AudiobookChapter.query.filter_by(book_project_id=book_id).order_by(AudiobookChapter.chapter_number).all()
-    chapter_tracklist = []
-    for ch in chapters:
-        src = url_for(
-            'book_platform.serve_audiobook_chapter_file',
-            book_id=book.id,
-            chapter_id=ch.id,
-        )
-        chapter_tracklist.append({
-            'id': ch.id,
-            'title': ch.title,
-            'seconds': ch.duration_seconds or 0,
-            'src': src,
-        })
+    chapter_tracklist = _build_audiobook_chapter_tracklist(book)
+    ab_chapters = (
+        AudiobookChapter.query.filter_by(book_project_id=book_id)
+        .order_by(AudiobookChapter.chapter_number)
+        .all()
+    )
     single_audiobook_src = None
     if not chapter_tracklist:
         single_audiobook_src = url_for('book_platform.serve_audiobook_file', book_id=book.id)
@@ -8754,7 +8778,7 @@ def audiobook_player(book_id):
     return render_template(
         'book_platform/audiobook_player.html',
         book=book,
-        chapters=chapters,
+        chapters=ab_chapters,
         chapter_tracklist=chapter_tracklist,
         single_audiobook_src=single_audiobook_src,
         cover_url=_marketplace_cover_url(book),

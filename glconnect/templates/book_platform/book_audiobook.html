@@ -44,7 +44,7 @@
                         <i class="fas fa-check-circle fa-2x me-3"></i>
                         <div class="flex-grow-1">
                             <h5 class="alert-heading mb-1"><i class="fas fa-headphones me-2"></i>Audiobook ready</h5>
-                            <p class="mb-0">Preview below, then publish when you are satisfied.</p>
+                            <p class="mb-0">Preview every section below (or open the full player), then publish when you are satisfied.</p>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -129,13 +129,7 @@
                                     </p>
                                     
                                     <!-- Embedded Audio Player -->
-                                    <div class="mb-3">
-                                        <label class="form-label"><i class="fas fa-headphones me-2"></i>Preview Audiobook:</label>
-                                        <audio controls class="w-100" style="max-width: 100%;">
-                                            <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
-                                            Your browser does not support the audio element.
-                                        </audio>
-                                    </div>
+                                    {% include 'book_platform/includes/_audiobook_author_preview.html' %}
                                 </div>
                                 <div class="col-md-4">
                                     <div class="d-flex flex-column gap-2">

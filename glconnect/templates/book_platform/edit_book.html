@@ -64,6 +64,7 @@
                                 {% set project_desc_field_id = 'description' %}
                                 {% set project_desc_book_id = book.id %}
                                 {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
+                                {% set project_desc_audio_enabled = project_desc_audio_enabled|default(false) %}
                                 {% include 'book_platform/_project_description_editor.html' %}
                                 <div class="form-text">Used on your marketplace listing and, if you choose, on an optional campaign page.{% if investment_campaign %}
                                     After saving, <a href="{{ url_for('book_platform.edit_campaign_project', campaign_id=investment_campaign.id) }}">edit the full project</a> to preview both sections together.{% endif %}
