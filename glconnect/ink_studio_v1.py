@@ -228,15 +228,19 @@ def ink_studio_v1_context_defaults(app=None):
     }
 
 
+def _landing_login_href(destination: str) -> str:
+    """Send guests to the login form; preserve ``destination`` in ``next``."""
+    from flask import url_for
+
+    return url_for("routes1.login", next=destination)
+
+
 def about_scroll_nav_urls():
     """
-    Scrolling about-page nav destinations.
+    Marketing landing nav (ticker + bento).
 
-    Pitch / Fund → author campaigns (or author onboarding).
-    Write / Publish → Ink Studio / My books (or onboarding).
-    Promote → GLC Media (Content hub) for any signed-in user.
-    Sell → Marketplace for any signed-in user.
-    Guests → login with ``next`` preserved.
+    Guests: every platform link → login form (``next`` = destination after sign-in).
+    Public without account: sign up, contact, and company footer only (handled in template).
     """
     from flask import url_for
 
@@ -253,17 +257,16 @@ def about_scroll_nav_urls():
         return url_for("book_platform.setup_profile", next=next_path)
 
     if not getattr(current_user, "is_authenticated", False):
-        login = "routes1.login"
         campaign_entry = _setup(author_campaigns)
         books_entry = _setup(my_books)
         return {
-            "pitch": url_for(login, next=campaign_entry),
-            "fund": url_for(login, next=campaign_entry),
-            "write": url_for(login, next=ink_studio),
-            "publish": url_for(login, next=books_entry),
-            "promote": url_for(login, next=promote),
-            "sell": url_for(login, next=sell),
-            "campaigns": url_for(login, next=browse_campaigns),
+            "pitch": _landing_login_href(campaign_entry),
+            "fund": _landing_login_href(campaign_entry),
+            "write": _landing_login_href(ink_studio),
+            "publish": _landing_login_href(books_entry),
+            "promote": _landing_login_href(promote),
+            "sell": _landing_login_href(sell),
+            "campaigns": _landing_login_href(browse_campaigns),
         }
 
     uid = current_user.user_id

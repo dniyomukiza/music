@@ -851,6 +851,23 @@ a.about-ticker-item:focus-visible {
 .about-bento-link i { transition: transform 0.25s ease; }
 .about-bento-link:hover i { transform: translateX(4px); }
 
+.about-link-lock {
+  margin-left: 0.35rem;
+  font-size: 0.72em;
+  color: #e0bc3a;
+  opacity: 0.9;
+}
+
+.about-bento-link--gated,
+.about-ticker-item--gated {
+  cursor: pointer;
+}
+
+.about-ticker-item--gated .about-link-lock {
+  margin-left: 0.25rem;
+  font-size: 0.65em;
+}
+
 /* ── Platform link directory (/about) ── */
 .about-page--directory {
   padding-top: 5.75rem;

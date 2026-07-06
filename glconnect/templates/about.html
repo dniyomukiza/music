@@ -76,8 +76,9 @@
                     </div>
                     <h3>Get Discovered</h3>
                     <p>Upload a pitch and launch your book funding campaign.</p>
-                    <a href="{{ about_nav.campaigns }}" class="about-bento-link">
-                        Browse campaigns <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <a href="{{ about_nav.campaigns }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        Browse campaigns{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
 
@@ -87,8 +88,9 @@
                     </div>
                     <h3>Promote Your Story</h3>
                     <p>Share your story on GLC Media, our radio &amp; TV stream promoting authors' stories and books.</p>
-                    <a href="{{ about_nav.promote }}" class="about-bento-link">
-                        GLC Media &amp; publicity <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <a href="{{ about_nav.promote }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        GLC Media &amp; publicity{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
 
@@ -104,8 +106,9 @@
                         <span class="about-tag">AI editing</span>
                         <span class="about-tag">ISBN ready</span>
                     </div>
-                    <a href="{{ about_nav.write }}" class="about-bento-link">
-                        Start writing in Ink Studio <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <a href="{{ about_nav.write }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        Start writing in Ink Studio{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
 
@@ -115,8 +118,9 @@
                     </div>
                     <h3>Monetize your work</h3>
                     <p>Sell your ebook, audiobook or ship to your customer.</p>
-                    <a href="{{ about_nav.sell }}" class="about-bento-link">
-                        Marketplace <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <a href="{{ about_nav.sell }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        Marketplace{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
             </div>
