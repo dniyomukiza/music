@@ -31,23 +31,52 @@ def career_positions_allowed():
 
 bp = Blueprint('routes', __name__)
 
+
+def _about_landing():
+    """Public marketing home — bento/ticker links gate guests through sign-in."""
+    from glconnect.ink_studio_v1 import about_scroll_nav_urls
+
+    return render_template(
+        'about.html',
+        about_nav=about_scroll_nav_urls(),
+        is_authenticated=current_user.is_authenticated,
+    )
+
+
 @bp.route('/')
 def index():
-    """Site entry — platform directory lives at /about; former hero landing is /legacy/home."""
-    # #region agent log
-    try:
-        import json, time
-        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
-            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "route", "location": "routes.py:index", "message": "root redirect to about", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n")
-    except Exception:
-        pass
-    # #endregion
-    return redirect(url_for('routes.about'), code=301)
+    """Site entry — marketing landing (Turning stories into published books)."""
+    return _about_landing()
+
 
 @bp.route('/home')
 def home():
-    """Legacy URL — platform directory is at /about."""
-    return redirect(url_for('routes.about'), code=301)
+    return _about_landing()
+
+
+@bp.route('/about')
+def about():
+    """Alias for the public marketing landing."""
+    return _about_landing()
+
+
+@bp.route('/platform')
+def platform():
+    """Internal link directory for all active routes."""
+    from glconnect.ink_studio_v1 import about_site_link_groups
+
+    return render_template(
+        'platform_directory.html',
+        link_groups=about_site_link_groups(),
+        is_authenticated=current_user.is_authenticated,
+    )
+
+
+@bp.route('/legacy/about')
+def about_legacy():
+    """Former URL — marketing landing is now public at /."""
+    return redirect(url_for('routes.index'), code=301)
+
 
 @bp.route('/marketplace')
 @login_required
@@ -55,46 +84,10 @@ def marketplace():
     """Universal marketplace access - redirects to Ink Studio marketplace"""
     return redirect(url_for('book_platform.marketplace'))
 
-@bp.route('/about')
-def about():
-    from glconnect.ink_studio_v1 import about_site_link_groups
-
-    # #region agent log
-    try:
-        import json, time
-        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
-            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "B", "location": "routes.py:about", "message": "about route enter", "data": {"authenticated": current_user.is_authenticated}, "timestamp": int(time.time() * 1000)}) + "\n")
-    except Exception:
-        pass
-    # #endregion
-    link_groups = about_site_link_groups()
-    # #region agent log
-    try:
-        import json, time
-        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
-            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "B", "location": "routes.py:about", "message": "link groups built", "data": {"group_count": len(link_groups)}, "timestamp": int(time.time() * 1000)}) + "\n")
-    except Exception:
-        pass
-    # #endregion
-    return render_template(
-        'about.html',
-        link_groups=link_groups,
-        is_authenticated=current_user.is_authenticated,
-    )
-
-
-@bp.route('/legacy/about')
-@login_required
-def about_legacy():
-    """Former marketing about page (bento layout). Swap template in ``about()`` to restore site-wide."""
-    from glconnect.ink_studio_v1 import about_scroll_nav_urls
-
-    return render_template('about_legacy.html', about_nav=about_scroll_nav_urls())
-
 
 @bp.route('/legacy/home')
 def home_legacy():
-    """Former public home landing (pre platform-directory /about links). Swap template in ``index()`` to restore."""
+    """Former public hero landing (epicenter of premium content)."""
     return render_template('landing_legacy.html')
 
 

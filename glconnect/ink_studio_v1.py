@@ -244,6 +244,7 @@ def about_scroll_nav_urls():
 
     promote = url_for("book_platform.content_hub")
     sell = url_for("book_platform.marketplace")
+    browse_campaigns = url_for("book_platform.campaigns")
     author_campaigns = url_for("book_platform.author_my_campaigns")
     my_books = url_for("book_platform.books")
     ink_studio = url_for("book_platform.ink_studio_access")
@@ -262,6 +263,7 @@ def about_scroll_nav_urls():
             "publish": url_for(login, next=books_entry),
             "promote": url_for(login, next=promote),
             "sell": url_for(login, next=sell),
+            "campaigns": url_for(login, next=browse_campaigns),
         }
 
     uid = current_user.user_id
@@ -288,6 +290,7 @@ def about_scroll_nav_urls():
         "publish": publish_url,
         "promote": promote,
         "sell": sell,
+        "campaigns": browse_campaigns,
     }
 
 
@@ -295,26 +298,7 @@ def _about_href(endpoint: str, *, protected: bool = False, **url_kwargs: str) ->
     """Resolve a platform link; guests are sent to login with ``next`` when protected."""
     from flask import url_for
 
-    # #region agent log
-    try:
-        import json, time
-        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
-            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "B", "location": "ink_studio_v1.py:_about_href", "message": "building about href", "data": {"endpoint": endpoint, "protected": protected}, "timestamp": int(time.time() * 1000)}) + "\n")
-    except Exception:
-        pass
-    # #endregion
-    try:
-        target = url_for(endpoint, **url_kwargs)
-    except Exception as exc:
-        # #region agent log
-        try:
-            import json, time
-            with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
-                _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "A", "location": "ink_studio_v1.py:_about_href", "message": "url_for failed", "data": {"endpoint": endpoint, "error": type(exc).__name__, "detail": str(exc)[:200]}, "timestamp": int(time.time() * 1000)}) + "\n")
-        except Exception:
-            pass
-        # #endregion
-        raise
+    target = url_for(endpoint, **url_kwargs)
     if protected and not getattr(current_user, "is_authenticated", False):
         return url_for("routes1.login", next=target)
     return target
@@ -342,7 +326,8 @@ def about_site_link_groups():
             "title": "Discover",
             "description": "Public entry points and company pages.",
             "links": [
-                _about_link("Home", "routes.about", description="Platform directory and all active links."),
+                _about_link("Home", "routes.index", description="Marketing landing and creator overview."),
+                _about_link("Platform directory", "routes.platform", description="All active links (internal reference)."),
                 _about_link("Blogs", "blog.blogs", description="Stories and journalism."),
                 _about_link("Music", "book_platform.music_dashboard", description="GLC Media music and playlists."),
                 _about_link("News", "news_bp.index", description="AI news broadcasts and audio."),
@@ -418,8 +403,7 @@ def about_site_link_groups():
             "title": "Legacy previews",
             "description": "Archived layouts kept for easy restore — not linked from public nav.",
             "links": [
-                _about_link("Legacy home", "routes.home_legacy", description="Former public landing page."),
-                _about_link("Legacy about", "routes.about_legacy", protected=True, description="Former marketing about page with bento cards."),
+                _about_link("Legacy home", "routes.home_legacy", description="Former hero landing page."),
                 _about_link("Legacy careers", "routes.careers_legacy", description="Former multi-role careers listings."),
             ],
         },
