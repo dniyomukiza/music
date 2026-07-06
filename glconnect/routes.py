@@ -33,13 +33,21 @@ bp = Blueprint('routes', __name__)
 
 @bp.route('/')
 def index():
-    """Render the home page."""
-    return render_template('landing.html')
+    """Site entry — platform directory lives at /about; former hero landing is /legacy/home."""
+    # #region agent log
+    try:
+        import json, time
+        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
+            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "route", "location": "routes.py:index", "message": "root redirect to about", "data": {}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
+    return redirect(url_for('routes.about'), code=301)
 
 @bp.route('/home')
 def home():
-    """Legacy URL — landing page is at /."""
-    return redirect(url_for('routes.index'), code=301)
+    """Legacy URL — platform directory is at /about."""
+    return redirect(url_for('routes.about'), code=301)
 
 @bp.route('/marketplace')
 @login_required
@@ -51,9 +59,26 @@ def marketplace():
 def about():
     from glconnect.ink_studio_v1 import about_site_link_groups
 
+    # #region agent log
+    try:
+        import json, time
+        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
+            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "B", "location": "routes.py:about", "message": "about route enter", "data": {"authenticated": current_user.is_authenticated}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
+    link_groups = about_site_link_groups()
+    # #region agent log
+    try:
+        import json, time
+        with open("/Applications/untitled folder/music-1/.cursor/debug-4b74e6.log", "a", encoding="utf-8") as _lf:
+            _lf.write(json.dumps({"sessionId": "4b74e6", "hypothesisId": "B", "location": "routes.py:about", "message": "link groups built", "data": {"group_count": len(link_groups)}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+    # #endregion
     return render_template(
         'about.html',
-        link_groups=about_site_link_groups(),
+        link_groups=link_groups,
         is_authenticated=current_user.is_authenticated,
     )
 

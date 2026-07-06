@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Ndotonic platform directory — every active link for Ink Studio, GLC Media, careers, and support.">
-    <title>Platform | Ndotonic</title>
+    <title>Ndotonic | Platform directory</title>
     <link rel="canonical" href="https://ndotonic.com/about">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/ndotonic_official.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/ndotonic_official.png') }}">
@@ -23,15 +23,15 @@
 
     <header class="ab-header">
         <nav class="ab-nav" aria-label="Quick links">
-            <a href="{{ url_for('routes.index') }}">Home</a>
+            <a href="{{ url_for('routes.about') }}">Home</a>
             <a href="{{ url_for('blog.contact') }}">Support</a>
         </nav>
-        <a class="ab-wordmark" href="{{ url_for('routes.index') }}" aria-label="Ndotonic home">
+        <a class="ab-wordmark" href="{{ url_for('routes.about') }}" aria-label="Ndotonic home">
             <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" width="160" height="99">
         </a>
         <div class="ab-header-actions">
             {% if is_authenticated %}
-            <a class="ab-header-btn" href="{{ url_for('prof.uprofile') }}">My profile</a>
+            <a class="ab-header-btn" href="{{ url_for('prof.profile') }}">My profile</a>
             {% else %}
             <a class="ab-header-btn ab-header-btn--ghost" href="{{ url_for('routes1.login', next=url_for('routes.about')) }}">Sign in</a>
             <a class="ab-header-btn" href="{{ url_for('routes1.register') }}">Sign up</a>

@@ -228,7 +228,7 @@
         {% if current_user.is_authenticated %}
         <li><a href="{{ url_for('routes.about') }}">About</a></li>
         {% endif %}
-        <li><a href="{{ url_for('routes.index') }}">Home</a></li>
+        <li><a href="{{ url_for('routes.about') }}">Home</a></li>
         {% if ink_nav_show_my_library|default(false) %}
         <li><a href="{{ url_for('book_platform.my_library') }}">My Library</a></li>
         {% endif %}
