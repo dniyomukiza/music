@@ -499,7 +499,7 @@
             </nav>
         </div>
         <a class="wordmark" href="{% if current_user.is_authenticated %}{{ url_for('routes.about') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.about')) }}{% endif %}" aria-label="About Ndotonic">
-            <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic" class="wordmark-img" width="160" height="40">
+            <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" class="wordmark-img" width="160" height="40">
         </a>
         <div class="platform-button-container">
             {% if current_user.is_authenticated %}
