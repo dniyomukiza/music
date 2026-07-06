@@ -4865,6 +4865,138 @@ body.ink-edit-book-listing .edit-book .alert-info {
     color: #e8ece9 !important;
 }
 
+/* Audiobook: Step 1 review-sections CTA (must be obvious before price/voice) */
+body.ink-edit-book-listing .edit-book .ink-audiobook-step {
+    padding: 1.15rem 1.2rem 1.25rem;
+    border-radius: 16px;
+    border: 2px solid rgba(201, 162, 39, 0.55);
+    background:
+        linear-gradient(145deg, rgba(201, 162, 39, 0.16), rgba(201, 162, 39, 0.06)),
+        rgba(8, 10, 9, 0.82);
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12), 0 14px 36px rgba(0, 0, 0, 0.28);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--review {
+    animation: ink-audiobook-step-pulse 2.8s ease-in-out infinite;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete {
+    border-color: rgba(64, 145, 108, 0.55);
+    background:
+        linear-gradient(145deg, rgba(45, 106, 79, 0.2), rgba(45, 106, 79, 0.08)),
+        rgba(8, 10, 9, 0.82);
+    box-shadow: 0 0 0 1px rgba(64, 145, 108, 0.15), 0 14px 36px rgba(0, 0, 0, 0.28);
+    animation: none;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #060807;
+    background: linear-gradient(145deg, #c9a227, #e0bc3a);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__required {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #f5d76a;
+    border: 1px solid rgba(201, 162, 39, 0.45);
+    background: rgba(201, 162, 39, 0.12);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__title {
+    margin: 0 0 0.35rem;
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__desc {
+    color: #cfd6d2 !important;
+    line-height: 1.55;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.75rem 1.35rem;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #060807 !important;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #e0bc3a, #c9a227);
+    box-shadow: 0 8px 24px rgba(201, 162, 39, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn:hover,
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn:focus-visible {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 0 12px 28px rgba(201, 162, 39, 0.42);
+    color: #060807 !important;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn {
+    background: linear-gradient(145deg, #4caf88, #2d6a4f);
+    box-shadow: 0 8px 24px rgba(45, 106, 79, 0.35);
+    color: #fff !important;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__status {
+    color: #f5d76a !important;
+    font-weight: 600;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-step__status {
+    color: #9be3c3 !important;
+}
+
+@keyframes ink-audiobook-step-pulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12), 0 14px 36px rgba(0, 0, 0, 0.28); }
+    50% { box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.22), 0 14px 36px rgba(0, 0, 0, 0.28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.ink-edit-book-listing .edit-book .ink-audiobook-step--review {
+        animation: none;
+    }
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-segments-list .ink-audiobook-seg-card .card-body {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-segments-list .form-check-label {
+    line-height: 1.45;
+}
+
 body.ink-edit-book-listing .edit-book .alert-success {
     background: rgba(45, 106, 79, 0.22) !important;
     border: 1px solid rgba(64, 145, 108, 0.4) !important;

@@ -164,15 +164,25 @@
                                         <strong>Voice language:</strong> choose a voice matching <strong>{{ ebook_language_label }}</strong>.
                                     </div>
                                     <p class="text-muted mb-3">
-                                        <strong>Step 1:</strong> Review sections. <strong>Content chapters</strong> define narration start/stop (each becomes its own audio track).
-                                        Foreword, afterword, and appendix are labeled separately, usually optional in audio.
-                                        <strong>Step 2:</strong> Choose a voice, then generate.
+                                        <strong>Step 1:</strong> Choose which parts are read aloud (required before generating).
+                                        <strong>Step 2:</strong> Set a price, choose a voice, then generate.
                                     </p>
-                                    <div class="mb-3">
-                                        <button type="button" class="btn btn-outline-primary" id="btnPrepareAudiobookSegments" onclick="prepareAudiobookSegments()">
-                                            <i class="fas fa-list-check me-1"></i> Review sections for audiobook
+                                    <div class="ink-audiobook-step ink-audiobook-step--review mb-4" id="audiobookReviewStepCta" role="region" aria-labelledby="audiobookReviewStepHeading">
+                                        <div class="ink-audiobook-step__header">
+                                            <span class="ink-audiobook-step__badge">Step 1</span>
+                                            <span class="ink-audiobook-step__required">Required</span>
+                                        </div>
+                                        <h6 class="ink-audiobook-step__title" id="audiobookReviewStepHeading">Review sections for audiobook</h6>
+                                        <p class="ink-audiobook-step__desc small mb-3">
+                                            <strong>Content chapters</strong> define narration start/stop (each becomes its own audio track).
+                                            Foreword, afterword, and appendix are labeled separately, usually optional in audio.
+                                        </p>
+                                        <button type="button" class="btn ink-audiobook-review-btn w-100 w-md-auto" id="btnPrepareAudiobookSegments" onclick="prepareAudiobookSegments()">
+                                            <i class="fas fa-list-check me-2" aria-hidden="true"></i>
+                                            Review sections for audiobook
+                                            <i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>
                                         </button>
-                                        <span id="audiobookPrepareStatus" class="small text-muted ms-2" role="status"></span>
+                                        <p id="audiobookPrepareStatus" class="ink-audiobook-step__status small mb-0 mt-2" role="status"></p>
                                     </div>
                                     <div id="audiobookSegmentsPanel" class="mb-3 d-none">
                                         <div class="alert alert-secondary py-2 px-3 small mb-2">
@@ -182,7 +192,7 @@
                                             Your ebook file for sale is unchanged.
                                             <span id="audiobookClassifierBadge" class="badge bg-light text-dark border ms-2 d-none"></span>
                                         </div>
-                                        <div id="audiobookSegmentsList" class="border rounded p-2 bg-light" style="max-height: 320px; overflow-y: auto;"></div>
+                                        <div id="audiobookSegmentsList" class="border rounded p-2 bg-light ink-audiobook-segments-list" style="max-height: 420px; overflow-y: auto;"></div>
                                     </div>
                                     
                                     <div class="mb-3">
@@ -450,6 +460,22 @@
             return !!(voiceInput && (voiceInput.value || '').trim());
         }
 
+        function updateAudiobookReviewCta() {
+            const cta = document.getElementById('audiobookReviewStepCta');
+            const btn = document.getElementById('btnPrepareAudiobookSegments');
+            if (!cta || !btn) {
+                return;
+            }
+            const reviewed = audiobookHasIncludedSections();
+            cta.classList.toggle('ink-audiobook-step--complete', reviewed);
+            btn.setAttribute('aria-pressed', reviewed ? 'true' : 'false');
+            if (reviewed) {
+                btn.innerHTML = '<i class="fas fa-check-circle me-2" aria-hidden="true"></i>Update section selection<i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-list-check me-2" aria-hidden="true"></i>Review sections for audiobook<i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>';
+            }
+        }
+
         function updateAudiobookGenerateReady() {
             const btn = document.getElementById('generateBtn');
             const hint = document.getElementById('audiobookGenerateHint');
@@ -462,6 +488,7 @@
             const ready = priceOk && sectionsOk && voiceOk;
             btn.disabled = !ready;
             btn.setAttribute('aria-disabled', ready ? 'false' : 'true');
+            updateAudiobookReviewCta();
             if (!hint) {
                 return;
             }
@@ -1327,10 +1354,8 @@
                 const list = document.getElementById('audiobookSegmentsList');
                 if (list && result.segments) {
                     list.innerHTML = result.segments.map(function (seg) {
-                        const prev = (seg.preview || '').slice(0, 320);
-                        const dots = (seg.preview || '').length > 320 ? '...' : '';
                         const checked = seg.include ? ' checked' : '';
-                        const aiNote = _escapeHtmlAudiobook((seg.ai_reason || '').slice(0, 200));
+                        const aiNote = _escapeHtmlAudiobook((seg.ai_reason || '').slice(0, 120));
                         const aiLabel = seg.ai_include ? 'suggested include' : 'suggested skip';
                         const kind = seg.section_kind || 'other';
                         const kindLabel = _escapeHtmlAudiobook(seg.kind_label || kind);
@@ -1340,21 +1365,22 @@
                         else if (kind === 'front') badgeClass = 'bg-info text-dark';
                         else if (kind === 'back') badgeClass = 'bg-secondary';
                         const boundaryNote = isChapter
-                            ? '<small class="text-primary d-block mb-1"><i class="fas fa-book-open me-1"></i>Content chapter, own audio track (narration boundary)</small>'
-                            : '<small class="text-muted d-block mb-1">Optional in audio, not a content chapter boundary</small>';
+                            ? '<small class="text-primary d-block mt-1"><i class="fas fa-book-open me-1"></i>Own audio track</small>'
+                            : '<small class="text-muted d-block mt-1">Optional in audio</small>';
+                        const aiLine = (aiNote || aiLabel)
+                            ? '<small class="text-secondary d-block mt-1">AI: ' + aiLabel + (aiNote ? (' — ' + aiNote) : '') + '</small>'
+                            : '';
                         return (
-                            '<div class="card mb-2 border-0 shadow-sm' + (isChapter ? ' border-start border-primary border-3' : '') + '">' +
+                            '<div class="card mb-2 border-0 shadow-sm ink-audiobook-seg-card' + (isChapter ? ' border-start border-primary border-3' : '') + '">' +
                             '<div class="card-body py-2 px-3">' +
-                            '<div class="form-check">' +
+                            '<div class="form-check mb-0">' +
                             '<input class="form-check-input audiobook-seg-include" type="checkbox" data-index="' + seg.index + '" id="audiobook-seg-' + seg.index + '"' + checked + '>' +
                             '<label class="form-check-label fw-semibold" for="audiobook-seg-' + seg.index + '">' +
                             '<span class="badge ' + badgeClass + ' me-2">' + kindLabel + '</span>' +
                             _escapeHtmlAudiobook(seg.title) + '</label>' +
-                            '</div>' +
                             boundaryNote +
-                            '<p class="small text-muted mb-1 mt-1">' + _escapeHtmlAudiobook(prev) + dots + '</p>' +
-                            '<small class="text-secondary">AI: ' + aiLabel + (aiNote ? (', ' + aiNote) : '') + '</small>' +
-                            '</div></div>'
+                            aiLine +
+                            '</div></div></div>'
                         );
                     }).join('');
                     list.addEventListener('change', function (e) {

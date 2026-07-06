@@ -769,7 +769,8 @@
                         ? '<div class="col-md-4 text-center mb-3 mb-md-0"><img src="' + escapeHtml(b.cover_url) + '" class="img-fluid rounded shadow" alt=""></div>'
                         : '<div class="col-md-4 text-center mb-3 mb-md-0"><div class="book-cover-placeholder rounded d-flex align-items-center justify-content-center bg-light" style="min-height:220px"><i class="fas fa-book fa-4x text-muted"></i></div></div>';
 
-                    const descHtml = escapeHtml(b.description || '').replace(/\n/g, '<br>');
+                    // Descriptions are server-sanitized HTML (CKEditor); do not escape or tags show as text.
+                    const descHtml = (b.description || '').trim();
                     const priceDigital = b.price != null ? Number(b.price) : null;
                     const priceAudio = b.audiobook_price != null ? Number(b.audiobook_price) : null;
                     const fmtDigital = b.formats && b.formats.digital;
@@ -851,7 +852,7 @@
                         (b.word_count ? '<span class="badge bg-light border text-muted">' + b.word_count.toLocaleString() + ' words</span>' : '') +
                         investBadge +
                         '</div>' +
-                        '<div class="book-description text-muted small" style="line-height:1.65">' + (descHtml || '<em>No description yet.</em>') + '</div>' +
+                        '<div class="book-description ink-project-description text-muted small" style="line-height:1.65">' + (descHtml || '<em>No description yet.</em>') + '</div>' +
                         pickerHtml +
                         '</div></div>';
 
