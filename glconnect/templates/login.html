@@ -9,7 +9,6 @@
 {% block salutation %}
 <div class="auth-page-shell">
     <div class="auth-card">
-        {% include 'messages.html' %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="auth-flashes">
