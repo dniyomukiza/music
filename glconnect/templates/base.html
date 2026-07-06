@@ -47,13 +47,14 @@
       width: auto;
       max-width: 120px;
       object-fit: contain;
-      border-radius: 12px;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
+      transition: transform 0.3s ease, filter 0.3s ease;
     }
     .logo-img:hover {
       transform: scale(1.05);
-      box-shadow: 0 4px 24px rgba(201, 162, 39, 0.35);
+      filter: brightness(1.06);
     }
 
     nav ul {
@@ -206,8 +207,9 @@
         display: none;
       }
       .logo-img {
-        width: 40px;
         height: 40px;
+        width: auto;
+        max-width: none;
       }
     }
   </style>

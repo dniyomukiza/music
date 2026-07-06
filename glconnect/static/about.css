@@ -98,15 +98,19 @@
   line-height: 0;
 }
 
+.ab-wordmark img,
 .ab-wordmark-img {
   height: 2.25rem;
   width: auto;
   max-width: min(40vw, 9.5rem);
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 
+.ab-wordmark:hover img,
 .ab-wordmark:hover .ab-wordmark-img { transform: scale(1.03); filter: brightness(1.06); }
 
 .ab-header a:focus-visible,

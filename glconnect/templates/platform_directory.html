@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=15">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=16">
 </head>
 <body class="about-body">
 
@@ -27,7 +27,7 @@
             <a href="{{ url_for('blog.contact') }}">Support</a>
         </nav>
         <a class="ab-wordmark" href="{{ url_for('routes.index') }}" aria-label="Ndotonic home">
-            <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" width="160" height="99">
+            <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" class="ab-wordmark-img">
         </a>
         <div class="ab-header-actions">
             {% if is_authenticated %}

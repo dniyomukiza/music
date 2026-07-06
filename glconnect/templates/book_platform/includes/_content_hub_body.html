@@ -1,0 +1,220 @@
+<div class="content-hub-inner" id="ink-ch-main" tabindex="-1">
+    <div class="row g-4 mb-5 justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="content-card">
+                <div class="content-icon-wrapper icon-music-bg">
+                    <i class="fas fa-music"></i>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">Music Player</h4>
+                    <p class="card-text">
+                        Stream music and submit your tracks for GLC Media promotion — live radio, playlists, TV segments, and podcasts. You must accept playback and copyright terms before each submission.
+                    </p>
+                    <div class="mt-auto content-card-actions">
+                        <a href="{{ url_for('book_platform.music_dashboard') }}" class="btn btn-modern btn-modern-primary">
+                            <i class="fas fa-play-circle me-2"></i>Launch Player
+                        </a>
+                        {% if current_user.is_authenticated %}
+                        {% if not has_artist_profile %}
+                        <button type="button" class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#createArtistModalContentHub">
+                            <i class="fas fa-star me-2"></i>Register as artist
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-modern btn-modern-success" data-bs-toggle="modal" data-bs-target="#uploadSongModalContentHub">
+                            <i class="fas fa-cloud-upload-alt me-2"></i>Submit track
+                        </button>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-5">
+            <div class="content-card">
+                <div class="content-icon-wrapper icon-podcasts-bg">
+                    <i class="fas fa-podcast"></i>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">Podcasts</h4>
+                    <p class="card-text">
+                        Listen to shows and submit your episodes for GLC Media promotion on radio, TV, and streaming — terms required before each submission.
+                    </p>
+                    <div class="mt-auto content-card-actions">
+                        <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-modern btn-modern-primary">
+                            <i class="fas fa-headphones me-2"></i>Listen Now
+                        </a>
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('book_platform.upload_podcast') }}" class="btn btn-modern btn-modern-success">
+                            <i class="fas fa-microphone me-2"></i>Submit episode
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-modern">
+                            <i class="fas fa-broadcast-tower me-2"></i>Live News
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createArtistModalContentHub" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title"><i class="fas fa-star text-warning me-2"></i>GLC Media artist registration</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="artistNameInputContentHub" class="form-label">Stage Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="artistNameInputContentHub" placeholder="Enter your artist name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="artistBioInputContentHub" class="form-label">Biography (Optional)</label>
+                    <textarea class="form-control" id="artistBioInputContentHub" rows="3" placeholder="Tell fans about yourself..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="artistProfilePicInputContentHub" class="form-label">Avatar (Optional)</label>
+                    <input type="file" class="form-control" id="artistProfilePicInputContentHub" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml">
+                    <div id="profilePicPreviewContentHub" class="mt-3 text-center" style="display: none;">
+                        <img id="profilePicPreviewImgContentHub" src="" alt="Preview" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #c9a227;">
+                    </div>
+                </div>
+                <div class="glc-media-terms-section">
+                    {% set terms_scroll_id = 'glcArtistTermsScrollContentHub' %}
+                    {% set terms_hint_id = 'glcArtistTermsHintContentHub' %}
+                    {% include '_glc_media_artist_agreement_scroll.html' %}
+                    <div class="glc-media-terms-checks">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input glc-artist-term-cb" type="checkbox" id="glcMediaTermsAcceptContentHub" value="on" disabled>
+                            <label class="form-check-label" for="glcMediaTermsAcceptContentHub">I accept the GLC Media Artist Agreement (v{{ glc_media_artist_terms_version|default('1.0') }}).</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input glc-artist-term-cb" type="checkbox" id="glcMediaRightsWarrantyContentHub" value="on" disabled>
+                            <label class="form-check-label" for="glcMediaRightsWarrantyContentHub">I own or control all rights in music I will submit.</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input glc-artist-term-cb" type="checkbox" id="glcMediaPlayLicenseContentHub" value="on" disabled>
+                            <label class="form-check-label" for="glcMediaPlayLicenseContentHub">I authorize GLC Media to play and promote my submissions until I withdraw in writing.</label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input glc-artist-term-cb" type="checkbox" id="glcMediaLiabilityWaiverContentHub" value="on" disabled>
+                            <label class="form-check-label" for="glcMediaLiabilityWaiverContentHub">I accept the copyright liability waiver and agree to indemnify Ndotonic / GLC Media.</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-modern w-auto" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modern btn-modern-primary w-auto" onclick="createArtistProfileContentHub()">
+                    <i class="fas fa-check me-2"></i>Submit Profile
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="uploadSongModalContentHub" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title"><i class="fas fa-cloud-upload-alt text-success me-2"></i>Submit track</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadSongFormContentHub" onsubmit="event.preventDefault(); uploadSongContentHub();">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="song_name_content_hub" class="form-label">Track Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-lg" id="song_name_content_hub" name="song_name" placeholder="Name of your song" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="song_file_content_hub" class="form-label">Audio File (MP3) <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control form-control-lg" id="song_file_content_hub" name="song_file" accept=".mp3" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="cover_image_content_hub" class="form-label">Album Art</label>
+                        <input type="file" class="form-control" id="cover_image_content_hub" name="cover_image" accept="image/*">
+                    </div>
+
+                    <h6 class="mb-3 text-muted border-bottom border-secondary pb-2">Social Links</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="spotify_content_hub" class="form-label"><i class="fab fa-spotify me-2 text-success"></i>Spotify</label>
+                            <input type="url" class="form-control" id="spotify_content_hub" name="spotify" placeholder="Spotify URL">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="apple_music_content_hub" class="form-label"><i class="fab fa-apple me-2 text-light"></i>Apple Music</label>
+                            <input type="url" class="form-control" id="apple_music_content_hub" name="apple_music" placeholder="Apple Music URL">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="instagram_content_hub" class="form-label"><i class="fab fa-instagram me-2 text-danger"></i>Instagram</label>
+                            <input type="url" class="form-control" id="instagram_content_hub" name="instagram" placeholder="Instagram URL">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="twitter_content_hub" class="form-label"><i class="fab fa-twitter me-2 text-info"></i>Twitter</label>
+                            <input type="url" class="form-control" id="twitter_content_hub" name="twitter" placeholder="Twitter URL">
+                        </div>
+                    </div>
+
+                    {% if artist_needs_glc_terms|default(true) %}
+                    <div class="glc-media-terms-section mt-3 pt-3 border-top border-secondary">
+                        <p class="small fw-semibold mb-2">Artist agreement (required once)</p>
+                        {% set terms_scroll_id = 'glcArtistTermsScrollUploadContentHub' %}
+                        {% set terms_hint_id = 'glcArtistTermsHintUploadContentHub' %}
+                        {% include '_glc_media_artist_agreement_scroll.html' %}
+                        <div class="glc-media-terms-checks mb-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-artist-upload-term-cb" type="checkbox" name="glc_media_terms_accept" id="glcMediaTermsAcceptUploadContentHub" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaTermsAcceptUploadContentHub">I accept the GLC Media Artist Agreement.</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-artist-upload-term-cb" type="checkbox" name="glc_media_rights_warranty" id="glcMediaRightsWarrantyUploadContentHub" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaRightsWarrantyUploadContentHub">I own or control all rights in music I submit.</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-artist-upload-term-cb" type="checkbox" name="glc_media_play_license" id="glcMediaPlayLicenseUploadContentHub" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaPlayLicenseUploadContentHub">I authorize GLC Media playback and promotion until written withdrawal.</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input glc-artist-upload-term-cb" type="checkbox" name="glc_media_liability_waiver" id="glcMediaLiabilityWaiverUploadContentHub" value="on" disabled>
+                                <label class="form-check-label" for="glcMediaLiabilityWaiverUploadContentHub">I accept the copyright liability waiver and indemnification.</label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="glc-media-terms-section mt-3 pt-3 border-top border-secondary">
+                        <p class="small fw-semibold mb-2">This track submission</p>
+                        {% set terms_scroll_id = 'glcTrackTermsScrollContentHub' %}
+                        {% set terms_hint_id = 'glcTrackTermsHintContentHub' %}
+                        {% include '_glc_media_track_submission_scroll.html' %}
+                        <div class="glc-media-terms-checks">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-track-term-cb" type="checkbox" name="glc_media_track_rights_confirm" id="glcTrackRightsContentHub" value="on" disabled required>
+                                <label class="form-check-label" for="glcTrackRightsContentHub">I confirm rights to submit this track for GLC Media promotion.</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input glc-track-term-cb" type="checkbox" name="glc_media_track_play_license" id="glcTrackPlayLicenseContentHub" value="on" disabled required>
+                                <label class="form-check-label" for="glcTrackPlayLicenseContentHub">I authorize GLC Media to play and promote this track until I withdraw it in writing.</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input glc-track-term-cb" type="checkbox" name="glc_media_track_liability_waiver" id="glcTrackLiabilityContentHub" value="on" disabled required>
+                                <label class="form-check-label" for="glcTrackLiabilityContentHub">I accept liability waiver and indemnification for this track.</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-modern w-auto" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-modern btn-modern-success w-auto" id="uploadSongBtnContentHub" onclick="uploadSongContentHub()">
+                    <i class="fas fa-broadcast-tower me-2"></i>Submit track
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

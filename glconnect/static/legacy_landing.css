@@ -1,15 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ndotonic, Turning real experiences into published books. Write, fund, and publish with Ink Studio, patron campaigns, and our marketplace.">
-    <title>Ndotonic</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
+/* Shared legacy landing shell (header, hero, atmosphere) */
+:root {
             --bg-void: #060807;
             --bg-elevated: #0c0f0e;
             --text-primary: #e8ece9;
@@ -82,9 +72,9 @@
             right: 0;
             height: var(--header-h);
             padding: 0 clamp(1rem, 4vw, 2.5rem);
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
-            justify-content: space-between;
             z-index: 100;
             background: rgba(6, 8, 7, 0.72);
             backdrop-filter: blur(14px);
@@ -92,18 +82,24 @@
             border-bottom: 1px solid rgba(42, 61, 50, 0.35);
         }
 
-        .nav-container { display: flex; align-items: center; }
+        .nav-container {
+            display: flex;
+            align-items: center;
+            justify-self: start;
+            min-width: 0;
+        }
 
         .nav-links {
             display: flex;
             align-items: center;
-            gap: clamp(0.5rem, 2vw, 1.75rem);
+            flex-wrap: wrap;
+            gap: clamp(0.35rem, 1.5vw, 1.25rem);
         }
 
         .nav-links a {
             text-decoration: none;
             color: var(--text-muted);
-            font-size: clamp(0.8rem, 1.1vw, 0.95rem);
+            font-size: clamp(0.68rem, 1vw, 0.85rem);
             font-weight: 600;
             letter-spacing: 0.06em;
             text-transform: uppercase;
@@ -131,15 +127,21 @@
             width: 100%;
         }
 
+        .nav-links a.is-active {
+            color: var(--text-primary);
+        }
+
+        .nav-links a.is-active::after {
+            width: 100%;
+        }
+
         .nav-links a:focus-visible {
             outline: 2px solid var(--accent);
             outline-offset: 4px;
         }
 
         .wordmark {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
+            justify-self: center;
             display: inline-flex;
             align-items: center;
             text-decoration: none;
@@ -168,7 +170,150 @@
             border-radius: 0;
         }
 
-        .platform-button-container { display: flex; align-items: center; }
+        .platform-button-container {
+            display: flex;
+            align-items: center;
+            justify-self: end;
+        }
+
+        .legacy-user-menu {
+            position: relative;
+        }
+
+        .legacy-user-menu-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            padding: 0;
+            border: 1px solid rgba(201, 162, 39, 0.35);
+            border-radius: 50%;
+            background: rgba(12, 15, 14, 0.85);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+
+        .legacy-user-menu-btn:hover,
+        .legacy-user-menu-btn[aria-expanded="true"] {
+            border-color: var(--accent);
+            background: rgba(201, 162, 39, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .legacy-user-menu-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .legacy-user-menu-icon {
+            font-size: 1.65rem;
+            color: var(--accent);
+        }
+
+        .legacy-user-menu-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .legacy-user-menu-panel {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            z-index: 120;
+            min-width: 15rem;
+            padding: 1rem 1.1rem;
+            background: rgba(12, 15, 14, 0.96);
+            border: 1px solid rgba(201, 162, 39, 0.28);
+            border-radius: 4px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .legacy-user-menu-greet {
+            margin: 0 0 0.35rem;
+            font-family: "Syne", sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .legacy-user-menu-role {
+            margin: 0 0 0.25rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .legacy-user-menu-email {
+            margin: 0 0 0.85rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            word-break: break-word;
+        }
+
+        .legacy-user-menu-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(42, 61, 50, 0.55);
+        }
+
+        .legacy-user-menu-links a {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.35rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 2px;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .legacy-user-menu-links a:hover {
+            background: rgba(201, 162, 39, 0.1);
+            color: var(--accent-hot);
+        }
+
+        .legacy-user-menu-signout {
+            color: #f0a8a8 !important;
+        }
+
+        .legacy-mobile-user {
+            padding: 0.75rem 1.5rem 1rem;
+            border-bottom: 1px solid rgba(42, 61, 50, 0.55);
+            margin-bottom: 0.25rem;
+        }
+
+        .legacy-mobile-user-greet {
+            margin: 0 0 0.35rem;
+            font-family: "Syne", sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .legacy-mobile-user-meta {
+            margin: 0 0 0.65rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        .legacy-mobile-user a {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-decoration: none;
+        }
 
         .platform-button {
             display: inline-flex;
@@ -263,6 +408,12 @@
             padding: calc(var(--header-h) + 2rem) clamp(1.25rem, 5vw, 4rem) 4rem;
         }
 
+        .hero-wrap--compact {
+            min-height: auto;
+            justify-content: flex-start;
+            padding-bottom: 2.5rem;
+        }
+
         .hero-grid {
             max-width: 1180px;
             margin: 0 auto;
@@ -273,8 +424,12 @@
             align-items: end;
         }
 
+        .hero-grid--stacked {
+            align-items: start;
+        }
+
         @media (min-width: 900px) {
-            .hero-grid {
+            .hero-grid:not(.hero-grid--stacked) {
                 grid-template-columns: 1fr 1fr;
                 gap: clamp(2rem, 5vw, 4rem);
             }
@@ -333,9 +488,16 @@
             line-height: 1.65;
             color: var(--text-muted);
             max-width: 36rem;
-            margin: 0 0 1.75rem;
+            margin: 0 0 1.25rem;
             opacity: 0;
             animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
+        }
+
+        .hero-card--steps {
+            max-width: 28rem;
+            margin-top: 0.15rem;
+            opacity: 0;
+            animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
         }
 
         .cta-row {
@@ -464,6 +626,11 @@
         }
 
         @media (max-width: 768px) {
+            .header {
+                display: flex;
+                justify-content: space-between;
+            }
+
             .nav-container,
             .platform-button-container { display: none; }
 
@@ -485,91 +652,3 @@
 
             .stat-row { grid-template-columns: 1fr; }
         }
-    </style>
-</head>
-<body>
-    <div class="page-bg" aria-hidden="true"></div>
-    <div class="scanline" aria-hidden="true"></div>
-
-    <header class="header">
-        <div class="nav-container">
-            <nav class="nav-links" aria-label="Primary">
-                <a href="{{ url_for('blog.blogs') }}">Blogs</a>
-                <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
-                <a href="{{ url_for('news_bp.index') }}">News</a>
-                <a href="{{ url_for('routes1.findwords') }}">Language</a>
-            </nav>
-        </div>
-        <a class="wordmark" href="{{ url_for('routes.index') }}" aria-label="Ndotonic home">
-            <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" class="wordmark-img">
-        </a>
-        <div class="platform-button-container">
-            <a href="{{ url_for('routes.index') }}" class="platform-button">About</a>
-        </div>
-        <button type="button" class="mobile-menu-button" onclick="toggleMobileMenu()" aria-expanded="false" aria-controls="mobileNav" aria-label="Open menu">
-            <span class="bar"></span>
-            <span class="bar"></span>
-            <span class="bar"></span>
-        </button>
-    </header>
-
-    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile">
-        <a href="{{ url_for('blog.blogs') }}">Blogs</a>
-        <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
-        <a href="{{ url_for('news_bp.index') }}">News</a>
-        <a href="{{ url_for('routes1.findwords') }}">Language</a>
-        <a href="{{ url_for('routes.index') }}" class="platform-button">About</a>
-    </nav>
-
-    <main class="hero-wrap">
-        <div class="hero-grid">
-            <div class="hero-copy">
-                <h1 class="display">The epicenter of <em>premium</em> content</h1>
-                <p class="lede">Turning real experiences into published books. One platform for storytelling, art, and music, intentionally built, not algorithmically flattened.</p>
-                <div class="cta-row">
-                    <a class="cta-chip" href="{{ url_for('blog.blogs') }}">Read Stories</a>
-                    <a class="cta-chip" href="{{ url_for('book_platform.music_dashboard') }}">Explore Music</a>
-                    <a class="cta-chip" href="{{ url_for('news_bp.index') }}">Latest News</a>
-                    {% if current_user.is_authenticated %}
-                    <a class="cta-chip" href="{{ url_for('book_platform.ink_studio_access') }}">Ink Studio</a>
-                    <a class="cta-chip" href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
-                    {% else %}
-                    <a class="cta-chip" href="{{ url_for('routes1.login', next=url_for('book_platform.ink_studio_access')) }}">Ink Studio</a>
-                    <a class="cta-chip" href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Marketplace</a>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="hero-side">
-                <div class="slant" aria-hidden="true"></div>
-                <div class="hero-card">
-                    <div class="stat-row">
-                        <div class="stat">
-                            <strong>01</strong>
-                            <span>Navigate</span>
-                        </div>
-                        <div class="stat">
-                            <strong>02</strong>
-                            <span>Imagine</span>
-                        </div>
-                        <div class="stat">
-                            <strong>03</strong>
-                            <span>Create</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <script>
-        function toggleMobileMenu() {
-            var mobileNav = document.getElementById("mobileNav");
-            var btn = document.querySelector(".mobile-menu-button");
-            var open = mobileNav.style.display === "flex";
-            mobileNav.style.display = open ? "none" : "flex";
-            if (btn) btn.setAttribute("aria-expanded", open ? "false" : "true");
-        }
-    </script>
-
-</body>
-</html>

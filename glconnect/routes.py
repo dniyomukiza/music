@@ -97,6 +97,32 @@ def careers_legacy():
     return render_template('careers_legacy.html', positions=CAREER_POSITIONS_LEGACY)
 
 
+@bp.route('/preview/content-hub')
+def preview_content_hub():
+    """Local-only visual preview of the content hub layout (no login required)."""
+    if os.getenv('FLASK_ENV') != 'development':
+        return redirect(url_for('routes1.login', next=url_for('book_platform.content_hub')))
+
+    from glconnect.glc_media_artist_terms import glc_media_terms_context
+
+    class _PreviewUser:
+        is_authenticated = True
+        user_id = 0
+        username = "preview_user"
+        first_name = "Preview"
+        email = "you@example.com"
+        role = "author"
+        profile_picture = None
+
+    return render_template(
+        'book_platform/content_hub.html',
+        current_user=_PreviewUser(),
+        has_artist_profile=False,
+        artist_needs_glc_terms=True,
+        **glc_media_terms_context(),
+    )
+
+
 @bp.route('/pitch-deck')
 def pitch_deck():
     return render_template('pitch_deck.html', deck_year=datetime.now(timezone.utc).year)

@@ -896,3 +896,38 @@ sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate
 2026-06-29 14:52:51,251 - glconnect.isbn_pool_service - WARNING - ISBN pool seed skipped: (psycopg2.OperationalError) could not translate host name "dpg-ct1ae39u0jms73cdpjdg-a.oregon-postgres.render.com" to address: nodename nor servname provided, or not known
 
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-07-06 13:11:47,959 - stripe - INFO - message='Request to Stripe api' method=get url=https://api.stripe.com/v1/balance
+2026-07-06 13:11:48,337 - stripe - INFO - message='Stripe API response' path=https://api.stripe.com/v1/balance response_code=401
+2026-07-06 13:11:48,338 - stripe - INFO - error_code=None error_message='The API key provided does not allow requests from your IP address.' error_param=None error_type=invalid_request_error message='Stripe v1 API error received'
+2026-07-06 13:11:48,339 - glconnect - WARNING - Stripe secret key blocked by IP allowlist on this host (outbound_ip=67.169.127.113). Add that IP in Stripe Dashboard → API keys → Manage IP restrictions.
+2026-07-06 13:11:50,087 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-07-06 13:11:51,490 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-07-06 13:11:51,736 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-07-06 13:11:52,238 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-07-06 13:11:54,754 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-07-06 13:12:01,480 - glconnect.db_schema_patches - INFO - Ensured investment_campaigns platform fee columns
+2026-07-06 13:12:03,844 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-07-06 13:12:04,209 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-07-06 13:12:10,171 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-07-06 13:12:10,172 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-07-06 13:12:10,172 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-07-06 13:12:10,172 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-07-06 13:12:10,172 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-07-06 13:12:11,637 - stripe - INFO - message='Request to Stripe api' method=get url=https://api.stripe.com/v1/balance
+2026-07-06 13:12:11,945 - stripe - INFO - message='Stripe API response' path=https://api.stripe.com/v1/balance response_code=401
+2026-07-06 13:12:11,946 - stripe - INFO - error_code=None error_message='The API key provided does not allow requests from your IP address.' error_param=None error_type=invalid_request_error message='Stripe v1 API error received'
+2026-07-06 13:12:11,948 - glconnect - WARNING - Stripe secret key blocked by IP allowlist on this host (outbound_ip=67.169.127.113). Add that IP in Stripe Dashboard → API keys → Manage IP restrictions.
+2026-07-06 13:12:13,633 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-07-06 13:12:14,953 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-07-06 13:12:15,213 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-07-06 13:12:15,791 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-07-06 13:12:18,488 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-07-06 13:12:25,311 - glconnect.db_schema_patches - INFO - Ensured investment_campaigns platform fee columns
+2026-07-06 13:12:27,527 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-07-06 13:12:27,771 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-07-06 13:12:35,394 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-07-06 13:12:35,394 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-07-06 13:12:35,394 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-07-06 13:12:35,394 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-07-06 13:12:35,394 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-07-06 13:12:35,434 - werkzeug - WARNING -  * Debugger is active!
