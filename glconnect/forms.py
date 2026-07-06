@@ -78,8 +78,12 @@ class CareerApplicationForm(FlaskForm):
     FirstName = StringField('First Name', validators=[DataRequired(), Length(max=50)])
     LastName = StringField('Last Name', validators=[DataRequired(), Length(max=50)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    portfolio_url = StringField('Portfolio or LinkedIn (optional)', validators=[Optional(), Length(max=300)])
-    message = TextAreaField('Cover letter / message', validators=[DataRequired(), Length(max=3000)])
+    phone = StringField(
+        'Phone number',
+        validators=[DataRequired(), Length(min=7, max=30)],
+        render_kw={'type': 'tel', 'autocomplete': 'tel', 'placeholder': '+1 555 123 4567'},
+    )
+    message = TextAreaField('Message', validators=[DataRequired(), Length(max=3000)])
     submit = SubmitField('Submit application')
     recap = RecaptchaField()
 

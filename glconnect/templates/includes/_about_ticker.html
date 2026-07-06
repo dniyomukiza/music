@@ -1,4 +1,4 @@
-{# Scrolling workflow nav — Pitch Fund Write Publish Promote Sell #}
+{# Scrolling workflow nav — Pitch Fund Write Publish GLC Media Sell #}
 <nav class="about-ticker" aria-label="Author workflow">
     <div class="about-ticker-track">
         <div class="about-ticker-group">
@@ -10,7 +10,7 @@
             <span class="about-ticker-sep" aria-hidden="true"></span>
             <a href="{{ about_nav.publish }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}><i class="fas fa-book-open" aria-hidden="true"></i> Publish{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
             <span class="about-ticker-sep" aria-hidden="true"></span>
-            <a href="{{ about_nav.promote }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}><i class="fas fa-tower-broadcast" aria-hidden="true"></i> Promote{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
+            <a href="{{ about_nav.promote }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}><i class="fas fa-tower-broadcast" aria-hidden="true"></i> GLC Media{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
             <span class="about-ticker-sep" aria-hidden="true"></span>
             <a href="{{ about_nav.sell }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}><i class="fas fa-store" aria-hidden="true"></i> Sell{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
         </div>
@@ -23,7 +23,7 @@
             <span class="about-ticker-sep" aria-hidden="true"></span>
             <a href="{{ about_nav.publish }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}" tabindex="-1"><i class="fas fa-book-open" aria-hidden="true"></i> Publish{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
             <span class="about-ticker-sep" aria-hidden="true"></span>
-            <a href="{{ about_nav.promote }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}" tabindex="-1"><i class="fas fa-tower-broadcast" aria-hidden="true"></i> Promote{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
+            <a href="{{ about_nav.promote }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}" tabindex="-1"><i class="fas fa-tower-broadcast" aria-hidden="true"></i> GLC Media{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
             <span class="about-ticker-sep" aria-hidden="true"></span>
             <a href="{{ about_nav.sell }}" class="about-ticker-item{% if not is_authenticated %} about-ticker-item--gated{% endif %}" tabindex="-1"><i class="fas fa-store" aria-hidden="true"></i> Sell{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}</a>
         </div>

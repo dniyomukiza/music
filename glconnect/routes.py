@@ -130,16 +130,14 @@ def careers_apply():
                 positions=allowed_positions,
             )
 
-        portfolio = (form.portfolio_url.data or "").strip()
         body = (
             f"Position: {position}\n"
             f"First name: {form.FirstName.data}\n"
             f"Last name: {form.LastName.data}\n"
             f"Email: {form.email.data}\n"
+            f"Phone: {form.phone.data}\n"
+            f"\nMessage:\n{form.message.data}"
         )
-        if portfolio:
-            body += f"Portfolio / LinkedIn: {portfolio}\n"
-        body += f"\nMessage:\n{form.message.data}"
 
         try:
             mail = Mail(
