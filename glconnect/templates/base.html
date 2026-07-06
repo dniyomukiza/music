@@ -218,7 +218,7 @@
 
 <header>
   <div class="nav-container">
-    <a href="{% if current_user.is_authenticated %}{{ url_for('routes.about') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.about')) }}{% endif %}" style="text-decoration: none;">
+    <a href="{{ url_for('routes.about') }}" style="text-decoration: none;">
       <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic logo" class="logo-img">
     </a>
 

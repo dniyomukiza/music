@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0f0e">
+    <meta name="color-scheme" content="dark">
+    <title>Access denied | Ink Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='book_platform.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+</head>
+<body class="ink-workspace ink-books-ui">
+    <div class="ink-workspace-bg" aria-hidden="true"></div>
+    {% set ink_nav_active = '' %}
+    {% include 'book_platform/includes/_ink_studio_nav.html' %}
+
+    <main class="container py-5" id="main-content" tabindex="-1">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 text-center">
+                <p class="text-muted text-uppercase small mb-2">403</p>
+                <h1 class="h3 mb-3">You do not have access to this page</h1>
+                <p class="text-muted mb-4">
+                    Sign in with the correct account, or return to a page you can open.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-ink-gold">
+                        <i class="fas fa-store me-2" aria-hidden="true"></i>Marketplace
+                    </a>
+                    <a href="{{ url_for('book_platform.my_library') }}" class="btn btn-ink-ghost">
+                        <i class="fas fa-book-reader me-2" aria-hidden="true"></i>My library
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('routes1.login', next=request.path) }}" class="btn btn-ink-gold">
+                        <i class="fas fa-sign-in-alt me-2" aria-hidden="true"></i>Sign in
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('routes1.home') }}" class="btn btn-outline-light">
+                        <i class="fas fa-home me-2" aria-hidden="true"></i>Homepage
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

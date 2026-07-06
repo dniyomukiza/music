@@ -12,12 +12,22 @@ from glconnect.forms import CareerApplicationForm
 logger = logging.getLogger(__name__)
 
 CAREER_POSITIONS = (
+    "Open pool",
+)
+
+# Former multi-role careers page — served at /legacy/careers; swap into CAREER_POSITIONS to restore.
+CAREER_POSITIONS_LEGACY = (
     "Co founder CTO",
     "Board Member",
     "AI Agent Engineer",
     "Quality Testing",
     "Penetration Tester",
 )
+
+
+def career_positions_allowed():
+    """Union of current and legacy role titles (careers apply accepts both)."""
+    return tuple(dict.fromkeys((*CAREER_POSITIONS, *CAREER_POSITIONS_LEGACY)))
 
 bp = Blueprint('routes', __name__)
 
@@ -38,11 +48,36 @@ def marketplace():
     return redirect(url_for('book_platform.marketplace'))
 
 @bp.route('/about')
-@login_required
 def about():
+    from glconnect.ink_studio_v1 import about_site_link_groups
+
+    return render_template(
+        'about.html',
+        link_groups=about_site_link_groups(),
+        is_authenticated=current_user.is_authenticated,
+    )
+
+
+@bp.route('/legacy/about')
+@login_required
+def about_legacy():
+    """Former marketing about page (bento layout). Swap template in ``about()`` to restore site-wide."""
     from glconnect.ink_studio_v1 import about_scroll_nav_urls
 
-    return render_template('about.html', about_nav=about_scroll_nav_urls())
+    return render_template('about_legacy.html', about_nav=about_scroll_nav_urls())
+
+
+@bp.route('/legacy/home')
+def home_legacy():
+    """Former public home landing (pre platform-directory /about links). Swap template in ``index()`` to restore."""
+    return render_template('landing_legacy.html')
+
+
+@bp.route('/legacy/careers')
+def careers_legacy():
+    """Former multi-role careers page. Swap template/positions in ``careers()`` to restore."""
+    return render_template('careers_legacy.html', positions=CAREER_POSITIONS_LEGACY)
+
 
 @bp.route('/pitch-deck')
 def pitch_deck():
@@ -58,9 +93,10 @@ def careers():
 def careers_apply():
     """Submit a job application via Mailtrap (same delivery path as the contact form)."""
     form = CareerApplicationForm()
-    form.position.choices = [("", "Select a role…")] + [(p, p) for p in CAREER_POSITIONS]
+    allowed_positions = career_positions_allowed()
+    form.position.choices = [("", "Select a role…")] + [(p, p) for p in allowed_positions]
     position_q = (request.args.get('position') or '').strip()
-    if request.method == 'GET' and position_q in CAREER_POSITIONS:
+    if request.method == 'GET' and position_q in allowed_positions:
         form.position.data = position_q
 
     sender = (os.getenv("SENDER_MAIL") or "").strip()
@@ -69,12 +105,12 @@ def careers_apply():
 
     if form.validate_on_submit():
         position = (form.position.data or "").strip()
-        if position not in CAREER_POSITIONS:
+        if position not in allowed_positions:
             flash("Please choose a valid position.", "error")
             return render_template(
                 "careers_apply.html",
                 form=form,
-                positions=CAREER_POSITIONS,
+                positions=allowed_positions,
             )
 
         if not sender or not receiver or not api_key:
@@ -91,7 +127,7 @@ def careers_apply():
             return render_template(
                 "careers_apply.html",
                 form=form,
-                positions=CAREER_POSITIONS,
+                positions=allowed_positions,
             )
 
         portfolio = (form.portfolio_url.data or "").strip()
@@ -123,7 +159,7 @@ def careers_apply():
             return render_template(
                 "careers_apply.html",
                 form=form,
-                positions=CAREER_POSITIONS,
+                positions=allowed_positions,
             )
 
         return redirect(
@@ -135,12 +171,12 @@ def careers_apply():
         )
 
     applied = (request.args.get("applied") or "").strip() == "1"
-    applied_position = position_q if applied and position_q in CAREER_POSITIONS else None
+    applied_position = position_q if applied and position_q in allowed_positions else None
 
     return render_template(
         "careers_apply.html",
         form=form,
-        positions=CAREER_POSITIONS,
+        positions=allowed_positions,
         applied=applied,
         applied_position=applied_position,
     )

@@ -289,3 +289,121 @@ def about_scroll_nav_urls():
         "promote": promote,
         "sell": sell,
     }
+
+
+def _about_href(endpoint: str, *, protected: bool = False, **url_kwargs: str) -> str:
+    """Resolve a platform link; guests are sent to login with ``next`` when protected."""
+    from flask import url_for
+
+    target = url_for(endpoint, **url_kwargs)
+    if protected and not getattr(current_user, "is_authenticated", False):
+        return url_for("routes1.login", next=target)
+    return target
+
+
+def _about_link(label: str, endpoint: str, *, protected: bool = False, description: str = "", **url_kwargs: str) -> dict:
+    return {
+        "label": label,
+        "description": description,
+        "href": _about_href(endpoint, protected=protected, **url_kwargs),
+        "protected": protected,
+        "requires_auth": protected and not getattr(current_user, "is_authenticated", False),
+    }
+
+
+def about_site_link_groups():
+    """
+    Active platform destinations for the /about link directory.
+
+    Public links resolve directly; proprietary areas redirect guests to sign in first.
+    """
+    groups = [
+        {
+            "id": "discover",
+            "title": "Discover",
+            "description": "Public entry points and company pages.",
+            "links": [
+                _about_link("Home", "routes.index", description="Main landing page."),
+                _about_link("Blogs", "blog.blogs", description="Stories and journalism."),
+                _about_link("Music", "book_platform.music_dashboard", description="GLC Media music and playlists."),
+                _about_link("News", "news_bp.index", description="AI news broadcasts and audio."),
+                _about_link("Language", "routes1.findwords", description="Word game and language tools."),
+                _about_link("Community dictionary", "routes1.community_dictionary_public", description="Crowdsourced word definitions."),
+                _about_link("Careers", "routes.careers", description="Join our mission."),
+                _about_link("Support", "blog.contact", description="Questions about Ink Studio, print orders, and partnerships."),
+                _about_link("Pitch deck", "routes.pitch_deck", protected=True, description="Investor overview."),
+            ],
+        },
+        {
+            "id": "ink-studio",
+            "title": "Ink Studio",
+            "description": "Author tools, marketplace, and patron campaigns.",
+            "links": [
+                _about_link("Ink Studio", "book_platform.ink_studio_access", protected=True, description="Write, publish, and manage projects."),
+                _about_link("Marketplace", "book_platform.marketplace", protected=True, description="Browse and buy ebooks and audiobooks."),
+                _about_link("Book campaigns", "book_platform.campaigns", protected=True, description="Fund books before publication."),
+                _about_link("Supported projects", "book_platform.supported_projects", protected=True, description="Track campaigns you backed."),
+                _about_link("My library", "book_platform.my_library", protected=True, description="Purchased ebooks and audiobooks."),
+                _about_link("My books", "book_platform.books", protected=True, description="Author workspace and listings."),
+                _about_link("My campaigns", "book_platform.author_my_campaigns", protected=True, description="Author funding campaigns."),
+                _about_link("Become an author", "book_platform.setup_profile", protected=True, description="Complete your Ink Studio author profile."),
+                _about_link("Earnings", "book_platform.earnings_dashboard", protected=True, description="Reviewer, investor, and author payouts."),
+                _about_link("Payout account", "book_platform.author_payout_setup", protected=True, description="Stripe Connect for author sales."),
+            ],
+        },
+        {
+            "id": "account",
+            "title": "Account",
+            "description": "Sign in to access proprietary platform areas.",
+            "links": [
+                _about_link("Sign in", "routes1.login", description="Access protected tools and content."),
+                _about_link("Sign up", "routes1.register", description="Create a free Ndotonic account."),
+                _about_link("My profile", "prof.uprofile", protected=True, description="Account settings and profile."),
+                _about_link("Write a story", "blog.blogpost", protected=True, description="Publish from the blog editor."),
+                _about_link("Apply for a role", "routes.careers_apply", description="Submit a careers application."),
+            ],
+        },
+    ]
+
+    if ink_show_media_ecosystem():
+        groups.insert(
+            2,
+            {
+                "id": "creators",
+                "title": "Creators & media",
+                "description": "Content hub, podcasts, and creator workflows.",
+                "links": [
+                    _about_link("Creators hub", "book_platform.content_hub", protected=True, description="Blogs, news, freelancing, and music."),
+                    _about_link("Podcast library", "book_platform.podcast_library", protected=True, description="Approved podcast episodes."),
+                ],
+            },
+        )
+
+    if getattr(current_user, "is_authenticated", False) and getattr(current_user, "role", None) == "admin":
+        groups.append(
+            {
+                "id": "admin",
+                "title": "Admin",
+                "description": "Internal moderation and operations.",
+                "links": [
+                    _about_link("Admin panel", "book_platform.admin_hub", protected=True, description="Books, podcasts, songs, and reviewers."),
+                    _about_link("Platform analytics", "analytics.analytics_dashboard", protected=True, description="Traffic and usage dashboard."),
+                    _about_link("News analytics", "news_bp.analytics", protected=True, description="Topic and category trends."),
+                ],
+            },
+        )
+
+    groups.append(
+        {
+            "id": "legacy",
+            "title": "Legacy previews",
+            "description": "Archived layouts kept for easy restore — not linked from public nav.",
+            "links": [
+                _about_link("Legacy home", "routes.home_legacy", description="Former public landing page."),
+                _about_link("Legacy about", "routes.about_legacy", protected=True, description="Former marketing about page with bento cards."),
+                _about_link("Legacy careers", "routes.careers_legacy", description="Former multi-role careers listings."),
+            ],
+        },
+    )
+
+    return groups

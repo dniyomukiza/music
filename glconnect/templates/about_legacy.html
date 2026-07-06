@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ndotonic, Turning stories into published books. Author platform with Ink Studio and AI editing; GLC Media is our radio &amp; TV stream promoting stories and books.">
+    <title>About | Ndotonic, Turning stories into published books</title>
+    <link rel="canonical" href="https://ndotonic.com/about">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/ndotonic.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/ndotonic.png') }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Ndotonic">
+    <meta property="og:title" content="Ndotonic, Turning stories into published books">
+    <meta property="og:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media promotes your stories and books on radio &amp; TV.">
+    <meta property="og:url" content="https://ndotonic.com/about">
+    <meta property="og:image" content="{{ url_for('static', filename='images/ndotonic.png', _external=True) }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Ndotonic, Turning stories into published books">
+    <meta name="twitter:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media promotes your stories and books on radio &amp; TV.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/ndotonic.png', _external=True) }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=14">
+</head>
+<body class="about-body">
+
+    <div class="ab-page-bg" aria-hidden="true"></div>
+    <div class="ab-scanline" aria-hidden="true"></div>
+    <div class="ab-mesh" aria-hidden="true"></div>
+
+    <main class="about-page">
+
+        <section class="about-hero" aria-labelledby="about-hero-heading">
+            <div class="about-wrap">
+                <div class="about-hero-grid">
+                    <div class="about-hero-copy">
+                        <p class="about-eyebrow ab-enter ab-enter-1">
+                            <span class="about-eyebrow-dot" aria-hidden="true"></span>
+                            Ndotonic
+                        </p>
+                        <h1 id="about-hero-heading" class="about-headline ab-enter ab-enter-2">
+                            Turning <em>stories</em> into published books
+                        </h1>
+                        <p class="about-hero-sub ab-enter ab-enter-3">
+                            Pitch, fund, write with AI in Ink Studio, publish, and monetize, all in one place.
+                        </p>
+                        <div class="about-hero-actions ab-enter ab-enter-4">
+                            <a class="about-cta about-cta--primary" href="{{ url_for('routes1.register') }}">
+                                Sign up for free <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                            <a class="about-cta about-cta--secondary" href="{{ url_for('blog.contact') }}">
+                                Contact Us <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% include 'includes/_about_ticker.html' %}
+        </section>
+
+        <section class="about-why about-wrap" aria-labelledby="why-ndotonic-heading">
+            <header class="about-section-head about-reveal">
+                <h2 id="why-ndotonic-heading" class="about-section-title">Why Ndotonic</h2>
+                <p class="about-section-sub">
+                    Four connected capabilities, from first pitch to paid reader, designed for creators who ship.
+                </p>
+            </header>
+
+            <div class="about-bento">
+                <article class="about-bento-card about-bento-card--discover about-reveal about-reveal--delay-1" data-spotlight data-tilt>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">01</span>
+                    </div>
+                    <h3>Get Discovered</h3>
+                    <p>Upload a pitch and launch your book funding campaign.</p>
+                    <a href="{{ url_for('book_platform.campaigns') }}" class="about-bento-link">
+                        Browse campaigns <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+
+                <article class="about-bento-card about-bento-card--promote about-reveal about-reveal--delay-2" data-spotlight data-tilt>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">02</span>
+                    </div>
+                    <h3>Promote Your Story</h3>
+                    <p>Share your story on GLC Media, our radio &amp; TV stream promoting authors' stories and books.</p>
+                    <a href="{{ url_for('book_platform.publicity_promotion') }}" class="about-bento-link">
+                        GLC Media &amp; publicity <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+
+                <article class="about-bento-card about-bento-card--featured about-reveal about-reveal--delay-3" data-spotlight data-tilt>
+                    <div class="about-bento-glow-ring" aria-hidden="true"></div>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">03</span>
+                    </div>
+                    <h3>Self publish</h3>
+                    <p>Write your book in Ink studio, use AI toolkit for editing, get ISBN and publish.</p>
+                    <div class="about-bento-tags">
+                        <span class="about-tag">Ink Studio</span>
+                        <span class="about-tag">AI editing</span>
+                        <span class="about-tag">ISBN ready</span>
+                    </div>
+                    <a href="{{ url_for('book_platform.ink_studio_access') }}" class="about-bento-link">
+                        Start writing in Ink Studio <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+
+                <article class="about-bento-card about-bento-card--monetize about-reveal about-reveal--delay-4" data-spotlight data-tilt>
+                    <div class="about-bento-top">
+                        <span class="about-bento-num">04</span>
+                    </div>
+                    <h3>Monetize your work</h3>
+                    <p>Sell your ebook, audiobook or ship to your customer.</p>
+                    <a href="{{ url_for('book_platform.marketplace') }}" class="about-bento-link">
+                        Marketplace <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </article>
+            </div>
+        </section>
+
+    </main>
+
+    {% include 'includes/_company_footer.html' %}
+
+    <script>
+    (function () {
+        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        document.querySelectorAll('.ab-enter').forEach(function (el) {
+            el.classList.add('is-in');
+        });
+
+        if (!reduced && 'IntersectionObserver' in window) {
+            var observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+            document.querySelectorAll('.about-reveal').forEach(function (el) { observer.observe(el); });
+        } else {
+            document.querySelectorAll('.about-reveal').forEach(function (el) { el.classList.add('is-visible'); });
+        }
+
+        if (!reduced) {
+            document.querySelectorAll('[data-spotlight]').forEach(function (card) {
+                card.addEventListener('mousemove', function (e) {
+                    var r = card.getBoundingClientRect();
+                    card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+                    card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+                });
+            });
+            document.querySelectorAll('[data-tilt]').forEach(function (card) {
+                card.addEventListener('mousemove', function (e) {
+                    var r = card.getBoundingClientRect();
+                    var x = (e.clientX - r.left) / r.width - 0.5;
+                    var y = (e.clientY - r.top) / r.height - 0.5;
+                    card.style.transform = 'perspective(900px) rotateX(' + (-y * 6) + 'deg) rotateY(' + (x * 6) + 'deg) translateY(-6px)';
+                });
+                card.addEventListener('mouseleave', function () {
+                    card.style.transform = '';
+                });
+            });
+        }
+    })();
+    </script>
+</body>
+</html>

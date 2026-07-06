@@ -498,11 +498,15 @@
                 <a href="{{ url_for('routes1.findwords') }}">Language</a>
             </nav>
         </div>
-        <a class="wordmark" href="{{ url_for('routes.about') }}" aria-label="Platform directory">
+        <a class="wordmark" href="{% if current_user.is_authenticated %}{{ url_for('routes.about') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.about')) }}{% endif %}" aria-label="About Ndotonic">
             <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic" class="wordmark-img" width="160" height="40">
         </a>
         <div class="platform-button-container">
+            {% if current_user.is_authenticated %}
             <a href="{{ url_for('routes.about') }}" class="platform-button">About</a>
+            {% else %}
+            <a href="{{ url_for('routes1.login', next=url_for('routes.about')) }}" class="platform-button">About</a>
+            {% endif %}
         </div>
         <button type="button" class="mobile-menu-button" onclick="toggleMobileMenu()" aria-expanded="false" aria-controls="mobileNav" aria-label="Open menu">
             <span class="bar"></span>
@@ -516,7 +520,11 @@
         <a href="{{ url_for('book_platform.music_dashboard') }}">Music</a>
         <a href="{{ url_for('news_bp.index') }}">News</a>
         <a href="{{ url_for('routes1.findwords') }}">Language</a>
+        {% if current_user.is_authenticated %}
         <a href="{{ url_for('routes.about') }}" class="platform-button">About</a>
+        {% else %}
+        <a href="{{ url_for('routes1.login', next=url_for('routes.about')) }}" class="platform-button">About</a>
+        {% endif %}
     </nav>
 
     <main class="hero-wrap">

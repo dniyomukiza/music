@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Careers | Join Our Mission | Ndotonic</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glc-theme.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: #060807;
+            background-image:
+                radial-gradient(ellipse 120% 80% at 10% -20%, rgba(201, 162, 39, 0.07), transparent 50%),
+                radial-gradient(ellipse 90% 70% at 100% 25%, rgba(42, 61, 50, 0.4), transparent 55%);
+            background-attachment: fixed;
+            color: #e8ece9;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(12, 15, 14, 0.85);
+            padding: 20px;
+            border-bottom: 1px solid rgba(201, 162, 39, 0.25);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .header a {
+            text-decoration: none;
+            color: #e0bc3a;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .header a:hover {
+            color: #f5d76a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .page-header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #e8ece9;
+        }
+
+        .page-header p {
+            font-size: 1.2em;
+            color: #aeb4b0;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .mission-intro {
+            background: rgba(12, 15, 14, 0.92);
+            border: 1px solid rgba(201, 162, 39, 0.2);
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 50px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        .mission-intro h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #e8ece9;
+        }
+
+        .mission-intro p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #aeb4b0;
+            margin-bottom: 15px;
+        }
+
+        .jobs-section {
+            margin-top: 50px;
+        }
+
+        .jobs-section h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #e8ece9;
+        }
+
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .job-card {
+            background: rgba(12, 15, 14, 0.92);
+            border: 1px solid rgba(201, 162, 39, 0.2);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+            border-color: rgba(201, 162, 39, 0.35);
+        }
+
+        .job-card h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #e8ece9;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: color 0.3s ease;
+        }
+
+        .job-card h3:hover {
+            color: #e0bc3a;
+        }
+
+        .job-card h3::after {
+            content: '+';
+            font-size: 1.5em;
+            font-weight: normal;
+            transition: transform 0.3s ease;
+            color: #c9a227;
+        }
+
+        .job-card.expanded h3::after {
+            content: '−';
+            transform: rotate(0deg);
+        }
+
+        .job-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            padding: 0;
+        }
+
+        .job-card.expanded .job-details {
+            max-height: 2000px;
+            padding-top: 20px;
+        }
+
+        .job-details h4 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            color: #e0bc3a;
+        }
+
+        .job-details h4:first-child {
+            margin-top: 0;
+        }
+
+        .job-details ul {
+            list-style-position: inside;
+            margin-bottom: 20px;
+            padding-left: 0;
+        }
+
+        .job-details li {
+            margin-bottom: 10px;
+            color: #aeb4b0;
+            line-height: 1.8;
+        }
+
+        .job-card .job-type {
+            display: inline-block;
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            color: #060807;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .job-card p {
+            color: #aeb4b0;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .apply-button {
+            display: inline-block;
+            background: linear-gradient(145deg, #c9a227, #a88416);
+            color: #060807;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: none;
+            box-shadow: 0 4px 20px rgba(201, 162, 39, 0.25);
+        }
+
+        .apply-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(201, 162, 39, 0.35);
+            color: #060807;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 40px;
+            color: #e0bc3a;
+            text-decoration: none;
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #f5d76a;
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2em;
+            }
+
+            .jobs-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mission-intro {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="{{ url_for('routes.index') }}">← Back to Home</a>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes" style="list-style: none; margin-bottom: 1.5rem;">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}" style="padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; {% if category == 'success' %}background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.35);{% elif category == 'error' %}background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4);{% endif %}">
+                            {{ message }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <div class="page-header">
+            <h1>Careers at Ndotonic</h1>
+            <p>Help shape how creators and communities connect through music, stories, and tools.</p>
+        </div>
+        <div class="jobs-section">
+            <div class="jobs-grid">
+                <div class="job-card">
+                    <h3>Co founder CTO</h3>
+                    <span class="job-type">Leadership</span>
+                    <a href="{{ url_for('routes.careers_apply', position='Co founder CTO') }}" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="board-member">
+                    <h3 onclick="toggleJobDetails(this)">Board Member</h3>
+                    <span class="job-type">Leadership</span>
+                    <p>Join Ndotonic’s board to guide strategy, governance, and growth as we build a platform where creators connect with their audiences through music, storytelling, and publishing tools.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Advise on company vision, product direction, and long term positioning in the creator economy.</li>
+                            <li>Support governance, risk oversight, and ethical standards as the platform scales.</li>
+                            <li>Help shape partnerships, fundraising, and go to market strategy with founders and leadership.</li>
+                            <li>Bring an independent perspective on finance, operations, technology, media, or community building as relevant to your background.</li>
+                            <li>Participate in periodic board meetings and strategic reviews (remote friendly).</li>
+                        </ul>
+                        <h4>About You</h4>
+                        <ul>
+                            <li>Senior experience in technology, media, publishing, startups, or nonprofit/cultural leadership.</li>
+                            <li>Track record of strategic judgment, scaling products, building teams, or advising early stage ventures.</li>
+                            <li>Genuine interest in empowering independent creators and underserved voices.</li>
+                            <li>Ability to commit time for board duties alongside other professional obligations.</li>
+                            <li>Integrity, discretion, and a collaborative working style with founders and stakeholders.</li>
+                        </ul>
+                        <h4>Nice to haves</h4>
+                        <ul>
+                            <li>Prior board or advisory experience at a startup or growth stage company</li>
+                            <li>Network in music, publishing, education, or creator platforms</li>
+                            <li>Experience with fundraising, M&amp;A, or international expansion</li>
+                        </ul>
+                    </div>
+                    <a href="{{ url_for('routes.careers_apply', position='Board Member') }}" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="ai-engineer">
+                    <h3 onclick="toggleJobDetails(this)">AI Agent Engineer</h3>
+                    <span class="job-type">Engineering</span>
+                    <p>Join our team to build intelligent AI agents that help creators optimize their content, connect with audiences, and automate workflows. Experience with LLMs, agent frameworks, and content generation required.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Collaborate with team to define the requirements and design tailored AI driven solutions that meet their specific needs.</li>
+                            <li>Develop and deliver customized product features and prototypes to demonstrate the value and functionality of our solutions.</li>
+                            <li>Act as a liaison between quality, security testers and the product development team, communicating feedback and helping to shape future product features.</li>
+                            <li>Create and maintain technical documentation</li>
+                        </ul>
+                        <h4>Requirements</h4>
+                        <ul>
+                            <li>Bachelor's degree in Computer Science, Engineering, or self taught with demo projects.</li>
+                            <li>Extreme sense of ownership, obsession for AI to ensure that you will thrive in our early stage environment</li>
+                            <li>Experience with programming languages such as Python, Javascript, or similar, and familiarity with APIs, databases and cloud platforms.</li>
+                            <li>Experience with CI/CD pipelines</li>
+                            <li>Version control with Git</li>
+                        </ul>
+                        <h4>Nice to haves</h4>
+                        <ul>
+                            <li>Stay current with AI multimodel tools</li>
+                            <li>Effective prompt engineering skills</li>
+                            <li>Certifications in cloud platforms such as AWS, Google Cloud, or Azure a plus</li>
+                        </ul>
+                    </div>
+                    <a href="{{ url_for('routes.careers_apply', position='AI Agent Engineer') }}" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="qa-engineer">
+                    <h3 onclick="toggleJobDetails(this)">Quality Testing</h3>
+                    <span class="job-type">Quality Assurance</span>
+                    <p>Ensure our platform delivers exceptional user experiences. You'll design and execute test strategies, automate testing processes, and work closely with engineering teams to maintain high quality standards.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Understanding user requirements, scrutinizing product usability, and providing feedback.</li>
+                            <li>Develop and maintain accurate test cases and ensure compliance across all web and mobile platforms.</li>
+                            <li>Create detailed reports on the quality and functionality of software applications after thorough testing.</li>
+                            <li>Work alongside our developers and product leaders throughout the software development lifecycle, ensuring that quality standards are always achieved.</li>
+                        </ul>
+                        <h4>About You</h4>
+                        <ul>
+                            <li>Comfortable scripting in at least one or preferably multiple scripting languages and tools such as Bash, Python, JavaScript, Playwright etc.</li>
+                            <li>Understanding of Linux, macOS operating systems</li>
+                            <li>Experience working with databases including PostgreSQL, SQL, and MySQL.</li>
+                            <li>Version controlling with Git</li>
+                        </ul>
+                    </div>
+                    <a href="{{ url_for('routes.careers_apply', position='Quality Testing') }}" class="apply-button">Apply Now</a>
+                </div>
+
+                <div class="job-card" data-job="penetration-tester">
+                    <h3 onclick="toggleJobDetails(this)">Penetration Tester</h3>
+                    <span class="job-type">Security</span>
+                    <p>Help us keep our platform secure for creators and users. You'll conduct security assessments, identify vulnerabilities, and work with engineering teams to implement robust security measures.</p>
+                    <div class="job-details">
+                        <h4>What You'll Be Doing</h4>
+                        <ul>
+                            <li>Perform controlled penetration testing on applications, cloud environments, and infrastructure, demonstrating potential vulnerabilities, documenting risks and remediation steps.</li>
+                            <li>Collaborate with Engineering to validate and fix vulnerabilities</li>
+                            <li>Develop automated scripts to support penetration testing</li>
+                            <li>Stay current on emerging threats</li>
+                        </ul>
+                        <h4>About You</h4>
+                        <ul>
+                            <li>Hands on penetration testing experience or aspirations in cybersecurity related roles.</li>
+                            <li>Strong understanding of security protocols</li>
+                            <li>Security certifications are a plus.</li>
+                            <li>Proficiency with penetration testing tools and related frameworks.</li>
+                            <li>Solid understanding of Linux and Unix operating systems and networking fundamentals.</li>
+                        </ul>
+                    </div>
+                    <a href="{{ url_for('routes.careers_apply', position='Penetration Tester') }}" class="apply-button">Apply Now</a>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{{ url_for('routes.index') }}" class="back-link">← Return to Homepage</a>
+        </div>
+    </div>
+    <script>
+        function toggleJobDetails(element) {
+            const jobCard = element.closest('.job-card');
+            jobCard.classList.toggle('expanded');
+        }
+    </script>
+    {% include 'includes/_ndotonic_mission_footer.html' %}
+
+</body>
+</html>
