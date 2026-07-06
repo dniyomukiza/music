@@ -57,6 +57,12 @@
       filter: brightness(1.06);
     }
 
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
     nav ul {
       display: flex;
       gap: 2rem;
@@ -239,6 +245,7 @@
         <li><a href="{{ url_for('book_platform.author_payout_setup', next=request.path) }}">Payout account</a></li>
         {% endif %}
       </ul>
+      {% include 'includes/_company_nav.html' %}
     </nav>
 
     <div class="menu-toggle" onclick="toggleMenu()">
@@ -281,6 +288,9 @@
         {% elif not current_user.is_authenticated %}
         <li><a href="/prof/uprofile">Others</a></li>
         {% endif %}
+        <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 5px 0;">
+        <li><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
+        <li><a href="{{ url_for('blog.contact') }}">Support</a></li>
       </ul>
     </div>
   </div>

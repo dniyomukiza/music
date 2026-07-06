@@ -400,16 +400,5 @@ def about_site_link_groups():
             },
         )
 
-    groups.append(
-        {
-            "id": "legacy",
-            "title": "Legacy previews",
-            "description": "Archived layouts kept for easy restore — not linked from public nav.",
-            "links": [
-                _about_link("Legacy home", "routes.home_legacy", description="Former hero landing page."),
-                _about_link("Legacy careers", "routes.careers_legacy", description="Former multi-role careers listings."),
-            ],
-        },
-    )
 
     return groups

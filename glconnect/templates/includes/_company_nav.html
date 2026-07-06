@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=7">
-<footer class="company-footer" aria-label="Site footer">
-    <div class="company-footer-inner">
-        {% include 'includes/_company_menu.html' %}
-    </div>
-</footer>
+<div class="company-nav-slot">
+    {% with company_menu_variant='nav' %}
+    {% include 'includes/_company_menu.html' %}
+    {% endwith %}
+</div>
 <script src="{{ url_for('static', filename='company_menu.js') }}?v=1" defer></script>

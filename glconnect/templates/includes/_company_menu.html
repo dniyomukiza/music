@@ -1,0 +1,14 @@
+<div class="company-footer-menu{% if company_menu_variant == 'nav' %} company-footer-menu--nav{% endif %}" data-company-menu>
+    <button type="button"
+            class="company-footer-toggle"
+            data-company-toggle
+            aria-expanded="false"
+            aria-haspopup="true">
+        Company <i class="fas fa-chevron-down" aria-hidden="true"></i>
+    </button>
+    <ul class="company-footer-dropdown" data-company-dropdown hidden>
+        <li class="company-footer-item"><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
+        <li class="company-footer-item"><a href="{{ url_for('blog.contact') }}">Support</a></li>
+        <li class="company-footer-item"><a href="https://www.instagram.com/GLConnect_cool/" target="_blank" rel="noopener noreferrer">@GLConnect_cool</a></li>
+    </ul>
+</div>

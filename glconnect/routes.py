@@ -15,7 +15,7 @@ CAREER_POSITIONS = (
     "Open pool",
 )
 
-# Former multi-role careers page — served at /legacy/careers; swap into CAREER_POSITIONS to restore.
+# Former multi-role titles still accepted on careers apply submissions.
 CAREER_POSITIONS_LEGACY = (
     "Co founder CTO",
     "Board Member",
@@ -72,55 +72,11 @@ def platform():
     )
 
 
-@bp.route('/legacy/about')
-def about_legacy():
-    """Former URL — marketing landing is now public at /."""
-    return redirect(url_for('routes.index'), code=301)
-
-
 @bp.route('/marketplace')
 @login_required
 def marketplace():
     """Universal marketplace access - redirects to Ink Studio marketplace"""
     return redirect(url_for('book_platform.marketplace'))
-
-
-@bp.route('/legacy/home')
-def home_legacy():
-    """Former public hero landing (epicenter of premium content)."""
-    return render_template('landing_legacy.html')
-
-
-@bp.route('/legacy/careers')
-def careers_legacy():
-    """Former multi-role careers page. Swap template/positions in ``careers()`` to restore."""
-    return render_template('careers_legacy.html', positions=CAREER_POSITIONS_LEGACY)
-
-
-@bp.route('/preview/content-hub')
-def preview_content_hub():
-    """Local-only visual preview of the content hub layout (no login required)."""
-    if os.getenv('FLASK_ENV') != 'development':
-        return redirect(url_for('routes1.login', next=url_for('book_platform.content_hub')))
-
-    from glconnect.glc_media_artist_terms import glc_media_terms_context
-
-    class _PreviewUser:
-        is_authenticated = True
-        user_id = 0
-        username = "preview_user"
-        first_name = "Preview"
-        email = "you@example.com"
-        role = "author"
-        profile_picture = None
-
-    return render_template(
-        'book_platform/content_hub.html',
-        current_user=_PreviewUser(),
-        has_artist_profile=False,
-        artist_needs_glc_terms=True,
-        **glc_media_terms_context(),
-    )
 
 
 @bp.route('/pitch-deck')
