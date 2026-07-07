@@ -221,10 +221,11 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body{% if not current_user.is_authenticated and request.endpoint in ('routes1.register', 'routes1.login', 'routes1.passreset', 'routes1.passreq') %} class="auth-guest-page"{% endif %}>
 
 <div class="ndotonic-page-bg" aria-hidden="true"></div>
 
+{% if current_user.is_authenticated or request.endpoint not in ('routes1.register', 'routes1.login', 'routes1.passreset', 'routes1.passreq') %}
 <header>
   <div class="nav-container">
     <a href="{{ url_for('routes.index') }}" style="text-decoration: none;">
@@ -295,6 +296,7 @@
     </div>
   </div>
 </header>
+{% endif %}
 
 <main>
   <section id="hero" class="hero" style="width: 100%; max-width: 100vw; padding:0; background:transparent;">
@@ -304,7 +306,9 @@
 
   {% block content %}{% endblock %}
 </main>
+{% if current_user.is_authenticated or request.endpoint not in ('routes1.register', 'routes1.login', 'routes1.passreset', 'routes1.passreq') %}
     {% include 'includes/_ndotonic_mission_footer.html' %}
+{% endif %}
 
 <script>
   function toggleMenu() {
