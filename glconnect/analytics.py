@@ -1,19 +1,89 @@
 """
 Analytics module for tracking and viewing app usage statistics.
-This module provides publicly accessible endpoints to view detailed analytics about page views and user behavior.
 """
 
 from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy import func, distinct
 from datetime import datetime, timezone, timedelta
-from .models import PageAnalytics, PageAnalyticsStats, db
+from .models import PageAnalytics, db
 
 analytics_bp = Blueprint('analytics', __name__)
 
+
+def _day_bucket(column):
+    """Group timestamps by calendar day (PostgreSQL + SQLite)."""
+    if db.engine.dialect.name == "postgresql":
+        return func.date_trunc("day", column)
+    return func.date(column)
+
+
 @analytics_bp.route('/analytics')
 def analytics_dashboard():
-    """Main analytics dashboard page (public access)"""
+    """Main analytics dashboard page (public access)."""
     return render_template('analytics_dashboard.html')
+
+
+@analytics_bp.route('/_analytics/api/dashboard')
+def get_dashboard():
+    """Daily view counts and endpoint visit totals."""
+    try:
+        days = min(max(int(request.args.get('days', 30)), 1), 365)
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+
+        day_expr = _day_bucket(PageAnalytics.timestamp)
+        daily_rows = (
+            db.session.query(
+                day_expr.label("day"),
+                func.count(PageAnalytics.id).label("views"),
+            )
+            .filter(PageAnalytics.timestamp >= start_date)
+            .group_by(day_expr)
+            .order_by(day_expr)
+            .all()
+        )
+
+        daily_views = []
+        for day, views in daily_rows:
+            if day is None:
+                continue
+            if isinstance(day, str):
+                day_label = day[:10]
+            else:
+                day_label = day.date().isoformat() if hasattr(day, "date") else day.isoformat()[:10]
+            daily_views.append({"date": day_label, "views": views})
+
+        endpoint_rows = (
+            db.session.query(
+                PageAnalytics.endpoint,
+                func.count(PageAnalytics.id).label("views"),
+                func.max(PageAnalytics.timestamp).label("last_visited"),
+            )
+            .filter(PageAnalytics.timestamp >= start_date)
+            .group_by(PageAnalytics.endpoint)
+            .order_by(func.count(PageAnalytics.id).desc())
+            .all()
+        )
+
+        endpoints = []
+        for endpoint, views, last_visited in endpoint_rows:
+            endpoints.append({
+                "endpoint": endpoint,
+                "views": views,
+                "last_visited": last_visited.isoformat() if last_visited else None,
+            })
+
+        total_views = sum(row["views"] for row in daily_views)
+
+        return jsonify({
+            "success": True,
+            "days": days,
+            "total_views": total_views,
+            "daily_views": daily_views,
+            "endpoints": endpoints,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @analytics_bp.route('/_analytics/api/stats')
 def get_stats():
@@ -161,9 +231,12 @@ def get_time_series():
         
         # Group by time period
         if group_by == 'hour':
-            time_format = func.date_trunc('hour', PageAnalytics.timestamp)
-        else:  # day
-            time_format = func.date_trunc('day', PageAnalytics.timestamp)
+            if db.engine.dialect.name == "postgresql":
+                time_format = func.date_trunc('hour', PageAnalytics.timestamp)
+            else:
+                time_format = func.strftime('%Y-%m-%d %H:00:00', PageAnalytics.timestamp)
+        else:
+            time_format = _day_bucket(PageAnalytics.timestamp)
         
         results = db.session.query(
             time_format.label('period'),

@@ -21,7 +21,14 @@
                             <h4 class="mb-0">{{ chapter.title }}</h4>
                             <small class="text-muted">{{ manuscript_section_heading(chapter.title, chapter.chapter_number) }} · "{{ book.title }}"</small>
                         </div>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if current_user.is_authenticated and can_edit_manuscript|default(false) %}
+                            <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                               class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                                {% if is_book_author|default(false) %}Edit section{% else %}Propose edits{% endif %}
+                            </a>
+                            {% endif %}
                             {% if chapter.is_published %}
                                 <span class="badge bg-success">Complete</span>
                             {% else %}
@@ -101,8 +108,15 @@
             <div class="col-lg-4">
                 <!-- Chapter Info -->
                 <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-info-circle"></i> Chapter Information</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Chapter Information</h5>
+                        {% if current_user.is_authenticated and can_edit_manuscript|default(false) %}
+                        <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit" aria-hidden="true"></i>
+                            {% if is_book_author|default(false) %}Edit section{% else %}Propose edits{% endif %}
+                        </a>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         <div class="row mb-2">
@@ -154,20 +168,11 @@
                     </div>
                     <div class="card-body">
                         <div class="d-flex flex-column align-items-start gap-2">
-                            {% if chapter.is_published %}
-                                {% if is_book_author|default(false) %}
-                                <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}" class="btn btn-success">
-                                    <i class="fas fa-check-circle"></i> Ready to publish
-                                </a>
-                                {% else %}
-                                <div class="alert alert-info py-2 mb-0">
-                                    <small><i class="fas fa-lock"></i> Section marked complete — ask the author for changes</small>
-                                </div>
-                                {% endif %}
-                            {% elif can_edit_manuscript|default(false) %}
+                            {% if can_edit_manuscript|default(false) %}
                                 <a href="{{ url_for('book_platform.edit_chapter', book_id=book.id, chapter_id=chapter.id) }}"
                                    class="btn btn-primary">
-                                    <i class="fas fa-edit"></i> {% if is_book_author|default(false) %}Edit content{% else %}Propose edits{% endif %}
+                                    <i class="fas fa-edit"></i>
+                                    {% if is_book_author|default(false) %}Edit section{% else %}Propose edits{% endif %}
                                 </a>
                             {% endif %}
                             {% if is_book_author|default(false) and not book.digital_file_path %}
