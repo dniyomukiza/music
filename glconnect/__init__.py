@@ -712,7 +712,7 @@ def create_app(config_overrides=None):
 
     @app.after_request
     def log_page_analytics_db(response):
-        """Record one row per request with Flask endpoint (not raw path)."""
+        """Record one row per request with the visited URL path."""
         info = getattr(g, "_ink_page_analytics", None)
         if not info or info.get("skip"):
             return response
@@ -720,9 +720,9 @@ def create_app(config_overrides=None):
             from .models import PageAnalytics, db
             from flask_login import current_user
 
-            page_endpoint = request.endpoint or request.path or "_unknown"
+            page_path = (request.path or "/").rstrip("/") or "/"
             analytics = PageAnalytics(
-                endpoint=page_endpoint,
+                endpoint=page_path,
                 ip_address=request.remote_addr,
                 device=info.get("device"),
                 user_id=current_user.user_id if current_user.is_authenticated else None,

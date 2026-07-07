@@ -2,12 +2,79 @@
 Analytics module for tracking and viewing app usage statistics.
 """
 
-from flask import Blueprint, jsonify, render_template, request
+import os
+from collections import defaultdict
+
+from flask import Blueprint, current_app, jsonify, render_template, request, url_for
 from sqlalchemy import func, distinct
 from datetime import datetime, timezone, timedelta
 from .models import PageAnalytics, db
 
 analytics_bp = Blueprint('analytics', __name__)
+
+ANALYTICS_SITE_HOST = (
+    os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com")
+    .replace("https://", "")
+    .replace("http://", "")
+    .rstrip("/")
+    .removeprefix("www.")
+)
+
+
+def normalize_request_path(path):
+    """Canonical path key for analytics grouping."""
+    if not path or path == "/":
+        return "/"
+    return path.rstrip("/") or "/"
+
+
+def _rule_to_display_path(rule):
+    """Turn a Flask URL rule into a readable ndotonic.com path."""
+    path = rule
+    for token in ("<int:", "<float:", "<path:", "<uuid:", "<string:", "<"):
+        if token in path:
+            idx = path.index("<")
+            end = path.index(">", idx) + 1
+            path = path[:idx] + "*" + path[end:]
+    path = path.replace("//", "/")
+    return normalize_request_path(path)
+
+
+def resolve_analytics_path(stored_value):
+    """Resolve stored request path or legacy Flask endpoint to a URL path."""
+    if not stored_value:
+        return "/"
+    if stored_value.startswith("/"):
+        return normalize_request_path(stored_value)
+
+    try:
+        return normalize_request_path(url_for(stored_value))
+    except Exception:
+        pass
+
+    try:
+        rules = [
+            rule
+            for rule in current_app.url_map.iter_rules(stored_value)
+            if "GET" in rule.methods and rule.rule != "/static/<path:filename>"
+        ]
+        if rules:
+            rules.sort(key=lambda r: (("<" in r.rule), len(r.rule)))
+            return _rule_to_display_path(rules[0].rule)
+    except Exception:
+        pass
+
+    return stored_value
+
+
+def format_site_path(stored_value):
+    """Human-readable ndotonic.com path for the dashboard."""
+    resolved = resolve_analytics_path(stored_value)
+    if not resolved or resolved == "/":
+        return ANALYTICS_SITE_HOST
+    if resolved.startswith("/"):
+        return f"{ANALYTICS_SITE_HOST}{resolved}"
+    return f"{ANALYTICS_SITE_HOST}/{resolved}"
 
 
 def _day_bucket(column):
@@ -60,17 +127,28 @@ def get_dashboard():
             )
             .filter(PageAnalytics.timestamp >= start_date)
             .group_by(PageAnalytics.endpoint)
-            .order_by(func.count(PageAnalytics.id).desc())
             .all()
         )
 
-        endpoints = []
-        for endpoint, views, last_visited in endpoint_rows:
-            endpoints.append({
-                "endpoint": endpoint,
-                "views": views,
-                "last_visited": last_visited.isoformat() if last_visited else None,
+        merged_pages = defaultdict(lambda: {"views": 0, "last_visited": None, "raw_keys": set()})
+        for stored, views, last_visited in endpoint_rows:
+            display_path = format_site_path(stored)
+            bucket = merged_pages[display_path]
+            bucket["views"] += views
+            bucket["raw_keys"].add(stored)
+            if last_visited and (
+                bucket["last_visited"] is None or last_visited > bucket["last_visited"]
+            ):
+                bucket["last_visited"] = last_visited
+
+        pages = []
+        for display_path, data in merged_pages.items():
+            pages.append({
+                "path": display_path,
+                "views": data["views"],
+                "last_visited": data["last_visited"].isoformat() if data["last_visited"] else None,
             })
+        pages.sort(key=lambda row: (-row["views"], row["path"]))
 
         total_views = sum(row["views"] for row in daily_views)
 
@@ -79,7 +157,7 @@ def get_dashboard():
             "days": days,
             "total_views": total_views,
             "daily_views": daily_views,
-            "endpoints": endpoints,
+            "pages": pages,
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

@@ -151,7 +151,7 @@
         <div class="page-head">
             <div>
                 <h1>Analytics</h1>
-                <p class="subtitle">Views per day and endpoint traffic</p>
+                <p class="subtitle">Views per day and page traffic</p>
             </div>
             <div class="toolbar">
                 <label for="days-select">Range</label>
@@ -177,9 +177,9 @@
             <div id="daily-views" class="loading">Loading daily views…</div>
         </section>
 
-        <section class="section" aria-labelledby="endpoints-heading">
-            <h2 id="endpoints-heading">Endpoints visited</h2>
-            <div id="endpoints" class="loading">Loading endpoints…</div>
+        <section class="section" aria-labelledby="pages-heading">
+            <h2 id="pages-heading">Pages visited</h2>
+            <div id="pages" class="loading">Loading pages…</div>
         </section>
     </div>
 
@@ -240,19 +240,19 @@
                 '</tbody></table>';
         }
 
-        function renderEndpoints(rows) {
-            var container = document.getElementById('endpoints');
+        function renderPages(rows) {
+            var container = document.getElementById('pages');
             if (!rows.length) {
-                container.innerHTML = '<p class="empty">No endpoint visits in this range.</p>';
+                container.innerHTML = '<p class="empty">No page visits in this range.</p>';
                 return;
             }
             container.innerHTML =
                 '<table><thead><tr>' +
-                '<th>Endpoint</th><th>Views</th><th>Last visited</th>' +
+                '<th>Page</th><th>Views</th><th>Last visited</th>' +
                 '</tr></thead><tbody>' +
                 rows.map(function (row) {
                     return '<tr>' +
-                        '<td><code>' + row.endpoint + '</code></td>' +
+                        '<td><code>' + row.path + '</code></td>' +
                         '<td class="views-cell">' + formatNumber(row.views) + '</td>' +
                         '<td class="muted">' + formatDateTime(row.last_visited) + '</td>' +
                         '</tr>';
@@ -273,10 +273,10 @@
                 rangeLabelEl.textContent = '(' + data.days + ' days)';
                 summaryEl.hidden = false;
                 renderDailyViews(data.daily_views || []);
-                renderEndpoints(data.endpoints || []);
+                renderPages(data.pages || []);
             } catch (err) {
                 document.getElementById('daily-views').innerHTML = '<p class="empty">Unable to load data.</p>';
-                document.getElementById('endpoints').innerHTML = '<p class="empty">Unable to load data.</p>';
+                document.getElementById('pages').innerHTML = '<p class="empty">Unable to load data.</p>';
                 errorContainer.innerHTML = '<div class="error">Could not load analytics: ' + err.message + '</div>';
             } finally {
                 refreshBtn.disabled = false;

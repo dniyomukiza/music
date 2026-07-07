@@ -402,7 +402,7 @@ class NewsTask(db.Model):
 class PageAnalytics(db.Model):
     __tablename__ = 'page_analytics'
     id = db.Column(db.Integer, primary_key=True)
-    # DB column remains "path" for compatibility; stores Flask endpoint (e.g. book_platform.marketplace).
+    # DB column is "path"; stores the visited URL path (e.g. /about, /mybook/marketplace).
     endpoint = db.Column('path', db.String(500), nullable=False)
     ip_address = db.Column(db.String(50), nullable=True)
     device = db.Column(db.String(50), nullable=True)

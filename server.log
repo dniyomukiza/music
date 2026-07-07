@@ -1003,3 +1003,21 @@ sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate
 2026-07-06 17:00:29,237 - __main__ - INFO - Logging configured - logs will appear in console and server.log
 2026-07-06 17:00:29,238 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
 2026-07-06 17:00:29,264 - werkzeug - WARNING -  * Debugger is active!
+2026-07-06 18:58:19,821 - stripe - INFO - message='Request to Stripe api' method=get url=https://api.stripe.com/v1/balance
+2026-07-06 18:58:20,292 - stripe - INFO - message='Stripe API response' path=https://api.stripe.com/v1/balance response_code=401
+2026-07-06 18:58:20,293 - stripe - INFO - error_code=None error_message='The API key provided does not allow requests from your IP address.' error_param=None error_type=invalid_request_error message='Stripe v1 API error received'
+2026-07-06 18:58:20,293 - glconnect - WARNING - Stripe secret key blocked by IP allowlist on this host (outbound_ip=67.169.127.113). Add that IP in Stripe Dashboard → API keys → Manage IP restrictions.
+2026-07-06 18:58:22,019 - glconnect.isbn_pool_service - INFO - ISBN pool schema verified (PostgreSQL).
+2026-07-06 18:58:23,347 - glconnect.db_schema_patches - INFO - book_platform_users.author_card_setup_completed ready (PostgreSQL).
+2026-07-06 18:58:23,619 - glconnect.db_schema_patches - INFO - book_platform_users.genres dropped if present (PostgreSQL).
+2026-07-06 18:58:24,174 - glconnect.db_schema_patches - INFO - book_projects.audiobook_segment_plan verified (PostgreSQL).
+2026-07-06 18:58:26,730 - glconnect.db_schema_patches - INFO - page_analytics: legacy columns dropped if present (PostgreSQL).
+2026-07-06 18:58:34,095 - glconnect.db_schema_patches - INFO - Ensured investment_campaigns platform fee columns
+2026-07-06 18:58:36,535 - summa.preprocessing.cleaner - INFO - 'pattern' package not found; tag filters are not available for English
+2026-07-06 18:58:36,832 - glconnect.audio_book_generator - INFO - TTS available - client will be initialized on first use
+2026-07-06 18:58:43,338 - __main__ - INFO - Starting Flask app in DEBUG mode
+2026-07-06 18:58:43,338 - __main__ - INFO - Reloader: ENABLED (prevents 502 errors)
+2026-07-06 18:58:43,338 - __main__ - INFO - App ready on http://0.0.0.0:5000
+2026-07-06 18:58:43,338 - __main__ - INFO - Logging configured - logs will appear in console and server.log
+2026-07-06 18:58:43,338 - werkzeug - WARNING - Werkzeug appears to be used in a production deployment. Consider switching to a production web server instead.
+2026-07-06 18:58:43,370 - werkzeug - WARNING -  * Debugger is active!
