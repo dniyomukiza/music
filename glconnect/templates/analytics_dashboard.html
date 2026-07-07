@@ -47,6 +47,7 @@
             color: #aeb4b0;
         }
         .toolbar select,
+        .toolbar input[type="date"],
         .refresh-btn {
             font-family: inherit;
             font-size: 0.9rem;
@@ -55,6 +56,14 @@
             background: rgba(12, 15, 14, 0.92);
             color: #e8ece9;
             padding: 0.55rem 0.85rem;
+        }
+        .toolbar input[type="date"] {
+            color-scheme: dark;
+        }
+        .toolbar input[type="date"]:disabled,
+        .toolbar select:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
         .refresh-btn {
             background: linear-gradient(145deg, #c9a227, #a88416);
@@ -118,18 +127,6 @@
             word-break: break-all;
         }
         .views-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
-        .bar-cell { width: 38%; min-width: 140px; }
-        .bar-track {
-            height: 8px;
-            border-radius: 999px;
-            background: rgba(201, 162, 39, 0.12);
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 100%;
-            border-radius: inherit;
-            background: linear-gradient(90deg, #a88416, #e0bc3a);
-        }
         .muted { color: #8b9690; font-size: 0.85rem; }
         .loading, .empty { text-align: center; padding: 2rem 1rem; color: #aeb4b0; }
         .error {
@@ -141,8 +138,7 @@
             margin-bottom: 1rem;
         }
         @media (max-width: 720px) {
-            .bar-cell { display: none; }
-            th.bar-col, td.bar-cell { display: none; }
+            th.page-col, td.page-col { max-width: 10rem; }
         }
     </style>
 </head>
@@ -151,16 +147,24 @@
         <div class="page-head">
             <div>
                 <h1>Analytics</h1>
-                <p class="subtitle">Views per day and page traffic</p>
+                <p class="subtitle">Views per day by page</p>
             </div>
             <div class="toolbar">
+                <label for="filter-mode">Show</label>
+                <select id="filter-mode" aria-label="Filter mode">
+                    <option value="range">Date range</option>
+                    <option value="day">Single day</option>
+                </select>
                 <label for="days-select">Range</label>
                 <select id="days-select" aria-label="Date range">
+                    <option value="1">Today</option>
                     <option value="7">Last 7 days</option>
                     <option value="14">Last 14 days</option>
                     <option value="30" selected>Last 30 days</option>
                     <option value="90">Last 90 days</option>
                 </select>
+                <label for="day-select">Day</label>
+                <input type="date" id="day-select" aria-label="Filter by day" disabled>
                 <button type="button" class="refresh-btn" id="refresh-btn">Refresh</button>
             </div>
         </div>
@@ -176,21 +180,47 @@
             <h2 id="daily-heading">Views per day</h2>
             <div id="daily-views" class="loading">Loading daily views…</div>
         </section>
-
-        <section class="section" aria-labelledby="pages-heading">
-            <h2 id="pages-heading">Pages visited</h2>
-            <div id="pages" class="loading">Loading pages…</div>
-        </section>
     </div>
 
     <script>
     (function () {
         var refreshBtn = document.getElementById('refresh-btn');
+        var filterMode = document.getElementById('filter-mode');
         var daysSelect = document.getElementById('days-select');
+        var daySelect = document.getElementById('day-select');
         var errorContainer = document.getElementById('error-container');
         var summaryEl = document.getElementById('summary');
         var totalViewsEl = document.getElementById('total-views');
         var rangeLabelEl = document.getElementById('range-label');
+        var dailyHeading = document.getElementById('daily-heading');
+
+        function todayIso() {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = String(now.getMonth() + 1).padStart(2, '0');
+            var d = String(now.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+
+        daySelect.value = todayIso();
+        daySelect.max = todayIso();
+
+        function syncFilterControls() {
+            var singleDay = filterMode.value === 'day';
+            daysSelect.disabled = singleDay;
+            daySelect.disabled = !singleDay;
+        }
+
+        function buildDashboardUrl() {
+            var url = '/_analytics/api/dashboard?_t=' + Date.now();
+            if (filterMode.value === 'day') {
+                if (!daySelect.value) throw new Error('Choose a day to filter.');
+                url += '&date=' + encodeURIComponent(daySelect.value);
+            } else {
+                url += '&days=' + encodeURIComponent(daysSelect.value);
+            }
+            return url;
+        }
 
         function formatNumber(num) {
             return new Intl.NumberFormat().format(num);
@@ -203,13 +233,16 @@
             return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
         }
 
-        function formatDateTime(iso) {
-            if (!iso) return '—';
-            return new Date(iso).toLocaleString();
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
-        async function fetchDashboard(days) {
-            var url = '/_analytics/api/dashboard?days=' + encodeURIComponent(days) + '&_t=' + Date.now();
+        async function fetchDashboard() {
+            var url = buildDashboardUrl();
             var response = await fetch(url, { cache: 'no-store' });
             if (!response.ok) throw new Error('HTTP ' + response.status);
             var data = await response.json();
@@ -217,66 +250,51 @@
             return data;
         }
 
-        function renderDailyViews(rows) {
+        function renderDailyViews(rows, singleDay) {
             var container = document.getElementById('daily-views');
             if (!rows.length) {
-                container.innerHTML = '<p class="empty">No views recorded in this range.</p>';
+                container.innerHTML = '<p class="empty">No views recorded for this filter.</p>';
                 return;
             }
-            var maxViews = Math.max.apply(null, rows.map(function (r) { return r.views; }));
-            var reversed = rows.slice().reverse();
+            var dateHeader = singleDay ? '' : '<th>Date</th>';
             container.innerHTML =
                 '<table><thead><tr>' +
-                '<th>Date</th><th>Views</th><th class="bar-col bar-cell">Volume</th>' +
-                '</tr></thead><tbody>' +
-                reversed.map(function (row) {
-                    var width = maxViews ? Math.round((row.views / maxViews) * 100) : 0;
-                    return '<tr>' +
-                        '<td>' + formatDate(row.date) + '</td>' +
-                        '<td class="views-cell">' + formatNumber(row.views) + '</td>' +
-                        '<td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:' + width + '%"></div></div></td>' +
-                        '</tr>';
-                }).join('') +
-                '</tbody></table>';
-        }
-
-        function renderPages(rows) {
-            var container = document.getElementById('pages');
-            if (!rows.length) {
-                container.innerHTML = '<p class="empty">No page visits in this range.</p>';
-                return;
-            }
-            container.innerHTML =
-                '<table><thead><tr>' +
-                '<th>Page</th><th>Views</th><th>Last visited</th>' +
+                dateHeader + '<th class="page-col">Page</th><th>Views</th>' +
                 '</tr></thead><tbody>' +
                 rows.map(function (row) {
+                    var dateCell = singleDay ? '' : '<td>' + formatDate(row.date) + '</td>';
                     return '<tr>' +
-                        '<td><code>' + row.path + '</code></td>' +
+                        dateCell +
+                        '<td class="page-col"><code>' + escapeHtml(row.path) + '</code></td>' +
                         '<td class="views-cell">' + formatNumber(row.views) + '</td>' +
-                        '<td class="muted">' + formatDateTime(row.last_visited) + '</td>' +
                         '</tr>';
                 }).join('') +
                 '</tbody></table>';
         }
 
         async function loadDashboard() {
-            var days = daysSelect.value;
             var originalText = refreshBtn.textContent;
             refreshBtn.disabled = true;
             refreshBtn.textContent = 'Loading…';
             errorContainer.innerHTML = '';
 
             try {
-                var data = await fetchDashboard(days);
+                var data = await fetchDashboard();
                 totalViewsEl.textContent = formatNumber(data.total_views);
-                rangeLabelEl.textContent = '(' + data.days + ' days)';
+                if (data.filter_date) {
+                    rangeLabelEl.textContent = '(' + formatDate(data.filter_date) + ')';
+                    dailyHeading.textContent = 'Views on ' + formatDate(data.filter_date);
+                } else if (Number(data.days) === 1) {
+                    rangeLabelEl.textContent = '(today)';
+                    dailyHeading.textContent = 'Views per day';
+                } else {
+                    rangeLabelEl.textContent = '(last ' + data.days + ' days)';
+                    dailyHeading.textContent = 'Views per day';
+                }
                 summaryEl.hidden = false;
-                renderDailyViews(data.daily_views || []);
-                renderPages(data.pages || []);
+                renderDailyViews(data.daily_views || [], Boolean(data.filter_date));
             } catch (err) {
                 document.getElementById('daily-views').innerHTML = '<p class="empty">Unable to load data.</p>';
-                document.getElementById('pages').innerHTML = '<p class="empty">Unable to load data.</p>';
                 errorContainer.innerHTML = '<div class="error">Could not load analytics: ' + err.message + '</div>';
             } finally {
                 refreshBtn.disabled = false;
@@ -285,7 +303,13 @@
         }
 
         refreshBtn.addEventListener('click', loadDashboard);
+        filterMode.addEventListener('change', function () {
+            syncFilterControls();
+            loadDashboard();
+        });
         daysSelect.addEventListener('change', loadDashboard);
+        daySelect.addEventListener('change', loadDashboard);
+        syncFilterControls();
         loadDashboard();
         setInterval(loadDashboard, 60000);
     })();

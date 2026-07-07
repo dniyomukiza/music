@@ -165,4 +165,4 @@ The epicenter of **premium** independent publishing
 - Broadcast amplification via **GLC Media**
 
 **Email:** info@ndotonic.com  
-**Instagram:** @GLConnect_cool
+**Instagram:** @ndotonic_

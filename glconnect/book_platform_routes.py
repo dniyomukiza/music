@@ -3030,7 +3030,8 @@ def prepare_audiobook_segments(book_id):
         'segments': segments,
         'notice': (
             'Your ebook listing is unchanged, footnotes, index, tables, and appendix stay in the digital edition. '
-            'Here you only choose what is read for the audiobook. Uncheck sections you do not want narrated.'
+            'Here you only choose what is read for the audiobook. Check each section you want narrated; '
+            'nothing is selected until you choose (or use AI suggestions).'
         ),
     })
 
@@ -4443,7 +4444,7 @@ def api_marketplace_book_detail(book_id):
         'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
         'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean',
         'ar': 'Arabic', 'hi': 'Hindi', 'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish',
-        'other': 'Other',
+        'rw': 'Kinyarwanda', 'rn': 'Kirundi', 'other': 'Other',
     }
     book = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)

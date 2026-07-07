@@ -138,7 +138,10 @@ class AIWritingAssistant {
         toolbar.className = 'ai-toolbar';
         toolbar.innerHTML = `
             <div class="ai-toolbar-header ai-toolbar-drag-handle" title="Drag to move horizontally or vertically">
-                <h6><i class="fas fa-grip-vertical ai-drag-grip" aria-hidden="true"></i><i class="fas fa-robot"></i> AI Assistant</h6>
+                <div class="ai-toolbar-drag-title">
+                    <h6><i class="fas fa-grip-vertical ai-drag-grip" aria-hidden="true"></i><i class="fas fa-robot"></i> AI Assistant</h6>
+                    <span class="ai-toolbar-drag-hint">Drag header to move</span>
+                </div>
                 <div class="ai-status ${this.isEnabled ? 'enabled' : 'disabled'}">
                     ${this.isEnabled ? 'Enabled' : 'Disabled'}
                 </div>
@@ -259,8 +262,53 @@ class AIWritingAssistant {
         toolbar.style.top = `${y}px`;
     }
 
+    _beginToolbarDrag(toolbar, handle, clientX, clientY, dragId, source) {
+        if (this._dragState) return;
+        const rect = toolbar.getBoundingClientRect();
+        this._prepareToolbarForDrag(toolbar);
+        toolbar.style.left = `${rect.left}px`;
+        toolbar.style.top = `${rect.top}px`;
+        toolbar.classList.add('is-dragging');
+        document.body.classList.add('ai-toolbar-drag-active');
+        this._dragState = {
+            dragId,
+            source,
+            offsetX: clientX - rect.left,
+            offsetY: clientY - rect.top,
+        };
+        try {
+            if (source === 'pointer' && handle.setPointerCapture) {
+                handle.setPointerCapture(dragId);
+            }
+        } catch (_) { /* capture optional on some touch browsers */ }
+    }
+
+    _updateToolbarDrag(toolbar, clientX, clientY) {
+        if (!this._dragState) return;
+        this._applyToolbarPosition(
+            toolbar,
+            clientX - this._dragState.offsetX,
+            clientY - this._dragState.offsetY
+        );
+    }
+
+    _endToolbarDrag(toolbar, handle, dragId) {
+        if (!this._dragState || this._dragState.dragId !== dragId) return;
+        try {
+            if (this._dragState.source === 'pointer' && handle.releasePointerCapture) {
+                handle.releasePointerCapture(dragId);
+            }
+        } catch (_) { /* already released */ }
+        toolbar.classList.remove('is-dragging');
+        document.body.classList.remove('ai-toolbar-drag-active');
+        this._dragState = null;
+        this.clampToolbarPosition(toolbar);
+        this.saveToolbarPosition(toolbar);
+    }
+
     /**
      * Drag header to reposition; position persists in localStorage.
+     * Pointer events for desktop; explicit touch handlers for phones.
      */
     setupDraggable(toolbar) {
         const handle = toolbar.querySelector('.ai-toolbar-drag-handle');
@@ -268,52 +316,76 @@ class AIWritingAssistant {
 
         this.restoreToolbarPosition(toolbar);
 
+        const moveOpts = { capture: true, passive: false };
+
         const onPointerMove = (e) => {
-            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
+            if (!this._dragState || this._dragState.source !== 'pointer' || e.pointerId !== this._dragState.dragId) {
+                return;
+            }
             e.preventDefault();
-            this._applyToolbarPosition(
-                toolbar,
-                e.clientX - this._dragState.offsetX,
-                e.clientY - this._dragState.offsetY
-            );
+            this._updateToolbarDrag(toolbar, e.clientX, e.clientY);
         };
 
-        const endDrag = (e) => {
-            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', endDrag);
-            window.removeEventListener('pointercancel', endDrag);
-            try {
-                handle.releasePointerCapture(e.pointerId);
-            } catch (_) { /* already released */ }
-            toolbar.classList.remove('is-dragging');
-            this._dragState = null;
-            this.clampToolbarPosition(toolbar);
-            this.saveToolbarPosition(toolbar);
+        const onTouchMove = (e) => {
+            if (!this._dragState || this._dragState.source !== 'touch') return;
+            const touch = Array.from(e.touches).find((t) => t.identifier === this._dragState.dragId);
+            if (!touch) return;
+            e.preventDefault();
+            this._updateToolbarDrag(toolbar, touch.clientX, touch.clientY);
+        };
+
+        const cleanupPointerListeners = () => {
+            document.removeEventListener('pointermove', onPointerMove, moveOpts);
+            document.removeEventListener('pointerup', onPointerEnd, moveOpts);
+            document.removeEventListener('pointercancel', onPointerEnd, moveOpts);
+        };
+
+        const cleanupTouchListeners = () => {
+            document.removeEventListener('touchmove', onTouchMove, moveOpts);
+            document.removeEventListener('touchend', onTouchEnd, moveOpts);
+            document.removeEventListener('touchcancel', onTouchEnd, moveOpts);
+        };
+
+        const onPointerEnd = (e) => {
+            if (!this._dragState || this._dragState.source !== 'pointer' || e.pointerId !== this._dragState.dragId) {
+                return;
+            }
+            cleanupPointerListeners();
+            this._endToolbarDrag(toolbar, handle, e.pointerId);
+        };
+
+        const onTouchEnd = (e) => {
+            if (!this._dragState || this._dragState.source !== 'touch') return;
+            const ended = Array.from(e.changedTouches).some((t) => t.identifier === this._dragState.dragId);
+            if (!ended) return;
+            cleanupTouchListeners();
+            this._endToolbarDrag(toolbar, handle, this._dragState.dragId);
         };
 
         handle.addEventListener('pointerdown', (e) => {
+            if (this._dragState) return;
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             e.preventDefault();
-            const rect = toolbar.getBoundingClientRect();
-            this._prepareToolbarForDrag(toolbar);
-            toolbar.style.left = `${rect.left}px`;
-            toolbar.style.top = `${rect.top}px`;
-            toolbar.classList.add('is-dragging');
-            this._dragState = {
-                pointerId: e.pointerId,
-                offsetX: e.clientX - rect.left,
-                offsetY: e.clientY - rect.top,
-            };
-            handle.setPointerCapture(e.pointerId);
-            window.addEventListener('pointermove', onPointerMove);
-            window.addEventListener('pointerup', endDrag);
-            window.addEventListener('pointercancel', endDrag);
+            this._beginToolbarDrag(toolbar, handle, e.clientX, e.clientY, e.pointerId, 'pointer');
+            document.addEventListener('pointermove', onPointerMove, moveOpts);
+            document.addEventListener('pointerup', onPointerEnd, moveOpts);
+            document.addEventListener('pointercancel', onPointerEnd, moveOpts);
         });
+
+        handle.addEventListener('touchstart', (e) => {
+            if (this._dragState || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            e.preventDefault();
+            this._beginToolbarDrag(toolbar, handle, touch.clientX, touch.clientY, touch.identifier, 'touch');
+            document.addEventListener('touchmove', onTouchMove, moveOpts);
+            document.addEventListener('touchend', onTouchEnd, moveOpts);
+            document.addEventListener('touchcancel', onTouchEnd, moveOpts);
+        }, { passive: false });
 
         window.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
+            window.visualViewport.addEventListener('scroll', () => this.clampToolbarPosition(toolbar));
         }
     }
 
@@ -406,12 +478,47 @@ class AIWritingAssistant {
             .ai-toolbar.is-dragging {
                 box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
                 opacity: 0.98;
+                touch-action: none;
+            }
+
+            body.ai-toolbar-drag-active {
+                touch-action: none;
+                overscroll-behavior: none;
             }
 
             .ai-toolbar-drag-handle {
                 cursor: grab;
                 touch-action: none;
+                -webkit-touch-callout: none;
                 user-select: none;
+                -webkit-user-select: none;
+            }
+
+            .ai-toolbar-drag-title {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                min-width: 0;
+            }
+
+            .ai-toolbar-drag-hint {
+                display: none;
+                font-size: 10px;
+                line-height: 1.2;
+                color: #64748b !important;
+                font-weight: 500;
+            }
+
+            @media (pointer: coarse) {
+                .ai-toolbar-drag-handle {
+                    min-height: 48px;
+                    padding-top: 4px;
+                    padding-bottom: 4px;
+                }
+
+                .ai-toolbar-drag-hint {
+                    display: block;
+                }
             }
 
             .ai-toolbar-drag-handle:active,
@@ -533,11 +640,16 @@ class AIWritingAssistant {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 8px;
             }
             
             .ai-toolbar-header h6 {
                 margin: 0;
                 color: #2c3e50;
+            }
+
+            .ai-toolbar-header .ai-status {
+                flex-shrink: 0;
             }
             
             .ai-status {

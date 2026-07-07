@@ -517,7 +517,7 @@ def slide_ask(deck):
     _text(slide, Inches(3.4), Inches(5.38), Inches(6.5), Inches(0.35),
           "Email: info@ndotonic.com", size=15, bold=True, color=GOLD, align=PP_ALIGN.CENTER)
     _text(slide, Inches(3.4), Inches(5.78), Inches(6.5), Inches(0.35),
-          "Instagram: @GLConnect_cool", size=14, color=TEXT, align=PP_ALIGN.CENTER)
+          "Instagram: @ndotonic_", size=14, color=TEXT, align=PP_ALIGN.CENTER)
 
 
 def build_pptx():

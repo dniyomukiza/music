@@ -6970,6 +6970,80 @@ body.ink-workspace .ink-workspace-bg {
         #060807 !important;
 }
 
+body.ink-edit-book-listing .edit-book .listing-terms-section--must {
+    padding: 1.15rem 1.2rem 1.25rem;
+    border-radius: 16px;
+    border: 2px solid rgba(201, 162, 39, 0.55) !important;
+    background:
+        linear-gradient(145deg, rgba(201, 162, 39, 0.16), rgba(201, 162, 39, 0.06)),
+        rgba(8, 10, 9, 0.82) !important;
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12), 0 14px 36px rgba(0, 0, 0, 0.28);
+    animation: ink-audiobook-step-pulse 2.8s ease-in-out infinite;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-section--complete {
+    border-color: rgba(64, 145, 108, 0.55) !important;
+    background:
+        linear-gradient(145deg, rgba(45, 106, 79, 0.2), rgba(45, 106, 79, 0.08)),
+        rgba(8, 10, 9, 0.82) !important;
+    box-shadow: 0 0 0 1px rgba(64, 145, 108, 0.15), 0 14px 36px rgba(0, 0, 0, 0.28);
+    animation: none;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+    min-height: unset;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(201, 162, 39, 0.28);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--compact:hover,
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--compact:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(201, 162, 39, 0.34);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn--compact {
+    box-shadow: 0 4px 14px rgba(45, 106, 79, 0.28);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn--compact:hover,
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn--compact:focus-visible {
+    box-shadow: 0 6px 18px rgba(45, 106, 79, 0.34);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--muted {
+    opacity: 0.55;
+    filter: grayscale(0.15);
+    box-shadow: none;
+    transform: none;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-generate-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    padding: 0.55rem 1.15rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.ink-edit-book-listing .edit-book .listing-terms-section--must {
+        animation: none;
+    }
+}
+
 body.ink-edit-book-listing .edit-book .bg-light,
 body.ink-edit-book-listing .edit-book .listing-terms-section {
     background: rgba(12, 15, 14, 0.75) !important;

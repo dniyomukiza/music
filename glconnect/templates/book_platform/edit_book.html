@@ -156,7 +156,8 @@
                                             <option value="ms" {% if book.language == 'ms' %}selected{% endif %}>Malay</option>
                                             <option value="tl" {% if book.language == 'tl' %}selected{% endif %}>Tagalog</option>
                                             <option value="haw" {% if book.language == 'haw' %}selected{% endif %}>Hawaiian</option>
-                                            <option value="other" {% if book.language == 'other' %}selected{% endif %}>Other</option>
+                                            <option value="rw" {% if book.language == 'rw' %}selected{% endif %}>Kinyarwanda</option>
+                                            <option value="rn" {% if book.language == 'rn' %}selected{% endif %}>Kirundi</option>
                                         </select>
                                         <small class="form-text text-muted">Select the primary language of your book</small>
                                         {% endif %}
@@ -283,17 +284,21 @@
                             </div>
                             {% endif %}
 
-                            <div class="mb-3 border rounded p-3 bg-light listing-terms-section">
+                            <div class="mb-3 border rounded p-3 listing-terms-section listing-terms-section--must" id="listingTermsSection">
                                 {% if book_has_listing_attestation(book) %}
                                 {% include 'book_platform/includes/_listing_attestation_status.html' %}
                                 {% else %}
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                                     <div>
-                                        <h6 class="mb-1"><i class="fas fa-scale-balanced me-2"></i>Author Publishing Agreement</h6>
-                                        <small class="text-muted">One time listing attestation for this title (v{{ listing_attestation_version }}), covers all formats.</small>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <span class="ink-audiobook-step__required">Required</span>
+                                            <h6 class="mb-0"><i class="fas fa-scale-balanced me-2"></i>Author Publishing Agreement</h6>
+                                        </div>
+                                        <small class="text-muted d-block">One time listing attestation for this title (v{{ listing_attestation_version }}), covers all formats.</small>
+                                        <small class="d-block mt-1 fw-semibold" style="color: #f5d76a;">You must review and accept terms before publishing.</small>
                                     </div>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="showListingTermsBtn" onclick="openListingTermsPanel(true); return false;">
-                                        Review and accept terms
+                                    <button type="button" class="btn ink-audiobook-review-btn" id="showListingTermsBtn" onclick="openListingTermsPanel(true); return false;">
+                                        <i class="fas fa-file-signature me-2"></i>Review and accept terms
                                     </button>
                                 </div>
                                 <div id="listingTermsPanel" class="mt-3 d-none">
@@ -319,7 +324,7 @@
                                         </label>
                                     </div>
                                     <div class="mt-3">
-                                        <button type="button" class="btn btn-secondary btn-sm" id="btnConfirmListingTerms" disabled title="Check each required box above first">
+                                        <button type="button" class="btn ink-audiobook-review-btn" id="btnConfirmListingTerms" disabled title="Check each required box above first">
                                             <i class="fas fa-check-circle me-1"></i>Agree to terms
                                         </button>
                                         <small class="text-muted d-block mt-2">Checking the boxes alone is not enough, click Agree to terms before publishing.</small>
@@ -358,7 +363,7 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     {% if not book.digital_file_path %}
     {# Only show AI Assistant for manually created books, not uploaded digital books #}
-    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.5"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}?v=2.6"></script>
     {% endif %}
     <script>
         let listingTermsConfirmed = {{ book_has_listing_attestation(book)|tojson }};
@@ -375,8 +380,7 @@
             if (!btn) return;
             const ready = listingTermsRequiredBoxesChecked();
             btn.disabled = !ready;
-            btn.classList.toggle('btn-primary', ready);
-            btn.classList.toggle('btn-secondary', !ready);
+            btn.classList.toggle('ink-audiobook-review-btn--muted', !ready);
         }
 
         function setListingTermsConfirmed(confirmed) {
@@ -384,6 +388,11 @@
             const note = document.getElementById('listingTermsConfirmedNote');
             if (note) {
                 note.classList.toggle('d-none', !listingTermsConfirmed);
+            }
+            const section = document.getElementById('listingTermsSection');
+            if (section) {
+                section.classList.toggle('listing-terms-section--must', !listingTermsConfirmed);
+                section.classList.toggle('listing-terms-section--complete', !!listingTermsConfirmed);
             }
         }
 

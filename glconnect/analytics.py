@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from flask import Blueprint, current_app, jsonify, render_template, request, url_for
 from sqlalchemy import func, distinct
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, time, timezone, timedelta
 from .models import PageAnalytics, db
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -84,6 +84,23 @@ def _day_bucket(column):
     return func.date(column)
 
 
+def _timestamp_to_day_label(day):
+    if day is None:
+        return None
+    if isinstance(day, str):
+        return day[:10]
+    if hasattr(day, "date"):
+        return day.date().isoformat()
+    return day.isoformat()[:10]
+
+
+def _day_bounds_utc(day_label):
+    """UTC [start, end) for a calendar day YYYY-MM-DD."""
+    day = date.fromisoformat(day_label)
+    start = datetime.combine(day, time.min, tzinfo=timezone.utc)
+    return start, start + timedelta(days=1)
+
+
 @analytics_bp.route('/analytics')
 def analytics_dashboard():
     """Main analytics dashboard page (public access)."""
@@ -92,72 +109,56 @@ def analytics_dashboard():
 
 @analytics_bp.route('/_analytics/api/dashboard')
 def get_dashboard():
-    """Daily view counts and endpoint visit totals."""
+    """Daily view counts per page."""
     try:
-        days = min(max(int(request.args.get('days', 30)), 1), 365)
-        start_date = datetime.now(timezone.utc) - timedelta(days=days)
-
+        filter_date = (request.args.get("date") or "").strip()
         day_expr = _day_bucket(PageAnalytics.timestamp)
-        daily_rows = (
-            db.session.query(
-                day_expr.label("day"),
-                func.count(PageAnalytics.id).label("views"),
-            )
-            .filter(PageAnalytics.timestamp >= start_date)
-            .group_by(day_expr)
-            .order_by(day_expr)
-            .all()
+        query = db.session.query(
+            day_expr.label("day"),
+            PageAnalytics.endpoint,
+            func.count(PageAnalytics.id).label("views"),
         )
 
-        daily_views = []
-        for day, views in daily_rows:
-            if day is None:
+        if filter_date:
+            try:
+                date.fromisoformat(filter_date)
+            except ValueError:
+                return jsonify({"success": False, "error": "Invalid date. Use YYYY-MM-DD."}), 400
+            start, end = _day_bounds_utc(filter_date)
+            query = query.filter(
+                PageAnalytics.timestamp >= start,
+                PageAnalytics.timestamp < end,
+            )
+            days = 1
+        else:
+            days = min(max(int(request.args.get("days", 30)), 1), 365)
+            start_date = datetime.now(timezone.utc) - timedelta(days=days)
+            query = query.filter(PageAnalytics.timestamp >= start_date)
+
+        daily_rows = query.group_by(day_expr, PageAnalytics.endpoint).all()
+
+        merged_daily = defaultdict(int)
+        for day, stored, views in daily_rows:
+            day_label = _timestamp_to_day_label(day)
+            if not day_label:
                 continue
-            if isinstance(day, str):
-                day_label = day[:10]
-            else:
-                day_label = day.date().isoformat() if hasattr(day, "date") else day.isoformat()[:10]
-            daily_views.append({"date": day_label, "views": views})
-
-        endpoint_rows = (
-            db.session.query(
-                PageAnalytics.endpoint,
-                func.count(PageAnalytics.id).label("views"),
-                func.max(PageAnalytics.timestamp).label("last_visited"),
-            )
-            .filter(PageAnalytics.timestamp >= start_date)
-            .group_by(PageAnalytics.endpoint)
-            .all()
-        )
-
-        merged_pages = defaultdict(lambda: {"views": 0, "last_visited": None, "raw_keys": set()})
-        for stored, views, last_visited in endpoint_rows:
             display_path = format_site_path(stored)
-            bucket = merged_pages[display_path]
-            bucket["views"] += views
-            bucket["raw_keys"].add(stored)
-            if last_visited and (
-                bucket["last_visited"] is None or last_visited > bucket["last_visited"]
-            ):
-                bucket["last_visited"] = last_visited
+            merged_daily[(day_label, display_path)] += views
 
-        pages = []
-        for display_path, data in merged_pages.items():
-            pages.append({
-                "path": display_path,
-                "views": data["views"],
-                "last_visited": data["last_visited"].isoformat() if data["last_visited"] else None,
-            })
-        pages.sort(key=lambda row: (-row["views"], row["path"]))
+        daily_views = [
+            {"date": day_label, "path": path, "views": count}
+            for (day_label, path), count in merged_daily.items()
+        ]
+        daily_views.sort(key=lambda row: (row["date"], row["views"], row["path"]), reverse=True)
 
         total_views = sum(row["views"] for row in daily_views)
 
         return jsonify({
             "success": True,
             "days": days,
+            "filter_date": filter_date or None,
             "total_views": total_views,
             "daily_views": daily_views,
-            "pages": pages,
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
