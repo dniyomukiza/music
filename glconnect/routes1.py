@@ -9,7 +9,13 @@ from glconnect.account_terms import (
     record_account_terms_acceptance,
     validate_account_signup_terms,
 )
-from werkzeug.security import check_password_hash
+from glconnect.password_reset_service import (
+    apply_password_reset,
+    find_user_by_username,
+    mask_email,
+    request_password_reset,
+    verify_password_reset_token,
+)
 from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g,jsonify
 from itsdangerous import URLSafeTimedSerializer
 from flask_login import login_user,LoginManager,login_required,current_user
@@ -271,15 +277,50 @@ def check_email():
 @bp1.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
+    login_ctx = {
+        "show_password_reset_help": False,
+        "failed_username": "",
+        "masked_email": None,
+        "reset_email_sent": False,
+    }
+
     if request.method == "GET":
         sync_auth_entry_marketplace_from_next(request.args.get("next"))
+
+    if request.method == "POST" and request.form.get("action") == "send_password_reset":
+        identifier = (request.form.get("username") or form.username.data or "").strip()
+        sent, masked = request_password_reset(identifier)
+        login_ctx["failed_username"] = identifier
+        form.username.data = identifier
+        login_ctx["reset_email_sent"] = sent
+        if sent and masked:
+            flash(f"Password reset link sent to {masked}. Check your inbox.", "info")
+        elif sent:
+            flash("Password reset link sent. Check your inbox.", "info")
+        else:
+            flash(
+                "We could not send a reset link right now. Try again shortly or use "
+                "Reset password below with your username or email.",
+                "error",
+            )
+            login_ctx["show_password_reset_help"] = True
+            user = find_user_by_username(identifier)
+            if user:
+                login_ctx["masked_email"] = mask_email(user.email)
+        return render_template(
+            "login.html",
+            title="Login",
+            form=form,
+            **login_ctx,
+        )
+
     if form.validate_on_submit():
-        username = form.username.data
+        username = (form.username.data or "").strip()
         password = form.password.data
-        user = User.query.filter(User.username.ilike(username)).first()
-        if user and check_password_hash(user.password, password):
+        user = find_user_by_username(username)
+        if user and user.check_password(password):
             login_user(user)
-            session['user_id'] = user.user_id 
+            session['user_id'] = user.user_id
             flash('Login successful!', 'success')
 
             next_page = safe_post_auth_next(
@@ -291,11 +332,21 @@ def login():
             if session.pop(SESSION_AUTH_ENTRY_MARKETPLACE, None):
                 return redirect(url_for("book_platform.marketplace"))
 
-            # Use shared role-based redirect function
             return get_role_based_redirect(user)
-        else:
-            flash('Invalid username or password', 'error')
-    return render_template('login.html', title='Login', form=form)
+
+        flash("Those sign-in details did not match.", "error")
+        login_ctx["show_password_reset_help"] = True
+        login_ctx["failed_username"] = username
+        form.username.data = username
+        if user:
+            login_ctx["masked_email"] = mask_email(user.email)
+
+    return render_template(
+        "login.html",
+        title="Login",
+        form=form,
+        **login_ctx,
+    )
 
 @bp1.route('/playlist')
 def playlist():
@@ -915,84 +966,51 @@ def get_community_stats():
 
 @bp1.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
-    try:
-        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-        email = s.loads(token, salt='password-reset', max_age=3600)  # Token expires in 1 hour
-    except Exception as e:
+    email = verify_password_reset_token(token)
+    if not email:
         flash('The reset link is invalid or has expired.', 'danger')
         return redirect(url_for('routes1.reset_password_request'))
 
     user = User.query.filter_by(email=email).first_or_404()
-
     form = PasswordResetForm()
 
     if form.validate_on_submit():
-        new_password = form.password.data
-
-        # Validate password complexity
-        if len(new_password) < 8 or not re.search(r"[A-Z]+", new_password) or not re.search(r"[_@#$]+", new_password):
-            flash("Password must be at least 8 characters long, contain a capital letter, and a special symbol.", 'error')
+        err = apply_password_reset(user, form.password.data)
+        if err:
+            flash(err, 'error')
         else:
-            user.set_password(new_password)
-            db.session.commit()
             flash('Your password has been reset successfully. You can now log in.', 'success')
             return redirect(url_for('routes1.login'))
 
     return render_template('passreset.html', title='Reset Password', form=form, token=token)
 
+
 @bp1.route('/reset_request', methods=['GET', 'POST'])
 def reset_password_request():
     form = ResetRequestForm()
+    prefill_login = (request.args.get("login") or request.args.get("username") or "").strip()
+
+    if request.method == "GET" and prefill_login and not form.login.data:
+        form.login.data = prefill_login
 
     if form.validate_on_submit():
-        email = form.email.data
-        user = User.query.filter_by(email=email).first()
+        identifier = (form.login.data or "").strip()
+        sent, masked = request_password_reset(identifier)
 
-        if user:
-            # Generate password reset token
-            s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-            token = s.dumps(user.email, salt='password-reset')
-            reset_url = url_for('routes1.reset_password', token=token, _external=True)
+        if sent and masked:
+            flash(f"Password reset link sent to {masked}. Check your inbox.", "info")
+            return redirect(url_for('routes1.login'))
+        if sent:
+            flash("Password reset link sent. Check your inbox.", "info")
+            return redirect(url_for('routes1.login'))
 
-            # Send password reset email
-            send_reset_email(user.email, reset_url)
-            flash("A password reset link has been sent to your email.", "info")
-        else:
-            flash("No account is associated with this email. Please sign up.", "error")
-            return redirect(url_for('routes1.register'))
+        flash(
+            "No account matched that username or email. Check the spelling or create an account.",
+            "error",
+        )
+        return redirect(url_for('routes1.register'))
 
     return render_template('passreq.html', title='Reset Password', form=form)
-  
-def send_reset_email(to_email, reset_url):
-    sender = os.getenv("SENDER_MAIL")
-    receiver = to_email
-    api_key = config.get("MAIL_TRAP")
-    
-    # Validate configuration
-    if not sender:
-        print("ERROR: SENDER_MAIL is not set in environment variables")
-        return
-    if not api_key:
-        print("ERROR: MAIL_TRAP API key is not set in environment variables")
-        return
-    
-    try:
-        # Create the Mail object
-        mail = Mail(
-            sender=Address(email=sender, name="Reset Your Password"),
-            to=[Address(email=receiver)],
-            subject="Reset Your Password",
-            text=(
-                f"Click the link below to reset your password:\n\n{reset_url}"
-            ),
-            category="Reset password"
-        )
-        # Send email using Mailtrap API
-        client = MailtrapClient(token=api_key)
-        client.send(mail)
-    except Exception as e:
-        print(f"ERROR: error occurred while sending email: {e}")
-        print(f"Sender: {sender}, Receiver: {receiver}, API Key present: {bool(api_key)}")
 
 
 

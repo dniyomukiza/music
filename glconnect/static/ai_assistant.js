@@ -12,6 +12,7 @@ class AIWritingAssistant {
         this.chatHistory = [];
         this.chatSending = false;
         this.activeTab = 'writing';
+        this._capturedSelectionText = '';
         this._dragState = null;
         this._positionStorageKey = 'inkStudioAiToolbarPosition';
         this.aiFeatures = {
@@ -27,7 +28,7 @@ class AIWritingAssistant {
                 hint: 'Fixes grammar and punctuation while keeping your voice.',
                 icon: 'fa-check-double',
                 btnClass: 'ai-action-btn-success',
-                needsSelection: false
+                needsSelection: true
             },
             'spelling': {
                 category: 'spelling',
@@ -35,7 +36,7 @@ class AIWritingAssistant {
                 hint: 'Corrects misspellings and typos only.',
                 icon: 'fa-spell-check',
                 btnClass: 'ai-action-btn-success',
-                needsSelection: false
+                needsSelection: true
             },
             'linguistic-errors': {
                 category: 'linguistic_errors',
@@ -43,7 +44,7 @@ class AIWritingAssistant {
                 hint: 'Flags wrong word usage, tense shifts, agreement, and similar issues.',
                 icon: 'fa-language',
                 btnClass: 'ai-action-btn-success',
-                needsSelection: false
+                needsSelection: true
             },
             'plot-continuity': {
                 category: 'plot_continuity',
@@ -104,12 +105,20 @@ class AIWritingAssistant {
      * Setup event listeners for AI features
      */
     setupEventListeners() {
-        // AI toolbar events
+        // Keep editor selection when clicking toolbar buttons (before focus leaves the editor)
+        document.addEventListener('mousedown', (e) => {
+            const actionBtn = e.target.closest('[data-ai-action]');
+            if (!actionBtn) return;
+            this._capturedSelectionText = this.getSelectedText();
+            e.preventDefault();
+        }, true);
+
+        // AI toolbar events (use closest — clicks often land on icons/spans inside the button)
         document.addEventListener('click', (e) => {
-            if (e.target.matches('[data-ai-action]')) {
-                e.preventDefault();
-                this.handleAIAction(e.target.dataset.aiAction);
-            }
+            const actionBtn = e.target.closest('[data-ai-action]');
+            if (!actionBtn) return;
+            e.preventDefault();
+            this.handleAIAction(actionBtn.dataset.aiAction);
         });
 
         // Keyboard shortcuts
@@ -172,7 +181,7 @@ class AIWritingAssistant {
                     </div>
                     <div class="ai-section">
                         <h6>Author editing</h6>
-                        <p class="ai-section-hint">Copy edits and craft review for your manuscript.</p>
+                        <p class="ai-section-hint">Copy edits and craft review. Highlight a passage first for grammar, spelling, and linguistic checks.</p>
                         <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="grammar-punctuation" title="Fix grammar and punctuation">
                             <span class="ai-action-label"><i class="fas fa-check-double" aria-hidden="true"></i><span>Grammar &amp; punctuation</span></span>
                             <span class="ai-action-desc">Correct grammar and punctuation; keeps your wording and voice.</span>
@@ -1174,8 +1183,23 @@ class AIWritingAssistant {
         const config = this.authorReviewCategories[actionKey];
         if (!config) return;
 
-        const selected = this.getSelectedText();
-        const text = selected || this.getCurrentText();
+        const selected = (this._capturedSelectionText || this.getSelectedText() || '').trim();
+        this._capturedSelectionText = '';
+
+        let text;
+        if (config.needsSelection) {
+            if (!selected) {
+                this.showNotification(
+                    `Highlight a passage in your manuscript first, then run ${config.title}.`,
+                    'warning'
+                );
+                return;
+            }
+            text = selected;
+        } else {
+            text = selected || this.getCurrentText();
+        }
+
         if (!text || !text.trim()) {
             this.showNotification('No text to review, select a passage or open a chapter', 'warning');
             return;
@@ -1419,17 +1443,84 @@ class AIWritingAssistant {
     }
 
     /**
+     * Active CKEditor 5 instance (chapter editor sets window.editor on init).
+     */
+    getCKEditor() {
+        if (window.editor && window.editor.model) {
+            return window.editor;
+        }
+        return null;
+    }
+
+    /**
+     * Plain text from a CKEditor 5 model selection range.
+     */
+    getCKEditor5SelectedText(editor) {
+        const selection = editor.model.document.selection;
+        if (selection.isCollapsed) {
+            return '';
+        }
+        let text = '';
+        for (const item of selection.getFirstRange().getItems()) {
+            if (item.is('$text') || item.is('$textProxy')) {
+                text += item.data;
+            }
+        }
+        return text;
+    }
+
+    /**
+     * Selected text from any CKEditor 4 instance on the page.
+     */
+    getCKEditor4SelectedText() {
+        if (!window.CKEDITOR || !window.CKEDITOR.instances) {
+            return '';
+        }
+        for (const name of Object.keys(window.CKEDITOR.instances)) {
+            const instance = window.CKEDITOR.instances[name];
+            if (!instance || typeof instance.getSelection !== 'function') {
+                continue;
+            }
+            const selected = instance.getSelection().getSelectedText();
+            if (selected && selected.trim()) {
+                return selected;
+            }
+        }
+        return '';
+    }
+
+    /**
      * Get current text from editor
      */
     getCurrentText() {
-        // Try CKEditor first
-        if (window.editor && window.editor.getData) {
-            return window.editor.getData();
+        const ckEditor = this.getCKEditor();
+        if (ckEditor && ckEditor.getData) {
+            const editable = document.querySelector('.ck-editor__editable');
+            if (editable) {
+                return editable.innerText || editable.textContent || '';
+            }
+            return ckEditor.getData();
+        }
+
+        if (window.CKEDITOR && window.CKEDITOR.instances) {
+            for (const name of Object.keys(window.CKEDITOR.instances)) {
+                const instance = window.CKEDITOR.instances[name];
+                if (!instance || typeof instance.getData !== 'function') {
+                    continue;
+                }
+                if (instance.focusManager && instance.focusManager.hasFocus) {
+                    const body = instance.document && instance.document.getBody();
+                    if (body && body.getText) {
+                        return body.getText();
+                    }
+                    return instance.getData();
+                }
+            }
         }
         
         // Try different editor types
-        const editor = document.querySelector('#editor') || 
-                      document.querySelector('.ck-editor__editable') ||
+        const editor = document.querySelector('.ck-editor__editable') ||
+                      document.querySelector('#editor') ||
                       document.querySelector('[contenteditable="true"]');
         
         if (editor) {
@@ -1443,17 +1534,33 @@ class AIWritingAssistant {
      * Get selected text from editor
      */
     getSelectedText() {
-        // Try CKEditor first
-        if (window.editor && window.editor.model && window.editor.model.document) {
-            const selection = window.editor.model.document.selection;
-            if (selection.getSelectedText) {
-                return selection.getSelectedText();
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const selected = this.getCKEditor5SelectedText(ckEditor);
+            if (selected) {
+                return selected;
             }
         }
-        
-        // Fallback to standard selection
+
+        const ck4Selected = this.getCKEditor4SelectedText();
+        if (ck4Selected) {
+            return ck4Selected;
+        }
+
+        const editable = document.querySelector('.ck-editor__editable') ||
+            document.querySelector('[contenteditable="true"]');
         const selection = window.getSelection();
-        return selection.toString();
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+            if (!editable) {
+                return selection.toString();
+            }
+            const range = selection.getRangeAt(0);
+            if (editable.contains(range.commonAncestorContainer)) {
+                return selection.toString();
+            }
+        }
+
+        return selection ? selection.toString() : '';
     }
 
     /**
@@ -1675,8 +1782,9 @@ class AIWritingAssistant {
      * Get current selection range for undo functionality
      */
     getSelectionRange() {
-        if (window.editor && window.editor.model) {
-            const selection = window.editor.model.document.selection;
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const selection = ckEditor.model.document.selection;
             return {
                 start: selection.getFirstPosition(),
                 end: selection.getLastPosition(),
@@ -1771,8 +1879,12 @@ class AIWritingAssistant {
         }
         
         try {
-            if (this.lastReplacementPosition.isCKEditor && window.editor) {
-                const model = window.editor.model;
+            if (this.lastReplacementPosition.isCKEditor) {
+                const ckEditor = this.getCKEditor();
+                if (!ckEditor) {
+                    throw new Error('Editor not available');
+                }
+                const model = ckEditor.model;
                 const position = this.lastReplacementPosition.start;
                 
                 model.change(writer => {
@@ -1785,7 +1897,7 @@ class AIWritingAssistant {
                 // Update the hidden textarea
                 const textarea = document.getElementById('content');
                 if (textarea) {
-                    textarea.value = window.editor.getData();
+                    textarea.value = ckEditor.getData();
                 }
             } else {
                 // Fallback for non-CKEditor
@@ -1813,9 +1925,9 @@ class AIWritingAssistant {
      * Insert text into editor
      */
     insertText(text) {
-        // Try CKEditor first
-        if (window.editor && window.editor.model) {
-            const model = window.editor.model;
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const model = ckEditor.model;
             const selection = model.document.selection;
             
             // Insert at current position
@@ -1827,7 +1939,7 @@ class AIWritingAssistant {
             // Update the hidden textarea
             const textarea = document.getElementById('content');
             if (textarea) {
-                textarea.value = window.editor.getData();
+                textarea.value = ckEditor.getData();
             }
             
             return;
@@ -1860,25 +1972,22 @@ class AIWritingAssistant {
      * Replace selected text in editor
      */
     replaceSelectedText(text) {
-        // Try CKEditor first
-        if (window.editor && window.editor.model) {
-            const model = window.editor.model;
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const model = ckEditor.model;
             const selection = model.document.selection;
             
             model.change(writer => {
-                // Delete selected content
-                if (selection.getSelectedText()) {
-                    writer.delete(selection.getFirstRange());
+                if (!selection.isCollapsed) {
+                    writer.remove(selection.getFirstRange());
                 }
-                // Insert new text
-                const insertPosition = selection.getFirstPosition();
-                writer.insertText(text, insertPosition);
+                writer.insertText(text, selection.getFirstPosition());
             });
             
             // Update the hidden textarea
             const textarea = document.getElementById('content');
             if (textarea) {
-                textarea.value = window.editor.getData();
+                textarea.value = ckEditor.getData();
             }
             
             return;

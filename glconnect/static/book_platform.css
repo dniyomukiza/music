@@ -5995,6 +5995,22 @@ body.ink-book-studio .ink-studio-hero::before {
     background: linear-gradient(90deg, #c9a227, #e0bc3a, #c9a227);
 }
 
+body.ink-book-studio .ink-studio-hero-actions .btn {
+    font-weight: 600;
+    border-radius: 999px !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.ink-book-studio .ink-studio-hero-actions .btn:hover,
+body.ink-book-studio .ink-studio-hero-actions .btn:focus-visible {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.65) !important;
+    color: #fff !important;
+}
+
 body.ink-book-studio .ink-studio-cover {
     width: 140px;
     aspect-ratio: 2/3;

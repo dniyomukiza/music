@@ -128,9 +128,13 @@ class PostForm(FlaskForm):
     submit=SubmitField('Post')
 
 class ResetRequestForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
+    login = StringField(
+        'Username or email',
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Username or email"},
+    )
     submit = SubmitField('Request Password Reset')
-    recap=RecaptchaField()
+    recap = RecaptchaField()
 
 class PasswordResetForm(FlaskForm):
     password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])

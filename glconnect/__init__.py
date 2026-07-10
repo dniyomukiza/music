@@ -718,7 +718,16 @@ def create_app(config_overrides=None):
             return response
         try:
             from .models import PageAnalytics, db
+            from .analytics import should_record_page_view
             from flask_login import current_user
+
+            if not should_record_page_view(
+                request.path,
+                request.method,
+                response.status_code,
+                request.url_rule,
+            ):
+                return response
 
             page_path = (request.path or "/").rstrip("/") or "/"
             analytics = PageAnalytics(
@@ -767,6 +776,7 @@ def create_app(config_overrides=None):
             ensure_saved_book_campaigns_schema,
             ensure_campaign_platform_fee_schema,
             ensure_campaign_translations_schema,
+            ensure_collaboration_role_enum_schema,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -796,6 +806,7 @@ def create_app(config_overrides=None):
         ensure_saved_book_campaigns_schema(db)
         ensure_campaign_platform_fee_schema(db)
         ensure_campaign_translations_schema(db)
+        ensure_collaboration_role_enum_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

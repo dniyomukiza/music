@@ -1651,3 +1651,65 @@ CREATE TABLE IF NOT EXISTS author_format_listing_coupons (
         db.session.rollback()
         logger.error("Could not patch author format listing coupons schema: %s", e, exc_info=True)
 
+
+def _pg_enum_labels(db, type_name: str) -> list[str]:
+    rows = db.session.execute(
+        text(
+            "SELECT e.enumlabel FROM pg_enum e "
+            "JOIN pg_type t ON e.enumtypid = t.oid "
+            "WHERE t.typname = :type_name "
+            "ORDER BY e.enumsortorder"
+        ),
+        {"type_name": type_name},
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
+def ensure_collaboration_role_enum_schema(db) -> None:
+    """Ensure PostgreSQL CollaborationRole enum includes every value defined in the app."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        if db.engine.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Collaboration role enum patch: dialect check failed: %s", e)
+        return
+
+    try:
+        from glconnect.book_platform_models import CollaborationRole
+
+        required_values = [role.value for role in CollaborationRole]
+    except Exception as e:
+        logger.warning("Collaboration role enum patch: could not load roles: %s", e)
+        return
+
+    candidate_types = ("collaborationrole", "collaboration_role")
+
+    try:
+        patched = False
+        for type_name in candidate_types:
+            labels = set(_pg_enum_labels(db, type_name))
+            if not labels:
+                continue
+            for value in required_values:
+                if value in labels:
+                    continue
+                logger.info(
+                    "Adding missing CollaborationRole enum value %r to PostgreSQL type %s",
+                    value,
+                    type_name,
+                )
+                db.session.execute(
+                    text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS '{value}'")
+                )
+                patched = True
+        if patched:
+            db.session.commit()
+            logger.info("Collaboration role enum patch applied.")
+        else:
+            db.session.rollback()
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch CollaborationRole enum: %s", e, exc_info=True)
+

@@ -3833,8 +3833,27 @@ def invite_collaborator(book_id, user_profile, profile_type):
     )
     
     db.session.add(invitation)
-    db.session.commit()
-    
+
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception(
+            "invite_collaborator failed for book %s role %s: %s",
+            book_id,
+            collaboration_role.value,
+            exc,
+        )
+        err_text = str(exc).lower()
+        if "co_author" in err_text or "enum" in err_text or "invalid input value" in err_text:
+            return jsonify({
+                'error': (
+                    'Co-author invitations require a database update. '
+                    'Please redeploy the app or contact support.'
+                ),
+            }), 500
+        return jsonify({'error': 'Could not save this invitation. Please try again.'}), 500
+
     # Send email invitation via Mailtrap
     try:
         send_collaboration_invitation_email(invitation, book, book_user)

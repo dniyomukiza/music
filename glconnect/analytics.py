@@ -3,11 +3,15 @@ Analytics module for tracking and viewing app usage statistics.
 """
 
 import os
+import re
 from collections import defaultdict
 
 from flask import Blueprint, current_app, jsonify, render_template, request, url_for
 from sqlalchemy import func, distinct
 from datetime import date, datetime, time, timezone, timedelta
+from werkzeug.exceptions import MethodNotAllowed, NotFound
+from werkzeug.routing.exceptions import RequestRedirect
+
 from .models import PageAnalytics, db
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -20,12 +24,90 @@ ANALYTICS_SITE_HOST = (
     .removeprefix("www.")
 )
 
+_ANALYTICS_SKIP_PREFIXES = (
+    "/static/",
+    "/hls/",
+    "/api/hls-status",
+    "/_analytics",
+)
+
+_SCANNER_PATH_SUFFIXES = (
+    ".php",
+    ".asp",
+    ".aspx",
+    ".cgi",
+    ".env",
+    ".bak",
+    ".sql",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".old",
+    ".swp",
+)
+
+_SCANNER_PATH_FRAGMENTS = re.compile(
+    r"(^|/)(wp-admin|wp-login|wp-content|wp-includes|xmlrpc\.php|phpmyadmin|cgi-bin|\.git)(/|$)",
+    re.IGNORECASE,
+)
+
 
 def normalize_request_path(path):
     """Canonical path key for analytics grouping."""
     if not path or path == "/":
         return "/"
     return path.rstrip("/") or "/"
+
+
+def _looks_like_scanner_probe(path: str) -> bool:
+    """Heuristic for bot/scanner URLs that are not real site pages."""
+    lower = (path or "").lower().split("?", 1)[0]
+    if any(lower.endswith(suffix) for suffix in _SCANNER_PATH_SUFFIXES):
+        return True
+    return bool(_SCANNER_PATH_FRAGMENTS.search(lower))
+
+
+def is_registered_browser_path(path: str) -> bool:
+    """True when path maps to a real GET route on this Flask app."""
+    normalized = normalize_request_path(path)
+    if normalized == "/analytics" or normalized.startswith(_ANALYTICS_SKIP_PREFIXES):
+        return False
+    if _looks_like_scanner_probe(normalized):
+        return False
+    try:
+        current_app.url_map.bind("localhost", "/").match(normalized, method="GET")
+        return True
+    except RequestRedirect:
+        return True
+    except (NotFound, MethodNotAllowed):
+        return False
+    except Exception:
+        return False
+
+
+def should_record_page_view(path, method, status_code, url_rule=None) -> bool:
+    """Record only successful GET/HEAD hits on real app routes (not 404 probes)."""
+    if method not in ("GET", "HEAD"):
+        return False
+    if not status_code or status_code >= 400:
+        return False
+    if url_rule is None:
+        return False
+    if url_rule.rule == "/static/<path:filename>":
+        return False
+    return is_registered_browser_path(path)
+
+
+def is_displayable_analytics_path(stored_value) -> bool:
+    """True when a stored analytics path should appear on the dashboard."""
+    if not stored_value:
+        return False
+    if stored_value.startswith("/"):
+        return is_registered_browser_path(stored_value)
+    resolved = resolve_analytics_path(stored_value)
+    if resolved.startswith("/"):
+        return is_registered_browser_path(resolved)
+    return False
 
 
 def _rule_to_display_path(rule):
@@ -139,6 +221,8 @@ def get_dashboard():
 
         merged_daily = defaultdict(int)
         for day, stored, views in daily_rows:
+            if not is_displayable_analytics_path(stored):
+                continue
             day_label = _timestamp_to_day_label(day)
             if not day_label:
                 continue
@@ -242,6 +326,8 @@ def get_page_stats():
         
         pages = []
         for endpoint, total_views, unique_visitors, last_accessed in results:
+            if not is_displayable_analytics_path(endpoint):
+                continue
             pages.append({
                 'endpoint': endpoint,
                 'path': endpoint,
@@ -273,6 +359,8 @@ def get_recent_activity():
         
         activities = []
         for activity in recent:
+            if not is_displayable_analytics_path(activity.endpoint):
+                continue
             activities.append({
                 'id': activity.id,
                 'endpoint': activity.endpoint,
@@ -363,6 +451,8 @@ def get_top_paths():
         
         paths = []
         for endpoint, views, unique_visitors in top_q:
+            if not is_displayable_analytics_path(endpoint):
+                continue
             paths.append({
                 'endpoint': endpoint,
                 'path': endpoint,
