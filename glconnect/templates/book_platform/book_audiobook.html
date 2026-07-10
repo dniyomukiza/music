@@ -402,6 +402,7 @@
         let listingTermsConfirmed = {{ book_has_listing_attestation(book)|tojson }};
         const listingAttestationComplete = {{ book_has_listing_attestation(book)|tojson }};
         let audiobookReadyForPublish = {{ 'true' if book.has_audiobook else 'false' }};
+        const audiobookWasReadyOnLoad = audiobookReadyForPublish;
         const audiobookStudioUrl = '{{ url_for("book_platform.book_audiobook", book_id=book.id) }}';
 
         function redirectToAudiobookStudioWhenReady() {
@@ -850,6 +851,7 @@
             if (btnClearSelection) btnClearSelection.addEventListener('click', clearAudiobookSegmentSelection);
             restoreAudiobookSegmentPlanIfSaved();
             updateAudiobookGenerateReady();
+            {% endif %}
             if (new URLSearchParams(window.location.search).get('ready') === '1') {
                 showNotification('Audiobook is ready. Preview it below, then publish when you are satisfied.', 'success');
                 const publishCard = document.getElementById('audiobook-publish-actions');
@@ -858,7 +860,6 @@
                 }
                 history.replaceState({}, '', audiobookStudioUrl);
             }
-            {% endif %}
             updatePublishButtonsUx();
             
             // Check audiobook generation status
@@ -985,13 +986,20 @@
                 } else {
                     statusDisplay.style.display = 'none';
 
-                    // Completed: send author to audiobook studio to preview and publish.
-                    if (result.has_audiobook && result.status === 'completed' && !reloadTriggered) {
+                    if (statusCheckInterval) {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                    }
+
+                    // Redirect once when generation finishes while the author is waiting.
+                    // Skip if the audiobook was already ready when this page loaded (prevents ?ready=1 reload loop).
+                    if (
+                        !audiobookWasReadyOnLoad &&
+                        result.has_audiobook &&
+                        result.status === 'completed' &&
+                        !reloadTriggered
+                    ) {
                         reloadTriggered = true;
-                        if (statusCheckInterval) {
-                            clearInterval(statusCheckInterval);
-                            statusCheckInterval = null;
-                        }
                         showNotification('Audiobook generation complete. Opening publish steps…', 'success');
                         redirectToAudiobookStudioWhenReady();
                     }

@@ -630,6 +630,22 @@ class AIWritingAssistant {
                 resize: vertical;
                 min-height: 56px;
                 font-size: 13px;
+                color: #1e293b !important;
+                background-color: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                caret-color: #1e293b;
+            }
+
+            .ai-chat-compose textarea::placeholder {
+                color: #64748b !important;
+                opacity: 1;
+            }
+
+            .ai-chat-compose textarea:focus {
+                color: #1e293b !important;
+                background-color: #ffffff !important;
+                border-color: #86b7fe !important;
+                box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
             }
 
             .ai-chat-actions {
@@ -842,6 +858,11 @@ class AIWritingAssistant {
             }
             
             /* Ensure form controls are visible */
+            .ai-toolbar .form-control,
+            .ai-toolbar .ai-chat-compose textarea,
+            .ai-toolbar input,
+            .ai-toolbar textarea,
+            .ai-toolbar select,
             .ai-modal-content .form-control,
             .ai-modal-content input,
             .ai-modal-content textarea,
@@ -850,7 +871,9 @@ class AIWritingAssistant {
                 background-color: white !important;
             }
             
-            .ai-modal-content .form-control::placeholder {
+            .ai-modal-content .form-control::placeholder,
+            .ai-toolbar .form-control::placeholder,
+            .ai-toolbar .ai-chat-compose textarea::placeholder {
                 color: #6c757d !important;
             }
             
