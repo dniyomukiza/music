@@ -244,22 +244,25 @@ class AIWritingAssistant {
     }
 
     /**
-     * Drag bounds: full horizontal range; vertical range down to bottom of viewport
-     * (only the header strip must stay visible so the panel can be re-grabbed).
+     * Drag bounds: allow the panel mostly off-screen left/right/bottom so it can
+     * be parked out of the way on mobile. Keep a grab strip (header / edge) visible
+     * so it can always be dragged back.
      */
     _getToolbarDragBounds(toolbar) {
         const margin = 8;
-        const minVisible = 44;
+        const minVisibleY = 44;
+        // Wide enough to grab on a phone thumb; most of the panel may leave the viewport.
+        const minVisibleX = 56;
         const rect = toolbar.getBoundingClientRect();
         const width = rect.width || toolbar.offsetWidth || 320;
         const viewportW = this._viewportWidth();
         const viewportH = this._viewportHeight();
         return {
             margin,
-            minLeft: margin,
-            maxLeft: Math.max(margin, viewportW - width - margin),
+            minLeft: Math.min(margin, -(width - minVisibleX)),
+            maxLeft: Math.max(margin, viewportW - minVisibleX),
             minTop: margin,
-            maxTop: Math.max(margin, viewportH - minVisible),
+            maxTop: Math.max(margin, viewportH - minVisibleY),
         };
     }
 
