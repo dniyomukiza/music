@@ -9143,16 +9143,21 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     
     # Check if book is ready for investment
     investment_readiness = check_investment_readiness(book)
-    
-    if not investment_readiness['is_ready']:
-        flash('Your book is not ready for a campaign yet. Please complete the following requirements:', 'warning')
+    form = InvestmentCampaignForm()
+
+    if request.method == 'POST' and not investment_readiness['is_ready']:
+        flash('Your book is not ready for a campaign yet. Complete the requirements below.', 'warning')
         for issue in investment_readiness['issues']:
             flash(f'• {issue}', 'info')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
+        return render_template(
+            'book_platform/create_campaign.html',
+            form=form,
+            book=book,
+            media_guide=MEDIA_GUIDE,
+            investment_readiness=investment_readiness,
+        )
     
-    form = InvestmentCampaignForm()
-    
-    if form.validate_on_submit():
+    if form.validate_on_submit() and investment_readiness['is_ready']:
         try:
             from glconnect.book_campaign_patronage import (
                 CAMPAIGN_GOAL_DEADLINE_DAYS,
@@ -9201,6 +9206,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
         form=form,
         book=book,
         media_guide=MEDIA_GUIDE,
+        investment_readiness=investment_readiness,
     )
 
 

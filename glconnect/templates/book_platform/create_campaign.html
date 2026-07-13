@@ -30,6 +30,37 @@
                         <small class="opacity-75">Invite patrons who believe in your story. Contributions help you finish and publish, not financial returns for backers.</small>
                     </div>
                     <div class="card-body">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+
+                        {% if investment_readiness and not investment_readiness.is_ready %}
+                        <div class="alert alert-warning border-0 mb-4" role="status">
+                            <h2 class="h5 mb-2"><i class="fas fa-list-check me-2"></i>Finish these steps before launching</h2>
+                            <p class="small mb-3">Funding opens when your manuscript meets the minimum campaign bar. Complete the items below, then return here.</p>
+                            {% with prefix='create-campaign', intro_prefix='Progress:', requirements_interactive=false %}
+                            {% include 'book_platform/includes/_campaign_requirements_progress.html' %}
+                            {% endwith %}
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-arrow-left me-1"></i>Back to book
+                                </a>
+                                <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i>Add section
+                                </a>
+                                <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-pen me-1"></i>Book settings
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
                         <form method="POST">
                             {{ form.hidden_tag() }}
                             <div>
@@ -114,6 +145,7 @@
                             </div>
                             </div>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
