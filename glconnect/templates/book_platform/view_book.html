@@ -144,6 +144,17 @@
                         <a href="{{ url_for('book_platform.book_audiobook', book_id=book.id) }}" class="btn btn-outline-light" title="Produce and manage your audiobook">
                             <i class="fas fa-headphones me-2"></i>Audiobook
                         </a>
+                        {% if not book.digital_file_path %}
+                        {% if investment_campaign %}
+                        <a href="{{ url_for('book_platform.campaign_detail', campaign_id=investment_campaign.id) }}" class="btn btn-outline-light" title="View your book funding campaign">
+                            <i class="fas fa-seedling me-2"></i>Funding
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('book_platform.create_investment_campaign', book_id=book.id) }}" class="btn btn-outline-light" title="Start a patron book campaign">
+                            <i class="fas fa-seedling me-2"></i>Funding
+                        </a>
+                        {% endif %}
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
