@@ -15,19 +15,10 @@ CAREER_POSITIONS = (
     "Open pool",
 )
 
-# Former multi-role titles still accepted on careers apply submissions.
-CAREER_POSITIONS_LEGACY = (
-    "Co founder CTO",
-    "Board Member",
-    "AI Agent Engineer",
-    "Quality Testing",
-    "Penetration Tester",
-)
-
 
 def career_positions_allowed():
-    """Union of current and legacy role titles (careers apply accepts both)."""
-    return tuple(dict.fromkeys((*CAREER_POSITIONS, *CAREER_POSITIONS_LEGACY)))
+    """Roles shown and accepted on the careers apply form."""
+    return CAREER_POSITIONS
 
 bp = Blueprint('routes', __name__)
 
