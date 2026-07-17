@@ -138,6 +138,12 @@ def stripe_secret_configured(app) -> bool:
     return get_stripe_server_secret_key(app) is not None
 
 
+def stripe_effective_mode_is_test(app) -> bool:
+    """True when the effective server secret key is Stripe test mode (sk_test_...)."""
+    sk = get_stripe_server_secret_key(app)
+    return bool(sk and sk.startswith("sk_test_"))
+
+
 def process_env_has_stripe_secret() -> bool:
     """True if any known Stripe env var in os.environ normalizes to sk_... (for diagnostics)."""
     for name in _STRIPE_ENV_KEYS:

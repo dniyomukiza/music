@@ -203,6 +203,7 @@ def _inject_author_agreement_template_context():
         marketplace_card_price_label,
         ebook_listed,
         audiobook_listed,
+        print_listed,
         marketplace_buyable,
     )
 
@@ -210,6 +211,7 @@ def _inject_author_agreement_template_context():
     ctx["marketplace_card_price_label"] = marketplace_card_price_label
     ctx["ebook_listed"] = ebook_listed
     ctx["audiobook_listed"] = audiobook_listed
+    ctx["print_listed"] = print_listed
     ctx["marketplace_buyable"] = marketplace_buyable
     ctx["is_ebook_marketplace_listed"] = is_ebook_marketplace_listed
     return ctx
@@ -4385,6 +4387,8 @@ def marketplace():
             # Authors can list finished digital/audio-ready titles without writing in Ink Studio
             can_list_book_on_marketplace = bool(has_writer_profile or has_book_platform_user)
 
+        from glconnect.stripe_utils import stripe_effective_mode_is_test
+
         return render_template(
             'book_platform/marketplace.html',
             books=books,
@@ -4403,6 +4407,7 @@ def marketplace():
             available_languages=available_languages,
             search_term=search_term or '',
             marketplace_cover_url=_marketplace_cover_url,
+            stripe_checkout_test_mode=stripe_effective_mode_is_test(current_app),
             **account_terms_context(),
         )
     except Exception as e:
@@ -4416,6 +4421,8 @@ def marketplace():
         import traceback
         traceback.print_exc()
         # Return empty list on error
+        from glconnect.stripe_utils import stripe_effective_mode_is_test
+
         return render_template(
             'book_platform/marketplace.html',
             books=[],
@@ -4434,6 +4441,7 @@ def marketplace():
             available_languages=[],
             search_term='',
             marketplace_cover_url=_marketplace_cover_url,
+            stripe_checkout_test_mode=stripe_effective_mode_is_test(current_app),
         )
 
 

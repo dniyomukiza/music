@@ -2235,6 +2235,180 @@ body.ink-marketplace .ink-mp-view-label {
     margin-left: 0.35rem;
 }
 
+/* Marketplace detail modal — format selection & checkout */
+body.ink-marketplace .ink-mp-detail-modal {
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    color: #e8ece9;
+}
+
+body.ink-marketplace .ink-mp-detail-modal .modal-header,
+body.ink-marketplace .ink-mp-detail-modal .modal-footer {
+    background: transparent;
+}
+
+body.ink-marketplace .ink-mp-detail-cover {
+    max-height: 280px;
+    object-fit: contain;
+}
+
+body.ink-marketplace .ink-mp-detail-cover-ph {
+    min-height: 200px;
+}
+
+body.ink-marketplace .ink-mp-format-section {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.ink-marketplace .ink-mp-format-grid {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+    body.ink-marketplace .ink-mp-format-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+body.ink-marketplace .ink-mp-format-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+body.ink-marketplace .ink-mp-format-card:hover {
+    border-color: rgba(201, 162, 39, 0.45);
+    background: rgba(201, 162, 39, 0.06);
+}
+
+body.ink-marketplace .ink-mp-format-card:has(.book-format-pick:checked) {
+    border-color: rgba(201, 162, 39, 0.65);
+    background: rgba(201, 162, 39, 0.1);
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.25);
+}
+
+body.ink-marketplace .ink-mp-format-card .form-check-input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+
+body.ink-marketplace .ink-mp-format-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+body.ink-marketplace .ink-mp-format-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #f3f5f4;
+}
+
+body.ink-marketplace .ink-mp-format-price {
+    font-weight: 700;
+    color: #c9a227;
+    font-size: 0.9rem;
+}
+
+body.ink-marketplace .ink-mp-format-sub {
+    font-size: 0.78rem;
+    color: rgba(232, 236, 233, 0.65);
+    line-height: 1.35;
+}
+
+body.ink-marketplace .ink-mp-bundle-btn {
+    width: 100%;
+    border-radius: 999px !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-mp-order-summary {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.ink-marketplace .ink-mp-order-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.875rem;
+    padding: 0.2rem 0;
+    color: rgba(232, 236, 233, 0.88);
+}
+
+body.ink-marketplace .ink-mp-order-note {
+    color: #6ee7a0;
+    font-weight: 600;
+    font-size: 0.78rem;
+}
+
+body.ink-marketplace .ink-mp-order-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.95rem;
+}
+
+body.ink-marketplace .ink-mp-order-total strong {
+    font-size: 1.15rem;
+    color: #c9a227;
+}
+
+body.ink-marketplace .ink-mp-test-banner {
+    padding: 0.65rem 0.85rem;
+    border-radius: 8px;
+    background: rgba(255, 193, 7, 0.12);
+    border: 1px solid rgba(255, 193, 7, 0.35);
+    color: #ffe08a;
+}
+
+body.ink-marketplace .ink-mp-test-banner code {
+    color: #fff3cd;
+    font-size: 0.85em;
+}
+
+body.ink-marketplace .ink-mp-checkout-status {
+    width: 100%;
+}
+
+body.ink-marketplace .ink-mp-checkout-btn {
+    min-width: 12rem;
+    border-radius: 999px !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-mp-checkout-btn:disabled {
+    opacity: 0.65;
+}
+
+@media (max-width: 575.98px) {
+    body.ink-marketplace .ink-mp-checkout-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    body.ink-marketplace #bookDetailsModal .modal-footer .d-flex.flex-wrap.gap-2.justify-content-end {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+}
+
 @media (max-width: 575.98px) {
     body.ink-marketplace #booksGrid.ink-view-list .ink-book-card-inner {
         flex-direction: column;
