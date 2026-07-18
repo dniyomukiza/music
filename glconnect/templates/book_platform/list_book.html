@@ -53,7 +53,7 @@
     <div class="container-fluid px-3 px-md-4 px-xl-5 py-4 py-md-5">
         <div class="col-lg-9">
             <h1 class="ink-upload-title mb-3">List your book</h1>
-            <p class="ink-upload-lead mb-0">Choose how you want to sell on the marketplace: upload an ebook, or list a printed copy you ship yourself.</p>
+            <p class="ink-upload-lead mb-0">Import your finished book privately first, then choose the formats you want customers to buy.</p>
         </div>
     </div>
 </header>
@@ -66,7 +66,13 @@
                     <a class="ink-list-format-card" role="listitem" href="{{ url_for('book_platform.upload_digital_book', listing='ebook') }}">
                         <span class="ink-list-format-icon" aria-hidden="true"><i class="fas fa-tablet-alt fa-lg"></i></span>
                         <h2 class="h5 mb-2">Ebook</h2>
-                        <p class="small text-muted mb-3 flex-grow-1">Upload EPUB, DOCX, or similar. Set cover and digital price. Optional audiobook after listing.</p>
+                        <p class="small text-muted mb-3 flex-grow-1">Upload EPUB, DOCX, TXT, or PDF. Review the customer experience before you publish.</p>
+                        <span class="btn btn-sm btn-ink-gold align-self-start">Continue <i class="fas fa-arrow-right ms-1"></i></span>
+                    </a>
+                    <a class="ink-list-format-card" role="listitem" href="{{ url_for('book_platform.upload_digital_book', listing='both') }}">
+                        <span class="ink-list-format-icon" aria-hidden="true"><i class="fas fa-layer-group fa-lg"></i></span>
+                        <h2 class="h5 mb-2">Ebook + printed book</h2>
+                        <p class="small text-muted mb-3 flex-grow-1">Import one manuscript, prepare both formats, and decide when to publish each one.</p>
                         <span class="btn btn-sm btn-ink-gold align-self-start">Continue <i class="fas fa-arrow-right ms-1"></i></span>
                     </a>
                     <a class="ink-list-format-card" role="listitem" href="{{ url_for('book_platform.upload_digital_book', listing='print') }}">

@@ -99,13 +99,13 @@
     <div class="container-fluid px-3 px-md-4 px-xl-5 py-4 py-md-5">
         <div class="row align-items-end g-4">
             <div class="col-lg-8">
-                <h1 class="ink-upload-title mb-3">Publish - List your book</h1>
+                <h1 class="ink-upload-title mb-3">Import your existing book</h1>
                 {% if listing_format == 'print' %}
                 <p class="ink-upload-lead mb-0">List a printed edition you ship yourself. Add cover, pricing, and shipping, buyers pay on Ink and you fulfill orders.</p>
                 {% elif listing_format == 'both' %}
-                <p class="ink-upload-lead mb-0">Upload your ebook and offer a print edition in one listing. <strong>Step 1:</strong> details, files, and pricing. <strong>Step 2:</strong> optional audiobook.</p>
+                <p class="ink-upload-lead mb-0">Upload your ebook and prepare a print edition in one private project. You will review everything before publishing.</p>
                 {% else %}
-                <p class="ink-upload-lead mb-0">Upload your finished ebook file, set cover and price, and go live. <strong>Step 1:</strong> manuscript + listing details. <strong>Step 2:</strong> optional AI audiobook.</p>
+                <p class="ink-upload-lead mb-0">Upload your finished ebook file, set cover and price, then review the customer experience before going live.</p>
                 {% endif %}
                 <p class="small mt-2 mb-0"><a href="{{ url_for('book_platform.list_book') }}" class="text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Change format (ebook / print / both)</a></p>
             </div>
@@ -284,7 +284,7 @@
                         </div>
                     </section>
 
-                    <section class="ink-upload-card mb-4" id="section-isbn" aria-labelledby="heading-isbn">
+                    <section class="ink-upload-card mb-4 d-none" id="section-isbn" aria-labelledby="heading-isbn">
                         <div class="ink-upload-card-head">
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-barcode"></i></span>
                             <div>
@@ -297,7 +297,7 @@
                         </div>
                     </section>
 
-                    <section class="ink-upload-card mb-4" id="section-terms" aria-labelledby="heading-terms">
+                    <section class="ink-upload-card mb-4 d-none" id="section-terms" aria-labelledby="heading-terms">
                         <div class="ink-upload-card-head">
                             <span class="ink-upload-badge" aria-hidden="true"><i class="fas fa-scale-balanced"></i></span>
                             <div>
@@ -347,6 +347,11 @@
                         </div>
                     </section>
 
+                    <div class="alert alert-info small mb-3" role="status">
+                        <i class="fas fa-lock me-1" aria-hidden="true"></i>
+                        This import stays private. You will set ISBN and accept publishing terms only when you choose to release the book.
+                    </div>
+
                     <div class="ink-upload-mobile-hint d-xl-none rounded-3 p-3 mb-3 border" style="border-color: rgba(201, 162, 39, 0.25) !important; background: rgba(8, 10, 9, 0.5);">
                         <p class="small fw-semibold mb-2"><i class="fas fa-clipboard-check me-2 text-primary"></i>Before you submit</p>
                         <ul class="small text-muted mb-0 ps-3">
@@ -368,11 +373,11 @@
                         <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
                             <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-ink-ghost order-md-0"><i class="fas fa-arrow-left me-2" aria-hidden="true"></i>Cancel</a>
                             <button type="submit" class="btn btn-ink-gold btn-lg px-4 ink-upload-submit" id="submitBtn">
-                                <i class="fas fa-paper-plane me-2" aria-hidden="true"></i>List on marketplace
+                                <i class="fas fa-file-import me-2" aria-hidden="true"></i>Import privately
                             </button>
                         </div>
                         <p class="small text-muted mb-0 mt-3 text-center text-md-start" id="uploadSubmitHint">
-                            {% if listing_format == 'print' %}Your print listing goes live after you submit.{% elif listing_format == 'both' %}Publish ebook + print now, then continue to audiobook step.{% else %}Publish ebook now, then continue to audiobook step.{% endif %}
+                            We will take you to your private release checklist. Nothing is visible to customers yet.
                         </p>
                     </div>
                 </form>
@@ -779,30 +784,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (genreVal !== 'nonfiction') {
                 return { ok: false, focus: genreEl, msg: 'Category must be Nonfiction.' };
             }
-        const isbnManualRadio = document.getElementById('isbnSourceManual');
-        const isbnManualInput = document.getElementById('isbnManualInput');
-        if (isbnManualRadio && isbnManualRadio.checked) {
-            const raw = isbnManualInput ? String(isbnManualInput.value || '').trim() : '';
-            if (!raw) {
-                return { ok: false, focus: isbnManualInput, msg: 'Enter your ISBN or choose "Assign from platform pool".' };
-            }
-        }
-        const rights = document.getElementById('listing_terms_rights_warranty');
-        const takedown = document.getElementById('listing_terms_takedown_consent');
-        if (!listingTermsRequiredBoxesCheckedUpload()) {
-            openListingTermsPanelUpload(listingTermsConfirmedUpload);
-            return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms, check each required box, then click "Agree to terms".' };
-        }
-        if (!listingTermsConfirmedUpload) {
-            openListingTermsPanelUpload(false);
-            return { ok: false, focus: btnConfirmListingTermsUpload || showListingTermsBtnUpload, msg: 'Almost there, click "Agree to terms" after checking each box.' };
-        }
-        if (!rights || !rights.checked) {
-            return { ok: false, focus: listingTermsScrollUpload || rights, msg: 'Scroll through the full terms text, then accept the rights warranty before listing.' };
-        }
-        if (!takedown || !takedown.checked) {
-            return { ok: false, focus: listingTermsScrollUpload || takedown, msg: 'Scroll through the full terms text, then accept takedown consent before listing.' };
-        }
         const aiSubmitSlow = ai && !hasCoverFile;
         return { ok: true, ai: aiSubmitSlow };
     }

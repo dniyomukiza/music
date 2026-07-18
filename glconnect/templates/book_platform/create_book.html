@@ -100,8 +100,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <h6 class="text-secondary mb-1">Book cover for the marketplace</h6>
-                                <p class="small text-muted mb-2 mb-md-3">Upload a cover from your computer or generate it with AI</p>
+                                <h6 class="text-secondary mb-1">Book cover <span class="text-muted fw-normal">(optional for drafts)</span></h6>
+                                <p class="small text-muted mb-2 mb-md-3">You can upload or generate a cover now, or add it when you prepare your release.</p>
                                 {% with cover_uid='create', use_wtforms=false, suppress_cover_intro=true %}
                                 {% include 'book_platform/includes/_cover_upload_or_ai.html' %}
                                 {% endwith %}
@@ -411,11 +411,6 @@
             if (!genreVal) {
                 alert('Please select a nonfiction category for your book');
                 if (genreEl) genreEl.focus();
-                return;
-            }
-
-            if (!coverFile && !ai) {
-                alert('Choose an image file, or switch to Generate with AI and create a preview.');
                 return;
             }
 

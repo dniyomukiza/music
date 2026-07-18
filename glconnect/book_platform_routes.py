@@ -1525,6 +1525,83 @@ def books(user_profile, profile_type):
         author_needs_publishing_agreement=_author_needs_publishing_agreement(current_user.user_id),
     )
 
+
+@book_bp.route('/books/<int:book_id>/release')
+@writer_or_book_platform_required
+def release_hub(book_id, user_profile, profile_type):
+    """One place to prepare a private project for a customer-facing release."""
+    from glconnect.book_purchase_format import audiobook_listed
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    if not author_id or book.author_id != author_id:
+        flash('Only the author can prepare this release.', 'error')
+        return redirect(url_for('book_platform.books'))
+
+    chapter_count = BookChapter.query.filter_by(book_project_id=book.id).count()
+    manuscript_ready = bool(book.digital_file_path or chapter_count)
+    ebook_live = is_ebook_marketplace_listed(book)
+    audio_live = audiobook_listed(book)
+    has_price = book.price is not None and float(book.price) >= 0
+    has_cover = book_has_listing_cover(book)
+    attested = book_has_listing_attestation(book)
+
+    checks = [
+        {
+            'label': 'Manuscript',
+            'complete': manuscript_ready,
+            'detail': 'File imported' if book.digital_file_path else (
+                f'{chapter_count} section' + ('s' if chapter_count != 1 else '') if chapter_count else 'Add your first section'
+            ),
+            'url': url_for('book_platform.view_book', book_id=book.id),
+        },
+        {
+            'label': 'Cover',
+            'complete': has_cover,
+            'detail': 'Ready for customers' if has_cover else 'Add a marketplace cover',
+            'url': url_for('book_platform.edit_book', book_id=book.id),
+        },
+        {
+            'label': 'Price',
+            'complete': has_price,
+            'detail': 'Price set' if has_price else 'Set a price or choose free',
+            'url': url_for('book_platform.edit_book', book_id=book.id) + '#publishing-options',
+        },
+        {
+            'label': 'Listing agreement',
+            'complete': attested,
+            'detail': 'Accepted for this title' if attested else 'Review before publishing',
+            'url': url_for('book_platform.edit_book', book_id=book.id) + '#listingTermsSection',
+        },
+    ]
+    remaining = [check for check in checks if not check['complete']]
+    if ebook_live:
+        primary = {
+            'label': 'Open audiobook studio' if not book.has_audiobook else 'Review audiobook',
+            'url': url_for('book_platform.book_audiobook', book_id=book.id),
+        }
+    elif remaining:
+        primary = {
+            'label': 'Complete: ' + remaining[0]['label'],
+            'url': remaining[0]['url'],
+        }
+    else:
+        primary = {
+            'label': 'Publish ebook',
+            'url': url_for('book_platform.edit_book', book_id=book.id) + '#publishing-options',
+        }
+
+    return render_template(
+        'book_platform/release_hub.html',
+        book=book,
+        chapter_count=chapter_count,
+        manuscript_ready=manuscript_ready,
+        ebook_live=ebook_live,
+        audio_live=audio_live,
+        checks=checks,
+        primary=primary,
+        marketplace_cover_url=_marketplace_cover_url,
+    )
+
 @book_bp.route('/books/create', methods=['GET', 'POST'])
 @writer_or_book_platform_required
 def create_book(user_profile, profile_type):
@@ -1549,22 +1626,13 @@ def create_book(user_profile, profile_type):
             }), 403
         return redirect(url_for('book_platform.setup_profile', next=request.path))
 
-    if _author_needs_publishing_agreement(current_user.user_id):
-        flash('Accept the Author Publishing Agreement before creating or listing books.', 'warning')
-        if request.method == 'POST':
-            return jsonify({
-                'success': False,
-                'error': 'Accept the Author Publishing Agreement first.',
-                'redirect': url_for('book_platform.author_publishing_agreement', next=request.path),
-            }), 403
-        return _redirect_to_publishing_agreement(request.path)
-
     if request.method == 'POST':
         author_id = get_profile_id(user_profile, profile_type)
         if not author_id:
             return jsonify({'success': False, 'error': 'Could not resolve author profile.'}), 400
 
-        # Require multipart upload so authors choose a cover at creation time
+        # Creation is intentionally lightweight: a project can remain private
+        # until the author is ready to prepare a marketplace release.
         if not request.content_type or 'multipart/form-data' not in request.content_type:
             return jsonify({
                 'success': False,
@@ -1618,12 +1686,6 @@ def create_book(user_profile, profile_type):
                         'or upload a cover image instead.'
                     ),
                 }), 400
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Upload a cover image or choose Generate with AI and confirm a preview.',
-            }), 400
-
         book = BookProject(
             title=title,
             description=desc_val,
@@ -2149,7 +2211,7 @@ def edit_book(book_id):
                 # Handle digital book publishing
                 if publish_digital:
                     price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
-                    if not price_value or price_value <= 0:
+                    if price_value is None or price_value < 0:
                         return jsonify({
                             'success': False, 
                             'error': 'Please set a price before publishing your digital book to the marketplace.'
@@ -2219,7 +2281,7 @@ def edit_book(book_id):
                     if book.status != BookStatus.PUBLISHED:
                         newly_listing = True
                     price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
-                    if not price_value or price_value <= 0:
+                    if price_value is None or price_value < 0:
                         return jsonify({
                             'success': False, 
                             'error': 'Please set a price before publishing your book to the marketplace.'
@@ -2286,25 +2348,27 @@ def edit_book(book_id):
                 IsbnValidationError,
             )
 
-            if newly_listing or (
+            should_apply_listing_setup = newly_listing or (
                 print_listed(book) and not book_has_listing_attestation(book)
-            ):
+            )
+            if should_apply_listing_setup:
                 attestation_error = ensure_listing_attestation(book, data)
                 if attestation_error:
                     return jsonify({'success': False, 'error': attestation_error}), 400
 
-            try:
-                apply_listing_isbn(
-                    book,
-                    data.get('isbn_source'),
-                    data.get('isbn_manual'),
-                )
-            except IsbnValidationError as e:
-                db.session.rollback()
-                return jsonify({'success': False, 'error': str(e)}), 400
-            except IsbnPoolError as e:
-                db.session.rollback()
-                return jsonify({'success': False, 'error': str(e)}), 503
+            if should_apply_listing_setup:
+                try:
+                    apply_listing_isbn(
+                        book,
+                        data.get('isbn_source'),
+                        data.get('isbn_manual'),
+                    )
+                except IsbnValidationError as e:
+                    db.session.rollback()
+                    return jsonify({'success': False, 'error': str(e)}), 400
+                except IsbnPoolError as e:
+                    db.session.rollback()
+                    return jsonify({'success': False, 'error': str(e)}), 503
             
             db.session.commit()
 
@@ -4599,7 +4663,7 @@ def publish_book(book_id):
         return jsonify({'error': attestation_error}), 400
 
     # Validate book is ready for publishing
-    if not book.price or book.price <= 0:
+    if book.price is None or book.price < 0:
         return jsonify({'error': 'Please set a price before publishing'}), 400
     if not book_has_listing_cover(book):
         return jsonify({'error': 'Please add a cover image before publishing to the marketplace.'}), 400
@@ -8121,9 +8185,6 @@ def _upload_digital_book_error(form, message, status_code=400, listing_format="e
 @book_platform_required
 def list_book():
     """Choose ebook, print, or both before the listing form."""
-    if _author_needs_publishing_agreement(current_user.user_id):
-        flash('Accept the Author Publishing Agreement before listing books.', 'warning')
-        return _redirect_to_publishing_agreement(url_for('book_platform.list_book'))
     return render_template('book_platform/list_book.html')
 
 
@@ -8134,18 +8195,6 @@ def upload_digital_book():
     
     logger.info(f"Upload digital book - Method: {request.method}, User: {current_user.user_id if current_user.is_authenticated else 'Not authenticated'}")
 
-    if _author_needs_publishing_agreement(current_user.user_id):
-        flash('Accept the Author Publishing Agreement before listing books.', 'warning')
-        if request.method == 'POST' and _upload_digital_book_accepts_json():
-            return jsonify({
-                'success': False,
-                'error': 'Accept the Author Publishing Agreement first.',
-                'redirect': url_for('book_platform.author_publishing_agreement', next=request.path),
-            }), 403
-        if request.method == 'POST':
-            flash('Accept the Author Publishing Agreement before listing books.', 'warning')
-        return _redirect_to_publishing_agreement(request.path)
-    
     form = DigitalBookUploadForm()
     _lang_choices = book_language_select_choices()
     form.ebook_language.choices = _lang_choices
@@ -8215,10 +8264,6 @@ def upload_digital_book():
                     "Could not determine author ID. Please ensure your profile is set up correctly.",
                     listing_format=listing_format,
                 )
-
-            terms_error = validate_listing_terms_payload(request.form or {})
-            if terms_error:
-                return _upload_digital_book_error(form, terms_error, listing_format=listing_format)
 
             if not is_valid_ink_upload_genre(form.genre.data or ''):
                 return _upload_digital_book_error(
@@ -8361,8 +8406,9 @@ def upload_digital_book():
                 book.digital_file_type = file_type
                 book.digital_file_size = file_stat.st_size if file_stat else None
                 book.digital_file_uploaded_at = datetime.now(timezone.utc)
-                book.digital_book_published = True
-                book.digital_book_published_at = datetime.now(timezone.utc)
+                # Upload is an import step, not a public launch. Authors review
+                # the customer experience in Release Hub before publishing.
+                book.digital_book_published = False
             else:
                 book.digital_book_published = False
 
@@ -8372,66 +8418,26 @@ def upload_digital_book():
                 book.print_shipping_price = print_shipping
                 book.print_handling_days = print_handling
                 book.print_description = print_description
-                if not wants_ebook:
-                    book.status = BookStatus.PUBLISHED
-                    book.published_at = datetime.now(timezone.utc)
+                # Print settings are also prepared privately; publication happens
+                # from the shared release checklist.
+                book.status = BookStatus.DRAFT
 
-            record_listing_attestation(book)
-            
             db.session.add(book)
             db.session.flush()
             logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
 
-            from glconnect.isbn_pool_service import apply_listing_isbn, IsbnPoolError, IsbnValidationError
-
-            try:
-                apply_listing_isbn(
-                    book,
-                    request.form.get('isbn_source'),
-                    request.form.get('isbn_manual'),
-                )
-            except IsbnValidationError as e:
-                db.session.rollback()
-                return _upload_digital_book_error(form, str(e), listing_format=listing_format)
-            except IsbnPoolError as e:
-                db.session.rollback()
-                return _upload_digital_book_error(form, str(e), listing_format=listing_format)
-
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
 
-            earned_formats = []
-            if wants_ebook:
-                earned_formats.append(LISTING_FORMAT_EBOOK)
-            if wants_print:
-                earned_formats.append(LISTING_FORMAT_PRINT)
-            if earned_formats:
-                _issue_listing_coupons_for_formats(book, earned_formats)
-                db.session.commit()
-
-            if wants_print and not wants_ebook:
-                flash(
-                    "Your print listing is live. When someone orders, you'll get their shipping address to fulfill.",
-                    "success",
-                )
-                next_step_url = url_for("book_platform.books")
-            elif wants_ebook:
-                parts = ["Step 1 complete: ebook is now live."]
-                if wants_print:
-                    parts.append("Print edition is also listed.")
-                parts.append("Next: generate audiobook or skip for now.")
-                flash(
-                    " ".join(parts)
-                    + (
-                        " Note: PDF listings often read poorly in browser; consider also offering EPUB or DOCX for reflowable reading."
-                        if file_type == "pdf"
-                        else ""
-                    ),
-                    "success",
-                )
-                next_step_url = url_for("book_platform.book_audiobook", book_id=book.id)
-            else:
-                next_step_url = url_for("book_platform.books")
+            flash(
+                "Book imported privately. Review your release checklist before publishing."
+                + (
+                    " PDF listings often read poorly in browser; consider also offering EPUB or DOCX for reflowable reading."
+                    if file_type == "pdf" else ""
+                ),
+                "success",
+            )
+            next_step_url = url_for("book_platform.release_hub", book_id=book.id)
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
             if _upload_digital_book_accepts_json():
