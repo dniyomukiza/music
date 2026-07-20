@@ -919,6 +919,7 @@ def ensure_book_print_orders_schema(db) -> None:
                         status VARCHAR(40) NOT NULL DEFAULT 'pending_fulfillment',
                         tracking_number VARCHAR(200),
                         shipping_carrier VARCHAR(100),
+                        handling_days INTEGER,
                         expected_delivery_days INTEGER,
                         shipped_at TIMESTAMP,
                         created_at TIMESTAMP,
@@ -955,6 +956,7 @@ def ensure_book_print_orders_schema(db) -> None:
                         status VARCHAR(40) NOT NULL DEFAULT 'pending_fulfillment',
                         tracking_number VARCHAR(200),
                         shipping_carrier VARCHAR(100),
+                        handling_days INTEGER,
                         expected_delivery_days INTEGER,
                         shipped_at TIMESTAMP,
                         created_at TIMESTAMP,
@@ -1024,7 +1026,7 @@ def ensure_book_print_order_shipping_note_column(db) -> None:
 
 
 def ensure_book_print_order_fulfillment_columns(db) -> None:
-    """Add shipping_carrier and expected_delivery_days for author fulfillment."""
+    """Add shipment and handling-promise columns for author fulfillment."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
         return
     try:
@@ -1070,6 +1072,19 @@ def ensure_book_print_order_fulfillment_columns(db) -> None:
             else:
                 db.session.execute(
                     text("ALTER TABLE book_print_orders ADD COLUMN shipping_carrier VARCHAR(100)")
+                )
+            changed = True
+        if "handling_days" not in cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(
+                        "ALTER TABLE book_print_orders ADD COLUMN IF NOT EXISTS "
+                        "handling_days INTEGER"
+                    )
+                )
+            else:
+                db.session.execute(
+                    text("ALTER TABLE book_print_orders ADD COLUMN handling_days INTEGER")
                 )
             changed = True
         if "expected_delivery_days" not in cols:
@@ -1712,4 +1727,3 @@ def ensure_collaboration_role_enum_schema(db) -> None:
     except Exception as e:
         db.session.rollback()
         logger.error("Could not patch CollaborationRole enum: %s", e, exc_info=True)
-

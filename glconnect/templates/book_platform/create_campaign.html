@@ -90,7 +90,7 @@
                             <div class="mb-3">
                                 {{ form.tentative_timeline.label(class="form-label") }}
                                 {{ form.tentative_timeline(class="form-control", id="tentative_timeline") }}
-                                <div class="form-text">When you expect to finish the manuscript or publish to the marketplace.</div>
+                                <div class="form-text">Required. Give supporters a realistic draft and marketplace-launch target.</div>
                                 {% if form.tentative_timeline.errors %}
                                     <div class="text-danger small">{{ form.tentative_timeline.errors[0] }}</div>
                                 {% endif %}
@@ -108,7 +108,7 @@
                                 <div class="col-md-6">
                                     {{ form.funding_goal.label(class="form-label") }}
                                     {{ form.funding_goal(class="form-control") }}
-                                    <div class="form-text">How much patron support you hope to raise. Projects can receive more than this goal.</div>
+                                    <div class="form-text">Set the amount needed to finish and publish. Funding closes once this goal is reached; missed goals are refunded after the campaign window.</div>
                                     {% if form.funding_goal.errors %}
                                         <div class="text-danger small">{{ form.funding_goal.errors[0] }}</div>
                                     {% endif %}

@@ -63,6 +63,60 @@ def platform():
     )
 
 
+_POLICY_PAGES = {
+    'terms': {
+        'title': 'Terms of Service',
+        'eyebrow': 'Using Ndotonic',
+        'description': 'The basic rules for accounts, the marketplace, and creator tools.',
+    },
+    'privacy': {
+        'title': 'Privacy Policy',
+        'eyebrow': 'Your information',
+        'description': 'What we collect, why we use it, and what is public.',
+    },
+    'refunds': {
+        'title': 'Refund & Cancellation Policy',
+        'eyebrow': 'Purchases and support',
+        'description': 'How digital purchases, print orders, and campaign contributions are handled.',
+    },
+    'shipping': {
+        'title': 'Print Shipping & Fulfillment Policy',
+        'eyebrow': 'Author-fulfilled print',
+        'description': 'What buyers can expect when an author ships a physical book.',
+    },
+    'rights': {
+        'title': 'Content, Rights & Takedown Policy',
+        'eyebrow': 'Publishing responsibly',
+        'description': 'The rights authors need and how we handle credible complaints.',
+    },
+    'ai': {
+        'title': 'AI Use Policy',
+        'eyebrow': 'Optional creator tools',
+        'description': 'Responsibilities when using AI-assisted text, art, or narration.',
+    },
+}
+
+
+@bp.route('/policies')
+def policies():
+    """Public index for customer- and creator-facing policies."""
+    return render_template('policies.html', policy_pages=_POLICY_PAGES, active_policy=None)
+
+
+@bp.route('/policies/<policy_key>')
+def policy_detail(policy_key):
+    """Public policy page; policy text lives in the template for reviewable releases."""
+    policy = _POLICY_PAGES.get(policy_key)
+    if not policy:
+        return redirect(url_for('routes.policies'))
+    return render_template(
+        'policies.html',
+        policy_pages=_POLICY_PAGES,
+        active_policy=policy_key,
+        policy=policy,
+    )
+
+
 @bp.route('/marketplace')
 @login_required
 def marketplace():
@@ -201,4 +255,3 @@ def health():
     return jsonify(payload), 200
 import glconnect.routes1
 import glconnect.routes2
-

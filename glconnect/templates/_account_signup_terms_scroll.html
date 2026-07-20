@@ -5,7 +5,7 @@
      tabindex="0"
      role="region"
      aria-label="Account Terms and Privacy Policy">
-    <p class="mb-2 fw-semibold">Account Terms &amp; Privacy (v{{ account_terms_version|default('1.0') }})</p>
+    <p class="mb-2 fw-semibold"><a href="{{ url_for('routes.policy_detail', policy_key='terms') }}">Account Terms</a> &amp; <a href="{{ url_for('routes.policy_detail', policy_key='privacy') }}">Privacy Policy</a> (v{{ account_terms_version|default('1.0') }})</p>
 
     <p class="mb-2"><strong>Who we are.</strong> Ndotonic (“we,” “us,” “the platform”) operates Ink Studio, the marketplace, campaigns, and related creator tools. By creating an account, you enter a contract with us as an individual user, not as our employee, agent, or partner.</p>
 

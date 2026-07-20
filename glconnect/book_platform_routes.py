@@ -2090,6 +2090,68 @@ def view_book(book_id, user_profile, profile_type):
     listing_live = is_book_published(book)
     marketplace_buyable_flag = marketplace_buyable(book)
     audiobook_chapter_tracklist = _build_audiobook_chapter_tracklist(book) if book.has_audiobook else []
+    manuscript_started = bool(book.digital_file_path or chapters)
+    word_count = int(book.word_count or 0)
+    word_target = int(book.word_count_target or 0)
+    has_price = book.price is not None
+    writing_progress = [
+        {
+            'label': 'Set up your book',
+            'detail': 'Title and book details',
+            'complete': bool(book.title and book.description),
+        },
+        {
+            'label': 'Write your manuscript',
+            'detail': f'{word_count:,} words' + (f' of {word_target:,}' if word_target else ''),
+            'complete': bool(word_target and word_count >= word_target),
+            'current': manuscript_started and not (word_target and word_count >= word_target),
+        },
+        {
+            'label': 'Prepare your release',
+            'detail': 'Cover and price',
+            'complete': bool(has_listing_cover and has_price),
+        },
+        {
+            'label': 'Publish to readers',
+            'detail': 'Marketplace listing',
+            'complete': marketplace_buyable_flag,
+        },
+    ]
+    if not manuscript_started and not book.digital_file_path:
+        next_writing_action = {
+            'label': 'Write your first section',
+            'detail': 'A first section gives your book a real starting point.',
+            'url': url_for('book_platform.create_chapter', book_id=book.id),
+            'icon': 'fa-feather-alt',
+        }
+    elif word_target and word_count < word_target:
+        next_writing_action = {
+            'label': 'Keep drafting',
+            'detail': f'{max(word_target - word_count, 0):,} words remain to reach your target.',
+            'url': url_for('book_platform.create_chapter', book_id=book.id),
+            'icon': 'fa-pen',
+        }
+    elif not has_listing_cover or not has_price:
+        next_writing_action = {
+            'label': 'Prepare your release',
+            'detail': 'Add a cover and price so your book is ready for readers.',
+            'url': url_for('book_platform.edit_book', book_id=book.id),
+            'icon': 'fa-book-open',
+        }
+    elif not marketplace_buyable_flag:
+        next_writing_action = {
+            'label': 'Review before publishing',
+            'detail': 'Check the customer-facing experience, then choose when to go live.',
+            'url': url_for('book_platform.release_hub', book_id=book.id),
+            'icon': 'fa-rocket',
+        }
+    else:
+        next_writing_action = {
+            'label': 'Promote your published book',
+            'detail': 'Share your listing and keep building your audience.',
+            'url': url_for('book_platform.content_hub'),
+            'icon': 'fa-bullhorn',
+        }
 
     try:
         return render_template('book_platform/view_book.html',
@@ -2114,7 +2176,9 @@ def view_book(book_id, user_profile, profile_type):
                              latest_audio_task=latest_audio_task,
                              marketplace_cover_url=_marketplace_cover_url,
                              listing_live=listing_live,
-                             marketplace_buyable=marketplace_buyable_flag)
+                             marketplace_buyable=marketplace_buyable_flag,
+                             writing_progress=writing_progress,
+                             next_writing_action=next_writing_action)
     except Exception as template_error:
         logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
         flash('Error loading book view. Please try again.', 'error')
@@ -3470,11 +3534,20 @@ def preview_voice_upload():
 @book_bp.route('/books/<int:book_id>/audiobook/preview-voice', methods=['POST'])
 @book_platform_required
 def preview_voice(book_id):
-    """Generate a preview audio sample for a voice"""
+    """Generate an author-only preview for a voice, optionally from this book."""
     try:
-        data = request.get_json()
+        book = BookProject.query.get_or_404(book_id)
+        book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        if not book_user or book.author_id != book_user.id:
+            return jsonify({'success': False, 'error': 'Only the author can preview this audiobook voice.'}), 403
+        data = request.get_json(silent=True) or {}
         voice_name = data.get('voice_name')
-        sample_text = data.get('sample_text')  # Optional custom sample
+        sample_text = data.get('sample_text')
+        if data.get('use_book_sample'):
+            source = build_audiobook_source(book, current_app.root_path)
+            if not source.get('success'):
+                return jsonify({'success': False, 'error': source.get('error', 'Could not prepare a book sample.')}), 400
+            sample_text = (source.get('full_text') or '')[:900]
         
         if not voice_name:
             return jsonify({
@@ -4279,18 +4352,18 @@ def _mailtrap_credentials():
     return sender, api_key
 
 
-def _maybe_send_purchase_receipt(book, purchase):
+def _maybe_send_purchase_receipt(book, purchase, print_order=None):
     """Send purchase receipt once per browser session (avoids duplicate on success-page refresh)."""
     if purchase.status != TransactionStatus.COMPLETED:
         return
     key = f"_receipt_sent_purchase_{purchase.id}"
     if session.get(key):
         return
-    if send_book_purchase_receipt_email(book, purchase):
+    if send_book_purchase_receipt_email(book, purchase, print_order=print_order):
         session[key] = True
 
 
-def send_book_purchase_receipt_email(book, purchase):
+def send_book_purchase_receipt_email(book, purchase, print_order=None):
     """Send a text receipt via Mailtrap (same pattern as account confirmation in routes1)."""
     to_email = purchase.get_buyer_email()
     if not to_email:
@@ -4329,7 +4402,11 @@ def send_book_purchase_receipt_email(book, purchase):
         "",
     ]
     if purchase_grants_format(fmt_norm, "print"):
-        handling_days = int(getattr(book, "print_handling_days", None) or 7)
+        handling_days = int(
+            getattr(print_order, "handling_days", None)
+            or getattr(book, "print_handling_days", None)
+            or 7
+        )
         lines.extend([
             "This is a print edition. The author will ship your book to the address you provided at checkout.",
             f"Typical handling time: about {handling_days} business days before shipment.",
@@ -4422,6 +4499,26 @@ def send_print_order_shipped_email(book, purchase, order):
     except Exception as e:
         logger.warning("Failed to send shipped email: %s", e, exc_info=True)
         return False
+
+
+def _print_order_ship_by_date(order, book):
+    """Return the promised ship-by date, counting the handling window as weekdays."""
+    placed_at = getattr(order, 'created_at', None)
+    if not placed_at:
+        return None
+    if placed_at.tzinfo is None:
+        placed_at = placed_at.replace(tzinfo=timezone.utc)
+    handling_days = max(1, min(
+        60,
+        int(getattr(order, 'handling_days', None) or getattr(book, 'print_handling_days', None) or 7),
+    ))
+    ship_by = placed_at.date()
+    remaining = handling_days
+    while remaining:
+        ship_by += timedelta(days=1)
+        if ship_by.weekday() < 5:
+            remaining -= 1
+    return ship_by
 
 
 # Marketplace routes
@@ -4942,12 +5039,24 @@ def book_print_orders(book_id):
     pending_count = sum(
         1 for o in orders if o.status == PrintOrderStatus.PENDING_FULFILLMENT
     )
+    today = datetime.now(timezone.utc).date()
+    overdue_count = 0
+    for order in orders:
+        order.ship_by_date = _print_order_ship_by_date(order, book)
+        order.is_overdue = bool(
+            order.status == PrintOrderStatus.PENDING_FULFILLMENT
+            and order.ship_by_date
+            and today > order.ship_by_date
+        )
+        if order.is_overdue:
+            overdue_count += 1
     print_enabled = bool(getattr(book, 'print_enabled', False))
     return render_template(
         'book_platform/print_orders.html',
         book=book,
         orders=orders,
         pending_count=pending_count,
+        overdue_count=overdue_count,
         print_enabled=print_enabled,
         can_add_print=_can_add_print_edition(book),
     )
@@ -4968,14 +5077,19 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
     tracking = (data.get('tracking_number') or request.form.get('tracking_number') or '').strip()
     carrier = (data.get('shipping_carrier') or request.form.get('shipping_carrier') or '').strip()
     raw_days = data.get('expected_delivery_days', request.form.get('expected_delivery_days'))
-    order.tracking_number = tracking[:200] if tracking else None
-    order.shipping_carrier = carrier[:100] if carrier else None
-    if raw_days is not None and str(raw_days).strip() != '':
-        try:
-            days = int(raw_days)
-            order.expected_delivery_days = days if days > 0 else None
-        except (TypeError, ValueError):
-            order.expected_delivery_days = None
+    if not carrier:
+        return jsonify({'success': False, 'error': 'Add the shipping carrier before marking this order shipped.'}), 400
+    if not tracking:
+        return jsonify({'success': False, 'error': 'Add a tracking number before marking this order shipped.'}), 400
+    try:
+        days = int(raw_days)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Enter the expected delivery time in business days.'}), 400
+    if not 1 <= days <= 60:
+        return jsonify({'success': False, 'error': 'Expected delivery must be between 1 and 60 business days.'}), 400
+    order.tracking_number = tracking[:200]
+    order.shipping_carrier = carrier[:100]
+    order.expected_delivery_days = days
     order.status = PrintOrderStatus.SHIPPED
     order.shipped_at = datetime.now(timezone.utc)
     db.session.commit()
@@ -5263,6 +5377,8 @@ def my_library():
             .order_by(BookPrintOrder.created_at.desc())
             .all()
         )
+        for order in print_orders:
+            order.ship_by_date = _print_order_ship_by_date(order, order.book_project)
 
     highlight_book_id = request.args.get('book_id', type=int)
     return render_template(
@@ -5614,6 +5730,7 @@ def _create_print_order_from_checkout_session(purchase, book, session):
         shipping_postal=(addr.get('postal_code') or addr.get('zip') or '')[:30],
         shipping_country=(addr.get('country') or 'US')[:2].upper(),
         status=PrintOrderStatus.PENDING_FULFILLMENT,
+        handling_days=max(1, min(60, int(getattr(book, 'print_handling_days', None) or 7))),
     )
     db.session.add(order)
     return order
@@ -7063,30 +7180,29 @@ def purchase_success():
             # Don't fail the purchase - it's recorded, just needs manual distribution
             notify_receipt = True
 
-        if purchase and purchase.status == TransactionStatus.COMPLETED:
-            try:
-                _maybe_send_purchase_receipt(book, purchase)
-            except Exception as receipt_err:
-                logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
-
         purchase_format = getattr(purchase, 'purchase_format', None) or 'digital'
-        _ensure_print_order_for_purchase(
+        print_order = _ensure_print_order_for_purchase(
             purchase,
             book,
             session_id=_resolve_checkout_session_id(session_id, purchase),
         )
+        if purchase and purchase.status == TransactionStatus.COMPLETED:
+            try:
+                _maybe_send_purchase_receipt(book, purchase, print_order=print_order)
+            except Exception as receipt_err:
+                logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
 
         has_print = purchase_grants_format(purchase_format, 'print')
         has_digital = purchase_grants_format(purchase_format, 'digital')
         has_audio = purchase_grants_format(purchase_format, 'audiobook')
         if has_print and not has_digital and not has_audio:
-            handling_days = int(getattr(book, 'print_handling_days', None) or 7)
+            handling_days = int(getattr(print_order, 'handling_days', None) or getattr(book, 'print_handling_days', None) or 7)
             flash(
                 f'Print order confirmed! The author will ship within about {handling_days} business days.',
                 'success',
             )
         elif has_print:
-            handling_days = int(getattr(book, 'print_handling_days', None) or 7)
+            handling_days = int(getattr(print_order, 'handling_days', None) or getattr(book, 'print_handling_days', None) or 7)
             flash(
                 f'Purchase successful! Digital formats are in your library; print ships within about {handling_days} business days.',
                 'success',

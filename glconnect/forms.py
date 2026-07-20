@@ -237,7 +237,7 @@ class InvestmentCampaignForm(FlaskForm):
     )
     tentative_timeline = StringField(
         'Tentative timeline',
-        validators=[Optional(), Length(max=200)],
+        validators=[DataRequired(), Length(max=200)],
         render_kw={"placeholder": "e.g., First draft by June 2026, marketplace launch Fall 2026"},
     )
     pitch_video_url = StringField('Pitch Video URL (Optional)', validators=[Optional(), Length(max=500)],

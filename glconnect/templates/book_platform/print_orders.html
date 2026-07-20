@@ -18,6 +18,9 @@
             {% if pending_count %}
             <p class="text-warning mt-2 mb-0"><strong>{{ pending_count }}</strong> awaiting shipment</p>
             {% endif %}
+            {% if overdue_count %}
+            <p class="text-danger mt-1 mb-0"><strong>{{ overdue_count }}</strong> past the promised handling window — ship these first or pause the print listing.</p>
+            {% endif %}
         </header>
 
         {% if orders %}
@@ -31,6 +34,9 @@
                                 <span class="badge bg-{% if order.status.value == 'pending_fulfillment' %}warning text-dark{% elif order.status.value == 'shipped' %}success{% else %}secondary{% endif %}">
                                     {{ order.status.value.replace('_', ' ')|title }}
                                 </span>
+                                {% if order.is_overdue %}
+                                <span class="badge bg-danger ms-1">Overdue</span>
+                                {% endif %}
                                 <small class="text-muted ms-2">Order #{{ order.id }} · {{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '' }}</small>
                             </div>
                             <div class="text-end small">
@@ -50,19 +56,26 @@
                         <p class="small text-muted mb-3"><strong class="text-white">Buyer note:</strong> {{ order.shipping_note }}</p>
                         {% endif %}
                         {% if order.status.value == 'pending_fulfillment' %}
+                        {% if order.ship_by_date %}
+                        <p class="small {% if order.is_overdue %}text-danger{% else %}text-warning{% endif %} mb-3">
+                            <strong>{% if order.is_overdue %}Past ship-by date:{% else %}Ship by:{% endif %}</strong>
+                            {{ order.ship_by_date.strftime('%b %d, %Y') }}
+                            <span class="text-muted">(based on the {{ order.handling_days or book.print_handling_days or 7 }}-business-day promise made at checkout)</span>
+                        </p>
+                        {% endif %}
                         <div class="d-flex flex-wrap gap-2 align-items-end">
                             <div style="max-width: 14rem;">
-                                <label class="form-label small text-muted" for="carrier-{{ order.id }}">Shipping company</label>
-                                <input type="text" class="form-control form-control-sm" id="carrier-{{ order.id }}" placeholder="e.g. USPS, UPS, FedEx">
+                                <label class="form-label small text-muted" for="carrier-{{ order.id }}">Shipping company <span class="text-warning">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="carrier-{{ order.id }}" placeholder="e.g. USPS, UPS, FedEx" required>
                             </div>
                             <div style="max-width: 14rem;">
-                                <label class="form-label small text-muted" for="tracking-{{ order.id }}">Tracking number</label>
-                                <input type="text" class="form-control form-control-sm" id="tracking-{{ order.id }}" placeholder="Carrier tracking number">
+                                <label class="form-label small text-muted" for="tracking-{{ order.id }}">Tracking number <span class="text-warning">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="tracking-{{ order.id }}" placeholder="Carrier tracking number" required>
                             </div>
                             <div style="max-width: 10rem;">
-                                <label class="form-label small text-muted" for="delivery-days-{{ order.id }}">Expected delivery</label>
+                                <label class="form-label small text-muted" for="delivery-days-{{ order.id }}">Expected delivery <span class="text-warning">*</span></label>
                                 <div class="input-group input-group-sm">
-                                    <input type="number" min="1" max="60" class="form-control" id="delivery-days-{{ order.id }}" placeholder="2">
+                                    <input type="number" min="1" max="60" class="form-control" id="delivery-days-{{ order.id }}" placeholder="2" required>
                                     <span class="input-group-text">business days</span>
                                 </div>
                             </div>
@@ -104,6 +117,10 @@
                 const tracking = document.getElementById('tracking-' + orderId)?.value || '';
                 const carrier = document.getElementById('carrier-' + orderId)?.value || '';
                 const deliveryDays = document.getElementById('delivery-days-' + orderId)?.value || '';
+                if (!carrier.trim() || !tracking.trim() || !deliveryDays) {
+                    alert('Carrier, tracking number, and expected delivery are required before marking an order shipped.');
+                    return;
+                }
                 btn.disabled = true;
                 fetch('{{ url_for("book_platform.mark_print_order_shipped", book_id=book.id, order_id=0) }}'.replace('/0/ship', '/' + orderId + '/ship'), {
                     method: 'POST',

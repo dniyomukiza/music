@@ -601,6 +601,8 @@ class BookPrintOrder(db.Model):
     status = db.Column(db.Enum(PrintOrderStatus), default=PrintOrderStatus.PENDING_FULFILLMENT)
     tracking_number = db.Column(db.String(200), nullable=True)
     shipping_carrier = db.Column(db.String(100), nullable=True)
+    # Snapshot the handling promise at checkout; listing settings may change later.
+    handling_days = db.Column(db.Integer, nullable=True)
     expected_delivery_days = db.Column(db.Integer, nullable=True)
     shipped_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -1254,4 +1256,3 @@ class IsbnPoolEntry(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     book_project = db.relationship("BookProject", backref=db.backref("isbn_pool_entry", uselist=False))
-

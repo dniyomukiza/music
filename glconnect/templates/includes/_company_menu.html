@@ -9,6 +9,9 @@
     <ul class="company-footer-dropdown" data-company-dropdown hidden>
         <li class="company-footer-item"><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
         <li class="company-footer-item"><a href="{{ url_for('blog.contact') }}">Support</a></li>
+        <li class="company-footer-item"><a href="{{ url_for('routes.policies') }}">Policies</a></li>
+        <li class="company-footer-item"><a href="{{ url_for('routes.policy_detail', policy_key='privacy') }}">Privacy</a></li>
+        <li class="company-footer-item"><a href="{{ url_for('routes.policy_detail', policy_key='refunds') }}">Refunds &amp; shipping</a></li>
         <li class="company-footer-item"><a href="https://www.instagram.com/ndotonic_/" target="_blank" rel="noopener noreferrer">@ndotonic_</a></li>
     </ul>
 </div>
