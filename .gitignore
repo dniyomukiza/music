@@ -54,5 +54,8 @@ jingles.m3u
 *.zip
 *.sql
 
-# Internal docs (pitch, ops, legal) — local only; not for repo/graders
-docs/
+# Internal docs (pitch, ops, legal) — local only; not for repo/graders.
+# The writer tutorial demos are deployed by Ink Studio, so keep them versioned.
+docs/*
+!docs/demos/
+!docs/demos/**

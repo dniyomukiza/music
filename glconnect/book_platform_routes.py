@@ -1526,6 +1526,37 @@ def books(user_profile, profile_type):
     )
 
 
+_NEW_WRITER_TUTORIALS = (
+    ('01-getting-started', 'From idea to first draft', 'Find a writing approach that works for you, build a small habit, and get words on the page.', 'fa-lightbulb'),
+    ('02-narrative-structure', 'Structure your narrative', 'Give your book momentum with a clear engine, a satisfying ending, and a shape that fits your genre.', 'fa-sitemap'),
+    ('03-building-characters', 'Build memorable characters', 'Develop believable motivations, details, and decisions that keep readers invested.', 'fa-user-pen'),
+    ('04-developing-plot', 'Develop your plot', 'Use a through line, key turning points, and escalating stakes to move your story forward.', 'fa-route'),
+    ('05-polish-and-format', 'Polish and format', 'Move from a complete draft to a clear, consistent manuscript ready for readers.', 'fa-wand-magic-sparkles'),
+    ('06-cover-and-description', 'Create a cover and description', 'Make a clear first impression with a readable cover and a focused description.', 'fa-book-open'),
+    ('07-how-to-launch', 'Plan your launch', 'Prepare your assets, invite early readers, and make a focused plan for launch week.', 'fa-rocket'),
+)
+
+
+@book_bp.route('/books/new-to-writing')
+@writer_or_book_platform_required
+def new_to_writing(user_profile, profile_type):
+    """Beginner-friendly writing lessons for Ink Studio authors."""
+    if profile_type == 'freelancer':
+        flash('New to Writing is part of the Ink Studio author workspace.', 'info')
+        return redirect(url_for('book_platform.content_hub'))
+    return render_template('book_platform/new_to_writing.html', tutorials=_NEW_WRITER_TUTORIALS, is_author=True, ink_nav_active='books')
+
+
+@book_bp.route('/books/new-to-writing/demos/<slug>.mp4')
+@writer_or_book_platform_required
+def new_to_writing_demo(slug, user_profile, profile_type):
+    """Serve only the approved tutorial videos without exposing the docs directory."""
+    if slug not in {tutorial[0] for tutorial in _NEW_WRITER_TUTORIALS}:
+        abort(404)
+    demos_directory = os.path.join(os.path.dirname(current_app.root_path), 'docs', 'demos')
+    return send_from_directory(demos_directory, f'{slug}.mp4', conditional=True, max_age=0)
+
+
 @book_bp.route('/books/<int:book_id>/release')
 @writer_or_book_platform_required
 def release_hub(book_id, user_profile, profile_type):
