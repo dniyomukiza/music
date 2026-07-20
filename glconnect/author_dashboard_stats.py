@@ -20,7 +20,10 @@ from glconnect.book_purchase_format import (
     ebook_listed,
     audiobook_listed,
 )
-from glconnect.platform_fee_policy import MARKETPLACE_PLATFORM_FEE_PERCENT
+from glconnect.platform_fee_policy import (
+    MARKETPLACE_PLATFORM_FEE_PERCENT,
+    marketplace_fee_schedule,
+)
 
 
 def _sale_transparency_row(sale: BookSale, title_by_id: Dict[int, str]) -> Dict[str, Any]:
@@ -114,6 +117,7 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
         "total_downloads": 0,
         "analytics_purchases": 0,
         "marketplace_platform_fee_percent": MARKETPLACE_PLATFORM_FEE_PERCENT,
+        "marketplace_fee_schedule": marketplace_fee_schedule(),
     }
 
     for book in books_q:

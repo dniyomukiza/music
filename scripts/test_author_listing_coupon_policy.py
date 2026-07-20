@@ -19,9 +19,6 @@ def main():
         BASE_PLATFORM_FEE_PERCENT,
         COUPON_PLATFORM_FEE_PERCENT,
         MIN_PLATFORM_FEE_PERCENT,
-        LISTING_FORMAT_EBOOK,
-        LISTING_FORMAT_AUDIOBOOK,
-        LISTING_FORMAT_PRINT,
         effective_platform_fee_percent,
         _format_base_portions,
     )
@@ -41,6 +38,10 @@ def main():
     if abs(platform - 2.0) > 0.01 or abs(fee_pct - 10.0) > 0.01:
         failures.append(f"standard digital: platform={platform}, fee_pct={fee_pct}")
 
+    fee_audio_default = effective_platform_fee_percent(book_std, "audiobook")
+    if abs(fee_audio_default - 30.0) > 0.01:
+        failures.append(f"default audiobook fee should be 30%, got {fee_audio_default}")
+
     book_disc = MockBook(
         id=2,
         author_id=1,
@@ -56,11 +57,11 @@ def main():
     if abs(platform - 0.75) > 0.01:
         failures.append(f"discounted audiobook platform fee should be 0.75, got {platform}")
 
+    # Bundle of 2+: flat 20% platform / 80% author on combo base (28)
     base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book_disc, "bundle", 28.0)
-    # bundle base = (20+15)*0.8 = 28; digital portion 16 @ 10%, audio 12 @ 5%
-    expected_platform = 16 * 0.10 + 12 * 0.05
-    if abs(platform - expected_platform) > 0.05:
-        failures.append(f"weighted bundle platform fee wrong: {platform} vs {expected_platform}")
+    expected_platform = 28.0 * 0.20
+    if abs(platform - expected_platform) > 0.05 or abs(fee_pct - 20.0) > 0.01:
+        failures.append(f"bundle platform fee wrong: {platform} (fee={fee_pct}) vs {expected_platform}")
 
     portions = _format_base_portions(book_std, ["digital", "audiobook"])
     if abs(sum(portions.values()) - 28.0) > 0.01:
@@ -69,7 +70,7 @@ def main():
     if MIN_PLATFORM_FEE_PERCENT >= COUPON_PLATFORM_FEE_PERCENT:
         failures.append("min fee should be below coupon fee")
     if COUPON_PLATFORM_FEE_PERCENT >= BASE_PLATFORM_FEE_PERCENT:
-        failures.append("coupon fee should be below base fee")
+        failures.append("coupon fee should be below base ebook fee")
 
     if failures:
         print("FAILURES:")

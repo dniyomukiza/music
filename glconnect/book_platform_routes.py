@@ -7732,7 +7732,7 @@ def stripe_webhook():
                                         db.session.add(purchase)
                                         db.session.flush()
                                         
-                                        # Revenue sharing: 90% author / 10% platform on list price; extras to author
+                                        # Revenue sharing: 90% ebook/print, 70% audiobook, 80% bundles (2+); extras to author
                                         base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                                             book, 'digital', actual_amount
                                         )
