@@ -206,14 +206,14 @@ def base_price_for_format(book: Any, purchase_format: str) -> float:
     if pt == "bundle":
         digital = float(getattr(book, "price", None) or 0)
         audio = float(getattr(book, "audiobook_price", None) or 0)
-        return (digital + audio) * 0.8
+        return digital + audio
     if pt == "print":
         return float(getattr(book, "print_price", None) or 0)
     return float(getattr(book, "price", None) or 0)
 
 
 def combo_base_price(book: Any, formats: Iterable[str]) -> float:
-    """Subtotal for selected formats (bundle discount when ebook + audiobook both chosen)."""
+    """Subtotal for selected formats (ebook + audiobook use their combined prices)."""
     fmts = parse_selected_formats(formats)
     total = 0.0
     has_digital = "digital" in fmts

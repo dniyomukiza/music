@@ -75,9 +75,9 @@ def main():
     if abs(royalty - 23.0) > 0.01 or abs(platform - 2.0) > 0.01:
         failures.append(f'extra-to-author split wrong: royalty={royalty}, platform={platform}')
 
-    # bundle ebook+audio base = (20+15)*0.8 = 28; 80% author / 20% platform
-    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'bundle', 28.0)
-    if abs(base - 28.0) > 0.01 or abs(royalty - 22.4) > 0.05 or abs(platform - 5.6) > 0.05:
+    # bundle ebook+audio base = 20+15 = 35; 80% author / 20% platform
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'bundle', 35.0)
+    if abs(base - 35.0) > 0.01 or abs(royalty - 28.0) > 0.05 or abs(platform - 7.0) > 0.05:
         failures.append(f'bundle split wrong: base={base}, royalty={royalty}, platform={platform}, fee={fee_pct}')
     if abs(fee_pct - 20.0) > 0.01:
         failures.append(f'bundle fee pct should be 20, got {fee_pct}')

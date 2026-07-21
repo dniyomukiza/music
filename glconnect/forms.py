@@ -31,7 +31,7 @@ class RegistrationForm(FlaskForm):
     username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Username"})
     password = StringField(validators=[DataRequired(), Length(min=2, max=20)], render_kw={"placeholder": "Password"})
     email = StringField('Email', validators=[DataRequired(), Email()], render_kw={"placeholder": "Email"})
-    role = SelectField('Role', choices=[('artist', 'Artist'), ('author', 'Author'), ('blogger', 'Blogger'), ('podcaster', 'Podcaster'), ('freelancer', 'Freelancer'), ('other', 'Other')], default='other')
+    role = SelectField('Role', choices=[('artist', 'Artist'), ('author', 'Author'), ('blogger', 'Blogger'), ('other', 'Other')], default='other')
     submit = SubmitField('Sign up')
     recap=RecaptchaField()
 
@@ -169,6 +169,7 @@ class DigitalBookUploadForm(FlaskForm):
     )
     digital_book_file = FileField('Digital Book File', validators=[
         Optional(),
+        FileSize(max_size_mb=500, message='The book file must be 500 MB or smaller.'),
         FileAllowed(
             ['epub', 'docx', 'txt', 'pdf'],
             'Use EPUB, DOCX, or TXT for the best in app reading experience. PDF is accepted for download but often does not reflow well in the browser reader.',
@@ -176,6 +177,7 @@ class DigitalBookUploadForm(FlaskForm):
     ])
     cover_image = FileField('Cover Image', validators=[
         Optional(),
+        FileSize(max_size_mb=10, message='The cover image must be 10 MB or smaller.'),
         FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Cover must be JPG, PNG, GIF, or WebP.')
     ])
     use_ai_cover = BooleanField('Generate cover with AI')

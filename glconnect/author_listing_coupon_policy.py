@@ -154,7 +154,7 @@ def _format_base_portions(book: Any, formats: List[str]) -> Dict[str, float]:
     has_print = "print" in fmts
 
     if has_digital and has_audio:
-        bundle_total = (d + a) * 0.8
+        bundle_total = d + a
         if d + a > 0:
             portions["digital"] = bundle_total * (d / (d + a))
             portions["audiobook"] = bundle_total * (a / (d + a))

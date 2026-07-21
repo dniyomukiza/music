@@ -13,6 +13,7 @@ from flask_ckeditor import CKEditor,upload_success, upload_fail
 import google.generativeai as genai
 from sqlalchemy import inspect, func
 import logging
+from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -33,10 +34,9 @@ creditor = CKEditor()
 @blog.route("/blogpost",methods=['GET','POST'])
 @login_required
 def blogpost():
-    """Create a blog post - bloggers and freelancers can create stories"""
-    # Only bloggers and freelancers can create stories
-    if current_user.role not in ['blogger', 'freelancer']:
-        flash('Only users with blogger or freelancer role can create stories. Please contact admin to change your role.', 'error')
+    """Create a blog post - bloggers can create stories."""
+    if current_user.role != 'blogger':
+        flash('Only users with the blogger role can create stories.', 'error')
         return redirect(url_for('blog.blogs'))
     
     #log_web_visit()
@@ -410,7 +410,7 @@ def update2(post_id):
         form.country.data = post.country or ''
     return render_template("blogpost.html", title="Update Post", form=form, legend="Update your blog")
 
-@blog.route("/post/<int:post_id>/delete", methods=['GET', 'POST'])
+@blog.route("/post/<int:post_id>/delete", methods=['POST'])
 @login_required
 def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
@@ -429,28 +429,33 @@ def files(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 @blog.route('/upload', methods=['POST'])
+@login_required
 def upload():
     f = request.files.get('upload')
 
     if f:
         # Check file type (you can add more allowed extensions as needed)
         allowed_extensions = {'jpg', 'jpeg', 'png', 'gif',"docx"}
-        file_extension = f.filename.rsplit('.', 1)[-1].lower()
+        safe_original_name = secure_filename(f.filename or '')
+        file_extension = safe_original_name.rsplit('.', 1)[-1].lower() if '.' in safe_original_name else ''
 
         if file_extension not in allowed_extensions:
             return upload_fail(message='Invalid file type. Only image files are allowed.')
 
-        # Define file path
-        file_path = os.path.join(UPLOAD_FOLDER, f.filename)
+        # Never use a client-provided path or filename on disk. Random names
+        # prevent traversal and overwriting another user's upload.
+        stored_name = f"{uuid.uuid4().hex}.{file_extension}"
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        file_path = os.path.join(UPLOAD_FOLDER, stored_name)
 
         # Save the file
         f.save(file_path)
 
         # Generate URL for the uploaded file
-        url = url_for('blog.files', filename=f.filename)
+        url = url_for('blog.files', filename=stored_name)
 
         # Return the success response
-        return upload_success(url, filename=f.filename) 
+        return upload_success(url, filename=stored_name)
     
     return upload_fail(message='No file uploaded', filename=None)
 

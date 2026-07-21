@@ -89,6 +89,11 @@ _POLICY_PAGES = {
         'eyebrow': 'Publishing responsibly',
         'description': 'The rights authors need and how we handle credible complaints.',
     },
+    'dmca': {
+        'title': 'DMCA & Copyright Policy',
+        'eyebrow': 'Notice and takedown',
+        'description': 'How to submit a copyright notice, counter-notice, and our repeat-infringer rules.',
+    },
     'ai': {
         'title': 'AI Use Policy',
         'eyebrow': 'Optional creator tools',

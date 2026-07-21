@@ -57,15 +57,15 @@ def main():
     if abs(platform - 0.75) > 0.01:
         failures.append(f"discounted audiobook platform fee should be 0.75, got {platform}")
 
-    # Bundle of 2+: flat 20% platform / 80% author on combo base (28)
-    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book_disc, "bundle", 28.0)
-    expected_platform = 28.0 * 0.20
+    # Bundle of 2+: flat 20% platform / 80% author on combined base (35)
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book_disc, "bundle", 35.0)
+    expected_platform = 35.0 * 0.20
     if abs(platform - expected_platform) > 0.05 or abs(fee_pct - 20.0) > 0.01:
         failures.append(f"bundle platform fee wrong: {platform} (fee={fee_pct}) vs {expected_platform}")
 
     portions = _format_base_portions(book_std, ["digital", "audiobook"])
-    if abs(sum(portions.values()) - 28.0) > 0.01:
-        failures.append(f"bundle portions should sum to 28, got {portions}")
+    if abs(sum(portions.values()) - 35.0) > 0.01:
+        failures.append(f"bundle portions should sum to 35, got {portions}")
 
     if MIN_PLATFORM_FEE_PERCENT >= COUPON_PLATFORM_FEE_PERCENT:
         failures.append("min fee should be below coupon fee")

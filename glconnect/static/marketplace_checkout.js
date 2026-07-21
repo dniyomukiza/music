@@ -55,10 +55,10 @@
         if (hasDigital && hasAudio) {
             var bundleBase = Number(opts.digital || 0) + Number(opts.audiobook || 0);
             var bundlePrice = bundleBase * 0.8;
-            lines.push({ label: 'Ebook + Audiobook bundle', amount: bundlePrice, note: 'Save 20%' });
+            lines.push({ label: 'Ebook + AI-narrated audiobook bundle', amount: bundlePrice, note: 'Save 20%' });
         } else {
             if (hasDigital) lines.push({ label: 'Ebook', amount: Number(opts.digital || 0) });
-            if (hasAudio) lines.push({ label: 'Audiobook', amount: Number(opts.audiobook || 0) });
+            if (hasAudio) lines.push({ label: 'AI-narrated audiobook', amount: Number(opts.audiobook || 0) });
         }
         if (fmts.indexOf('print') >= 0) {
             lines.push({ label: 'Print edition', amount: Number(opts.print_price || 0) });
@@ -118,8 +118,20 @@
         if (summaryWrap) summaryWrap.classList.toggle('d-none', !hasPaidSelection);
         if (totalEl) totalEl.textContent = money(total);
         checkoutBtn.classList.toggle('d-none', !state.hasPaidFormats);
+
+        var waiverWrap = document.getElementById('bookDetailsDigitalWaiver');
+        var waiverCheck = document.getElementById('bookDetailsDigitalWaiverCheck');
+        var needsDigitalWaiver = hasPaidSelection && selected.some(function (f) {
+            return f === 'digital' || f === 'audiobook';
+        });
+        if (waiverWrap) {
+            waiverWrap.classList.toggle('d-none', !needsDigitalWaiver);
+            if (!needsDigitalWaiver && waiverCheck) waiverCheck.checked = false;
+        }
+        var waiverOk = !needsDigitalWaiver || (waiverCheck && waiverCheck.checked);
+
         if (!checkoutInFlight) {
-            checkoutBtn.disabled = !hasPaidSelection;
+            checkoutBtn.disabled = !hasPaidSelection || !waiverOk;
         }
 
         if (linesEl && hasPaidSelection) {
@@ -161,7 +173,7 @@
         if (flags.hasPaidAudio) {
             var audioChecked = flags.defaultFormats.indexOf('audiobook') >= 0 && flags.defaultFormats.indexOf('digital') < 0 ? ' checked' : '';
             html += formatCard('bdfAudiobook', 'audiobook', audioChecked,
-                'Audiobook',
+                'AI-narrated audiobook',
                 money(opts.audiobook),
                 'Stream or download after purchase');
         }
@@ -234,6 +246,21 @@
             requestBody.purchase_type = 'combo:' + selectedFormats.slice().sort().join(',');
         }
         requestBody.custom_amount = total;
+        var waiverCheck = document.getElementById('bookDetailsDigitalWaiverCheck');
+        var needsDigitalWaiver = selectedFormats.some(function (f) {
+            return f === 'digital' || f === 'audiobook';
+        });
+        if (needsDigitalWaiver) {
+            if (!waiverCheck || !waiverCheck.checked) {
+                setCheckoutLoading(false);
+                setCheckoutStatus(
+                    'Please confirm immediate digital delivery and the withdrawal waiver for ebook/audiobook items.',
+                    'warning'
+                );
+                return;
+            }
+            requestBody.digital_delivery_waiver = true;
+        }
 
         fetch('/mybook/books/' + bookId + '/purchase', {
             method: 'POST',
@@ -368,7 +395,7 @@
                 } else {
                     var formatLines = [];
                     if (fmtDigital) formatLines.push('<li>Ebook' + (priceDigital === 0 ? ' — Free' : '') + '</li>');
-                    if (fmtAudio) formatLines.push('<li>Audiobook' + (priceAudio === 0 ? ' — Free' : '') + '</li>');
+                    if (fmtAudio) formatLines.push('<li>AI-narrated audiobook' + (priceAudio === 0 ? ' — Free' : '') + '</li>');
                     if (fmtPrint && pricePrint > 0) formatLines.push('<li>Print — ' + money(pricePrint) + '</li>');
                     if (!formatLines.length) formatLines.push('<li class="text-muted">See listing for availability.</li>');
                     pickerHtml = '<div class="mt-4 pt-3 border-top"><p class="small text-muted mb-1"><strong>Formats</strong></p><ul class="small mb-0">' + formatLines.join('') + '</ul></div>';
@@ -385,7 +412,7 @@
                     '<div class="d-flex flex-wrap gap-1 mb-3">' +
                     (b.genre ? '<span class="badge bg-primary">' + escapeHtml(b.genre) + '</span>' : '') +
                     (fmtDigital ? '<span class="badge bg-success-subtle text-success border">Ebook</span>' : '') +
-                    (fmtAudio ? '<span class="badge bg-info-subtle text-info border">Audiobook</span>' : '') +
+                    (fmtAudio ? '<span class="badge bg-info-subtle text-info border">AI-narrated audiobook</span>' : '') +
                     (fmtPrint ? '<span class="badge bg-warning-subtle text-warning border">Print</span>' : '') +
                     '<span class="badge bg-secondary">' + escapeHtml(b.language_label || b.language || '') + '</span>' +
                     (b.word_count ? '<span class="badge bg-light border text-muted">' + b.word_count.toLocaleString() + ' words</span>' : '') +
@@ -450,6 +477,10 @@
     window.viewBook = viewBook;
 
     document.addEventListener('DOMContentLoaded', function () {
+        var waiverCheck = document.getElementById('bookDetailsDigitalWaiverCheck');
+        if (waiverCheck) {
+            waiverCheck.addEventListener('change', syncBookDetailsCheckoutUi);
+        }
         try {
             var params = new URLSearchParams(window.location.search);
             var ob = params.get('open_book');

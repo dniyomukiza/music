@@ -148,6 +148,9 @@ from glconnect.stripe_utils import (
     checkout_ready_author_connect_id,
     print_checkout_shipping_kw,
     create_marketplace_checkout_session,
+    apply_stripe_tax_to_checkout_kw,
+    marketplace_requires_author_connect,
+    stripe_tax_enabled,
     stripe_checkout_custom_field_values,
     merge_print_shipping_line2,
 )
@@ -726,8 +729,7 @@ def ink_studio_show_author_nav_links():
     """My Books / Payout account in shared nav — authors who publish, not buyers."""
     if not current_user.is_authenticated:
         return False
-    excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
-    if current_user.role in excluded_roles:
+    if current_user.role not in ('author', 'admin'):
         return False
     user_profile, profile_type = get_user_profile()
     if profile_type not in ('writer', 'book_platform') or not user_profile:
@@ -2187,6 +2189,12 @@ def edit_book(book_id):
             else:
                 data = request.form.to_dict()
 
+            title = str(data.get('title') or '').strip()
+            if not title:
+                return jsonify({'success': False, 'error': 'Give the book a title before saving.'}), 400
+            if len(title) > 255:
+                return jsonify({'success': False, 'error': 'Book titles must be 255 characters or fewer.'}), 400
+
             listing_flow_requested = str(data.get('listing_flow') or '').strip().lower() in (
                 '1', 'true', 'yes', 'on'
             )
@@ -2207,7 +2215,7 @@ def edit_book(book_id):
             logger.debug(f"Edit book {book_id} - is_published value: {data.get('is_published', 'NOT PRESENT')}")
             
             # Update book fields
-            book.title = data['title']
+            book.title = title
             raw_description = data.get('description', '')
             try:
                 book.description = sanitize_project_description(raw_description, book_id=book_id)
@@ -2569,17 +2577,42 @@ def create_chapter(book_id, user_profile, profile_type):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
+
+            title = str(data.get('title') or '').strip()
+            if not title:
+                return jsonify({'success': False, 'error': 'Give this section a title before saving.'}), 400
+            if len(title) > 255:
+                return jsonify({'success': False, 'error': 'Section titles must be 255 characters or fewer.'}), 400
             
             # Get next chapter number
             last_chapter = BookChapter.query.filter_by(book_project_id=book_id).order_by(BookChapter.chapter_number.desc()).first()
             next_number = (last_chapter.chapter_number + 1) if last_chapter else 1
             
             # Use provided chapter number or calculate next
-            chapter_number = int(data.get('chapter_number', next_number))
+            try:
+                chapter_number = int(data.get('chapter_number', next_number))
+            except (TypeError, ValueError):
+                return jsonify({'success': False, 'error': 'Reading order must be a whole number.'}), 400
+            if chapter_number < 1:
+                return jsonify({'success': False, 'error': 'Reading order must start at 1.'}), 400
+            if BookChapter.query.filter_by(
+                book_project_id=book_id, chapter_number=chapter_number
+            ).first():
+                return jsonify({'success': False, 'error': 'That reading order is already in use. Choose another number.'}), 409
             
             # Calculate word count from content (strip HTML tags)
             content = data.get('content', '')
             word_count = count_words_from_html(content) if content else 0
+
+            raw_target = data.get('word_count_target')
+            word_count_target = None
+            if raw_target not in (None, ''):
+                try:
+                    word_count_target = int(raw_target)
+                except (TypeError, ValueError):
+                    return jsonify({'success': False, 'error': 'The word-count target must be a whole number.'}), 400
+                if word_count_target < 1:
+                    return jsonify({'success': False, 'error': 'The word-count target must be positive.'}), 400
             
             from glconnect.book_utils import normalize_section_kind_input
 
@@ -2588,13 +2621,13 @@ def create_chapter(book_id, user_profile, profile_type):
                 is_published = data.get('is_published') == 'on' or data.get('is_published') is True
 
             chapter = BookChapter(
-                title=data['title'],
+                title=title,
                 content=content,
                 summary=data.get('summary', ''),
                 chapter_number=chapter_number,
                 section_kind=normalize_section_kind_input(data.get('section_kind'), data['title']),
                 word_count=word_count,
-                word_count_target=int(data.get('word_count_target', 0)) if data.get('word_count_target') else None,
+                word_count_target=word_count_target,
                 book_project_id=book_id,
                 is_published=is_published,
             )
@@ -2685,6 +2718,12 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             else:
                 data = request.form.to_dict()
 
+            title = str(data.get('title') or '').strip()
+            if not title:
+                return jsonify({'success': False, 'error': 'Give this section a title before saving.'}), 400
+            if len(title) > 255:
+                return jsonify({'success': False, 'error': 'Section titles must be 255 characters or fewer.'}), 400
+
             merge_suggestion_id = data.get('merge_suggestion_id')
             if merge_suggestion_id:
                 try:
@@ -2717,7 +2756,7 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 snapshot_chapter(chapter, actor_id, change_source='author_edit')
             
             # Update chapter fields
-            chapter.title = data.get('title', chapter.title)
+            chapter.title = title
             chapter.content = data.get('content', chapter.content)
             chapter.summary = data.get('summary', chapter.summary)
             from glconnect.book_utils import normalize_section_kind_input
@@ -2731,8 +2770,10 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             if word_count_target and word_count_target.strip():
                 try:
                     chapter.word_count_target = int(word_count_target)
+                    if chapter.word_count_target < 1:
+                        raise ValueError
                 except (ValueError, TypeError):
-                    chapter.word_count_target = None
+                    return jsonify({'success': False, 'error': 'The word-count target must be a positive whole number.'}), 400
             else:
                 chapter.word_count_target = None
             
@@ -2782,15 +2823,10 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             error_msg = str(e)
             logging.error(f"Chapter update error: {error_msg}", exc_info=True)
             print(f"Chapter update error: {error_msg}")
-            print(f"Error type: {type(e)}")
-            try:
-                print(f"Data received: {data}")
-            except:
-                print("Data not available in error handler")
             if request.is_json:
-                return jsonify({'success': False, 'error': f'An unexpected error occurred: {error_msg}'}), 500
+                return jsonify({'success': False, 'error': 'We could not save this section. Please try again.'}), 500
             else:
-                flash(f'An unexpected error occurred while editing section: {error_msg}', 'error')
+                flash('We could not save this section. Please try again.', 'error')
     
     # GET request - show edit form
     can_restore_versions = access["is_book_author"]
@@ -2993,6 +3029,29 @@ def delete_book(book_id):
                 return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
             if book.author_id != author_id:
                 return jsonify({'error': 'You can only delete your own books'}), 403
+
+        # Financial history is an accounting record, not disposable content.
+        # Archive and unlist a sold/funded title instead of deleting purchases,
+        # refunds, payouts, or buyer entitlements.
+        has_financial_history = bool(
+            BookPurchase.query.filter_by(book_project_id=book_id).first()
+            or BookSale.query.filter_by(book_project_id=book_id).first()
+            or InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
+            or BookPrintOrder.query.filter_by(book_project_id=book_id).first()
+        )
+        from glconnect.data_lifecycle import is_live_data_mode
+        if has_financial_history and is_live_data_mode():
+            book.status = BookStatus.ARCHIVED
+            book.digital_book_published = False
+            book.audiobook_published = False
+            book.print_enabled = False
+            book.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'archived': True,
+                'message': 'This title was archived and unlisted to preserve purchase and payment history.',
+            }), 200
 
         # Clean up related data in proper order to avoid foreign key constraints
         
@@ -4741,6 +4800,18 @@ def publish_book(book_id):
     if attestation_error:
         return jsonify({'error': attestation_error}), 400
 
+    # Platform-authored manuscripts must contain publishable content. Uploaded
+    # digital editions do not use chapter rows, so they remain eligible here.
+    if not book.digital_file_path:
+        manuscript_chapters = BookChapter.query.filter_by(book_project_id=book.id).all()
+        if not manuscript_chapters:
+            return jsonify({'error': 'Add at least one section before publishing this manuscript.'}), 400
+        if not any(
+            (chapter.title or '').strip() and count_words_from_html(chapter.content or '') > 0
+            for chapter in manuscript_chapters
+        ):
+            return jsonify({'error': 'Add a titled section with content before publishing this manuscript.'}), 400
+
     # Validate book is ready for publishing
     if book.price is None or book.price < 0:
         return jsonify({'error': 'Please set a price before publishing'}), 400
@@ -4873,11 +4944,28 @@ def add_print_edition(book_id, user_profile, profile_type):
         try:
             print_shipping = max(0.0, float(request.form.get('print_shipping_price') or 5))
         except (TypeError, ValueError):
-            print_shipping = 5.0
+            flash('Enter a valid shipping price.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html', book=book,
+                cover_url=_marketplace_cover_url(book), needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn, **agreement_context_for_templates(),
+            )
         try:
-            print_handling = max(1, min(60, int(request.form.get('print_handling_days') or 7)))
+            print_handling = int(request.form.get('print_handling_days') or 7)
         except (TypeError, ValueError):
-            print_handling = 7
+            flash('Enter a valid handling time in business days.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html', book=book,
+                cover_url=_marketplace_cover_url(book), needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn, **agreement_context_for_templates(),
+            )
+        if print_handling < 1 or print_handling > 60:
+            flash('Handling time must be between 1 and 60 business days.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html', book=book,
+                cover_url=_marketplace_cover_url(book), needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn, **agreement_context_for_templates(),
+            )
         print_description = (request.form.get('print_description') or '').strip() or None
 
         coupon_err = try_redeem_coupon_from_form(book, LISTING_FORMAT_PRINT, request.form)
@@ -5024,6 +5112,8 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
     order = BookPrintOrder.query.filter_by(id=order_id, book_project_id=book_id).first_or_404()
     if order.status != PrintOrderStatus.PENDING_FULFILLMENT:
         return jsonify({'success': False, 'error': 'Order is not awaiting shipment'}), 400
+    if not order.purchase or order.purchase.status != TransactionStatus.COMPLETED:
+        return jsonify({'success': False, 'error': 'Payment is not confirmed for this order yet.'}), 409
     data = request.get_json(silent=True) or {}
     tracking = (data.get('tracking_number') or request.form.get('tracking_number') or '').strip()
     carrier = (data.get('shipping_carrier') or request.form.get('shipping_carrier') or '').strip()
@@ -5054,6 +5144,37 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
         'success': True,
         'message': 'Marked as shipped.' + (f' Tracking: {tracking}' if tracking else ''),
     })
+
+
+@book_bp.route('/print-orders/<int:order_id>/received', methods=['POST'])
+@login_required
+def mark_print_order_received(order_id):
+    """Let the buyer close a shipped print order without deleting its history."""
+    order = BookPrintOrder.query.get_or_404(order_id)
+    purchase = order.purchase
+    if not purchase or purchase.status != TransactionStatus.COMPLETED:
+        if not request.is_json:
+            flash('This order is not a completed purchase.', 'warning')
+            return redirect(url_for('book_platform.my_library'))
+        return jsonify({'success': False, 'error': 'This order is not a completed purchase.'}), 409
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    owns_order = purchase.buyer_user_id == current_user.user_id or (
+        bp_user and purchase.buyer_id == bp_user.id
+    )
+    if not owns_order:
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    if order.status != PrintOrderStatus.SHIPPED:
+        if not request.is_json:
+            flash('Only shipped orders can be marked delivered.', 'warning')
+            return redirect(url_for('book_platform.my_library'))
+        return jsonify({'success': False, 'error': 'Only shipped orders can be marked delivered.'}), 409
+    order.status = PrintOrderStatus.COMPLETED
+    order.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    if not request.is_json:
+        flash('Print order marked as delivered.', 'success')
+        return redirect(url_for('book_platform.my_library'))
+    return jsonify({'success': True, 'message': 'Order marked as delivered.'})
 
 
 @book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
@@ -5744,6 +5865,20 @@ def purchase_book(book_id):
             return jsonify({'error': fmt_err}), 400
 
         purchase_type = purchase_format_key(selected_formats)
+
+        # EU digital-content withdrawal waiver (required for immediate digital delivery).
+        digital_formats = [f for f in selected_formats if f in ("digital", "audiobook")]
+        if digital_formats and not (
+            request_data.get("digital_delivery_waiver")
+            in (True, "true", "1", "on", "yes")
+        ):
+            return jsonify({
+                "error": (
+                    "Please confirm immediate digital delivery and that you waive the "
+                    "14-day withdrawal right for the digital format(s) in this order."
+                ),
+                "error_code": "digital_delivery_waiver_required",
+            }), 400
         
         buyer_user_id = current_user.user_id if current_user.is_authenticated else None
         if not buyer_user_id:
@@ -5841,6 +5976,15 @@ def purchase_book(book_id):
                     "author_payout_setup_needed": True,
                 },
             )
+        # Production: refuse paid checkout unless author Connect is ready (no platform float).
+        if marketplace_requires_author_connect() and not author_connect_id and payment_amount > 0:
+            return jsonify({
+                "error": (
+                    "This title is not ready for paid checkout. The author must finish "
+                    "Stripe Connect payout setup before sales can be accepted."
+                ),
+                "error_code": "author_payout_setup_required",
+            }), 400
         payment_intent_data, connect_checkout_error = marketplace_book_payment_intent_data(
             book=book,
             purchase_type=purchase_type,
@@ -6444,6 +6588,7 @@ def purchase_book(book_id):
                     checkout_kw['payment_intent_data'] = payment_intent_data
                     if author_connect_id:
                         checkout_kw['stripe_account'] = author_connect_id
+                checkout_kw = apply_stripe_tax_to_checkout_kw(checkout_kw)
                 checkout_session = create_marketplace_checkout_session(
                     checkout_kw,
                     purchase_type=purchase_type,
@@ -6530,7 +6675,6 @@ def purchase_book(book_id):
         logger.error(f"Purchase failed for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
         
         # Convert technical errors to user-friendly messages
-        # TEMPORARILY: Always include error details for debugging
         user_friendly_error = "We encountered an issue processing your purchase. Please try again or contact support if the problem persists."
         
         # Check if we're in debug/development mode - include more details for debugging
@@ -6539,24 +6683,18 @@ def purchase_book(book_id):
         except Exception:
             is_debug = False
         
-        # TEMPORARILY: Always show error details for debugging
-        is_debug = True  # Force debug mode to see actual errors
-        
         # Check for specific error types and provide better messages
         if 'psycopg2' in error_msg.lower() or 'database' in error_msg.lower() or 'sql' in error_msg.lower():
             user_friendly_error = "A database error occurred. Our team has been notified. Please try again in a moment."
-            if is_debug:
-                user_friendly_error += f" (Debug: {error_msg[:200]})"
         elif 'enum' in error_msg.lower() or 'transactionstatus' in error_msg.lower():
             user_friendly_error = "There was an issue with the purchase status. Please try again."
-            if is_debug:
-                user_friendly_error += f" (Debug: {error_msg[:200]})"
         elif 'not found' in error_msg.lower() or '404' in error_msg.lower():
             user_friendly_error = "The book you're trying to purchase could not be found."
         elif 'permission' in error_msg.lower() or 'unauthorized' in error_msg.lower():
             user_friendly_error = "You don't have permission to perform this action."
-        elif is_debug:
-            # In debug mode, include the actual error message
+        elif is_debug and _purchase_app.config.get('TESTING'):
+            # Test responses may include a short diagnostic without exposing it
+            # in normal development or production browser responses.
             user_friendly_error = f"We encountered an issue: {error_msg[:300]}"
         
         
@@ -7006,23 +7144,26 @@ def purchase_success():
 
         # If purchase found, ensure it's COMPLETED and has BookSale
         if purchase:
-            # Purchase exists - ensure it's COMPLETED
+            # The browser return URL is not proof of payment. Only the signed
+            # Stripe webhook may grant an entitlement or create a completed
+            # sale. This prevents a buyer from completing a pending order by
+            # manually visiting this URL.
+            if purchase.status == TransactionStatus.PENDING:
+                flash(
+                    'Payment is still being confirmed. Your library will update automatically once Stripe confirms it. '
+                    'If you were charged, please refresh in a moment.',
+                    'info',
+                )
+                return redirect(url_for('book_platform.my_library'))
+            if purchase.status != TransactionStatus.COMPLETED:
+                flash('This payment was not completed, so no access was granted.', 'warning')
+                return redirect(url_for('book_platform.marketplace'))
+
+            # Purchase already confirmed by the signed webhook.
             book = BookProject.query.get_or_404(purchase.book_project_id)
-            was_pending = purchase.status == TransactionStatus.PENDING
-            purchase.status = TransactionStatus.COMPLETED
             purchase.purchased_at = purchase.purchased_at or datetime.now(timezone.utc)
             purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
             purchase.payment_method = purchase.payment_method or 'stripe'
-            
-            # If purchase was PENDING and is now COMPLETED, update the sale status
-            if was_pending:
-                pending_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
-                if pending_sale:
-                    pending_sale.status = TransactionStatus.COMPLETED
-                    pending_sale.paid_at = datetime.now(timezone.utc)
-                    db.session.commit()
-                    logger.info(f"✅ Updated sale {pending_sale.id} to COMPLETED for purchase {purchase.id}")
-                    notify_receipt = True
         elif buyer_user_id is not None:
             # No purchase found - create new one (fallback, signed-in only)
             book = BookProject.query.get_or_404(book_id)
@@ -7503,6 +7644,27 @@ def stripe_webhook():
             return True
         
         # Handle the event
+        if event['type'] in ('account.deleted', 'account.application.deauthorized'):
+            event_object = (event.get('data') or {}).get('object') or {}
+            deleted_account_id = (
+                event_object.get('id')
+                or event.get('account')
+            )
+            if deleted_account_id:
+                stale_profiles = BookPlatformUser.query.filter_by(
+                    stripe_connect_account_id=deleted_account_id
+                ).all()
+                for stale_profile in stale_profiles:
+                    stale_profile.stripe_connect_account_id = None
+                if stale_profiles:
+                    db.session.commit()
+                    logger.info(
+                        "Cleared deleted Stripe Connect account %s from %d local profile(s)",
+                        deleted_account_id,
+                        len(stale_profiles),
+                    )
+            return jsonify({'received': True})
+
         if event['type'] == 'payment_intent.succeeded':
             # Handle payment_intent.succeeded event (for direct Payment Intents)
             payment_intent = event['data']['object']
@@ -7552,25 +7714,9 @@ def stripe_webhook():
                     except (ValueError, TypeError):
                         pass
                 
-                # If still no purchase, try to find by amount and email
-                if not purchase and customer_email and amount_total:
-                    user = User.query.filter_by(email=customer_email).first()
-                    if user:
-                        buyer_user_id = user.user_id
-                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                        buyer_id = bp_user.id if bp_user else None
-                        
-                        purchase = BookPurchase.query.filter(
-                            db.or_(
-                                BookPurchase.buyer_user_id == buyer_user_id,
-                                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-                            ),
-                            BookPurchase.status == TransactionStatus.PENDING,
-                            db.func.abs(BookPurchase.amount - amount_total) < 0.01
-                        ).order_by(BookPurchase.created_at.desc()).first()
-                        
-                        if purchase:
-                            logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
+                # Never recover by amount/email alone: two simultaneous orders
+                # can have the same amount and would otherwise receive the
+                # wrong entitlement. Checkout metadata is the authoritative key.
                 
                 # Complete the purchase if found
                 if purchase:
@@ -7745,27 +7891,9 @@ def stripe_webhook():
                         except (ValueError, TypeError):
                             pass
                     
-                    # If still no purchase, try to find by amount and email (fallback for missing book_id)
-                    if not purchase and customer_email and amount_total:
-                        user = User.query.filter_by(email=customer_email).first()
-                        if user:
-                            buyer_user_id = user.user_id
-                            bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                            buyer_id = bp_user.id if bp_user else None
-                            
-                            # Find PENDING purchase matching amount (within $0.01 tolerance)
-                            purchase = BookPurchase.query.filter(
-                                db.or_(
-                                    BookPurchase.buyer_user_id == buyer_user_id,
-                                    (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-                                ),
-                                BookPurchase.status == TransactionStatus.PENDING,
-                                db.func.abs(BookPurchase.amount - amount_total) < 0.01
-                            ).order_by(BookPurchase.created_at.desc()).first()
-                            
-                            if purchase:
-                                logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
-                                book_id = purchase.book_project_id
+                    # Do not match a payment to an order using amount/email;
+                    # missing metadata requires manual reconciliation instead
+                    # of risking delivery to the wrong buyer.
                     
                     # Complete the purchase if found
                     if purchase:
@@ -8347,6 +8475,16 @@ def upload_digital_book():
         )
         wants_ebook = _listing_wants_ebook(listing_format)
         wants_print = _listing_wants_print(listing_format)
+        created_upload_paths = []
+
+        def _cleanup_created_uploads():
+            for upload_path in created_upload_paths:
+                try:
+                    if upload_path and os.path.isfile(upload_path):
+                        os.remove(upload_path)
+                except OSError:
+                    logger.warning('Could not clean up failed upload file %s', upload_path)
+
         try:
             logger.info("Starting book listing upload (format=%s)", listing_format)
             
@@ -8400,13 +8538,25 @@ def upload_digital_book():
                         listing_format=listing_format,
                     )
                 try:
-                    print_shipping = max(0.0, float(request.form.get('print_shipping_price') or 5))
+                    print_shipping = float(request.form.get('print_shipping_price') or 5)
                 except (TypeError, ValueError):
-                    print_shipping = 5.0
+                    return _upload_digital_book_error(
+                        form, 'Enter a valid print shipping price.', listing_format=listing_format
+                    )
                 try:
-                    print_handling = max(1, min(60, int(request.form.get('print_handling_days') or 7)))
+                    print_handling = int(request.form.get('print_handling_days') or 7)
                 except (TypeError, ValueError):
-                    print_handling = 7
+                    return _upload_digital_book_error(
+                        form, 'Enter a valid print handling time in business days.', listing_format=listing_format
+                    )
+                if print_shipping < 0:
+                    return _upload_digital_book_error(
+                        form, 'Print shipping price cannot be negative.', listing_format=listing_format
+                    )
+                if print_handling < 1 or print_handling > 60:
+                    return _upload_digital_book_error(
+                        form, 'Print handling time must be between 1 and 60 business days.', listing_format=listing_format
+                    )
                 print_description = (request.form.get('print_description') or '').strip() or None
             
             digital_file = form.digital_book_file.data
@@ -8438,13 +8588,15 @@ def upload_digital_book():
                 unique_digital_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
                 digital_file_path = os.path.join(digital_books_dir, unique_digital_filename)
                 digital_file.save(digital_file_path)
+                created_upload_paths.append(digital_file_path)
                 file_stat = os.stat(digital_file_path)
                 file_type = ext.lower().lstrip('.')
                 extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
                 if not extraction_result['success']:
+                    _cleanup_created_uploads()
                     return _upload_digital_book_error(
                         form,
-                        f"Failed to extract text from file: {extraction_result['error']}",
+                        "We could not read this book file. Check that it is a valid EPUB, DOCX, TXT, or PDF and try again.",
                         listing_format=listing_format,
                     )
 
@@ -8456,25 +8608,21 @@ def upload_digital_book():
                 unique_cover_filename = f"{cover_name}_{uuid.uuid4().hex[:8]}{cover_ext}"
                 abs_cover = os.path.join(covers_dir, unique_cover_filename)
                 cover_image.save(abs_cover)
+                created_upload_paths.append(abs_cover)
                 cover_path = f"book_covers/{unique_cover_filename}"
             elif form.use_ai_cover.data:
                 cover_path = promote_listing_preview_to_cover()
-                if not cover_path:
-                    return _upload_digital_book_error(
-                        form,
-                        "Generate an AI cover preview and choose “Use this cover” before listing your book, "
-                        "or upload a cover image instead.",
-                        listing_format=listing_format,
-                    )
-            else:
+            if not cover_path:
+                _cleanup_created_uploads()
                 return _upload_digital_book_error(
                     form,
-                    "Please upload a cover image or choose Generate with AI and confirm a preview.",
+                    "Please upload a cover image or generate and accept an AI cover preview.",
                     listing_format=listing_format,
                 )
 
             primary_lang = (form.ebook_language.data or "en").lower().strip()
             if primary_lang not in TTS_BOOK_LANGUAGES:
+                _cleanup_created_uploads()
                 return _upload_digital_book_error(
                     form,
                     "Choose a supported language from the list.",
@@ -8484,12 +8632,14 @@ def upload_digital_book():
             digital_price = None
             if wants_ebook:
                 if form.digital_price.data is None:
+                    _cleanup_created_uploads()
                     return _upload_digital_book_error(
                         form,
                         "Set a digital ebook price before creating the listing.",
                         listing_format=listing_format,
                     )
                 if form.digital_price.data < 0:
+                    _cleanup_created_uploads()
                     return _upload_digital_book_error(
                         form,
                         "Price cannot be negative.",
@@ -8557,15 +8707,11 @@ def upload_digital_book():
             
         except Exception as e:
             db.session.rollback()
-            error_msg = f"Error uploading book: {str(e)}"
             logger.error(f"Error in upload_digital_book: {str(e)}", exc_info=True)
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            print(f"ERROR in upload_digital_book: {str(e)}")
-            traceback.print_exc()
+            _cleanup_created_uploads()
             return _upload_digital_book_error(
                 form,
-                error_msg,
+                "We could not import this book right now. Please try again. If the problem continues, contact support.",
                 500,
                 listing_format=_normalize_listing_format(
                     request.form.get('listing_format') or request.args.get('listing')
@@ -8599,6 +8745,9 @@ def upload_digital_book():
 @book_platform_required
 def debug_check_upload():
     """Debug endpoint to check upload status"""
+    # Debug metadata must never be available on a production deployment.
+    if not current_app.debug and os.getenv('FLASK_ENV', '').strip().lower() != 'development':
+        abort(404)
     from glconnect.book_platform_models import BookProject, BookPlatformUser
     
     user_profile, profile_type = get_user_profile()
@@ -8621,7 +8770,8 @@ def debug_check_upload():
             'status': str(book.status),
             'created_at': str(book.created_at),
             'has_digital_file': bool(book.digital_file_path),
-            'digital_file_path': book.digital_file_path
+            # Do not expose internal storage paths, even in local diagnostics.
+            'digital_file_present': bool(book.digital_file_path)
         })
     
     return jsonify(debug_info)
@@ -8830,7 +8980,8 @@ def _user_has_audiobook_access(book, user_id):
         BookPurchase.status == TransactionStatus.COMPLETED
     ).all()
     return any(
-        getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+        purchase_grants_format(getattr(p, 'purchase_format', 'digital'), 'audiobook')
+        for p in purchases
     )
 
 
@@ -9347,6 +9498,16 @@ def edit_campaign_project(campaign_id, user_profile, profile_type):
 
     if not author_id or book.author_id != author_id:
         flash('Only the author can edit this project.', 'error')
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
+
+    # A paid contribution makes the displayed campaign promise historical.
+    # Do not let an author silently rewrite it after patrons have committed.
+    committed_contribution = BookInvestment.query.filter(
+        BookInvestment.campaign_id == campaign_id,
+        BookInvestment.status.in_((InvestmentStatus.CONFIRMED, InvestmentStatus.ACTIVE)),
+    ).first()
+    if committed_contribution and request.method == 'POST':
+        flash('Campaign terms cannot be edited after a paid patron contribution.', 'error')
         return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
 
     form = EditCampaignProjectForm()
@@ -9966,6 +10127,30 @@ def contribute_to_campaign(campaign_id):
             return jsonify({'error': amount_error}), 400
         flash(amount_error, 'error')
         return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
+
+    # Enforce campaign-specific limits before creating a Stripe session.
+    campaign_min = float(campaign.minimum_investment or 0)
+    campaign_max = campaign.maximum_investment
+    if campaign_min and amount < campaign_min:
+        amount_error = f'Patron gift must be at least ${campaign_min:.2f}.'
+        if request_data:
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
+    if campaign_max is not None and amount > float(campaign_max):
+        amount_error = f'Patron gift cannot exceed ${float(campaign_max):.2f}.'
+        if request_data:
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
+
+    remaining_goal = max(0.0, float(campaign.funding_goal or 0) - float(campaign.current_funding or 0))
+    if remaining_goal <= 0 or amount > remaining_goal:
+        amount_error = 'This gift would exceed the campaign funding goal.'
+        if request_data:
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
     
     try:
         from glconnect.book_campaign_patronage import (
@@ -10412,13 +10597,21 @@ def request_author_sales_payout():
         return jsonify({'error': 'Author profile not found'}), 403
     
     # Available = total revenue - paid out
+    # Reserve both paid and already-requested amounts. Only completed and
+    # successfully distributed sales are withdrawable; pending/chargeback-
+    # exposed sales must not become an immediate payout liability.
     author_paid_out = sum(
-        r.amount for r in AuthorSalesPayoutRequest.query.filter_by(
-            author_id=author_id, status='PAID'
+        r.amount for r in AuthorSalesPayoutRequest.query.filter(
+            AuthorSalesPayoutRequest.author_id == author_id,
+            AuthorSalesPayoutRequest.status.in_(['PENDING', 'PAID']),
         ).all()
     )
     total_revenue = sum(
-        s.net_amount for s in BookSale.query.filter_by(seller_id=author_id).all()
+        s.net_amount for s in BookSale.query.filter(
+            BookSale.seller_id == author_id,
+            BookSale.status == TransactionStatus.COMPLETED,
+            BookSale.distribution_completed.is_(True),
+        ).all()
     )
     available = max(0, total_revenue - author_paid_out)
     
@@ -11736,6 +11929,7 @@ def news_redirect():
 @login_required
 def upload_podcast():
     """Upload a podcast episode for GLC Media promotion — max 30 minutes, requires admin approval."""
+    return jsonify({'error': 'Podcast submissions have been retired.'}), 410
     if request.method == 'GET':
         from glconnect.models import PodcastSubmission
         user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(

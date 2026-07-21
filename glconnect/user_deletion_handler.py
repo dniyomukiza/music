@@ -31,6 +31,29 @@ def delete_user_and_all_data(user_id, *, commit: bool = True):
             return {'success': False, 'message': f'User with ID {user_id} not found'}
         
         user_username = user.username
+
+        # Do not allow the convenience deletion helper to erase financial,
+        # tax, refund, payout, or buyer-entitlement evidence. A separate
+        # audited anonymization workflow is required for accounts with history.
+        from glconnect.data_lifecycle import is_live_data_mode
+        bp_user_check = BookPlatformUser.query.filter_by(user_id=user_id).first()
+        if bp_user_check and is_live_data_mode():
+            has_purchases = bool(BookPurchase.query.filter_by(buyer_id=bp_user_check.id).first())
+            has_sales = bool(BookSale.query.filter_by(seller_id=bp_user_check.id).first())
+            authored_book_ids = [
+                row[0] for row in db.session.query(BookProject.id)
+                .filter_by(author_id=bp_user_check.id).limit(1).all()
+            ]
+            if has_purchases or has_sales or authored_book_ids:
+                return {
+                    'success': False,
+                    'requires_anonymization': True,
+                    'message': (
+                        'Account deletion was not performed because this account has '
+                        'books or financial history. Use the audited anonymization workflow '
+                        'to remove personal data while preserving required records.'
+                    ),
+                }
         
         # 1. Delete Writer profile and associated books
         writers = Writer.query.filter_by(user_id=user_id).all()
@@ -194,4 +217,3 @@ def cleanup_book_files(book):
                 
     except Exception as e:
         print(f"Error deleting files for book {book.id}: {e}")
-

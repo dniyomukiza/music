@@ -97,7 +97,7 @@
                     </div>
                 </div>
                 <h3 class="h6 text-secondary mb-2">Recent sales</h3>
-                <p class="small text-muted mb-2">Buyer total is before any sales tax. Tax is collected from the buyer at checkout (when applicable) and is not deducted from your royalty.</p>
+                <p class="small text-muted mb-2">Buyer paid is the list price for the format (before any sales tax). When Stripe Tax is enabled, tax is collected from the buyer at checkout and is not deducted from your royalty. If tax is not enabled for a sale, the sales-tax column shows “—”.</p>
                 <div id="authorRecentSales">
                     {% if author_dashboard_stats and author_dashboard_stats.recent_sales %}
                     <div class="table-responsive">
@@ -122,7 +122,7 @@
                                     <td class="text-end">${{ "%.2f"|format(s.gross_amount) }}</td>
                                     <td class="text-end text-warning">${{ "%.2f"|format(s.platform_fee) }}</td>
                                     <td class="text-end text-success fw-semibold">${{ "%.2f"|format(s.net_amount) }}</td>
-                                    <td class="text-end text-muted small">, </td>
+                                    <td class="text-end text-muted small">—</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -167,7 +167,7 @@
                                 <td class="text-end text-warning">${{ "%.2f"|format(s.platform_fee) }}</td>
                                 <td class="text-end small text-muted">{{ "%.1f"|format(s.platform_fee_percent) }}%</td>
                                 <td class="text-end text-success fw-semibold">${{ "%.2f"|format(s.net_amount) }}</td>
-                                <td class="text-end text-muted small" title="Collected from buyer at checkout when applicable; not deducted from your royalty">, </td>
+                                <td class="text-end text-muted small" title="Tax collected only when Stripe Tax is enabled; never deducted from your royalty">—</td>
                                 <td class="text-end pe-3">
                                     <a href="{{ url_for('book_platform.book_sales_transparency', book_id=s.book_id) }}" class="small text-decoration-none">Details</a>
                                 </td>
@@ -181,13 +181,13 @@
                                 <th class="text-end text-warning">${{ "%.2f"|format(author_dashboard_stats.summary.total_platform_fees) }}</th>
                                 <th></th>
                                 <th class="text-end text-success">${{ "%.2f"|format(author_dashboard_stats.summary.author_earnings) }}</th>
-                                <th class="text-end text-muted">, </th>
+                                <th class="text-end text-muted">—</th>
                                 <th class="pe-3"></th>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-                <p class="small text-muted px-3 pb-3 mb-0">Platform fee applies to the list price for each format. Shipping and tips go to you in full. Sales tax (if charged) is paid by the buyer and handled by Stripe at checkout.</p>
+                <p class="small text-muted px-3 pb-3 mb-0">Platform fee applies to the list price for each format. Shipping and tips go to you in full. Sales tax is collected only when Stripe Tax is enabled; it is paid by the buyer and is not deducted from your royalty.</p>
             </div>
         </section>
         {% endif %}
@@ -427,7 +427,7 @@
                     '<td class="text-end text-warning">' + fmtMoney(s.platform_fee) + '</td>' +
                     feePctCell +
                     '<td class="text-end text-success fw-semibold">' + fmtMoney(s.net_amount) + '</td>' +
-                    '<td class="text-end text-muted small" title="Collected from buyer at checkout when applicable">, </td>' +
+                    '<td class="text-end text-muted small" title="Tax collected only when Stripe Tax is enabled">—</td>' +
                     (opts.detailLink ? detailLink : '') +
                     '</tr>';
             }

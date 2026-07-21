@@ -124,9 +124,10 @@ def _ink_is_author_account_impl(user_id: Optional[int] = None) -> bool:
         author_id = get_profile_id(user_profile, profile_type)
         if not author_id:
             return False
-        if user.role == "author":
-            return True
-        return BookProject.query.filter_by(author_id=author_id).count() > 0
+        # A legacy profile/book row must not silently promote a buyer or
+        # another role into the author workspace. Role assignment is the
+        # authoritative capability boundary.
+        return user.role in ("author", "admin")
 
     user_profile, profile_type = get_user_profile()
     if profile_type not in ("writer", "book_platform") or not user_profile:
@@ -134,9 +135,7 @@ def _ink_is_author_account_impl(user_id: Optional[int] = None) -> bool:
     author_id = get_profile_id(user_profile, profile_type)
     if not author_id:
         return False
-    if current_user.role == "author":
-        return True
-    return BookProject.query.filter_by(author_id=author_id).count() > 0
+    return current_user.role in ("author", "admin")
 
 
 def ink_show_author_workspace(user_id: Optional[int] = None) -> bool:

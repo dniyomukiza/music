@@ -194,13 +194,7 @@ def _load_config():
 
 config, STRIPE_TEST_KEYS_FROM_GLCONFIG = _load_config()
 
-# Startup diagnostic: trace why keys might be missing
-_cwd = os.getcwd()
-_env_after = bool(os.getenv("GOOGLE_API_KEY"))
-print(f"DEBUG: CWD={_cwd}")
-print(f"DEBUG: .env in CWD: {os.path.isfile(os.path.join(_cwd, '.env'))}")
-print(f"DEBUG: GOOGLE_API_KEY before load_dotenv: {'set' if _env_before else 'NOT SET (Docker did not inject)'}")
-print(f"DEBUG: GOOGLE_API_KEY after load_dotenv: {'set' if _env_after else 'NOT SET'}")
+# Never log environment contents, filesystem paths, or credential fragments at startup.
 
 # Push config into os.environ so modules that use os.getenv() get the values
 if config.get("GOOGLE_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
@@ -252,7 +246,7 @@ else:
 google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")
 print(f"GOOGLE_API_KEY: {'(set)' if google_api_key else '(not set)'}")
-print(f"GEMINI_API_KEY: {gemini_api_key[:20] + '...' if gemini_api_key else '(not set)'}")
+print(f"GEMINI_API_KEY: {'(set)' if gemini_api_key else '(not set)'}")
 print(f"GOOGLE_APPLICATION_CREDENTIALS: {config.get('GOOGLE_APPLICATION_CREDENTIALS', 'tts.json')}")
 
 # Initialize extensions
@@ -341,6 +335,18 @@ def create_app(config_overrides=None):
         # Book campaigns: patronage (no sale returns to funders). Set BOOK_CAMPAIGN_PATRONAGE=0 for legacy.
         BOOK_CAMPAIGN_PATRONAGE=_book_campaign_patronage,
     )
+
+    # Baseline response protections. CSP is intentionally not enabled here because
+    # the legacy templates load third-party media/scripts and need a separate audit.
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if not is_local_dev:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
 
     # Startup visibility for Stripe payout/checkout setup (never log secret values).
     _stripe_secret_present = bool(_sk)

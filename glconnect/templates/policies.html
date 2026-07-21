@@ -64,7 +64,7 @@
             <p class="policy-eyebrow">{{ policy.eyebrow }}</p>
             <h1 class="policy-title">{{ policy.title }}</h1>
             <p class="lead text-muted mb-3">{{ policy.description }}</p>
-            <p class="policy-meta mb-4">Last updated: July 20, 2026</p>
+            <p class="policy-meta mb-4">Last updated: July 21, 2026</p>
             <article class="policy-card">
                 {% if active_policy == 'terms' %}
                 <h2>1. The platform</h2>
@@ -82,24 +82,42 @@
                 <h2>2. How we use it</h2>
                 <p>We use this information to operate and secure accounts, provide publishing and marketplace features, process purchases and payouts, respond to support requests, prevent misuse, comply with legal obligations, and improve the service. We do not sell personal information as a standalone product.</p>
                 <h2>3. Payments, public profiles, and providers</h2>
-                <p>Stripe processes checkout and author payout details. Ndotonic does not receive or store full card numbers, security codes, or bank login credentials. Public listings may show a pen name, bio, cover, book details, reviews, campaign information, and other material you choose to publish; email addresses are not displayed on public listings. Providers may process data for payments, hosting, email, analytics, and AI features.</p>
-                <h2>4. Your choices</h2>
-                <p>You can update public profile information in your account and ask Support about account closure or access requests. Some records must be retained for completed transactions, fraud prevention, tax, dispute resolution, or other lawful business needs. We will verify requests and respond as applicable law requires.</p>
+                <p>Stripe processes checkout and author payout details. Ndotonic does not receive or store full card numbers, security codes, or bank login credentials. Public listings may show a pen name, bio, cover, book details, reviews, campaign information, and other material you choose to publish; email addresses are not displayed on public listings.</p>
+                <h2>4. Subprocessors</h2>
+                <p>We use service providers (“subprocessors”) that process data on our behalf to run the product. Current categories include:</p>
+                <ul>
+                    <li><strong>Payments:</strong> Stripe (checkout, Connect payouts).</li>
+                    <li><strong>Hosting / infrastructure:</strong> our cloud host (e.g. Render or equivalent) and related databases/storage.</li>
+                    <li><strong>Email / messaging:</strong> transactional email providers used for account and order messages.</li>
+                    <li><strong>AI features:</strong> Google Gemini and Google Cloud Text-to-Speech (and similar model providers) when you use optional AI editing, covers, or audiobook narration.</li>
+                </ul>
+                <p>Providers process data under their terms and our instructions. Do not submit confidential third-party manuscripts or sensitive personal data to AI tools unless you have authority to do so.</p>
+                <h2>5. Print shipping addresses</h2>
+                <p>When you buy a print book, we collect your shipping address and share it with the author solely for fulfillment of that order. Authors agree not to use buyer addresses for marketing.</p>
+                <h2>6. Your rights and requests</h2>
+                <p>Depending on where you live (including the EU/UK GDPR and California CCPA/CPRA where applicable), you may have rights to access, correct, delete, or receive a copy of personal information, and to object to or restrict certain processing. To make a request, contact <a href="{{ url_for('blog.contact') }}">Support</a> from the email on your account and describe what you need. We will verify the request and respond within the time required by applicable law. Some records (completed transactions, fraud prevention, tax, and dispute records) may be retained as required.</p>
+                <h2>7. Age</h2>
+                <p>The service is for users who are at least <strong>18 years old</strong>, or the age of majority where they live. We do not knowingly collect personal information from children under 13. If we learn we have such data, we will delete it.</p>
+                <h2>8. Cookies</h2>
+                <p>We use cookies and similar technologies needed for login, security, and core product functions. Where required by law for non-essential cookies (for example analytics), we will seek consent before setting them.</p>
                 <p class="policy-note">Do not upload private, sensitive, or personal information about another person unless you have a lawful basis and any required permission to do so.</p>
 
                 {% elif active_policy == 'refunds' %}
                 <h2>1. Digital books and audiobooks</h2>
                 <p>Digital formats are delivered or made available immediately after a completed purchase. Because they can be accessed or copied, they are generally not returnable after delivery, except where required by applicable law or where there is a verified technical, duplicate-charge, or unauthorized-payment issue. Contact Support with the order reference and a clear description of the issue.</p>
+                <p>If you are in the European Economic Area or United Kingdom and buy a digital format, checkout requires you to request immediate delivery and acknowledge that you lose the statutory 14-day withdrawal right for that digital content once delivery begins.</p>
                 <h2>2. Print orders</h2>
                 <p>Print books are sold by the author and shipped by that author. A buyer may request cancellation through Support before the order is marked shipped; availability depends on whether the author can stop fulfillment. If the order is not shipped by the promised time, the buyer must be offered a meaningful choice between a revised shipment date and cancellation with a prompt refund of the original payment. A refund for a delayed or unfulfilled order is not replaced with store credit unless the buyer freely chooses that option.</p>
                 <h2>3. Defective, incorrect, or lost print books</h2>
                 <p>Contact Support promptly with the order reference, photos where appropriate, and a description of the problem. We will coordinate with the author to assess replacement, reshipment, or refund under applicable law and the facts of the order. This policy does not remove any non-waivable consumer rights.</p>
                 <h2>4. Book campaigns</h2>
                 <p>Campaign contributions are patronage, not investments, and do not grant a share of future sales. Campaign-specific refund rules and milestones are shown before a contribution is made. If a campaign misses its stated goal or is otherwise refunded under its displayed terms, refunds are returned to the original payment method where practicable.</p>
+                <h2>5. Sales tax and VAT</h2>
+                <p>When Stripe Tax is enabled for the platform, applicable sales tax or VAT may be calculated and collected from the buyer at checkout and remitted through Stripe. Tax is not deducted from the author’s royalty on the list price. If Stripe Tax is not enabled for a given transaction, no sales tax is collected by Ndotonic at checkout.</p>
 
                 {% elif active_policy == 'shipping' %}
                 <h2>1. Who ships the book</h2>
-                <p>Ink Studio is not a print-on-demand printer. A print listing is fulfilled by its author: Ink collects checkout payment, securely captures the buyer’s shipping address, and makes the fulfillment details available to the author so they can print and ship the book.</p>
+                <p>Ink Studio is not a print-on-demand printer. A print listing is fulfilled by its author: Ink collects checkout payment, securely captures the buyer’s shipping address, and makes the fulfillment details available to the author so they can print and ship the book. Authors may use that address only to fulfill the order.</p>
                 <h2>2. Shipping promises</h2>
                 <p>Print listings display the author’s handling window and shipping charge before checkout. Authors must have a reasonable basis for that promise and must ship within it. Print shipping is currently limited to US delivery addresses unless the listing clearly states otherwise.</p>
                 <h2>3. Delays, tracking, and cancellation</h2>
@@ -109,23 +127,59 @@
 
                 {% elif active_policy == 'rights' %}
                 <h2>1. Rights authors must hold</h2>
-                <p>Authors remain responsible for obtaining the rights and permissions needed to publish, sell, distribute, and promote their text, cover art, images, audio, translations, excerpts, and metadata. This includes copyright, trademark, publicity, privacy, and contractual rights. Listing a work does not transfer the author’s copyright to Ndotonic.</p>
+                <p>Authors remain responsible for obtaining the rights and permissions needed to publish, sell, distribute, and promote their text, cover art, images, audio, translations, excerpts, and metadata. This includes copyright, trademark, publicity, privacy, and contractual rights. Listing a work does not transfer the author’s copyright to Ndotonic. When a platform-pool ISBN is used, Ndotonic is the publisher of record for that ISBN imprint; the author remains responsible for the content.</p>
                 <h2>2. Limited platform license</h2>
                 <p>Authors give Ndotonic the limited non-exclusive right to host, reproduce, display, market, sell, deliver, and technically process their listed work only as needed to operate the service and the formats the author enables.</p>
                 <h2>3. Reporting a concern</h2>
-                <p>To report alleged infringement, impersonation, privacy misuse, or an unlawful listing, contact <a href="{{ url_for('blog.contact') }}">Support</a> with the URL or title, your contact information, the rights or policy concern, and enough detail for us to investigate. Do not submit sensitive personal information unless necessary.</p>
+                <p>To report alleged infringement, impersonation, privacy misuse, or an unlawful listing, contact <a href="{{ url_for('blog.contact') }}">Support</a> with the URL or title, your contact information, the rights or policy concern, and enough detail for us to investigate. Copyright owners should also follow the formal process in our <a href="{{ url_for('routes.policy_detail', policy_key='dmca') }}">DMCA &amp; Copyright Policy</a>.</p>
                 <h2>4. Review and takedown</h2>
                 <p>We may remove, restrict, or pause a listing while reviewing a credible claim, legal request, or safety issue. We may ask the author and reporter for additional information. Nothing in this policy limits formal legal rights or procedures that apply in a particular jurisdiction.</p>
+
+                {% elif active_policy == 'dmca' %}
+                <h2>1. Designated agent</h2>
+                <p>Ndotonic respects intellectual property rights. To send a formal copyright notice under the U.S. Digital Millennium Copyright Act (17 U.S.C. §512), contact our designated agent:</p>
+                <ul>
+                    <li><strong>Agent:</strong> Ndotonic Copyright Agent</li>
+                    <li><strong>Email:</strong> copyright@ndotonic.com</li>
+                    <li><strong>Mail:</strong> Use the postal address published on our Support / Contact page for “DMCA / Copyright Agent”</li>
+                    <li><strong>Web form:</strong> <a href="{{ url_for('blog.contact') }}">Support</a> with subject line “DMCA Notice”</li>
+                </ul>
+                <p class="policy-note">Register this agent with the U.S. Copyright Office DMCA Designated Agent Directory and keep the listing current. Until registration is complete, publish the same contact details here and on Support.</p>
+                <h2>2. What a valid notice must include</h2>
+                <p>Your written notice should include:</p>
+                <ul>
+                    <li>Identification of the copyrighted work claimed to be infringed.</li>
+                    <li>Identification of the material claimed to be infringing, with enough detail for us to locate it (URL or title and author).</li>
+                    <li>Your contact information (name, address, telephone, email).</li>
+                    <li>A statement that you have a good-faith belief the use is not authorized by the copyright owner, its agent, or the law.</li>
+                    <li>A statement that the information in the notice is accurate, and under penalty of perjury that you are authorized to act on behalf of the copyright owner.</li>
+                    <li>Your physical or electronic signature.</li>
+                </ul>
+                <h2>3. Our process</h2>
+                <p>Upon receiving a substantially compliant notice, we will promptly remove or disable access to the identified material and take reasonable steps to notify the user who posted it. We may ask for clarifying information if a notice is incomplete.</p>
+                <h2>4. Counter-notice</h2>
+                <p>If your material was removed and you believe the removal was a mistake or misidentification, you may send a counter-notice to the same agent including:</p>
+                <ul>
+                    <li>Identification of the material removed and where it appeared before removal.</li>
+                    <li>A statement under penalty of perjury that you have a good-faith belief the material was removed or disabled as a result of mistake or misidentification.</li>
+                    <li>Your name, address, and telephone number, and a statement that you consent to the jurisdiction of the Federal District Court for your address (or any judicial district where Ndotonic may be found if outside the U.S.), and that you will accept service of process from the person who filed the original notice.</li>
+                    <li>Your physical or electronic signature.</li>
+                </ul>
+                <p>If we receive a valid counter-notice, we may restore the material in about 10–14 business days unless the original complainant notifies us that they have filed a court action seeking to restrain the alleged infringement.</p>
+                <h2>5. Repeat infringers</h2>
+                <p>It is our policy to terminate, in appropriate circumstances, accounts of users who are repeat infringers. We may also suspend accounts earlier for clear, willful, or high-volume abuse. We keep records of notices and enforcement actions as needed to operate this policy.</p>
+                <h2>6. Misrepresentations</h2>
+                <p>Knowingly misrepresenting that material is infringing, or that material was removed by mistake, may expose you to liability for damages, including costs and attorneys’ fees.</p>
 
                 {% elif active_policy == 'ai' %}
                 <h2>1. Optional tools, human responsibility</h2>
                 <p>Ink Studio may offer optional AI-assisted ideation, editing, cover, narration, and related tools. AI output can be inaccurate, incomplete, offensive, or similar to existing material. Authors—not Ndotonic—choose whether to use output and are responsible for reviewing, editing, and approving anything they publish.</p>
                 <h2>2. Commercial rights and disclosure</h2>
-                <p>Before using AI-assisted text, art, audio, or translations commercially, authors must confirm they have the rights required by the applicable tool provider and by law. Authors must not present AI-generated material as independently verified fact, impersonate a real person, use protected names or likenesses without permission, or make misleading claims about how work was created.</p>
+                <p>Before using AI-assisted text, art, audio, or translations commercially, authors must confirm they have the rights required by the applicable tool provider and by law. Authors must not present AI-generated material as independently verified fact, impersonate a real person, use protected names or likenesses without permission, or make misleading claims about how work was created. Platform-generated audiobooks are labeled as AI-narrated on the marketplace.</p>
                 <h2>3. Third-party processing</h2>
                 <p>Some features send prompts or content to third-party AI providers. Use those features only if you are permitted to share the material. Do not submit confidential client work, unpublished third-party manuscripts, sensitive personal data, or material you do not have authority to process.</p>
                 <h2>4. Enforcement</h2>
-                <p>We may restrict AI features or remove AI-assisted content when there is a credible rights, safety, deception, or policy concern. Authors must cooperate with reasonable requests related to a complaint or takedown.</p>
+                <p>We may restrict AI features or remove AI-assisted content when there is a credible rights, safety, deception, or policy concern. Authors must cooperate with reasonable requests related to a complaint or takedown and indemnify Ndotonic for claims arising from their AI-assisted listings as stated in the Author Publishing Agreement.</p>
                 {% endif %}
                 <hr class="border-secondary my-4">
                 <p class="policy-meta mb-0">These policies are a plain-language summary of how the service operates. They do not replace non-waivable rights under applicable law. Authors are additionally bound by the accepted Author Publishing Agreement and title-level listing terms.</p>

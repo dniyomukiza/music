@@ -136,7 +136,7 @@ def build_author_dashboard_stats(author_id: int) -> Dict[str, Any]:
 
         bundle_base = None
         if book.price and book.audiobook_price:
-            bundle_base = (float(book.price) + float(book.audiobook_price)) * 0.8
+            bundle_base = float(book.price) + float(book.audiobook_price)
 
         print_on = print_listed(book)
         ebook_on = ebook_listed(book)

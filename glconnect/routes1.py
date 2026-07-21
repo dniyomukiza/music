@@ -110,10 +110,6 @@ def get_role_based_redirect(user):
             return redirect(url_for('book_platform.setup_profile'))
         return redirect(url_for('book_platform.books'))
     
-    # Freelancer users → blogs
-    elif user.role == "freelancer":
-        return redirect(url_for('blog.blogs'))
-    
     # Blogger users → blogs
     elif user.role == "blogger":
         return redirect(url_for('blog.blogs'))
@@ -1011,6 +1007,5 @@ def reset_password_request():
         return redirect(url_for('routes1.register'))
 
     return render_template('passreq.html', title='Reset Password', form=form)
-
 
 
