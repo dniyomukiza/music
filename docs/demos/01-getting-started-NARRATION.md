@@ -2,11 +2,11 @@
 
 Voice: `en-US-AvaMultilingualNeural` via edge-tts (-2%).
 
-Duration: **3:01** (181.4s)
+Duration: **2:58** (178.2s)
 
-## 1. Getting Started (12.36s)
+## 1. Getting Started (9.34s)
 
-Welcome to the Ndotonic Author Series. If you have never written a book before, you are in the right place. In three minutes, we turn a vague idea into the first pages of a real draft.
+If you have never written a book before, you are in the right place. In three minutes, we turn a vague idea into the first pages of a real draft.
 
 ## 2. No Single Right Path (14.62s)
 
@@ -36,7 +36,7 @@ Before you draft chapters, write one plain sentence: this book follows someone w
 
 Build a small daily writing habit. Five focused minutes count. Consistency makes a first draft possible because each session adds to the work already there. Protect a repeatable time, even if it is short, and treat showing up as the win.
 
-## 9. Try This Exercise (15.67s)
+## 9. A Simple Exercise (15.67s)
 
 Here is a simple exercise. Write one short scene where your main character wants something specific. Put one obstacle in the way. End the scene when they make a choice. That choice is the seed of your next page, and often the start of your plot.
 
@@ -44,10 +44,10 @@ Here is a simple exercise. Write one short scene where your main character wants
 
 In a first draft, progress beats polish. Do not stop to perfect every sentence. Leave placeholders, skip ahead when stuck, and keep the story moving. You can revise later. You cannot revise a blank document.
 
-## 11. Bring It Into Ndotonic (13.1s)
+## 11. Bring It Into Ndotonic (13.34s)
 
 When you are ready to grow the draft, bring it into Ndotonic. Start from a story pitch, keep writing in Ink Studio, and use the editing tools when you want craft help — with you remaining in control of every change.
 
-## 12. Your Next Step (15.6s)
+## 12. Your Next Step (15.14s)
 
-Your next step is simple. Open a blank page, set a five-minute timer, and write anything related to your idea. When the timer ends, you are no longer starting from zero — you are mid-draft. See you in the next lesson on narrative structure.
+Your next step is simple. Open a blank page, set a five-minute timer, and write anything related to your idea. When the timer ends, you are no longer starting from zero — you are mid-draft. Next up: narrative structure.

@@ -59,3 +59,5 @@ jingles.m3u
 docs/*
 !docs/demos/
 !docs/demos/**
+# Writer tutorial demo assets are generated/deployed outside source control.
+/docs/demos/
