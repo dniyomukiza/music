@@ -2103,12 +2103,7 @@ def view_book(book_id, user_profile, profile_type):
             'icon': 'fa-rocket',
         }
     else:
-        next_writing_action = {
-            'label': 'Promote your published book',
-            'detail': 'Share your listing and keep building your audience.',
-            'url': url_for('book_platform.content_hub'),
-            'icon': 'fa-bullhorn',
-        }
+        next_writing_action = None
 
     try:
         return render_template('book_platform/view_book.html',
@@ -7249,11 +7244,17 @@ def stripe_connect_onboard():
         next_path = safe_mybook_next_path(request.form.get('next'), default_next)
 
     country = (os.getenv('STRIPE_CONNECT_DEFAULT_COUNTRY') or 'US').strip().upper()
+    connect_business_name = (
+        os.getenv('STRIPE_CONNECT_BUSINESS_NAME') or 'Ndotonic LLC'
+    ).strip()
 
     def _create_connect_account_and_store_id():
         create_kwargs = {
             'type': 'express',
             'country': country,
+            'business_profile': {
+                'name': connect_business_name,
+            },
             'capabilities': {
                 'card_payments': {'requested': True},
                 'transfers': {'requested': True},

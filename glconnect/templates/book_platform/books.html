@@ -285,9 +285,7 @@
                                             {{ listing.agg_views }} views · {{ listing.agg_downloads }} dl
                                         </div>
                                         <div class="mt-3">
-                                            {% if listing_live %}
-                                            <a href="{{ url_for('book_platform.marketplace', open_book=book.id) }}" class="btn btn-sm btn-ink-gold">View customer page</a>
-                                            {% elif not book.digital_file_path and not book.word_count %}
+                                            {% if not book.digital_file_path and not book.word_count %}
                                             <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-sm btn-ink-gold">Write first section</a>
                                             {% elif not book.digital_file_path and book.word_count %}
                                             <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-sm btn-ink-gold">Continue writing</a>
