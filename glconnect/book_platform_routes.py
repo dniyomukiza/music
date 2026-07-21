@@ -3144,6 +3144,20 @@ def reset_audiobook(book_id):
     if not book.has_audiobook:
         return jsonify({'success': True, 'message': 'Ready to generate a new audiobook.'})
 
+    # A sold audiobook is part of buyer entitlement history. In live mode it
+    # must be replaced through a controlled support/re-release process rather
+    # than silently removing the files buyers already paid for.
+    from glconnect.data_lifecycle import is_live_data_mode
+    if is_live_data_mode() and BookPurchase.query.filter(
+        BookPurchase.book_project_id == book.id,
+        BookPurchase.status == TransactionStatus.COMPLETED,
+        BookPurchase.purchase_format.in_(("audiobook", "bundle")),
+    ).first():
+        return jsonify({
+            'success': False,
+            'error': 'This audiobook has buyer purchases and cannot be reset automatically in live mode. Contact support for a versioned replacement.',
+        }), 409
+
     clear_audiobook_generation(book, unpublish=True)
     db.session.commit()
     return jsonify({
@@ -3173,6 +3187,17 @@ def prepare_audiobook_segments(book_id):
         }), 403
     if book.has_audiobook:
         return jsonify({'success': False, 'error': 'This book already has an audiobook version'}), 400
+
+    active_task = AudioGenerationTask.query.filter(
+        AudioGenerationTask.book_project_id == book.id,
+        AudioGenerationTask.status.in_(("pending", "processing")),
+    ).first()
+    if active_task:
+        return jsonify({
+            'success': False,
+            'error': 'Audiobook generation is already in progress. Use the status panel to follow it.',
+            'task_id': active_task.id,
+        }), 409
 
     src = build_audiobook_source(book, current_app.root_path)
     if not src['success']:
@@ -3264,6 +3289,12 @@ def generate_audiobook_for_book(book_id):
     voice_name = (data.get('voice_name') or '').strip()
     if not voice_name:
         return jsonify({'success': False, 'error': 'Voice selection is required.'}), 400
+    voice_prefix = tts_voice_list_prefix(book.language or 'en')
+    if voice_prefix and not voice_name.startswith(voice_prefix):
+        return jsonify({
+            'success': False,
+            'error': 'Choose a voice that matches the ebook language.',
+        }), 400
     
     try:
         src = build_audiobook_source(book, current_app.root_path)
@@ -3348,6 +3379,28 @@ def generate_audiobook_for_book(book_id):
 
         def generate_audio_background():
             with app.app_context():
+                def _cleanup_partial_audio(result):
+                    generated_root = os.path.realpath(os.path.join(
+                        current_app.root_path, 'static', 'audio', 'audiobooks'
+                    ))
+                    paths = []
+                    for row in (result or {}).get('chapter_results') or []:
+                        paths.append(row.get('audio_file_path') or row.get('audio_file'))
+                    path = (result or {}).get('audio_file_path')
+                    if path:
+                        paths.append(path)
+                    for raw in paths:
+                        if not raw:
+                            continue
+                        candidate = os.path.realpath(str(raw))
+                        if not os.path.isabs(str(raw)):
+                            candidate = os.path.realpath(os.path.join(current_app.root_path, 'static', str(raw)))
+                        if candidate.startswith(generated_root + os.sep) and os.path.isfile(candidate):
+                            try:
+                                os.remove(candidate)
+                            except OSError:
+                                logger.warning('Could not clean failed audiobook asset %s', candidate)
+
                 try:
                     audio_task = AudioGenerationTask.query.get(task_id)
                     book = BookProject.query.get(book_id_for_thread)
@@ -3411,8 +3464,9 @@ def generate_audiobook_for_book(book_id):
                         
                     else:
                         # Update task with error
+                        _cleanup_partial_audio(audio_result)
                         audio_task.status = 'failed'
-                        audio_task.error_message = audio_result['error']
+                        audio_task.error_message = 'Audio generation failed. Review the source text and try again.'
                         db.session.commit()
                         logger.error(f"Failed to generate audiobook for book {book.id}: {audio_result['error']}")
                         
@@ -3420,12 +3474,13 @@ def generate_audiobook_for_book(book_id):
                     import traceback
                     error_trace = traceback.format_exc()
                     logger.error(f"Error in background audiobook generation: {str(e)}\n{error_trace}")
+                    _cleanup_partial_audio(locals().get('audio_result'))
                     try:
                         # Try to update task status, but don't fail if we can't
                         audio_task = AudioGenerationTask.query.get(task_id)
                         if audio_task:
                             audio_task.status = 'failed'
-                            audio_task.error_message = str(e)
+                            audio_task.error_message = 'Audio generation failed unexpectedly. Please try again or contact support.'
                             db.session.commit()
                     except Exception as inner_e:
                         logger.error(f"Failed to update task status after error: {str(inner_e)}")
@@ -3448,7 +3503,7 @@ def generate_audiobook_for_book(book_id):
         logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}\n{error_trace}")
         return jsonify({
             'success': False,
-            'error': f'Failed to start audiobook generation: {str(e)}'
+            'error': 'We could not start audiobook generation. Please try again or contact support.'
         }), 500
 
 @book_bp.route('/audiobook/available-voices', methods=['GET'])

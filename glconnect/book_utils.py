@@ -3,6 +3,9 @@ Shared utilities for book platform - avoids circular imports.
 """
 
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 _FRONT_MATTER_PREFIXES = (
     'foreword', 'preface', 'introduction', 'prologue', 'acknowledgment',
@@ -173,9 +176,29 @@ def clear_audiobook_generation(book, *, unpublish: bool = True) -> None:
     """Remove generated audiobook assets so the author can regenerate from scratch."""
     from glconnect import db
     from glconnect.book_platform_models import AudiobookChapter
+    import os
 
     if not book:
         return
+    chapter_rows = AudiobookChapter.query.filter_by(book_project_id=book.id).all()
+    generated_root = os.path.realpath(os.path.join(
+        os.getcwd(), 'glconnect', 'static', 'audio', 'audiobooks'
+    ))
+    paths = [getattr(book, 'audiobook_file_path', None)] + [
+        getattr(row, 'audio_file_path', None) for row in chapter_rows
+    ]
+    for raw_path in paths:
+        if not raw_path:
+            continue
+        path = os.path.realpath(str(raw_path))
+        if not os.path.isabs(str(raw_path)):
+            path = os.path.realpath(os.path.join(os.getcwd(), str(raw_path)))
+        # Only remove files produced inside the audiobook generation folder.
+        if path.startswith(generated_root + os.sep) and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                logger.warning('Could not remove audiobook asset %s', path)
     AudiobookChapter.query.filter_by(book_project_id=book.id).delete(synchronize_session=False)
     book.has_audiobook = False
     book.audiobook_file_path = None
