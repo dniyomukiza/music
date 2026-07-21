@@ -1581,7 +1581,7 @@ def release_hub(book_id, user_profile, profile_type):
         }
     elif remaining:
         primary = {
-            'label': 'Complete: ' + remaining[0]['label'],
+            'label': 'Set price' if remaining[0]['label'] == 'Price' else 'Complete: ' + remaining[0]['label'],
             'url': remaining[0]['url'],
         }
     else:
@@ -2086,12 +2086,8 @@ def view_book(book_id, user_profile, profile_type):
         },
     ]
     if not manuscript_started and not book.digital_file_path:
-        next_writing_action = {
-            'label': 'Write your first section',
-            'detail': 'A first section gives your book a real starting point.',
-            'url': url_for('book_platform.create_chapter', book_id=book.id),
-            'icon': 'fa-feather-alt',
-        }
+        # The primary book-view controls already provide the chapter creation action.
+        next_writing_action = None
     elif not has_listing_cover or not has_price:
         next_writing_action = {
             'label': 'Prepare your release',
@@ -7293,12 +7289,16 @@ def stripe_connect_onboard():
                 'test mode account link for an account that was created in live mode' in err_msg
                 or 'live mode account link for an account that was created in test mode' in err_msg
             )
-            if not mode_mismatch:
+            missing_account = (
+                getattr(e, 'code', None) == 'resource_missing'
+                or 'no such account' in err_msg.lower()
+            )
+            if not mode_mismatch and not missing_account:
                 raise
 
             old_acct = bp_user.stripe_connect_account_id
             logger.warning(
-                "Stripe Connect mode mismatch for user=%s account=%s. Recreating account in current mode.",
+                "Stripe Connect account is stale or mode-mismatched for user=%s account=%s. Recreating account in current mode.",
                 bp_user.id,
                 old_acct,
             )
