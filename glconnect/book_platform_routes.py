@@ -2061,7 +2061,6 @@ def view_book(book_id, user_profile, profile_type):
     audiobook_chapter_tracklist = _build_audiobook_chapter_tracklist(book) if book.has_audiobook else []
     manuscript_started = bool(book.digital_file_path or chapters)
     word_count = int(book.word_count or 0)
-    word_target = int(book.word_count_target or 0)
     has_price = book.price is not None
     writing_progress = [
         {
@@ -2071,9 +2070,9 @@ def view_book(book_id, user_profile, profile_type):
         },
         {
             'label': 'Write your manuscript',
-            'detail': f'{word_count:,} words' + (f' of {word_target:,}' if word_target else ''),
-            'complete': bool(word_target and word_count >= word_target),
-            'current': manuscript_started and not (word_target and word_count >= word_target),
+            'detail': f'{word_count:,} words',
+            'complete': bool(word_count > 0),
+            'current': manuscript_started and word_count <= 0,
         },
         {
             'label': 'Prepare your release',
@@ -2092,13 +2091,6 @@ def view_book(book_id, user_profile, profile_type):
             'detail': 'A first section gives your book a real starting point.',
             'url': url_for('book_platform.create_chapter', book_id=book.id),
             'icon': 'fa-feather-alt',
-        }
-    elif word_target and word_count < word_target:
-        next_writing_action = {
-            'label': 'Keep drafting',
-            'detail': f'{max(word_target - word_count, 0):,} words remain to reach your target.',
-            'url': url_for('book_platform.create_chapter', book_id=book.id),
-            'icon': 'fa-pen',
         }
     elif not has_listing_cover or not has_price:
         next_writing_action = {
@@ -2235,7 +2227,6 @@ def edit_book(book_id):
                 book.language = data.get('language', '')
             book.target_audience = data.get('target_audience', '')
             book.price = float(data.get('price', 0)) if data.get('price') else None
-            book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
             if data.get('audiobook_price') not in (None, ''):
                 try:

@@ -60,7 +60,6 @@
                     <input type="hidden" name="price" value="{{ book.price if book.price is not none else '0' }}">
                     <input type="hidden" name="tags" value="{{ book.tags or '' }}">
                     <input type="hidden" name="target_audience" value="{{ book.target_audience or '' }}">
-                    <input type="hidden" name="word_count_target" value="{{ book.word_count_target or '' }}">
                     <input type="hidden" name="audiobook_price" id="audiobook_price_field" value="{{ book.audiobook_price if book.audiobook_price is not none else '' }}">
                     {% if book.digital_file_path %}
                     <input type="hidden" name="publish_digital_book" id="publish_digital_book" value="on" data-was-published="1">

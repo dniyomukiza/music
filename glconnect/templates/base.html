@@ -225,7 +225,7 @@
 
 <div class="ndotonic-page-bg" aria-hidden="true"></div>
 
-{% if current_user.is_authenticated or request.endpoint not in ('routes1.register', 'routes1.login', 'routes1.passreset', 'routes1.passreq') %}
+{% if request.endpoint not in ('routes1.register', 'routes1.login') and (current_user.is_authenticated or request.endpoint not in ('routes1.register', 'routes1.login', 'routes1.passreset', 'routes1.passreq')) %}
 <header>
   <div class="nav-container">
     <a href="{{ url_for('routes.index') }}" style="text-decoration: none;">
