@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
 import psutil
@@ -31,6 +31,23 @@ def _about_landing():
         'about.html',
         about_nav=about_scroll_nav_urls(),
         is_authenticated=current_user.is_authenticated,
+    )
+
+
+@bp.route('/robots.txt')
+def robots_txt():
+    from glconnect.seo import build_robots_txt
+
+    return Response(build_robots_txt(), mimetype='text/plain; charset=utf-8')
+
+
+@bp.route('/sitemap.xml')
+def sitemap_xml():
+    from glconnect.seo import build_sitemap_xml
+
+    return Response(
+        build_sitemap_xml(policy_keys=_POLICY_PAGES.keys()),
+        mimetype='application/xml; charset=utf-8',
     )
 
 

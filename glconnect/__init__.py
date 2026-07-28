@@ -710,6 +710,7 @@ def create_app(config_overrides=None):
                     or request.path.startswith("/api/hls-status")
                     or request.path.startswith("/_analytics")
                     or request.path == "/analytics"
+                    or request.path in ("/robots.txt", "/sitemap.xml")
                 ),
             }
 
