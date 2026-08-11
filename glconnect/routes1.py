@@ -18,8 +18,10 @@ from glconnect.password_reset_service import (
 )
 from flask import render_template, request, flash,redirect,url_for,current_app,Blueprint,session,g,jsonify
 from itsdangerous import URLSafeTimedSerializer
-from flask_login import login_user,LoginManager,login_required,current_user
+from flask_login import login_user,logout_user,LoginManager,login_required,current_user
 from urllib.parse import urlparse
+from sqlalchemy import func
+from glconnect.book_platform_security import rate_limit
 
 # Load configuration from environment variables
 config = {
@@ -41,6 +43,36 @@ def load_user(user_id):
 @bp1.before_app_request
 def load_logged_in_user():
     g.user_id = session.get('user_id')
+
+
+@bp1.before_app_request
+def require_confirmed_email_for_authenticated_users():
+    """Do not let legacy unverified sessions continue using the platform."""
+    if not getattr(current_user, 'is_authenticated', False):
+        return None
+    if getattr(current_user, 'confirmed', False) is True:
+        return None
+
+    allowed_endpoints = {
+        'routes1.confirm_email',
+        'routes1.check_email',
+        'routes1.resend_confirmation',
+        'routes1.logout',
+        'routes1.login',
+        'routes1.register',
+        'routes1.reset_password',
+        'routes1.reset_password_request',
+    }
+    if request.endpoint in allowed_endpoints or request.endpoint == 'static':
+        return None
+
+    # An account created before this safeguard may have an active session. End it
+    # and send the person to verification instead of permitting platform access.
+    session['pending_confirmation_user_id'] = current_user.user_id
+    logout_user()
+    session.pop('user_id', None)
+    flash('Please verify your email address before using your account.', 'warning')
+    return redirect(url_for('routes1.check_email'))
 
 
 def safe_post_auth_next(candidate):
@@ -92,31 +124,15 @@ def sync_auth_entry_marketplace_from_next(raw_next):
 
 
 def get_role_based_redirect(user):
-    """Helper function to get the appropriate redirect URL based on user role.
-    Used by both login and registration flows to ensure consistent redirects."""
+    """Initial post-login destination: authors enter Ink Studio; everyone else enters Content Hub."""
     from glconnect.book_platform_routes import _author_requires_setup_profile
-    from glconnect.ink_studio_v1 import ink_v1_books_launch, ink_v1_role_redirect
 
-    if ink_v1_books_launch():
-        return ink_v1_role_redirect(user)
-    
-    # Artist users → music dashboard
-    if user.role == "artist":
-        return redirect(url_for('book_platform.music_dashboard'))
-    
-    # Author users → Ink Studio setup-profile until author card is complete
-    elif user.role == "author":
+    if user.role == "author":
         if _author_requires_setup_profile(user.user_id):
             return redirect(url_for('book_platform.setup_profile'))
         return redirect(url_for('book_platform.books'))
-    
-    # Blogger users → blogs
-    elif user.role == "blogger":
-        return redirect(url_for('blog.blogs'))
-    
-    # All other users → content page
-    else:
-        return redirect(url_for('book_platform.content_hub'))
+
+    return redirect(url_for('book_platform.content_hub'))
 
 @bp1.route('/register', methods=['GET', 'POST'])
 def register():
@@ -149,6 +165,18 @@ def register():
                 flash("Password must be at least 8 characters with a capital letter and a special symbol.", 'error')
 
             else:
+                existing_email_user = User.query.filter(
+                    func.lower(User.email) == new_user_email.strip().lower()
+                ).first()
+                if existing_email_user:
+                    if not existing_email_user.confirmed:
+                        session['pending_confirmation_user_id'] = existing_email_user.user_id
+                        _send_confirmation_for_user(existing_email_user)
+                        flash('An account with that email is awaiting verification. We sent a new confirmation link if delivery is available.', 'info')
+                        return redirect(url_for('routes1.check_email'))
+                    flash('An account with that email already exists. Please sign in instead.', 'error')
+                    return redirect(url_for('routes1.login'))
+
                 # Create user without confirmation
                 new_user = User(
                     username=new_user_username,
@@ -165,13 +193,8 @@ def register():
                     db.session.add(new_user)
                     db.session.commit()
 
-                    # Generate email confirmation token
-                    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-                    token = s.dumps(new_user.email, salt='email-confirm')
-                    confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
-
-                    # Send confirmation email (Mailtrap; configured via env / glconfig at app startup)
-                    if not send_confirmation_email(new_user.email, confirm_url):
+                    session['pending_confirmation_user_id'] = new_user.user_id
+                    if not _send_confirmation_for_user(new_user):
                         flash(
                             "Your account was created, but we couldn’t send the confirmation email. "
                             "Please try again in a little while or contact support if this keeps happening.",
@@ -234,6 +257,16 @@ def send_confirmation_email(to_email, confirm_url):
         return False
 
 
+def _send_confirmation_for_user(user):
+    """Create a fresh, expiring verification link for an unconfirmed account."""
+    if not user or getattr(user, 'confirmed', False):
+        return False
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    token = serializer.dumps(user.email, salt='email-confirm')
+    confirm_url = url_for('routes1.confirm_email', token=token, _external=True)
+    return send_confirmation_email(user.email, confirm_url)
+
+
 @bp1.route('/confirm/<token>')
 def confirm_email(token):
     try:
@@ -254,6 +287,7 @@ def confirm_email(token):
     # Automatically log the user in after email confirmation
     login_user(user)
     session['user_id'] = user.user_id
+    session.pop('pending_confirmation_user_id', None)
 
     pending = session.pop("post_confirm_next", None)
     dest = safe_post_auth_next(pending) if pending else None
@@ -268,7 +302,36 @@ def confirm_email(token):
 
 @bp1.route('/check_email')
 def check_email():
-    return render_template('check_email.html', title='Check Email')
+    return render_template(
+        'check_email.html',
+        title='Check Email',
+        confirmation_email=None,
+    )
+
+
+@bp1.route('/resend-confirmation', methods=['POST'])
+@rate_limit(max_requests=5, window_minutes=60)
+def resend_confirmation():
+    """Resend a verification link without revealing whether an address has an account."""
+    # Form and JSON clients are both supported; do not echo an address in responses.
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        supplied = (payload.get('email') or '').strip().lower()
+    else:
+        supplied = (request.form.get('email') or '').strip().lower()
+    user = None
+    if supplied:
+        user = User.query.filter(func.lower(User.email) == supplied).first()
+    elif session.get('pending_confirmation_user_id'):
+        user = User.query.get(session['pending_confirmation_user_id'])
+    if user and not getattr(user, 'confirmed', False):
+        _send_confirmation_for_user(user)
+        session['pending_confirmation_user_id'] = user.user_id
+    message = 'If an unverified account exists for that email, a confirmation link has been sent.'
+    if request.is_json:
+        return jsonify({'success': True, 'message': message})
+    flash(message, 'info')
+    return redirect(url_for('routes1.check_email'))
 
 @bp1.route('/login', methods=['GET', 'POST'])
 def login():
@@ -315,6 +378,10 @@ def login():
         password = form.password.data
         user = find_user_by_username(username)
         if user and user.check_password(password):
+            if not getattr(user, 'confirmed', False):
+                session['pending_confirmation_user_id'] = user.user_id
+                flash('Verify your email address before signing in. You can request a new confirmation link below.', 'warning')
+                return redirect(url_for('routes1.check_email'))
             login_user(user)
             session['user_id'] = user.user_id
             flash('Login successful!', 'success')
@@ -1007,5 +1074,3 @@ def reset_password_request():
         return redirect(url_for('routes1.register'))
 
     return render_template('passreq.html', title='Reset Password', form=form)
-
-

@@ -7064,7 +7064,7 @@ def purchase_book(book_id):
 
 @book_bp.route('/checkout/quick-register', methods=['POST'])
 def checkout_quick_register():
-    """Create an account during marketplace checkout, then continue as a logged in buyer."""
+    """Create an account during checkout; email verification is required before sign-in."""
     if getattr(current_user, 'is_authenticated', False):
         return jsonify({'success': True, 'already_logged_in': True})
 
@@ -7096,15 +7096,22 @@ def checkout_quick_register():
         last_name=last_name or 'User',
         username=username,
         email=email,
+        confirmed=False,
         role='other',
     )
     user.set_password(password)
     record_account_terms_acceptance(user)
     db.session.add(user)
     db.session.commit()
-    login_user(user)
-    session['user_id'] = user.user_id
-    return jsonify({'success': True})
+    from glconnect.routes1 import _send_confirmation_for_user
+    verification_sent = _send_confirmation_for_user(user)
+    return jsonify({
+        'success': True,
+        'verification_required': True,
+        'verification_sent': verification_sent,
+        'verification_url': url_for('routes1.check_email'),
+        'message': 'Check your email and confirm your account before continuing to checkout.',
+    })
 
 
 # Stripe Payment Success Callback

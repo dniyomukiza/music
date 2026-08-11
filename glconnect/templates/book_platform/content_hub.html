@@ -19,7 +19,9 @@
     <div class="page-bg" aria-hidden="true"></div>
     <div class="scanline" aria-hidden="true"></div>
 
+    {% with show_company_nav=false %}
     {% include 'includes/_legacy_landing_header.html' %}
+    {% endwith %}
 
     {% with legacy_hero_compact=true %}
     {% include 'includes/_legacy_landing_hero.html' %}

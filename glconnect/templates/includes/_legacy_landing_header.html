@@ -11,7 +11,9 @@
         <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" class="wordmark-img">
     </a>
     <div class="platform-button-container">
+        {% if show_company_nav|default(true) %}
         {% include 'includes/_company_nav.html' %}
+        {% endif %}
         {% if current_user.is_authenticated %}
         <div class="legacy-user-menu" id="legacyUserMenu">
             <button type="button" class="legacy-user-menu-btn" onclick="toggleLegacyUserMenu(event)" aria-expanded="false" aria-controls="legacyUserMenuPanel" aria-label="Account menu for {{ current_user.first_name or current_user.username }}">

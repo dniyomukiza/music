@@ -3,496 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blogs</title>
+    <meta name="description" content="GLC Media stories, perspectives, and reporting from the Ndotonic community.">
+    <title>GLC Media | Ndotonic</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,400;0,500;0,600;0,700;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='book_platform.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body {
-            background: transparent;
-            color: #e8ece9;
-            min-height: 100vh;
-        }
-        .filters-container {
-            background: rgba(12, 15, 14, 0.85);
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: flex-end;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(201, 162, 39, 0.25);
-        }
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #ecf0f1;
-        }
-        .filter-group select,
-        .filter-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            font-size: 14px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #ecf0f1;
-        }
-        .filter-group select option {
-            background: #0c0f0e;
-            color: #ecf0f1;
-        }
-        .filter-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .btn-filter {
-            padding: 8px 20px;
-            background: #c9a227;
-            color: #0a0b0a;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: background 0.3s;
-            font-weight: 600;
-        }
-        .btn-filter:hover {
-            background: #e0bc3a;
-        }
-        .btn-clear {
-            background: #7f8c8d;
-        }
-        .btn-clear:hover {
-            background: #5d6d7e;
-        }
-        .post-meta {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-        .meta-badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            color: #ecf0f1;
-        }
-        .meta-badge.category {
-            background: #c9a227;
-            color: #0a0b0a;
-        }
-        .meta-badge.language {
-            background: #27ae60;
-            color: white;
-        }
-        .meta-badge.country {
-            background: #f39c12;
-            color: white;
-        }
-        /* Ensure blog post titles are white */
-        h2, h2 a {
-            color: #ffffff !important;
-        }
-        h2 a:hover {
-            color: #ecf0f1 !important;
-            text-decoration: underline;
-        }
+        :root { --glc-bg: #0b0f0d; --glc-panel: rgba(18, 25, 21, .84); --glc-line: rgba(255,255,255,.12); --glc-text: #edf2ee; --glc-muted: #aeb9b1; --glc-gold: #d7b84b; --glc-green: #8ec79f; }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; background: radial-gradient(circle at 85% -10%, rgba(122, 168, 112, .18), transparent 30rem), radial-gradient(circle at -10% 25%, rgba(215,184,75,.13), transparent 26rem), var(--glc-bg); color: var(--glc-text); font-family: "DM Sans", sans-serif; }
+        .glc-shell { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 4rem; }
+        .glc-hero { position: relative; overflow: hidden; padding: clamp(1.6rem, 5vw, 3.5rem); border: 1px solid rgba(215,184,75,.38); border-radius: 1.35rem; background: linear-gradient(135deg, rgba(23, 35, 28, .98), rgba(18, 24, 21, .9)); box-shadow: 0 1.5rem 4rem rgba(0,0,0,.26); }
+        .glc-hero:after { content: ""; position: absolute; width: 18rem; height: 18rem; top: -8rem; right: -5rem; border: 1px solid rgba(215,184,75,.25); border-radius: 50%; box-shadow: 0 0 0 2.5rem rgba(215,184,75,.04), 0 0 0 5rem rgba(215,184,75,.025); pointer-events: none; }
+        .glc-eyebrow { color: var(--glc-gold); margin: 0 0 .7rem; font-size: .73rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+        .glc-title { position: relative; z-index: 1; max-width: 45rem; margin: 0; font: 800 clamp(2.2rem, 6vw, 4.6rem)/.98 "Syne", sans-serif; letter-spacing: -.06em; }
+        .glc-subtitle { position: relative; z-index: 1; max-width: 42rem; margin: 1rem 0 0; color: var(--glc-muted); font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.65; }
+        .glc-hero-actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+        .glc-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.7rem; padding: .65rem 1rem; border: 1px solid var(--glc-line); border-radius: .65rem; background: rgba(255,255,255,.06); color: var(--glc-text); font: 700 .9rem "DM Sans", sans-serif; text-decoration: none; cursor: pointer; transition: transform .18s, border-color .18s, background .18s; }
+        .glc-btn:hover, .glc-btn:focus-visible { transform: translateY(-2px); color: var(--glc-text); border-color: rgba(215,184,75,.7); background: rgba(255,255,255,.1); }
+        .glc-btn--primary { border-color: var(--glc-gold); background: var(--glc-gold); color: #12150f; }
+        .glc-btn--primary:hover, .glc-btn--primary:focus-visible { color: #12150f; background: #eed069; }
+        .glc-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 2.25rem 0 1rem; }
+        .glc-section-title { margin: 0; font: 800 clamp(1.25rem, 2vw, 1.55rem)/1 "Syne", sans-serif; letter-spacing: -.035em; }
+        .glc-result-count { margin: 0; color: var(--glc-muted); font-size: .9rem; }
+        .glc-filter { margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--glc-line); border-radius: 1rem; background: var(--glc-panel); backdrop-filter: blur(16px); }
+        .glc-filter form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: .8rem; align-items: end; }
+        .glc-filter label { display: block; margin: 0 0 .35rem; color: var(--glc-muted); font-size: .78rem; font-weight: 700; }
+        .glc-filter select, .glc-filter input { width: 100%; min-height: 2.65rem; padding: .55rem .7rem; border: 1px solid rgba(255,255,255,.16); border-radius: .55rem; background: rgba(3, 6, 4, .42); color: var(--glc-text); font: inherit; }
+        .glc-filter select option { background: #101612; color: var(--glc-text); }
+        .glc-filter-actions { display: flex; gap: .5rem; }
+        .glc-filter-actions .glc-btn { white-space: nowrap; }
+        .glc-active-filter { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: .8rem 1rem; border: 1px solid rgba(100, 175, 221, .38); border-radius: .75rem; background: rgba(52, 152, 219, .12); color: #dcecf6; }
+        .glc-stories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+        .glc-story { display: flex; flex-direction: column; min-height: 19rem; padding: 1.25rem; border: 1px solid var(--glc-line); border-radius: 1rem; background: linear-gradient(145deg, rgba(25, 34, 28, .92), rgba(12, 17, 14, .9)); transition: transform .2s, border-color .2s, box-shadow .2s; }
+        .glc-story:hover { transform: translateY(-3px); border-color: rgba(215,184,75,.5); box-shadow: 0 1rem 2.25rem rgba(0,0,0,.2); }
+        .glc-story-meta { display: flex; align-items: center; justify-content: space-between; gap: .75rem; color: var(--glc-muted); font-size: .78rem; }
+        .glc-story-author { display: inline-flex; min-width: 0; align-items: center; gap: .45rem; }
+        .glc-story-author:before { width: .42rem; height: .42rem; border-radius: 50%; background: var(--glc-green); content: ""; }
+        .glc-story-date { flex: 0 0 auto; }
+        .glc-story-title { margin: 1.1rem 0 .65rem; font: 800 clamp(1.3rem, 2vw, 1.75rem)/1.08 "Syne", sans-serif; letter-spacing: -.04em; }
+        .glc-story-title a { color: #fff; text-decoration: none; }
+        .glc-story-title a:hover, .glc-story-title a:focus-visible { color: #ffe789; }
+        .glc-story-excerpt { display: -webkit-box; overflow: hidden; margin: 0; color: var(--glc-muted); line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+        .glc-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+        .glc-tag { padding: .27rem .55rem; border: 1px solid rgba(255,255,255,.13); border-radius: 99rem; background: rgba(255,255,255,.05); color: #d5ddd7; font-size: .72rem; font-weight: 700; }
+        .glc-tag--category { border-color: rgba(215,184,75,.5); color: #f0d573; }
+        .glc-story-footer { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: auto; padding-top: 1.2rem; }
+        .glc-metrics { display: flex; gap: .65rem; align-items: center; color: var(--glc-muted); font-size: .8rem; }
+        .glc-metric { display: inline-flex; align-items: center; gap: .35rem; }
+        .glc-like { min-width: auto; min-height: 2rem; padding: .25rem .35rem; border: 0; background: transparent; color: var(--glc-muted); }
+        .glc-like:hover, .glc-like:focus-visible { transform: none; background: rgba(231,76,96,.13); color: #ff8393; }
+        .glc-read { color: #f3d770; font-size: .85rem; font-weight: 700; text-decoration: none; }
+        .glc-read:hover { color: #fff1a7; }
+        .glc-empty { padding: 3rem 1.5rem; border: 1px dashed rgba(255,255,255,.2); border-radius: 1rem; color: var(--glc-muted); text-align: center; }
+        .glc-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-top: 2rem; padding: 1rem; border: 1px solid var(--glc-line); border-radius: .9rem; background: rgba(255,255,255,.04); }
+        .glc-page-status { color: var(--glc-muted); font-size: .85rem; }
+        @media (max-width: 820px) { .glc-filter form { grid-template-columns: 1fr 1fr; } .glc-filter-actions { grid-column: 1 / -1; } }
+        @media (max-width: 640px) { .glc-shell { width: min(100% - 1.25rem, 1180px); padding-top: 1rem; } .glc-toolbar, .glc-active-filter { align-items: flex-start; flex-direction: column; } .glc-filter form, .glc-stories { grid-template-columns: 1fr; } .glc-story { min-height: 0; } .glc-story-footer { align-items: flex-end; } }
     </style>
 </head>
 <body>
-    {% include 'messages.html' %}
-    <!-- Content banner -->
-    <div style="background: linear-gradient(145deg, #1a221c 0%, #2a3d32 50%, #3d2f14 100%); border: 1px solid rgba(201, 162, 39, 0.35); color: #e8ece9; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div>
-                <h3 style="margin: 0; font-size: 20px;">
-                    <i class="fas fa-pen-fancy"></i> Stories & News · GLC Media
-                </h3>
-                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
-                    Part of GLC Media on Ndotonic
-                </p>
+    <main class="glc-shell">
+        {% include 'messages.html' %}
+        <header class="glc-hero">
+            <p class="glc-eyebrow">Ndotonic presents</p>
+            <h1 class="glc-title">GLC Media</h1>
+            <p class="glc-subtitle">Stories, reporting, and perspectives from the people shaping culture and community.</p>
+            <div class="glc-hero-actions">
+                {% if current_user.is_authenticated and current_user.role == 'blogger' %}
+                <a class="glc-btn glc-btn--primary" href="{{ url_for('blog.blogpost') }}">Write a story <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                {% elif not current_user.is_authenticated %}
+                <a class="glc-btn glc-btn--primary" href="{{ url_for('routes1.login', next=url_for('blog.blogpost')) }}">Sign in to write <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                {% endif %}
+                {% if current_user.is_authenticated %}
+                <a class="glc-btn" href="{{ url_for('book_platform.content_hub') }}">Content hub</a>
+                {% endif %}
             </div>
+        </header>
+
+        <div class="glc-toolbar">
             <div>
-                <a href="{{ url_for('book_platform.content_hub') if current_user.is_authenticated else url_for('book_platform.ink_studio_access') }}" 
-                   style="background: rgba(255, 255, 255, 0.2); color: white; padding: 8px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; border: 1px solid rgba(255, 255, 255, 0.3); transition: background 0.3s;"
-                   onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                    <i class="fas fa-th-large me-1"></i>Content
-                </a>
+                <p class="glc-eyebrow mb-2">Explore</p>
+                <h2 class="glc-section-title">Latest stories</h2>
             </div>
-        </div>
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-        <div class="button-container">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('blog.logout') }}" class="btn">Logout</a>
-                <a href="{{ url_for('blog.blogpost') }}" class="btn">Create Story</a>
-            {% else %}
-                <a href="{{ url_for('routes1.login') }}" class="btn">Login to Post</a>
-            {% endif %}
+            <p class="glc-result-count">{% if posts.total %}{{ posts.total }} {{ 'story' if posts.total == 1 else 'stories' }}{% else %}No stories yet{% endif %}</p>
         </div>
 
-        <!-- Filters Section -->
         {% if is_freelance_filter %}
-        <div style="background: rgba(52, 152, 219, 0.2); border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 4px; color: #ecf0f1;">
-            <strong><i class="fas fa-newspaper me-2"></i>Showing Freelance Journalism Stories</strong>
-            <p class="mb-0 small" style="opacity: 0.8; margin-top: 5px;">Filtered by: News, Features, Opinion, Investigative, Analysis, Editorial</p>
-            <a href="{{ url_for('blog.blogs') }}" class="btn btn-sm btn-outline-primary mt-2" style="background: #3498db; color: white; border: 1px solid #3498db; padding: 6px 15px; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 10px;">
-                <i class="fas fa-times me-1"></i>Show All Blogs
-            </a>
+        <div class="glc-active-filter">
+            <div><strong>Freelance journalism</strong><span class="d-block small opacity-75">News, features, opinion, investigative, analysis, and editorial stories.</span></div>
+            <a class="glc-btn" href="{{ url_for('blog.blogs') }}">Show all</a>
         </div>
         {% endif %}
-        <div class="filters-container">
-            <form method="GET" action="{{ url_for('blog.blogs') }}" style="display: flex; flex-wrap: wrap; gap: 15px; width: 100%; align-items: flex-end;">
-                {% if is_freelance_filter %}
-                <input type="hidden" name="freelance" value="true">
-                {% endif %}
-                <div class="filter-group">
-                    <label for="category">Category</label>
-                    <select name="category" id="category">
-                        <option value="">All Categories</option>
-                        {% for cat in available_categories %}
-                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="language">Language</label>
-                    <select name="language" id="language">
-                        <option value="">All Languages</option>
-                        {% for lang in available_languages %}
-                        <option value="{{ lang }}" {% if selected_language == lang %}selected{% endif %}>{{ lang }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="country">Country</label>
-                    <input type="text" name="country" id="country" value="{{ selected_country or '' }}" placeholder="Enter country name">
-                </div>
-                <div class="filter-actions">
-                    <button type="submit" class="btn-filter">Apply Filters</button>
-                    <a href="{{ url_for('blog.blogs') }}" class="btn-filter btn-clear">Clear</a>
-                </div>
+
+        <section class="glc-filter" aria-label="Filter stories">
+            <form method="GET" action="{{ url_for('blog.blogs') }}">
+                {% if is_freelance_filter %}<input type="hidden" name="freelance" value="true">{% endif %}
+                <div><label for="category">Category</label><select name="category" id="category"><option value="">All categories</option>{% for cat in available_categories %}<option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>{% endfor %}</select></div>
+                <div><label for="language">Language</label><select name="language" id="language"><option value="">All languages</option>{% for lang in available_languages %}<option value="{{ lang }}" {% if selected_language == lang %}selected{% endif %}>{{ lang }}</option>{% endfor %}</select></div>
+                <div><label for="country">Country</label><input type="text" name="country" id="country" value="{{ selected_country or '' }}" placeholder="Any country"></div>
+                <div class="glc-filter-actions"><button type="submit" class="glc-btn glc-btn--primary">Apply</button><a class="glc-btn" href="{{ url_for('blog.blogs') }}">Clear</a></div>
             </form>
-        </div>
+        </section>
 
-        {% for post in posts.items %}
-        <div style="margin-bottom: 20px; padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); border-radius: 4px; backdrop-filter: blur(10px);" data-post-id="{{ post.id }}">
-            <div style="font-size: 12px; margin-bottom: 5px; color: #bdc3c7;">
-                <small>Posted by: {{ post.author.username if post.author else 'Unknown' }}</small>
-                <br>
-                <small>Date: {{ post.date_posted.strftime("%Y-%m-%d %H:%M") if post.date_posted else 'N/A' }}</small>
-            </div>
-            <h2 style="font-size: 24px; margin-bottom: 10px; color: #ffffff !important;">
-                <a href="{{ url_for('blog.update', post_id=post.id) }}" style="color: #ffffff !important; text-decoration: none;">{{ post.title }}</a>
-            </h2>
-            <div class="post-meta">
-                {% if post.category %}
-                <span class="meta-badge category">{{ post.category }}</span>
-                {% endif %}
-                {% if post.language %}
-                <span class="meta-badge language">{{ post.language }}</span>
-                {% endif %}
-                {% if post.country %}
-                <span class="meta-badge country">{{ post.country }}</span>
-                {% endif %}
-            </div>
-            <p style="font-size: 16px; margin-bottom: 10px; margin-top: 10px; color: #bdc3c7;">{{ post.content | safe | truncate(300) }}</p>
-
-            <!-- Metrics and Actions -->
-            <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
-                <div style="display: flex; gap: 20px; align-items: center;">
-                    <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
-                        <button id="like-btn-{{ post.id }}" 
-                                onclick="toggleLike({{ post.id }})" 
-                                style="background: none; border: none; cursor: pointer; padding: 5px; border-radius: 50%; transition: all 0.2s; display: flex; align-items: center;"
-                                title="{% if current_user.is_authenticated %}Click to like{% else %}Login to like{% endif %}"
-                                data-liked="{{ 'true' if (post.user_liked if hasattr(post, 'user_liked') else False) else 'false' }}">
-                            <i class="fas fa-heart like-icon-{{ post.id }}" style="color: {% if hasattr(post, 'user_liked') and post.user_liked %}#e74c3c{% else %}#95a5a6{% endif %}; font-size: 18px; transition: color 0.2s;"></i>
-                        </button>
-                        <span class="likes-count-{{ post.id }}" style="font-weight: bold; color: #ecf0f1;">{{ post.likes_count if post.likes_count else 0 }}</span>
-                        <span style="color: #bdc3c7; font-size: 12px;">likes</span>
-                    </div>
-                    <div class="metric-badge" style="display: flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-eye" style="color: #3498db;"></i>
-                        <span class="impressions-count-{{ post.id }}" style="font-weight: bold; color: #ecf0f1;">{{ post.impressions_count if post.impressions_count else 0 }}</span>
-                        <span style="color: #bdc3c7; font-size: 12px;">views</span>
-                    </div>
+        {% if posts.items %}
+        <section class="glc-stories" aria-label="Stories">
+            {% for post in posts.items %}
+            <article class="glc-story" data-post-id="{{ post.id }}">
+                <div class="glc-story-meta"><span class="glc-story-author">{{ post.author.username if post.author else 'GLC Media' }}</span><time class="glc-story-date" datetime="{{ post.date_posted.isoformat() if post.date_posted else '' }}">{{ post.date_posted.strftime('%b %d, %Y') if post.date_posted else 'New story' }}</time></div>
+                <h3 class="glc-story-title"><a href="{{ url_for('blog.update', post_id=post.id) }}">{{ post.title }}</a></h3>
+                <p class="glc-story-excerpt">{{ post.content | safe | truncate(300) }}</p>
+                <div class="glc-tags">
+                    {% if post.category %}<span class="glc-tag glc-tag--category">{{ post.category }}</span>{% endif %}
+                    {% if post.language %}<span class="glc-tag">{{ post.language }}</span>{% endif %}
+                    {% if post.country %}<span class="glc-tag">{{ post.country }}</span>{% endif %}
                 </div>
-                <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-                    <button onclick="copyPostLink({{ post.id }})" 
-                            class="btn" 
-                            style="background: rgba(52, 152, 219, 0.3); color: #ecf0f1; border: 1px solid rgba(52, 152, 219, 0.5); padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: all 0.3s;"
-                            title="Copy link to share"
-                            id="share-btn-{{ post.id }}">
-                        <i class="fas fa-share-alt" style="margin-right: 5px;"></i>Share
-                    </button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-
-        <!-- Pagination Controls -->
-        {% if posts.pages > 1 %}
-        <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; backdrop-filter: blur(10px);">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
-                {% if posts.has_prev %}
-                    <a href="{{ url_for('blog.blogs', page=posts.prev_num, category=selected_category, language=selected_language, country=selected_country) }}" 
-                       class="btn" 
-                       style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s;"
-                       onmouseover="this.style.background='#2980b9'" 
-                       onmouseout="this.style.background='#3498db'">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                {% else %}
-                    <span style="background: rgba(255, 255, 255, 0.1); color: #95a5a6; padding: 10px 20px; border-radius: 5px; cursor: not-allowed;">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </span>
-                {% endif %}
-                
-                <span style="color: #ecf0f1; font-size: 16px; font-weight: bold; padding: 10px 20px;">
-                    Page {{ posts.page }} of {{ posts.pages }}
-                </span>
-                
-                {% if posts.has_next %}
-                    <a href="{{ url_for('blog.blogs', page=posts.next_num, category=selected_category, language=selected_language, country=selected_country) }}" 
-                       class="btn" 
-                       style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s;"
-                       onmouseover="this.style.background='#2980b9'" 
-                       onmouseout="this.style.background='#3498db'">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                {% else %}
-                    <span style="background: rgba(255, 255, 255, 0.1); color: #95a5a6; padding: 10px 20px; border-radius: 5px; cursor: not-allowed;">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </span>
-                {% endif %}
-            </div>
-            {% if posts.total > 0 %}
-            <div style="margin-top: 10px; color: #bdc3c7; font-size: 14px;">
-                Showing {{ ((posts.page - 1) * posts.per_page) + 1 }} to {{ [posts.page * posts.per_page, posts.total] | min }} of {{ posts.total }} posts
-            </div>
-            {% endif %}
-        </div>
-        {% elif posts.total > 0 %}
-        <div style="text-align: center; margin-top: 30px; padding: 15px; color: #bdc3c7; font-size: 14px;">
-            Showing all {{ posts.total }} post{{ 's' if posts.total != 1 else '' }}
-        </div>
+                <footer class="glc-story-footer">
+                    <div class="glc-metrics">
+                        <button id="like-btn-{{ post.id }}" class="glc-btn glc-like" type="button" onclick="toggleLike({{ post.id }})" aria-label="Like {{ post.title }}" data-liked="{{ 'true' if (post.user_liked if hasattr(post, 'user_liked') else False) else 'false' }}"><i class="fas fa-heart like-icon-{{ post.id }}" style="color: {% if hasattr(post, 'user_liked') and post.user_liked %}#ee6577{% else %}currentColor{% endif %};"></i><span class="likes-count-{{ post.id }}">{{ post.likes_count if post.likes_count else 0 }}</span></button>
+                        <span class="glc-metric"><i class="fas fa-eye" aria-hidden="true"></i><span class="impressions-count-{{ post.id }}">{{ post.impressions_count if post.impressions_count else 0 }}</span></span>
+                    </div>
+                    <div class="d-flex gap-3 align-items-center"><button type="button" class="glc-btn glc-like" onclick="copyPostLink({{ post.id }})" id="share-btn-{{ post.id }}" aria-label="Share {{ post.title }}"><i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i></button><a class="glc-read" href="{{ url_for('blog.update', post_id=post.id) }}">Read story <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+                </footer>
+            </article>
+            {% endfor %}
+        </section>
+        {% else %}
+        <section class="glc-empty"><h2 class="glc-section-title">No stories found</h2><p class="mb-0 mt-2">Try changing your filters, or return later for a new story.</p></section>
         {% endif %}
-    </div>
 
-    <!-- JavaScript -->
+        {% if posts.pages > 1 %}
+        <nav class="glc-pagination" aria-label="Story pages">
+            {% if posts.has_prev %}<a class="glc-btn" href="{{ url_for('blog.blogs', page=posts.prev_num, category=selected_category, language=selected_language, country=selected_country, freelance='true' if is_freelance_filter else none) }}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Newer</a>{% endif %}
+            <span class="glc-page-status">Page {{ posts.page }} of {{ posts.pages }} · {{ ((posts.page - 1) * posts.per_page) + 1 }}–{{ [posts.page * posts.per_page, posts.total] | min }} of {{ posts.total }}</span>
+            {% if posts.has_next %}<a class="glc-btn" href="{{ url_for('blog.blogs', page=posts.next_num, category=selected_category, language=selected_language, country=selected_country, freelance='true' if is_freelance_filter else none) }}">Older <i class="fas fa-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        </nav>
+        {% endif %}
+    </main>
+
     <script>
-    // Copy post link to clipboard
     function copyPostLink(postId) {
         const postUrl = window.location.origin + '{{ url_for("blog.update", post_id=0) }}'.replace('0', postId);
-        const shareBtn = document.getElementById(`share-btn-${postId}`);
-        const originalText = shareBtn.innerHTML;
-        
-        // Try to use the Clipboard API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(postUrl)
-                .then(() => {
-                    shareBtn.innerHTML = '<i class="fas fa-check" style="margin-right: 5px;"></i>Copied!';
-                    shareBtn.style.background = 'rgba(39, 174, 96, 0.3)';
-                    shareBtn.style.borderColor = 'rgba(39, 174, 96, 0.5)';
-                    setTimeout(() => {
-                        shareBtn.innerHTML = originalText;
-                        shareBtn.style.background = 'rgba(52, 152, 219, 0.3)';
-                        shareBtn.style.borderColor = 'rgba(52, 152, 219, 0.5)';
-                    }, 2000);
-                })
-                .catch(err => {
-                    console.error('Failed to copy:', err);
-                    fallbackCopyTextToClipboard(postUrl, shareBtn, originalText);
-                });
-        } else {
-            // Fallback for older browsers
-            fallbackCopyTextToClipboard(postUrl, shareBtn, originalText);
-        }
+        const button = document.getElementById(`share-btn-${postId}`);
+        const copied = () => { button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>'; setTimeout(() => { button.innerHTML = '<i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>'; }, 1800); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(postUrl).then(copied).catch(() => window.prompt('Copy this link:', postUrl));
+        else window.prompt('Copy this link:', postUrl);
     }
-    
-    // Fallback copy function for older browsers
-    function fallbackCopyTextToClipboard(text, button, originalText) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                button.innerHTML = '<i class="fas fa-check" style="margin-right: 5px;"></i>Copied!';
-                button.style.background = 'rgba(39, 174, 96, 0.3)';
-                button.style.borderColor = 'rgba(39, 174, 96, 0.5)';
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.style.background = 'rgba(52, 152, 219, 0.3)';
-                    button.style.borderColor = 'rgba(52, 152, 219, 0.5)';
-                }, 2000);
-            } else {
-                // If copy fails, show the URL in a prompt
-                prompt('Copy this link:', text);
-            }
-        } catch (err) {
-            console.error('Fallback copy failed:', err);
-            prompt('Copy this link:', text);
-        }
-        
-        document.body.removeChild(textArea);
-    }
-    
-    // Like/Unlike functionality - prevents duplicate likes
-    let likeRequestInProgress = {}; // Track ongoing like requests per post
-    
+
+    const likeRequestInProgress = {};
     function toggleLike(postId) {
         {% if current_user.is_authenticated %}
-        // Prevent multiple simultaneous requests for the same post
-        if (likeRequestInProgress[postId]) {
-            console.log('Like request already in progress for post:', postId);
-            return;
-        }
-        
-        const likeBtn = document.getElementById(`like-btn-${postId}`);
-        const likesCountEl = document.querySelector(`.likes-count-${postId}`);
+        if (likeRequestInProgress[postId]) return;
+        const button = document.getElementById(`like-btn-${postId}`);
+        const count = document.querySelector(`.likes-count-${postId}`);
         const icon = document.querySelector(`.like-icon-${postId}`);
-        
-        if (!likeBtn || !likesCountEl || !icon) {
-            console.error('Like button elements not found for post:', postId);
-            return;
-        }
-        
-        const isLiked = likeBtn.dataset.liked === 'true';
-        
-        // Disable button during request
-        likeBtn.style.pointerEvents = 'none';
-        likeBtn.style.opacity = '0.6';
-        likeRequestInProgress[postId] = true;
-        
-        // Optimistic UI update
-        const currentCount = parseInt(likesCountEl.textContent) || 0;
-        if (isLiked) {
-            likesCountEl.textContent = Math.max(0, currentCount - 1);
-            icon.style.color = '#95a5a6';
-            likeBtn.dataset.liked = 'false';
-        } else {
-            likesCountEl.textContent = currentCount + 1;
-            icon.style.color = '#e74c3c';
-            likeBtn.dataset.liked = 'true';
-        }
-        
-        // Send request to server
-        fetch(`/blog/post/${postId}/like`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update with server response (ensures accuracy)
-                likesCountEl.textContent = data.likes_count;
-                likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
-                icon.style.color = data.user_has_liked ? '#e74c3c' : '#95a5a6';
-            } else {
-                // Revert on error
-                likesCountEl.textContent = currentCount;
-                likeBtn.dataset.liked = isLiked ? 'true' : 'false';
-                icon.style.color = isLiked ? '#e74c3c' : '#95a5a6';
-                // Update with server state if available
-                if (data.likes_count !== undefined) {
-                    likesCountEl.textContent = data.likes_count;
-                }
-                if (data.user_has_liked !== undefined) {
-                    likeBtn.dataset.liked = data.user_has_liked ? 'true' : 'false';
-                    icon.style.color = data.user_has_liked ? '#e74c3c' : '#95a5a6';
-                }
-                console.error('Like error:', data.error || 'Failed to update like');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // Revert on error
-            likesCountEl.textContent = currentCount;
-            likeBtn.dataset.liked = isLiked ? 'true' : 'false';
-            icon.style.color = isLiked ? '#e74c3c' : '#95a5a6';
-        })
-        .finally(() => {
-            // Re-enable button
-            likeBtn.style.pointerEvents = '';
-            likeBtn.style.opacity = '1';
-            delete likeRequestInProgress[postId];
-        });
+        if (!button || !count || !icon) return;
+        const liked = button.dataset.liked === 'true'; const original = parseInt(count.textContent) || 0;
+        likeRequestInProgress[postId] = true; button.disabled = true; count.textContent = liked ? Math.max(0, original - 1) : original + 1; icon.style.color = liked ? 'currentColor' : '#ee6577';
+        fetch(`/blog/post/${postId}/like`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin' })
+            .then(r => r.json()).then(data => { if (!data.success) throw data; count.textContent = data.likes_count; button.dataset.liked = data.user_has_liked ? 'true' : 'false'; icon.style.color = data.user_has_liked ? '#ee6577' : 'currentColor'; })
+            .catch(() => { count.textContent = original; icon.style.color = liked ? '#ee6577' : 'currentColor'; })
+            .finally(() => { button.disabled = false; delete likeRequestInProgress[postId]; });
         {% else %}
-        alert('Please log in to like stories');
-        window.location.href = '{{ url_for("routes1.login") }}';
+        window.location.href = '{{ url_for("routes1.login", next=url_for("blog.blogs")) }}';
         {% endif %}
     }
-    </script>
-    
-    <!-- Real time metrics updates for blog listing -->
-    <script>
-    // Update metrics for all visible posts every 10 seconds
+
     function updateAllPostMetrics() {
-        const postElements = document.querySelectorAll('[data-post-id]');
-        postElements.forEach(function(element) {
-            const postId = element.getAttribute('data-post-id');
-            fetch(`/blog/post/${postId}/metrics`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const likesEl = element.querySelector(`.likes-count-${postId}`);
-                        const impressionsEl = element.querySelector(`.impressions-count-${postId}`);
-                        if (likesEl) likesEl.textContent = data.likes_count;
-                        if (impressionsEl) impressionsEl.textContent = data.impressions_count;
-                    }
-                })
-                .catch(error => console.error('Error updating metrics:', error));
+        document.querySelectorAll('[data-post-id]').forEach(element => {
+            const postId = element.dataset.postId;
+            fetch(`/blog/post/${postId}/metrics`).then(r => r.json()).then(data => {
+                if (!data.success) return;
+                const likes = element.querySelector(`.likes-count-${postId}`); const views = element.querySelector(`.impressions-count-${postId}`);
+                if (likes) likes.textContent = data.likes_count; if (views) views.textContent = data.impressions_count;
+            }).catch(() => {});
         });
     }
-    
-    // Update metrics every 10 seconds
     setInterval(updateAllPostMetrics, 10000);
-    
-    // Also try WebSocket if available
-    if (typeof io !== 'undefined') {
-        try {
-            const socket = io();
-            socket.on('post_metrics_update', function(data) {
-                const postElement = document.querySelector(`[data-post-id="${data.post_id}"]`);
-                if (postElement) {
-                    const likesEl = postElement.querySelector(`.likes-count-${data.post_id}`);
-                    const impressionsEl = postElement.querySelector(`.impressions-count-${data.post_id}`);
-                    if (likesEl) likesEl.textContent = data.likes_count;
-                    if (impressionsEl) impressionsEl.textContent = data.impressions_count;
-                }
-            });
-        } catch (e) {
-            console.log('WebSocket not available, using polling');
-        }
-    }
+    if (typeof io !== 'undefined') { try { const socket = io(); socket.on('post_metrics_update', data => { const el = document.querySelector(`[data-post-id="${data.post_id}"]`); if (!el) return; const likes = el.querySelector(`.likes-count-${data.post_id}`); const views = el.querySelector(`.impressions-count-${data.post_id}`); if (likes) likes.textContent = data.likes_count; if (views) views.textContent = data.impressions_count; }); } catch (_) {} }
     </script>
     {% include 'includes/_ndotonic_mission_footer.html' %}
-
 </body>
 </html>
-
