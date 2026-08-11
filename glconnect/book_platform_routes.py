@@ -697,7 +697,7 @@ def get_profile_id(user_profile, profile_type):
 
 
 def ink_studio_home_url():
-    """Role-appropriate Ink Studio home, readers go to My library, not author profile setup."""
+    """Default signed-in home: authors → Ink Studio; everyone else → Content Hub."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch
 
     if not current_user.is_authenticated:
@@ -708,21 +708,13 @@ def ink_studio_home_url():
                 return url_for('book_platform.setup_profile')
         return url_for('book_platform.marketplace')
     role = getattr(current_user, 'role', None)
-    if role == 'artist':
-        return url_for('book_platform.music_dashboard')
-    if role == 'freelancer':
-        return url_for('book_platform.dashboard')
-    if role == 'blogger':
-        return url_for('blog.blogs')
-    if role == 'podcaster':
-        return url_for('book_platform.content_hub')
     if role == 'author':
         if _author_requires_setup_profile(current_user.user_id):
             return url_for('book_platform.setup_profile')
         return url_for('book_platform.books')
     if ink_studio_show_author_nav_links():
         return url_for('book_platform.books')
-    return url_for('book_platform.my_library')
+    return url_for('book_platform.content_hub')
 
 
 def ink_studio_show_author_nav_links():
@@ -1106,7 +1098,7 @@ def _book_studio_access(book, user_profile, profile_type):
 
 @book_bp.route('/ink-studio')
 def ink_studio_access():
-    """Ink Studio access point - redirects to login if not authenticated, otherwise redirects based on role."""
+    """Ink Studio access point — authors to workspace; everyone else to Content Hub."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch, ink_v1_role_redirect
 
     # If not authenticated, redirect to login (which has register link)
@@ -1116,36 +1108,20 @@ def ink_studio_access():
     if ink_v1_books_launch():
         return ink_v1_role_redirect(current_user)
 
-    # User is authenticated - redirect based on role
     user_role = getattr(current_user, 'role', None)
-    
-    # Artist users → music dashboard
-    if user_role == 'artist':
-        return redirect(url_for('book_platform.music_dashboard'))
-    
-    # Author users → Ink Studio setup-profile until author card is complete
-    elif user_role == 'author':
+
+    if user_role == 'author':
         if _author_requires_setup_profile(current_user.user_id):
             return redirect(url_for('book_platform.setup_profile'))
         return redirect(url_for('book_platform.books'))
-    
-    # Freelancer users → blogs
-    elif user_role == 'freelancer':
-        return redirect(url_for('blog.blogs'))
-    
-    # Blogger users → blogs
-    elif user_role == 'blogger':
-        return redirect(url_for('blog.blogs'))
-    
-    # All other users → content page
-    else:
-        return redirect(url_for('book_platform.content_hub'))
+
+    return redirect(url_for('book_platform.content_hub'))
 
 # Main dashboard route
 @book_bp.route('/')
 @login_required
 def dashboard():
-    """Ink Studio entry, role-based home; readers without author profiles go to My library."""
+    """Ink Studio dashboard entry — authors to workspace; everyone else to Content Hub."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch
 
     if ink_v1_books_launch():
@@ -1156,62 +1132,15 @@ def dashboard():
 
     role = getattr(current_user, 'role', None)
 
-    if role == 'artist':
-        return redirect(url_for('book_platform.music_dashboard'))
-
-    if role == 'freelancer':
-        from glconnect.models import Post
-
-        class FreelancerProfile:
-            def __init__(self, user):
-                self.id = user.user_id
-                self.user_id = user.user_id
-                self.pen_name = user.username
-                self.bio = None
-                self.profile_picture = None
-
-        freelancer_stories = (
-            Post.query.filter_by(user_id=current_user.user_id)
-            .order_by(Post.date_posted.desc())
-            .limit(10)
-            .all()
-        )
-        fp = FreelancerProfile(current_user)
-        return render_template(
-            'book_platform/dashboard.html',
-            authored_books=[],
-            collaborations=[],
-            notifications=[],
-            user_profile=fp,
-            profile_type='freelancer',
-            is_author=False,
-            investment_campaigns=[],
-            review_requests=[],
-            user_reviewer_profile=None,
-            user_investments=[],
-            freelancer_stories=freelancer_stories,
-            is_freelancer=True,
-            marketplace_cover_url=_marketplace_cover_url,
-            ink_nav_active='dashboard',
-        )
-
-    user_profile, profile_type = get_user_profile()
-
     if role == 'author':
         if _author_requires_setup_profile(current_user.user_id):
             return redirect(url_for('book_platform.setup_profile'))
+        user_profile, profile_type = get_user_profile()
+        if profile_type in ('writer', 'book_platform') and user_profile and ink_studio_show_author_nav_links():
+            return redirect(url_for('book_platform.books'))
         return redirect(url_for('book_platform.books'))
 
-    if profile_type in ('writer', 'book_platform') and user_profile and ink_studio_show_author_nav_links():
-        return redirect(url_for('book_platform.books'))
-
-    if role == 'blogger':
-        return redirect(url_for('blog.blogs'))
-
-    if role == 'podcaster':
-        return redirect(url_for('book_platform.content_hub'))
-
-    return redirect(url_for('book_platform.my_library'))
+    return redirect(url_for('book_platform.content_hub'))
 
 
 @book_bp.route('/api/dashboard/author-stats', methods=['GET'])
@@ -11547,6 +11476,45 @@ def publicity_promotion():
 # UNIFIED CONTENT HUB - BLOGS, NEWS, FREELANCING
 # ============================================================================
 
+def _content_hub_role_entry(user):
+    """Primary workspace link for non-author roles on the Content Hub landing page."""
+    role = getattr(user, 'role', None) or 'other'
+    if role == 'author':
+        return None
+
+    entries = {
+        'artist': {
+            'card': 'music',
+            'label': 'Music dashboard',
+            'description': 'Launch the player, register as an artist, and submit tracks for GLC Media.',
+            'url': url_for('book_platform.music_dashboard'),
+            'write_url': None,
+        },
+        'blogger': {
+            'card': 'stories',
+            'label': 'GLC Media stories',
+            'description': 'Read community stories and publish your own posts.',
+            'url': url_for('blog.blogs'),
+            'write_url': url_for('blog.blogpost'),
+        },
+        'freelancer': {
+            'card': 'stories',
+            'label': 'Freelance stories',
+            'description': 'Journalism, features, and reporting for GLC Media.',
+            'url': url_for('blog.blogs', freelance='true'),
+            'write_url': url_for('blog.blogpost'),
+        },
+        'other': {
+            'card': 'library',
+            'label': 'My library',
+            'description': 'Your purchased books, downloads, and saved titles.',
+            'url': url_for('book_platform.my_library'),
+            'write_url': None,
+        },
+    }
+    return entries.get(role, entries['other'])
+
+
 @book_bp.route('/content-hub')
 @login_required
 def content_hub():
@@ -11650,12 +11618,16 @@ def content_hub():
             db.session.rollback()  # Rollback on error
             user_posts = []
     
+    role_entry = _content_hub_role_entry(current_user)
+
     return render_template('book_platform/content_hub.html',
                          recent_posts=recent_posts,
                          user_posts=user_posts,
                          has_artist_profile=artist_profile is not None,
                          artist_profile=artist_profile,
                          artist_needs_glc_terms=not artist_has_glc_media_terms(artist_profile),
+                         role_entry=role_entry,
+                         highlight_card=role_entry.get('card') if role_entry else None,
                          **glc_media_terms_context())
 
 @book_bp.route('/stories')

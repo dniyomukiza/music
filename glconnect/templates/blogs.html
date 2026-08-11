@@ -22,10 +22,10 @@
         .glc-title { position: relative; z-index: 1; max-width: 45rem; margin: 0; font: 800 clamp(2.2rem, 6vw, 4.6rem)/.98 "Syne", sans-serif; letter-spacing: -.06em; }
         .glc-subtitle { position: relative; z-index: 1; max-width: 42rem; margin: 1rem 0 0; color: var(--glc-muted); font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.65; }
         .glc-hero-actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
-        .glc-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.7rem; padding: .65rem 1rem; border: 1px solid var(--glc-line); border-radius: .65rem; background: rgba(255,255,255,.06); color: var(--glc-text); font: 700 .9rem "DM Sans", sans-serif; text-decoration: none; cursor: pointer; transition: transform .18s, border-color .18s, background .18s; }
-        .glc-btn:hover, .glc-btn:focus-visible { transform: translateY(-2px); color: var(--glc-text); border-color: rgba(215,184,75,.7); background: rgba(255,255,255,.1); }
-        .glc-btn--primary { border-color: var(--glc-gold); background: var(--glc-gold); color: #12150f; }
-        .glc-btn--primary:hover, .glc-btn--primary:focus-visible { color: #12150f; background: #eed069; }
+        .glc-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.7rem; padding: .55rem 1rem; border: 1px solid var(--glc-line); border-radius: 2px; background: rgba(255,255,255,.05); color: var(--glc-text); font: 500 .875rem "Syne", sans-serif; text-decoration: none; cursor: pointer; transition: transform .18s, border-color .18s, background .18s, box-shadow .18s, filter .18s; }
+        .glc-btn:hover, .glc-btn:focus-visible { transform: translateY(-2px); color: var(--glc-text); border-color: rgba(201,162,39,.22); background: rgba(255,255,255,.1); }
+        .glc-btn--primary { border: none; background: linear-gradient(145deg, #c9a227, #a88416); color: #060807; }
+        .glc-btn--primary:hover, .glc-btn--primary:focus-visible { color: #060807; filter: brightness(1.06); box-shadow: 0 4px 15px rgba(201, 162, 39, 0.35); }
         .glc-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 2.25rem 0 1rem; }
         .glc-section-title { margin: 0; font: 800 clamp(1.25rem, 2vw, 1.55rem)/1 "Syne", sans-serif; letter-spacing: -.035em; }
         .glc-result-count { margin: 0; color: var(--glc-muted); font-size: .9rem; }
@@ -74,9 +74,9 @@
             <p class="glc-subtitle">Stories, reporting, and perspectives from the people shaping culture and community.</p>
             <div class="glc-hero-actions">
                 {% if current_user.is_authenticated and current_user.role == 'blogger' %}
-                <a class="glc-btn glc-btn--primary" href="{{ url_for('blog.blogpost') }}">Write a story <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                <a class="glc-btn glc-btn--primary" href="{{ url_for('blog.blogpost') }}"><i class="fas fa-pen-nib" aria-hidden="true"></i> Write a story</a>
                 {% elif not current_user.is_authenticated %}
-                <a class="glc-btn glc-btn--primary" href="{{ url_for('routes1.login', next=url_for('blog.blogpost')) }}">Sign in to write <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                <a class="glc-btn glc-btn--primary" href="{{ url_for('routes1.login', next=url_for('blog.blogpost')) }}"><i class="fas fa-pen-nib" aria-hidden="true"></i> Sign in to write</a>
                 {% endif %}
                 {% if current_user.is_authenticated %}
                 <a class="glc-btn" href="{{ url_for('book_platform.content_hub') }}">Content hub</a>

@@ -19,8 +19,11 @@ def main() -> None:
 
     app, _socketio = create_app()
     with app.app_context():
-        converted = User.query.filter_by(role="freelancer").update(
+        freelancer_converted = User.query.filter_by(role="freelancer").update(
             {User.role: "blogger"}, synchronize_session=False
+        )
+        podcaster_converted = User.query.filter_by(role="podcaster").update(
+            {User.role: "other"}, synchronize_session=False
         )
         submissions = PodcastSubmission.query.all()
         removed_files = 0
@@ -36,7 +39,8 @@ def main() -> None:
                     removed_files += 1
             db.session.delete(submission)
         db.session.commit()
-        print(f"Converted freelancer accounts to blogger: {converted}")
+        print(f"Converted freelancer accounts to blogger: {freelancer_converted}")
+        print(f"Converted podcaster accounts to other: {podcaster_converted}")
         print(f"Removed podcast submissions: {len(submissions)}")
         print(f"Removed podcast files referenced by submissions: {removed_files}")
 

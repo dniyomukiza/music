@@ -1,7 +1,27 @@
 <div class="content-hub-inner" id="ink-ch-main" tabindex="-1">
+    {% if role_entry %}
+    <section class="hub-role-entry" aria-label="Your workspace">
+        <div class="hub-role-entry-copy">
+            <p class="hub-role-entry-eyebrow">Your workspace</p>
+            <h2 class="hub-role-entry-title">{{ role_entry.label }}</h2>
+            <p class="hub-role-entry-text">{{ role_entry.description }}</p>
+        </div>
+        <div class="hub-role-entry-actions">
+            <a href="{{ role_entry.url }}" class="btn btn-modern btn-modern-primary">
+                <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>Open {{ role_entry.label }}
+            </a>
+            {% if role_entry.write_url and current_user.role == 'blogger' %}
+            <a href="{{ role_entry.write_url }}" class="btn btn-modern btn-modern-success">
+                <i class="fas fa-pen-nib me-2" aria-hidden="true"></i>Write a story
+            </a>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
     <div class="row g-4 mb-5 justify-content-center">
         <div class="col-md-6 col-lg-5">
-            <div class="content-card">
+            <div class="content-card{% if highlight_card == 'music' %} content-card--your-home{% endif %}">
                 <div class="content-icon-wrapper icon-music-bg">
                     <i class="fas fa-music"></i>
                 </div>
@@ -31,26 +51,71 @@
         </div>
 
         <div class="col-md-6 col-lg-5">
-            <div class="content-card">
+            <div class="content-card{% if highlight_card == 'podcasts' %} content-card--your-home{% endif %}">
                 <div class="content-icon-wrapper icon-podcasts-bg">
                     <i class="fas fa-podcast"></i>
                 </div>
                 <div class="card-body">
                     <h4 class="card-title">Podcasts</h4>
                     <p class="card-text">
-                        Listen to shows and submit your episodes for GLC Media promotion on radio, TV, and streaming — terms required before each submission.
+                        Listen to GLC Media shows on radio, TV, and streaming — browse the podcast library or tune into live news.
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-modern btn-modern-primary">
                             <i class="fas fa-headphones me-2"></i>Listen Now
                         </a>
-                        {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('book_platform.upload_podcast') }}" class="btn btn-modern btn-modern-success">
-                            <i class="fas fa-microphone me-2"></i>Submit episode
-                        </a>
-                        {% endif %}
                         <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-modern">
                             <i class="fas fa-broadcast-tower me-2"></i>Live News
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-5">
+            <div class="content-card{% if highlight_card == 'stories' %} content-card--your-home{% endif %}">
+                <div class="content-icon-wrapper icon-stories-bg">
+                    <i class="fas fa-feather-alt"></i>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">GLC Media Stories</h4>
+                    <p class="card-text">
+                        Read community blogs, freelance journalism, and perspectives — or publish your own story when you have a blogger account.
+                    </p>
+                    <div class="mt-auto content-card-actions">
+                        <a href="{{ url_for('blog.blogs') }}" class="btn btn-modern btn-modern-primary">
+                            <i class="fas fa-newspaper me-2"></i>Browse stories
+                        </a>
+                        {% if current_user.is_authenticated and current_user.role == 'blogger' %}
+                        <a href="{{ url_for('blog.blogpost') }}" class="btn btn-modern btn-modern-success">
+                            <i class="fas fa-pen-nib me-2"></i>Write a story
+                        </a>
+                        {% elif current_user.is_authenticated and current_user.role == 'freelancer' %}
+                        <a href="{{ url_for('blog.blogs', freelance='true') }}" class="btn btn-modern">
+                            <i class="fas fa-briefcase me-2"></i>Freelance feed
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-5">
+            <div class="content-card{% if highlight_card == 'library' %} content-card--your-home{% endif %}">
+                <div class="content-icon-wrapper icon-library-bg">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">Books &amp; marketplace</h4>
+                    <p class="card-text">
+                        Browse indie titles, support campaigns, and open your personal library of purchases and downloads.
+                    </p>
+                    <div class="mt-auto content-card-actions">
+                        <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-modern btn-modern-primary">
+                            <i class="fas fa-store me-2"></i>Marketplace
+                        </a>
+                        <a href="{{ url_for('book_platform.my_library') }}" class="btn btn-modern">
+                            <i class="fas fa-bookmark me-2"></i>My library
                         </a>
                     </div>
                 </div>

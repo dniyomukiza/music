@@ -5,6 +5,9 @@
             <a href="{{ url_for('news_bp.index') }}"{% if request.endpoint == 'news_bp.index' %} class="is-active" aria-current="page"{% endif %}>News</a>
             <a href="{{ url_for('routes1.findwords') }}"{% if request.endpoint == 'routes1.findwords' %} class="is-active" aria-current="page"{% endif %}>Language</a>
             <a href="{{ url_for('book_platform.content_hub') }}"{% if request.endpoint == 'book_platform.content_hub' %} class="is-active" aria-current="page"{% endif %}>Content</a>
+            {% if show_marketplace_nav|default(false) %}
+            <a href="{{ url_for('book_platform.marketplace') }}"{% if request.endpoint == 'book_platform.marketplace' %} class="is-active" aria-current="page"{% endif %}>Marketplace</a>
+            {% endif %}
         </nav>
     </div>
     <a class="wordmark" href="{% if current_user.is_authenticated %}{{ url_for('routes.index') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.index')) }}{% endif %}" aria-label="Ndotonic home">
@@ -57,6 +60,9 @@
     <a href="{{ url_for('news_bp.index') }}">News</a>
     <a href="{{ url_for('routes1.findwords') }}">Language</a>
     <a href="{{ url_for('book_platform.content_hub') }}">Content</a>
+    {% if show_marketplace_nav|default(false) %}
+    <a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
+    {% endif %}
     <a href="{{ url_for('routes.careers') }}">Join Our Mission</a>
     <a href="{{ url_for('blog.contact') }}">Support</a>
     {% if current_user.is_authenticated %}

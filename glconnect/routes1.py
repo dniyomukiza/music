@@ -36,6 +36,8 @@ login_manager = LoginManager()
 # Set when user opens login/register with next=/mybook/marketplace (fallback if query is lost on POST).
 SESSION_AUTH_ENTRY_MARKETPLACE = "auth_entry_marketplace"
 
+SIGNUP_ROLES = frozenset({"artist", "author", "blogger", "other"})
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -154,10 +156,12 @@ def register():
             new_user_email = form.email.data
             new_user_fname = form.fname.data
             new_user_lname = form.lname.data
-            new_user_role = form.role.data
+            new_user_role = (request.form.get("role") or form.role.data or "other").strip()
 
+            if new_user_role not in SIGNUP_ROLES:
+                flash("Please choose a valid role.", "error")
             # Validate username and password
-            if len(new_user_username) < 5:
+            elif len(new_user_username) < 5:
                 flash("Username must be at least 5 characters with one uppercase letter and a digit.", 'error')
             elif len(new_user_password) < 8 \
                 or not re.search(r"[A-Z]", new_user_password) \

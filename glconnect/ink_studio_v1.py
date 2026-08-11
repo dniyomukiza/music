@@ -12,7 +12,7 @@ from flask_login import current_user
 logger = logging.getLogger(__name__)
 
 # Roles that cannot list books or start campaigns in V1 (media / non-book personas).
-_V1_EXCLUDED_AUTHOR_ROLES = frozenset({"artist", "podcaster", "freelancer", "blogger", "other"})
+_V1_EXCLUDED_AUTHOR_ROLES = frozenset({"artist", "freelancer", "blogger", "other"})
 
 _DEBUG_LOG_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
