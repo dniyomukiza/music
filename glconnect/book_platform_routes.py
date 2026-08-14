@@ -40,6 +40,7 @@ from glconnect.book_platform_models import (
     AuthorCampaignPayoutRequest,
     RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, ReviewerPayoutRequest, AuthorSalesPayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
     ReviewStatus, ReviewRequest, ReviewRequestStatus, InvestmentStatus, CampaignStatus, DistributionType,
+    ReaderBookPost, ReaderBookComment,
     BookPrintOrder, PrintOrderStatus,
 )
 
@@ -13158,3 +13159,71 @@ def podcast_library():
     ).all()
     
     return render_template('book_platform/podcast_library.html', podcasts=podcasts)
+
+
+@book_bp.route('/books/<int:book_id>/discussion', methods=['GET', 'POST'])
+@login_required
+def reader_book_discussion(book_id):
+    """Reader-generated posts and comments for a book."""
+    book = BookProject.query.get_or_404(book_id)
+    if request.method == 'POST':
+        content = (request.form.get('content') or '').strip()
+        quote = (request.form.get('quote') or '').strip() or None
+        status = request.form.get('reading_status') or 'reading'
+        if not content:
+            flash('Write something before posting.', 'error')
+        elif status not in {'reading', 'read'}:
+            flash('Choose a valid reading status.', 'error')
+        else:
+            db.session.add(ReaderBookPost(
+                book_project_id=book.id,
+                user_id=current_user.user_id,
+                content=content,
+                quote=quote,
+                reading_status=status,
+            ))
+            db.session.commit()
+            flash('Your book post was shared.', 'success')
+            return redirect(url_for('book_platform.reader_book_discussion', book_id=book.id))
+
+    posts = ReaderBookPost.query.filter_by(book_project_id=book.id).order_by(
+        ReaderBookPost.created_at.desc()
+    ).all()
+    return render_template('book_platform/reader_book_discussion.html', book=book, posts=posts)
+
+
+@book_bp.route('/book-cafe', methods=['GET', 'POST'])
+@login_required
+def book_cafe():
+    """Community feed where regular readers share posts about books."""
+    books = BookProject.query.order_by(BookProject.title.asc()).all()
+    selected_book_id = request.args.get('book_id', type=int)
+    if request.method == 'POST':
+        book_id = request.form.get('book_id', type=int)
+        content = (request.form.get('content') or '').strip()
+        quote = (request.form.get('quote') or '').strip() or None
+        status = request.form.get('reading_status') or 'reading'
+        book = BookProject.query.get(book_id) if book_id else None
+        if not book or not content or status not in {'reading', 'read'}:
+            flash('Choose a book and write a valid post.', 'error')
+        else:
+            db.session.add(ReaderBookPost(book_project_id=book.id, user_id=current_user.user_id,
+                                          content=content, quote=quote, reading_status=status))
+            db.session.commit()
+            flash('Your post was shared in Book Café.', 'success')
+            return redirect(url_for('book_platform.book_cafe'))
+    posts = ReaderBookPost.query.order_by(ReaderBookPost.created_at.desc()).all()
+    selected_book = BookProject.query.get(selected_book_id) if selected_book_id else None
+    return render_template('book_platform/book_cafe.html', books=books, posts=posts,
+                           selected_book=selected_book)
+
+
+@book_bp.route('/reader-discussion/<int:post_id>/comment', methods=['POST'])
+@login_required
+def reader_book_comment(post_id):
+    post = ReaderBookPost.query.get_or_404(post_id)
+    content = (request.form.get('content') or '').strip()
+    if content:
+        db.session.add(ReaderBookComment(post_id=post.id, user_id=current_user.user_id, content=content))
+        db.session.commit()
+    return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id))

@@ -244,6 +244,9 @@
                                                     <button type="button" class="btn btn-primary btn-sm ink-mp-cta ink-mp-view-btn flex-grow-1" onclick="viewBook({{ book.id }})" aria-label="View {{ book.title }}">
                                                         <i class="fas fa-book-open" aria-hidden="true"></i><span class="ink-mp-view-label">View</span>
                                                     </button>
+                                                    <a href="{{ url_for('book_platform.book_cafe', book_id=book.id) }}" class="btn btn-outline-warning btn-sm" aria-label="Review {{ book.title }}">
+                                                        <i class="fas fa-comment-dots" aria-hidden="true"></i> Review
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -852,7 +855,6 @@
 
 </body>
 </html>
-
 
 
 
