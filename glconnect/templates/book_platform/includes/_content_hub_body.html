@@ -5,20 +5,20 @@
                 <div class="card-body">
                     <h4 class="card-title">Music Player</h4>
                     <p class="card-text">
-                        Stream music and submit your tracks for GLC Media promotion — live radio, playlists, TV segments, and podcasts. You must accept playback and copyright terms before each submission.
+                        Stream music and submit your tracks for GLC Media promotion, including live radio, playlists, TV segments, and podcasts. You must accept playback and copyright terms before each submission.
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('book_platform.music_dashboard') }}" class="btn btn-modern btn-modern-primary">
-                            <i class="fas fa-play-circle me-2"></i>Launch Player
+                            Launch Player
                         </a>
                         {% if current_user.is_authenticated %}
                         {% if not has_artist_profile %}
                         <button type="button" class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#createArtistModalContentHub">
-                            <i class="fas fa-star me-2"></i>Register as artist
+                            Register as artist
                         </button>
                         {% else %}
                         <button type="button" class="btn btn-modern btn-modern-success" data-bs-toggle="modal" data-bs-target="#uploadSongModalContentHub">
-                            <i class="fas fa-cloud-upload-alt me-2"></i>Submit track
+                            Submit track
                         </button>
                         {% endif %}
                         {% endif %}
@@ -32,14 +32,14 @@
                 <div class="card-body">
                     <h4 class="card-title">Podcasts</h4>
                     <p class="card-text">
-                        Listen to GLC Media shows on radio, TV, and streaming — browse the podcast library or tune into live news.
+                        Listen to GLC Media shows on radio, TV, and streaming. Browse the podcast library or tune into live news.
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('book_platform.podcast_library') }}" class="btn btn-modern btn-modern-primary">
-                            <i class="fas fa-headphones me-2"></i>Listen Now
+                            Listen Now
                         </a>
                         <a href="{{ url_for('book_platform.podcasts_redirect') }}" class="btn btn-modern">
-                            <i class="fas fa-broadcast-tower me-2"></i>Live News
+                            Live News
                         </a>
                     </div>
                 </div>
@@ -51,19 +51,19 @@
                 <div class="card-body">
                     <h4 class="card-title">GLC Media Stories</h4>
                     <p class="card-text">
-                        Read community blogs, freelance journalism, and perspectives — or publish your own story when you have a blogger account.
+                        Read community blogs, freelance journalism, and perspectives, or publish your own story when you have a blogger account.
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('blog.blogs') }}" class="btn btn-modern btn-modern-primary">
-                            <i class="fas fa-newspaper me-2"></i>Browse stories
+                            Browse stories
                         </a>
                         {% if current_user.is_authenticated and current_user.role == 'blogger' %}
                         <a href="{{ url_for('blog.blogpost') }}" class="btn btn-modern btn-modern-success">
-                            <i class="fas fa-pen-nib me-2"></i>Write a story
+                            Write a story
                         </a>
                         {% elif current_user.is_authenticated and current_user.role == 'freelancer' %}
                         <a href="{{ url_for('blog.blogs', freelance='true') }}" class="btn btn-modern">
-                            <i class="fas fa-briefcase me-2"></i>Freelance feed
+                            Freelance feed
                         </a>
                         {% endif %}
                     </div>
@@ -80,10 +80,10 @@
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-modern btn-modern-primary">
-                            <i class="fas fa-store me-2"></i>Marketplace
+                            Marketplace
                         </a>
                         <a href="{{ url_for('book_platform.my_library') }}" class="btn btn-modern">
-                            <i class="fas fa-bookmark me-2"></i>My library
+                            My library
                         </a>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title"><i class="fas fa-star text-warning me-2"></i>GLC Media artist registration</h5>
+                <h5 class="modal-title">GLC Media artist registration</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -142,7 +142,7 @@
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-modern w-auto" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-modern btn-modern-primary w-auto" onclick="createArtistProfileContentHub()">
-                    <i class="fas fa-check me-2"></i>Submit Profile
+                    Submit Profile
                 </button>
             </div>
         </div>
@@ -153,7 +153,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title"><i class="fas fa-cloud-upload-alt text-success me-2"></i>Submit track</h5>
+                <h5 class="modal-title">Submit track</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -245,7 +245,7 @@
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-modern w-auto" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-modern btn-modern-success w-auto" id="uploadSongBtnContentHub" onclick="uploadSongContentHub()">
-                    <i class="fas fa-broadcast-tower me-2"></i>Submit track
+                    Submit track
                 </button>
             </div>
         </div>
