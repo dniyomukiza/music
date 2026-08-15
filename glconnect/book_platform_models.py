@@ -823,8 +823,11 @@ class ReaderBookPost(db.Model):
     __tablename__ = 'reader_book_posts'
 
     id = db.Column(db.Integer, primary_key=True)
-    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    external_book_title = db.Column(db.String(300), nullable=True)
+    external_book_author = db.Column(db.String(200), nullable=True)
+    external_book_cover_url = db.Column(db.String(1000), nullable=True)
     content = db.Column(db.Text, nullable=False)
     quote = db.Column(db.Text, nullable=True)
     reading_status = db.Column(db.String(20), nullable=False, default='reading')
@@ -840,6 +843,7 @@ class ReaderBookComment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('reader_book_posts.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(1000), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     user = db.relationship('User', backref=db.backref('reader_book_comments', lazy=True))
 

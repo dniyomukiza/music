@@ -1,7 +1,7 @@
 <header class="header">
     <div class="nav-container">
         <nav class="nav-links" aria-label="Primary">
-            <a href="{{ url_for('blog.blogs') }}"{% if request.endpoint == 'blog.blogs' %} class="is-active" aria-current="page"{% endif %}>Blogs</a>
+            <a href="{{ url_for('book_platform.book_cafe') }}"{% if request.endpoint == 'book_platform.book_cafe' %} class="is-active" aria-current="page"{% endif %}>Discussions</a>
             <a href="{{ url_for('news_bp.index') }}"{% if request.endpoint == 'news_bp.index' %} class="is-active" aria-current="page"{% endif %}>News</a>
             <a href="{{ url_for('routes1.findwords') }}"{% if request.endpoint == 'routes1.findwords' %} class="is-active" aria-current="page"{% endif %}>Language</a>
             <a href="{{ url_for('book_platform.content_hub') }}"{% if request.endpoint == 'book_platform.content_hub' %} class="is-active" aria-current="page"{% endif %}>Content</a>
@@ -56,7 +56,7 @@
         <a href="{{ url_for('prof.edit_profile') }}">Settings</a>
     </div>
     {% endif %}
-    <a href="{{ url_for('blog.blogs') }}">Blogs</a>
+    <a href="{{ url_for('book_platform.book_cafe') }}">Discussions</a>
     <a href="{{ url_for('news_bp.index') }}">News</a>
     <a href="{{ url_for('routes1.findwords') }}">Language</a>
     <a href="{{ url_for('book_platform.content_hub') }}">Content</a>

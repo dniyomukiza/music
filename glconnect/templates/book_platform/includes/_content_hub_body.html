@@ -1,24 +1,4 @@
 <div class="content-hub-inner" id="ink-ch-main" tabindex="-1">
-    {% if role_entry %}
-    <section class="hub-role-entry" aria-label="Your workspace">
-        <div class="hub-role-entry-copy">
-            <p class="hub-role-entry-eyebrow">Your workspace</p>
-            <h2 class="hub-role-entry-title">{{ role_entry.label }}</h2>
-            <p class="hub-role-entry-text">{{ role_entry.description }}</p>
-        </div>
-        <div class="hub-role-entry-actions">
-            <a href="{{ role_entry.url }}" class="btn btn-modern btn-modern-primary">
-                <i class="fas fa-arrow-right me-2" aria-hidden="true"></i>Open {{ role_entry.label }}
-            </a>
-            {% if role_entry.write_url and current_user.role == 'blogger' %}
-            <a href="{{ role_entry.write_url }}" class="btn btn-modern btn-modern-success">
-                <i class="fas fa-pen-nib me-2" aria-hidden="true"></i>Write a story
-            </a>
-            {% endif %}
-        </div>
-    </section>
-    {% endif %}
-
     <div class="row g-4 mb-5 justify-content-center">
         <div class="col-md-6 col-lg-5">
             <div class="content-card{% if highlight_card == 'music' %} content-card--your-home{% endif %}">

@@ -13200,15 +13200,48 @@ def book_cafe():
     selected_book_id = request.args.get('book_id', type=int)
     if request.method == 'POST':
         book_id = request.form.get('book_id', type=int)
+        book_source = request.form.get('book_source') or 'platform'
+        external_title = (request.form.get('external_book_title') or '').strip() or None
+        external_author = (request.form.get('external_book_author') or '').strip() or None
+        external_cover = (request.form.get('external_book_cover_url') or '').strip() or None
+        cover_file = request.files.get('external_book_cover')
         content = (request.form.get('content') or '').strip()
         quote = (request.form.get('quote') or '').strip() or None
         status = request.form.get('reading_status') or 'reading'
-        book = BookProject.query.get(book_id) if book_id else None
-        if not book or not content or status not in {'reading', 'read'}:
-            flash('Choose a book and write a valid post.', 'error')
+        book = BookProject.query.get(book_id) if book_source == 'platform' and book_id else None
+        if book_source == 'platform' and not book:
+            flash('Choose a platform book.', 'error')
+        elif book_source == 'external' and not external_title:
+            flash('Enter the title of the book you read.', 'error')
+        elif not content or status not in {'reading', 'read'}:
+            flash('Write a valid post.', 'error')
         else:
-            db.session.add(ReaderBookPost(book_project_id=book.id, user_id=current_user.user_id,
-                                          content=content, quote=quote, reading_status=status))
+            if book_source == 'external' and cover_file and cover_file.filename:
+                try:
+                    from PIL import Image
+                    from werkzeug.utils import secure_filename
+                    allowed = {'jpg', 'jpeg', 'png', 'webp'}
+                    original_name = secure_filename(cover_file.filename)
+                    extension = original_name.rsplit('.', 1)[-1].lower() if '.' in original_name else ''
+                    if extension not in allowed or (request.content_length and request.content_length > 6 * 1024 * 1024):
+                        raise ValueError('Use a JPG, PNG, or WebP image smaller than 6 MB.')
+                    image = Image.open(cover_file)
+                    image.verify()
+                    cover_file.seek(0)
+                    cover_dir = os.path.join(current_app.static_folder, 'book_cafe_covers')
+                    os.makedirs(cover_dir, exist_ok=True)
+                    stored_name = f"{uuid.uuid4().hex}.{extension}"
+                    cover_file.save(os.path.join(cover_dir, stored_name))
+                    external_cover = f"book_cafe_covers/{stored_name}"
+                except Exception:
+                    flash('That cover could not be uploaded. Use a valid JPG, PNG, or WebP image under 6 MB.', 'error')
+                    return render_template('book_platform/book_cafe.html', books=books, posts=ReaderBookPost.query.order_by(ReaderBookPost.created_at.desc()).all(), selected_book=selected_book if 'selected_book' in locals() else None)
+            db.session.add(ReaderBookPost(book_project_id=book.id if book else None,
+                                          external_book_title=external_title if book_source == 'external' else None,
+                                          external_book_author=external_author if book_source == 'external' else None,
+                                          external_book_cover_url=external_cover if book_source == 'external' else None,
+                                          user_id=current_user.user_id, content=content,
+                                          quote=quote, reading_status=status))
             db.session.commit()
             flash('Your post was shared in Book Café.', 'success')
             return redirect(url_for('book_platform.book_cafe'))
@@ -13223,7 +13256,83 @@ def book_cafe():
 def reader_book_comment(post_id):
     post = ReaderBookPost.query.get_or_404(post_id)
     content = (request.form.get('content') or '').strip()
-    if content:
-        db.session.add(ReaderBookComment(post_id=post.id, user_id=current_user.user_id, content=content))
+    image_url = None
+    image_file = request.files.get('image')
+    if image_file and image_file.filename:
+        try:
+            from PIL import Image
+            from werkzeug.utils import secure_filename
+            allowed = {'jpg', 'jpeg', 'png', 'webp'}
+            safe_name = secure_filename(image_file.filename)
+            extension = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+            if extension not in allowed or (request.content_length and request.content_length > 6 * 1024 * 1024):
+                raise ValueError
+            image = Image.open(image_file)
+            image.verify()
+            image_file.seek(0)
+            image_dir = os.path.join(current_app.static_folder, 'book_cafe_replies')
+            os.makedirs(image_dir, exist_ok=True)
+            stored_name = f"{uuid.uuid4().hex}.{extension}"
+            image_file.save(os.path.join(image_dir, stored_name))
+            image_url = f"book_cafe_replies/{stored_name}"
+        except Exception:
+            flash('Reply image must be a valid JPG, PNG, or WebP image under 6 MB.', 'error')
+            return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id)) if post.book_project_id else redirect(url_for('book_platform.book_cafe'))
+    if content or image_url:
+        db.session.add(ReaderBookComment(post_id=post.id, user_id=current_user.user_id, content=content, image_url=image_url))
         db.session.commit()
-    return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id))
+    if post.book_project_id:
+        return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id))
+    return redirect(url_for('book_platform.book_cafe'))
+
+
+@book_bp.route('/reader-discussion/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_reader_book_post(post_id):
+    post = ReaderBookPost.query.get_or_404(post_id)
+    is_admin = current_user.username == 'admin' or current_user.role == 'admin'
+    if post.user_id != current_user.user_id and not is_admin:
+        abort(403)
+    destination = url_for('book_platform.reader_book_discussion', book_id=post.book_project_id) if post.book_project_id else url_for('book_platform.book_cafe')
+    db.session.delete(post)
+    db.session.commit()
+    flash('Post and its replies were deleted.', 'success')
+    return redirect(destination)
+
+
+@book_bp.route('/reader-discussion/<int:post_id>/edit', methods=['POST'])
+@login_required
+def edit_reader_book_post(post_id):
+    post = ReaderBookPost.query.get_or_404(post_id)
+    is_admin = current_user.username == 'admin' or current_user.role == 'admin'
+    if post.user_id != current_user.user_id and not is_admin:
+        abort(403)
+    content = (request.form.get('content') or '').strip()
+    quote = (request.form.get('quote') or '').strip() or None
+    if not content:
+        flash('Post text cannot be empty.', 'error')
+    else:
+        post.content = content
+        post.quote = quote
+        image_file = request.files.get('external_book_cover')
+        if image_file and image_file.filename and not post.book_project_id:
+            try:
+                from PIL import Image
+                from werkzeug.utils import secure_filename
+                safe_name = secure_filename(image_file.filename)
+                extension = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+                if extension not in {'jpg', 'jpeg', 'png', 'webp'} or (request.content_length and request.content_length > 6 * 1024 * 1024):
+                    raise ValueError
+                image = Image.open(image_file)
+                image.verify()
+                image_file.seek(0)
+                image_dir = os.path.join(current_app.static_folder, 'book_cafe_covers')
+                os.makedirs(image_dir, exist_ok=True)
+                stored_name = f"{uuid.uuid4().hex}.{extension}"
+                image_file.save(os.path.join(image_dir, stored_name))
+                post.external_book_cover_url = f"book_cafe_covers/{stored_name}"
+            except Exception:
+                flash('That cover could not be uploaded.', 'error')
+        db.session.commit()
+        flash('Post updated.', 'success')
+    return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id)) if post.book_project_id else redirect(url_for('book_platform.book_cafe'))
