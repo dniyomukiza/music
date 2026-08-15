@@ -784,6 +784,7 @@ def create_app(config_overrides=None):
             ensure_campaign_platform_fee_schema,
             ensure_campaign_translations_schema,
             ensure_collaboration_role_enum_schema,
+            ensure_reader_book_discussion_schema,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -814,6 +815,7 @@ def create_app(config_overrides=None):
         ensure_campaign_platform_fee_schema(db)
         ensure_campaign_translations_schema(db)
         ensure_collaboration_role_enum_schema(db)
+        ensure_reader_book_discussion_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

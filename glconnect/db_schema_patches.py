@@ -14,6 +14,45 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 
+def ensure_reader_book_discussion_schema(db) -> None:
+    """Catch up the Book Café tables/columns on older PostgreSQL deployments."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        if db.engine.dialect.name != "postgresql":
+            return
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS reader_book_posts (
+                id SERIAL PRIMARY KEY,
+                book_project_id INTEGER REFERENCES book_projects(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                external_book_title VARCHAR(300), external_book_author VARCHAR(200),
+                external_book_cover_url VARCHAR(1000), content TEXT NOT NULL,
+                quote TEXT, reading_status VARCHAR(20) DEFAULT 'reading',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_title VARCHAR(300)"))
+        db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_author VARCHAR(200)"))
+        db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_cover_url VARCHAR(1000)"))
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS reader_book_comments (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES reader_book_posts(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                content TEXT NOT NULL, image_url VARCHAR(1000),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.session.execute(text("ALTER TABLE reader_book_comments ADD COLUMN IF NOT EXISTS image_url VARCHAR(1000)"))
+        db.session.commit()
+        logger.info("Book Café discussion schema verified.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch Book Café schema: %s", e, exc_info=True)
+        raise
+
+
 def ensure_investment_campaign_milestone_schema(db) -> None:
     """Add missing milestone columns / payout_requests table if not present."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
