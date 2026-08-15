@@ -35,6 +35,7 @@ def ensure_reader_book_discussion_schema(db) -> None:
         db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_title VARCHAR(300)"))
         db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_author VARCHAR(200)"))
         db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_cover_url VARCHAR(1000)"))
+        db.session.execute(text("ALTER TABLE reader_book_posts ALTER COLUMN book_project_id DROP NOT NULL"))
         db.session.execute(text("""
             CREATE TABLE IF NOT EXISTS reader_book_comments (
                 id SERIAL PRIMARY KEY,

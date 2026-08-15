@@ -13203,7 +13203,7 @@ def book_cafe():
         book_source = request.form.get('book_source') or 'platform'
         external_title = (request.form.get('external_book_title') or '').strip() or None
         external_author = (request.form.get('external_book_author') or '').strip() or None
-        external_cover = (request.form.get('external_book_cover_url') or '').strip() or None
+        external_cover = None
         cover_file = request.files.get('external_book_cover')
         content = (request.form.get('content') or '').strip()
         quote = (request.form.get('quote') or '').strip() or None
