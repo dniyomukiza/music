@@ -1337,6 +1337,7 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
         try:
             # Check if the interpreter is shutting down
             if sys.is_finalizing():
+                _last_async_error = "RuntimeError: Python interpreter is finalizing"
                 print(f"DEBUG: Interpreter is finalizing, cannot run async operation (attempt {attempt + 1})")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
@@ -1347,6 +1348,7 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
             try:
                 current_loop = asyncio.get_event_loop()
                 if current_loop.is_closed():
+                    _last_async_error = "RuntimeError: current asyncio event loop is closed"
                     print(f"DEBUG: Current event loop is closed, cannot run async operation (attempt {attempt + 1})")
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)
@@ -1381,6 +1383,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                 return result
             except RuntimeError as e:
                 if "cannot schedule new futures after interpreter shutdown" in str(e):
+                    last_error = e
+                    _last_async_error = f"{type(e).__name__}: {e}"
                     print(f"DEBUG: Interpreter is shutting down, cannot run async operation (attempt {attempt + 1})")
                     if attempt < max_retries - 1:
                         print(f"DEBUG: Retrying in {retry_delay} seconds...")
@@ -1388,6 +1392,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                         continue
                     return None
                 elif "Event loop is closed" in str(e):
+                    last_error = e
+                    _last_async_error = f"{type(e).__name__}: {e}"
                     print(f"DEBUG: Event loop is closed, cannot run async operation (attempt {attempt + 1})")
                     if attempt < max_retries - 1:
                         print(f"DEBUG: Retrying in {retry_delay} seconds...")
