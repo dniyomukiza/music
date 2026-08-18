@@ -1927,6 +1927,13 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             intro_text = "Welcome to GLC News"
             transitions = [f"Transition {i+1}" for i in range(len(topics))]
             outro_text = "Thanks for listening to GLC News"
+
+    # The fallback branch above creates anchor_script but does not enter the
+    # parsing branch where these values are normally initialized.
+    if anchor_output is None:
+        intro_text = anchor_script["intro"]
+        transitions = anchor_script["transitions"]
+        outro_text = anchor_script["outro"]
     
     # Create intro and outro TTS agents with actual script content
     intro_tts_agent = Agent(
