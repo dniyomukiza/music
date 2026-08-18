@@ -1326,6 +1326,7 @@ This concludes our report on {topic}. Stay tuned for more updates.
 def _run_async_safely(coro, max_retries=3, retry_delay=2):
     """Safely run async coroutine in a thread, handling interpreter shutdown gracefully with retry logic."""
     import asyncio
+    import inspect
     import threading
     import sys
     import time
@@ -1333,6 +1334,11 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
     global _last_async_error
     last_error = None
     _last_async_error = None
+    # A coroutine object is single-use. Retrying the same object produces
+    # "cannot reuse already awaited coroutine" and hides the original error.
+    # Callers that need a retry must create and pass a fresh coroutine.
+    if inspect.iscoroutine(coro):
+        max_retries = 1
     for attempt in range(max_retries):
         try:
             # Check if the interpreter is shutting down
