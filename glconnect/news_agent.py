@@ -122,7 +122,25 @@ if google_api_key:
     genai.configure(api_key=google_api_key)
     os.environ['GOOGLE_API_KEY'] = google_api_key
 
-NEWS_GEMINI_MODEL = (os.getenv("NEWS_GEMINI_MODEL") or "gemini-3.6-flash").strip()
+NEWS_GEMINI_MODEL = (os.getenv("NEWS_GEMINI_MODEL") or "gemini-2.5-flash").strip()
+
+# #region agent log
+def _agent_debug_log(hypothesis_id, location, message, data=None):
+    try:
+        import json as _json, time as _time
+        with open("/Applications/untitled folder/music-1/.cursor/debug-1f57ca.log", "a") as _f:
+            _f.write(_json.dumps({
+                "sessionId": "1f57ca",
+                "runId": "pre-fix",
+                "hypothesisId": hypothesis_id,
+                "location": location,
+                "message": message,
+                "data": data or {},
+                "timestamp": int(_time.time() * 1000),
+            }) + "\n")
+    except Exception:
+        pass
+# #endregion
 
 # TTS credentials will be loaded when needed
 
@@ -1380,12 +1398,18 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     Now includes memory optimizations to prevent timeouts.
     """
     print("DEBUG: Starting full audio news generation with memory optimizations")
+    # #region agent log
+    _agent_debug_log("B", "news_agent.py:generate_broadcast", "generate_broadcast_enter", {"topic_count": len(topics or []), "task_id": task_id})
+    # #endregion
     
     if not topics:
         print("No topics entered. Exiting.")
         return {"error": "No topics provided"}
 
     tts_error = validate_tts_credentials()
+    # #region agent log
+    _agent_debug_log("B", "news_agent.py:generate_broadcast", "tts_preflight", {"ok": not bool(tts_error), "error": (tts_error or "")[:160]})
+    # #endregion
     if tts_error:
         print(f"ERROR: TTS preflight failed: {tts_error}")
         return {"error": tts_error}
@@ -1403,26 +1427,6 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     
     # Use the original workflow but with memory optimizations
     return _generate_broadcast_attempt(topics, task_id)
-
-def generate_intelligent_fallback_content(topic: str) -> str:
-    """Generate simple fallback content when main generation fails."""
-    try:
-        # Simple fallback content generation
-        return f"""
-Breaking News Report: {topic}
-
-This is a developing story about {topic}. Our news team is working to gather more information and will provide updates as they become available.
-
-Key points to consider:
-- This topic is currently under investigation
-- More details will be provided as they emerge
-- We will continue to monitor this situation closely
-
-This concludes our report on {topic}. Stay tuned for more updates.
-        """.strip()
-    except Exception as e:
-        print(f"DEBUG: Error in fallback content generation: {e}")
-        return f"News report on {topic} - Content generation temporarily unavailable. Please try again later."
 
 def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failure=False):
     """Safely run async coroutine in a thread, handling interpreter shutdown gracefully with retry logic."""
@@ -1533,9 +1537,11 @@ def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failu
                 f"exception_type={type(e).__name__} message={e!s}"
             )
             traceback.print_exc()
+            err_text = str(e)
             if attempt < max_retries - 1:
-                print(f"DEBUG: Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                wait_s = max(retry_delay, 15) if ("RESOURCE_EXHAUSTED" in err_text or "429" in err_text) else retry_delay
+                print(f"DEBUG: Retrying in {wait_s} seconds...")
+                time.sleep(wait_s)
                 continue
             if raise_on_failure:
                 raise last_error
@@ -1767,20 +1773,30 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             
             # Process this agent
             try:
-                result = _run_async_safely(lambda agent=agent: run_agent(agent, ""), max_retries=2, retry_delay=3)
+                result = _run_async_safely(lambda agent=agent: run_agent(agent, ""), max_retries=2, retry_delay=8)
                 if result is not None:
                     individual_outputs.append(result)
                     print(f"DEBUG: Agent {i+1} completed successfully")
+                    # #region agent log
+                    _agent_debug_log("F", "news_agent.py:sequential_agent", "agent_ok", {"agent": agent.name, "chars": len(str(result))})
+                    # #endregion
                 else:
                     print(f"DEBUG: Agent {i+1} failed - using fallback")
-                    # Create fallback content for this agent
-                    fallback_result = {"script": f"News report on topic {i+1} - Content generation temporarily unavailable."}
-                    individual_outputs.append(fallback_result)
+                    script_key = reporter_script_keys[i]
+                    category = script_key.replace("_script", "")
+                    topic_str = ", ".join(topics_by_category.get(category, [category]))
+                    # #region agent log
+                    _agent_debug_log("F", "news_agent.py:sequential_agent", "agent_fail_fallback", {"agent": agent.name, "error": (_last_async_error or "")[:200], "topics": topic_str})
+                    # #endregion
+                    fallback_content = generate_intelligent_fallback_content(topic_str)
+                    individual_outputs.append(json.dumps({script_key: fallback_content}))
             except Exception as e:
                 print(f"DEBUG: Agent {i+1} failed with error: {e}")
-                # Create fallback content
-                fallback_result = {"script": f"News report on topic {i+1} - Content generation temporarily unavailable."}
-                individual_outputs.append(fallback_result)
+                script_key = reporter_script_keys[i]
+                category = script_key.replace("_script", "")
+                topic_str = ", ".join(topics_by_category.get(category, [category]))
+                fallback_content = generate_intelligent_fallback_content(topic_str)
+                individual_outputs.append(json.dumps({script_key: fallback_content}))
             
             # Force aggressive memory cleanup after each agent
             try:
@@ -1939,7 +1955,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         
         if script_found:
             # Validate the extracted content before using it
-            topic = script_key.replace('_script', '')
+            category = script_key.replace('_script', '')
+            topic = ", ".join(topics_by_category.get(category, [category]))
             is_valid, cleaned_script = validate_news_content(script_text, topic)
             
             if is_valid:
@@ -1958,7 +1975,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
                 fallback_text = fallback_match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
                 if len(fallback_text.strip()) > 10:
                     # Validate the fallback content
-                    topic = script_key.replace('_script', '')
+                    topic = ", ".join(topics_by_category.get(script_key.replace('_script', ''), [script_key.replace('_script', '')]))
                     is_valid, cleaned_fallback = validate_news_content(fallback_text, topic)
                     
                     if is_valid:
@@ -1968,10 +1985,13 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             
             if not script_found:
                 # Generate intelligent fallback content
-                topic = script_key.replace('_script', '')
+                topic = ", ".join(topics_by_category.get(script_key.replace('_script', ''), [script_key.replace('_script', '')]))
                 fallback_content = generate_intelligent_fallback_content(topic)
                 reporter_scripts.append(fallback_content)
                 print(f"DEBUG: Generated intelligent fallback for {script_key} due to extraction failure")
+                # #region agent log
+                _agent_debug_log("F", "news_agent.py:extract_scripts", "extraction_fallback", {"script_key": script_key, "topics": topic, "preview": fallback_content[:120]})
+                # #endregion
 
     print(f"DEBUG: Extracted reporter scripts: {len(reporter_scripts)} scripts")
 
