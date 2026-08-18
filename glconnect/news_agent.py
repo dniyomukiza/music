@@ -389,12 +389,15 @@ _tts_client = None
 _tts_credentials_checked = False
 _tts_backend = None  # "google" or "elevenlabs"
 _ELEVENLABS_VOICE_MAP = {
-    "en-US-Studio-O": "EXAVITQu4vr4xnSDxMaL",  # Sarah
-    "en-US-Neural2-D": "pNInz6obpgDQGcFmaJgB",  # Adam
-    "en-US-Standard-F": "EXAVITQu4vr4xnSDxMaL",  # Sarah
-    "en-GB-Standard-B": "JBFqnCBsd6RMkjVDRZzb",  # George
+    "en-US-Studio-O": "EXAVITQu4vr4xnSDxMaL",  # Sarah — studio anchor only
+    "en-US-Neural2-D": "pNInz6obpgDQGcFmaJgB",  # Adam — Ernest
+    "en-US-Neural2-C": "21m00Tcm4TlvDq8ikWAM",  # Rachel — Edith
+    "en-US-Standard-F": "MF3mGyEYCl7XYWbV9V6O",  # Elli — Isabella
+    "en-GB-Standard-B": "JBFqnCBsd6RMkjVDRZzb",  # George — Mark
+    "en-US-Neural2-F": "AZnzlk1XvdvUeBnXmlld",  # Domi — Clara
+    "en-US-Neural2-A": "TxGEqnHWrfWFTfGW9XjX",  # Josh — James
 }
-_ELEVENLABS_DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL"
+_ELEVENLABS_DEFAULT_VOICE = "TxGEqnHWrfWFTfGW9XjX"  # James — never reuse anchor Sarah
 
 
 def _resolve_tts_credentials_path() -> str:
@@ -539,12 +542,13 @@ def _run_direct_tts_phase(
             ANCHOR_VOICE,
         )
 
-    for category, script_content, voice in reporter_segments:
+    for segment_id, script_content, voice in reporter_segments:
+        safe_voice = _sanitize_reporter_voice(voice)
         _convert(
-            f"{category} report",
+            f"{segment_id} report",
             script_content,
-            f"{category}_audio.mp3",
-            voice,
+            f"{segment_id}_audio.mp3",
+            safe_voice,
         )
 
 
@@ -569,6 +573,15 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     # Clean the text before processing. Keep enough context in logs to identify
     # the exact segment when ParallelAgent runs several TTS calls at once.
     clean_text = clean_text_for_speech(text)
+    is_reporter_segment = (
+        output_filename.startswith("report_") and output_filename.endswith("_audio.mp3")
+    )
+    if is_reporter_segment and _reporter_voice_collides_with_anchor(voice_name):
+        print(
+            f"WARNING: Blocked anchor voice on reporter segment {output_filename!r}; "
+            f"using {JAMES_VOICE!r}"
+        )
+        voice_name = _sanitize_reporter_voice(voice_name)
     print(
         f"TTS_START segment={output_filename!r} voice={voice_name!r} "
         f"text_chars={len(clean_text)}"
@@ -903,28 +916,29 @@ def _categorize_topic_locally(topic: str) -> str:
     return "other"
 
 
+def _category_for_topic(topic: str, categorized_topics: dict) -> str:
+    if isinstance(categorized_topics, dict):
+        if topic in categorized_topics:
+            return _normalize_category(categorized_topics[topic])
+        topic_l = str(topic).lower()
+        for key, value in categorized_topics.items():
+            if str(key).lower() == topic_l:
+                return _normalize_category(value)
+    return _categorize_topic_locally(topic)
+
+
 def _voice_for_category(category: str) -> str:
-    return {
-        "sports": ERNEST_VOICE,
-        "finance": ISABELLA_VOICE,
-        "tech": MARK_VOICE,
-    }.get(category, EDITH_VOICE)
+    return _reporter_for_category(category)["voice"]
 
 
 def _reporter_display_name(category: str) -> str:
-    return {
-        "sports": "Ernest",
-        "finance": "Isabella",
-        "tech": "Mark",
-        "politics": "Edith",
-        "health": "Edith",
-        "other": "Edith",
-    }.get(category, "Edith")
+    return _reporter_for_category(category)["name"]
 
 
 def _deterministic_reporter_script(topic: str, category: str) -> str:
-    name = _reporter_display_name(category)
-    desk = category if category != "other" else "news"
+    reporter = _reporter_for_category(category)
+    name = reporter["name"]
+    desk = reporter["desk"]
     return (
         f"This is {name} with the {desk} desk at GLC News. "
         f"We are covering {topic}. "
@@ -957,17 +971,27 @@ def _strip_json_fence(text: str) -> str:
     return cleaned.strip()
 
 
-def _gemini_reporter_scripts(topics: list, trace: NewsPipelineTrace = None) -> dict:
+def _gemini_reporter_scripts(topics: list, assignments: list = None, trace: NewsPipelineTrace = None) -> dict:
     """One Gemini call for all reporter scripts. Returns {topic: script} or {}."""
     if not topics:
         return {}
     try:
+        assignment_lines = []
+        for item in assignments or []:
+            assignment_lines.append(
+                f'- Topic {item["topic"]!r}: reporter {item["name"]} on the {item["desk"]} desk. '
+                f'Sign off exactly: "I am {item["name"]}, for GLC News."'
+            )
+        assignment_block = "\n".join(assignment_lines) if assignment_lines else ""
         prompt = (
             "Write spoken radio news reports. Return ONLY JSON:\n"
             '{"reports": [{"topic": "<exact topic>", "script": "<4 to 6 spoken sentences, no titles, '
-            'no asterisks, end with I am <FirstName>, for GLC News>"}]}\n'
+            'no asterisks>"}]}\n'
             f"Topics: {json.dumps(list(topics))}\n"
-            "Each script must cover that exact topic only. Do not reuse the same sentences across reports."
+            f"Assigned reporters:\n{assignment_block}\n"
+            "Each script must cover that exact topic only, be spoken by that assigned reporter, "
+            "and must not reuse sentences across reports. "
+            "The studio anchor is a different person and must not file these reports."
         )
         raw = _gemini_generate_text(prompt)
         gemini_meta = dict(_last_gemini_meta)
@@ -1043,14 +1067,26 @@ def _gemini_reporter_scripts(topics: list, trace: NewsPipelineTrace = None) -> d
 
 def _build_reporter_segments(topics: list, categorized_topics: dict, trace: NewsPipelineTrace = None):
     """One reporter audio segment per user topic, with a distinct script."""
-    generated = _gemini_reporter_scripts(topics, trace=trace)
+    assignments = []
+    for topic in topics:
+        category = _category_for_topic(topic, categorized_topics)
+        reporter = _reporter_for_category(category)
+        assignments.append({
+            "topic": topic,
+            "category": category,
+            "name": reporter["name"],
+            "desk": reporter["desk"],
+            "voice": reporter["voice"],
+        })
+    generated = _gemini_reporter_scripts(topics, assignments=assignments, trace=trace)
     script_keys = []
     scripts = []
     segments = []
     reporter_trace = []
     fallback_count = 0
-    for index, topic in enumerate(topics):
-        category = categorized_topics.get(topic) or _categorize_topic_locally(topic)
+    for index, assignment in enumerate(assignments):
+        topic = assignment["topic"]
+        category = assignment["category"]
         script = generated.get(topic)
         if script:
             source = "gemini"
@@ -1063,18 +1099,23 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
         segment_id = f"report_{index}"
         script_keys.append(f"{segment_id}_script")
         scripts.append(script)
-        segments.append((segment_id, clean_text_for_speech(script), _voice_for_category(category)))
+        segments.append((segment_id, clean_text_for_speech(script), assignment["voice"]))
         reporter_trace.append({
             "index": index,
             "topic": topic,
             "category": category,
             "source": source,
-            "voice": _voice_for_category(category),
-            "reporter": _reporter_display_name(category),
+            "voice": assignment["voice"],
+            "reporter": assignment["name"],
+            "desk": assignment["desk"],
+            "anchor_collision": _reporter_voice_collides_with_anchor(assignment["voice"]),
             "chars": len(script),
             "preview": _clip_trace_text(script, 160),
         })
-        print(f"DEBUG: Reporter {index} category={category} topic={topic!r} chars={len(script)}")
+        print(
+            f"DEBUG: Reporter {index} name={assignment['name']} category={category} "
+            f"topic={topic!r} voice={assignment['voice']} chars={len(script)}"
+        )
     if trace:
         if fallback_count == 0:
             status = "ok"
@@ -1085,6 +1126,10 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
         else:
             status = "fallback"
             warning = f"All {len(topics)} reporters used deterministic fallback scripts"
+        collisions = [row["topic"] for row in reporter_trace if row.get("anchor_collision")]
+        if collisions:
+            collision_warning = f"Reporter voice collides with studio anchor for: {collisions}"
+            warning = f"{warning} | {collision_warning}" if warning else collision_warning
         trace.stage(
             "scripts_assign",
             status=status,
@@ -1382,11 +1427,86 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
         return {"combined_audio_filepath": f"Error: Critical failure in audio combination. {e}"}
 
 # --- Define Voices ---
+# Studio-O is the desk anchor only. Field reporters must use a different voice
+# or the same person appears to both host the bulletin and file a report.
 ANCHOR_VOICE = 'en-US-Studio-O'
 ERNEST_VOICE = 'en-US-Neural2-D'
-EDITH_VOICE = 'en-US-Studio-O'
+EDITH_VOICE = 'en-US-Neural2-C'
 ISABELLA_VOICE = 'en-US-Standard-F'
-MARK_VOICE = 'en-GB-Standard-B' 
+MARK_VOICE = 'en-GB-Standard-B'
+CLARA_VOICE = 'en-US-Neural2-F'
+JAMES_VOICE = 'en-US-Neural2-A'
+
+_REPORTER_ROSTER = {
+    "sports": {"name": "Ernest", "desk": "sports", "voice": ERNEST_VOICE},
+    "finance": {"name": "Isabella", "desk": "finance", "voice": ISABELLA_VOICE},
+    "tech": {"name": "Mark", "desk": "tech", "voice": MARK_VOICE},
+    "politics": {"name": "Edith", "desk": "politics", "voice": EDITH_VOICE},
+    "health": {"name": "Clara", "desk": "health", "voice": CLARA_VOICE},
+    "other": {"name": "James", "desk": "news", "voice": JAMES_VOICE},
+}
+
+_CATEGORY_ALIASES = {
+    "political": "politics",
+    "economy": "finance",
+    "business": "finance",
+    "technology": "tech",
+    "science": "health",
+    "health & science": "health",
+    "world": "other",
+    "world & international": "other",
+    "international": "other",
+    "news": "other",
+}
+
+
+def _normalize_category(category: str) -> str:
+    text = (category or "other").strip().lower()
+    text = _CATEGORY_ALIASES.get(text, text)
+    return text if text in _REPORTER_ROSTER else "other"
+
+
+def _reporter_for_category(category: str) -> dict:
+    reporter = dict(_REPORTER_ROSTER[_normalize_category(category)])
+    reporter["voice"] = _sanitize_reporter_voice(reporter["voice"])
+    return reporter
+
+
+def _reporter_voice_collides_with_anchor(voice: str) -> bool:
+    """True when TTS would sound like the studio anchor (Google name or ElevenLabs id)."""
+    if not voice or voice == ANCHOR_VOICE:
+        return True
+    anchor_id = _ELEVENLABS_VOICE_MAP.get(ANCHOR_VOICE)
+    reporter_id = _ELEVENLABS_VOICE_MAP.get(voice)
+    return bool(anchor_id and reporter_id and anchor_id == reporter_id)
+
+
+def _sanitize_reporter_voice(voice: str) -> str:
+    """Hard guard: field reporters must never use the anchor voice."""
+    if not _reporter_voice_collides_with_anchor(voice):
+        return voice
+    print(
+        f"WARNING: Reporter voice {voice!r} collides with anchor {ANCHOR_VOICE!r}; "
+        f"using fallback {JAMES_VOICE!r}"
+    )
+    return JAMES_VOICE
+
+
+def _validate_reporter_roster() -> None:
+    """Fail fast at import if roster config would let a reporter sound like the anchor."""
+    for category, reporter in _REPORTER_ROSTER.items():
+        if _reporter_voice_collides_with_anchor(reporter["voice"]):
+            raise ValueError(
+                f"Reporter roster misconfigured: {category} voice {reporter['voice']!r} "
+                f"matches studio anchor {ANCHOR_VOICE!r}"
+            )
+    if _ELEVENLABS_DEFAULT_VOICE == _ELEVENLABS_VOICE_MAP.get(ANCHOR_VOICE):
+        raise ValueError(
+            "ElevenLabs default voice must not be the studio anchor voice"
+        )
+
+
+_validate_reporter_roster()
 
 def create_news_reporter_agent(topic: str, voice: str, agent_name: str, output_key: str) -> Agent:
     """Creates a news reporter agent for a specific topic."""
