@@ -2257,7 +2257,10 @@ def broadcast():
             print(f"DEBUG: Result type: {type(result)}")
             
             # Update task status based on result
-            if result and 'error' not in result:
+            # A result without an audio path is not a successful broadcast.
+            # The audio generator reports TTS/finalization failures using a
+            # summary and audio_file=None, so do not mark those tasks complete.
+            if result and 'error' not in result and result.get('audio_file'):
                 # Success - store result in database
                 update_task_in_db(task_id, 
                                  status='completed',
@@ -2275,7 +2278,10 @@ def broadcast():
                 print(f"DEBUG: Task {task_id} marked as completed with result stored")
             else:
                 # Error
-                error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                error_msg = (
+                    result.get('error') or result.get('summary') or 'No audio file was generated'
+                    if result else 'No result returned'
+                )
                 update_task_in_db(task_id, 
                                  status='failed',
                                  progress=0,

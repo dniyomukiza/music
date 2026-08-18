@@ -254,8 +254,13 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     # Force garbage collection before TTS processing
     gc.collect()
     
-    # Clean the text before processing
+    # Clean the text before processing. Keep enough context in logs to identify
+    # the exact segment when ParallelAgent runs several TTS calls at once.
     clean_text = clean_text_for_speech(text)
+    print(
+        f"TTS_START segment={output_filename!r} voice={voice_name!r} "
+        f"text_chars={len(clean_text)}"
+    )
     
     # Check cache first
     cache_key = f"{clean_text}_{voice_name}_{speaking_rate}_{pitch}"
@@ -431,9 +436,12 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             
         return {"audio_filepath": full_path}
     except Exception as e:
-        print(f"ERROR during Text to Speech for {output_filename}: {e}")
-        print(f"DEBUG: Exception type: {type(e)}")
-        print(f"DEBUG: Exception details: {str(e)}")
+        import traceback
+        print(
+            f"TTS_FAILURE segment={output_filename!r} voice={voice_name!r} "
+            f"exception_type={type(e).__name__} message={e!s}"
+        )
+        traceback.print_exc()
         # Instead of returning an error string, raise the exception to be handled by the calling function
         raise Exception(f"TTS failed for {output_filename}: {e}")
 
@@ -1137,6 +1145,8 @@ def create_tts_agent(script_key: str, audio_filename: str, voice: str, agent_nam
 
 
 async def run_agent(agent, input_text):
+    agent_name = getattr(agent, "name", agent.__class__.__name__)
+    print(f"AGENT_START name={agent_name!r}")
     session_service = InMemorySessionService()
     runner = Runner(app_name="news_agent", agent=agent, session_service=session_service)
     
@@ -1165,11 +1175,21 @@ async def run_agent(agent, input_text):
     print(f"DEBUG: Session type: {type(session)}")
     print(f"DEBUG: Session user_id: {getattr(session, 'user_id', 'NO USER_ID ATTRIBUTE')}")
     
-    async for event in runner.run_async(user_id=session.user_id, session_id=session.id, new_message=Content(role="user", parts=[Part(text=input_text)])):
-        if event.is_final_response():
-            if event.content and event.content.parts:
-                final_response = event.content.parts[0].text
-    return final_response
+    try:
+        async for event in runner.run_async(user_id=session.user_id, session_id=session.id, new_message=Content(role="user", parts=[Part(text=input_text)])):
+            if event.is_final_response():
+                if event.content and event.content.parts:
+                    final_response = event.content.parts[0].text
+        print(f"AGENT_SUCCESS name={agent_name!r}")
+        return final_response
+    except Exception as e:
+        import traceback
+        print(
+            f"AGENT_FAILURE name={agent_name!r} exception_type={type(e).__name__} "
+            f"message={e!s}"
+        )
+        traceback.print_exc()
+        raise
 
 def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) -> dict:
     """
@@ -1309,6 +1329,7 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
     import sys
     import time
     
+    last_error = None
     for attempt in range(max_retries):
         try:
             # Check if the interpreter is shutting down
@@ -1373,13 +1394,26 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                 else:
                     raise e
         except Exception as e:
-            print(f"DEBUG: Error in _run_async_safely (attempt {attempt + 1}): {e}")
+            import traceback
+            last_error = e
+            print(
+                f"ASYNC_FAILURE attempt={attempt + 1}/{max_retries} "
+                f"exception_type={type(e).__name__} message={e!s}"
+            )
+            traceback.print_exc()
             if attempt < max_retries - 1:
                 print(f"DEBUG: Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
                 continue
             return None
     
+    if last_error:
+        print(
+            f"ASYNC_FINAL_FAILURE exception_type={type(last_error).__name__} "
+            f"message={last_error!s}"
+        )
+    else:
+        print("ASYNC_FINAL_FAILURE reason=interpreter_shutdown_or_closed_event_loop")
     print(f"DEBUG: All {max_retries} attempts failed in _run_async_safely")
     return None
 
