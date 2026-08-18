@@ -236,19 +236,29 @@ def _broadcast_result_record(output, audio_file_path, summary):
 
 def completed_news_payload(task_id, task, audio_file, summary):
     result = _task_result(task)
-    pipeline = pipeline_from_task(task) or result.get('pipeline')
-    heygen = result.get('heygen') or {'status': 'idle'}
+    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+    public_clips = []
+    for clip in heygen.get('clips') or []:
+        if not isinstance(clip, dict):
+            continue
+        public_clips.append({
+            'role': clip.get('role'),
+            'name': clip.get('name'),
+            'topic': clip.get('topic'),
+            'status': clip.get('status'),
+            'url': clip.get('url'),
+        })
     return {
         'status': 'completed',
         'task_id': task_id,
         'audio_file': audio_file,
         'summary': summary,
         'topics': task.get('topics') or result.get('topics'),
-        'pipeline': pipeline,
-        'used_fallback': bool(result.get('used_fallback') or (pipeline or {}).get('used_fallback')),
-        'scripts': result.get('scripts'),
         'has_scripts': bool(result.get('scripts')),
-        'heygen': heygen,
+        'heygen': {
+            'status': heygen.get('status') or 'idle',
+            'clips': public_clips,
+        },
         'bumper_url': NEWS_BUMPER_URL,
     }
 
@@ -2222,7 +2232,7 @@ def serve_news_bumper(filename):
     return send_file(path, mimetype='video/mp4', conditional=True)
 
 
-def _run_heygen_bulletin_thread(app, task_id, scripts):
+def _run_heygen_bulletin_thread(app, task_id, scripts, existing_clips=None):
     from glconnect.heygen_news import generate_video_bulletin
 
     with app.app_context():
@@ -2231,6 +2241,7 @@ def _run_heygen_bulletin_thread(app, task_id, scripts):
                 task_id,
                 scripts,
                 lambda patch: merge_news_task_result(task_id, patch),
+                existing_clips=existing_clips,
             )
         except Exception as exc:
             print(f"ERROR: HeyGen bulletin thread failed for {task_id}: {exc}")
@@ -2273,17 +2284,28 @@ def generate_video_bulletin_route(task_id):
 
     heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
     current_status = heygen.get('status')
+    existing_clips = [
+        clip for clip in (heygen.get('clips') or [])
+        if isinstance(clip, dict) and clip.get('status') == 'completed' and clip.get('url')
+    ]
     if current_status in ('queued', 'processing'):
         return jsonify({
             'status': current_status,
             'task_id': task_id,
-            'heygen': heygen,
+            'heygen': {'status': current_status, 'clips': existing_clips},
+            'bumper_url': NEWS_BUMPER_URL,
+        })
+    if current_status == 'completed' and existing_clips:
+        return jsonify({
+            'status': 'completed',
+            'task_id': task_id,
+            'heygen': {'status': 'completed', 'clips': existing_clips},
             'bumper_url': NEWS_BUMPER_URL,
         })
 
     queued = {
         'status': 'queued',
-        'clips': [],
+        'clips': existing_clips,
         'warnings': [],
         'started_at': datetime.utcnow().isoformat(),
     }
@@ -2291,14 +2313,14 @@ def generate_video_bulletin_route(task_id):
     app = current_app._get_current_object()
     thread = threading.Thread(
         target=_run_heygen_bulletin_thread,
-        args=(app, task_id, scripts),
+        args=(app, task_id, scripts, existing_clips),
         daemon=True,
     )
     thread.start()
     return jsonify({
         'status': 'queued',
         'task_id': task_id,
-        'heygen': queued,
+        'heygen': {'status': 'queued', 'clips': existing_clips},
         'bumper_url': NEWS_BUMPER_URL,
     })
 
@@ -2439,11 +2461,7 @@ def broadcast():
             # summary and audio_file=None, so do not mark those tasks complete.
             if result and 'error' not in result and result.get('audio_file'):
                 # Success - store result in database
-                completed_step = (
-                    'News generation completed with fallback scripts'
-                    if result.get('used_fallback')
-                    else 'News generation completed successfully'
-                )
+                completed_step = 'News generation completed successfully'
                 update_task_in_db(task_id, 
                                  status='completed',
                                  progress=100,
@@ -3149,7 +3167,6 @@ def task_status(task_id):
         return jsonify({
             'status': 'failed',
             'error': error_message,
-            'pipeline': pipeline_from_task(task),
         })
     else:
         return jsonify({

@@ -158,15 +158,16 @@ def _error_message(payload, fallback: str) -> str:
     return fallback
 
 
-def _heygen_request(method: str, path: str, api_key: str, json_body=None):
+def _heygen_request(method: str, path: str, api_key: str, json_body=None, params=None, unwrap=True):
     url = f"{HEYGEN_API_BASE}{path}"
-    response = requests.request(
-        method,
-        url,
-        headers=_headers(api_key),
-        json=json_body,
-        timeout=_REQUEST_TIMEOUT,
-    )
+    kwargs = {
+        "headers": _headers(api_key),
+        "timeout": _REQUEST_TIMEOUT,
+        "params": params,
+    }
+    if json_body is not None:
+        kwargs["json"] = json_body
+    response = requests.request(method, url, **kwargs)
     try:
         payload = response.json()
     except ValueError:
@@ -176,7 +177,7 @@ def _heygen_request(method: str, path: str, api_key: str, json_body=None):
             f"HeyGen {method} {path} HTTP {response.status_code}: "
             f"{_error_message(payload, response.text[:240])}"
         )
-    return _unwrap(payload)
+    return _unwrap(payload) if unwrap else payload
 
 
 def _is_anchor_identity(avatar_id: str, voice_id: str) -> bool:
@@ -235,55 +236,132 @@ def _poll_look(api_key: str, avatar_id: str) -> str:
     raise TimeoutError(f"HeyGen look {avatar_id} not ready after {_LOOK_TIMEOUT_SECONDS}s (last={last_status})")
 
 
-def _design_voice(api_key: str, prompt: str, gender: str) -> str:
-    data = _heygen_request(
-        "POST",
-        "/v3/voices",
-        api_key,
-        {"prompt": prompt[:1000], "gender": gender, "locale": "en-US"},
-    )
+_voice_catalog_cache = {"voices": None, "fetched_at": 0}
+_VOICE_CACHE_TTL = 3600
+_DESK_VOICE_SLOT = {
+    "sports": 0,
+    "tech": 1,
+    "news": 2,
+    "finance": 0,
+    "politics": 1,
+    "health": 2,
+}
+
+
+def _extract_voice_rows(payload) -> list:
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if not isinstance(payload, dict):
+        return []
+    if isinstance(payload.get("voices"), list):
+        return [row for row in payload["voices"] if isinstance(row, dict)]
+    inner = payload.get("data")
+    if isinstance(inner, list):
+        return [row for row in inner if isinstance(row, dict)]
+    if isinstance(inner, dict) and isinstance(inner.get("voices"), list):
+        return [row for row in inner["voices"] if isinstance(row, dict)]
+    if payload.get("voice_id") or payload.get("id"):
+        return [payload]
+    return []
+
+
+def _list_catalog_voices(api_key: str) -> list:
+    cached = _voice_catalog_cache.get("voices")
+    fetched_at = _voice_catalog_cache.get("fetched_at") or 0
+    if cached and (time.time() - fetched_at) < _VOICE_CACHE_TTL:
+        return cached
+
     voices = []
-    if isinstance(data, dict):
-        voices = data.get("voices") or []
-        if not voices and data.get("voice_id"):
-            voices = [data]
-    for voice in voices:
-        if not isinstance(voice, dict):
-            continue
-        voice_id = voice.get("voice_id") or voice.get("id")
-        if voice_id and str(voice_id) != ANCHOR_VOICE_ID:
-            return str(voice_id)
-    raise RuntimeError("HeyGen voice design returned no usable voice_id")
+    source = None
+    try:
+        payload = _heygen_request("GET", "/v2/voices", api_key, unwrap=False)
+        voices = _extract_voice_rows(payload)
+        source = "v2"
+    except Exception as exc:
+        _log("heygen_skip", resource="voices_v2", error=str(exc)[:240])
+
+    if not voices:
+        collected = []
+        token = None
+        source = "v3"
+        for _page in range(8):
+            params = {"language": "English", "type": "public", "limit": 100}
+            if token:
+                params["token"] = token
+            payload = _heygen_request("GET", "/v3/voices", api_key, params=params, unwrap=False)
+            page_rows = _extract_voice_rows(payload)
+            collected.extend(page_rows)
+            if isinstance(payload, dict) and payload.get("has_more") and payload.get("next_token"):
+                token = payload.get("next_token")
+                continue
+            break
+        voices = collected
+
+    _voice_catalog_cache["voices"] = voices
+    _voice_catalog_cache["fetched_at"] = time.time()
+    _log("heygen_roster", resource="voice_catalog", source=source, count=len(voices))
+    return voices
+
+
+def _voice_id_of(voice: dict) -> str:
+    return str(voice.get("voice_id") or voice.get("id") or "").strip()
+
+
+def _voice_matches_catalog(voice: dict, gender: str) -> bool:
+    voice_id = _voice_id_of(voice)
+    if not voice_id or voice_id == ANCHOR_VOICE_ID:
+        return False
+    language = str(voice.get("language") or "").strip().lower()
+    if language and "english" not in language and language not in {"en", "en-us", "en-gb", "en-au"}:
+        return False
+    voice_gender = str(voice.get("gender") or "").strip().lower()
+    return (not voice_gender) or voice_gender == str(gender or "").strip().lower()
+
+
+def _taken_voice_ids() -> set:
+    from glconnect.models import NewsHeygenRoster
+
+    taken = {ANCHOR_VOICE_ID}
+    for row in NewsHeygenRoster.query.filter(NewsHeygenRoster.voice_id.isnot(None)).all():
+        taken.add(row.voice_id)
+    return taken
+
+
+def _pick_catalog_voice(api_key: str, gender: str, desk: str) -> str:
+    """Pick a public English catalog voice_id. Do not use voice design."""
+    voices = [
+        voice for voice in _list_catalog_voices(api_key)
+        if _voice_matches_catalog(voice, gender)
+    ]
+    if not voices:
+        raise RuntimeError(f"HeyGen voice catalog returned no English {gender} voices")
+
+    taken = _taken_voice_ids()
+    available = [voice for voice in voices if _voice_id_of(voice) not in taken] or voices
+    slot = _DESK_VOICE_SLOT.get(desk, 0) % len(available)
+    chosen = available[slot]
+    voice_id = _voice_id_of(chosen)
+    _log(
+        "heygen_create",
+        resource="voice",
+        source="catalog",
+        desk=desk,
+        gender=gender,
+        name=chosen.get("name"),
+        language=chosen.get("language"),
+        voice_id=voice_id,
+        candidates=len(available),
+    )
+    return voice_id
 
 
 def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dict:
-    """Return {avatar_id, voice_id} for a desk, creating once and reusing later."""
+    """Reuse stored avatar_id + voice_id per desk. Create only what is still missing."""
     from glconnect.models import NewsHeygenRoster, db
 
     prompts = _REPORTER_PROMPTS.get(desk) or _REPORTER_PROMPTS["news"]
     with _roster_lock:
         row = NewsHeygenRoster.query.filter_by(desk=desk).first()
-        if row and row.avatar_id and row.voice_id and row.status == "ready":
-            if _is_anchor_identity(row.avatar_id, row.voice_id):
-                _log(
-                    "heygen_anchor_guard",
-                    desk=desk,
-                    reason="stored_ids_match_anchor",
-                )
-                row.status = "failed"
-                row.last_error = "Stored reporter IDs collided with the studio anchor"
-                db.session.commit()
-            else:
-                _log(
-                    "heygen_roster",
-                    desk=desk,
-                    name=reporter_name,
-                    status="reuse",
-                    avatar_id=row.avatar_id,
-                    voice_id=row.voice_id,
-                )
-                return {"avatar_id": row.avatar_id, "voice_id": row.voice_id, "name": row.reporter_name}
-
         if row is None:
             row = NewsHeygenRoster(
                 desk=desk,
@@ -293,44 +371,78 @@ def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dic
             db.session.add(row)
             db.session.commit()
 
+        def _reuse_if_complete():
+            if not (row.avatar_id and row.voice_id):
+                return None
+            if _is_anchor_identity(row.avatar_id, row.voice_id):
+                _log("heygen_anchor_guard", desk=desk, reason="stored_ids_match_anchor")
+                row.status = "failed"
+                row.last_error = "Stored reporter IDs collided with the studio anchor"
+                row.avatar_id = None
+                row.voice_id = None
+                db.session.commit()
+                return None
+            if row.status != "ready":
+                row.status = "ready"
+                row.last_error = None
+                row.reporter_name = reporter_name or row.reporter_name
+                db.session.commit()
+            _log(
+                "heygen_roster",
+                desk=desk,
+                name=row.reporter_name,
+                status="reuse",
+                avatar_id=row.avatar_id,
+                voice_id=row.voice_id,
+            )
+            return {"avatar_id": row.avatar_id, "voice_id": row.voice_id, "name": row.reporter_name}
+
+        reused = _reuse_if_complete()
+        if reused:
+            return reused
+
         try:
+            created_avatar = False
             if not row.avatar_id:
                 row.avatar_id = _create_prompt_avatar(
                     api_key, prompts["avatar_name"], prompts["look_prompt"]
                 )
                 row.status = "pending"
                 db.session.commit()
+                created_avatar = True
                 _log("heygen_create", resource="avatar", desk=desk, avatar_id=row.avatar_id)
-            _poll_look(api_key, row.avatar_id)
+            else:
+                _log(
+                    "heygen_roster",
+                    resource="avatar",
+                    desk=desk,
+                    status="reuse",
+                    avatar_id=row.avatar_id,
+                )
+
+            # Only poll HeyGen while a new look is still training.
+            if created_avatar or row.status == "pending":
+                _poll_look(api_key, row.avatar_id)
 
             if not row.voice_id:
-                row.voice_id = _design_voice(api_key, prompts["voice_prompt"], prompts["gender"])
+                row.voice_id = _pick_catalog_voice(api_key, prompts["gender"], desk)
                 db.session.commit()
                 _log("heygen_create", resource="voice", desk=desk, voice_id=row.voice_id)
+            else:
+                _log(
+                    "heygen_roster",
+                    resource="voice",
+                    desk=desk,
+                    status="reuse",
+                    voice_id=row.voice_id,
+                )
 
-            if _is_anchor_identity(row.avatar_id, row.voice_id):
-                _log("heygen_anchor_guard", desk=desk, reason="created_ids_match_anchor")
-                row.status = "failed"
-                row.last_error = "Reporter identity collided with studio anchor IDs"
-                row.avatar_id = None
-                row.voice_id = None
-                db.session.commit()
-                raise RuntimeError(row.last_error)
-
-            row.status = "ready"
-            row.last_error = None
-            row.reporter_name = reporter_name or row.reporter_name
-            db.session.commit()
-            _log(
-                "heygen_roster",
-                desk=desk,
-                name=row.reporter_name,
-                status="ready",
-                avatar_id=row.avatar_id,
-                voice_id=row.voice_id,
-            )
-            return {"avatar_id": row.avatar_id, "voice_id": row.voice_id, "name": row.reporter_name}
+            reused = _reuse_if_complete()
+            if reused:
+                return reused
+            raise RuntimeError("Reporter roster missing avatar_id or voice_id after ensure")
         except Exception as exc:
+            # Keep any IDs we already paid for so the next bulletin can reuse them.
             row.status = "failed"
             row.last_error = str(exc)[:1000]
             db.session.commit()
@@ -420,10 +532,28 @@ def _public_clip(clip: dict) -> dict:
     }
 
 
-def generate_video_bulletin(task_id: str, scripts: dict, merge_result) -> dict:
-    """Create HeyGen clips from saved scripts. merge_result(patch) persists heygen state."""
+def _clip_key(clip: dict) -> tuple:
+    role = clip.get("role")
+    if role == "reporter":
+        return (role, clip.get("desk"), clip.get("topic"))
+    return (role,)
+
+
+def _reusable_clip_index(existing_clips) -> dict:
+    index = {}
+    for clip in existing_clips or []:
+        if not isinstance(clip, dict):
+            continue
+        if clip.get("status") == "completed" and clip.get("url"):
+            index[_clip_key(clip)] = clip
+    return index
+
+
+def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_clips=None) -> dict:
+    """Create HeyGen clips from saved scripts. Reuse completed clips, avatars, and voices."""
     warnings = []
     clips = []
+    reusable = _reusable_clip_index(existing_clips)
     api_key = heygen_api_key()
     if not api_key:
         _log("heygen_skip", reason="no_api_key")
@@ -491,6 +621,22 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result) -> dict:
         return clip
 
     def queue_and_render(clip):
+        previous = reusable.get(_clip_key(clip))
+        if previous:
+            clip["status"] = "completed"
+            clip["url"] = previous.get("url")
+            clip["video_id"] = previous.get("video_id")
+            clip["error"] = None
+            clips.append(clip)
+            _log(
+                "heygen_skip",
+                reason="clip_reuse",
+                role=clip.get("role"),
+                desk=clip.get("desk"),
+                topic=clip.get("topic"),
+            )
+            persist()
+            return clip
         clips.append(clip)
         persist()
         return render_clip(clip)
@@ -578,6 +724,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result) -> dict:
         status=status,
         completed=len(completed),
         failed=len(failed),
+        reused=len(reusable),
         desks=seen_desks,
     )
     persist()

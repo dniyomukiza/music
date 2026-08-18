@@ -2724,9 +2724,6 @@
                         }, 500);
                     } else if (data.status === 'failed') {
                         console.log('Task failed:', data.error);
-                        if (data.pipeline) {
-                            console.log('News pipeline', data.pipeline);
-                        }
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         
@@ -2853,48 +2850,6 @@
                 .replace(/'/g, '&#39;');
         }
 
-        function pipelineTraceHtml(pipeline) {
-            if (!pipeline) {
-                return '';
-            }
-            const warnings = (pipeline.warnings || []).map(item => `<li>${escapeNewsHtml(item)}</li>`).join('');
-            const reporters = [];
-            (pipeline.stages || []).forEach(stage => {
-                (stage.reporters || []).forEach(reporter => {
-                    reporters.push(
-                        `<li>${escapeNewsHtml(reporter.reporter || 'Reporter')} on ` +
-                        `<em>${escapeNewsHtml(reporter.topic)}</em>: ` +
-                        `${escapeNewsHtml(reporter.source)} ` +
-                        `(${escapeNewsHtml(reporter.category)}, ${escapeNewsHtml(reporter.chars)} chars)</li>`
-                    );
-                });
-            });
-            const stages = (pipeline.stages || []).map(stage => {
-                const extra = [stage.model, stage.backend, stage.source, stage.matched, stage.error]
-                    .filter(Boolean)
-                    .map(escapeNewsHtml)
-                    .join(', ');
-                return `<li>${escapeNewsHtml(stage.stage)}: ${escapeNewsHtml(stage.status)}${extra ? ' — ' + extra : ''}</li>`;
-            }).join('');
-            const tone = pipeline.used_fallback || pipeline.outcome === 'failed'
-                ? 'rgba(201,162,39,0.18)'
-                : 'rgba(15,20,18,0.9)';
-            const title = pipeline.used_fallback
-                ? 'Broadcast used fallback scripts'
-                : (pipeline.outcome === 'failed' ? 'Broadcast pipeline failed' : 'Broadcast pipeline');
-            return `
-                <div class="pipeline-trace" style="margin-top: 16px; padding: 14px; background: ${tone}; color: #e8ece9; border-radius: 8px; border-left: 4px solid #c9a227;">
-                    <p style="margin: 0 0 8px 0;"><strong>${escapeNewsHtml(title)}</strong> (${escapeNewsHtml(pipeline.outcome || 'unknown')})</p>
-                    ${warnings ? `<ul style="margin: 0 0 8px 18px;">${warnings}</ul>` : ''}
-                    ${reporters.length ? `<p style="margin: 8px 0 4px 0;"><strong>Reporters</strong></p><ul style="margin: 0 0 8px 18px;">${reporters.join('')}</ul>` : ''}
-                    <details>
-                        <summary style="cursor: pointer;">Stage log</summary>
-                        <ul style="margin: 8px 0 0 18px;">${stages}</ul>
-                    </details>
-                </div>
-            `;
-        }
-        
         function heygenPanelHtml(result) {
             lastHeygenResult = result;
             const heygen = (result && result.heygen) || { status: 'idle' };
@@ -2903,12 +2858,6 @@
             const bumperUrl = (result && result.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
             const clips = heygen.clips || [];
             const readyClips = clips.filter(clip => clip && clip.url);
-            const warnings = (heygen.warnings || []).map(item => `<li>${escapeNewsHtml(item)}</li>`).join('');
-            const clipLines = clips.map(clip => {
-                const label = clip.name || clip.role || 'clip';
-                const topic = clip.topic ? ` — ${clip.topic}` : '';
-                return `<li>${escapeNewsHtml(label)}${escapeNewsHtml(topic)}: ${escapeNewsHtml(clip.status || 'unknown')}${clip.error ? ' — ' + escapeNewsHtml(clip.error) : ''}</li>`;
-            }).join('');
             let actionLabel = 'Generate video bulletin';
             if (status === 'queued' || status === 'processing') {
                 actionLabel = 'Generating video…';
@@ -2920,15 +2869,22 @@
             const busy = status === 'queued' || status === 'processing';
             const buttonDisabled = !hasScripts || busy;
             const playDisabled = readyClips.length === 0;
-            const statusLabel = hasScripts
-                ? (status === 'idle' ? 'Audio is ready. Video is optional and starts only when you click Generate.' : status)
-                : 'This broadcast has no saved scripts. Generate news again to enable video.';
+            let statusLabel = 'Audio is ready. Video is optional and starts only when you click Generate.';
+            if (!hasScripts) {
+                statusLabel = 'Generate news again to enable the video bulletin.';
+            } else if (status === 'queued' || status === 'processing') {
+                statusLabel = 'Generating video bulletin…';
+            } else if (status === 'completed') {
+                statusLabel = 'Video bulletin is ready.';
+            } else if (status === 'partial') {
+                statusLabel = 'Video bulletin is ready.';
+            } else if (status === 'failed') {
+                statusLabel = 'Video bulletin could not be generated. You can retry.';
+            }
             return `
                 <div class="heygen-panel" id="heygenPanel">
                     <h4><i class="fas fa-video"></i> Video bulletin</h4>
                     <p class="heygen-status">${escapeNewsHtml(statusLabel)}</p>
-                    ${clipLines ? `<ul>${clipLines}</ul>` : ''}
-                    ${warnings ? `<ul>${warnings}</ul>` : ''}
                     <div class="audio-actions">
                         <button class="btn btn-primary" id="generateVideoBtn" ${buttonDisabled ? 'disabled' : ''}
                             onclick="generateVideoBulletin()">
@@ -3060,12 +3016,8 @@
         function showResults(result) {
             // Reset the generation flag when results are shown
             isGeneratingNews = false;
-            console.log('News generation completed, setting isGeneratingNews = false');
             if (result && result.task_id) {
                 lastNewsTaskId = result.task_id;
-            }
-            if (result && result.pipeline) {
-                console.log('News pipeline', result.pipeline);
             }
             
             // Reset generate button states
@@ -3132,7 +3084,6 @@
                             <p><strong>Summary:</strong> ${escapeNewsHtml(result.summary || 'N/A')}</p>
                             <p><strong>Topics:</strong> ${result.topics ? result.topics.map(escapeNewsHtml).join(', ') : 'N/A'}</p>
                             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-                            ${pipelineTraceHtml(result.pipeline)}
                             ${heygenPanelHtml(result)}
                         </div>
                     </div>
