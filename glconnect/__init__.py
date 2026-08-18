@@ -3,7 +3,7 @@ import json
 import re
 from datetime import datetime, timezone
 from flask import Flask, request, g
-from .models import db, User
+from .models import db, User, NewsHeygenRoster  # noqa: F401 — ensure table is created
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
@@ -46,6 +46,7 @@ def _load_config():
         "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
         "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
         "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
+        "HEYGEN_API_KEY": os.getenv("HEYGEN_API_KEY"),
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
         "DB_URL": os.getenv("DB_URL"),
         "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
@@ -76,6 +77,8 @@ def _load_config():
                     cfg["GOOGLE_API_KEY"] = file_cfg["GOOGLE_API_KEY"]
                 if not cfg.get("GEMINI_API_KEY") and file_cfg.get("GEMINI_API_KEY"):
                     cfg["GEMINI_API_KEY"] = file_cfg["GEMINI_API_KEY"]
+                if not cfg.get("HEYGEN_API_KEY") and file_cfg.get("HEYGEN_API_KEY"):
+                    cfg["HEYGEN_API_KEY"] = file_cfg["HEYGEN_API_KEY"]
                 if not cfg.get("DB_URL"):
                     cfg["DB_URL"] = file_cfg.get("DB_URL") or file_cfg.get("DATABASE_URL")
                 if not cfg.get("OPENAI_AI_KEY") and file_cfg.get("OPENAI_AI_KEY"):
@@ -201,6 +204,8 @@ if config.get("GOOGLE_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = config["GOOGLE_API_KEY"]
 if config.get("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY"):
     os.environ["GEMINI_API_KEY"] = config["GEMINI_API_KEY"]
+if config.get("HEYGEN_API_KEY") and not os.getenv("HEYGEN_API_KEY"):
+    os.environ["HEYGEN_API_KEY"] = config["HEYGEN_API_KEY"]
 if config.get("DB_URL") and not os.getenv("DB_URL"):
     os.environ["DB_URL"] = config["DB_URL"]
 if config.get("DB_URL") and not os.getenv("DATABASE_URL"):
@@ -247,6 +252,8 @@ google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")
 print(f"GOOGLE_API_KEY: {'(set)' if google_api_key else '(not set)'}")
 print(f"GEMINI_API_KEY: {'(set)' if gemini_api_key else '(not set)'}")
+heygen_api_key = config.get("HEYGEN_API_KEY")
+print(f"HEYGEN_API_KEY: {'(set)' if heygen_api_key else '(not set)'}")
 print(f"GOOGLE_APPLICATION_CREDENTIALS: {config.get('GOOGLE_APPLICATION_CREDENTIALS', 'tts.json')}")
 
 # Initialize extensions
@@ -327,6 +334,7 @@ def create_app(config_overrides=None):
     app.config.update(
         JWT_SECRET_KEY=jwt_secret_key,
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
+        HEYGEN_API_KEY=config.get("HEYGEN_API_KEY"),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
         STRIPE_SECRET_KEY=_sk,
         STRIPE_API_KEY=_sapi,

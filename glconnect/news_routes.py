@@ -6,7 +6,7 @@ import re
 import glob
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from flask_login import login_required, current_user
 from .news_agent import NEWS_GEMINI_MODEL, generate_broadcast, _gemini_generate_text
 
@@ -207,6 +207,78 @@ def pipeline_from_task(task):
     if isinstance(result, dict) and result.get('pipeline'):
         return result.get('pipeline')
     return task.get('pipeline')
+
+
+NEWS_BUMPER_URL = '/routes2/news/bumper/grojingle.mp4'
+
+
+def _task_result(task):
+    result = task.get('result') if isinstance(task, dict) else None
+    return result if isinstance(result, dict) else {}
+
+
+def _broadcast_result_record(output, audio_file_path, summary):
+    record = {
+        'audio_file_path': audio_file_path,
+        'output_text': summary,
+        'pipeline': output.get('pipeline') if isinstance(output, dict) else None,
+        'used_fallback': bool(output.get('used_fallback')) if isinstance(output, dict) else False,
+    }
+    if isinstance(output, dict):
+        if output.get('scripts'):
+            record['scripts'] = output['scripts']
+        if output.get('topics'):
+            record['topics'] = output['topics']
+        if output.get('heygen'):
+            record['heygen'] = output['heygen']
+    return record
+
+
+def completed_news_payload(task_id, task, audio_file, summary):
+    result = _task_result(task)
+    pipeline = pipeline_from_task(task) or result.get('pipeline')
+    heygen = result.get('heygen') or {'status': 'idle'}
+    return {
+        'status': 'completed',
+        'task_id': task_id,
+        'audio_file': audio_file,
+        'summary': summary,
+        'topics': task.get('topics') or result.get('topics'),
+        'pipeline': pipeline,
+        'used_fallback': bool(result.get('used_fallback') or (pipeline or {}).get('used_fallback')),
+        'scripts': result.get('scripts'),
+        'has_scripts': bool(result.get('scripts')),
+        'heygen': heygen,
+        'bumper_url': NEWS_BUMPER_URL,
+    }
+
+
+def merge_news_task_result(task_id, patch):
+    """Merge keys into the stored news task result without replacing audio fields."""
+    from glconnect.models import db, NewsTask
+
+    result = {}
+    task_row = NewsTask.query.filter_by(task_id=task_id).first()
+    if task_row and task_row.result:
+        try:
+            parsed = json.loads(task_row.result)
+            if isinstance(parsed, dict):
+                result = parsed
+        except Exception:
+            result = {}
+    if not result:
+        with _tasks_lock:
+            memory_task = tasks.get(task_id) or {}
+            if isinstance(memory_task.get('result'), dict):
+                result = dict(memory_task['result'])
+    result.update(patch)
+    if task_row:
+        task_row.result = json.dumps(result)
+        db.session.commit()
+    with _tasks_lock:
+        if task_id in tasks:
+            tasks[task_id]['result'] = result
+    return result
 
 def cleanup_old_tasks():
     """Clean up old completed/failed tasks to prevent memory buildup."""
@@ -1762,25 +1834,16 @@ def run_generate_broadcast(task_id, topics):
             print(f"DEBUG: Audio file exists: {os.path.exists(audio_file_path) if audio_file_path else 'No path'}")
             
             # Update database
+            result_record = _broadcast_result_record(output, audio_file_path, summary)
             update_task_in_db(task_id, 
                              status='completed',
                              completed_at=datetime.now(),
-                             result={
-                                 'audio_file_path': audio_file_path,
-                                 'output_text': summary,
-                                 'pipeline': output.get('pipeline') if isinstance(output, dict) else None,
-                                 'used_fallback': bool(output.get('used_fallback')) if isinstance(output, dict) else False,
-                             })
+                             result=result_record)
             
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
                 tasks[task_id]['completed_at'] = datetime.now()
-                tasks[task_id]['result'] = {
-                    'audio_file_path': audio_file_path,
-                    'output_text': summary,
-                    'pipeline': output.get('pipeline') if isinstance(output, dict) else None,
-                    'used_fallback': bool(output.get('used_fallback')) if isinstance(output, dict) else False,
-                }
+                tasks[task_id]['result'] = result_record
                 tasks[task_id]['summary'] = summary
                 # Also store the audio URL for the UI
                 tasks[task_id]['audio_file'] = audio_url
@@ -2131,6 +2194,114 @@ def serve_audio(filename):
     
     print(f"ERROR: Audio file {filename} not found in any expected location")
     return "Audio file not found", 404
+
+
+def _grojingle_path():
+    filename = 'grojingle.mp4'
+    candidates = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'video', filename),
+        os.path.join(os.getcwd(), 'video', filename),
+        f'/usr/src/appdir/video/{filename}',
+        os.path.abspath(os.path.join('video', filename)),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+@news_bp.route('/bumper/<filename>')
+def serve_news_bumper(filename):
+    """Serve the GRO News video bumper (grojingle.mp4 only)."""
+    if filename != 'grojingle.mp4':
+        return "Bumper not found", 404
+    path = _grojingle_path()
+    if not path:
+        print("ERROR: video/grojingle.mp4 not found")
+        return "Bumper not found", 404
+    return send_file(path, mimetype='video/mp4', conditional=True)
+
+
+def _run_heygen_bulletin_thread(app, task_id, scripts):
+    from glconnect.heygen_news import generate_video_bulletin
+
+    with app.app_context():
+        try:
+            generate_video_bulletin(
+                task_id,
+                scripts,
+                lambda patch: merge_news_task_result(task_id, patch),
+            )
+        except Exception as exc:
+            print(f"ERROR: HeyGen bulletin thread failed for {task_id}: {exc}")
+            try:
+                result = merge_news_task_result(task_id, {})
+                heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+                warnings = list(heygen.get('warnings') or [])
+                warnings.append(str(exc)[:400])
+                merge_news_task_result(task_id, {
+                    'heygen': {
+                        'status': 'failed',
+                        'clips': heygen.get('clips') or [],
+                        'warnings': warnings,
+                    }
+                })
+            except Exception as persist_exc:
+                print(f"ERROR: Failed to persist HeyGen failure for {task_id}: {persist_exc}")
+
+
+@news_bp.route('/video/<task_id>', methods=['POST'])
+def generate_video_bulletin_route(task_id):
+    """Start a complementary HeyGen video bulletin from saved broadcast scripts."""
+    db_task = get_task_from_db(task_id)
+    task = normalize_task_format(db_task)
+    if not task:
+        with _tasks_lock:
+            task = tasks.get(task_id)
+    if not task:
+        return jsonify({'error': 'News task not found'}), 404
+    if task.get('status') != 'completed':
+        return jsonify({'error': 'News audio must finish before generating video'}), 400
+
+    result = _task_result(task)
+    scripts = result.get('scripts')
+    if not scripts or not (scripts.get('intro') or scripts.get('reporters')):
+        return jsonify({
+            'error': 'No saved scripts on this broadcast. Generate news again, then create the video bulletin.',
+            'task_id': task_id,
+        }), 400
+
+    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+    current_status = heygen.get('status')
+    if current_status in ('queued', 'processing'):
+        return jsonify({
+            'status': current_status,
+            'task_id': task_id,
+            'heygen': heygen,
+            'bumper_url': NEWS_BUMPER_URL,
+        })
+
+    queued = {
+        'status': 'queued',
+        'clips': [],
+        'warnings': [],
+        'started_at': datetime.utcnow().isoformat(),
+    }
+    merge_news_task_result(task_id, {'heygen': queued})
+    app = current_app._get_current_object()
+    thread = threading.Thread(
+        target=_run_heygen_bulletin_thread,
+        args=(app, task_id, scripts),
+        daemon=True,
+    )
+    thread.start()
+    return jsonify({
+        'status': 'queued',
+        'task_id': task_id,
+        'heygen': queued,
+        'bumper_url': NEWS_BUMPER_URL,
+    })
+
 
 @news_bp.route('/broadcast', methods=['POST'])
 def broadcast():
@@ -2900,14 +3071,12 @@ def task_status(task_id):
                 
                 print(f"DEBUG: Audio file verified for UI - {actual_file_path} ({file_size} bytes)")
             
-            return jsonify({
-                'status': 'completed',
-                'audio_file': task['audio_file'],
-                'summary': task.get('summary') or (task.get('result') or {}).get('summary', ''),
-                'topics': task.get('topics') or (task.get('result') or {}).get('topics'),
-                'pipeline': pipeline_from_task(task),
-                'used_fallback': bool((pipeline_from_task(task) or {}).get('used_fallback')),
-            })
+            return jsonify(completed_news_payload(
+                task_id,
+                task,
+                task['audio_file'],
+                task.get('summary') or (_task_result(task).get('summary') or _task_result(task).get('output_text') or ''),
+            ))
         # Fallback for old structure
         elif 'result' in task:
             result = task['result']
@@ -2960,14 +3129,7 @@ def task_status(task_id):
             elif not audio_file_path:
                 return jsonify({'status': 'failed', 'error': 'No audio file path found in result'})
             
-            return jsonify({
-                'status': 'completed',
-                'audio_file': audio_file_path,
-                'summary': summary,
-                'topics': task.get('topics') or (result.get('topics') if isinstance(result, dict) else None),
-                'pipeline': pipeline_from_task(task) or (result.get('pipeline') if isinstance(result, dict) else None),
-                'used_fallback': bool((result or {}).get('used_fallback')) if isinstance(result, dict) else False,
-            })
+            return jsonify(completed_news_payload(task_id, task, audio_file_path, summary))
         else:
             # Handle old dictionary structure (if any) - but result is not defined here
             return jsonify({'status': 'failed', 'error': 'No valid result structure found in task'})

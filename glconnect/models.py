@@ -399,6 +399,26 @@ class NewsTask(db.Model):
     memory_usage = db.Column(db.Text, nullable=True)  # JSON string of memory info
     topics_processed = db.Column(db.Text, nullable=True)  # JSON string of processed topics
 
+
+class NewsHeygenRoster(db.Model):
+    """Reusable HeyGen avatar + voice IDs per GRO News reporter desk."""
+
+    __tablename__ = 'news_heygen_roster'
+
+    id = db.Column(db.Integer, primary_key=True)
+    desk = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    reporter_name = db.Column(db.String(64), nullable=False)
+    avatar_id = db.Column(db.String(128), nullable=True)
+    voice_id = db.Column(db.String(128), nullable=True)
+    status = db.Column(db.String(32), nullable=False, default='pending')
+    last_error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<NewsHeygenRoster {self.desk} {self.reporter_name} {self.status}>'
+
+
 class PageAnalytics(db.Model):
     __tablename__ = 'page_analytics'
     id = db.Column(db.Integer, primary_key=True)

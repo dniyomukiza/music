@@ -976,6 +976,41 @@
             color: white;
         }
 
+        .heygen-panel {
+            margin-top: 24px;
+            padding: 18px;
+            background: rgba(8, 10, 9, 0.72);
+            border: 1px solid rgba(201, 162, 39, 0.22);
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .heygen-panel h4 {
+            margin: 0 0 10px 0;
+            color: #e0bc3a;
+        }
+
+        .heygen-panel .heygen-status {
+            margin: 0 0 12px 0;
+            color: #c5cdc8;
+        }
+
+        .bulletin-video {
+            width: 100%;
+            max-width: 720px;
+            display: block;
+            margin: 12px auto 0;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .heygen-clip-label {
+            text-align: center;
+            color: #c9a227;
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+
         .generation-info {
             margin-top: 20px;
             padding: 15px;
@@ -2288,6 +2323,7 @@
                 
                 // Poll for completion
                 const taskId = data.task_id;
+                lastNewsTaskId = taskId;
                 await pollForCompletion(taskId);
                 
             } catch (error) {
@@ -2330,6 +2366,7 @@
         }
         
         async function pollForCompletion(taskId) {
+            lastNewsTaskId = taskId;
             const maxAttempts = 60; // 5 minutes max
             let attempts = 0;
             
@@ -2512,6 +2549,10 @@
         
         // Flag to prevent multiple simultaneous requests
         let isGeneratingNews = false;
+        let lastNewsTaskId = null;
+        let isGeneratingVideo = false;
+        let lastHeygenResult = null;
+        let heygenPollTimer = null;
 
         // Function to generate news from added topics
         function generateNewsFromTopics() {
@@ -2585,6 +2626,7 @@
                     resetGenerateButtons(); // Re-enable buttons on error
                 } else {
                     console.log('Starting polling for task_id:', data.task_id);
+                    lastNewsTaskId = data.task_id;
                     pollForCompletion(data.task_id);
                 }
             })
@@ -2620,6 +2662,7 @@
         
         // Function to poll for completion (legacy version)
         function pollForCompletionLegacy(taskId) {
+            lastNewsTaskId = taskId;
             // Validate task ID
             if (!taskId || taskId.length < 10) {
                 console.error('Invalid task ID:', taskId);
@@ -2852,11 +2895,175 @@
             `;
         }
         
+        function heygenPanelHtml(result) {
+            lastHeygenResult = result;
+            const heygen = (result && result.heygen) || { status: 'idle' };
+            const status = heygen.status || 'idle';
+            const hasScripts = Boolean(result && (result.has_scripts || result.scripts));
+            const bumperUrl = (result && result.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
+            const clips = heygen.clips || [];
+            const readyClips = clips.filter(clip => clip && clip.url);
+            const warnings = (heygen.warnings || []).map(item => `<li>${escapeNewsHtml(item)}</li>`).join('');
+            const clipLines = clips.map(clip => {
+                const label = clip.name || clip.role || 'clip';
+                const topic = clip.topic ? ` — ${clip.topic}` : '';
+                return `<li>${escapeNewsHtml(label)}${escapeNewsHtml(topic)}: ${escapeNewsHtml(clip.status || 'unknown')}${clip.error ? ' — ' + escapeNewsHtml(clip.error) : ''}</li>`;
+            }).join('');
+            let actionLabel = 'Generate video bulletin';
+            if (status === 'queued' || status === 'processing') {
+                actionLabel = 'Generating video…';
+            } else if (status === 'failed' || status === 'partial') {
+                actionLabel = 'Retry video bulletin';
+            } else if (status === 'completed') {
+                actionLabel = 'Regenerate video bulletin';
+            }
+            const busy = status === 'queued' || status === 'processing';
+            const buttonDisabled = !hasScripts || busy;
+            const playDisabled = readyClips.length === 0;
+            const statusLabel = hasScripts
+                ? (status === 'idle' ? 'Audio is ready. Video is optional and starts only when you click Generate.' : status)
+                : 'This broadcast has no saved scripts. Generate news again to enable video.';
+            return `
+                <div class="heygen-panel" id="heygenPanel">
+                    <h4><i class="fas fa-video"></i> Video bulletin</h4>
+                    <p class="heygen-status">${escapeNewsHtml(statusLabel)}</p>
+                    ${clipLines ? `<ul>${clipLines}</ul>` : ''}
+                    ${warnings ? `<ul>${warnings}</ul>` : ''}
+                    <div class="audio-actions">
+                        <button class="btn btn-primary" id="generateVideoBtn" ${buttonDisabled ? 'disabled' : ''}
+                            onclick="generateVideoBulletin()">
+                            <i class="fas fa-film"></i> ${escapeNewsHtml(actionLabel)}
+                        </button>
+                        <button class="btn btn-secondary" id="playBulletinBtn" ${playDisabled ? 'disabled' : ''}
+                            onclick="playBulletinPlaylist()">
+                            <i class="fas fa-play"></i> Play video bulletin
+                        </button>
+                    </div>
+                    <video id="bulletinVideo" class="bulletin-video" controls playsinline
+                        data-bumper="${escapeNewsHtml(bumperUrl)}"
+                        ${readyClips.length ? '' : 'style="display:none;"'}></video>
+                    <div id="bulletinClipLabel" class="heygen-clip-label"></div>
+                </div>
+            `;
+        }
+
+        function generateVideoBulletin() {
+            const taskId = lastNewsTaskId;
+            if (!taskId) {
+                alert('Generate a news broadcast first, then create the video bulletin.');
+                return;
+            }
+            if (isGeneratingVideo) {
+                return;
+            }
+            isGeneratingVideo = true;
+            const button = document.getElementById('generateVideoBtn');
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-film"></i> Generating video…';
+            }
+            fetch(`/routes2/news/video/${taskId}`, { method: 'POST' })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        throw new Error(data.error || 'Could not start the video bulletin');
+                    }
+                    pollHeygenUntilDone(taskId);
+                })
+                .catch(error => {
+                    isGeneratingVideo = false;
+                    alert(error.message || 'Could not start the video bulletin');
+                    const retry = document.getElementById('generateVideoBtn');
+                    if (retry) {
+                        retry.disabled = false;
+                    }
+                });
+        }
+
+        function pollHeygenUntilDone(taskId) {
+            if (heygenPollTimer) {
+                clearInterval(heygenPollTimer);
+            }
+            const tick = () => {
+                fetch(`/routes2/news/status/${taskId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const panel = document.getElementById('heygenPanel');
+                        if (panel) {
+                            panel.outerHTML = heygenPanelHtml(data);
+                        }
+                        const status = (data.heygen && data.heygen.status) || 'idle';
+                        if (status === 'completed' || status === 'partial' || status === 'failed') {
+                            clearInterval(heygenPollTimer);
+                            heygenPollTimer = null;
+                            isGeneratingVideo = false;
+                            if (status === 'completed' || status === 'partial') {
+                                playBulletinPlaylist(data);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('HeyGen poll failed', error);
+                    });
+            };
+            tick();
+            heygenPollTimer = setInterval(tick, 5000);
+        }
+
+        function playBulletinPlaylist(result) {
+            const payload = (result && result.heygen) ? result : lastHeygenResult;
+            const player = document.getElementById('bulletinVideo');
+            const label = document.getElementById('bulletinClipLabel');
+            if (!player || !payload) {
+                return;
+            }
+            const bumper = player.getAttribute('data-bumper') || (payload.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
+            const heygen = payload.heygen || {};
+            const clips = (heygen.clips || []).filter(clip => clip && clip.url);
+            if (!clips.length) {
+                return;
+            }
+            const playlist = [{ url: bumper, label: 'GRO jingle' }];
+            clips.forEach(clip => {
+                playlist.push({
+                    url: clip.url,
+                    label: (clip.name || clip.role || 'Clip') + (clip.topic ? ' — ' + clip.topic : '')
+                });
+            });
+            playlist.push({ url: bumper, label: 'GRO jingle' });
+            let index = 0;
+            player.style.display = 'block';
+            const playAt = () => {
+                if (index >= playlist.length) {
+                    if (label) {
+                        label.textContent = 'Bulletin finished';
+                    }
+                    return;
+                }
+                const item = playlist[index];
+                if (label) {
+                    label.textContent = item.label;
+                }
+                player.src = item.url;
+                player.play().catch(error => {
+                    console.error('Video play failed', error);
+                });
+            };
+            player.onended = () => {
+                index += 1;
+                playAt();
+            };
+            playAt();
+        }
+
         // Function to show results
         function showResults(result) {
             // Reset the generation flag when results are shown
             isGeneratingNews = false;
             console.log('News generation completed, setting isGeneratingNews = false');
+            if (result && result.task_id) {
+                lastNewsTaskId = result.task_id;
+            }
             if (result && result.pipeline) {
                 console.log('News pipeline', result.pipeline);
             }
@@ -2926,6 +3133,7 @@
                             <p><strong>Topics:</strong> ${result.topics ? result.topics.map(escapeNewsHtml).join(', ') : 'N/A'}</p>
                             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
                             ${pipelineTraceHtml(result.pipeline)}
+                            ${heygenPanelHtml(result)}
                         </div>
                     </div>
                 `;

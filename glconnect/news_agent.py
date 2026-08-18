@@ -1137,7 +1137,7 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             fallback_count=fallback_count,
             reporters=reporter_trace,
         )
-    return script_keys, scripts, segments
+    return script_keys, scripts, segments, assignments
 
 def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
     """
@@ -2152,7 +2152,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
     
     print(f"DEBUG: Topics grouped by category: {topics_by_category}")
 
-    reporter_script_keys, reporter_scripts, reporter_segments = _build_reporter_segments(
+    reporter_script_keys, reporter_scripts, reporter_segments, reporter_assignments = _build_reporter_segments(
         topics, categorized_topics, trace=trace
     )
 
@@ -2160,6 +2160,24 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
     intro_text = f"{timezone} Here are today's top stories."
     transitions = [f"Turning now to {topic}." for topic in topics]
     outro_text = "That's all for this GLC News bulletin. Thank you for listening."
+    persisted_scripts = {
+        "intro": intro_text,
+        "outro": outro_text,
+        "reporters": [
+            {
+                "topic": assignment["topic"],
+                "desk": assignment["desk"],
+                "name": assignment["name"],
+                "category": assignment["category"],
+                "script": reporter_scripts[index],
+            }
+            for index, assignment in enumerate(reporter_assignments)
+        ],
+    }
+    print(
+        f"DEBUG: Persisted video scripts intro={len(intro_text)} "
+        f"outro={len(outro_text)} reporters={len(persisted_scripts['reporters'])}"
+    )
     print(f"DEBUG: Built {len(reporter_segments)} reporter segments")
 
     if task_id:
@@ -2338,6 +2356,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
                 "audio_file": web_path,
                 "summary": broadcast_summary,
                 "topics": list(topics),
+                "scripts": persisted_scripts,
             },
             trace,
         )
