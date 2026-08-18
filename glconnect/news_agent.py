@@ -122,6 +122,8 @@ if google_api_key:
     genai.configure(api_key=google_api_key)
     os.environ['GOOGLE_API_KEY'] = google_api_key
 
+NEWS_GEMINI_MODEL = (os.getenv("NEWS_GEMINI_MODEL") or "gemini-3.6-flash").strip()
+
 # TTS credentials will be loaded when needed
 
 # --- Define the Summarization Tool (as a callable function) ---
@@ -236,6 +238,168 @@ def get_timezone_info() -> dict:
 # Simple TTS cache to avoid regenerating identical content
 _tts_cache = {}
 _last_async_error = None
+_tts_client = None
+_tts_credentials_checked = False
+_tts_backend = None  # "google" or "elevenlabs"
+_ELEVENLABS_VOICE_MAP = {
+    "en-US-Studio-O": "EXAVITQu4vr4xnSDxMaL",  # Sarah
+    "en-US-Neural2-D": "pNInz6obpgDQGcFmaJgB",  # Adam
+    "en-US-Standard-F": "EXAVITQu4vr4xnSDxMaL",  # Sarah
+    "en-GB-Standard-B": "JBFqnCBsd6RMkjVDRZzb",  # George
+}
+_ELEVENLABS_DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL"
+
+
+def _resolve_tts_credentials_path() -> str:
+    """Resolve the Google Cloud TTS service-account file path."""
+    raw = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json") or "tts.json"
+    path = raw.strip().strip('"').strip("'")
+    if os.path.isabs(path) and os.path.exists(path):
+        return path
+    if os.path.exists(path):
+        return os.path.abspath(path)
+    for candidate in (
+        os.path.join(os.getcwd(), path),
+        os.path.join(os.path.dirname(__file__), "..", path),
+        os.path.abspath("tts.json"),
+    ):
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return os.path.abspath(path)
+
+
+def _load_tts_credentials():
+    """Load Google Cloud TTS credentials from file or inline JSON env var."""
+    from google.oauth2 import service_account
+
+    inline_json = os.getenv("GOOGLE_TTS_CREDENTIALS_JSON", "").strip()
+    if inline_json:
+        info = json.loads(inline_json)
+        return service_account.Credentials.from_service_account_info(info)
+
+    credentials_path = _resolve_tts_credentials_path()
+    if not os.path.exists(credentials_path):
+        raise FileNotFoundError(
+            "Google Cloud TTS credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS "
+            f"to a valid service-account JSON file (looked for {credentials_path}) or set "
+            "GOOGLE_TTS_CREDENTIALS_JSON with the JSON contents."
+        )
+    return service_account.Credentials.from_service_account_file(credentials_path)
+
+
+def validate_tts_credentials():
+    """Return an error message when TTS is not configured, otherwise None."""
+    global _tts_credentials_checked, _tts_client, _tts_backend
+    try:
+        credentials = _load_tts_credentials()
+        _tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+        _tts_backend = "google"
+        _tts_credentials_checked = True
+        print("DEBUG: Using Google Cloud TTS")
+        return None
+    except (FileNotFoundError, json.JSONDecodeError, Exception) as google_exc:
+        eleven_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
+        if eleven_key:
+            _tts_backend = "elevenlabs"
+            _tts_credentials_checked = True
+            print(f"DEBUG: Google Cloud TTS unavailable ({google_exc}); using ElevenLabs fallback")
+            return None
+        if isinstance(google_exc, FileNotFoundError):
+            return str(google_exc)
+        if isinstance(google_exc, json.JSONDecodeError):
+            return "GOOGLE_TTS_CREDENTIALS_JSON is set but contains invalid JSON."
+        return f"TTS credentials could not be loaded: {google_exc}"
+
+
+def _get_tts_client():
+    global _tts_client, _tts_credentials_checked
+    if _tts_backend is None:
+        error = validate_tts_credentials()
+        if error:
+            raise RuntimeError(error)
+    if _tts_backend != "google":
+        raise RuntimeError("Google Cloud TTS client requested but ElevenLabs fallback is active")
+    return _tts_client
+
+
+def _elevenlabs_audio_bytes(text: str, voice_name: str) -> bytes:
+    from elevenlabs.client import ElevenLabs
+
+    api_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("ELEVENLABS_API_KEY is not set")
+    client = ElevenLabs(api_key=api_key)
+    voice_id = _ELEVENLABS_VOICE_MAP.get(voice_name, _ELEVENLABS_DEFAULT_VOICE)
+    chunks = []
+    max_chars = 2400
+    remaining = text.strip()
+    while remaining:
+        piece = remaining[:max_chars]
+        if len(remaining) > max_chars:
+            split_at = max(piece.rfind(". "), piece.rfind("? "), piece.rfind("! "))
+            if split_at > 400:
+                piece = remaining[: split_at + 1]
+        remaining = remaining[len(piece):].lstrip()
+        audio = client.text_to_speech.convert(
+            voice_id=voice_id,
+            text=piece,
+            model_id="eleven_multilingual_v2",
+            output_format="mp3_44100_128",
+        )
+        if isinstance(audio, (bytes, bytearray)):
+            chunks.append(bytes(audio))
+        else:
+            chunks.append(b"".join(audio))
+    return b"".join(chunks)
+
+
+def _run_direct_tts_phase(
+    intro_text: str,
+    outro_text: str,
+    transitions: list[str],
+    reporter_segments: list[tuple[str, str, str]],
+    task_id=None,
+) -> None:
+    """Convert all broadcast scripts to audio without Gemini tool-calling."""
+    total_segments = 2 + len(transitions) + len(reporter_segments) + 1
+    completed = 0
+
+    def _convert(label: str, text: str, filename: str, voice: str) -> None:
+        nonlocal completed
+        if task_id:
+            try:
+                from glconnect.news_routes import update_task_in_db
+                update_task_in_db(
+                    task_id,
+                    progress=min(70 + int((completed / max(total_segments, 1)) * 15), 84),
+                    current_step=f"Converting {label} to speech ({completed + 1}/{total_segments})...",
+                    last_heartbeat=datetime.now(),
+                )
+            except Exception:
+                pass
+        text_to_speech(text, filename, voice)
+        completed += 1
+
+    _convert("intro", intro_text, "intro_audio.mp3", ANCHOR_VOICE)
+    _convert("outro", outro_text, "outro_audio.mp3", ANCHOR_VOICE)
+    _convert("thank-you", "Thank you for that report.", "thank_you_audio.mp3", ANCHOR_VOICE)
+
+    for index, transition_text in enumerate(transitions):
+        _convert(
+            f"transition {index + 1}",
+            transition_text,
+            f"transition_audio_{index}.mp3",
+            ANCHOR_VOICE,
+        )
+
+    for category, script_content, voice in reporter_segments:
+        _convert(
+            f"{category} report",
+            script_content,
+            f"{category}_audio.mp3",
+            voice,
+        )
+
 
 # --- Define the Text to Speech Tool (as a callable function) ---
 def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_rate: float = 1.0, pitch: float = 0.0) -> dict:
@@ -274,107 +438,39 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             # Remove stale cache entry
             del _tts_cache[cache_key]
     
-    # Load credentials from file and pass to client
-    from google.oauth2 import service_account
-    
-    # Get TTS credentials path from environment variables
-    tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
-    print(f"DEBUG: Loading TTS credentials from: {tts_credentials_path}")
-    print(f"DEBUG: Credentials file exists: {os.path.exists(tts_credentials_path)}")
-    print(f"DEBUG: Current working directory: {os.getcwd()}")
-    print(f"DEBUG: Environment: {os.getenv('FLASK_ENV', 'production')}")
-    
-    # Check if credentials file exists, if not try default path
-    if not os.path.exists(tts_credentials_path):
-        print(f"DEBUG: Credentials file not found at {tts_credentials_path}, trying default 'tts.json'")
-        tts_credentials_path = "tts.json"
-        print(f"DEBUG: Trying default path: {tts_credentials_path}")
-        print(f"DEBUG: Default credentials file exists: {os.path.exists(tts_credentials_path)}")
-    
-    if not os.path.exists(tts_credentials_path):
-        raise Exception(f"TTS credentials file not found at {tts_credentials_path} or default 'tts.json'")
-    
-    # Debug: Check credentials file content
-    try:
-        with open(tts_credentials_path, 'r') as f:
-            creds_content = f.read()
-            print(f"DEBUG: Credentials file size: {len(creds_content)} bytes")
-            print(f"DEBUG: Credentials file starts with: {creds_content[:100]}...")
-    except Exception as e:
-        print(f"DEBUG: Error reading credentials file: {e}")
-    
-    credentials = service_account.Credentials.from_service_account_file(tts_credentials_path)
-    client = texttospeech.TextToSpeechClient(credentials=credentials)
-    print(f"DEBUG: TTS client created successfully")
-    
-    # Test TTS API with a simple call to verify it's working
-    try:
-        test_input = texttospeech.SynthesisInput(text="test")
-        test_voice = texttospeech.VoiceSelectionParams(language_code="en-US", name="en-US-Standard-A")
-        test_audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
-        test_response = client.synthesize_speech(input=test_input, voice=test_voice, audio_config=test_audio_config)
-        print(f"DEBUG: TTS API test successful - response length: {len(test_response.audio_content) if test_response.audio_content else 'None'}")
-        
-        # Additional test - try to write the test response to verify filesystem works
-        if test_response.audio_content:
-            test_output_dir = os.path.abspath("glconnect/static/audio")
-            os.makedirs(test_output_dir, mode=0o755, exist_ok=True)
-            test_file_path = os.path.join(test_output_dir, "test_tts.mp3")
-            with open(test_file_path, "wb") as test_file:
-                test_file.write(test_response.audio_content)
-                test_file.flush()
-                os.fsync(test_file.fileno())
-            test_file_size = os.path.getsize(test_file_path)
-            print(f"DEBUG: Test file written successfully - size: {test_file_size} bytes")
-            # Clean up test file
-            try:
-                os.remove(test_file_path)
-                print(f"DEBUG: Test file cleaned up")
-            except:
-                pass
-        else:
-            print(f"DEBUG: TTS API test returned empty content - this indicates a problem with the API")
-    except Exception as e:
-        print(f"DEBUG: TTS API test failed: {e}")
-        print(f"DEBUG: This indicates a problem with Google Cloud TTS API access")
-        print(f"DEBUG: Exception details: {type(e).__name__}: {str(e)}")
-
-    synthesis_input = texttospeech.SynthesisInput(text=clean_text)
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=speaking_rate,
-        pitch=pitch
-    )
-    voice_params = texttospeech.VoiceSelectionParams(
-        language_code="en-US",
-        name=voice_name
-    )
+    if _tts_backend is None:
+        error = validate_tts_credentials()
+        if error:
+            raise RuntimeError(error)
 
     try:
         print(f"DEBUG: Attempting TTS for {output_filename} with text: '{clean_text[:100]}...'")
-        print(f"DEBUG: Using voice: {voice_name}, rate: {speaking_rate}, pitch: {pitch}")
+        print(f"DEBUG: Using voice: {voice_name}, rate: {speaking_rate}, pitch: {pitch}, backend: {_tts_backend}")
         print(f"DEBUG: Text length: {len(clean_text)} characters")
-        
-        response = client.synthesize_speech(
-            input=synthesis_input, voice=voice_params, audio_config=audio_config
-        )
 
-        print(f"DEBUG: TTS response received, audio content length: {len(response.audio_content) if response.audio_content else 'None'}")
-        print(f"DEBUG: Response type: {type(response)}")
-        print(f"DEBUG: Response attributes: {dir(response)}")
-        
-        # Additional debugging for audio content
-        if response.audio_content:
-            print(f"DEBUG: Audio content type: {type(response.audio_content)}")
-            print(f"DEBUG: Audio content first 20 bytes: {response.audio_content[:20] if len(response.audio_content) > 20 else response.audio_content}")
-            print(f"DEBUG: Audio content is bytes: {isinstance(response.audio_content, bytes)}")
+        if _tts_backend == "elevenlabs":
+            audio_content = _elevenlabs_audio_bytes(clean_text, voice_name)
         else:
+            client = _get_tts_client()
+            synthesis_input = texttospeech.SynthesisInput(text=clean_text)
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3,
+                speaking_rate=speaking_rate,
+                pitch=pitch
+            )
+            voice_params = texttospeech.VoiceSelectionParams(
+                language_code="en-US",
+                name=voice_name
+            )
+            response = client.synthesize_speech(
+                input=synthesis_input, voice=voice_params, audio_config=audio_config
+            )
+            audio_content = response.audio_content
+
+        print(f"DEBUG: TTS response received, audio content length: {len(audio_content) if audio_content else 'None'}")
+        
+        if not audio_content:
             print(f"ERROR: TTS returned empty audio content for {output_filename}")
-            print(f"DEBUG: Full response: {response}")
-            print(f"DEBUG: Response has audio_content attribute: {hasattr(response, 'audio_content')}")
-            if hasattr(response, 'audio_content'):
-                print(f"DEBUG: audio_content is None: {response.audio_content is None}")
-                print(f"DEBUG: audio_content is empty: {response.audio_content == b''}")
             raise Exception(f"TTS returned empty audio content for {output_filename}")
 
         # Use absolute paths for better cross-platform compatibility
@@ -399,7 +495,7 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
         # Write with explicit error handling
         try:
             with open(full_path, "wb") as out:
-                bytes_written = out.write(response.audio_content)
+                bytes_written = out.write(audio_content)
                 print(f"DEBUG: Bytes written to file: {bytes_written}")
                 out.flush()  # Force flush to disk
                 os.fsync(out.fileno())  # Force sync to filesystem
@@ -408,7 +504,7 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             # Try alternative approach
             try:
                 with open(full_path, "wb") as out:
-                    out.write(response.audio_content)
+                    out.write(audio_content)
                     out.flush()
                     os.fsync(out.fileno())
                 print(f"DEBUG: Alternative write successful")
@@ -427,8 +523,8 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
         
         if file_size == 0:
             print(f"ERROR: Audio file created but is empty (0 bytes) for {output_filename}")
-            print(f"DEBUG: Response audio_content type: {type(response.audio_content)}")
-            print(f"DEBUG: Response audio_content length: {len(response.audio_content) if response.audio_content else 'None'}")
+            print(f"DEBUG: Response audio_content type: {type(audio_content)}")
+            print(f"DEBUG: Response audio_content length: {len(audio_content) if audio_content else 'None'}")
             raise Exception(f"Audio file created but is empty (0 bytes) for {output_filename}")
         
         # Cache the result for future use
@@ -538,7 +634,7 @@ def analyze_topic_context(topic: str) -> dict:
         )
         
         model = genai.GenerativeModel(
-            'gemini-2.0-flash',
+            NEWS_GEMINI_MODEL,
             generation_config=generation_config
         )
         
@@ -609,7 +705,7 @@ def generate_intelligent_fallback_content(topic: str) -> str:
         )
         
         model = genai.GenerativeModel(
-            'gemini-2.0-flash',
+            NEWS_GEMINI_MODEL,
             generation_config=generation_config
         )
         
@@ -955,7 +1051,7 @@ MARK_VOICE = 'en-GB-Standard-B'
 def create_news_reporter_agent(topic: str, voice: str, agent_name: str, output_key: str) -> Agent:
     """Creates a news reporter agent for a specific topic."""
     return Agent(
-        model="gemini-2.0-flash",
+        model=NEWS_GEMINI_MODEL,
         name=agent_name,
         description=f"An agent that generates a news script about {topic}.",
         instruction=f"""
@@ -989,7 +1085,7 @@ def create_category_reporter_agent(category: str, topics: list[str], voice: str,
     """Creates a news reporter agent for a specific category that handles multiple topics."""
     topics_str = ", ".join(topics)
     return Agent(
-        model="gemini-2.0-flash",
+        model=NEWS_GEMINI_MODEL,
         name=agent_name,
         description=f"An agent that generates a news script about {category} topics: {topics_str}.",
         instruction=f"""
@@ -1024,7 +1120,7 @@ def create_anchor_agent(topics: list[str], reporter_scripts: list[str]) -> Agent
     """Creates a news anchor agent to introduce and conclude the news bulletin."""
     reporter_scripts_str = "\n".join(reporter_scripts)
     return Agent(
-        model="gemini-2.0-flash",
+        model=NEWS_GEMINI_MODEL,
         name="news_anchor_agent",
         description="Generates the anchor's script for the news bulletin.",
         instruction=f"""
@@ -1136,7 +1232,7 @@ def create_tts_agent(script_key: str, audio_filename: str, voice: str, agent_nam
         """
     
     return Agent(
-        model="gemini-2.0-flash",
+        model=NEWS_GEMINI_MODEL,
         name=agent_name,
         description=f"Converts the {script_key} to audio using the specified voice.",
         instruction=instruction,
@@ -1288,6 +1384,11 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     if not topics:
         print("No topics entered. Exiting.")
         return {"error": "No topics provided"}
+
+    tts_error = validate_tts_credentials()
+    if tts_error:
+        print(f"ERROR: TTS preflight failed: {tts_error}")
+        return {"error": tts_error}
     
     # Check memory before starting
     try:
@@ -1323,23 +1424,31 @@ This concludes our report on {topic}. Stay tuned for more updates.
         print(f"DEBUG: Error in fallback content generation: {e}")
         return f"News report on {topic} - Content generation temporarily unavailable. Please try again later."
 
-def _run_async_safely(coro, max_retries=3, retry_delay=2):
+def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failure=False):
     """Safely run async coroutine in a thread, handling interpreter shutdown gracefully with retry logic."""
     import asyncio
     import inspect
-    import threading
     import sys
     import time
     
     global _last_async_error
     last_error = None
     _last_async_error = None
-    # A coroutine object is single-use. Retrying the same object produces
-    # "cannot reuse already awaited coroutine" and hides the original error.
-    # Callers that need a retry must create and pass a fresh coroutine.
-    if inspect.iscoroutine(coro):
+
+    if callable(coro_factory) and not inspect.iscoroutine(coro_factory):
+        get_coro = coro_factory
+    elif inspect.iscoroutine(coro_factory):
+        spent_coro = coro_factory
+        get_coro = lambda: spent_coro
         max_retries = 1
+    else:
+        get_coro = lambda: coro_factory
+
     for attempt in range(max_retries):
+        coro = get_coro()
+        if inspect.iscoroutine(coro) is False and coro is None:
+            _last_async_error = "Async factory returned None instead of a coroutine"
+            break
         try:
             # Check if the interpreter is shutting down
             if sys.is_finalizing():
@@ -1348,6 +1457,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
+                if raise_on_failure:
+                    raise RuntimeError(_last_async_error)
                 return None
             
             # Check if there's a closed event loop set as the current loop
@@ -1359,6 +1470,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                     if attempt < max_retries - 1:
                         time.sleep(retry_delay)
                         continue
+                    if raise_on_failure:
+                        raise RuntimeError(_last_async_error)
                     return None
             except RuntimeError:
                 # No event loop set, that's fine
@@ -1396,6 +1509,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                         print(f"DEBUG: Retrying in {retry_delay} seconds...")
                         time.sleep(retry_delay)
                         continue
+                    if raise_on_failure:
+                        raise e
                     return None
                 elif "Event loop is closed" in str(e):
                     last_error = e
@@ -1405,6 +1520,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                         print(f"DEBUG: Retrying in {retry_delay} seconds...")
                         time.sleep(retry_delay)
                         continue
+                    if raise_on_failure:
+                        raise e
                     return None
                 else:
                     raise e
@@ -1420,6 +1537,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
                 print(f"DEBUG: Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
                 continue
+            if raise_on_failure:
+                raise last_error
             return None
     
     if last_error:
@@ -1432,6 +1551,8 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
         _last_async_error = "Interpreter shutdown or closed event loop"
         print("ASYNC_FINAL_FAILURE reason=interpreter_shutdown_or_closed_event_loop")
     print(f"DEBUG: All {max_retries} attempts failed in _run_async_safely")
+    if raise_on_failure:
+        raise RuntimeError(_last_async_error or "Async operation failed without a captured exception")
     return None
 
 def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
@@ -1444,7 +1565,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         memory_percent = get_memory_usage()
         print(f"DEBUG: Memory at start of broadcast generation - Percent: {memory_percent:.1f}%")
         
-        if memory_percent > 70:  # Conservative threshold for 4GB containers
+        if memory_percent > 90:  # Abort only under real memory pressure
             print(f"ERROR: Memory usage too high ({memory_percent:.1f}%) - aborting broadcast generation")
             return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
     except:
@@ -1477,7 +1598,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     
     # Categorization Agent
     categorization_agent = Agent(
-        model="gemini-2.0-flash",
+        model=NEWS_GEMINI_MODEL,
         name="categorization_agent",
         description="Categorizes news topics into sports, finance, politics, tech, and health.",
         instruction=f"""
@@ -1495,7 +1616,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         output_key="categorized_topics"
     )
 
-    categorized_topics_json = _run_async_safely(run_agent(categorization_agent, str(topics)))
+    categorized_topics_json = _run_async_safely(lambda: run_agent(categorization_agent, str(topics)))
     print(f"DEBUG: Raw categorization output: {categorized_topics_json}")
     
     # Force garbage collection after categorization
@@ -1578,8 +1699,6 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     # Note: TTS agents for anchor parts will be created after we have the anchor script
 
     # Create transition TTS agents after we have the anchor script
-    transition_tts_agents = []
-
     # Orchestration
     text_generation_phase = ParallelAgent(
         name="text_generation_phase",
@@ -1648,7 +1767,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             
             # Process this agent
             try:
-                result = _run_async_safely(run_agent(agent, ""), max_retries=2, retry_delay=3)
+                result = _run_async_safely(lambda agent=agent: run_agent(agent, ""), max_retries=2, retry_delay=3)
                 if result is not None:
                     individual_outputs.append(result)
                     print(f"DEBUG: Agent {i+1} completed successfully")
@@ -1771,7 +1890,9 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         for i, agent in enumerate(news_agents):
             try:
                 print(f"DEBUG: Running individual agent {i}: {agent.name}")
-                individual_output = _run_async_safely(asyncio.wait_for(run_agent(agent, ""), timeout=180))
+                individual_output = _run_async_safely(
+                    lambda agent=agent: asyncio.wait_for(run_agent(agent, ""), timeout=180)
+                )
                 individual_outputs.append(individual_output)
                 print(f"DEBUG: Agent {i} output: {individual_output[:100]}...")
             except asyncio.TimeoutError:
@@ -1857,34 +1978,17 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     # Create anchor agent with actual reporter scripts
     anchor_agent = create_anchor_agent(topics, reporter_scripts)
 
-    # Create TTS agents with actual script content
-    reporters_tts_agents_with_content = []
-    for i, (script_key, script_content) in enumerate(zip(reporter_script_keys, reporter_scripts)):
+    # Prepare reporter segments for direct TTS conversion
+    reporter_segments = []
+    for script_key, script_content in zip(reporter_script_keys, reporter_scripts):
         category = script_key.replace('_script', '')
-        voice = ERNEST_VOICE if category == 'sports' else ISABELLA_VOICE if category == 'finance' else MARK_VOICE if category == 'tech' else EDITH_VOICE
-        
-        # Clean the script content for speech
-        cleaned_script = clean_text_for_speech(script_content)
-        
-        # Create TTS agent with cleaned script content
-        tts_agent = Agent(
-            model="gemini-2.0-flash",
-            name=f"tts_{category}_reporter",
-            description=f"Converts {category} report to audio.",
-            instruction=f"""
-                Convert the following {category} report to audio using Google Cloud Text to Speech.
-                Use the voice: {voice}
-                The report content is: {cleaned_script}
-                
-                Create the audio file as: {category}_audio.mp3
-                Output the audio file path as: {category}_audio.mp3
-            """,
-            output_key=f"{category}_audio_filepath",
-            tools=[text_to_speech]
+        voice = (
+            ERNEST_VOICE if category == 'sports'
+            else ISABELLA_VOICE if category == 'finance'
+            else MARK_VOICE if category == 'tech'
+            else EDITH_VOICE
         )
-        reporters_tts_agents_with_content.append(tts_agent)
-
-    # Note: transition_tts_agents will be added after anchor script is parsed
+        reporter_segments.append((category, clean_text_for_speech(script_content), voice))
 
     # Build the final list of audio file paths in the correct order
     final_audio_paths = [
@@ -1904,49 +2008,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         "glconnect/static/audio/jingle.wav"  # Closing jingle
     ])
 
-    tool_call_paths = ", ".join([f'"{path}"' for path in final_audio_paths])
-
-    final_audio_assembler_agent = Agent(
-        model="gemini-2.0-flash",
-        name="final_audio_assembler_agent",
-        description="Combines all audio files into a single broadcast in the correct order.",
-        instruction=f"""
-            You have paths to individual audio segments that need to be combined in the correct order for a news broadcast.
-            
-            The correct order is:
-            1. Opening jingle (jingle.wav)
-            2. Anchor intro with current time (intro_audio.mp3)
-            3. For each report: transition → report → thank you
-            4. Anchor outro (outro_audio.mp3)
-            5. Closing jingle (jingle.wav)
-            
-            Use the 'combine_audio_files' tool to stitch them together in this exact order.
-            The file paths are: {final_audio_paths}.
-            Call the tool with the full list of file paths.
-            Tool call: combine_audio_files(file_paths=[{tool_call_paths}], output_filename='final_news_broadcast.mp3')
-            After the tool call, you MUST output the value of the 'combined_audio_filepath' from the tool's result.
-        """,
-        output_key="final_broadcast_audio_output",
-        tools=[combine_audio_files]
-    )
-
-    # Create summary with actual script content
+    # Create summary input from reporter scripts
     summarized_text_input = " ".join(reporter_scripts)
-
-    summary_agent = Agent(
-        model="gemini-2.0-flash",
-        name="summary_agent",
-        description="Summarizes the news reports.",
-        instruction=f"""
-            You have the news reports. Use the 'summarize_text' tool to summarize them.
-            The news reports are: {summarized_text_input}
-            Call the tool with the full text of the news reports.
-            Tool call: summarize_text(text="{summarized_text_input}")
-            After the tool call, you MUST output the value of the 'summary' from the tool's result.
-        """,
-        output_key="summary_output",
-        tools=[summarize_text]
-    )
 
     # Execute anchor agent separately to ensure it gets current time
     print("DEBUG: Executing anchor agent...")
@@ -1954,7 +2017,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     
     # Force the anchor agent to call the timezone tool first
     anchor_input = "Please call the get_timezone_info tool first to get the current time, then create your script."
-    anchor_output = _run_async_safely(run_agent(anchor_agent, anchor_input))
+    anchor_output = _run_async_safely(lambda: run_agent(anchor_agent, anchor_input))
     print(f"DEBUG: Anchor output: {anchor_output[:200] if anchor_output else 'None'}...")
     
     # Handle case where async operation failed due to interpreter shutdown
@@ -1986,155 +2049,63 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         transitions = anchor_script["transitions"]
         outro_text = anchor_script["outro"]
     
-    # Create intro and outro TTS agents with actual script content
-    intro_tts_agent = Agent(
-        model="gemini-2.0-flash",
-        name="tts_intro",
-        description="Converts intro to audio.",
-        instruction=f"""
-            Convert the following intro text to audio using Google Cloud Text to Speech.
-            Use the voice: {ANCHOR_VOICE}
-            The intro text is: {intro_text}
-            
-            Create the audio file as: intro_audio.mp3
-            Output the audio file path as: intro_audio.mp3
-        """,
-        output_key="intro_audio_filepath",
-        tools=[text_to_speech]
-    )
-    
-    outro_tts_agent = Agent(
-        model="gemini-2.0-flash",
-        name="tts_outro",
-        description="Converts outro to audio.",
-        instruction=f"""
-            Convert the following outro text to audio using Google Cloud Text to Speech.
-            Use the voice: {ANCHOR_VOICE}
-            The outro text is: {outro_text}
-            
-            Create the audio file as: outro_audio.mp3
-            Output the audio file path as: outro_audio.mp3
-        """,
-        output_key="outro_audio_filepath",
-        tools=[text_to_speech]
-    )
-    
-    thank_you_tts_agent = Agent(
-        model="gemini-2.0-flash",
-        name="tts_thank_you",
-        description="Converts thank you message to audio.",
-        instruction=f"""
-            Convert the following thank you message to audio using Google Cloud Text to Speech.
-            Use the voice: {ANCHOR_VOICE}
-            The thank you text is: Thank you for that report.
-            
-            Create the audio file as: thank_you_audio.mp3
-            Output the audio file path as: thank_you_audio.mp3
-        """,
-        output_key="thank_you_audio_filepath",
-        tools=[text_to_speech]
-    )
-    
-    # Create transition TTS agents with actual transition content
-    for i, transition_text in enumerate(transitions):
-        agent_name = f"tts_transition_{i}"
-        audio_filename = f"glconnect/static/audio/transition_audio_{i}.mp3"
-        output_key = f"transition_audio_filepath_{i}"
-        
-        transition_tts_agent = Agent(
-            model="gemini-2.0-flash",
-            name=agent_name,
-            description=f"Converts transition {i+1} to audio.",
-            instruction=f"""
-                Convert the following transition text to audio using Google Cloud Text to Speech.
-                Use the voice: {ANCHOR_VOICE}
-                The transition text is: {transition_text}
-                
-                Create the audio file as: transition_audio_{i}.mp3
-                Output the audio file path as: transition_audio_{i}.mp3
-            """,
-            output_key=output_key,
-            tools=[text_to_speech]
+    # Convert all scripts to audio directly (more reliable than Gemini tool-calling)
+    print("DEBUG: Executing direct TTS phase...")
+    if task_id:
+        try:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(
+                task_id,
+                progress=70,
+                current_step='Converting text segments to speech...',
+                last_heartbeat=datetime.now(),
+            )
+        except Exception:
+            pass
+
+    try:
+        _run_direct_tts_phase(
+            intro_text=intro_text,
+            outro_text=outro_text,
+            transitions=transitions,
+            reporter_segments=reporter_segments,
+            task_id=task_id,
         )
-        transition_tts_agents.append(transition_tts_agent)
+    except Exception as exc:
+        print(f"DEBUG: Direct TTS phase failed: {exc}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "audio_file": None,
+            "summary": f"News generation failed: TTS conversion failed. Root cause: {exc}",
+        }
 
-    # Create TTS phase with all agents
-    tts_phase = ParallelAgent(
-        name="tts_conversion_phase",
-        description="Converts all news reports to audio concurrently.",
-        sub_agents=[intro_tts_agent, outro_tts_agent, thank_you_tts_agent] + reporters_tts_agents_with_content + transition_tts_agents
-    )
+    gc.collect()
+    gc.collect()
 
-    # Execute TTS phase with progress updates
-    print("DEBUG: Executing TTS phase...")
-    
-    # Update progress before TTS
     if task_id:
         try:
             from glconnect.news_routes import update_task_in_db
-            update_task_in_db(task_id, 
-                             progress=70,
-                             current_step=f'Converting {len(tts_phase.sub_agents)} text segments to speech...',
-                             last_heartbeat=datetime.now())
-        except:
-            pass
-    
-    # TTS processing with retry logic and memory optimization
-    print("DEBUG: Starting TTS processing with retry logic...")
-    tts_output = _run_async_safely(run_agent(tts_phase, ""), max_retries=3, retry_delay=3)
-    
-    # Handle case where TTS failed due to interpreter shutdown
-    if tts_output is None:
-        print("DEBUG: TTS phase failed after retries - attempting fallback")
-        # Try a simpler TTS approach as fallback
-        try:
-            print("DEBUG: Attempting fallback TTS processing...")
-            # Force garbage collection before fallback
-            gc.collect()
-            gc.collect()
-            
-            # Try again with a fresh async context
-            tts_output = _run_async_safely(run_agent(tts_phase, ""), max_retries=2, retry_delay=5)
-            
-            if tts_output is None:
-                print("DEBUG: Fallback TTS also failed")
-                diagnostic = globals().get("_last_async_error") or "No exception captured"
-                return {"audio_file": None, "summary": f"News generation failed: TTS conversion failed after multiple attempts. Root cause: {diagnostic}"}
-        except Exception as e:
-            print(f"DEBUG: Fallback TTS failed with error: {e}")
-            return {"audio_file": None, "summary": "News generation failed: TTS conversion failed due to system error. Please try again."}
-    
-    # Force garbage collection after TTS to free memory
-    gc.collect()
-    gc.collect()
-    
-    # Update progress after TTS
-    if task_id:
-        try:
-            from glconnect.news_routes import update_task_in_db
-            update_task_in_db(task_id, 
-                             progress=85,
-                             current_step='TTS conversion completed, assembling final audio...',
-                             last_heartbeat=datetime.now())
-        except:
+            update_task_in_db(
+                task_id,
+                progress=85,
+                current_step='TTS conversion completed, assembling final audio...',
+                last_heartbeat=datetime.now(),
+            )
+        except Exception:
             pass
 
-    # Execute final output phase
-    final_output_phase = ParallelAgent(
-        name="final_output_phase",
-        description="Generates the final audio broadcast and a summary of the news.",
-        sub_agents=[
-            final_audio_assembler_agent,
-            summary_agent
-        ]
-    )
-    print("DEBUG: Executing final output phase...")
-    final_output = _run_async_safely(run_agent(final_output_phase, ""))
-    
-    # Handle case where final output failed due to interpreter shutdown
-    if final_output is None:
-        print("DEBUG: Final output phase failed due to interpreter shutdown")
-        return {"audio_file": None, "summary": "News generation failed: Final assembly failed due to interpreter shutdown"}
+    print("DEBUG: Assembling final broadcast audio...")
+    combine_result = combine_audio_files(final_audio_paths, output_filename="final_news_broadcast.mp3")
+    combined_path = combine_result.get("combined_audio_filepath", "")
+    if not combined_path or str(combined_path).startswith("Error"):
+        return {
+            "audio_file": None,
+            "summary": f"News generation failed: audio assembly failed. Root cause: {combined_path}",
+        }
+
+    summary_result = summarize_text(summarized_text_input)
+    broadcast_summary = summary_result.get("summary", "")
     
     # Force aggressive garbage collection to free memory
     gc.collect()
@@ -2207,12 +2178,14 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         
         print(f"DEBUG: Web-accessible path: {web_path}")
         return {
-            "audio_file": web_path
+            "audio_file": web_path,
+            "summary": broadcast_summary,
         }
     else:
         print("DEBUG: No audio files found")
         return {
-            "audio_file": None
+            "audio_file": None,
+            "summary": broadcast_summary or "News generation completed but final audio file was not found.",
         }
 
 
