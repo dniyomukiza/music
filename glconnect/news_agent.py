@@ -235,6 +235,7 @@ def get_timezone_info() -> dict:
 
 # Simple TTS cache to avoid regenerating identical content
 _tts_cache = {}
+_last_async_error = None
 
 # --- Define the Text to Speech Tool (as a callable function) ---
 def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_rate: float = 1.0, pitch: float = 0.0) -> dict:
@@ -1329,7 +1330,9 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
     import sys
     import time
     
+    global _last_async_error
     last_error = None
+    _last_async_error = None
     for attempt in range(max_retries):
         try:
             # Check if the interpreter is shutting down
@@ -1408,11 +1411,13 @@ def _run_async_safely(coro, max_retries=3, retry_delay=2):
             return None
     
     if last_error:
+        _last_async_error = f"{type(last_error).__name__}: {last_error}"
         print(
             f"ASYNC_FINAL_FAILURE exception_type={type(last_error).__name__} "
             f"message={last_error!s}"
         )
     else:
+        _last_async_error = "Interpreter shutdown or closed event loop"
         print("ASYNC_FINAL_FAILURE reason=interpreter_shutdown_or_closed_event_loop")
     print(f"DEBUG: All {max_retries} attempts failed in _run_async_safely")
     return None
@@ -2081,7 +2086,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             
             if tts_output is None:
                 print("DEBUG: Fallback TTS also failed")
-                return {"audio_file": None, "summary": "News generation failed: TTS conversion failed after multiple attempts. Please try again."}
+                diagnostic = globals().get("_last_async_error") or "No exception captured"
+                return {"audio_file": None, "summary": f"News generation failed: TTS conversion failed after multiple attempts. Root cause: {diagnostic}"}
         except Exception as e:
             print(f"DEBUG: Fallback TTS failed with error: {e}")
             return {"audio_file": None, "summary": "News generation failed: TTS conversion failed due to system error. Please try again."}
