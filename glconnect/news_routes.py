@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
-from .news_agent import generate_broadcast
+from .news_agent import NEWS_GEMINI_MODEL, generate_broadcast, _gemini_generate_text
 
 # Create blueprint for news routes
 news_bp = Blueprint('news_bp', __name__)
@@ -198,6 +198,15 @@ def normalize_task_format(task):
         normalized['topics_processed'] = task['topics_processed']
     
     return normalized
+
+def pipeline_from_task(task):
+    """Return the stored news pipeline trace, if the task has one."""
+    if not isinstance(task, dict):
+        return None
+    result = task.get('result')
+    if isinstance(result, dict) and result.get('pipeline'):
+        return result.get('pipeline')
+    return task.get('pipeline')
 
 def cleanup_old_tasks():
     """Clean up old completed/failed tasks to prevent memory buildup."""
@@ -781,7 +790,7 @@ class NewsTopicValidationAgent:
         self.client = genai.Client(api_key=self.api_key)
         # Default: widely available; override with NEWS_TOPIC_GEMINI_MODEL. Older “gemini-2.0-flash”
         # can 404 for new API users (Google returns NOT_FOUND for deprecated model names).
-        self._validation_model = (os.getenv("NEWS_TOPIC_GEMINI_MODEL") or "gemini-2.5-flash").strip()
+        self._validation_model = (os.getenv("NEWS_TOPIC_GEMINI_MODEL") or NEWS_GEMINI_MODEL).strip()
     
     def validate_topic(self, topic: str) -> tuple[bool, str]:
         """
@@ -850,7 +859,7 @@ class NewsTopicValidationAgent:
             if not getattr(cand, "content", None) or not getattr(cand.content, "parts", None):
                 return False, (
                     f"Empty model response (finish_reason={fin}). If this persists, check API billing "
-                    f"or try NEWS_TOPIC_GEMINI_MODEL=gemini-2.5-flash."
+                    f"or try NEWS_TOPIC_GEMINI_MODEL=gemini-3.6-flash."
                 )
             raw_text = None
             for p in cand.content.parts:
@@ -1020,7 +1029,6 @@ def categorize_topic_ai(topic: str) -> str:
     More accurate and handles context better than keyword matching.
     """
     import google.generativeai as genai
-    from glconnect import config
     
     # Configure Gemini with memory-efficient settings
     generation_config = genai.types.GenerationConfig(
@@ -1028,11 +1036,6 @@ def categorize_topic_ai(topic: str) -> str:
         temperature=0.7,  # Balanced creativity
         top_p=0.8,  # Focus on most likely tokens
         top_k=40  # Limit token selection
-    )
-    
-    model = genai.GenerativeModel(
-        'gemini-2.0-flash',
-        generation_config=generation_config
     )
     
     prompt = f"""
@@ -1053,8 +1056,7 @@ def categorize_topic_ai(topic: str) -> str:
     Return only the category name, nothing else.
     """
     
-    response = model.generate_content(prompt)
-    category = response.text.strip()
+    category = _gemini_generate_text(prompt, generation_config=generation_config)
     
     # Validate the response
     valid_categories = ['Politics', 'Economy', 'Sports', 'Technology', 
@@ -1765,7 +1767,9 @@ def run_generate_broadcast(task_id, topics):
                              completed_at=datetime.now(),
                              result={
                                  'audio_file_path': audio_file_path,
-                                 'output_text': summary
+                                 'output_text': summary,
+                                 'pipeline': output.get('pipeline') if isinstance(output, dict) else None,
+                                 'used_fallback': bool(output.get('used_fallback')) if isinstance(output, dict) else False,
                              })
             
             with _tasks_lock:
@@ -1773,7 +1777,9 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['completed_at'] = datetime.now()
                 tasks[task_id]['result'] = {
                     'audio_file_path': audio_file_path,
-                    'output_text': summary
+                    'output_text': summary,
+                    'pipeline': output.get('pipeline') if isinstance(output, dict) else None,
+                    'used_fallback': bool(output.get('used_fallback')) if isinstance(output, dict) else False,
                 }
                 tasks[task_id]['summary'] = summary
                 # Also store the audio URL for the UI
@@ -2262,11 +2268,16 @@ def broadcast():
             # summary and audio_file=None, so do not mark those tasks complete.
             if result and 'error' not in result and result.get('audio_file'):
                 # Success - store result in database
+                completed_step = (
+                    'News generation completed with fallback scripts'
+                    if result.get('used_fallback')
+                    else 'News generation completed successfully'
+                )
                 update_task_in_db(task_id, 
                                  status='completed',
                                  progress=100,
-                                 current_step='News generation completed successfully',
-                                 result=result,  # Store the result
+                                 current_step=completed_step,
+                                 result=result,  # Store the result including pipeline trace
                                  last_heartbeat=datetime.now())
                 
                 with _tasks_lock:
@@ -2276,6 +2287,8 @@ def broadcast():
                         tasks[task_id]['completed_at'] = datetime.now()
                 
                 print(f"DEBUG: Task {task_id} marked as completed with result stored")
+                if result.get('pipeline'):
+                    print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} used_fallback={result.get('used_fallback')}")
             else:
                 # Error
                 error_msg = (
@@ -2287,6 +2300,7 @@ def broadcast():
                                  progress=0,
                                  current_step=f'News generation failed: {error_msg}',
                                  error=error_msg,
+                                 result=result,
                                  failed_at=datetime.now(),
                                  last_heartbeat=datetime.now())
                 
@@ -2294,9 +2308,12 @@ def broadcast():
                     if task_id in tasks:
                         tasks[task_id]['status'] = 'failed'
                         tasks[task_id]['error'] = error_msg
+                        tasks[task_id]['result'] = result
                         tasks[task_id]['failed_at'] = datetime.now()
                 
                 print(f"DEBUG: Task {task_id} marked as failed: {error_msg}")
+                if result and result.get('pipeline'):
+                    print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} error={error_msg}")
                 
         except Exception as e:
             print(f"ERROR: Direct news generation failed for task {task_id}: {e}")
@@ -2886,7 +2903,10 @@ def task_status(task_id):
             return jsonify({
                 'status': 'completed',
                 'audio_file': task['audio_file'],
-                'summary': task.get('summary', '')
+                'summary': task.get('summary') or (task.get('result') or {}).get('summary', ''),
+                'topics': task.get('topics') or (task.get('result') or {}).get('topics'),
+                'pipeline': pipeline_from_task(task),
+                'used_fallback': bool((pipeline_from_task(task) or {}).get('used_fallback')),
             })
         # Fallback for old structure
         elif 'result' in task:
@@ -2942,7 +2962,11 @@ def task_status(task_id):
             
             return jsonify({
                 'status': 'completed',
-                'audio_file': audio_file_path
+                'audio_file': audio_file_path,
+                'summary': summary,
+                'topics': task.get('topics') or (result.get('topics') if isinstance(result, dict) else None),
+                'pipeline': pipeline_from_task(task) or (result.get('pipeline') if isinstance(result, dict) else None),
+                'used_fallback': bool((result or {}).get('used_fallback')) if isinstance(result, dict) else False,
             })
         else:
             # Handle old dictionary structure (if any) - but result is not defined here
@@ -2960,7 +2984,11 @@ def task_status(task_id):
             else:
                 error_message = "News generation failed due to an unknown error. Please try again."
         print(f"DEBUG: Task {task_id} failed with error: {error_message}")
-        return jsonify({'status': 'failed', 'error': error_message})
+        return jsonify({
+            'status': 'failed',
+            'error': error_message,
+            'pipeline': pipeline_from_task(task),
+        })
     else:
         return jsonify({
             'status': 'running',
@@ -3501,7 +3529,7 @@ def run_transcription(task_id, audio_file_path, filename):
         print("Generating transcription...")
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=NEWS_GEMINI_MODEL,
                 contents=["Transcribe this audio file. Provide a clean, accurate transcription of all spoken content.", myfile]
             )
         except Exception as e:

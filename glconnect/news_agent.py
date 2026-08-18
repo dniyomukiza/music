@@ -122,7 +122,154 @@ if google_api_key:
     genai.configure(api_key=google_api_key)
     os.environ['GOOGLE_API_KEY'] = google_api_key
 
-NEWS_GEMINI_MODEL = (os.getenv("NEWS_GEMINI_MODEL") or "gemini-2.5-flash").strip()
+NEWS_GEMINI_MODEL = (os.getenv("NEWS_GEMINI_MODEL") or "gemini-3.6-flash").strip()
+NEWS_GEMINI_MODEL_FALLBACKS = [
+    NEWS_GEMINI_MODEL,
+    "gemini-3.6-flash",
+    "gemini-2.5-flash",
+]
+
+
+def _gemini_model_candidates():
+    seen = []
+    for name in NEWS_GEMINI_MODEL_FALLBACKS:
+        if name and name not in seen:
+            seen.append(name)
+    return seen
+
+
+_last_gemini_meta = {}
+
+
+def _classify_model_error(exc) -> str:
+    text = str(exc or "")
+    lower = text.lower()
+    if "404" in text or "not found" in lower or "no longer available" in lower:
+        return "model_unavailable"
+    if "429" in text or "resource_exhausted" in lower or "quota" in lower:
+        return "quota_exhausted"
+    if "403" in text or "permission" in lower or "api key" in lower:
+        return "permission_denied"
+    if "json" in lower and "decode" in lower:
+        return "invalid_json"
+    if "empty" in lower:
+        return "empty_response"
+    return type(exc).__name__ if exc is not None else "unknown"
+
+
+def _clip_trace_text(value, limit=300):
+    if value is None:
+        return None
+    text = str(value).replace("\n", " ").strip()
+    if len(text) > limit:
+        return text[:limit] + "..."
+    return text
+
+
+class NewsPipelineTrace:
+    """Structured breadcrumb trail for one news broadcast run."""
+
+    def __init__(self, topics, task_id=None):
+        self.task_id = task_id
+        self.topics = list(topics or [])
+        self.started_at = datetime.utcnow().isoformat() + "Z"
+        self.stages = []
+        self.warnings = []
+        self.used_fallback = False
+
+    def stage(self, name, status="ok", warning=None, **details):
+        event = {"stage": name, "status": status}
+        for key, value in details.items():
+            if value is not None:
+                event[key] = value
+        if warning:
+            event["warning"] = warning
+            self.warnings.append(warning)
+        self.stages.append(event)
+        if status in ("fallback", "partial_fallback"):
+            self.used_fallback = True
+        parts = [f"{key}={_clip_trace_text(value, 180)}" for key, value in event.items()]
+        print("PIPELINE " + " | ".join(parts))
+        return event
+
+    def outcome(self, audio_ok):
+        if not audio_ok:
+            return "failed"
+        if self.used_fallback:
+            return "ok_with_fallback"
+        return "ok"
+
+    def to_dict(self, audio_ok=None):
+        payload = {
+            "task_id": self.task_id,
+            "topics": self.topics,
+            "started_at": self.started_at,
+            "used_fallback": self.used_fallback,
+            "warnings": list(self.warnings),
+            "stages": list(self.stages),
+        }
+        if audio_ok is not None:
+            payload["outcome"] = self.outcome(audio_ok)
+        return payload
+
+
+def _result_with_pipeline(result: dict, trace: NewsPipelineTrace) -> dict:
+    audio_ok = bool(result.get("audio_file")) and "error" not in result
+    pipeline = trace.to_dict(audio_ok=audio_ok)
+    result = dict(result)
+    result["pipeline"] = pipeline
+    result["used_fallback"] = pipeline["used_fallback"]
+    print("PIPELINE_SUMMARY " + json.dumps(pipeline, default=str))
+    if pipeline.get("warnings"):
+        print("PIPELINE_WARNINGS " + " || ".join(pipeline["warnings"]))
+    return result
+
+
+def _gemini_generate_text(prompt: str, generation_config=None) -> str:
+    """Try current then fallback Gemini models. Raises the last error if all fail."""
+    import google.generativeai as genai
+    global _last_gemini_meta
+    attempts = []
+    last_error = None
+    for model_name in _gemini_model_candidates():
+        try:
+            kwargs = {}
+            if generation_config is not None:
+                kwargs["generation_config"] = generation_config
+            model = genai.GenerativeModel(model_name, **kwargs)
+            response = model.generate_content(prompt)
+            text = (getattr(response, "text", None) or "").strip()
+            if text:
+                attempts.append({"model": model_name, "ok": True, "chars": len(text)})
+                _last_gemini_meta = {"ok": True, "model": model_name, "attempts": attempts}
+                print(f"DEBUG: Gemini text OK model={model_name} chars={len(text)}")
+                return text
+            last_error = RuntimeError(f"{model_name} returned empty text")
+            attempts.append({
+                "model": model_name,
+                "ok": False,
+                "error": "empty_response",
+                "detail": f"{model_name} returned empty text",
+            })
+            print(f"DEBUG: Gemini text failed model={model_name}: empty text")
+        except Exception as exc:
+            last_error = exc
+            classified = _classify_model_error(exc)
+            attempts.append({
+                "model": model_name,
+                "ok": False,
+                "error": classified,
+                "detail": _clip_trace_text(exc, 240),
+            })
+            print(f"DEBUG: Gemini text failed model={model_name}: {classified}: {exc}")
+    _last_gemini_meta = {
+        "ok": False,
+        "model": None,
+        "attempts": attempts,
+        "error": _classify_model_error(last_error),
+        "detail": _clip_trace_text(last_error, 240),
+    }
+    raise last_error or RuntimeError("No Gemini model produced text")
 
 # TTS credentials will be loaded when needed
 
@@ -633,11 +780,6 @@ def analyze_topic_context(topic: str) -> dict:
             top_k=40  # Limit token selection
         )
         
-        model = genai.GenerativeModel(
-            NEWS_GEMINI_MODEL,
-            generation_config=generation_config
-        )
-        
         prompt = f"""
         Analyze this news topic and provide context for professional news reporting: "{topic}"
         
@@ -660,8 +802,7 @@ def analyze_topic_context(topic: str) -> dict:
         Topic: "{topic}"
         """
         
-        response = model.generate_content(prompt)
-        content = response.text.strip()
+        content = _gemini_generate_text(prompt, generation_config=generation_config)
         
         # Clean up the response
         if content.startswith('```json'):
@@ -694,7 +835,6 @@ def generate_intelligent_fallback_content(topic: str) -> str:
         analysis = analyze_topic_context(topic)
         
         import google.generativeai as genai
-        from glconnect import config
         
         # Configure Gemini with memory-efficient settings
         generation_config = genai.types.GenerationConfig(
@@ -702,11 +842,6 @@ def generate_intelligent_fallback_content(topic: str) -> str:
             temperature=0.7,  # Balanced creativity
             top_p=0.8,  # Focus on most likely tokens
             top_k=40  # Limit token selection
-        )
-        
-        model = genai.GenerativeModel(
-            NEWS_GEMINI_MODEL,
-            generation_config=generation_config
         )
         
         prompt = f"""
@@ -730,8 +865,7 @@ def generate_intelligent_fallback_content(topic: str) -> str:
         Generate professional news content:
         """
         
-        response = model.generate_content(prompt)
-        content = response.text.strip()
+        content = _gemini_generate_text(prompt, generation_config=generation_config)
         
         # Validate the generated content
         is_valid, cleaned_content = validate_news_content(content, topic)
@@ -793,11 +927,26 @@ def _deterministic_reporter_script(topic: str, category: str) -> str:
     desk = category if category != "other" else "news"
     return (
         f"This is {name} with the {desk} desk at GLC News. "
-        f"Our top story is {topic}. "
-        f"This is a developing story. We are tracking official statements, independent reporting, "
-        f"and what this could mean next. Stay with GLC News as more facts are confirmed. "
+        f"We are covering {topic}. "
+        f"Our {desk} team is checking official statements and independent reporting on {topic}, "
+        f"and we will bring you the next confirmed details as soon as they are available. "
         f"I am {name}, for GLC News."
     )
+
+
+def _broadcast_summary(topics: list, reporter_scripts: list) -> str:
+    """One unique line per topic so TextRank cannot collapse cloned boilerplate."""
+    lines = []
+    for topic, script in zip(topics, reporter_scripts):
+        first = ""
+        for sentence in re.split(r"(?<=[.!?])\s+", (script or "").strip()):
+            if sentence and topic.lower() in sentence.lower():
+                first = sentence.rstrip(".")
+                break
+        if not first:
+            first = f"Coverage of {topic}"
+        lines.append(f"{topic}: {first}.")
+    return "\n".join(lines)
 
 
 def _strip_json_fence(text: str) -> str:
@@ -808,22 +957,36 @@ def _strip_json_fence(text: str) -> str:
     return cleaned.strip()
 
 
-def _gemini_reporter_scripts(topics: list) -> dict:
+def _gemini_reporter_scripts(topics: list, trace: NewsPipelineTrace = None) -> dict:
     """One Gemini call for all reporter scripts. Returns {topic: script} or {}."""
     if not topics:
         return {}
     try:
-        import google.generativeai as genai
-        model = genai.GenerativeModel(NEWS_GEMINI_MODEL)
         prompt = (
             "Write spoken radio news reports. Return ONLY JSON:\n"
             '{"reports": [{"topic": "<exact topic>", "script": "<4 to 6 spoken sentences, no titles, '
             'no asterisks, end with I am <FirstName>, for GLC News>"}]}\n'
             f"Topics: {json.dumps(list(topics))}\n"
-            "Each script must cover that exact topic only."
+            "Each script must cover that exact topic only. Do not reuse the same sentences across reports."
         )
-        response = model.generate_content(prompt)
-        data = json.loads(_strip_json_fence(getattr(response, "text", "") or ""))
+        raw = _gemini_generate_text(prompt)
+        gemini_meta = dict(_last_gemini_meta)
+        try:
+            data = json.loads(_strip_json_fence(raw))
+        except json.JSONDecodeError as exc:
+            warning = f"Reporter JSON parse failed: {_clip_trace_text(exc, 160)}"
+            if trace:
+                trace.stage(
+                    "scripts_generate",
+                    status="fallback",
+                    warning=warning,
+                    model=gemini_meta.get("model"),
+                    attempts=gemini_meta.get("attempts"),
+                    error="invalid_json",
+                    preview=_clip_trace_text(raw, 200),
+                )
+            print(f"DEBUG: Gemini reporter scripts failed: {exc}")
+            return {}
         generated = {}
         for item in data.get("reports") or []:
             topic = (item.get("topic") or "").strip()
@@ -839,27 +1002,96 @@ def _gemini_reporter_scripts(topics: list) -> dict:
                 if key.lower() == topic.lower() or topic.lower() in key.lower() or key.lower() in topic.lower():
                     matched[topic] = script
                     break
+        unmatched = [topic for topic in topics if topic not in matched]
         print(f"DEBUG: Gemini reporter scripts matched {len(matched)}/{len(topics)} topics")
+        if trace:
+            status = "ok"
+            warning = None
+            if unmatched:
+                status = "partial_fallback" if matched else "fallback"
+                warning = (
+                    f"Gemini scripts matched {len(matched)}/{len(topics)}; "
+                    f"unmatched={unmatched}; generated_keys={list(generated.keys())}"
+                )
+            trace.stage(
+                "scripts_generate",
+                status=status,
+                warning=warning,
+                model=gemini_meta.get("model"),
+                attempts=gemini_meta.get("attempts"),
+                matched=f"{len(matched)}/{len(topics)}",
+                generated_keys=list(generated.keys()),
+                unmatched=unmatched or None,
+            )
         return matched
     except Exception as exc:
-        print(f"DEBUG: Gemini reporter scripts failed: {exc}")
+        classified = _classify_model_error(exc)
+        warning = f"Gemini reporter scripts failed ({classified}): {_clip_trace_text(exc, 200)}"
+        print(f"DEBUG: {warning}")
+        if trace:
+            trace.stage(
+                "scripts_generate",
+                status="fallback",
+                warning=warning,
+                model=_last_gemini_meta.get("model"),
+                attempts=_last_gemini_meta.get("attempts"),
+                error=classified,
+                detail=_clip_trace_text(exc, 240),
+            )
         return {}
 
 
-def _build_reporter_segments(topics: list, categorized_topics: dict):
+def _build_reporter_segments(topics: list, categorized_topics: dict, trace: NewsPipelineTrace = None):
     """One reporter audio segment per user topic, with a distinct script."""
-    generated = _gemini_reporter_scripts(topics)
+    generated = _gemini_reporter_scripts(topics, trace=trace)
     script_keys = []
     scripts = []
     segments = []
+    reporter_trace = []
+    fallback_count = 0
     for index, topic in enumerate(topics):
         category = categorized_topics.get(topic) or _categorize_topic_locally(topic)
-        script = generated.get(topic) or _deterministic_reporter_script(topic, category)
+        script = generated.get(topic)
+        if script:
+            source = "gemini"
+            print(f"DEBUG: Reporter {index} using Gemini script for topic={topic!r}")
+        else:
+            source = "deterministic_fallback"
+            fallback_count += 1
+            script = _deterministic_reporter_script(topic, category)
+            print(f"DEBUG: Reporter {index} using deterministic fallback for topic={topic!r}")
         segment_id = f"report_{index}"
         script_keys.append(f"{segment_id}_script")
         scripts.append(script)
         segments.append((segment_id, clean_text_for_speech(script), _voice_for_category(category)))
+        reporter_trace.append({
+            "index": index,
+            "topic": topic,
+            "category": category,
+            "source": source,
+            "voice": _voice_for_category(category),
+            "reporter": _reporter_display_name(category),
+            "chars": len(script),
+            "preview": _clip_trace_text(script, 160),
+        })
         print(f"DEBUG: Reporter {index} category={category} topic={topic!r} chars={len(script)}")
+    if trace:
+        if fallback_count == 0:
+            status = "ok"
+            warning = None
+        elif fallback_count < len(topics):
+            status = "partial_fallback"
+            warning = f"{fallback_count}/{len(topics)} reporters used deterministic fallback scripts"
+        else:
+            status = "fallback"
+            warning = f"All {len(topics)} reporters used deterministic fallback scripts"
+        trace.stage(
+            "scripts_assign",
+            status=status,
+            warning=warning,
+            fallback_count=fallback_count,
+            reporters=reporter_trace,
+        )
     return script_keys, scripts, segments
 
 def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
@@ -1439,18 +1671,7 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
                 pass
             
             # Generate simple content
-            content = f"""
-Breaking News: {topic}
-
-This is a developing story about {topic}. Our news team is working to gather more information and will provide updates as they become available.
-
-Key points to consider:
-- This topic is currently under investigation
-- More details will be provided as they emerge
-- We will continue to monitor this situation closely
-
-This concludes our report on {topic}. Stay tuned for more updates.
-            """.strip()
+            content = _deterministic_reporter_script(topic, _categorize_topic_locally(topic))
             
             news_content.append(content)
             
@@ -1488,15 +1709,25 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     Now includes memory optimizations to prevent timeouts.
     """
     print("DEBUG: Starting full audio news generation with memory optimizations")
+    trace = NewsPipelineTrace(topics, task_id=task_id)
+    trace.stage(
+        "start",
+        default_model=NEWS_GEMINI_MODEL,
+        model_candidates=_gemini_model_candidates(),
+        topic_count=len(topics or []),
+    )
     
     if not topics:
         print("No topics entered. Exiting.")
-        return {"error": "No topics provided"}
+        trace.stage("start", status="failed", error="No topics provided")
+        return _result_with_pipeline({"error": "No topics provided"}, trace)
 
     tts_error = validate_tts_credentials()
     if tts_error:
         print(f"ERROR: TTS preflight failed: {tts_error}")
-        return {"error": tts_error}
+        trace.stage("tts_preflight", status="failed", error=tts_error)
+        return _result_with_pipeline({"error": tts_error}, trace)
+    trace.stage("tts_preflight", backend=_tts_backend)
     
     # Check memory before starting
     try:
@@ -1505,12 +1736,30 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         print(f"DEBUG: Memory at start - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
         if memory_info.percent > 90:  # More appropriate threshold for 4GB containers
             print(f"ERROR: Memory usage too high ({memory_info.percent}%) - aborting")
-            return {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"}
+            trace.stage("memory", status="failed", error=f"Memory usage too high ({memory_info.percent}%)")
+            return _result_with_pipeline(
+                {"error": f"Memory usage too high ({memory_info.percent}%) - please try again later"},
+                trace,
+            )
     except Exception as e:
         print(f"DEBUG: Memory check failed: {e}")
     
     # Use the original workflow but with memory optimizations
-    return _generate_broadcast_attempt(topics, task_id)
+    try:
+        return _generate_broadcast_attempt(topics, task_id, trace)
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        trace.stage(
+            "pipeline",
+            status="failed",
+            error=type(exc).__name__,
+            detail=_clip_trace_text(exc, 240),
+        )
+        return _result_with_pipeline(
+            {"error": f"News generation failed: {exc}", "audio_file": None},
+            trace,
+        )
 
 def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failure=False):
     """Safely run async coroutine in a thread, handling interpreter shutdown gracefully with retry logic."""
@@ -1645,10 +1894,12 @@ def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failu
         raise RuntimeError(_last_async_error or "Async operation failed without a captured exception")
     return None
 
-def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
+def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: NewsPipelineTrace = None) -> dict:
     import gc
     import psutil
     import os
+    if trace is None:
+        trace = NewsPipelineTrace(topics, task_id=task_id)
     
     # Check memory at start and abort if too high using container-aware monitoring
     try:
@@ -1657,7 +1908,11 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         
         if memory_percent > 90:  # Abort only under real memory pressure
             print(f"ERROR: Memory usage too high ({memory_percent:.1f}%) - aborting broadcast generation")
-            return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
+            trace.stage("memory", status="failed", error=f"Memory usage too high ({memory_percent:.1f}%)")
+            return _result_with_pipeline(
+                {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"},
+                trace,
+            )
     except:
         pass
     
@@ -1725,8 +1980,17 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     
     # Handle case where async operation failed due to interpreter shutdown
     if categorized_topics_json is None:
-        print("DEBUG: Categorization agent failed, using local keyword categories")
+        warning = f"Categorization agent failed, using local keyword categories: {_clip_trace_text(_last_async_error, 200)}"
+        print(f"DEBUG: {warning}")
         categorized_topics = {topic: _categorize_topic_locally(topic) for topic in topics}
+        trace.stage(
+            "categorize",
+            status="ok",
+            source="local_keywords",
+            warning=warning,
+            categories=categorized_topics,
+            error=_clip_trace_text(_last_async_error, 200),
+        )
     else:
         # Clean up the JSON response
         categorized_topics_json = categorized_topics_json.strip()
@@ -1739,9 +2003,24 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         
         try:
             categorized_topics = json.loads(categorized_topics_json)
+            trace.stage(
+                "categorize",
+                source="adk_agent",
+                model=NEWS_GEMINI_MODEL,
+                categories=categorized_topics,
+            )
         except json.JSONDecodeError as e:
-            print(f"DEBUG: JSON decode error: {e}, using local keyword categories")
+            warning = f"Categorization JSON decode failed, using local keyword categories: {e}"
+            print(f"DEBUG: {warning}")
             categorized_topics = {topic: _categorize_topic_locally(topic) for topic in topics}
+            trace.stage(
+                "categorize",
+                status="ok",
+                source="local_keywords",
+                warning=warning,
+                categories=categorized_topics,
+                preview=_clip_trace_text(categorized_topics_json, 200),
+            )
     print(f"DEBUG: Parsed categories: {categorized_topics}")
 
     # Group topics by category
@@ -1754,7 +2033,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     print(f"DEBUG: Topics grouped by category: {topics_by_category}")
 
     reporter_script_keys, reporter_scripts, reporter_segments = _build_reporter_segments(
-        topics, categorized_topics
+        topics, categorized_topics, trace=trace
     )
 
     timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
@@ -1815,12 +2094,22 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         print(f"DEBUG: Direct TTS phase failed: {exc}")
         import traceback
         traceback.print_exc()
-        return {
-            "audio_file": None,
-            "summary": f"News generation failed: TTS conversion failed. Root cause: {exc}",
-        }
+        trace.stage(
+            "tts",
+            status="failed",
+            backend=_tts_backend,
+            error=_classify_model_error(exc),
+            detail=_clip_trace_text(exc, 240),
+        )
+        return _result_with_pipeline(
+            {
+                "audio_file": None,
+                "summary": f"News generation failed: TTS conversion failed. Root cause: {exc}",
+            },
+            trace,
+        )
+    trace.stage("tts", backend=_tts_backend, segments=len(reporter_segments))
 
-    gc.collect()
     gc.collect()
 
     if task_id:
@@ -1839,13 +2128,20 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     combine_result = combine_audio_files(final_audio_paths, output_filename="final_news_broadcast.mp3")
     combined_path = combine_result.get("combined_audio_filepath", "")
     if not combined_path or str(combined_path).startswith("Error"):
-        return {
-            "audio_file": None,
-            "summary": f"News generation failed: audio assembly failed. Root cause: {combined_path}",
-        }
+        trace.stage("assemble", status="failed", error=_clip_trace_text(combined_path, 240))
+        return _result_with_pipeline(
+            {
+                "audio_file": None,
+                "summary": f"News generation failed: audio assembly failed. Root cause: {combined_path}",
+            },
+            trace,
+        )
+    trace.stage("assemble", path=combined_path)
 
-    summary_result = summarize_text(summarized_text_input)
-    broadcast_summary = summary_result.get("summary", "")
+    broadcast_summary = _broadcast_summary(topics, reporter_scripts)
+    if not broadcast_summary.strip():
+        summary_result = summarize_text(summarized_text_input)
+        broadcast_summary = summary_result.get("summary", "")
     
     # Force aggressive garbage collection to free memory
     gc.collect()
@@ -1917,16 +2213,25 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
             web_path = f"/static/audio/{os.path.basename(latest_audio)}"
         
         print(f"DEBUG: Web-accessible path: {web_path}")
-        return {
-            "audio_file": web_path,
-            "summary": broadcast_summary,
-        }
+        return _result_with_pipeline(
+            {
+                "audio_file": web_path,
+                "summary": broadcast_summary,
+                "topics": list(topics),
+            },
+            trace,
+        )
     else:
         print("DEBUG: No audio files found")
-        return {
-            "audio_file": None,
-            "summary": broadcast_summary or "News generation completed but final audio file was not found.",
-        }
+        trace.stage("finalize", status="failed", error="Final audio file was not found")
+        return _result_with_pipeline(
+            {
+                "audio_file": None,
+                "summary": broadcast_summary or "News generation completed but final audio file was not found.",
+                "topics": list(topics),
+            },
+            trace,
+        )
 
 
 

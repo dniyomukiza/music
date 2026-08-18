@@ -2681,6 +2681,9 @@
                         }, 500);
                     } else if (data.status === 'failed') {
                         console.log('Task failed:', data.error);
+                        if (data.pipeline) {
+                            console.log('News pipeline', data.pipeline);
+                        }
                         clearInterval(pollInterval);
                         stopProgressAnimation();
                         
@@ -2798,11 +2801,65 @@
             }
         }
         
+        function escapeNewsHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function pipelineTraceHtml(pipeline) {
+            if (!pipeline) {
+                return '';
+            }
+            const warnings = (pipeline.warnings || []).map(item => `<li>${escapeNewsHtml(item)}</li>`).join('');
+            const reporters = [];
+            (pipeline.stages || []).forEach(stage => {
+                (stage.reporters || []).forEach(reporter => {
+                    reporters.push(
+                        `<li>${escapeNewsHtml(reporter.reporter || 'Reporter')} on ` +
+                        `<em>${escapeNewsHtml(reporter.topic)}</em>: ` +
+                        `${escapeNewsHtml(reporter.source)} ` +
+                        `(${escapeNewsHtml(reporter.category)}, ${escapeNewsHtml(reporter.chars)} chars)</li>`
+                    );
+                });
+            });
+            const stages = (pipeline.stages || []).map(stage => {
+                const extra = [stage.model, stage.backend, stage.source, stage.matched, stage.error]
+                    .filter(Boolean)
+                    .map(escapeNewsHtml)
+                    .join(', ');
+                return `<li>${escapeNewsHtml(stage.stage)}: ${escapeNewsHtml(stage.status)}${extra ? ' — ' + extra : ''}</li>`;
+            }).join('');
+            const tone = pipeline.used_fallback || pipeline.outcome === 'failed'
+                ? 'rgba(201,162,39,0.18)'
+                : 'rgba(15,20,18,0.9)';
+            const title = pipeline.used_fallback
+                ? 'Broadcast used fallback scripts'
+                : (pipeline.outcome === 'failed' ? 'Broadcast pipeline failed' : 'Broadcast pipeline');
+            return `
+                <div class="pipeline-trace" style="margin-top: 16px; padding: 14px; background: ${tone}; color: #e8ece9; border-radius: 8px; border-left: 4px solid #c9a227;">
+                    <p style="margin: 0 0 8px 0;"><strong>${escapeNewsHtml(title)}</strong> (${escapeNewsHtml(pipeline.outcome || 'unknown')})</p>
+                    ${warnings ? `<ul style="margin: 0 0 8px 18px;">${warnings}</ul>` : ''}
+                    ${reporters.length ? `<p style="margin: 8px 0 4px 0;"><strong>Reporters</strong></p><ul style="margin: 0 0 8px 18px;">${reporters.join('')}</ul>` : ''}
+                    <details>
+                        <summary style="cursor: pointer;">Stage log</summary>
+                        <ul style="margin: 8px 0 0 18px;">${stages}</ul>
+                    </details>
+                </div>
+            `;
+        }
+        
         // Function to show results
         function showResults(result) {
             // Reset the generation flag when results are shown
             isGeneratingNews = false;
             console.log('News generation completed, setting isGeneratingNews = false');
+            if (result && result.pipeline) {
+                console.log('News pipeline', result.pipeline);
+            }
             
             // Reset generate button states
             resetGenerateButtons();
@@ -2865,9 +2922,10 @@
                         </div>
                         
                         <div class="generation-info">
-                            <p><strong>Summary:</strong> ${result.summary || 'N/A'}</p>
-                            <p><strong>Topics:</strong> ${result.topics ? result.topics.join(', ') : 'N/A'}</p>
+                            <p><strong>Summary:</strong> ${escapeNewsHtml(result.summary || 'N/A')}</p>
+                            <p><strong>Topics:</strong> ${result.topics ? result.topics.map(escapeNewsHtml).join(', ') : 'N/A'}</p>
                             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                            ${pipelineTraceHtml(result.pipeline)}
                         </div>
                     </div>
                 `;
