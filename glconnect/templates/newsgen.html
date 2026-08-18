@@ -2566,9 +2566,6 @@
             }
             
             // Submit the topics to the broadcast endpoint
-            // #region agent log
-            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1f57ca'},body:JSON.stringify({sessionId:'1f57ca',runId:'pre-fix',hypothesisId:'A',location:'newsgen.html:generateNewsFromTopics',message:'broadcast_fetch_start',data:{topicCount:topicsToUse.length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             fetch('/routes2/news/broadcast', {
                 method: 'POST',
                 headers: {
@@ -2578,16 +2575,10 @@
             })
             .then(response => {
                 console.log('Broadcast response status:', response.status);
-                // #region agent log
-                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1f57ca'},body:JSON.stringify({sessionId:'1f57ca',runId:'pre-fix',hypothesisId:'C',location:'newsgen.html:generateNewsFromTopics',message:'broadcast_http_status',data:{status:response.status,ok:response.ok},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 return response.json();
             })
             .then(data => {
                 console.log('Broadcast response data:', data);
-                // #region agent log
-                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1f57ca'},body:JSON.stringify({sessionId:'1f57ca',runId:'pre-fix',hypothesisId:'D',location:'newsgen.html:generateNewsFromTopics',message:'broadcast_json',data:{hasError:!!data.error,hasTaskId:!!data.task_id},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
                 if (data.error) {
                     alert('Error: ' + data.error);
                     isGeneratingNews = false; // Reset flag on error

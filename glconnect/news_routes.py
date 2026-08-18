@@ -2247,30 +2247,11 @@ def broadcast():
 
         # DIRECT EXECUTION - No threading to avoid worker restarts
         print(f"DEBUG: Starting DIRECT news generation for task {task_id}")
-        # #region agent log
-        try:
-            from glconnect.news_agent import _agent_debug_log
-            _agent_debug_log("A", "news_routes.py:broadcast", "before_generate_broadcast", {"task_id": task_id, "topics": relevant_topics})
-        except Exception:
-            pass
-        # #endregion
         
         try:
             # Call our memory optimized function directly
             from glconnect.news_agent import generate_broadcast
             result = generate_broadcast(relevant_topics, task_id=task_id)
-            # #region agent log
-            try:
-                from glconnect.news_agent import _agent_debug_log
-                _agent_debug_log("A", "news_routes.py:broadcast", "after_generate_broadcast", {
-                    "task_id": task_id,
-                    "has_audio": bool(result and result.get("audio_file")),
-                    "has_error": bool(result and result.get("error")),
-                    "keys": list(result.keys()) if isinstance(result, dict) else str(type(result)),
-                })
-            except Exception:
-                pass
-            # #endregion
             
             print(f"DEBUG: Direct news generation completed for task {task_id}")
             print(f"DEBUG: Result type: {type(result)}")
@@ -2338,13 +2319,6 @@ def broadcast():
                     tasks[task_id]['failed_at'] = datetime.now()
 
         print(f"DEBUG: Direct execution completed for task {task_id}")
-        # #region agent log
-        try:
-            from glconnect.news_agent import _agent_debug_log
-            _agent_debug_log("A", "news_routes.py:broadcast", "returning_task_id", {"task_id": task_id})
-        except Exception:
-            pass
-        # #endregion
         
         return jsonify({'task_id': task_id})
         

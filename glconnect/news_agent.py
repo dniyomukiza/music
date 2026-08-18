@@ -124,24 +124,6 @@ if google_api_key:
 
 NEWS_GEMINI_MODEL = (os.getenv("NEWS_GEMINI_MODEL") or "gemini-2.5-flash").strip()
 
-# #region agent log
-def _agent_debug_log(hypothesis_id, location, message, data=None):
-    try:
-        import json as _json, time as _time
-        with open("/Applications/untitled folder/music-1/.cursor/debug-1f57ca.log", "a") as _f:
-            _f.write(_json.dumps({
-                "sessionId": "1f57ca",
-                "runId": "pre-fix",
-                "hypothesisId": hypothesis_id,
-                "location": location,
-                "message": message,
-                "data": data or {},
-                "timestamp": int(_time.time() * 1000),
-            }) + "\n")
-    except Exception:
-        pass
-# #endregion
-
 # TTS credentials will be loaded when needed
 
 # --- Define the Summarization Tool (as a callable function) ---
@@ -766,11 +748,119 @@ def generate_intelligent_fallback_content(topic: str) -> str:
         return generate_generic_fallback(topic)
 
 def generate_generic_fallback(topic: str) -> str:
-    """
-    Generate a generic professional fallback when AI generation fails.
-    This is the last resort to ensure we never have unprofessional content.
-    """
-    return f"Regarding {topic}, our news team continues to monitor developments and will provide updates as new information becomes available. This story remains under close observation by our editorial team. I'm reporting for GLC News."
+    """Last-resort spoken copy when Gemini is unavailable. Always names the actual story."""
+    return _deterministic_reporter_script(topic, _categorize_topic_locally(topic))
+
+
+_CATEGORY_KEYWORDS = {
+    "sports": ("fifa", "infantino", "football", "soccer", "nba", "nfl", "mlb", "tennis", "olympic", "world cup"),
+    "tech": ("stripe", "openrouter", "openai", "google", "apple", "microsoft", "crypto", "software", "startup", "ai "),
+    "politics": ("oman", "bombing", "war", "election", "president", "minister", "nato", "sanctions", "congress"),
+    "finance": ("fed", "inflation", "stock", "market", "bank", "interest rate", "wall street"),
+    "health": ("covid", "vaccine", "who", "hospital", "outbreak", "fda"),
+}
+
+
+def _categorize_topic_locally(topic: str) -> str:
+    text = (topic or "").lower()
+    for category, keywords in _CATEGORY_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            return category
+    return "other"
+
+
+def _voice_for_category(category: str) -> str:
+    return {
+        "sports": ERNEST_VOICE,
+        "finance": ISABELLA_VOICE,
+        "tech": MARK_VOICE,
+    }.get(category, EDITH_VOICE)
+
+
+def _reporter_display_name(category: str) -> str:
+    return {
+        "sports": "Ernest",
+        "finance": "Isabella",
+        "tech": "Mark",
+        "politics": "Edith",
+        "health": "Edith",
+        "other": "Edith",
+    }.get(category, "Edith")
+
+
+def _deterministic_reporter_script(topic: str, category: str) -> str:
+    name = _reporter_display_name(category)
+    desk = category if category != "other" else "news"
+    return (
+        f"This is {name} with the {desk} desk at GLC News. "
+        f"Our top story is {topic}. "
+        f"This is a developing story. We are tracking official statements, independent reporting, "
+        f"and what this could mean next. Stay with GLC News as more facts are confirmed. "
+        f"I am {name}, for GLC News."
+    )
+
+
+def _strip_json_fence(text: str) -> str:
+    cleaned = (text or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    return cleaned.strip()
+
+
+def _gemini_reporter_scripts(topics: list) -> dict:
+    """One Gemini call for all reporter scripts. Returns {topic: script} or {}."""
+    if not topics:
+        return {}
+    try:
+        import google.generativeai as genai
+        model = genai.GenerativeModel(NEWS_GEMINI_MODEL)
+        prompt = (
+            "Write spoken radio news reports. Return ONLY JSON:\n"
+            '{"reports": [{"topic": "<exact topic>", "script": "<4 to 6 spoken sentences, no titles, '
+            'no asterisks, end with I am <FirstName>, for GLC News>"}]}\n'
+            f"Topics: {json.dumps(list(topics))}\n"
+            "Each script must cover that exact topic only."
+        )
+        response = model.generate_content(prompt)
+        data = json.loads(_strip_json_fence(getattr(response, "text", "") or ""))
+        generated = {}
+        for item in data.get("reports") or []:
+            topic = (item.get("topic") or "").strip()
+            script = (item.get("script") or "").strip()
+            if topic and len(script) > 40:
+                generated[topic] = script
+        matched = {}
+        for topic in topics:
+            if topic in generated:
+                matched[topic] = generated[topic]
+                continue
+            for key, script in generated.items():
+                if key.lower() == topic.lower() or topic.lower() in key.lower() or key.lower() in topic.lower():
+                    matched[topic] = script
+                    break
+        print(f"DEBUG: Gemini reporter scripts matched {len(matched)}/{len(topics)} topics")
+        return matched
+    except Exception as exc:
+        print(f"DEBUG: Gemini reporter scripts failed: {exc}")
+        return {}
+
+
+def _build_reporter_segments(topics: list, categorized_topics: dict):
+    """One reporter audio segment per user topic, with a distinct script."""
+    generated = _gemini_reporter_scripts(topics)
+    script_keys = []
+    scripts = []
+    segments = []
+    for index, topic in enumerate(topics):
+        category = categorized_topics.get(topic) or _categorize_topic_locally(topic)
+        script = generated.get(topic) or _deterministic_reporter_script(topic, category)
+        segment_id = f"report_{index}"
+        script_keys.append(f"{segment_id}_script")
+        scripts.append(script)
+        segments.append((segment_id, clean_text_for_speech(script), _voice_for_category(category)))
+        print(f"DEBUG: Reporter {index} category={category} topic={topic!r} chars={len(script)}")
+    return script_keys, scripts, segments
 
 def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
     """
@@ -1398,18 +1488,12 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     Now includes memory optimizations to prevent timeouts.
     """
     print("DEBUG: Starting full audio news generation with memory optimizations")
-    # #region agent log
-    _agent_debug_log("B", "news_agent.py:generate_broadcast", "generate_broadcast_enter", {"topic_count": len(topics or []), "task_id": task_id})
-    # #endregion
     
     if not topics:
         print("No topics entered. Exiting.")
         return {"error": "No topics provided"}
 
     tts_error = validate_tts_credentials()
-    # #region agent log
-    _agent_debug_log("B", "news_agent.py:generate_broadcast", "tts_preflight", {"ok": not bool(tts_error), "error": (tts_error or "")[:160]})
-    # #endregion
     if tts_error:
         print(f"ERROR: TTS preflight failed: {tts_error}")
         return {"error": tts_error}
@@ -1641,9 +1725,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     
     # Handle case where async operation failed due to interpreter shutdown
     if categorized_topics_json is None:
-        print("DEBUG: Categorization failed due to interpreter shutdown, using fallback")
-        # Create a simple fallback categorization
-        categorized_topics = {topic: 'other' for topic in topics}
+        print("DEBUG: Categorization agent failed, using local keyword categories")
+        categorized_topics = {topic: _categorize_topic_locally(topic) for topic in topics}
     else:
         # Clean up the JSON response
         categorized_topics_json = categorized_topics_json.strip()
@@ -1657,8 +1740,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
         try:
             categorized_topics = json.loads(categorized_topics_json)
         except json.JSONDecodeError as e:
-            print(f"DEBUG: JSON decode error: {e}, using fallback categorization")
-            categorized_topics = {topic: 'other' for topic in topics}
+            print(f"DEBUG: JSON decode error: {e}, using local keyword categories")
+            categorized_topics = {topic: _categorize_topic_locally(topic) for topic in topics}
     print(f"DEBUG: Parsed categories: {categorized_topics}")
 
     # Group topics by category
@@ -1670,405 +1753,42 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None) -> dict:
     
     print(f"DEBUG: Topics grouped by category: {topics_by_category}")
 
-    # Create agents for each category (one reporter per category) - SEQUENTIAL PROCESSING
-    news_agents = []
-    reporter_script_keys = []
-    reporters_tts_agents = []
-
-    for category, category_topics in topics_by_category.items():
-        agent_name = f"{category}_reporter"
-        script_key = f"{category}_script"
-        voice = ERNEST_VOICE if category == 'sports' else ISABELLA_VOICE if category == 'finance' else MARK_VOICE if category == 'tech' else EDITH_VOICE
-        
-        # Create a specialized reporter agent for this category that handles multiple topics
-        news_agent = create_category_reporter_agent(category, category_topics, voice, agent_name, script_key)
-        reporter_tts_agent = create_tts_agent(script_key, f"{category}_audio.mp3", voice, f"tts_{category}_reporter", f"{category}_audio_filepath")
-        
-        news_agents.append(news_agent)
-        reporter_script_keys.append(script_key)
-        reporters_tts_agents.append(reporter_tts_agent)
-
-    # Create anchor agent with category information
-    anchor_agent = create_anchor_agent(list(topics_by_category.keys()), reporter_script_keys)
-    
-    # Update heartbeat before audio processing
-    if task_id:
-        try:
-            from glconnect.news_routes import tasks, _tasks_lock
-            with _tasks_lock:
-                if task_id in tasks:
-                    tasks[task_id]['last_heartbeat'] = datetime.now()
-                    tasks[task_id]['current_step'] = 'Creating audio components...'
-        except:
-            pass
-
-    # Note: TTS agents for anchor parts will be created after we have the anchor script
-
-    # Create transition TTS agents after we have the anchor script
-    # Orchestration
-    text_generation_phase = ParallelAgent(
-        name="text_generation_phase",
-        description="Generates all news reports concurrently.",
-        sub_agents=news_agents
+    reporter_script_keys, reporter_scripts, reporter_segments = _build_reporter_segments(
+        topics, categorized_topics
     )
 
-    # Execute text generation with optimized parallel processing
-    print("DEBUG: Executing text generation phase...")
-    print(f"DEBUG: Running with {len(news_agents)} reporter agents")
-    for i, agent in enumerate(news_agents):
-        print(f"DEBUG: Agent {i}: {agent.name} - {agent.description}")
-    
-    # Check memory before text generation
-    try:
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory before text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-        if memory_info.percent > 85:
-            print(f"WARNING: High memory usage before text generation ({memory_info.percent}%)")
-            gc.collect()
-            gc.collect()
-    except:
-        pass
-    
-    # Update heartbeat before text generation
+    timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
+    intro_text = f"{timezone} Here are today's top stories."
+    transitions = [f"Turning now to {topic}." for topic in topics]
+    outro_text = "That's all for this GLC News bulletin. Thank you for listening."
+    print(f"DEBUG: Built {len(reporter_segments)} reporter segments")
+
     if task_id:
         try:
-            from glconnect.news_routes import tasks, _tasks_lock
-            with _tasks_lock:
-                if task_id in tasks:
-                    tasks[task_id]['last_heartbeat'] = datetime.now()
-                    tasks[task_id]['current_step'] = f'Generating content with {len(news_agents)} AI reporters...'
-        except:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(
+                task_id,
+                progress=55,
+                current_step=f'Writing {len(reporter_segments)} reporter scripts...',
+                last_heartbeat=datetime.now(),
+            )
+        except Exception:
             pass
-    
-    try:
-        # SEQUENTIAL PROCESSING: Process topics one by one to prevent memory spikes
-        print("DEBUG: Using sequential processing to prevent memory issues...")
-        individual_outputs = []
-        
-        for i, agent in enumerate(news_agents):
-            print(f"DEBUG: Processing agent {i+1}/{len(news_agents)}: {agent.name}")
-            
-            # Check memory before each agent
-            try:
-                memory_percent = get_memory_usage()
-                print(f"DEBUG: Memory before agent {i+1} - Percent: {memory_percent:.1f}%")
-                if memory_percent > 65:  # More aggressive threshold for 2GB containers
-                    print(f"WARNING: High memory usage before agent {i+1} ({memory_percent:.1f}%) - forcing cleanup")
-                    gc.collect()
-                    gc.collect()
-                    gc.collect()
-            except:
-                pass
-            
-            # Update progress
-            try:
-                from glconnect.news_routes import update_task_in_db
-                progress = 20 + (i * 15)  # 20% to 80% for sequential agents
-                update_task_in_db(task_id, 
-                                 progress=progress,
-                                 current_step=f'Processing topic {i+1}/{len(news_agents)} with AI reporter...',
-                                 last_heartbeat=datetime.now())
-            except:
-                pass
-            
-            # Process this agent
-            try:
-                result = _run_async_safely(lambda agent=agent: run_agent(agent, ""), max_retries=2, retry_delay=8)
-                if result is not None:
-                    individual_outputs.append(result)
-                    print(f"DEBUG: Agent {i+1} completed successfully")
-                    # #region agent log
-                    _agent_debug_log("F", "news_agent.py:sequential_agent", "agent_ok", {"agent": agent.name, "chars": len(str(result))})
-                    # #endregion
-                else:
-                    print(f"DEBUG: Agent {i+1} failed - using fallback")
-                    script_key = reporter_script_keys[i]
-                    category = script_key.replace("_script", "")
-                    topic_str = ", ".join(topics_by_category.get(category, [category]))
-                    # #region agent log
-                    _agent_debug_log("F", "news_agent.py:sequential_agent", "agent_fail_fallback", {"agent": agent.name, "error": (_last_async_error or "")[:200], "topics": topic_str})
-                    # #endregion
-                    fallback_content = generate_intelligent_fallback_content(topic_str)
-                    individual_outputs.append(json.dumps({script_key: fallback_content}))
-            except Exception as e:
-                print(f"DEBUG: Agent {i+1} failed with error: {e}")
-                script_key = reporter_script_keys[i]
-                category = script_key.replace("_script", "")
-                topic_str = ", ".join(topics_by_category.get(category, [category]))
-                fallback_content = generate_intelligent_fallback_content(topic_str)
-                individual_outputs.append(json.dumps({script_key: fallback_content}))
-            
-            # Force aggressive memory cleanup after each agent
-            try:
-                gc.collect()
-                gc.collect()
-                gc.collect()  # Triple garbage collection
-                
-                # Try to trim memory on Linux
-                try:
-                    import ctypes
-                    libc = ctypes.CDLL("libc.so.6")
-                    libc.malloc_trim(0)
-                except:
-                    pass
-                
-                memory_percent = get_memory_usage()
-                print(f"DEBUG: Memory after agent {i+1} - Percent: {memory_percent:.1f}%")
-                
-                # Emergency abort if memory is still too high
-                if memory_percent > 80:
-                    print(f"EMERGENCY: Memory too high after agent {i+1} ({memory_percent:.1f}%) - aborting remaining agents")
-                    break
-                    
-            except:
-                pass
-            
-            # Longer delay to allow memory cleanup
-            import time
-            time.sleep(2)  # Increased delay
-        
-        print(f"DEBUG: Sequential processing completed - {len(individual_outputs)} agents processed")
-        
-        # Force garbage collection after text generation
-        gc.collect()
-        
-        # Check memory after text generation
-        try:
-            memory_info = psutil.virtual_memory()
-            print(f"DEBUG: Memory after text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-            if memory_info.percent > 85:
-                print(f"WARNING: High memory usage after text generation ({memory_info.percent}%) - forcing cleanup")
-                gc.collect()
-                gc.collect()
-        except:
-            pass
-        
-        # Force garbage collection after async operations
-        gc.collect()
-        gc.collect()  # Call twice for better cleanup
-        
-        # Check memory after text generation
-        try:
-            memory_info = psutil.virtual_memory()
-            print(f"DEBUG: Memory after text generation - Used: {memory_info.used / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-            if memory_info.percent > 85:
-                print(f"WARNING: High memory usage after text generation ({memory_info.percent}%) - forcing aggressive cleanup")
-                gc.collect()
-                gc.collect()
-                gc.collect()
-                
-                # Try to trim memory on Linux
-                try:
-                    import ctypes
-                    libc = ctypes.CDLL("libc.so.6")
-                    libc.malloc_trim(0)
-                except:
-                    pass
-        except:
-            pass
-        
-        # Handle case where async operation failed due to interpreter shutdown
-        if individual_outputs is None:
-            print("DEBUG: Parallel agent execution failed due to interpreter shutdown, using fallback")
-            individual_outputs = []
-        
-        # Filter out exceptions and combine results
-        valid_outputs = []
-        for i, output in enumerate(individual_outputs):
-            if isinstance(output, Exception):
-                print(f"DEBUG: Agent {i} failed with exception: {output}")
-                valid_outputs.append("")
-            else:
-                valid_outputs.append(str(output))
-                print(f"DEBUG: Agent {i} completed successfully")
-        
-        text_generation_output = "\n".join(valid_outputs)
-        print(f"DEBUG: Parallel execution completed. Output length: {len(text_generation_output)}")
-        print(f"DEBUG: Combined outputs: {text_generation_output[:500]}...")
-        
-        # Update heartbeat after text generation
-        if task_id:
-            try:
-                from glconnect.news_routes import tasks, _tasks_lock
-                with _tasks_lock:
-                    if task_id in tasks:
-                        tasks[task_id]['last_heartbeat'] = datetime.now()
-                        tasks[task_id]['current_step'] = 'Processing generated content...'
-            except:
-                pass
-        
-    except Exception as e:
-        print(f"DEBUG: Parallel execution failed: {e}")
-        print("DEBUG: Falling back to individual agent execution...")
-        
-        # Fallback: run each agent individually with shorter timeout
-        individual_outputs = []
-        for i, agent in enumerate(news_agents):
-            try:
-                print(f"DEBUG: Running individual agent {i}: {agent.name}")
-                individual_output = _run_async_safely(
-                    lambda agent=agent: asyncio.wait_for(run_agent(agent, ""), timeout=180)
-                )
-                individual_outputs.append(individual_output)
-                print(f"DEBUG: Agent {i} output: {individual_output[:100]}...")
-            except asyncio.TimeoutError:
-                print(f"DEBUG: Agent {i} timed out after 3 minutes")
-                individual_outputs.append("")
-            except Exception as agent_error:
-                print(f"DEBUG: Agent {i} failed: {agent_error}")
-                individual_outputs.append("")
-        
-        # Combine individual outputs
-        text_generation_output = "\n".join(individual_outputs)
-        print(f"DEBUG: Combined individual outputs: {text_generation_output[:500]}...")
 
-    # Extract reporter scripts from the output
-    reporter_scripts = []
-    
-    print(f"DEBUG: Raw text generation output: {text_generation_output[:500]}...")
-    
-    for script_key in reporter_script_keys:
-        script_found = False
-        script_text = ""
-        
-        # Try multiple extraction methods
-        extraction_methods = [
-            # Method 1: Look for JSON with script key
-            f'"{script_key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"',
-            # Method 2: Look for script key with different quote styles
-            f'"{script_key}"\\s*:\\s*"([^"]*)"',
-            # Method 3: Look for script key with single quotes
-            f"'{script_key}'\\s*:\\s*'([^']*)'",
-            # Method 4: Look for script key without quotes
-            f'{script_key}\\s*:\\s*"([^"]*)"',
-        ]
-        
-        for i, pattern in enumerate(extraction_methods):
-            match = re.search(pattern, text_generation_output, re.DOTALL)
-            if match:
-                script_text = match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
-                # Only accept if we got substantial content (more than just a placeholder)
-                if len(script_text.strip()) > 20 and not script_text.strip().startswith("Here's the latest"):
-                    script_found = True
-                    print(f"DEBUG: Found {script_key} using method {i+1}: {script_text[:50]}...")
-                    break
-        
-        if script_found:
-            # Validate the extracted content before using it
-            category = script_key.replace('_script', '')
-            topic = ", ".join(topics_by_category.get(category, [category]))
-            is_valid, cleaned_script = validate_news_content(script_text, topic)
-            
-            if is_valid:
-                reporter_scripts.append(cleaned_script)
-                print(f"DEBUG: Valid content extracted for {script_key}")
-            else:
-                # Content failed validation, generate intelligent fallback
-                fallback_content = generate_intelligent_fallback_content(topic)
-                reporter_scripts.append(fallback_content)
-                print(f"DEBUG: Content validation failed for {script_key}, using intelligent fallback")
-        else:
-            # If still not found, try to extract any substantial content after the script key
-            fallback_pattern = f'"{script_key}"\\s*:\\s*"([^"]*)"'
-            fallback_match = re.search(fallback_pattern, text_generation_output, re.DOTALL)
-            if fallback_match:
-                fallback_text = fallback_match.group(1).replace('\\"', '"').replace('\\n', ' ').replace('\\t', ' ')
-                if len(fallback_text.strip()) > 10:
-                    # Validate the fallback content
-                    topic = ", ".join(topics_by_category.get(script_key.replace('_script', ''), [script_key.replace('_script', '')]))
-                    is_valid, cleaned_fallback = validate_news_content(fallback_text, topic)
-                    
-                    if is_valid:
-                        reporter_scripts.append(cleaned_fallback)
-                        script_found = True
-                        print(f"DEBUG: Found {script_key} using fallback: {cleaned_fallback[:50]}...")
-            
-            if not script_found:
-                # Generate intelligent fallback content
-                topic = ", ".join(topics_by_category.get(script_key.replace('_script', ''), [script_key.replace('_script', '')]))
-                fallback_content = generate_intelligent_fallback_content(topic)
-                reporter_scripts.append(fallback_content)
-                print(f"DEBUG: Generated intelligent fallback for {script_key} due to extraction failure")
-                # #region agent log
-                _agent_debug_log("F", "news_agent.py:extract_scripts", "extraction_fallback", {"script_key": script_key, "topics": topic, "preview": fallback_content[:120]})
-                # #endregion
-
-    print(f"DEBUG: Extracted reporter scripts: {len(reporter_scripts)} scripts")
-
-    # Create anchor agent with actual reporter scripts
-    anchor_agent = create_anchor_agent(topics, reporter_scripts)
-
-    # Prepare reporter segments for direct TTS conversion
-    reporter_segments = []
-    for script_key, script_content in zip(reporter_script_keys, reporter_scripts):
-        category = script_key.replace('_script', '')
-        voice = (
-            ERNEST_VOICE if category == 'sports'
-            else ISABELLA_VOICE if category == 'finance'
-            else MARK_VOICE if category == 'tech'
-            else EDITH_VOICE
-        )
-        reporter_segments.append((category, clean_text_for_speech(script_content), voice))
-
-    # Build the final list of audio file paths in the correct order
     final_audio_paths = [
-        "glconnect/static/audio/jingle.wav",  # Opening jingle
-        "glconnect/static/audio/intro_audio.mp3"  # Anchor intro with current time
+        "glconnect/static/audio/jingle.wav",
+        "glconnect/static/audio/intro_audio.mp3",
     ]
-    
-    # Add each category report with transitions and thank you messages
-    for i, category in enumerate(topics_by_category.keys()):
-        final_audio_paths.append(f"glconnect/static/audio/transition_audio_{i}.mp3")  # Transition to report
-        final_audio_paths.append(f"glconnect/static/audio/{category}_audio.mp3")  # The actual report
-        final_audio_paths.append("glconnect/static/audio/thank_you_audio.mp3")  # Thank you after report
-    
-    # Add outro and closing jingle
+    for i, (segment_id, _script, _voice) in enumerate(reporter_segments):
+        final_audio_paths.append(f"glconnect/static/audio/transition_audio_{i}.mp3")
+        final_audio_paths.append(f"glconnect/static/audio/{segment_id}_audio.mp3")
+        final_audio_paths.append("glconnect/static/audio/thank_you_audio.mp3")
     final_audio_paths.extend([
-        "glconnect/static/audio/outro_audio.mp3",  # Anchor outro
-        "glconnect/static/audio/jingle.wav"  # Closing jingle
+        "glconnect/static/audio/outro_audio.mp3",
+        "glconnect/static/audio/jingle.wav",
     ])
-
-    # Create summary input from reporter scripts
     summarized_text_input = " ".join(reporter_scripts)
 
-    # Execute anchor agent separately to ensure it gets current time
-    print("DEBUG: Executing anchor agent...")
-    print("DEBUG: Anchor agent tools:", [tool.__name__ if hasattr(tool, '__name__') else str(tool) for tool in anchor_agent.tools])
-    
-    # Force the anchor agent to call the timezone tool first
-    anchor_input = "Please call the get_timezone_info tool first to get the current time, then create your script."
-    anchor_output = _run_async_safely(lambda: run_agent(anchor_agent, anchor_input))
-    print(f"DEBUG: Anchor output: {anchor_output[:200] if anchor_output else 'None'}...")
-    
-    # Handle case where async operation failed due to interpreter shutdown
-    if anchor_output is None:
-        print("DEBUG: Anchor agent failed due to interpreter shutdown, using fallback")
-        anchor_script = {
-            "intro": "Welcome to GLC News. Here are today's top stories.",
-            "transitions": ["Now let's hear from our reporters.", "Moving on to our next story."],
-            "outro": "That's all for today's news. Thank you for listening to GLC News."
-        }
-    else:
-        # Parse anchor script to get intro, transitions, and outro
-        try:
-            anchor_script = json.loads(anchor_output.strip("```json\n").strip("```"))
-            intro_text = anchor_script.get("intro", "Welcome to GLC News")
-            transitions = anchor_script.get("transitions", [])
-            outro_text = anchor_script.get("outro", "Thanks for listening to GLC News")
-            print(f"DEBUG: Found intro, {len(transitions)} transitions, and outro in anchor script")
-        except Exception as e:
-            print(f"DEBUG: Error parsing anchor script: {e}")
-            intro_text = "Welcome to GLC News"
-            transitions = [f"Transition {i+1}" for i in range(len(topics))]
-            outro_text = "Thanks for listening to GLC News"
-
-    # The fallback branch above creates anchor_script but does not enter the
-    # parsing branch where these values are normally initialized.
-    if anchor_output is None:
-        intro_text = anchor_script["intro"]
-        transitions = anchor_script["transitions"]
-        outro_text = anchor_script["outro"]
-    
     # Convert all scripts to audio directly (more reliable than Gemini tool-calling)
     print("DEBUG: Executing direct TTS phase...")
     if task_id:
