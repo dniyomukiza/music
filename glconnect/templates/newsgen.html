@@ -1085,6 +1085,31 @@
             margin: 20px 0;
         }
 
+        .bulletin-stop {
+            text-align: left;
+        }
+
+        .bulletin-stop .error-kicker {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #a88416;
+            margin: 0 0 8px 0;
+        }
+
+        .bulletin-stop p {
+            margin: 0 0 12px 0;
+            line-height: 1.5;
+        }
+
+        .bulletin-stop .error-note {
+            margin: 0;
+            color: #5c6561;
+            font-size: 0.92rem;
+        }
+
         .analytics-link {
             display: inline-flex;
             align-items: center;
@@ -2326,7 +2351,7 @@
                 await pollForCompletion(taskId);
                 
             } catch (error) {
-                showError('Error: ' + error.message);
+                showBulletinStopped(error.message);
                 stopProgressAnimation();
             } finally {
                 // Only hide loading if it wasn't already hidden by showResults
@@ -2393,9 +2418,14 @@
                         return;
                     } else if (data.status === 'failed') {
                         stopProgressAnimation();
-                        isGeneratingNews = false; // Reset flag on failure
-                        resetGenerateButtons(); // Re-enable buttons on failure
-                        throw new Error(data.error || 'Generation failed');
+                        isGeneratingNews = false;
+                        resetGenerateButtons();
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) {
+                            loadingEl.style.display = 'none';
+                        }
+                        showBulletinStopped(data.error || 'News generation failed.', data.reason);
+                        return;
                     }
                     
                     // Wait 5 seconds before next poll
@@ -2448,20 +2478,52 @@
             result.scrollIntoView({ behavior: 'smooth' });
         }
         
-        function showError(message) {
+        function bulletinStopTitle(reason) {
+            const titles = {
+                quota_exhausted: 'Gemini quota exceeded',
+                model_unavailable: 'News model unavailable',
+                permission_denied: 'API key rejected',
+                missing_api_key: 'API key missing',
+                invalid_json: 'Reporter scripts unreadable',
+                empty_response: 'Reporter scripts empty',
+                script_unavailable: 'Reporter scripts unavailable'
+            };
+            return titles[reason] || 'Bulletin not generated';
+        }
+
+        function showBulletinStopped(message, reason) {
             const result = document.getElementById('result');
+            if (!result) {
+                alert(message || 'Bulletin not generated.');
+                return;
+            }
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+            const title = bulletinStopTitle(reason);
+            const body = (message || 'Reporter scripts could not be written.').replace(/^Error:\s*/i, '');
             result.innerHTML = `
                 <div class="result-card">
                     <div class="result-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Bulletin not generated</h3>
+                        <h3><i class="fas fa-exclamation-triangle"></i> ${escapeNewsHtml(title)}</h3>
+                        <p>Audio and video were not produced.</p>
                     </div>
                     <div class="result-body">
-                        <div class="error-message">${escapeNewsHtml(message)}</div>
+                        <div class="error-message bulletin-stop">
+                            ${reason ? `<div class="error-kicker">${escapeNewsHtml(reason)}</div>` : ''}
+                            <p>${escapeNewsHtml(body)}</p>
+                            <p class="error-note">Fix the issue above, then generate news again. Existing reporter avatars are unchanged.</p>
+                        </div>
                     </div>
                 </div>
             `;
             result.style.display = 'block';
-            result.scrollIntoView({ behavior: 'smooth' });
+            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showError(message) {
+            showBulletinStopped(message);
         }
         
         function goToAnalytics() {
@@ -2620,9 +2682,10 @@
             .then(data => {
                 console.log('Broadcast response data:', data);
                 if (data.error) {
-                    alert('Error: ' + data.error);
-                    isGeneratingNews = false; // Reset flag on error
-                    resetGenerateButtons(); // Re-enable buttons on error
+                    hideLoadingState();
+                    isGeneratingNews = false;
+                    resetGenerateButtons();
+                    showBulletinStopped(data.error, data.reason);
                 } else {
                     console.log('Starting polling for task_id:', data.task_id);
                     lastNewsTaskId = data.task_id;
@@ -2631,11 +2694,10 @@
             })
             .catch(error => {
                 console.error('Error in news generation:', error);
-                alert('Error: ' + error.message);
-                isGeneratingNews = false; // Reset flag on error
-                resetGenerateButtons(); // Re-enable buttons on error
-                console.error('Error:', error);
-                alert('Error generating news. Please try again.');
+                hideLoadingState();
+                isGeneratingNews = false;
+                resetGenerateButtons();
+                showBulletinStopped(error.message || 'Error generating news. Please try again.');
             });
         }
         
@@ -2733,8 +2795,9 @@
                         }
                         
                         hideLoadingState();
-                        isGeneratingNews = false; // Reset flag on failure
-                        alert('News generation failed: ' + (data.error || 'Unknown error'));
+                        isGeneratingNews = false;
+                        resetGenerateButtons();
+                        showBulletinStopped(data.error || 'News generation failed.', data.reason);
                     } else if (data.error === 'Task not found') {
                         console.log('Task not found - may have completed or been cancelled');
                         clearInterval(pollInterval);
