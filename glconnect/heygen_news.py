@@ -810,13 +810,25 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
         state = {
             "status": "failed",
             "clips": [],
-            "warnings": ["HeyGen API key is not set"],
+            "warnings": ["HeyGen API key is not set. Video bulletin was not generated."],
         }
         merge_result({"heygen": state})
         return state
 
     intro = (scripts.get("intro") or "").strip()
     outro = (scripts.get("outro") or "").strip()
+    from glconnect.news_agent import reporter_scripts_block_reason
+
+    script_block = reporter_scripts_block_reason(scripts)
+    if script_block:
+        _log("heygen_skip", reason="placeholder_scripts")
+        state = {
+            "status": "failed",
+            "clips": [],
+            "warnings": [script_block],
+        }
+        merge_result({"heygen": state})
+        return state
     scripts = _fill_handoff_scripts(scripts)
     merge_result({"scripts": scripts})
     reporters = scripts.get("reporters") or []

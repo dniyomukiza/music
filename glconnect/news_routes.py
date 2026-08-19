@@ -252,11 +252,14 @@ def _public_heygen(heygen, task_id=None):
         from glconnect.heygen_news import bulletin_file_ready, bulletin_file_url
         if bulletin_file_ready(task_id):
             final_url = bulletin_file_url(task_id)
-    return {
+    public = {
         'status': heygen.get('status') or 'idle',
         'clips': public_clips,
         'final_url': final_url or None,
     }
+    if public['status'] in ('failed', 'partial') and heygen.get('warnings'):
+        public['warnings'] = [str(item)[:300] for item in heygen.get('warnings')[:2]]
+    return public
 
 
 def completed_news_payload(task_id, task, audio_file, summary):
@@ -1776,10 +1779,20 @@ def run_generate_broadcast(task_id, topics):
             if 'error' in output:
                 error_message = output['error']
                 print(f"DEBUG: generate_broadcast returned error: {error_message}")
+                update_task_in_db(
+                    task_id,
+                    status='failed',
+                    failed_at=datetime.now(),
+                    error=error_message,
+                    current_step=str(error_message)[:250],
+                    result=output,
+                )
                 with _tasks_lock:
                     tasks[task_id]['status'] = 'failed'
                     tasks[task_id]['failed_at'] = datetime.now()
                     tasks[task_id]['error'] = error_message
+                    tasks[task_id]['result'] = output
+                print(f"PIPELINE_ABORT task={task_id} error={error_message}")
                 return
             
             audio_file_path = output.get('audio_file')
@@ -2029,64 +2042,21 @@ def run_generate_broadcast(task_id, topics):
         import traceback
         traceback_str = traceback.format_exc()
         print(f"ERROR traceback: {traceback_str}")
-        
-        # Create detailed error message
         detailed_error = f"{error_type}: {error_message}"
-        
-        # Try simple fallback generation before marking as failed
-        try:
-            print("DEBUG: Attempting simple fallback news generation...")
-            from glconnect.news_agent import generate_intelligent_fallback_content
-            
-            fallback_content = []
-            for topic in topics:
-                content = generate_intelligent_fallback_content(topic)
-                fallback_content.append(content)
-            
-            # Create a simple broadcast structure
-            fallback_output = {
-                "broadcast_script": "\n\n".join(fallback_content),
-                "audio_files": [],
-                "combined_audio_filepath": "fallback_generation.mp3",
-                "generation_method": "fallback_simple"
-            }
-            
-            # Store the fallback result
-            with _tasks_lock:
-                tasks[task_id]['status'] = 'completed'
-                tasks[task_id]['completed_at'] = datetime.now()
-                tasks[task_id]['result'] = fallback_output
-                tasks[task_id]['generation_method'] = 'fallback_simple'
-                print(f"DEBUG: Task {task_id} completed with fallback generation")
-            
-            # Update database
-            update_task_in_db(task_id, 
-                             status='completed',
-                             completed_at=datetime.now(),
-                             result=fallback_output)
-            
-            print("DEBUG: Fallback generation successful")
-            return
-            
-        except Exception as fallback_error:
-            print(f"DEBUG: Fallback generation also failed: {fallback_error}")
-            fallback_error_type = type(fallback_error).__name__
-            fallback_error_message = str(fallback_error)
-            
-            # Create comprehensive error message
-            comprehensive_error = f"Primary error: {detailed_error}. Fallback error: {fallback_error_type}: {fallback_error_message}"
-            
-            # Update database
-            update_task_in_db(task_id, 
-                             status='failed',
-                             failed_at=datetime.now(),
-                             error=comprehensive_error)
-            
-            with _tasks_lock:
-                tasks[task_id]['status'] = 'failed'
-                tasks[task_id]['failed_at'] = datetime.now()
-                tasks[task_id]['error'] = comprehensive_error
-                print(f"DEBUG: Task {task_id} marked as failed due to: {comprehensive_error}")
+        update_task_in_db(
+            task_id,
+            status='failed',
+            failed_at=datetime.now(),
+            error=detailed_error,
+            current_step=detailed_error[:250],
+        )
+        with _tasks_lock:
+            tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['failed_at'] = datetime.now()
+            tasks[task_id]['error'] = detailed_error
+            print(f"DEBUG: Task {task_id} marked as failed due to: {detailed_error}")
+        print(f"PIPELINE_ABORT task={task_id} error={detailed_error}")
+        return
     finally:
         # Cancel the timeout thread
         timeout_occurred.set()
@@ -2313,6 +2283,11 @@ def generate_video_bulletin_route(task_id):
             'error': 'No saved scripts on this broadcast. Generate news again, then create the video bulletin.',
             'task_id': task_id,
         }), 400
+    from glconnect.news_agent import reporter_scripts_block_reason
+    script_block = reporter_scripts_block_reason(scripts)
+    if script_block:
+        print(f"PIPELINE_ABORT task={task_id} video=blocked error={script_block}")
+        return jsonify({'error': script_block, 'task_id': task_id}), 400
 
     heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
     current_status = heygen.get('status')
@@ -3201,6 +3176,7 @@ def task_status(task_id):
         return jsonify({
             'status': 'failed',
             'error': error_message,
+            'reason': (_task_result(task) or {}).get('reason'),
         })
     else:
         return jsonify({

@@ -2,6 +2,7 @@ import os
 import asyncio
 import json
 import re
+import time
 from datetime import datetime
 import pytz
 from dotenv import load_dotenv
@@ -107,9 +108,29 @@ def get_memory_usage():
         return 0
 
 # Load Google API key from environment variables (no exit at import - allows app to start)
-google_api_key = os.getenv("GOOGLE_API_KEY")
+def _resolve_google_api_key() -> str:
+    return (
+        (os.getenv("GOOGLE_API_KEY") or "").strip()
+        or (os.getenv("GEMINI_API_KEY") or "").strip()
+    )
+
+
+def _ensure_genai_configured() -> str:
+    """Resolve API key at call time so glconfig/env loaded after import still works."""
+    global google_api_key
+    key = _resolve_google_api_key()
+    if not key:
+        raise RuntimeError("GOOGLE_API_KEY and GEMINI_API_KEY are not set")
+    if key != google_api_key:
+        google_api_key = key
+        genai.configure(api_key=key)
+        os.environ["GOOGLE_API_KEY"] = key
+    return key
+
+
+google_api_key = _resolve_google_api_key()
 if not google_api_key:
-    print("WARNING: GOOGLE_API_KEY not set. News generation and TTS will fail until added to .env or glconfig.json.")
+    print("WARNING: GOOGLE_API_KEY/GEMINI_API_KEY not set. News scripts will use fallback copy until configured.")
 
 # Get TTS credentials path from environment variables
 tts_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json")
@@ -127,6 +148,7 @@ NEWS_GEMINI_MODEL_FALLBACKS = [
     NEWS_GEMINI_MODEL,
     "gemini-3.6-flash",
     "gemini-2.5-flash",
+    "gemini-2.0-flash-lite",
 ]
 
 
@@ -148,6 +170,8 @@ def _classify_model_error(exc) -> str:
         return "model_unavailable"
     if "429" in text or "resource_exhausted" in lower or "quota" in lower:
         return "quota_exhausted"
+    if "not set" in lower and ("google_api_key" in lower or "gemini_api_key" in lower or "api key" in lower):
+        return "missing_api_key"
     if "403" in text or "permission" in lower or "api key" in lower:
         return "permission_denied"
     if "json" in lower and "decode" in lower:
@@ -213,6 +237,85 @@ class NewsPipelineTrace:
         return payload
 
 
+class NewsScriptUnavailable(RuntimeError):
+    """Reporter scripts could not be written. Do not assemble audio or video."""
+
+    def __init__(self, reason_code: str, message: str):
+        super().__init__(message)
+        self.reason_code = reason_code or "script_unavailable"
+
+
+PLACEHOLDER_SCRIPT_MARK = "checking official statements and independent reporting"
+
+_FATAL_SCRIPT_ERRORS = {
+    "quota_exhausted",
+    "model_unavailable",
+    "permission_denied",
+    "missing_api_key",
+}
+
+_SCRIPT_ABORT_MESSAGES = {
+    "quota_exhausted": (
+        "Gemini quota was exceeded, so reporter scripts could not be written. "
+        "No audio or video bulletin was generated. Check usage at ai.dev/rate-limit, "
+        "wait for the daily reset, or enable billing, then generate news again."
+    ),
+    "model_unavailable": (
+        "The news script model is unavailable. Set NEWS_GEMINI_MODEL to a live Gemini model "
+        "and generate news again. No bulletin was generated."
+    ),
+    "permission_denied": (
+        "Gemini rejected the API key. Check GOOGLE_API_KEY or GEMINI_API_KEY, then generate news again. "
+        "No bulletin was generated."
+    ),
+    "missing_api_key": (
+        "Gemini API key is not set. Add GOOGLE_API_KEY or GEMINI_API_KEY, then generate news again. "
+        "No bulletin was generated."
+    ),
+    "invalid_json": (
+        "The news model did not return usable reporter scripts. No bulletin was generated. Please try again."
+    ),
+    "empty_response": (
+        "The news model returned empty reporter scripts. No bulletin was generated. Please try again."
+    ),
+}
+
+
+def script_abort_message(reason_code: str, missing_count: int = 0, topic_count: int = 0) -> str:
+    message = _SCRIPT_ABORT_MESSAGES.get(reason_code) or (
+        "Reporter scripts could not be written because of an API or model error. "
+        "No audio or video bulletin was generated. Please try again."
+    )
+    if missing_count and topic_count:
+        return f"{message} Missing scripts: {missing_count}/{topic_count}."
+    return message
+
+
+def is_placeholder_reporter_script(script: str) -> bool:
+    text = (script or "").strip().lower()
+    if not text:
+        return True
+    return PLACEHOLDER_SCRIPT_MARK in text
+
+
+def reporter_scripts_block_reason(scripts) -> str | None:
+    """User-facing error if saved scripts are missing or placeholder copy."""
+    reporters = (scripts or {}).get("reporters") if isinstance(scripts, dict) else None
+    if not reporters:
+        return "No reporter scripts were saved. Generate news again after Gemini is available."
+    placeholders = [
+        row for row in reporters
+        if isinstance(row, dict) and is_placeholder_reporter_script(row.get("script") or "")
+    ]
+    if placeholders:
+        names = ", ".join((row.get("name") or row.get("topic") or "reporter") for row in placeholders)
+        return (
+            "This broadcast only has placeholder reporter copy from an API, quota, or model failure. "
+            f"Affected: {names}. Generate news again after Gemini is available. Video was not started."
+        )
+    return None
+
+
 def _result_with_pipeline(result: dict, trace: NewsPipelineTrace) -> dict:
     audio_ok = bool(result.get("audio_file")) and "error" not in result
     pipeline = trace.to_dict(audio_ok=audio_ok)
@@ -268,43 +371,63 @@ def _anchor_outro_text(assignments: list) -> str:
     return f"{thanks}That's all for this GLC News bulletin. Thank you for listening."
 
 
+def _quota_retry_seconds(exc) -> float | None:
+    text = str(exc or "")
+    match = re.search(r"retry in ([0-9.]+)s", text, re.I)
+    if match:
+        return min(float(match.group(1)) + 1.0, 60.0)
+    if "429" in text or "resource_exhausted" in text.lower():
+        return 35.0
+    return None
+
+
 def _gemini_generate_text(prompt: str, generation_config=None) -> str:
     """Try current then fallback Gemini models. Raises the last error if all fail."""
     import google.generativeai as genai
     global _last_gemini_meta
+    _ensure_genai_configured()
     attempts = []
     last_error = None
     for model_name in _gemini_model_candidates():
-        try:
-            kwargs = {}
-            if generation_config is not None:
-                kwargs["generation_config"] = generation_config
-            model = genai.GenerativeModel(model_name, **kwargs)
-            response = model.generate_content(prompt)
-            text = (getattr(response, "text", None) or "").strip()
-            if text:
-                attempts.append({"model": model_name, "ok": True, "chars": len(text)})
-                _last_gemini_meta = {"ok": True, "model": model_name, "attempts": attempts}
-                print(f"DEBUG: Gemini text OK model={model_name} chars={len(text)}")
-                return text
-            last_error = RuntimeError(f"{model_name} returned empty text")
-            attempts.append({
-                "model": model_name,
-                "ok": False,
-                "error": "empty_response",
-                "detail": f"{model_name} returned empty text",
-            })
-            print(f"DEBUG: Gemini text failed model={model_name}: empty text")
-        except Exception as exc:
-            last_error = exc
-            classified = _classify_model_error(exc)
-            attempts.append({
-                "model": model_name,
-                "ok": False,
-                "error": classified,
-                "detail": _clip_trace_text(exc, 240),
-            })
-            print(f"DEBUG: Gemini text failed model={model_name}: {classified}: {exc}")
+        kwargs = {}
+        if generation_config is not None:
+            kwargs["generation_config"] = generation_config
+        model = genai.GenerativeModel(model_name, **kwargs)
+        for attempt in range(2):
+            try:
+                response = model.generate_content(prompt)
+                text = (getattr(response, "text", None) or "").strip()
+                if text:
+                    attempts.append({"model": model_name, "ok": True, "chars": len(text)})
+                    _last_gemini_meta = {"ok": True, "model": model_name, "attempts": attempts}
+                    print(f"DEBUG: Gemini text OK model={model_name} chars={len(text)}")
+                    return text
+                last_error = RuntimeError(f"{model_name} returned empty text")
+                attempts.append({
+                    "model": model_name,
+                    "ok": False,
+                    "error": "empty_response",
+                    "detail": f"{model_name} returned empty text",
+                })
+                print(f"DEBUG: Gemini text failed model={model_name}: empty text")
+                break
+            except Exception as exc:
+                last_error = exc
+                classified = _classify_model_error(exc)
+                attempts.append({
+                    "model": model_name,
+                    "ok": False,
+                    "error": classified,
+                    "detail": _clip_trace_text(exc, 240),
+                })
+                print(f"DEBUG: Gemini text failed model={model_name}: {classified}: {exc}")
+                if attempt == 0 and classified == "quota_exhausted":
+                    delay = _quota_retry_seconds(exc)
+                    if delay:
+                        print(f"DEBUG: Retrying {model_name} after quota delay ({delay:.0f}s)")
+                        time.sleep(delay)
+                        continue
+                break
     _last_gemini_meta = {
         "ok": False,
         "model": None,
@@ -982,7 +1105,6 @@ def _deterministic_reporter_script(topic: str, category: str) -> str:
     name = reporter["name"]
     desk = reporter["desk"]
     return (
-        f"This is {name} with the {desk} desk at GLC News. "
         f"We are covering {topic}. "
         f"Our {desk} team is checking official statements and independent reporting on {topic}, "
         f"and we will bring you the next confirmed details as soon as they are available. "
@@ -1013,6 +1135,69 @@ def _strip_json_fence(text: str) -> str:
     return cleaned.strip()
 
 
+def _parse_reporter_payload(raw: str) -> dict:
+    """Parse Gemini reporter JSON, tolerating fences and alternate field names."""
+    cleaned = _strip_json_fence(raw)
+    data = None
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        match = re.search(r"\{[\s\S]*\}", cleaned)
+        if match:
+            data = json.loads(match.group(0))
+    if not isinstance(data, dict):
+        raise json.JSONDecodeError("No reporter JSON object found", raw or "", 0)
+
+    generated = {}
+    reports = data.get("reports") or data.get("items") or []
+    if isinstance(reports, dict):
+        reports = [{"topic": key, "script": value} for key, value in reports.items()]
+    for item in reports:
+        if not isinstance(item, dict):
+            continue
+        topic = (item.get("topic") or item.get("title") or "").strip()
+        script = (
+            item.get("script")
+            or item.get("content")
+            or item.get("report")
+            or item.get("text")
+            or ""
+        ).strip()
+        if topic and len(script) > 40:
+            generated[topic] = script
+    return generated
+
+
+def _reporter_json_generation_config():
+    import google.generativeai as genai
+    return genai.types.GenerationConfig(
+        response_mime_type="application/json",
+        temperature=0.7,
+        max_output_tokens=4096,
+    )
+
+
+def _gemini_reporter_script_single(topic: str, assignment: dict) -> str:
+    """Generate one reporter script when the batch call misses or fails a topic."""
+    name = (assignment.get("name") or "our reporter").strip()
+    desk = (assignment.get("desk") or "news").strip()
+    prompt = (
+        f"Write a spoken radio news report about {topic!r}. "
+        f"You are {name} on the {desk} desk. "
+        "Use 4 to 6 sentences with concrete details about the story. "
+        f'Sign off exactly: "I am {name}, for GLC News." '
+        "Return only the spoken script text."
+    )
+    try:
+        raw = _gemini_generate_text(prompt)
+        script = clean_text_for_speech(_strip_json_fence(raw))
+        if len(script) > 40:
+            return script
+    except Exception as exc:
+        print(f"DEBUG: Single-topic Gemini script failed for {topic!r}: {exc}")
+    return ""
+
+
 def _gemini_reporter_scripts(topics: list, assignments: list = None, trace: NewsPipelineTrace = None) -> dict:
     """One Gemini call for all reporter scripts. Returns {topic: script} or {}."""
     if not topics:
@@ -1035,10 +1220,10 @@ def _gemini_reporter_scripts(topics: list, assignments: list = None, trace: News
             "and must not reuse sentences across reports. "
             "The studio anchor is a different person and must not file these reports."
         )
-        raw = _gemini_generate_text(prompt)
+        raw = _gemini_generate_text(prompt, generation_config=_reporter_json_generation_config())
         gemini_meta = dict(_last_gemini_meta)
         try:
-            data = json.loads(_strip_json_fence(raw))
+            generated = _parse_reporter_payload(raw)
         except json.JSONDecodeError as exc:
             warning = f"Reporter JSON parse failed: {_clip_trace_text(exc, 160)}"
             if trace:
@@ -1053,12 +1238,6 @@ def _gemini_reporter_scripts(topics: list, assignments: list = None, trace: News
                 )
             print(f"DEBUG: Gemini reporter scripts failed: {exc}")
             return {}
-        generated = {}
-        for item in data.get("reports") or []:
-            topic = (item.get("topic") or "").strip()
-            script = (item.get("script") or "").strip()
-            if topic and len(script) > 40:
-                generated[topic] = script
         matched = {}
         for topic in topics:
             if topic in generated:
@@ -1121,6 +1300,8 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             "voice": reporter["voice"],
         })
     generated = _gemini_reporter_scripts(topics, assignments=assignments, trace=trace)
+    script_api_error = (_last_gemini_meta or {}).get("error")
+    skip_single = script_api_error in _FATAL_SCRIPT_ERRORS
     script_keys = []
     scripts = []
     segments = []
@@ -1130,14 +1311,36 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
         topic = assignment["topic"]
         category = assignment["category"]
         script = generated.get(topic)
-        if script:
-            source = "gemini"
+        source = "gemini"
+        if script and not is_placeholder_reporter_script(script):
             print(f"DEBUG: Reporter {index} using Gemini script for topic={topic!r}")
-        else:
+        elif skip_single:
             source = "deterministic_fallback"
             fallback_count += 1
-            script = _deterministic_reporter_script(topic, category)
-            print(f"DEBUG: Reporter {index} using deterministic fallback for topic={topic!r}")
+            script = ""
+            print(f"DEBUG: Reporter {index} stopping on {script_api_error} for topic={topic!r}")
+        else:
+            script = _gemini_reporter_script_single(topic, assignment)
+            if script and not is_placeholder_reporter_script(script):
+                source = "gemini_single"
+                print(f"DEBUG: Reporter {index} using single-topic Gemini script for topic={topic!r}")
+            else:
+                source = "deterministic_fallback"
+                fallback_count += 1
+                script = ""
+                print(f"DEBUG: Reporter {index} missing usable script for topic={topic!r}")
+        if fallback_count and not script:
+            reporter_trace.append({
+                "index": index,
+                "topic": topic,
+                "category": category,
+                "source": source,
+                "voice": assignment["voice"],
+                "reporter": assignment["name"],
+                "desk": assignment["desk"],
+                "chars": 0,
+            })
+            continue
         segment_id = f"report_{index}"
         script_keys.append(f"{segment_id}_script")
         scripts.append(script)
@@ -1158,25 +1361,30 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             f"DEBUG: Reporter {index} name={assignment['name']} category={category} "
             f"topic={topic!r} voice={assignment['voice']} chars={len(script)}"
         )
+    if fallback_count:
+        reason = script_api_error or "empty_response"
+        message = script_abort_message(reason, fallback_count, len(topics))
+        if trace:
+            trace.stage(
+                "scripts_assign",
+                status="failed",
+                error=reason,
+                warning=message,
+                fallback_count=fallback_count,
+                reporters=reporter_trace,
+            )
+        print(f"PIPELINE_ABORT reason={reason} message={message}")
+        raise NewsScriptUnavailable(reason, message)
     if trace:
-        if fallback_count == 0:
-            status = "ok"
-            warning = None
-        elif fallback_count < len(topics):
-            status = "partial_fallback"
-            warning = f"{fallback_count}/{len(topics)} reporters used deterministic fallback scripts"
-        else:
-            status = "fallback"
-            warning = f"All {len(topics)} reporters used deterministic fallback scripts"
         collisions = [row["topic"] for row in reporter_trace if row.get("anchor_collision")]
+        warning = None
         if collisions:
-            collision_warning = f"Reporter voice collides with studio anchor for: {collisions}"
-            warning = f"{warning} | {collision_warning}" if warning else collision_warning
+            warning = f"Reporter voice collides with studio anchor for: {collisions}"
         trace.stage(
             "scripts_assign",
-            status=status,
+            status="ok",
             warning=warning,
-            fallback_count=fallback_count,
+            fallback_count=0,
             reporters=reporter_trace,
         )
     return script_keys, scripts, segments, assignments
@@ -1816,51 +2024,12 @@ def generate_broadcast_memory_optimized(topics: list[str], task_id: str = None) 
     gc.collect()
     
     try:
-        # Simple fallback content for each topic (no AI agents)
-        print("DEBUG: Generating simple news content (no AI agents)")
-        
-        news_content = []
-        for i, topic in enumerate(topics):
-            print(f"DEBUG: Processing topic {i+1}/{len(topics)}: {topic}")
-            
-            # Check memory before each topic using container-aware monitoring
-            try:
-                memory_percent = get_memory_usage()
-                if memory_percent > 90:  # More appropriate threshold for 4GB containers
-                    print(f"ERROR: Memory usage too high during processing ({memory_percent:.1f}%)")
-                    return {"error": f"Memory usage too high ({memory_percent:.1f}%) - please try again later"}
-            except:
-                pass
-            
-            # Generate simple content
-            content = _deterministic_reporter_script(topic, _categorize_topic_locally(topic))
-            
-            news_content.append(content)
-            
-            # Force garbage collection after each topic
-            gc.collect()
-            
-            # Update progress
-            if task_id:
-                try:
-                    from glconnect.news_routes import update_task_in_db
-                    update_task_in_db(task_id, 
-                                     progress=20 + (i * 20),
-                                     current_step=f'Processed topic {i+1}/{len(topics)}...',
-                                     last_heartbeat=datetime.now())
-                except:
-                    pass
-        
-        # Create simple audio files (no TTS for now)
-        print("DEBUG: Creating simple audio files")
-        
-        # For now, return a simple result without audio processing
         return {
-            "audio_file": "simple_news_broadcast.mp3",
-            "summary": f"Generated news content for {len(topics)} topics",
-            "content": news_content
+            "error": (
+                "Memory-optimized fallback does not generate reporter scripts. "
+                "No bulletin was generated."
+            )
         }
-        
     except Exception as e:
         print(f"ERROR: Memory-optimized generation failed: {e}")
         return {"error": f"Generation failed: {e}"}
@@ -1909,6 +2078,12 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
     # Use the original workflow but with memory optimizations
     try:
         return _generate_broadcast_attempt(topics, task_id, trace)
+    except NewsScriptUnavailable as exc:
+        print(f"ERROR: Aborting news bulletin: {exc}")
+        return _result_with_pipeline(
+            {"error": str(exc), "audio_file": None, "reason": exc.reason_code},
+            trace,
+        )
     except Exception as exc:
         import traceback
         traceback.print_exc()
@@ -2194,9 +2369,26 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
     
     print(f"DEBUG: Topics grouped by category: {topics_by_category}")
 
-    reporter_script_keys, reporter_scripts, reporter_segments, reporter_assignments = _build_reporter_segments(
-        topics, categorized_topics, trace=trace
-    )
+    try:
+        reporter_script_keys, reporter_scripts, reporter_segments, reporter_assignments = _build_reporter_segments(
+            topics, categorized_topics, trace=trace
+        )
+    except NewsScriptUnavailable as exc:
+        print(f"ERROR: Aborting news bulletin: {exc}")
+        if task_id:
+            try:
+                from glconnect.news_routes import update_task_in_db
+                update_task_in_db(
+                    task_id,
+                    current_step=str(exc)[:250],
+                    last_heartbeat=datetime.now(),
+                )
+            except Exception:
+                pass
+        return _result_with_pipeline(
+            {"error": str(exc), "audio_file": None, "reason": exc.reason_code},
+            trace,
+        )
 
     timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
     intro_text = _anchor_intro_text(timezone, topics)

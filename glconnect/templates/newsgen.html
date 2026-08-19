@@ -2453,10 +2453,10 @@
             result.innerHTML = `
                 <div class="result-card">
                     <div class="result-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+                        <h3><i class="fas fa-exclamation-triangle"></i> Bulletin not generated</h3>
                     </div>
                     <div class="result-body">
-                        <div class="error-message">${message}</div>
+                        <div class="error-message">${escapeNewsHtml(message)}</div>
                     </div>
                 </div>
             `;
@@ -2880,7 +2880,9 @@
             } else if (status === 'completed' || status === 'partial') {
                 statusLabel = 'Video bulletin is ready.';
             } else if (status === 'failed') {
-                statusLabel = 'Video bulletin could not be generated. You can retry.';
+                statusLabel = (heygen.warnings && heygen.warnings[0])
+                    ? heygen.warnings[0]
+                    : 'Video bulletin could not be generated. You can retry.';
             }
             return `
                 <div class="heygen-panel" id="heygenPanel">
