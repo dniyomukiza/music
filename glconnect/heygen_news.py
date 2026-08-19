@@ -9,6 +9,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
+import subprocess
+import tempfile
 import threading
 import time
 
@@ -25,6 +29,15 @@ _VIDEO_POLL_SECONDS = 10
 _VIDEO_TIMEOUT_SECONDS = 900
 _REQUEST_TIMEOUT = (10, 60)
 
+LOOK_KEY = "glc-studio-v1"
+_STUDIO_BACKGROUND = (
+    "standing in the GLC Media television studio, identical branded set for every "
+    "presenter: dark charcoal newsroom walls, bronze-gold rim lighting, a large "
+    "rear wall graphic that clearly reads GLC MEDIA in gold sans-serif letters, "
+    "subtle forest-green edge lights, soft out-of-focus LED panels, professional "
+    "broadcast lighting, no other network logos"
+)
+
 _roster_lock = threading.Lock()
 
 _REPORTER_PROMPTS = {
@@ -32,10 +45,9 @@ _REPORTER_PROMPTS = {
         "name": "Ernest",
         "avatar_name": "GRO News Ernest",
         "look_prompt": (
-            "Ghanaian man in his early 30s, athletic build, short cropped black hair, "
-            "warm brown skin, confident smile, wearing a navy sports-desk blazer over "
-            "a collared shirt, standing in a modern Accra newsroom with LED screens "
-            "showing stadium lights, professional broadcast lighting"
+            "Black man in his early 30s, dark brown skin, short cropped black hair, "
+            "athletic build, confident smile, wearing a navy sports-desk blazer over "
+            "a collared shirt, " + _STUDIO_BACKGROUND
         ),
         "voice_prompt": (
             "Warm, energetic West African English male sports reporter, mid-30s, "
@@ -47,13 +59,12 @@ _REPORTER_PROMPTS = {
         "name": "Isabella",
         "avatar_name": "GRO News Isabella",
         "look_prompt": (
-            "West African woman in her 30s, polished professional look, dark hair "
-            "pulled back, wearing a charcoal tailored blazer, standing at a finance "
-            "desk in a contemporary Accra newsroom with market tickers softly out of "
-            "focus, warm studio lighting"
+            "White woman in her 30s, fair skin, light brown hair pulled back, "
+            "polished professional look, wearing a charcoal tailored blazer, "
+            + _STUDIO_BACKGROUND
         ),
         "voice_prompt": (
-            "Clear, measured West African English female finance reporter, 30s, "
+            "Clear, measured female finance reporter, 30s, "
             "authoritative but approachable, moderate pace"
         ),
         "gender": "female",
@@ -62,9 +73,8 @@ _REPORTER_PROMPTS = {
         "name": "Mark",
         "avatar_name": "GRO News Mark",
         "look_prompt": (
-            "British-Ghanaian man in his 30s, short neat hair, glasses, wearing a "
-            "smart casual blazer over a dark shirt, standing in a modern tech news "
-            "alcove with soft blue LED lighting and screens, professional broadcast look"
+            "White man in his 30s, light skin, short neat brown hair, glasses, "
+            "wearing a smart casual blazer over a dark shirt, " + _STUDIO_BACKGROUND
         ),
         "voice_prompt": (
             "British English male technology reporter, 30s, clear and curious, "
@@ -76,10 +86,9 @@ _REPORTER_PROMPTS = {
         "name": "Edith",
         "avatar_name": "GRO News Edith",
         "look_prompt": (
-            "Ghanaian woman in her late 30s, composed expression, natural dark hair, "
-            "wearing a deep green structured jacket, standing in a parliamentary "
-            "newsroom set with muted wood panels and a Ghana flag softly in the "
-            "background, cinematic studio lighting"
+            "Black woman in her late 30s, dark brown skin, natural dark hair, "
+            "composed expression, wearing a deep green structured jacket, "
+            + _STUDIO_BACKGROUND
         ),
         "voice_prompt": (
             "Calm, precise West African English female politics correspondent, "
@@ -91,12 +100,12 @@ _REPORTER_PROMPTS = {
         "name": "Clara",
         "avatar_name": "GRO News Clara",
         "look_prompt": (
-            "West African woman in her 30s, warm open expression, natural hair, "
-            "wearing a light blue professional blouse, standing in a clean health "
-            "desk set with soft daylight and a blurred clinic graphic, broadcast lighting"
+            "White woman in her 30s, fair skin, shoulder-length auburn hair, "
+            "warm open expression, wearing a light blue professional blouse, "
+            + _STUDIO_BACKGROUND
         ),
         "voice_prompt": (
-            "Warm, reassuring West African English female health reporter, 30s, "
+            "Warm, reassuring female health reporter, 30s, "
             "clear diction, unhurried and trustworthy"
         ),
         "gender": "female",
@@ -105,9 +114,9 @@ _REPORTER_PROMPTS = {
         "name": "James",
         "avatar_name": "GRO News James",
         "look_prompt": (
-            "Ghanaian man in his 40s, short hair, neat beard, wearing a navy newsroom "
-            "blazer and open-collar shirt, standing in a general assignment news set "
-            "with Accra skyline graphics, professional warm lighting"
+            "Black man in his 40s, dark brown skin, short hair, neat beard, "
+            "wearing a navy newsroom blazer and open-collar shirt, "
+            + _STUDIO_BACKGROUND
         ),
         "voice_prompt": (
             "Steady West African English male general-assignment reporter, 40s, "
@@ -355,10 +364,47 @@ def _pick_catalog_voice(api_key: str, gender: str, desk: str) -> str:
     return voice_id
 
 
+_look_key_column_ready = False
+
+
+def _ensure_look_key_column(db) -> None:
+    """Add look_key on older news_heygen_roster tables so diversity refreshes can run."""
+    global _look_key_column_ready
+    if _look_key_column_ready:
+        return
+    try:
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(db.engine)
+        if "news_heygen_roster" not in inspector.get_table_names():
+            _look_key_column_ready = True
+            return
+        columns = {col["name"] for col in inspector.get_columns("news_heygen_roster")}
+        if "look_key" in columns:
+            _look_key_column_ready = True
+            return
+        dialect = db.engine.dialect.name
+        if dialect == "postgresql":
+            db.session.execute(text(
+                "ALTER TABLE news_heygen_roster ADD COLUMN IF NOT EXISTS look_key VARCHAR(64)"
+            ))
+        else:
+            db.session.execute(text(
+                "ALTER TABLE news_heygen_roster ADD COLUMN look_key VARCHAR(64)"
+            ))
+        db.session.commit()
+        _look_key_column_ready = True
+        _log("heygen_roster", resource="schema", status="added_look_key")
+    except Exception as exc:
+        db.session.rollback()
+        _log("heygen_skip", resource="schema", error=str(exc)[:240])
+
+
 def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dict:
     """Reuse stored avatar_id + voice_id per desk. Create only what is still missing."""
     from glconnect.models import NewsHeygenRoster, db
 
+    _ensure_look_key_column(db)
     prompts = _REPORTER_PROMPTS.get(desk) or _REPORTER_PROMPTS["news"]
     with _roster_lock:
         row = NewsHeygenRoster.query.filter_by(desk=desk).first()
@@ -367,12 +413,29 @@ def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dic
                 desk=desk,
                 reporter_name=reporter_name or prompts["name"],
                 status="pending",
+                look_key=LOOK_KEY,
             )
             db.session.add(row)
             db.session.commit()
 
+        stored_look = getattr(row, "look_key", None)
+        if row.avatar_id and stored_look != LOOK_KEY:
+            _log(
+                "heygen_roster",
+                desk=desk,
+                status="refresh_look",
+                previous_look=stored_look,
+                look_key=LOOK_KEY,
+            )
+            row.avatar_id = None
+            row.status = "pending"
+            row.look_key = LOOK_KEY
+            db.session.commit()
+
         def _reuse_if_complete():
             if not (row.avatar_id and row.voice_id):
+                return None
+            if getattr(row, "look_key", None) != LOOK_KEY:
                 return None
             if _is_anchor_identity(row.avatar_id, row.voice_id):
                 _log("heygen_anchor_guard", desk=desk, reason="stored_ids_match_anchor")
@@ -386,6 +449,7 @@ def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dic
                 row.status = "ready"
                 row.last_error = None
                 row.reporter_name = reporter_name or row.reporter_name
+                row.look_key = LOOK_KEY
                 db.session.commit()
             _log(
                 "heygen_roster",
@@ -408,6 +472,7 @@ def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dic
                     api_key, prompts["avatar_name"], prompts["look_prompt"]
                 )
                 row.status = "pending"
+                row.look_key = LOOK_KEY
                 db.session.commit()
                 created_avatar = True
                 _log("heygen_create", resource="avatar", desk=desk, avatar_id=row.avatar_id)
@@ -463,6 +528,7 @@ def _create_avatar_video(api_key: str, avatar_id: str, voice_id: str, script: st
             "title": title[:120],
             "resolution": "720p",
             "aspect_ratio": "16:9",
+            "background": {"type": "color", "value": "#060807"},
         },
     )
     video_id = None
@@ -536,7 +602,36 @@ def _clip_key(clip: dict) -> tuple:
     role = clip.get("role")
     if role == "reporter":
         return (role, clip.get("desk"), clip.get("topic"))
+    if role == "anchor_handoff":
+        return (role, clip.get("topic"), clip.get("name"))
     return (role,)
+
+
+def _fill_handoff_scripts(scripts: dict) -> dict:
+    """Ensure each reporter has an anchor handoff line, even on older broadcasts."""
+    from glconnect.news_agent import _anchor_handoff_text
+
+    filled = dict(scripts or {})
+    reporters = [dict(row) for row in (filled.get("reporters") or [])]
+    previous = None
+    for row in reporters:
+        if not (row.get("handoff") or "").strip():
+            row["handoff"] = _anchor_handoff_text(row, previous)
+        previous = row
+    filled["reporters"] = reporters
+    return filled
+
+
+def heygen_clips_missing_handoffs(scripts: dict, clips) -> bool:
+    reporters = (scripts or {}).get("reporters") or []
+    if not reporters:
+        return False
+    have = {
+        clip.get("topic")
+        for clip in (clips or [])
+        if isinstance(clip, dict) and clip.get("role") == "anchor_handoff" and clip.get("url")
+    }
+    return any(row.get("topic") not in have for row in reporters)
 
 
 def _reusable_clip_index(existing_clips) -> dict:
@@ -547,6 +642,161 @@ def _reusable_clip_index(existing_clips) -> dict:
         if clip.get("status") == "completed" and clip.get("url"):
             index[_clip_key(clip)] = clip
     return index
+
+
+def _safe_task_id(task_id: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_-]", "", task_id or "")
+    if not cleaned:
+        raise ValueError("invalid task id")
+    return cleaned
+
+
+def news_video_dir() -> str:
+    path = os.path.abspath(os.path.join("glconnect", "static", "news_video"))
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def bulletin_mp4_path(task_id: str) -> str:
+    return os.path.join(news_video_dir(), f"bulletin_{_safe_task_id(task_id)}.mp4")
+
+
+def bulletin_file_url(task_id: str) -> str:
+    return f"/routes2/news/bulletin/{_safe_task_id(task_id)}.mp4"
+
+
+def bulletin_file_ready(task_id: str) -> bool:
+    try:
+        path = bulletin_mp4_path(task_id)
+    except ValueError:
+        return False
+    return os.path.isfile(path) and os.path.getsize(path) > 0
+
+
+def _grojingle_path() -> str | None:
+    filename = "grojingle.mp4"
+    candidates = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "video", filename),
+        os.path.join(os.getcwd(), "video", filename),
+        f"/usr/src/appdir/video/{filename}",
+        os.path.abspath(os.path.join("video", filename)),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _probe_duration(path: str) -> float:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "csv=p=0", path,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    try:
+        return max(float((result.stdout or "").strip() or "0"), 0.1)
+    except ValueError:
+        return 1.0
+
+
+def _has_audio_stream(path: str) -> bool:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "a:0",
+            "-show_entries", "stream=codec_type", "-of", "csv=p=0", path,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return bool((result.stdout or "").strip())
+
+
+def _materialize_video(source: str, dest: str) -> None:
+    if os.path.isfile(source):
+        shutil.copyfile(source, dest)
+        return
+    with requests.get(source, stream=True, timeout=(15, 180)) as response:
+        response.raise_for_status()
+        with open(dest, "wb") as handle:
+            for chunk in response.iter_content(256 * 1024):
+                if chunk:
+                    handle.write(chunk)
+    if not os.path.isfile(dest) or os.path.getsize(dest) == 0:
+        raise RuntimeError("Downloaded an empty video clip")
+
+
+def assemble_bulletin_mp4(task_id: str, clips: list) -> str:
+    """Stitch bumper + clips + bumper into one 1280x720 MP4. Returns the file path."""
+    ready = [
+        clip.get("url")
+        for clip in (clips or [])
+        if isinstance(clip, dict) and clip.get("status") == "completed" and clip.get("url")
+    ]
+    if not ready:
+        raise RuntimeError("No completed clips to combine")
+
+    bumper = _grojingle_path()
+    sources = ([bumper] if bumper else []) + ready + ([bumper] if bumper else [])
+    output_path = bulletin_mp4_path(task_id)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="news_bulletin_") as tmpdir:
+        local_paths = []
+        for index, source in enumerate(sources):
+            dest = os.path.join(tmpdir, f"part_{index:02d}.mp4")
+            _materialize_video(source, dest)
+            local_paths.append(dest)
+
+        filters = []
+        concat_labels = []
+        for index, path in enumerate(local_paths):
+            filters.append(
+                f"[{index}:v]scale=1280:720:force_original_aspect_ratio=decrease:flags=bicubic,"
+                f"pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=0x060807,setsar=1,fps=30,format=yuv420p[v{index}]"
+            )
+            if _has_audio_stream(path):
+                filters.append(
+                    f"[{index}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,"
+                    f"aresample=async=1:first_pts=0[a{index}]"
+                )
+            else:
+                duration = _probe_duration(path)
+                filters.append(
+                    f"anullsrc=r=44100:cl=stereo:d={duration:.3f},aformat=sample_fmts=fltp:"
+                    f"sample_rates=44100:channel_layouts=stereo[a{index}]"
+                )
+            concat_labels.append(f"[v{index}][a{index}]")
+
+        filter_complex = ";".join(filters) + (
+            f";{''.join(concat_labels)}concat=n={len(local_paths)}:v=1:a=1[v][a]"
+        )
+        cmd = ["ffmpeg", "-y"]
+        for path in local_paths:
+            cmd.extend(["-i", path])
+        cmd.extend([
+            "-filter_complex", filter_complex,
+            "-map", "[v]",
+            "-map", "[a]",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "23",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            output_path,
+        ])
+        _log("heygen_assemble", status="start", parts=len(local_paths), bumper=bool(bumper))
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        if result.returncode != 0 or not os.path.isfile(output_path) or os.path.getsize(output_path) == 0:
+            err = (result.stderr or result.stdout or "ffmpeg failed")[-400:]
+            raise RuntimeError(err)
+
+    return output_path
 
 
 def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_clips=None) -> dict:
@@ -567,6 +817,8 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
 
     intro = (scripts.get("intro") or "").strip()
     outro = (scripts.get("outro") or "").strip()
+    scripts = _fill_handoff_scripts(scripts)
+    merge_result({"scripts": scripts})
     reporters = scripts.get("reporters") or []
     _log(
         "heygen_scripts",
@@ -575,7 +827,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
         reporters=len(reporters),
     )
 
-    state = {"status": "processing", "clips": clips, "warnings": warnings}
+    state = {"status": "processing", "clips": clips, "warnings": warnings, "final_url": None}
 
     def persist():
         merge_result({
@@ -583,6 +835,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
                 "status": state["status"],
                 "clips": [_public_clip(item) for item in clips],
                 "warnings": warnings,
+                "final_url": state.get("final_url"),
             }
         })
 
@@ -595,6 +848,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
             if _is_anchor_identity(clip["avatar_id"], clip["voice_id"]) and clip["role"] not in (
                 "anchor_intro",
                 "anchor_outro",
+                "anchor_handoff",
             ):
                 _log("heygen_anchor_guard", role=clip["role"], desk=clip.get("desk"))
                 raise RuntimeError("Reporter clip blocked from using the studio anchor identity")
@@ -662,6 +916,21 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
         name = reporter.get("name") or desk
         topic = reporter.get("topic") or ""
         script = reporter.get("script") or ""
+        handoff = (reporter.get("handoff") or "").strip()
+        queue_and_render(
+            _clip_record(
+                role="anchor_handoff",
+                name=ANCHOR_NAME,
+                topic=topic,
+                status="queued",
+            )
+            | {
+                "avatar_id": ANCHOR_AVATAR_ID,
+                "voice_id": ANCHOR_VOICE_ID,
+                "script": handoff,
+                "title": f"GRO News handoff {name} {task_id[:8]}",
+            }
+        )
         try:
             identity = ensure_reporter_identity(desk, name, api_key)
         except Exception as exc:
@@ -718,6 +987,14 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
         status = "partial"
     else:
         status = "failed"
+    if completed:
+        persist()
+        try:
+            assemble_bulletin_mp4(task_id, clips)
+            state["final_url"] = bulletin_file_url(task_id)
+            _log("heygen_assemble", status="ok", url=state["final_url"])
+        except Exception as exc:
+            _log("heygen_assemble", status="failed", error=str(exc)[:240])
     state["status"] = status
     _log(
         "heygen_summary",
@@ -726,10 +1003,12 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
         failed=len(failed),
         reused=len(reusable),
         desks=seen_desks,
+        final=bool(state.get("final_url")),
     )
     persist()
     return {
         "status": status,
         "clips": [_public_clip(item) for item in clips],
         "warnings": warnings,
+        "final_url": state.get("final_url"),
     }

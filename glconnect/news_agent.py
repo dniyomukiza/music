@@ -225,6 +225,49 @@ def _result_with_pipeline(result: dict, trace: NewsPipelineTrace) -> dict:
     return result
 
 
+def _spoken_topic_rundown(topics: list) -> str:
+    names = [str(topic or "").strip() for topic in (topics or []) if str(topic or "").strip()]
+    if not names:
+        return "today's top stories"
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    return ", ".join(names[:-1]) + f", and {names[-1]}"
+
+
+def _anchor_intro_text(timezone_info: str, topics: list) -> str:
+    """Time check, GLC News welcome, then a rundown of this edition's topics."""
+    clock = (timezone_info or "").strip().rstrip(".")
+    rundown = _spoken_topic_rundown(topics)
+    if clock.lower() == "welcome to glc news":
+        return f"Welcome to GLC News. In this edition we are covering {rundown}."
+    welcome = "" if "glc news" in clock.lower() else " Welcome to GLC News."
+    return f"{clock}.{welcome} In this edition we are covering {rundown}."
+
+
+def _anchor_handoff_text(assignment: dict, previous: dict = None) -> str:
+    name = (assignment.get("name") or "our reporter").strip()
+    topic = (assignment.get("topic") or "the next story").strip()
+    if not previous:
+        return f"Now let's go to {name}, who will tell us about {topic}."
+    prev_name = (previous.get("name") or "our reporter").strip()
+    if prev_name.lower() == name.lower():
+        return f"Thanks {prev_name} for that report. {name} also has more, and will tell us about {topic}."
+    return (
+        f"Thanks {prev_name} for that report. Now let's switch to {name}, "
+        f"who will tell us about {topic}."
+    )
+
+
+def _anchor_outro_text(assignments: list) -> str:
+    last_name = ""
+    if assignments:
+        last_name = (assignments[-1].get("name") or "").strip()
+    thanks = f"Thanks {last_name} for that report. " if last_name else ""
+    return f"{thanks}That's all for this GLC News bulletin. Thank you for listening."
+
+
 def _gemini_generate_text(prompt: str, generation_config=None) -> str:
     """Try current then fallback Gemini models. Raises the last error if all fail."""
     import google.generativeai as genai
@@ -511,7 +554,7 @@ def _run_direct_tts_phase(
     task_id=None,
 ) -> None:
     """Convert all broadcast scripts to audio without Gemini tool-calling."""
-    total_segments = 2 + len(transitions) + len(reporter_segments) + 1
+    total_segments = 2 + len(transitions) + len(reporter_segments)
     completed = 0
 
     def _convert(label: str, text: str, filename: str, voice: str) -> None:
@@ -532,7 +575,6 @@ def _run_direct_tts_phase(
 
     _convert("intro", intro_text, "intro_audio.mp3", ANCHOR_VOICE)
     _convert("outro", outro_text, "outro_audio.mp3", ANCHOR_VOICE)
-    _convert("thank-you", "Thank you for that report.", "thank_you_audio.mp3", ANCHOR_VOICE)
 
     for index, transition_text in enumerate(transitions):
         _convert(
@@ -2157,9 +2199,15 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
     )
 
     timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
-    intro_text = f"{timezone} Here are today's top stories."
-    transitions = [f"Turning now to {topic}." for topic in topics]
-    outro_text = "That's all for this GLC News bulletin. Thank you for listening."
+    intro_text = _anchor_intro_text(timezone, topics)
+    transitions = [
+        _anchor_handoff_text(
+            assignment,
+            previous=reporter_assignments[index - 1] if index else None,
+        )
+        for index, assignment in enumerate(reporter_assignments)
+    ]
+    outro_text = _anchor_outro_text(reporter_assignments)
     persisted_scripts = {
         "intro": intro_text,
         "outro": outro_text,
@@ -2170,6 +2218,7 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
                 "name": assignment["name"],
                 "category": assignment["category"],
                 "script": reporter_scripts[index],
+                "handoff": transitions[index],
             }
             for index, assignment in enumerate(reporter_assignments)
         ],
@@ -2199,7 +2248,6 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
     for i, (segment_id, _script, _voice) in enumerate(reporter_segments):
         final_audio_paths.append(f"glconnect/static/audio/transition_audio_{i}.mp3")
         final_audio_paths.append(f"glconnect/static/audio/{segment_id}_audio.mp3")
-        final_audio_paths.append("glconnect/static/audio/thank_you_audio.mp3")
     final_audio_paths.extend([
         "glconnect/static/audio/outro_audio.mp3",
         "glconnect/static/audio/jingle.wav",

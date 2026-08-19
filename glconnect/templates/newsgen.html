@@ -976,6 +976,12 @@
             color: white;
         }
 
+        .audio-actions .btn.disabled,
+        .audio-actions .btn[aria-disabled="true"] {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         .heygen-panel {
             margin-top: 24px;
             padding: 18px;
@@ -1002,13 +1008,6 @@
             margin: 12px auto 0;
             background: #000;
             border-radius: 8px;
-        }
-
-        .heygen-clip-label {
-            text-align: center;
-            color: #c9a227;
-            margin-top: 8px;
-            font-size: 0.95rem;
         }
 
         .generation-info {
@@ -2858,6 +2857,7 @@
             const bumperUrl = (result && result.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
             const clips = heygen.clips || [];
             const readyClips = clips.filter(clip => clip && clip.url);
+            const finalUrl = heygen.final_url || '';
             let actionLabel = 'Generate video bulletin';
             if (status === 'queued' || status === 'processing') {
                 actionLabel = 'Generating video…';
@@ -2868,15 +2868,16 @@
             }
             const busy = status === 'queued' || status === 'processing';
             const buttonDisabled = !hasScripts || busy;
-            const playDisabled = readyClips.length === 0;
+            const playDisabled = !finalUrl && readyClips.length === 0;
+            const downloadDisabled = !finalUrl;
             let statusLabel = 'Audio is ready. Video is optional and starts only when you click Generate.';
             if (!hasScripts) {
                 statusLabel = 'Generate news again to enable the video bulletin.';
             } else if (status === 'queued' || status === 'processing') {
                 statusLabel = 'Generating video bulletin…';
-            } else if (status === 'completed') {
-                statusLabel = 'Video bulletin is ready.';
-            } else if (status === 'partial') {
+            } else if (status === 'completed' && finalUrl) {
+                statusLabel = 'Video bulletin is ready to play and download.';
+            } else if (status === 'completed' || status === 'partial') {
                 statusLabel = 'Video bulletin is ready.';
             } else if (status === 'failed') {
                 statusLabel = 'Video bulletin could not be generated. You can retry.';
@@ -2894,11 +2895,15 @@
                             onclick="playBulletinPlaylist()">
                             <i class="fas fa-play"></i> Play video bulletin
                         </button>
+                        <a class="btn btn-primary${downloadDisabled ? ' disabled' : ''}" id="downloadBulletinBtn"
+                            href="${downloadDisabled ? '#' : escapeNewsHtml(finalUrl + '?download=1')}"
+                            ${downloadDisabled ? 'aria-disabled="true" tabindex="-1" onclick="return false;"' : 'download="glc-news-bulletin.mp4"'}>
+                            <i class="fas fa-download"></i> Download MP4
+                        </a>
                     </div>
                     <video id="bulletinVideo" class="bulletin-video" controls playsinline
                         data-bumper="${escapeNewsHtml(bumperUrl)}"
-                        ${readyClips.length ? '' : 'style="display:none;"'}></video>
-                    <div id="bulletinClipLabel" class="heygen-clip-label"></div>
+                        ${finalUrl || readyClips.length ? '' : 'style="display:none;"'}></video>
                 </div>
             `;
         }
@@ -2969,38 +2974,33 @@
         function playBulletinPlaylist(result) {
             const payload = (result && result.heygen) ? result : lastHeygenResult;
             const player = document.getElementById('bulletinVideo');
-            const label = document.getElementById('bulletinClipLabel');
             if (!player || !payload) {
                 return;
             }
             const bumper = player.getAttribute('data-bumper') || (payload.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
             const heygen = payload.heygen || {};
+            const finalUrl = heygen.final_url || '';
             const clips = (heygen.clips || []).filter(clip => clip && clip.url);
-            if (!clips.length) {
+            if (!finalUrl && !clips.length) {
                 return;
             }
-            const playlist = [{ url: bumper, label: 'GRO jingle' }];
-            clips.forEach(clip => {
-                playlist.push({
-                    url: clip.url,
-                    label: (clip.name || clip.role || 'Clip') + (clip.topic ? ' — ' + clip.topic : '')
+            player.style.display = 'block';
+            if (finalUrl) {
+                player.onended = null;
+                player.src = finalUrl;
+                player.play().catch(error => {
+                    console.error('Video play failed', error);
                 });
-            });
-            playlist.push({ url: bumper, label: 'GRO jingle' });
+                return;
+            }
+            const playlist = [bumper, ...clips.map(clip => clip.url), bumper];
             let index = 0;
             player.style.display = 'block';
             const playAt = () => {
                 if (index >= playlist.length) {
-                    if (label) {
-                        label.textContent = 'Bulletin finished';
-                    }
                     return;
                 }
-                const item = playlist[index];
-                if (label) {
-                    label.textContent = item.label;
-                }
-                player.src = item.url;
+                player.src = playlist[index];
                 player.play().catch(error => {
                     console.error('Video play failed', error);
                 });

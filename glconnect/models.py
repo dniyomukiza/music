@@ -411,6 +411,7 @@ class NewsHeygenRoster(db.Model):
     avatar_id = db.Column(db.String(128), nullable=True)
     voice_id = db.Column(db.String(128), nullable=True)
     status = db.Column(db.String(32), nullable=False, default='pending')
+    look_key = db.Column(db.String(64), nullable=True)
     last_error = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

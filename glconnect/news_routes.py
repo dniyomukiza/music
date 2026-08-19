@@ -234,9 +234,8 @@ def _broadcast_result_record(output, audio_file_path, summary):
     return record
 
 
-def completed_news_payload(task_id, task, audio_file, summary):
-    result = _task_result(task)
-    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+def _public_heygen(heygen, task_id=None):
+    heygen = heygen if isinstance(heygen, dict) else {}
     public_clips = []
     for clip in heygen.get('clips') or []:
         if not isinstance(clip, dict):
@@ -248,6 +247,21 @@ def completed_news_payload(task_id, task, audio_file, summary):
             'status': clip.get('status'),
             'url': clip.get('url'),
         })
+    final_url = heygen.get('final_url')
+    if task_id:
+        from glconnect.heygen_news import bulletin_file_ready, bulletin_file_url
+        if bulletin_file_ready(task_id):
+            final_url = bulletin_file_url(task_id)
+    return {
+        'status': heygen.get('status') or 'idle',
+        'clips': public_clips,
+        'final_url': final_url or None,
+    }
+
+
+def completed_news_payload(task_id, task, audio_file, summary):
+    result = _task_result(task)
+    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
     return {
         'status': 'completed',
         'task_id': task_id,
@@ -255,10 +269,7 @@ def completed_news_payload(task_id, task, audio_file, summary):
         'summary': summary,
         'topics': task.get('topics') or result.get('topics'),
         'has_scripts': bool(result.get('scripts')),
-        'heygen': {
-            'status': heygen.get('status') or 'idle',
-            'clips': public_clips,
-        },
+        'heygen': _public_heygen(heygen, task_id),
         'bumper_url': NEWS_BUMPER_URL,
     }
 
@@ -2232,6 +2243,27 @@ def serve_news_bumper(filename):
     return send_file(path, mimetype='video/mp4', conditional=True)
 
 
+@news_bp.route('/bulletin/<task_id>.mp4')
+def serve_news_bulletin_mp4(task_id):
+    """Serve the combined GRO News video bulletin MP4."""
+    from glconnect.heygen_news import bulletin_mp4_path
+
+    try:
+        path = bulletin_mp4_path(task_id)
+    except ValueError:
+        return "Bulletin not found", 404
+    if not os.path.isfile(path) or os.path.getsize(path) == 0:
+        return "Bulletin not found", 404
+    as_attachment = str(request.args.get('download') or '').lower() in ('1', 'true', 'yes')
+    return send_file(
+        path,
+        mimetype='video/mp4',
+        as_attachment=as_attachment,
+        download_name='glc-news-bulletin.mp4',
+        conditional=True,
+    )
+
+
 def _run_heygen_bulletin_thread(app, task_id, scripts, existing_clips=None):
     from glconnect.heygen_news import generate_video_bulletin
 
@@ -2292,16 +2324,18 @@ def generate_video_bulletin_route(task_id):
         return jsonify({
             'status': current_status,
             'task_id': task_id,
-            'heygen': {'status': current_status, 'clips': existing_clips},
+            'heygen': _public_heygen(heygen, task_id),
             'bumper_url': NEWS_BUMPER_URL,
         })
     if current_status == 'completed' and existing_clips:
-        return jsonify({
-            'status': 'completed',
-            'task_id': task_id,
-            'heygen': {'status': 'completed', 'clips': existing_clips},
-            'bumper_url': NEWS_BUMPER_URL,
-        })
+        from glconnect.heygen_news import bulletin_file_ready, heygen_clips_missing_handoffs
+        if not heygen_clips_missing_handoffs(scripts, existing_clips) and bulletin_file_ready(task_id):
+            return jsonify({
+                'status': 'completed',
+                'task_id': task_id,
+                'heygen': _public_heygen(heygen, task_id),
+                'bumper_url': NEWS_BUMPER_URL,
+            })
 
     queued = {
         'status': 'queued',
@@ -2320,7 +2354,7 @@ def generate_video_bulletin_route(task_id):
     return jsonify({
         'status': 'queued',
         'task_id': task_id,
-        'heygen': {'status': 'queued', 'clips': existing_clips},
+        'heygen': {'status': 'queued', 'clips': existing_clips, 'final_url': None},
         'bumper_url': NEWS_BUMPER_URL,
     })
 
