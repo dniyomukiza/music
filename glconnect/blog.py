@@ -5,7 +5,6 @@ from datetime import datetime, timezone, timedelta
 from .models import *
 from .forms import *
 from dotenv import load_dotenv
-from mailtrap import MailtrapClient, Mail, Address
 from flask import redirect,url_for,render_template,request,flash,abort,send_from_directory,jsonify
 from flask import Blueprint,render_template,request,flash,redirect,url_for,send_file,current_app,session
 from flask_login import current_user, login_required, logout_user
@@ -14,16 +13,10 @@ import google.generativeai as genai
 from sqlalchemy import inspect, func
 import logging
 from werkzeug.utils import secure_filename
+from glconnect.email_service import get_inbound_receiver, is_mail_configured, send_email
 
 logger = logging.getLogger(__name__)
 load_dotenv()
-# Load configuration from environment variables
-config = {
-    "SENDER_MAIL": os.getenv("SENDER_MAIL"),
-    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD"),
-    "RECEIVER_MAIL": os.getenv("RECEIVER_MAIL"),
-    "MAIL_TRAP": os.getenv("MAIL_TRAP")
-}
 blog= Blueprint("blog", __name__)
 creditor = CKEditor()
 
@@ -278,17 +271,14 @@ def contact():
     form = ContactForm()
     if not current_app.config.get('RECAPTCHA_PUBLIC_KEY'):
         form.recap.validators = []
-    sender = (os.getenv("SENDER_MAIL") or config.get("SENDER_MAIL") or "info@ndotonic.com").strip()
-    receiver = (os.getenv("RECEIVER_MAIL") or config.get("RECEIVER_MAIL") or "info@ndotonic.com").strip()
-    api_key = (os.getenv("MAIL_TRAP") or config.get("MAIL_TRAP") or "").strip()
+    receiver = get_inbound_receiver()
 
     if form.validate_on_submit():
-        if not sender or not receiver or not api_key:
+        if not is_mail_configured() or not receiver:
             logger.warning(
-                "Contact form mail not configured (sender=%s receiver=%s api_key=%s)",
-                bool(sender),
+                "Contact form mail not configured (resend=%s receiver=%s)",
+                is_mail_configured(),
                 bool(receiver),
-                bool(api_key),
             )
             flash(
                 "We can’t send messages from the contact form right now. Please try again later.",
@@ -296,33 +286,33 @@ def contact():
             )
             return render_template("contact.html", form=form)
 
-        try:
-            mail = Mail(
-                sender=Address(email=sender, name="Message form Ndotonic user"),
-                to=[Address(email=receiver)],
-                subject="New Contact Form Submission",
-                text=(
-                    f"First name: {form.FirstName.data}\n"
-                    f"Last name: {form.LastName.data}\n"
-                    f"Email: {form.email.data}\n"
-                    f"Message: {form.message.data}"
-                ),
-                category="User Contact",
-            )
-            MailtrapClient(token=api_key).send(mail)
-            logger.info(
-                "Contact form submitted: from=%s to=%s subject=%s",
-                form.email.data,
-                receiver,
-                "New Contact Form Submission",
-            )
-        except Exception:
-            logger.exception("Contact form Mailtrap send failed")
+        body = (
+            f"First name: {form.FirstName.data}\n"
+            f"Last name: {form.LastName.data}\n"
+            f"Email: {form.email.data}\n"
+            f"Message: {form.message.data}"
+        )
+        if not send_email(
+            to=receiver,
+            subject="New Contact Form Submission",
+            text=body,
+            from_name="Message from Ndotonic user",
+            reply_to=form.email.data,
+            tags=["user-contact"],
+        ):
+            logger.error("Contact form Resend send failed")
             flash(
                 "We couldn’t send your message. Please try again in a moment.",
                 "error",
             )
             return render_template("contact.html", form=form)
+
+        logger.info(
+            "Contact form submitted: from=%s to=%s subject=%s",
+            form.email.data,
+            receiver,
+            "New Contact Form Submission",
+        )
 
         flash("Thank you for reaching out. We will get back to you ASAP.", "success")
         next_url = (request.form.get("next") or request.args.get("next") or "").strip()

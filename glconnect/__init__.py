@@ -56,7 +56,8 @@ def _load_config():
         "STRIPE_WEBHOOK_SECRET": (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
         "SENDER_MAIL": (os.getenv("SENDER_MAIL") or "").strip() or None,
         "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
-        "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
+        "RESEND_API_KEY": (os.getenv("RESEND_API_KEY") or "").strip() or None,
+        "RESEND_FROM": (os.getenv("RESEND_FROM") or "").strip() or None,
         "JWT_SECRET_KEY": (os.getenv("JWT_SECRET_KEY") or "").strip() or None,
         "INK_STUDIO_V1_BOOKS_LAUNCH": os.getenv("INK_STUDIO_V1_BOOKS_LAUNCH", "").strip().lower()
         in ("1", "true", "yes", "on"),
@@ -113,17 +114,25 @@ def _load_config():
                     if wh:
                         cfg["STRIPE_WEBHOOK_SECRET"] = wh
 
-                # Mailtrap (account confirmation, receipts, etc.), same paths as DB/Stripe
+                # Resend (account confirmation, receipts, contact/careers inbox, etc.)
                 if not cfg.get("SENDER_MAIL"):
                     _sm = _gl_first_nonempty(file_cfg, "SENDER_MAIL", "SENDER_EMAIL")
                     if _sm:
                         cfg["SENDER_MAIL"] = _sm
-                if not cfg.get("MAIL_TRAP"):
-                    _mt = _gl_first_nonempty(
-                        file_cfg, "MAIL_TRAP", "MAILTRAP_API_TOKEN", "MAIL_TRAP_API_KEY"
+                if not cfg.get("RESEND_API_KEY"):
+                    _rk = _gl_first_nonempty(
+                        file_cfg,
+                        "RESEND_API_KEY",
+                        "RESEND_KEY",
+                        "RESEND_API",
+                        "RESEND",
                     )
-                    if _mt:
-                        cfg["MAIL_TRAP"] = _mt
+                    if _rk:
+                        cfg["RESEND_API_KEY"] = _rk
+                if not cfg.get("RESEND_FROM"):
+                    _rf = _gl_first_nonempty(file_cfg, "RESEND_FROM")
+                    if _rf:
+                        cfg["RESEND_FROM"] = _rf
                 if not cfg.get("RECEIVER_MAIL"):
                     _rm = _gl_first_nonempty(
                         file_cfg, "RECEIVER_MAIL", "RECEIVER_EMAIL", "CONTACT_RECEIVER_MAIL"
@@ -224,11 +233,13 @@ if config.get("STRIPE_WEBHOOK_SECRET"):
     if STRIPE_TEST_KEYS_FROM_GLCONFIG or not (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip():
         os.environ["STRIPE_WEBHOOK_SECRET"] = config["STRIPE_WEBHOOK_SECRET"]
 
-# Mailtrap / confirmation email: expose glconfig values to os.getenv() for routes1, blog, book_platform, etc.
+# Resend / confirmation email: expose glconfig values to os.getenv() for routes1, blog, book_platform, etc.
 if config.get("SENDER_MAIL") and not (os.getenv("SENDER_MAIL") or "").strip():
     os.environ["SENDER_MAIL"] = config["SENDER_MAIL"]
-if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
-    os.environ["MAIL_TRAP"] = config["MAIL_TRAP"]
+if config.get("RESEND_API_KEY") and not (os.getenv("RESEND_API_KEY") or "").strip():
+    os.environ["RESEND_API_KEY"] = config["RESEND_API_KEY"]
+if config.get("RESEND_FROM") and not (os.getenv("RESEND_FROM") or "").strip():
+    os.environ["RESEND_FROM"] = config["RESEND_FROM"]
 if config.get("RECEIVER_MAIL") and not (os.getenv("RECEIVER_MAIL") or "").strip():
     os.environ["RECEIVER_MAIL"] = config["RECEIVER_MAIL"]
 if config.get("JWT_SECRET_KEY") and not (os.getenv("JWT_SECRET_KEY") or "").strip():
@@ -415,6 +426,10 @@ def create_app(config_overrides=None):
     # Mail and recaptcha configuration
     app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
+    app.config['SENDER_MAIL'] = config.get('SENDER_MAIL')
+    app.config['RECEIVER_MAIL'] = config.get('RECEIVER_MAIL')
+    app.config['RESEND_API_KEY'] = config.get('RESEND_API_KEY')
+    app.config['RESEND_FROM'] = config.get('RESEND_FROM')
 
     # Database and JWT configuration
     db_url = config.get('DB_URL')

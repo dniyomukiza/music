@@ -24,7 +24,7 @@ from tempfile import SpooledTemporaryFile
 from typing import List, Optional
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
-from mailtrap import MailtrapClient, Mail, Address
+from glconnect.email_service import is_mail_configured, send_email
 
 # Import models
 from glconnect.models import db, User, Writer
@@ -3832,12 +3832,9 @@ def view_suggestion(suggestion_id, user_profile, profile_type):
 
 # Helper function to send collaboration invitation email
 def send_collaboration_invitation_email(invitation, book, inviter):
-    """Send collaboration invitation email via Mailtrap"""
-    sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
-    api_key = os.getenv("MAIL_TRAP")
-    
-    if not api_key:
-        logger.warning("MAIL_TRAP API key not set. Cannot send collaboration invitation email.")
+    """Send collaboration invitation email via Resend"""
+    if not is_mail_configured():
+        logger.warning("RESEND_API_KEY is not set. Cannot send collaboration invitation email.")
         return False
     
     # Generate invitation URL
@@ -3876,21 +3873,18 @@ Best regards,
 Ink Studio Team
 """
     
-    try:
-        mail = Mail(
-            sender=Address(email=sender, name="Ink Studio"),
-            to=[Address(email=invitation.email)],
-            subject=subject,
-            text=message_text,
-            category="Collaboration Invitation"
-        )
-        client = MailtrapClient(token=api_key)
-        client.send(mail)
+    sent = send_email(
+        to=invitation.email,
+        subject=subject,
+        text=message_text,
+        from_name="Ink Studio",
+        tags=["collaboration-invitation"],
+    )
+    if sent:
         logger.info(f"Collaboration invitation email sent to {invitation.email} for book {book.id}")
         return True
-    except Exception as e:
-        logger.error(f"Failed to send collaboration invitation email: {str(e)}", exc_info=True)
-        return False
+    logger.error("Failed to send collaboration invitation email")
+    return False
 
 # Collaboration routes
 @book_bp.route('/books/<int:book_id>/collaborate')
@@ -4019,7 +4013,7 @@ def invite_collaborator(book_id, user_profile, profile_type):
             }), 500
         return jsonify({'error': 'Could not save this invitation. Please try again.'}), 500
 
-    # Send email invitation via Mailtrap
+    # Send email invitation via Resend
     try:
         send_collaboration_invitation_email(invitation, book, book_user)
     except Exception as e:
@@ -4333,20 +4327,6 @@ def _marketplace_cover_url(book, external=False):
     return url_for("static", filename=path, _external=external)
 
 
-def _mailtrap_credentials():
-    """Resolve Mailtrap sender + API key from env or app config (same as account emails)."""
-    sender = (
-        (os.getenv("SENDER_MAIL") or "").strip()
-        or (current_app.config.get("SENDER_MAIL") or "").strip()
-        or "info@ndotonic.com"
-    )
-    api_key = (
-        (os.getenv("MAIL_TRAP") or "").strip()
-        or (current_app.config.get("MAIL_TRAP") or "").strip()
-    )
-    return sender, api_key
-
-
 def _maybe_send_purchase_receipt(book, purchase, print_order=None):
     """Send purchase receipt once per browser session (avoids duplicate on success-page refresh)."""
     if purchase.status != TransactionStatus.COMPLETED:
@@ -4359,14 +4339,13 @@ def _maybe_send_purchase_receipt(book, purchase, print_order=None):
 
 
 def send_book_purchase_receipt_email(book, purchase, print_order=None):
-    """Send a text receipt via Mailtrap (same pattern as account confirmation in routes1)."""
+    """Send a text receipt via Resend (same pattern as account confirmation in routes1)."""
     to_email = purchase.get_buyer_email()
     if not to_email:
         logger.warning("Purchase receipt skipped: no buyer email for purchase %s", purchase.id)
         return False
-    sender, api_key = _mailtrap_credentials()
-    if not api_key:
-        logger.warning("Purchase receipt skipped: MAIL_TRAP not set (SENDER_MAIL=%s)", sender or "(empty)")
+    if not is_mail_configured():
+        logger.warning("Purchase receipt skipped: RESEND_API_KEY not set")
         return False
 
     base = (current_app.config.get("FRONTEND_BASE_URL") or "").rstrip("/")
@@ -4418,20 +4397,18 @@ def send_book_purchase_receipt_email(book, purchase, print_order=None):
         lines.extend(["", f"My Library: {library_url}"])
     body = "\n".join(lines)
 
-    try:
-        msg = Mail(
-            sender=Address(email=sender, name="ndotonic"),
-            to=[Address(email=to_email)],
-            subject=f"Receipt: {book.title}",
-            text=body,
-            category="Book purchase",
-        )
-        MailtrapClient(token=api_key).send(msg)
+    sent = send_email(
+        to=to_email,
+        subject=f"Receipt: {book.title}",
+        text=body,
+        from_name="ndotonic",
+        tags=["book-purchase"],
+    )
+    if sent:
         logger.info("Sent purchase receipt for purchase %s to %s", purchase.id, to_email)
         return True
-    except Exception as e:
-        logger.warning("Failed to send purchase receipt: %s", e, exc_info=True)
-        return False
+    logger.warning("Failed to send purchase receipt")
+    return False
 
 
 def send_print_order_shipped_email(book, purchase, order):
@@ -4440,9 +4417,8 @@ def send_print_order_shipped_email(book, purchase, order):
     if not to_email:
         logger.warning("Shipped email skipped: no buyer email for purchase %s", purchase.id)
         return False
-    sender, api_key = _mailtrap_credentials()
-    if not api_key:
-        logger.warning("Shipped email skipped: MAIL_TRAP not set")
+    if not is_mail_configured():
+        logger.warning("Shipped email skipped: RESEND_API_KEY not set")
         return False
 
     base = (current_app.config.get("FRONTEND_BASE_URL") or "").rstrip("/")
@@ -4480,20 +4456,18 @@ def send_print_order_shipped_email(book, purchase, order):
     ])
     body = "\n".join(lines)
 
-    try:
-        msg = Mail(
-            sender=Address(email=sender, name="ndotonic"),
-            to=[Address(email=to_email)],
-            subject=f"Shipped: {book.title}",
-            text=body,
-            category="Print order shipped",
-        )
-        MailtrapClient(token=api_key).send(msg)
+    sent = send_email(
+        to=to_email,
+        subject=f"Shipped: {book.title}",
+        text=body,
+        from_name="ndotonic",
+        tags=["print-order-shipped"],
+    )
+    if sent:
         logger.info("Sent shipped email for print order %s to %s", order.id, to_email)
         return True
-    except Exception as e:
-        logger.warning("Failed to send shipped email: %s", e, exc_info=True)
-        return False
+    logger.warning("Failed to send shipped email")
+    return False
 
 
 def _print_order_ship_by_date(order, book):
@@ -9209,12 +9183,9 @@ def reviewer_profile(reviewer_id):
 
 # Helper function to send reviewer invitation email
 def send_reviewer_invitation_email(reviewer, book, inviter, message=None):
-    """Send reviewer invitation email via Mailtrap"""
-    sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
-    api_key = os.getenv("MAIL_TRAP")
-    
-    if not api_key:
-        logger.warning("MAIL_TRAP API key not set. Cannot send reviewer invitation email.")
+    """Send reviewer invitation email via Resend"""
+    if not is_mail_configured():
+        logger.warning("RESEND_API_KEY is not set. Cannot send reviewer invitation email.")
         return False
     
     # Get reviewer email from user account
@@ -9255,21 +9226,18 @@ Best regards,
 Ink Studio Team
 """
     
-    try:
-        mail = Mail(
-            sender=Address(email=sender, name="Ink Studio"),
-            to=[Address(email=reviewer_email)],
-            subject=subject,
-            text=message_text,
-            category="Reviewer Invitation"
-        )
-        client = MailtrapClient(token=api_key)
-        client.send(mail)
+    sent = send_email(
+        to=reviewer_email,
+        subject=subject,
+        text=message_text,
+        from_name="Ink Studio",
+        tags=["reviewer-invitation"],
+    )
+    if sent:
         logger.info(f"Reviewer invitation email sent to {reviewer_email} for book {book.id}")
         return True
-    except Exception as e:
-        logger.error(f"Failed to send reviewer invitation email: {str(e)}", exc_info=True)
-        return False
+    logger.error("Failed to send reviewer invitation email")
+    return False
 
 @book_bp.route('/reviewers/<int:reviewer_id>/invite', methods=['POST'])
 @writer_or_book_platform_required

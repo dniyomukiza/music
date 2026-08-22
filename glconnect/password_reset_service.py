@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import re
 from typing import Optional, Tuple
 
 from flask import current_app, url_for
 from itsdangerous import URLSafeTimedSerializer
-from mailtrap import Address, Mail, MailtrapClient
 
+from glconnect.email_service import send_email
 from glconnect.models import User, db
 
 PASSWORD_RESET_SALT = "password-reset"
@@ -85,33 +84,17 @@ def build_password_reset_url(email: str) -> str:
 
 
 def send_password_reset_email(to_email: str, reset_url: str) -> bool:
-    sender = os.getenv("SENDER_MAIL")
-    api_key = os.getenv("MAIL_TRAP")
-
-    if not sender:
-        current_app.logger.error("SENDER_MAIL is not set; password reset email not sent")
-        return False
-    if not api_key:
-        current_app.logger.error("MAIL_TRAP is not set; password reset email not sent")
-        return False
-
-    try:
-        mail = Mail(
-            sender=Address(email=sender, name="Ndotonic"),
-            to=[Address(email=to_email)],
-            subject="Reset your Ndotonic password",
-            text=(
-                "We received a request to reset your Ndotonic password.\n\n"
-                f"Reset your password (link expires in 1 hour):\n{reset_url}\n\n"
-                "If you did not request this, you can ignore this email."
-            ),
-            category="Reset password",
-        )
-        MailtrapClient(token=api_key).send(mail)
-        return True
-    except Exception as exc:
-        current_app.logger.exception("Password reset email failed: %s", exc)
-        return False
+    return send_email(
+        to=to_email,
+        subject="Reset your Ndotonic password",
+        text=(
+            "We received a request to reset your Ndotonic password.\n\n"
+            f"Reset your password (link expires in 1 hour):\n{reset_url}\n\n"
+            "If you did not request this, you can ignore this email."
+        ),
+        from_name="Ndotonic",
+        tags=["reset-password"],
+    )
 
 
 def issue_password_reset(user: User) -> bool:

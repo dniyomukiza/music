@@ -5,8 +5,7 @@ import psutil
 import os
 import logging
 
-from mailtrap import MailtrapClient, Mail, Address
-
+from glconnect.email_service import get_inbound_receiver, is_mail_configured, send_email
 from glconnect.forms import CareerApplicationForm
 
 logger = logging.getLogger(__name__)
@@ -158,7 +157,7 @@ def careers():
 
 @bp.route('/careers/apply', methods=['GET', 'POST'])
 def careers_apply():
-    """Submit a job application via Mailtrap (same delivery path as the contact form)."""
+    """Submit a job application via Resend (same delivery path as the contact form)."""
     form = CareerApplicationForm()
     allowed_positions = career_positions_allowed()
     form.position.choices = [("", "Select a role…")] + [(p, p) for p in allowed_positions]
@@ -166,9 +165,7 @@ def careers_apply():
     if request.method == 'GET' and position_q in allowed_positions:
         form.position.data = position_q
 
-    sender = (os.getenv("SENDER_MAIL") or "").strip()
-    receiver = (os.getenv("RECEIVER_MAIL") or "info@ndotonic.com").strip()
-    api_key = (os.getenv("MAIL_TRAP") or "").strip()
+    receiver = get_inbound_receiver()
 
     if form.validate_on_submit():
         position = (form.position.data or "").strip()
@@ -180,12 +177,11 @@ def careers_apply():
                 positions=allowed_positions,
             )
 
-        if not sender or not receiver or not api_key:
+        if not is_mail_configured() or not receiver:
             logger.warning(
-                "Careers apply mail not configured (sender=%s receiver=%s api_key=%s)",
-                bool(sender),
+                "Careers apply mail not configured (resend=%s receiver=%s)",
+                is_mail_configured(),
                 bool(receiver),
-                bool(api_key),
             )
             flash(
                 "We can’t send applications right now. Please email info@ndotonic.com directly.",
@@ -206,17 +202,15 @@ def careers_apply():
             f"\nMessage:\n{form.message.data}"
         )
 
-        try:
-            mail = Mail(
-                sender=Address(email=sender, name="Ndotonic Careers"),
-                to=[Address(email=receiver)],
-                subject=f"Job application: {position}",
-                text=body,
-                category="Careers",
-            )
-            MailtrapClient(token=api_key).send(mail)
-        except Exception:
-            logger.exception("Careers application Mailtrap send failed")
+        if not send_email(
+            to=receiver,
+            subject=f"Job application: {position}",
+            text=body,
+            from_name="Ndotonic Careers",
+            reply_to=form.email.data,
+            tags=["careers"],
+        ):
+            logger.error("Careers application Resend send failed")
             flash(
                 "We couldn’t send your application. Please try again or email info@ndotonic.com.",
                 "error",

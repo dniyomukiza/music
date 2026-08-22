@@ -1,7 +1,6 @@
 import requests
 import re,os
 import json
-from mailtrap import MailtrapClient, Mail, Address
 from glconnect.forms import *
 from glconnect.models import*
 from glconnect.account_terms import (
@@ -22,14 +21,8 @@ from flask_login import login_user,logout_user,LoginManager,login_required,curre
 from urllib.parse import urlparse
 from sqlalchemy import func
 from glconnect.book_platform_security import rate_limit
+from glconnect.email_service import send_email
 
-# Load configuration from environment variables
-config = {
-    "SENDER_MAIL": os.getenv("SENDER_MAIL"),
-    "SENDER_PASSWORD": os.getenv("SENDER_PASSWORD"),
-    "RECEIVER_MAIL": os.getenv("RECEIVER_MAIL"),
-    "MAIL_TRAP": os.getenv("MAIL_TRAP")
-}
 bp1 = Blueprint('routes1', __name__)
 API_URL = os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com").rstrip("/") + "/word/"
 login_manager = LoginManager()
@@ -230,35 +223,14 @@ def register():
     )
 
 def send_confirmation_email(to_email, confirm_url):
-    """Send verification email via Mailtrap. Returns True if sent, False if misconfigured or send failed."""
-    sender = os.getenv("SENDER_MAIL")
-    receiver = to_email
-    api_key = config.get("MAIL_TRAP")
-
-    if not sender:
-        current_app.logger.error("SENDER_MAIL is not set; confirmation email not sent")
-        return False
-    if not api_key:
-        current_app.logger.error("MAIL_TRAP is not set; confirmation email not sent")
-        return False
-
-    try:
-        mail = Mail(
-            sender=Address(email=sender, name="Please verify your account"),
-            to=[Address(email=receiver)],
-            subject="Please verify your account",
-            text=(
-                f"Click the link below to confirm your email:\n\n{confirm_url}"
-            ),
-            category="Verify email"
-        )
-        MailtrapClient(token=api_key).send(mail)
-        return True
-    except Exception as e:
-        current_app.logger.exception(
-            "Confirmation email failed for %s: %s", receiver, e
-        )
-        return False
+    """Send verification email via Resend. Returns True if sent, False if misconfigured or send failed."""
+    return send_email(
+        to=to_email,
+        subject="Please verify your account",
+        text=f"Click the link below to confirm your email:\n\n{confirm_url}",
+        from_name="Please verify your account",
+        tags=["verify-email"],
+    )
 
 
 def _send_confirmation_for_user(user):

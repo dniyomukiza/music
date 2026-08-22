@@ -43,6 +43,9 @@ scripts/fix_ytauto_from_disk.py
 # Combined GRO News video bulletins (generated at runtime)
 /glconnect/static/news_video/*.mp4
 
+# Local HeyGen downloads — generated mp4s, not source
+/video/heygen_downloads/
+
 # Radio (main.liq) jingles — not TV; ignore if your paths are machine-specific
 jingles.m3u
 # TV: video/videolist.m3u + video/tv_jingles.m3u are tracked so prod gets them on pull.
