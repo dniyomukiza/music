@@ -47,6 +47,10 @@ def _load_config():
         "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
         "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
         "HEYGEN_API_KEY": os.getenv("HEYGEN_API_KEY"),
+        "PARALLEL_API_KEY": (os.getenv("PARALLEL_API_KEY") or os.getenv("PARALLEL_KEY") or "").strip() or None,
+        "PARALLEL_WEBHOOK_SECRET": (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip() or None,
+        "PARALLEL_WEBHOOK_URL": (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip() or None,
+        "PARALLEL_MONITOR_MAX_ACTIVE": (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip() or None,
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
         "DB_URL": os.getenv("DB_URL"),
         "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
@@ -84,6 +88,24 @@ def _load_config():
                     cfg["GEMINI_API_KEY"] = cfg["GOOGLE_API_KEY"]
                 if not cfg.get("HEYGEN_API_KEY") and file_cfg.get("HEYGEN_API_KEY"):
                     cfg["HEYGEN_API_KEY"] = file_cfg["HEYGEN_API_KEY"]
+                if not cfg.get("PARALLEL_API_KEY"):
+                    _pk = _gl_first_nonempty(
+                        file_cfg, "PARALLEL_API_KEY", "PARALLEL_KEY"
+                    )
+                    if _pk:
+                        cfg["PARALLEL_API_KEY"] = _pk
+                if not cfg.get("PARALLEL_WEBHOOK_SECRET"):
+                    _pws = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_SECRET")
+                    if _pws:
+                        cfg["PARALLEL_WEBHOOK_SECRET"] = _pws
+                if not cfg.get("PARALLEL_WEBHOOK_URL"):
+                    _pwu = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_URL")
+                    if _pwu:
+                        cfg["PARALLEL_WEBHOOK_URL"] = _pwu
+                if not cfg.get("PARALLEL_MONITOR_MAX_ACTIVE"):
+                    _pma = _gl_first_nonempty(file_cfg, "PARALLEL_MONITOR_MAX_ACTIVE")
+                    if _pma:
+                        cfg["PARALLEL_MONITOR_MAX_ACTIVE"] = _pma
                 if not cfg.get("DB_URL"):
                     cfg["DB_URL"] = file_cfg.get("DB_URL") or file_cfg.get("DATABASE_URL")
                 if not cfg.get("OPENAI_AI_KEY") and file_cfg.get("OPENAI_AI_KEY"):
@@ -219,6 +241,14 @@ if config.get("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY"):
     os.environ["GEMINI_API_KEY"] = config["GEMINI_API_KEY"]
 if config.get("HEYGEN_API_KEY") and not os.getenv("HEYGEN_API_KEY"):
     os.environ["HEYGEN_API_KEY"] = config["HEYGEN_API_KEY"]
+if config.get("PARALLEL_API_KEY") and not (os.getenv("PARALLEL_API_KEY") or "").strip():
+    os.environ["PARALLEL_API_KEY"] = config["PARALLEL_API_KEY"]
+if config.get("PARALLEL_WEBHOOK_SECRET") and not (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip():
+    os.environ["PARALLEL_WEBHOOK_SECRET"] = config["PARALLEL_WEBHOOK_SECRET"]
+if config.get("PARALLEL_WEBHOOK_URL") and not (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip():
+    os.environ["PARALLEL_WEBHOOK_URL"] = config["PARALLEL_WEBHOOK_URL"]
+if config.get("PARALLEL_MONITOR_MAX_ACTIVE") and not (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip():
+    os.environ["PARALLEL_MONITOR_MAX_ACTIVE"] = config["PARALLEL_MONITOR_MAX_ACTIVE"]
 if config.get("DB_URL") and not os.getenv("DB_URL"):
     os.environ["DB_URL"] = config["DB_URL"]
 if config.get("DB_URL") and not os.getenv("DATABASE_URL"):

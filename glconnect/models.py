@@ -420,6 +420,64 @@ class NewsHeygenRoster(db.Model):
         return f'<NewsHeygenRoster {self.desk} {self.reporter_name} {self.status}>'
 
 
+class ParallelNewsMonitor(db.Model):
+    """Recurring Parallel web monitor for one GRO News beat."""
+
+    __tablename__ = 'parallel_news_monitors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    parallel_monitor_id = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    topic = db.Column(db.String(255), nullable=False, index=True)
+    desk = db.Column(db.String(32), nullable=False, default='news')
+    query = db.Column(db.Text, nullable=False)
+    frequency = db.Column(db.String(16), nullable=False, default='1d')
+    processor = db.Column(db.String(16), nullable=False, default='lite')
+    status = db.Column(db.String(32), nullable=False, default='active', index=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
+    last_event_at = db.Column(db.DateTime, nullable=True)
+    last_error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    events = db.relationship(
+        'ParallelNewsEvent',
+        backref='monitor',
+        cascade='all, delete-orphan',
+        lazy='dynamic',
+    )
+
+
+class ParallelNewsEvent(db.Model):
+    """Material development detected by a Parallel monitor."""
+
+    __tablename__ = 'parallel_news_events'
+
+    id = db.Column(db.Integer, primary_key=True)
+    monitor_id = db.Column(
+        db.Integer,
+        db.ForeignKey('parallel_news_monitors.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    parallel_event_id = db.Column(db.String(160), unique=True, nullable=False, index=True)
+    event_group_id = db.Column(db.String(160), nullable=False, index=True)
+    event_date = db.Column(db.String(32), nullable=True)
+    content = db.Column(db.Text, nullable=False)
+    citations = db.Column(db.Text, nullable=True)  # JSON list of source URLs / basis rows
+    confidence = db.Column(db.String(32), nullable=True)
+    is_read = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    received_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
 class PageAnalytics(db.Model):
     __tablename__ = 'page_analytics'
     id = db.Column(db.Integer, primary_key=True)

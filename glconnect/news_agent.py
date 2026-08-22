@@ -1177,16 +1177,26 @@ def _reporter_json_generation_config():
     )
 
 
-def _gemini_reporter_script_single(topic: str, assignment: dict) -> str:
+def _gemini_reporter_script_single(topic: str, assignment: dict, research: dict | None = None) -> str:
     """Generate one reporter script when the batch call misses or fails a topic."""
     name = (assignment.get("name") or "our reporter").strip()
     desk = (assignment.get("desk") or "news").strip()
+    from glconnect.parallel_news_search import format_research_block
+
+    packet = format_research_block(research)
+    research_rule = (
+        "Use only facts from the research packet. Do not invent names, numbers, or quotes. "
+        if packet
+        else "No live research packet was available; use careful general knowledge of the topic. "
+    )
     prompt = (
         f"Write a spoken radio news report about {topic!r}. "
         f"You are {name} on the {desk} desk. "
+        f"{research_rule}"
         "Use 4 to 6 sentences with concrete details about the story. "
         f'Sign off exactly: "I am {name}, for GLC News." '
-        "Return only the spoken script text."
+        "Return only the spoken script text.\n"
+        f"{packet}"
     )
     try:
         raw = _gemini_generate_text(prompt)
@@ -1198,7 +1208,12 @@ def _gemini_reporter_script_single(topic: str, assignment: dict) -> str:
     return ""
 
 
-def _gemini_reporter_scripts(topics: list, assignments: list = None, trace: NewsPipelineTrace = None) -> dict:
+def _gemini_reporter_scripts(
+    topics: list,
+    assignments: list = None,
+    trace: NewsPipelineTrace = None,
+    research: dict | None = None,
+) -> dict:
     """One Gemini call for all reporter scripts. Returns {topic: script} or {}."""
     if not topics:
         return {}
@@ -1210,15 +1225,30 @@ def _gemini_reporter_scripts(topics: list, assignments: list = None, trace: News
                 f'Sign off exactly: "I am {item["name"]}, for GLC News."'
             )
         assignment_block = "\n".join(assignment_lines) if assignment_lines else ""
+        from glconnect.parallel_news_search import format_research_block
+
+        research_blocks = []
+        for topic in topics:
+            block = format_research_block((research or {}).get(topic))
+            if block:
+                research_blocks.append(block)
+        research_section = "\n\n".join(research_blocks)
+        research_rule = (
+            "Use only facts from the research packets below. Do not invent names, numbers, or quotes. "
+            if research_section
+            else "No live research packets were available; use careful general knowledge of each topic. "
+        )
         prompt = (
             "Write spoken radio news reports. Return ONLY JSON:\n"
             '{"reports": [{"topic": "<exact topic>", "script": "<4 to 6 spoken sentences, no titles, '
             'no asterisks>"}]}\n'
             f"Topics: {json.dumps(list(topics))}\n"
             f"Assigned reporters:\n{assignment_block}\n"
+            f"{research_rule}"
             "Each script must cover that exact topic only, be spoken by that assigned reporter, "
             "and must not reuse sentences across reports. "
-            "The studio anchor is a different person and must not file these reports."
+            "The studio anchor is a different person and must not file these reports.\n"
+            f"{research_section}"
         )
         raw = _gemini_generate_text(prompt, generation_config=_reporter_json_generation_config())
         gemini_meta = dict(_last_gemini_meta)
@@ -1299,7 +1329,25 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             "desk": reporter["desk"],
             "voice": reporter["voice"],
         })
-    generated = _gemini_reporter_scripts(topics, assignments=assignments, trace=trace)
+    from glconnect.parallel_news_monitor import recent_event_packets
+    from glconnect.parallel_news_search import search_topics_for_news
+
+    research = search_topics_for_news(topics, trace=trace)
+    monitored = recent_event_packets(topics)
+    for topic, items in monitored.items():
+        packet = research.setdefault(
+            topic, {"topic": topic, "source": "monitor", "items": []}
+        )
+        packet["items"] = list(items) + list(packet.get("items") or [])
+        packet["source"] = "parallel+monitor" if packet["items"] else packet.get("source")
+    if trace and monitored:
+        trace.stage(
+            "parallel_monitor_inbox",
+            topics_with_events=f"{len(monitored)}/{len(topics)}",
+        )
+    generated = _gemini_reporter_scripts(
+        topics, assignments=assignments, trace=trace, research=research
+    )
     script_api_error = (_last_gemini_meta or {}).get("error")
     skip_single = script_api_error in _FATAL_SCRIPT_ERRORS
     script_keys = []
@@ -1320,7 +1368,7 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             script = ""
             print(f"DEBUG: Reporter {index} stopping on {script_api_error} for topic={topic!r}")
         else:
-            script = _gemini_reporter_script_single(topic, assignment)
+            script = _gemini_reporter_script_single(topic, assignment, research.get(topic))
             if script and not is_placeholder_reporter_script(script):
                 source = "gemini_single"
                 print(f"DEBUG: Reporter {index} using single-topic Gemini script for topic={topic!r}")

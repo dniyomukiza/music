@@ -16,6 +16,150 @@ news_bp = Blueprint('news_bp', __name__)
 # Task storage (keeping for backward compatibility, but using database as primary)
 tasks = {}
 _tasks_lock = threading.Lock()
+_parallel_webhooks_in_flight = set()
+_parallel_webhooks_lock = threading.Lock()
+
+
+def _parallel_admin_required():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Authentication required'}), 401
+    if getattr(current_user, 'role', None) != 'admin':
+        return jsonify({'error': 'Admin privileges required'}), 403
+    return None
+
+
+def _parallel_webhook_url():
+    configured = (
+        os.getenv("PARALLEL_WEBHOOK_URL")
+        or current_app.config.get("PARALLEL_WEBHOOK_URL")
+        or ""
+    ).strip()
+    if configured:
+        return configured
+    return "https://ndotonic.com/routes2/news/api/parallel-monitors/webhook"
+
+
+def _parallel_monitor_json(row, *, include_events=False):
+    payload = {
+        'id': row.id,
+        'parallel_monitor_id': row.parallel_monitor_id,
+        'topic': row.topic,
+        'desk': row.desk,
+        'query': row.query,
+        'frequency': row.frequency,
+        'processor': row.processor,
+        'status': row.status,
+        'last_event_at': row.last_event_at.isoformat() if row.last_event_at else None,
+        'last_error': row.last_error,
+        'created_at': row.created_at.isoformat() if row.created_at else None,
+        'updated_at': row.updated_at.isoformat() if row.updated_at else None,
+    }
+    if include_events:
+        from glconnect.models import ParallelNewsEvent
+
+        payload['events'] = [
+            _parallel_event_json(event)
+            for event in row.events.order_by(
+                ParallelNewsEvent.received_at.desc()
+            ).limit(25).all()
+        ]
+    return payload
+
+
+def _parallel_event_json(row):
+    try:
+        citations = json.loads(row.citations or "[]")
+    except (TypeError, ValueError):
+        citations = []
+    return {
+        'id': row.id,
+        'monitor_id': row.monitor_id,
+        'parallel_event_id': row.parallel_event_id,
+        'event_group_id': row.event_group_id,
+        'event_date': row.event_date,
+        'content': row.content,
+        'citations': citations,
+        'confidence': row.confidence,
+        'is_read': row.is_read,
+        'received_at': row.received_at.isoformat() if row.received_at else None,
+    }
+
+
+def _process_parallel_monitor_webhook(app, payload, webhook_id):
+    from glconnect.models import db, ParallelNewsEvent, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import (
+        ParallelMonitorError,
+        event_values,
+        fetch_monitor_events,
+    )
+
+    try:
+        with app.app_context():
+            event_type = str(payload.get('type') or '')
+            data = payload.get('data') if isinstance(payload.get('data'), dict) else {}
+            remote_monitor_id = str(data.get('monitor_id') or '').strip()
+            monitor = ParallelNewsMonitor.query.filter_by(
+                parallel_monitor_id=remote_monitor_id
+            ).first()
+            if not monitor:
+                app.logger.warning(
+                    "Parallel webhook %s references unknown monitor %s",
+                    webhook_id,
+                    remote_monitor_id,
+                )
+                return
+            if event_type == 'monitor.execution.failed':
+                event = data.get('event') if isinstance(data.get('event'), dict) else {}
+                monitor.last_error = str(event.get('error') or 'Parallel monitor execution failed')[:1000]
+                db.session.commit()
+                return
+            if event_type != 'monitor.event.detected':
+                return
+            event = data.get('event') if isinstance(data.get('event'), dict) else {}
+            event_group_id = str(event.get('event_group_id') or '').strip()
+            if not event_group_id:
+                monitor.last_error = 'Parallel webhook did not include event_group_id'
+                db.session.commit()
+                return
+            remote_events = fetch_monitor_events(remote_monitor_id, event_group_id)
+            inserted = 0
+            for remote_event in remote_events:
+                values = event_values(remote_event)
+                if not values['parallel_event_id'] or not values['content']:
+                    continue
+                if ParallelNewsEvent.query.filter_by(
+                    parallel_event_id=values['parallel_event_id']
+                ).first():
+                    continue
+                db.session.add(ParallelNewsEvent(monitor_id=monitor.id, **values))
+                inserted += 1
+            monitor.last_event_at = datetime.utcnow()
+            monitor.last_error = None
+            db.session.commit()
+            app.logger.info(
+                "Stored %s Parallel news event(s) for topic %s",
+                inserted,
+                monitor.topic,
+            )
+    except ParallelMonitorError as exc:
+        with app.app_context():
+            db.session.rollback()
+            monitor = ParallelNewsMonitor.query.filter_by(
+                parallel_monitor_id=str(
+                    (payload.get('data') or {}).get('monitor_id') or ''
+                )
+            ).first()
+            if monitor:
+                monitor.last_error = str(exc)[:1000]
+                db.session.commit()
+            app.logger.warning("Parallel webhook processing failed: %s", exc)
+    except Exception:
+        with app.app_context():
+            db.session.rollback()
+            app.logger.exception("Unexpected Parallel webhook processing failure")
+    finally:
+        with _parallel_webhooks_lock:
+            _parallel_webhooks_in_flight.discard(webhook_id)
 
 # Database task management functions
 def create_task_in_db(task_id, topics):
@@ -2066,6 +2210,250 @@ def index():
     from .forms import KeywordForm
     form = KeywordForm()
     return render_template('newsgen.html', form=form)
+
+
+@news_bp.route('/api/parallel-monitors', methods=['GET'])
+@login_required
+def list_parallel_monitors():
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import ParallelNewsMonitor
+
+    rows = ParallelNewsMonitor.query.order_by(
+        ParallelNewsMonitor.created_at.desc()
+    ).all()
+    return jsonify({
+        'configured': bool(os.getenv('PARALLEL_API_KEY')),
+        'webhook_configured': bool(os.getenv('PARALLEL_WEBHOOK_SECRET')),
+        'webhook_url': _parallel_webhook_url(),
+        'monitors': [
+            _parallel_monitor_json(row, include_events=True) for row in rows
+        ],
+    })
+
+
+@news_bp.route('/api/parallel-monitors', methods=['POST'])
+@login_required
+def create_parallel_monitor_route():
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import (
+        ParallelMonitorError,
+        create_monitor,
+        normalize_frequency,
+        normalize_processor,
+    )
+
+    data = request.get_json(silent=True) or {}
+    topic = str(data.get('topic') or '').strip()
+    desk = str(data.get('desk') or 'news').strip().lower()[:32]
+    if not topic or len(topic) > 255:
+        return jsonify({'error': 'topic is required and must be at most 255 characters'}), 400
+    if ParallelNewsMonitor.query.filter(
+        db.func.lower(ParallelNewsMonitor.topic) == topic.lower(),
+        ParallelNewsMonitor.status == 'active',
+    ).first():
+        return jsonify({'error': 'An active monitor already exists for this topic'}), 409
+    try:
+        max_active = max(1, int(os.getenv('PARALLEL_MONITOR_MAX_ACTIVE', '20')))
+    except ValueError:
+        max_active = 20
+    active_count = ParallelNewsMonitor.query.filter_by(status='active').count()
+    if active_count >= max_active:
+        return jsonify({
+            'error': f'Active monitor limit reached ({max_active}); cancel a beat first'
+        }), 409
+    try:
+        frequency = normalize_frequency(str(data.get('frequency') or '1d'))
+        processor = normalize_processor(str(data.get('processor') or 'lite'))
+        external_id = f"glc-news-{uuid.uuid4()}"
+        remote = create_monitor(
+            topic=topic,
+            desk=desk,
+            frequency=frequency,
+            processor=processor,
+            webhook_url=_parallel_webhook_url(),
+            external_id=external_id,
+        )
+        remote_id = str(remote.get('monitor_id') or '').strip()
+        if not remote_id:
+            raise ParallelMonitorError("Parallel did not return monitor_id")
+        row = ParallelNewsMonitor(
+            parallel_monitor_id=remote_id,
+            topic=topic,
+            desk=desk,
+            query=f"Extract recent material news developments about {topic}",
+            frequency=str(remote.get('frequency') or frequency),
+            processor=str(remote.get('processor') or processor),
+            status=str(remote.get('status') or 'active'),
+            created_by_user_id=current_user.user_id,
+        )
+        db.session.add(row)
+        db.session.commit()
+        return jsonify({'monitor': _parallel_monitor_json(row, include_events=True)}), 201
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except ParallelMonitorError as exc:
+        current_app.logger.warning("Parallel monitor creation failed: %s", exc)
+        return jsonify({'error': str(exc)}), 502
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not persist Parallel monitor")
+        return jsonify({'error': 'Could not save monitor'}), 500
+
+
+@news_bp.route('/api/parallel-monitors/<int:monitor_id>', methods=['PATCH'])
+@login_required
+def update_parallel_monitor_route(monitor_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import (
+        ParallelMonitorError,
+        normalize_frequency,
+        normalize_processor,
+        update_monitor,
+    )
+
+    row = ParallelNewsMonitor.query.get_or_404(monitor_id)
+    if row.status == 'cancelled':
+        return jsonify({'error': 'Cancelled monitors cannot be updated'}), 409
+    data = request.get_json(silent=True) or {}
+    topic = str(data.get('topic', row.topic) or '').strip()
+    desk = str(data.get('desk', row.desk) or 'news').strip().lower()[:32]
+    if not topic or len(topic) > 255:
+        return jsonify({'error': 'topic is required and must be at most 255 characters'}), 400
+    try:
+        frequency = normalize_frequency(str(data.get('frequency', row.frequency)))
+        processor = normalize_processor(str(data.get('processor', row.processor)))
+        remote = update_monitor(
+            row.parallel_monitor_id,
+            topic=topic,
+            desk=desk,
+            frequency=frequency,
+            processor=processor,
+            webhook_url=_parallel_webhook_url(),
+            external_id=f"glc-news-monitor-{row.id}",
+        )
+        row.topic = topic
+        row.desk = desk
+        row.query = f"Extract recent material news developments about {topic}"
+        row.frequency = str(remote.get('frequency') or frequency)
+        row.processor = str(remote.get('processor') or processor)
+        row.status = str(remote.get('status') or row.status)
+        row.last_error = None
+        db.session.commit()
+        return jsonify({'monitor': _parallel_monitor_json(row, include_events=True)})
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except ParallelMonitorError as exc:
+        row.last_error = str(exc)[:1000]
+        db.session.commit()
+        return jsonify({'error': str(exc)}), 502
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not update Parallel monitor")
+        return jsonify({'error': 'Could not update monitor'}), 500
+
+
+@news_bp.route('/api/parallel-monitors/<int:monitor_id>', methods=['DELETE'])
+@login_required
+def cancel_parallel_monitor_route(monitor_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import ParallelMonitorError, cancel_monitor
+
+    row = ParallelNewsMonitor.query.get_or_404(monitor_id)
+    try:
+        remote = cancel_monitor(row.parallel_monitor_id)
+        row.status = str(remote.get('status') or 'cancelled')
+        row.last_error = None
+        db.session.commit()
+        return jsonify({'monitor': _parallel_monitor_json(row)})
+    except ParallelMonitorError as exc:
+        row.last_error = str(exc)[:1000]
+        db.session.commit()
+        return jsonify({'error': str(exc)}), 502
+
+
+@news_bp.route('/api/parallel-monitors/<int:monitor_id>/trigger', methods=['POST'])
+@login_required
+def trigger_parallel_monitor_route(monitor_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import ParallelMonitorError, trigger_monitor
+
+    row = ParallelNewsMonitor.query.get_or_404(monitor_id)
+    if row.status != 'active':
+        return jsonify({'error': 'Only active monitors can be triggered'}), 409
+    try:
+        trigger_monitor(row.parallel_monitor_id)
+        return jsonify({'status': 'queued', 'monitor_id': row.id}), 202
+    except ParallelMonitorError as exc:
+        return jsonify({'error': str(exc)}), 502
+
+
+@news_bp.route('/api/parallel-events/<int:event_id>/read', methods=['POST'])
+@login_required
+def mark_parallel_event_read(event_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsEvent
+
+    row = ParallelNewsEvent.query.get_or_404(event_id)
+    row.is_read = bool((request.get_json(silent=True) or {}).get('is_read', True))
+    db.session.commit()
+    return jsonify({'event': _parallel_event_json(row)})
+
+
+@news_bp.route('/api/parallel-monitors/webhook', methods=['POST'])
+def parallel_monitor_webhook():
+    from glconnect.parallel_news_monitor import (
+        parallel_webhook_secret,
+        verify_webhook_signature,
+    )
+
+    body = request.get_data(cache=True)
+    webhook_id = (request.headers.get('webhook-id') or '').strip()
+    secret = parallel_webhook_secret()
+    if not secret:
+        current_app.logger.error(
+            "Parallel webhook rejected: PARALLEL_WEBHOOK_SECRET is not configured"
+        )
+        return jsonify({'error': 'Webhook verification unavailable'}), 503
+    if not verify_webhook_signature(
+        body=body,
+        webhook_id=webhook_id,
+        webhook_timestamp=request.headers.get('webhook-timestamp') or '',
+        signature_header=request.headers.get('webhook-signature') or '',
+        secret=secret,
+    ):
+        return jsonify({'error': 'Invalid webhook signature'}), 401
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'Invalid JSON payload'}), 400
+    with _parallel_webhooks_lock:
+        if webhook_id in _parallel_webhooks_in_flight:
+            return jsonify({'status': 'already_processing'}), 200
+        _parallel_webhooks_in_flight.add(webhook_id)
+    app = current_app._get_current_object()
+    threading.Thread(
+        target=_process_parallel_monitor_webhook,
+        args=(app, payload, webhook_id),
+        daemon=True,
+        name=f"parallel-monitor-{webhook_id[:16]}",
+    ).start()
+    return jsonify({'status': 'accepted'}), 202
+
 
 @news_bp.route('/memory-status')
 def memory_status():
