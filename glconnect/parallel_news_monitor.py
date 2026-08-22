@@ -131,7 +131,6 @@ def update_monitor(
     topic: str,
     desk: str,
     frequency: str,
-    processor: str,
     webhook_url: str,
     external_id: str,
 ) -> dict:
@@ -145,7 +144,6 @@ def update_monitor(
         body={
             "type": "event_stream",
             "frequency": normalize_frequency(frequency),
-            "processor": normalize_processor(processor),
             "settings": {"query": query},
             "webhook": {
                 "url": webhook_url,

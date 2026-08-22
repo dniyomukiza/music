@@ -2315,7 +2315,6 @@ def update_parallel_monitor_route(monitor_id):
     from glconnect.parallel_news_monitor import (
         ParallelMonitorError,
         normalize_frequency,
-        normalize_processor,
         update_monitor,
     )
 
@@ -2327,15 +2326,17 @@ def update_parallel_monitor_route(monitor_id):
     desk = str(data.get('desk', row.desk) or 'news').strip().lower()[:32]
     if not topic or len(topic) > 255:
         return jsonify({'error': 'topic is required and must be at most 255 characters'}), 400
+    if 'processor' in data and str(data['processor']).strip().lower() != row.processor:
+        return jsonify({
+            'error': 'Parallel does not allow changing a monitor processor; recreate the monitor instead'
+        }), 400
     try:
         frequency = normalize_frequency(str(data.get('frequency', row.frequency)))
-        processor = normalize_processor(str(data.get('processor', row.processor)))
         remote = update_monitor(
             row.parallel_monitor_id,
             topic=topic,
             desk=desk,
             frequency=frequency,
-            processor=processor,
             webhook_url=_parallel_webhook_url(),
             external_id=f"glc-news-monitor-{row.id}",
         )
@@ -2343,7 +2344,7 @@ def update_parallel_monitor_route(monitor_id):
         row.desk = desk
         row.query = f"Extract recent material news developments about {topic}"
         row.frequency = str(remote.get('frequency') or frequency)
-        row.processor = str(remote.get('processor') or processor)
+        row.processor = str(remote.get('processor') or row.processor)
         row.status = str(remote.get('status') or row.status)
         row.last_error = None
         db.session.commit()

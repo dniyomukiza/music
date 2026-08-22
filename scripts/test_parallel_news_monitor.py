@@ -20,6 +20,7 @@ sys.modules.setdefault("glconnect", package)
 from glconnect.parallel_news_monitor import (
     create_monitor,
     event_values,
+    update_monitor,
     verify_webhook_signature,
 )
 
@@ -117,11 +118,36 @@ def test_event_values_extracts_sources():
     assert values["confidence"] == "high"
 
 
+def test_update_omits_immutable_processor():
+    response = Mock(status_code=200)
+    response.json.return_value = {
+        "monitor_id": "monitor_123",
+        "status": "active",
+        "frequency": "1d",
+        "processor": "lite",
+    }
+    with patch.dict("os.environ", {"PARALLEL_API_KEY": "test-key"}):
+        with patch("glconnect.parallel_news_monitor.requests.request", return_value=response) as call:
+            update_monitor(
+                "monitor_123",
+                topic="World health",
+                desk="health",
+                frequency="1d",
+                webhook_url="https://ndotonic.com/routes2/news/api/parallel-monitors/webhook",
+                external_id="glc-news-monitor-1",
+            )
+    body = call.call_args.kwargs["json"]
+    assert "processor" not in body
+    assert body["type"] == "event_stream"
+    assert body["settings"]["query"].endswith("World health")
+
+
 def main():
     test_valid_webhook_signature()
     test_rejects_stale_or_tampered_webhook()
     test_create_uses_stable_monitor_contract()
     test_event_values_extracts_sources()
+    test_update_omits_immutable_processor()
     print("OK: parallel_news_monitor tests passed")
 
 

@@ -1767,3 +1767,65 @@ def ensure_collaboration_role_enum_schema(db) -> None:
     except Exception as e:
         db.session.rollback()
         logger.error("Could not patch CollaborationRole enum: %s", e, exc_info=True)
+
+
+def ensure_parallel_news_monitor_schema(db) -> None:
+    """Create the Parallel newsroom inbox tables on existing PostgreSQL deployments."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        if db.engine.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Parallel news monitor schema: dialect check failed: %s", e)
+        return
+
+    statements = [
+        """
+        CREATE TABLE IF NOT EXISTS parallel_news_monitors (
+            id SERIAL PRIMARY KEY,
+            parallel_monitor_id VARCHAR(128) UNIQUE NOT NULL,
+            topic VARCHAR(255) NOT NULL,
+            desk VARCHAR(32) NOT NULL DEFAULT 'news',
+            query TEXT NOT NULL,
+            frequency VARCHAR(16) NOT NULL DEFAULT '1d',
+            processor VARCHAR(16) NOT NULL DEFAULT 'lite',
+            status VARCHAR(32) NOT NULL DEFAULT 'active',
+            created_by_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+            last_event_at TIMESTAMP,
+            last_error TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS parallel_news_events (
+            id SERIAL PRIMARY KEY,
+            monitor_id INTEGER NOT NULL REFERENCES parallel_news_monitors(id) ON DELETE CASCADE,
+            parallel_event_id VARCHAR(160) UNIQUE NOT NULL,
+            event_group_id VARCHAR(160) NOT NULL,
+            event_date VARCHAR(32),
+            content TEXT NOT NULL,
+            citations TEXT,
+            confidence VARCHAR(32),
+            is_read BOOLEAN NOT NULL DEFAULT FALSE,
+            received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_monitors_parallel_monitor_id ON parallel_news_monitors(parallel_monitor_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_monitors_topic ON parallel_news_monitors(topic)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_monitors_status ON parallel_news_monitors(status)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_monitor_id ON parallel_news_events(monitor_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_parallel_event_id ON parallel_news_events(parallel_event_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_event_group_id ON parallel_news_events(event_group_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_is_read ON parallel_news_events(is_read)",
+    ]
+    try:
+        for statement in statements:
+            db.session.execute(text(statement))
+        db.session.commit()
+        logger.info("Parallel news monitor schema verified.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch Parallel news monitor schema: %s", e, exc_info=True)
+        raise
