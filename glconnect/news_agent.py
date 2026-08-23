@@ -769,9 +769,10 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             raise RuntimeError(error)
 
     try:
-        print(f"DEBUG: Attempting TTS for {output_filename} with text: '{clean_text[:100]}...'")
-        print(f"DEBUG: Using voice: {voice_name}, rate: {speaking_rate}, pitch: {pitch}, backend: {_tts_backend}")
-        print(f"DEBUG: Text length: {len(clean_text)} characters")
+        print(
+            f"DEBUG: TTS confirmed for {output_filename} "
+            f"voice={voice_name} chars={len(clean_text)} backend={_tts_backend}"
+        )
 
         if _tts_backend == "elevenlabs":
             audio_content = _elevenlabs_audio_bytes(clean_text, voice_name)
@@ -1264,7 +1265,7 @@ def _gemini_reporter_scripts(
                     model=gemini_meta.get("model"),
                     attempts=gemini_meta.get("attempts"),
                     error="invalid_json",
-                    preview=_clip_trace_text(raw, 200),
+                    chars=len(raw or ""),
                 )
             print(f"DEBUG: Gemini reporter scripts failed: {exc}")
             return {}
@@ -1403,7 +1404,6 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             "desk": assignment["desk"],
             "anchor_collision": _reporter_voice_collides_with_anchor(assignment["voice"]),
             "chars": len(script),
-            "preview": _clip_trace_text(script, 160),
         })
         print(
             f"DEBUG: Reporter {index} name={assignment['name']} category={category} "

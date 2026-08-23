@@ -153,8 +153,8 @@ def send_email(
     try:
         import resend
     except ImportError:
-        logger.error("resend package is not installed; email not sent")
-        return False
+        logger.warning("resend package missing; sending via Resend HTTP API")
+        return _send_via_resend_http(api_key, params, recipients, subject)
 
     try:
         resend.api_key = api_key
@@ -162,4 +162,42 @@ def send_email(
         return True
     except Exception:
         logger.exception("Resend send failed (to=%s subject=%s)", recipients, subject)
+        return False
+
+
+def _send_via_resend_http(
+    api_key: str,
+    params: dict,
+    recipients: list[str],
+    subject: str,
+) -> bool:
+    """Send through Resend's REST API when the SDK is not installed in the image."""
+    try:
+        import requests
+    except ImportError:
+        logger.error("Neither resend nor requests is installed; email not sent")
+        return False
+
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=params,
+            timeout=20,
+        )
+        if response.status_code >= 400:
+            logger.error(
+                "Resend HTTP send failed (to=%s subject=%s status=%s body=%s)",
+                recipients,
+                subject,
+                response.status_code,
+                (response.text or "")[:240],
+            )
+            return False
+        return True
+    except Exception:
+        logger.exception("Resend HTTP send failed (to=%s subject=%s)", recipients, subject)
         return False

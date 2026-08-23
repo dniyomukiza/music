@@ -1523,12 +1523,32 @@ def categorize_topic_with_confidence(topic: str) -> tuple[str, float]:
         confidence = 0.6  # Lower confidence for keyword matching
         return category, confidence
 
+def _broadcast_output_confirmation(output) -> str:
+    """Log that scripts exist without printing the script text."""
+    if output is None:
+        return "DEBUG: generate_broadcast confirmed none"
+    if isinstance(output, dict):
+        scripts = output.get("scripts") if isinstance(output.get("scripts"), dict) else {}
+        reporters = scripts.get("reporters") if isinstance(scripts, dict) else None
+        return (
+            "DEBUG: generate_broadcast confirmed "
+            f"keys={list(output.keys())} "
+            f"audio={bool(output.get('audio_file'))} "
+            f"reporters={len(reporters or [])} "
+            f"error={bool(output.get('error'))}"
+        )
+    return (
+        f"DEBUG: generate_broadcast confirmed type={type(output).__name__} "
+        f"chars={len(str(output))}"
+    )
+
+
 def extract_audio_path_from_output(output_text):
     """Extract audio file path from agent output text or filesystem."""
     if not output_text:
         return None
     
-    print(f"DEBUG: Looking for audio path in output: {output_text}")
+    print(f"DEBUG: Looking for audio path in output ({len(str(output_text))} chars)")
     
     # Look for final news broadcast audio file in glconnect/static/audio/
     patterns = [
@@ -1902,11 +1922,7 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
         print("ADK agent system completed successfully")
-        print(f"DEBUG: Output type: {type(output)}")
-        print(f"DEBUG: Output content: {str(output)[:500]}...")
-        print(f"DEBUG: Output is None: {output is None}")
-        print(f"DEBUG: Output is dict: {isinstance(output, dict)}")
-        print(f"DEBUG: Output keys: {list(output.keys()) if isinstance(output, dict) else 'Not a dict'}")
+        print(_broadcast_output_confirmation(output))
         
         # Handle both string and dictionary outputs
         if output is None:
@@ -1917,7 +1933,7 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['error'] = "No topics provided for news generation"
             return
         elif isinstance(output, dict):
-            print(f"Output from generate_broadcast (dict): {output}")
+            print(_broadcast_output_confirmation(output))
             
             # Check for error first
             if 'error' in output:
@@ -2044,7 +2060,7 @@ def run_generate_broadcast(task_id, topics):
             print("ADK agent system completed successfully!")
             return
         elif isinstance(output, str):
-            print(f"Output from generate_broadcast: {output}")
+            print(_broadcast_output_confirmation(output))
             # Extract the audio file path from the string output
             audio_file_path = extract_audio_path_from_output(output)
             print(f"Extracted audio file path: {audio_file_path}")
