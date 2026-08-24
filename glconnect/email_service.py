@@ -1,4 +1,4 @@
-"""Outbound email via Resend (replaces Mailtrap).
+"""Outbound email via Resend.
 
 Set RESEND_API_KEY in `.env` locally, or in production `/etc/glconfig.json`
 (same pattern as HEYGEN_API_KEY / Stripe). Replace `re_xxxxxxxxx` with the

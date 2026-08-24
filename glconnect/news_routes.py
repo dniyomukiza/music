@@ -2866,9 +2866,6 @@ def broadcast():
             from glconnect.news_agent import generate_broadcast
             result = generate_broadcast(relevant_topics, task_id=task_id)
             
-            print(f"DEBUG: Direct news generation completed for task {task_id}")
-            print(f"DEBUG: Result type: {type(result)}")
-            
             # Update task status based on result
             # A result without an audio path is not a successful broadcast.
             # The audio generator reports TTS/finalization failures using a
@@ -2889,7 +2886,6 @@ def broadcast():
                         tasks[task_id]['result'] = result
                         tasks[task_id]['completed_at'] = datetime.now()
                 
-                print(f"DEBUG: Task {task_id} marked as completed with result stored")
                 if result.get('pipeline'):
                     print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} used_fallback={result.get('used_fallback')}")
             else:
@@ -3487,7 +3483,7 @@ def task_status(task_id):
                 actual_file_path = os.path.join('glconnect', 'static', 'audio', filename)
                 
                 if not os.path.exists(actual_file_path):
-                    print(f"DEBUG: Audio file not found on disk: {actual_file_path}")
+                    print(f"ERROR: Audio file not found on disk: {actual_file_path}")
                     return jsonify({
                         'status': 'failed',
                         'error': 'Audio file not found on disk'
@@ -3495,13 +3491,11 @@ def task_status(task_id):
                 
                 file_size = os.path.getsize(actual_file_path)
                 if file_size == 0:
-                    print(f"DEBUG: Audio file is empty: {actual_file_path}")
+                    print(f"ERROR: Audio file is empty: {actual_file_path}")
                     return jsonify({
                         'status': 'failed',
                         'error': 'Audio file is empty'
                     })
-                
-                print(f"DEBUG: Audio file verified for UI - {actual_file_path} ({file_size} bytes)")
             
             return jsonify(completed_news_payload(
                 task_id,
@@ -3512,9 +3506,6 @@ def task_status(task_id):
         # Fallback for old structure
         elif 'result' in task:
             result = task['result']
-            print(f"DEBUG: Task {task_id} completed with result: {result}")
-            print(f"DEBUG: Result type: {type(result)}")
-            print(f"DEBUG: Result keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
             
             # Initialize variables
             audio_file_path = None
@@ -3526,14 +3517,10 @@ def task_status(task_id):
                 if 'audio_file' in result:
                     audio_file_path = result['audio_file']
                     summary = result.get('summary', '')
-                    print(f"DEBUG: Found audio_file in result: {audio_file_path}")
                 # Check for old structure
                 elif 'audio_file_path' in result:
                     audio_file_path = result['audio_file_path']
                     summary = result.get('summary', '')
-                    print(f"DEBUG: Found audio_file_path in result: {audio_file_path}")
-                else:
-                    print(f"DEBUG: No audio_file or audio_file_path found in result")
                 
                 # Extract summary from content if available
                 if not summary and 'content' in result:
@@ -3568,8 +3555,6 @@ def task_status(task_id):
             
     elif task['status'] == 'failed':
         error_message = task.get('error')
-        print(f"DEBUG: Task {task_id} failed - raw error: '{error_message}'")
-        print(f"DEBUG: Task {task_id} full task data: {task}")
         
         if not error_message or error_message == 'Unknown error':
             # Try to get more specific error information
@@ -3577,7 +3562,7 @@ def task_status(task_id):
                 error_message = f"News generation failed at {task['failed_at']}. Please try again."
             else:
                 error_message = "News generation failed due to an unknown error. Please try again."
-        print(f"DEBUG: Task {task_id} failed with error: {error_message}")
+        print(f"ERROR: Task {task_id} failed: {error_message}")
         return jsonify({
             'status': 'failed',
             'error': error_message,

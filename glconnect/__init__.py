@@ -7,7 +7,6 @@ from .models import db, User, NewsHeygenRoster  # noqa: F401 — ensure table is
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
-from flask_mail import Mail
 from flask_ckeditor import CKEditor
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -302,7 +301,6 @@ print(f"HEYGEN_API_KEY: {'(set)' if heygen_api_key else '(not set)'}")
 print(f"GOOGLE_APPLICATION_CREDENTIALS: {config.get('GOOGLE_APPLICATION_CREDENTIALS', 'tts.json')}")
 
 # Initialize extensions
-mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
 
@@ -527,7 +525,6 @@ def create_app(config_overrides=None):
     jwt.init_app(app)
     login_manager.init_app(app)
     ckeditor.init_app(app)
-    mail.init_app(app)
 
     def _hls_root() -> str:
         # Docker: set HLS_VIDEO_DIR=/usr/src/appdir/hls-video (same bind mount as Liquidsoap ./hls-video)

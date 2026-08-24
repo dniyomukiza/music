@@ -322,7 +322,11 @@ def _result_with_pipeline(result: dict, trace: NewsPipelineTrace) -> dict:
     result = dict(result)
     result["pipeline"] = pipeline
     result["used_fallback"] = pipeline["used_fallback"]
-    print("PIPELINE_SUMMARY " + json.dumps(pipeline, default=str))
+    if pipeline.get("outcome") != "ok" or pipeline.get("warnings"):
+        print(
+            f"PIPELINE_SUMMARY task={pipeline.get('task_id')} "
+            f"outcome={pipeline.get('outcome')} used_fallback={pipeline.get('used_fallback')}"
+        )
     if pipeline.get("warnings"):
         print("PIPELINE_WARNINGS " + " || ".join(pipeline["warnings"]))
     return result
