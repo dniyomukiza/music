@@ -42,7 +42,7 @@ jobs:
           POSTGRES_PASSWORD: ci
           POSTGRES_DB: ci
         run: |
-          DB_URL=$(python -c "import os; u=os.environ['POSTGRES_USER']; p=os.environ['POSTGRES_PASSWORD']; d=os.environ['POSTGRES_DB']; print('postgres'+'ql://'+u+':'+p+'@localhost:5432/'+d)")
+          DB_URL=$(python -c "import os; u=os.environ['POSTGRES_USER']; p=os.environ['POSTGRES_PASSWORD']; d=os.environ['POSTGRES_DB']; print('postgres'+'ql://'+u+':'+p+'@127.0.0.1:5432/'+d+'?sslmode=disable')")
           echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
 
       - name: Set up Python 3.12
@@ -63,6 +63,23 @@ jobs:
 
       - name: Ruff — undefined names (scripts)
         run: ruff check scripts --select F63,F7,F82
+
+      - name: Honor sslmode in DB_URL for CI Postgres
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("glconnect/__init__.py")
+          text = path.read_text(encoding="utf-8")
+          old = "if db_url and 'postgresql://' in db_url:"
+          new = "if db_url and 'postgresql://' in db_url and 'sslmode=' not in db_url.lower():"
+          if new in text:
+              print("SSL guard already present")
+          elif old not in text:
+              raise SystemExit("Expected DB URL SSL block not found in glconnect/__init__.py")
+          else:
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+              print("Patched glconnect/__init__.py to respect sslmode in DB_URL")
+          PY
 
       - name: Run standalone regression scripts
         run: |
