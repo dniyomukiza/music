@@ -25,10 +25,13 @@ def main():
     from glconnect.platform_fee_policy import (
         CAMPAIGN_PLATFORM_FEE_PERCENT,
         MARKETPLACE_PLATFORM_FEE_PERCENT,
+        MARKETPLACE_PLATFORM_FEE_PERCENT_AUDIOBOOK,
+        MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE,
         apply_campaign_fee_terms,
         campaign_milestone_release_amount,
         marketplace_author_royalty_fraction,
         marketplace_author_royalty_percent,
+        marketplace_platform_fee_percent_for,
     )
     from glconnect.book_platform_models import CampaignStatus
     from glconnect.book_purchase_format import revenue_split_for_purchase
@@ -38,20 +41,46 @@ def main():
     if CAMPAIGN_PLATFORM_FEE_PERCENT != 15.0:
         failures.append('campaign platform fee should be 15%')
     if MARKETPLACE_PLATFORM_FEE_PERCENT != 10.0:
-        failures.append('marketplace platform fee should be 10%')
-    if marketplace_author_royalty_percent() != 90.0:
-        failures.append('author marketplace share should be 90%')
-    if marketplace_author_royalty_fraction() != 0.9:
-        failures.append('author marketplace fraction should be 0.9')
+        failures.append('ebook/print marketplace platform fee should be 10%')
+    if MARKETPLACE_PLATFORM_FEE_PERCENT_AUDIOBOOK != 30.0:
+        failures.append('audiobook platform fee should be 30%')
+    if MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE != 20.0:
+        failures.append('bundle platform fee should be 20%')
+    if marketplace_author_royalty_percent('digital') != 90.0:
+        failures.append('ebook author share should be 90%')
+    if marketplace_author_royalty_percent('audiobook') != 70.0:
+        failures.append('audiobook author share should be 70%')
+    if marketplace_author_royalty_percent('bundle') != 80.0:
+        failures.append('bundle author share should be 80%')
+    if marketplace_author_royalty_fraction('digital') != 0.9:
+        failures.append('ebook author fraction should be 0.9')
+    if marketplace_platform_fee_percent_for('print') != 10.0:
+        failures.append('print platform fee should be 10%')
 
     book = MockBook(1, price=20.0, audiobook_price=15.0, print_price=25.0, print_shipping_price=5.0)
-    base, extra, royalty, platform, _ = revenue_split_for_purchase(book, 'digital', 20.0)
-    if abs(royalty - 18.0) > 0.01 or abs(platform - 2.0) > 0.01:
-        failures.append(f'digital split wrong: royalty={royalty}, platform={platform}')
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'digital', 20.0)
+    if abs(royalty - 18.0) > 0.01 or abs(platform - 2.0) > 0.01 or abs(fee_pct - 10.0) > 0.01:
+        failures.append(f'digital split wrong: royalty={royalty}, platform={platform}, fee={fee_pct}')
 
-    base, extra, royalty, platform, _ = revenue_split_for_purchase(book, 'digital', 25.0)
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'audiobook', 15.0)
+    if abs(royalty - 10.5) > 0.01 or abs(platform - 4.5) > 0.01 or abs(fee_pct - 30.0) > 0.01:
+        failures.append(f'audiobook split wrong: royalty={royalty}, platform={platform}, fee={fee_pct}')
+
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'print', 30.0)
+    # base print 25 @ 90% = 22.5 royalty + 5 shipping; platform 2.5
+    if abs(royalty - 27.5) > 0.01 or abs(platform - 2.5) > 0.01:
+        failures.append(f'print+shipping split wrong: royalty={royalty}, platform={platform}')
+
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'digital', 25.0)
     if abs(royalty - 23.0) > 0.01 or abs(platform - 2.0) > 0.01:
         failures.append(f'extra-to-author split wrong: royalty={royalty}, platform={platform}')
+
+    # bundle ebook+audio base = 20+15 = 35; 80% author / 20% platform
+    base, extra, royalty, platform, fee_pct = revenue_split_for_purchase(book, 'bundle', 35.0)
+    if abs(base - 35.0) > 0.01 or abs(royalty - 28.0) > 0.05 or abs(platform - 7.0) > 0.05:
+        failures.append(f'bundle split wrong: base={base}, royalty={royalty}, platform={platform}, fee={fee_pct}')
+    if abs(fee_pct - 20.0) > 0.01:
+        failures.append(f'bundle fee pct should be 20, got {fee_pct}')
 
     first_campaign = MockCampaign(
         id=1,

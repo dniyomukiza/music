@@ -3,7 +3,6 @@ Flask==3.1.0
 Flask-CKEditor==1.0.0
 Flask-JWT-Extended==4.7.1
 Flask-Login==0.6.3
-Flask-Mail==0.10.0
 Flask-Migrate==4.1.0
 Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.2
@@ -49,7 +48,7 @@ lxml==5.3.0
 yt-dlp[default]>=2026.1.0
 
 # Email
-mailtrap==2.1.0
+resend==2.39.0
 
 # Environment and configuration
 python-dotenv==1.0.1

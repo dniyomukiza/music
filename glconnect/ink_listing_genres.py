@@ -1,40 +1,23 @@
-"""Ink Studio listing categories — real experiences / nonfiction only."""
+"""Ink Studio listing categories — nonfiction only."""
 
 INK_UPLOAD_GENRE_CHOICES = [
-    ("", "Select a category"),
-    ("real-life", "Real Life"),
     ("nonfiction", "Nonfiction"),
 ]
 
-INK_UPLOAD_GENRE_VALUES = frozenset({"real-life", "nonfiction"})
+INK_UPLOAD_GENRE_VALUES = frozenset({"nonfiction"})
 
 INK_UPLOAD_GENRE_LABELS = {
-    "real-life": "Real Life",
     "nonfiction": "Nonfiction",
 }
 
-# Ink Studio write-in-app flow (create / edit chapters) — nonfiction categories only
+# Ink Studio write-in-app flow (create / edit chapters) — nonfiction only
 INK_STUDIO_GENRE_CHOICES = [
-    ("", "Select a category"),
-    ("real-life", "Real Life"),
     ("nonfiction", "Nonfiction"),
-    ("memoir", "Memoir & Biography"),
-    ("self-help", "Self-Help"),
-    ("business", "Business"),
-    ("history", "History"),
-    ("true-crime", "True Crime"),
-    ("science", "Science & Nature"),
-    ("health", "Health & Wellness"),
-    ("travel", "Travel"),
-    ("politics", "Politics & Current Affairs"),
-    ("spirituality", "Spirituality & Religion"),
-    ("education", "Education & How-To"),
-    ("other", "Other"),
 ]
 
-INK_STUDIO_GENRE_VALUES = frozenset(v for v, _ in INK_STUDIO_GENRE_CHOICES if v)
+INK_STUDIO_GENRE_VALUES = frozenset({"nonfiction"})
 
-INK_STUDIO_GENRE_LABELS = {value: label for value, label in INK_STUDIO_GENRE_CHOICES if value}
+INK_STUDIO_GENRE_LABELS = {value: label for value, label in INK_STUDIO_GENRE_CHOICES}
 
 
 def ink_upload_genre_label(value: str) -> str:

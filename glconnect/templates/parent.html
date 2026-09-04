@@ -17,11 +17,12 @@
 
 <header class="header">
   <div class="header-background">
-    <a href="{% if current_user.is_authenticated %}{{ url_for('routes.about') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.about')) }}{% endif %}" class="logo"></a>
+    <a href="{{ url_for('routes.index') }}" class="logo"></a>
   </div>
   <nav>
     <ul class="nav-links">
     </ul>
+    {% include 'includes/_company_nav.html' %}
   </nav>
 </header>
 

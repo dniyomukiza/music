@@ -3,11 +3,10 @@ import json
 import re
 from datetime import datetime, timezone
 from flask import Flask, request, g
-from .models import db, User
+from .models import db, User, NewsHeygenRoster  # noqa: F401 — ensure table is created
 from flask_jwt_extended import JWTManager
 from sqlalchemy import inspect
 from flask_login import LoginManager
-from flask_mail import Mail
 from flask_ckeditor import CKEditor
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -46,6 +45,11 @@ def _load_config():
         "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
         "OPENAI_AI_KEY": os.getenv("OPENAI_AI_KEY"),
         "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
+        "HEYGEN_API_KEY": os.getenv("HEYGEN_API_KEY"),
+        "PARALLEL_API_KEY": (os.getenv("PARALLEL_API_KEY") or os.getenv("PARALLEL_KEY") or "").strip() or None,
+        "PARALLEL_WEBHOOK_SECRET": (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip() or None,
+        "PARALLEL_WEBHOOK_URL": (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip() or None,
+        "PARALLEL_MONITOR_MAX_ACTIVE": (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip() or None,
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
         "DB_URL": os.getenv("DB_URL"),
         "RECAPTCHAPUB": os.getenv("RECAPTCHAPUB"),
@@ -55,7 +59,8 @@ def _load_config():
         "STRIPE_WEBHOOK_SECRET": (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip() or None,
         "SENDER_MAIL": (os.getenv("SENDER_MAIL") or "").strip() or None,
         "RECEIVER_MAIL": (os.getenv("RECEIVER_MAIL") or "").strip() or None,
-        "MAIL_TRAP": (os.getenv("MAIL_TRAP") or "").strip() or None,
+        "RESEND_API_KEY": (os.getenv("RESEND_API_KEY") or "").strip() or None,
+        "RESEND_FROM": (os.getenv("RESEND_FROM") or "").strip() or None,
         "JWT_SECRET_KEY": (os.getenv("JWT_SECRET_KEY") or "").strip() or None,
         "INK_STUDIO_V1_BOOKS_LAUNCH": os.getenv("INK_STUDIO_V1_BOOKS_LAUNCH", "").strip().lower()
         in ("1", "true", "yes", "on"),
@@ -76,6 +81,30 @@ def _load_config():
                     cfg["GOOGLE_API_KEY"] = file_cfg["GOOGLE_API_KEY"]
                 if not cfg.get("GEMINI_API_KEY") and file_cfg.get("GEMINI_API_KEY"):
                     cfg["GEMINI_API_KEY"] = file_cfg["GEMINI_API_KEY"]
+                if not cfg.get("GOOGLE_API_KEY") and cfg.get("GEMINI_API_KEY"):
+                    cfg["GOOGLE_API_KEY"] = cfg["GEMINI_API_KEY"]
+                if not cfg.get("GEMINI_API_KEY") and cfg.get("GOOGLE_API_KEY"):
+                    cfg["GEMINI_API_KEY"] = cfg["GOOGLE_API_KEY"]
+                if not cfg.get("HEYGEN_API_KEY") and file_cfg.get("HEYGEN_API_KEY"):
+                    cfg["HEYGEN_API_KEY"] = file_cfg["HEYGEN_API_KEY"]
+                if not cfg.get("PARALLEL_API_KEY"):
+                    _pk = _gl_first_nonempty(
+                        file_cfg, "PARALLEL_API_KEY", "PARALLEL_KEY"
+                    )
+                    if _pk:
+                        cfg["PARALLEL_API_KEY"] = _pk
+                if not cfg.get("PARALLEL_WEBHOOK_SECRET"):
+                    _pws = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_SECRET")
+                    if _pws:
+                        cfg["PARALLEL_WEBHOOK_SECRET"] = _pws
+                if not cfg.get("PARALLEL_WEBHOOK_URL"):
+                    _pwu = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_URL")
+                    if _pwu:
+                        cfg["PARALLEL_WEBHOOK_URL"] = _pwu
+                if not cfg.get("PARALLEL_MONITOR_MAX_ACTIVE"):
+                    _pma = _gl_first_nonempty(file_cfg, "PARALLEL_MONITOR_MAX_ACTIVE")
+                    if _pma:
+                        cfg["PARALLEL_MONITOR_MAX_ACTIVE"] = _pma
                 if not cfg.get("DB_URL"):
                     cfg["DB_URL"] = file_cfg.get("DB_URL") or file_cfg.get("DATABASE_URL")
                 if not cfg.get("OPENAI_AI_KEY") and file_cfg.get("OPENAI_AI_KEY"):
@@ -106,17 +135,25 @@ def _load_config():
                     if wh:
                         cfg["STRIPE_WEBHOOK_SECRET"] = wh
 
-                # Mailtrap (account confirmation, receipts, etc.), same paths as DB/Stripe
+                # Resend (account confirmation, receipts, contact/careers inbox, etc.)
                 if not cfg.get("SENDER_MAIL"):
                     _sm = _gl_first_nonempty(file_cfg, "SENDER_MAIL", "SENDER_EMAIL")
                     if _sm:
                         cfg["SENDER_MAIL"] = _sm
-                if not cfg.get("MAIL_TRAP"):
-                    _mt = _gl_first_nonempty(
-                        file_cfg, "MAIL_TRAP", "MAILTRAP_API_TOKEN", "MAIL_TRAP_API_KEY"
+                if not cfg.get("RESEND_API_KEY"):
+                    _rk = _gl_first_nonempty(
+                        file_cfg,
+                        "RESEND_API_KEY",
+                        "RESEND_KEY",
+                        "RESEND_API",
+                        "RESEND",
                     )
-                    if _mt:
-                        cfg["MAIL_TRAP"] = _mt
+                    if _rk:
+                        cfg["RESEND_API_KEY"] = _rk
+                if not cfg.get("RESEND_FROM"):
+                    _rf = _gl_first_nonempty(file_cfg, "RESEND_FROM")
+                    if _rf:
+                        cfg["RESEND_FROM"] = _rf
                 if not cfg.get("RECEIVER_MAIL"):
                     _rm = _gl_first_nonempty(
                         file_cfg, "RECEIVER_MAIL", "RECEIVER_EMAIL", "CONTACT_RECEIVER_MAIL"
@@ -194,19 +231,23 @@ def _load_config():
 
 config, STRIPE_TEST_KEYS_FROM_GLCONFIG = _load_config()
 
-# Startup diagnostic: trace why keys might be missing
-_cwd = os.getcwd()
-_env_after = bool(os.getenv("GOOGLE_API_KEY"))
-print(f"DEBUG: CWD={_cwd}")
-print(f"DEBUG: .env in CWD: {os.path.isfile(os.path.join(_cwd, '.env'))}")
-print(f"DEBUG: GOOGLE_API_KEY before load_dotenv: {'set' if _env_before else 'NOT SET (Docker did not inject)'}")
-print(f"DEBUG: GOOGLE_API_KEY after load_dotenv: {'set' if _env_after else 'NOT SET'}")
+# Never log environment contents, filesystem paths, or credential fragments at startup.
 
 # Push config into os.environ so modules that use os.getenv() get the values
 if config.get("GOOGLE_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = config["GOOGLE_API_KEY"]
 if config.get("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY"):
     os.environ["GEMINI_API_KEY"] = config["GEMINI_API_KEY"]
+if config.get("HEYGEN_API_KEY") and not os.getenv("HEYGEN_API_KEY"):
+    os.environ["HEYGEN_API_KEY"] = config["HEYGEN_API_KEY"]
+if config.get("PARALLEL_API_KEY") and not (os.getenv("PARALLEL_API_KEY") or "").strip():
+    os.environ["PARALLEL_API_KEY"] = config["PARALLEL_API_KEY"]
+if config.get("PARALLEL_WEBHOOK_SECRET") and not (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip():
+    os.environ["PARALLEL_WEBHOOK_SECRET"] = config["PARALLEL_WEBHOOK_SECRET"]
+if config.get("PARALLEL_WEBHOOK_URL") and not (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip():
+    os.environ["PARALLEL_WEBHOOK_URL"] = config["PARALLEL_WEBHOOK_URL"]
+if config.get("PARALLEL_MONITOR_MAX_ACTIVE") and not (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip():
+    os.environ["PARALLEL_MONITOR_MAX_ACTIVE"] = config["PARALLEL_MONITOR_MAX_ACTIVE"]
 if config.get("DB_URL") and not os.getenv("DB_URL"):
     os.environ["DB_URL"] = config["DB_URL"]
 if config.get("DB_URL") and not os.getenv("DATABASE_URL"):
@@ -221,11 +262,13 @@ if config.get("STRIPE_WEBHOOK_SECRET"):
     if STRIPE_TEST_KEYS_FROM_GLCONFIG or not (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip():
         os.environ["STRIPE_WEBHOOK_SECRET"] = config["STRIPE_WEBHOOK_SECRET"]
 
-# Mailtrap / confirmation email: expose glconfig values to os.getenv() for routes1, blog, book_platform, etc.
+# Resend / confirmation email: expose glconfig values to os.getenv() for routes1, blog, book_platform, etc.
 if config.get("SENDER_MAIL") and not (os.getenv("SENDER_MAIL") or "").strip():
     os.environ["SENDER_MAIL"] = config["SENDER_MAIL"]
-if config.get("MAIL_TRAP") and not (os.getenv("MAIL_TRAP") or "").strip():
-    os.environ["MAIL_TRAP"] = config["MAIL_TRAP"]
+if config.get("RESEND_API_KEY") and not (os.getenv("RESEND_API_KEY") or "").strip():
+    os.environ["RESEND_API_KEY"] = config["RESEND_API_KEY"]
+if config.get("RESEND_FROM") and not (os.getenv("RESEND_FROM") or "").strip():
+    os.environ["RESEND_FROM"] = config["RESEND_FROM"]
 if config.get("RECEIVER_MAIL") and not (os.getenv("RECEIVER_MAIL") or "").strip():
     os.environ["RECEIVER_MAIL"] = config["RECEIVER_MAIL"]
 if config.get("JWT_SECRET_KEY") and not (os.getenv("JWT_SECRET_KEY") or "").strip():
@@ -252,11 +295,12 @@ else:
 google_api_key = config.get("GOOGLE_API_KEY")
 gemini_api_key = config.get("GEMINI_API_KEY")
 print(f"GOOGLE_API_KEY: {'(set)' if google_api_key else '(not set)'}")
-print(f"GEMINI_API_KEY: {gemini_api_key[:20] + '...' if gemini_api_key else '(not set)'}")
+print(f"GEMINI_API_KEY: {'(set)' if gemini_api_key else '(not set)'}")
+heygen_api_key = config.get("HEYGEN_API_KEY")
+print(f"HEYGEN_API_KEY: {'(set)' if heygen_api_key else '(not set)'}")
 print(f"GOOGLE_APPLICATION_CREDENTIALS: {config.get('GOOGLE_APPLICATION_CREDENTIALS', 'tts.json')}")
 
 # Initialize extensions
-mail = Mail()
 jwt = JWTManager()
 login_manager = LoginManager()
 
@@ -333,6 +377,7 @@ def create_app(config_overrides=None):
     app.config.update(
         JWT_SECRET_KEY=jwt_secret_key,
         GEMINI_API_KEY=config.get("GEMINI_API_KEY"),
+        HEYGEN_API_KEY=config.get("HEYGEN_API_KEY"),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2 GB max upload size
         STRIPE_SECRET_KEY=_sk,
         STRIPE_API_KEY=_sapi,
@@ -341,6 +386,18 @@ def create_app(config_overrides=None):
         # Book campaigns: patronage (no sale returns to funders). Set BOOK_CAMPAIGN_PATRONAGE=0 for legacy.
         BOOK_CAMPAIGN_PATRONAGE=_book_campaign_patronage,
     )
+
+    # Baseline response protections. CSP is intentionally not enabled here because
+    # the legacy templates load third-party media/scripts and need a separate audit.
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if not is_local_dev:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
 
     # Startup visibility for Stripe payout/checkout setup (never log secret values).
     _stripe_secret_present = bool(_sk)
@@ -397,6 +454,10 @@ def create_app(config_overrides=None):
     # Mail and recaptcha configuration
     app.config['RECAPTCHA_PUBLIC_KEY'] = config.get('RECAPTCHAPUB')
     app.config['RECAPTCHA_PRIVATE_KEY'] = config.get('RECAPTCHAPRIV')
+    app.config['SENDER_MAIL'] = config.get('SENDER_MAIL')
+    app.config['RECEIVER_MAIL'] = config.get('RECEIVER_MAIL')
+    app.config['RESEND_API_KEY'] = config.get('RESEND_API_KEY')
+    app.config['RESEND_FROM'] = config.get('RESEND_FROM')
 
     # Database and JWT configuration
     db_url = config.get('DB_URL')
@@ -464,7 +525,6 @@ def create_app(config_overrides=None):
     jwt.init_app(app)
     login_manager.init_app(app)
     ckeditor.init_app(app)
-    mail.init_app(app)
 
     def _hls_root() -> str:
         # Docker: set HLS_VIDEO_DIR=/usr/src/appdir/hls-video (same bind mount as Liquidsoap ./hls-video)
@@ -704,6 +764,7 @@ def create_app(config_overrides=None):
                     or request.path.startswith("/api/hls-status")
                     or request.path.startswith("/_analytics")
                     or request.path == "/analytics"
+                    or request.path in ("/robots.txt", "/sitemap.xml")
                 ),
             }
 
@@ -712,17 +773,26 @@ def create_app(config_overrides=None):
 
     @app.after_request
     def log_page_analytics_db(response):
-        """Record one row per request with Flask endpoint (not raw path)."""
+        """Record one row per request with the visited URL path."""
         info = getattr(g, "_ink_page_analytics", None)
         if not info or info.get("skip"):
             return response
         try:
             from .models import PageAnalytics, db
+            from .analytics import should_record_page_view
             from flask_login import current_user
 
-            page_endpoint = request.endpoint or request.path or "_unknown"
+            if not should_record_page_view(
+                request.path,
+                request.method,
+                response.status_code,
+                request.url_rule,
+            ):
+                return response
+
+            page_path = (request.path or "/").rstrip("/") or "/"
             analytics = PageAnalytics(
-                endpoint=page_endpoint,
+                endpoint=page_path,
                 ip_address=request.remote_addr,
                 device=info.get("device"),
                 user_id=current_user.user_id if current_user.is_authenticated else None,
@@ -767,6 +837,9 @@ def create_app(config_overrides=None):
             ensure_saved_book_campaigns_schema,
             ensure_campaign_platform_fee_schema,
             ensure_campaign_translations_schema,
+            ensure_collaboration_role_enum_schema,
+            ensure_reader_book_discussion_schema,
+            ensure_parallel_news_monitor_schema,
         )
         from .isbn_pool_service import bootstrap_isbn_pool
 
@@ -796,6 +869,9 @@ def create_app(config_overrides=None):
         ensure_saved_book_campaigns_schema(db)
         ensure_campaign_platform_fee_schema(db)
         ensure_campaign_translations_schema(db)
+        ensure_collaboration_role_enum_schema(db)
+        ensure_reader_book_discussion_schema(db)
+        ensure_parallel_news_monitor_schema(db)
 
         # Import and register blueprints
         from .routes import bp 

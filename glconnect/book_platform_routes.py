@@ -24,7 +24,7 @@ from tempfile import SpooledTemporaryFile
 from typing import List, Optional
 from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
-from mailtrap import MailtrapClient, Mail, Address
+from glconnect.email_service import is_mail_configured, send_email
 
 # Import models
 from glconnect.models import db, User, Writer
@@ -40,6 +40,7 @@ from glconnect.book_platform_models import (
     AuthorCampaignPayoutRequest,
     RevenueDistribution, ReviewerEarning, InvestmentPayout, PayoutRequest, ReviewerPayoutRequest, AuthorSalesPayoutRequest, RefundRequest, ReviewerStatus, ReviewerLevel,
     ReviewStatus, ReviewRequest, ReviewRequestStatus, InvestmentStatus, CampaignStatus, DistributionType,
+    ReaderBookPost, ReaderBookComment,
     BookPrintOrder, PrintOrderStatus,
 )
 
@@ -148,13 +149,18 @@ from glconnect.stripe_utils import (
     checkout_ready_author_connect_id,
     print_checkout_shipping_kw,
     create_marketplace_checkout_session,
+    apply_stripe_tax_to_checkout_kw,
+    marketplace_requires_author_connect,
+    stripe_tax_enabled,
     stripe_checkout_custom_field_values,
     merge_print_shipping_line2,
 )
 from glconnect.book_utils import (
     audiobook_ready_for_marketplace_publish,
+    clear_audiobook_generation,
     delete_book_chapter_version_graph_for_project,
     is_book_published,
+    is_ebook_marketplace_listed,
 )
 from glconnect.book_platform_purge import delete_book_project_dependents
 from glconnect.author_dashboard_stats import build_author_dashboard_stats
@@ -197,10 +203,21 @@ book_bp = Blueprint('book_platform', __name__, url_prefix='/mybook')
 
 @book_bp.context_processor
 def _inject_author_agreement_template_context():
-    from glconnect.book_purchase_format import marketplace_card_price_label
+    from glconnect.book_purchase_format import (
+        marketplace_card_price_label,
+        ebook_listed,
+        audiobook_listed,
+        print_listed,
+        marketplace_buyable,
+    )
 
     ctx = agreement_context_for_templates()
     ctx["marketplace_card_price_label"] = marketplace_card_price_label
+    ctx["ebook_listed"] = ebook_listed
+    ctx["audiobook_listed"] = audiobook_listed
+    ctx["print_listed"] = print_listed
+    ctx["marketplace_buyable"] = marketplace_buyable
+    ctx["is_ebook_marketplace_listed"] = is_ebook_marketplace_listed
     return ctx
 
 
@@ -215,6 +232,54 @@ def _ink_studio_disable_page_cache(response):
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+
+def _marketplace_visibility_snapshot(book):
+    """Diagnostic snapshot for why a title does or does not appear on the marketplace."""
+    from glconnect.book_platform_models import BookChapter
+    from glconnect.book_purchase_format import (
+        ebook_listed,
+        marketplace_listed_format_amounts,
+        marketplace_buyable,
+        print_listed,
+        audiobook_listed,
+    )
+
+    chapter_count = (
+        BookChapter.query.filter_by(book_project_id=book.id).count() if book else 0
+    )
+    in_query = (
+        DatabaseOptimizer.marketplace_books_base_query()
+        .filter(BookProject.id == book.id)
+        .count()
+        > 0
+        if book
+        else False
+    )
+    api_digital_flag = ebook_listed(book) if book else False
+    return {
+        "book_id": book.id if book else None,
+        "title": book.title if book else None,
+        "status": book.status.value if book and book.status else None,
+        "digital_file_path": bool(getattr(book, "digital_file_path", None)) if book else None,
+        "digital_book_published": bool(getattr(book, "digital_book_published", False)) if book else None,
+        "audiobook_published": bool(getattr(book, "audiobook_published", False)) if book else None,
+        "has_audiobook": bool(getattr(book, "has_audiobook", False)) if book else None,
+        "audiobook_price": getattr(book, "audiobook_price", None) if book else None,
+        "price": getattr(book, "price", None) if book else None,
+        "print_listed": print_listed(book) if book else False,
+        "chapter_count": chapter_count,
+        "is_book_published": is_book_published(book) if book else False,
+        "ebook_listed": ebook_listed(book) if book else False,
+        "audiobook_listed": audiobook_listed(book) if book else False,
+        "marketplace_buyable": marketplace_buyable(book) if book else False,
+        "marketplace_query_match": in_query,
+        "format_amounts": marketplace_listed_format_amounts(book) if book else [],
+        "api_formats_digital_flag": api_digital_flag,
+        "api_formats_digital_mismatch": (
+            ebook_listed(book) and not api_digital_flag if book else False
+        ),
+    }
 
 
 # Image upload configuration
@@ -633,7 +698,7 @@ def get_profile_id(user_profile, profile_type):
 
 
 def ink_studio_home_url():
-    """Role-appropriate Ink Studio home, readers go to My library, not author profile setup."""
+    """Default signed-in home: authors → Ink Studio; everyone else → Content Hub."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch
 
     if not current_user.is_authenticated:
@@ -644,29 +709,20 @@ def ink_studio_home_url():
                 return url_for('book_platform.setup_profile')
         return url_for('book_platform.marketplace')
     role = getattr(current_user, 'role', None)
-    if role == 'artist':
-        return url_for('book_platform.music_dashboard')
-    if role == 'freelancer':
-        return url_for('book_platform.dashboard')
-    if role == 'blogger':
-        return url_for('blog.blogs')
-    if role == 'podcaster':
-        return url_for('book_platform.content_hub')
     if role == 'author':
         if _author_requires_setup_profile(current_user.user_id):
             return url_for('book_platform.setup_profile')
         return url_for('book_platform.books')
     if ink_studio_show_author_nav_links():
         return url_for('book_platform.books')
-    return url_for('book_platform.my_library')
+    return url_for('book_platform.content_hub')
 
 
 def ink_studio_show_author_nav_links():
     """My Books / Payout account in shared nav — authors who publish, not buyers."""
     if not current_user.is_authenticated:
         return False
-    excluded_roles = ['podcaster', 'freelancer', 'blogger', 'artist', 'other']
-    if current_user.role in excluded_roles:
+    if current_user.role not in ('author', 'admin'):
         return False
     user_profile, profile_type = get_user_profile()
     if profile_type not in ('writer', 'book_platform') or not user_profile:
@@ -796,10 +852,40 @@ def check_investment_readiness(book):
             "(write your first chapter for patrons to preview)"
         )
 
-    requirement_total = 5
+    requirements = [
+        {
+            'label': 'Book title (at least 3 characters)',
+            'met': bool(book.title and len(book.title.strip()) >= 3),
+        },
+        {
+            'label': 'Category selected',
+            'met': bool(book.genre),
+        },
+        {
+            'label': 'Language selected',
+            'met': bool(book.language),
+        },
+    ]
+    if has_digital_file and chapter_count == 0:
+        requirements.append({
+            'label': 'Ink Studio manuscript with at least one section',
+            'met': False,
+        })
+    else:
+        requirements.append({
+            'label': 'At least one section (patron preview)',
+            'met': chapter_count > 0,
+        })
+    requirements.append({
+        'label': f'At least {CAMPAIGN_READINESS_MIN_WORDS:,} words of content',
+        'met': chapter_count > 0 and word_count >= CAMPAIGN_READINESS_MIN_WORDS,
+    })
+
+    requirement_total = len(requirements)
     return {
         'is_ready': len(issues) == 0,
         'issues': issues,
+        'requirements': requirements,
         'chapter_count': chapter_count,
         'word_count': word_count,
         'requirement_total': requirement_total,
@@ -1013,7 +1099,7 @@ def _book_studio_access(book, user_profile, profile_type):
 
 @book_bp.route('/ink-studio')
 def ink_studio_access():
-    """Ink Studio access point - redirects to login if not authenticated, otherwise redirects based on role."""
+    """Ink Studio access point — authors to workspace; everyone else to Content Hub."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch, ink_v1_role_redirect
 
     # If not authenticated, redirect to login (which has register link)
@@ -1023,36 +1109,20 @@ def ink_studio_access():
     if ink_v1_books_launch():
         return ink_v1_role_redirect(current_user)
 
-    # User is authenticated - redirect based on role
     user_role = getattr(current_user, 'role', None)
-    
-    # Artist users → music dashboard
-    if user_role == 'artist':
-        return redirect(url_for('book_platform.music_dashboard'))
-    
-    # Author users → Ink Studio setup-profile until author card is complete
-    elif user_role == 'author':
+
+    if user_role == 'author':
         if _author_requires_setup_profile(current_user.user_id):
             return redirect(url_for('book_platform.setup_profile'))
         return redirect(url_for('book_platform.books'))
-    
-    # Freelancer users → blogs
-    elif user_role == 'freelancer':
-        return redirect(url_for('blog.blogs'))
-    
-    # Blogger users → blogs
-    elif user_role == 'blogger':
-        return redirect(url_for('blog.blogs'))
-    
-    # All other users → content page
-    else:
-        return redirect(url_for('book_platform.content_hub'))
+
+    return redirect(url_for('book_platform.content_hub'))
 
 # Main dashboard route
 @book_bp.route('/')
 @login_required
 def dashboard():
-    """Ink Studio entry, role-based home; readers without author profiles go to My library."""
+    """Ink Studio dashboard entry — authors to workspace; everyone else to Content Hub."""
     from glconnect.ink_studio_v1 import ink_v1_books_launch
 
     if ink_v1_books_launch():
@@ -1063,62 +1133,15 @@ def dashboard():
 
     role = getattr(current_user, 'role', None)
 
-    if role == 'artist':
-        return redirect(url_for('book_platform.music_dashboard'))
-
-    if role == 'freelancer':
-        from glconnect.models import Post
-
-        class FreelancerProfile:
-            def __init__(self, user):
-                self.id = user.user_id
-                self.user_id = user.user_id
-                self.pen_name = user.username
-                self.bio = None
-                self.profile_picture = None
-
-        freelancer_stories = (
-            Post.query.filter_by(user_id=current_user.user_id)
-            .order_by(Post.date_posted.desc())
-            .limit(10)
-            .all()
-        )
-        fp = FreelancerProfile(current_user)
-        return render_template(
-            'book_platform/dashboard.html',
-            authored_books=[],
-            collaborations=[],
-            notifications=[],
-            user_profile=fp,
-            profile_type='freelancer',
-            is_author=False,
-            investment_campaigns=[],
-            review_requests=[],
-            user_reviewer_profile=None,
-            user_investments=[],
-            freelancer_stories=freelancer_stories,
-            is_freelancer=True,
-            marketplace_cover_url=_marketplace_cover_url,
-            ink_nav_active='dashboard',
-        )
-
-    user_profile, profile_type = get_user_profile()
-
     if role == 'author':
         if _author_requires_setup_profile(current_user.user_id):
             return redirect(url_for('book_platform.setup_profile'))
+        user_profile, profile_type = get_user_profile()
+        if profile_type in ('writer', 'book_platform') and user_profile and ink_studio_show_author_nav_links():
+            return redirect(url_for('book_platform.books'))
         return redirect(url_for('book_platform.books'))
 
-    if profile_type in ('writer', 'book_platform') and user_profile and ink_studio_show_author_nav_links():
-        return redirect(url_for('book_platform.books'))
-
-    if role == 'blogger':
-        return redirect(url_for('blog.blogs'))
-
-    if role == 'podcaster':
-        return redirect(url_for('book_platform.content_hub'))
-
-    return redirect(url_for('book_platform.my_library'))
+    return redirect(url_for('book_platform.content_hub'))
 
 
 @book_bp.route('/api/dashboard/author-stats', methods=['GET'])
@@ -1434,6 +1457,83 @@ def books(user_profile, profile_type):
         author_needs_publishing_agreement=_author_needs_publishing_agreement(current_user.user_id),
     )
 
+
+@book_bp.route('/books/<int:book_id>/release')
+@writer_or_book_platform_required
+def release_hub(book_id, user_profile, profile_type):
+    """One place to prepare a private project for a customer-facing release."""
+    from glconnect.book_purchase_format import audiobook_listed
+    book = BookProject.query.get_or_404(book_id)
+    author_id = get_profile_id(user_profile, profile_type)
+    if not author_id or book.author_id != author_id:
+        flash('Only the author can prepare this release.', 'error')
+        return redirect(url_for('book_platform.books'))
+
+    chapter_count = BookChapter.query.filter_by(book_project_id=book.id).count()
+    manuscript_ready = bool(book.digital_file_path or chapter_count)
+    ebook_live = is_ebook_marketplace_listed(book)
+    audio_live = audiobook_listed(book)
+    has_price = book.price is not None and float(book.price) >= 0
+    has_cover = book_has_listing_cover(book)
+    attested = book_has_listing_attestation(book)
+
+    checks = [
+        {
+            'label': 'Manuscript',
+            'complete': manuscript_ready,
+            'detail': 'File imported' if book.digital_file_path else (
+                f'{chapter_count} section' + ('s' if chapter_count != 1 else '') if chapter_count else 'Add your first section'
+            ),
+            'url': url_for('book_platform.view_book', book_id=book.id),
+        },
+        {
+            'label': 'Cover',
+            'complete': has_cover,
+            'detail': 'Ready for customers' if has_cover else 'Add a marketplace cover',
+            'url': url_for('book_platform.edit_book', book_id=book.id),
+        },
+        {
+            'label': 'Price',
+            'complete': has_price,
+            'detail': 'Price set' if has_price else 'Set a price or choose free',
+            'url': url_for('book_platform.edit_book', book_id=book.id) + '#publishing-options',
+        },
+        {
+            'label': 'Listing agreement',
+            'complete': attested,
+            'detail': 'Accepted for this title' if attested else 'Review before publishing',
+            'url': url_for('book_platform.edit_book', book_id=book.id) + '#listingTermsSection',
+        },
+    ]
+    remaining = [check for check in checks if not check['complete']]
+    if ebook_live:
+        primary = {
+            'label': 'Open audiobook studio' if not book.has_audiobook else 'Review audiobook',
+            'url': url_for('book_platform.book_audiobook', book_id=book.id),
+        }
+    elif remaining:
+        primary = {
+            'label': 'Set price' if remaining[0]['label'] == 'Price' else 'Complete: ' + remaining[0]['label'],
+            'url': remaining[0]['url'],
+        }
+    else:
+        primary = {
+            'label': 'Publish ebook',
+            'url': url_for('book_platform.edit_book', book_id=book.id) + '#publishing-options',
+        }
+
+    return render_template(
+        'book_platform/release_hub.html',
+        book=book,
+        chapter_count=chapter_count,
+        manuscript_ready=manuscript_ready,
+        ebook_live=ebook_live,
+        audio_live=audio_live,
+        checks=checks,
+        primary=primary,
+        marketplace_cover_url=_marketplace_cover_url,
+    )
+
 @book_bp.route('/books/create', methods=['GET', 'POST'])
 @writer_or_book_platform_required
 def create_book(user_profile, profile_type):
@@ -1458,22 +1558,13 @@ def create_book(user_profile, profile_type):
             }), 403
         return redirect(url_for('book_platform.setup_profile', next=request.path))
 
-    if _author_needs_publishing_agreement(current_user.user_id):
-        flash('Accept the Author Publishing Agreement before creating or listing books.', 'warning')
-        if request.method == 'POST':
-            return jsonify({
-                'success': False,
-                'error': 'Accept the Author Publishing Agreement first.',
-                'redirect': url_for('book_platform.author_publishing_agreement', next=request.path),
-            }), 403
-        return _redirect_to_publishing_agreement(request.path)
-
     if request.method == 'POST':
         author_id = get_profile_id(user_profile, profile_type)
         if not author_id:
             return jsonify({'success': False, 'error': 'Could not resolve author profile.'}), 400
 
-        # Require multipart upload so authors choose a cover at creation time
+        # Creation is intentionally lightweight: a project can remain private
+        # until the author is ready to prepare a marketplace release.
         if not request.content_type or 'multipart/form-data' not in request.content_type:
             return jsonify({
                 'success': False,
@@ -1527,12 +1618,6 @@ def create_book(user_profile, profile_type):
                         'or upload a cover image instead.'
                     ),
                 }), 400
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Upload a cover image or choose Generate with AI and confirm a preview.',
-            }), 400
-
         book = BookProject(
             title=title,
             description=desc_val,
@@ -1902,10 +1987,61 @@ def view_book(book_id, user_profile, profile_type):
     else:
         collaborator_pending_by_chapter = {}
 
+    from glconnect.book_purchase_format import marketplace_buyable
+    listing_live = is_book_published(book)
+    marketplace_buyable_flag = marketplace_buyable(book)
+    audiobook_chapter_tracklist = _build_audiobook_chapter_tracklist(book) if book.has_audiobook else []
+    manuscript_started = bool(book.digital_file_path or chapters)
+    word_count = int(book.word_count or 0)
+    has_price = book.price is not None
+    writing_progress = [
+        {
+            'label': 'Set up your book',
+            'detail': 'Title and book details',
+            'complete': bool(book.title and book.description),
+        },
+        {
+            'label': 'Write your manuscript',
+            'detail': f'{word_count:,} words',
+            'complete': bool(word_count > 0),
+            'current': manuscript_started and word_count <= 0,
+        },
+        {
+            'label': 'Prepare your release',
+            'detail': 'Cover and price',
+            'complete': bool(has_listing_cover and has_price),
+        },
+        {
+            'label': 'Publish to readers',
+            'detail': 'Marketplace listing',
+            'complete': marketplace_buyable_flag,
+        },
+    ]
+    if not manuscript_started and not book.digital_file_path:
+        # The primary book-view controls already provide the chapter creation action.
+        next_writing_action = None
+    elif not has_listing_cover or not has_price:
+        next_writing_action = {
+            'label': 'Prepare your release',
+            'detail': 'Add a cover and price so your book is ready for readers.',
+            'url': url_for('book_platform.edit_book', book_id=book.id),
+            'icon': 'fa-book-open',
+        }
+    elif not marketplace_buyable_flag:
+        next_writing_action = {
+            'label': 'Review before publishing',
+            'detail': 'Check the customer-facing experience, then choose when to go live.',
+            'url': url_for('book_platform.release_hub', book_id=book.id),
+            'icon': 'fa-rocket',
+        }
+    else:
+        next_writing_action = None
+
     try:
-        return render_template('book_platform/view_book.html', 
+        return render_template('book_platform/view_book.html',
                              book=book, 
                              chapters=chapters,
+                             audiobook_chapter_tracklist=audiobook_chapter_tracklist,
                              collaborations=collaborations,
                              pending_invitation_count=pending_invitation_count,
                              pending_suggestion_count=pending_suggestion_count,
@@ -1922,7 +2058,11 @@ def view_book(book_id, user_profile, profile_type):
                              digital_download_options=digital_download_options,
                              has_listing_cover=has_listing_cover,
                              latest_audio_task=latest_audio_task,
-                             marketplace_cover_url=_marketplace_cover_url)
+                             marketplace_cover_url=_marketplace_cover_url,
+                             listing_live=listing_live,
+                             marketplace_buyable=marketplace_buyable_flag,
+                             writing_progress=writing_progress,
+                             next_writing_action=next_writing_action)
     except Exception as template_error:
         logger.error(f"Error rendering view_book template for book {book_id}: {template_error}", exc_info=True)
         flash('Error loading book view. Please try again.', 'error')
@@ -1979,6 +2119,12 @@ def edit_book(book_id):
             else:
                 data = request.form.to_dict()
 
+            title = str(data.get('title') or '').strip()
+            if not title:
+                return jsonify({'success': False, 'error': 'Give the book a title before saving.'}), 400
+            if len(title) > 255:
+                return jsonify({'success': False, 'error': 'Book titles must be 255 characters or fewer.'}), 400
+
             listing_flow_requested = str(data.get('listing_flow') or '').strip().lower() in (
                 '1', 'true', 'yes', 'on'
             )
@@ -1999,7 +2145,7 @@ def edit_book(book_id):
             logger.debug(f"Edit book {book_id} - is_published value: {data.get('is_published', 'NOT PRESENT')}")
             
             # Update book fields
-            book.title = data['title']
+            book.title = title
             raw_description = data.get('description', '')
             try:
                 book.description = sanitize_project_description(raw_description, book_id=book_id)
@@ -2010,9 +2156,8 @@ def edit_book(book_id):
                 book.language = data.get('language', '')
             book.target_audience = data.get('target_audience', '')
             book.price = float(data.get('price', 0)) if data.get('price') else None
-            book.word_count_target = int(data.get('word_count_target', 0)) if data.get('word_count_target') else None
             book.tags = data.get('tags', '')
-            if book.digital_file_path and data.get('audiobook_price') not in (None, ''):
+            if data.get('audiobook_price') not in (None, ''):
                 try:
                     book.audiobook_price = float(data.get('audiobook_price'))
                 except (TypeError, ValueError):
@@ -2050,7 +2195,7 @@ def edit_book(book_id):
                 # Handle digital book publishing
                 if publish_digital:
                     price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
-                    if not price_value or price_value <= 0:
+                    if price_value is None or price_value < 0:
                         return jsonify({
                             'success': False, 
                             'error': 'Please set a price before publishing your digital book to the marketplace.'
@@ -2109,10 +2254,9 @@ def edit_book(book_id):
             else:
                 # For platform-created books, use the old status-based publishing
                 is_published_flag = (
-                    data.get('is_published') == 'on' or 
-                    data.get('is_published') == True or 
-                    data.get('is_published') == 'true' or
-                    'is_published' in data
+                    data.get('is_published') == 'on'
+                    or data.get('is_published') is True
+                    or str(data.get('is_published', '')).strip().lower() == 'true'
                 )
                 
                 logger.info(f"Edit book {book_id} - is_published_flag: {is_published_flag}, price: {book.price}")
@@ -2121,7 +2265,7 @@ def edit_book(book_id):
                     if book.status != BookStatus.PUBLISHED:
                         newly_listing = True
                     price_value = book.price if book.price else (float(data.get('price', 0)) if data.get('price') else 0)
-                    if not price_value or price_value <= 0:
+                    if price_value is None or price_value < 0:
                         return jsonify({
                             'success': False, 
                             'error': 'Please set a price before publishing your book to the marketplace.'
@@ -2142,31 +2286,73 @@ def edit_book(book_id):
                         book.status = BookStatus.DRAFT
                         logger.info(f"Book {book_id} unpublished via edit form - Status set to DRAFT")
 
+                publish_audiobook = data.get('publish_audiobook') == 'on'
+                if publish_audiobook and not book.audiobook_published:
+                    newly_listing = True
+                if publish_audiobook:
+                    ok_audio, audio_err = audiobook_ready_for_marketplace_publish(book)
+                    if not ok_audio:
+                        return jsonify({'success': False, 'error': audio_err}), 400
+                    if not book.audiobook_published and data.get('confirm_audiobook_publish') != 'on':
+                        return jsonify({
+                            'success': False,
+                            'error': (
+                                'Confirm that you have previewed the audiobook and approve '
+                                'publishing it to the marketplace.'
+                            ),
+                        }), 400
+                    audiobook_price_value = float(book.audiobook_price) if book.audiobook_price is not None else None
+                    if audiobook_price_value is None or audiobook_price_value < 0:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please set an audiobook price before publishing it to the marketplace (use 0 for free).'
+                        }), 400
+                    if not book_has_listing_cover(book):
+                        return jsonify({
+                            'success': False,
+                            'error': 'Please add a cover image before publishing the audiobook to the marketplace.'
+                        }), 400
+                    if not book.audiobook_published:
+                        book.audiobook_published = True
+                        book.audiobook_published_at = datetime.now(timezone.utc)
+                        logger.info(f"Audiobook {book_id} published via edit form (Ink Studio book)")
+                elif data.get('publish_audiobook') is not None and publish_audiobook is False:
+                    if book.audiobook_published:
+                        book.audiobook_published = False
+                        logger.info(f"Audiobook {book_id} unpublished via edit form (Ink Studio book)")
+
+                if publish_audiobook and not _prev_audiobook_pub:
+                    coupon_err = try_redeem_coupon_from_form(book, LISTING_FORMAT_AUDIOBOOK, data)
+                    if coupon_err:
+                        return jsonify({'success': False, 'error': coupon_err}), 400
+
             from glconnect.isbn_pool_service import (
                 apply_listing_isbn,
                 IsbnPoolError,
                 IsbnValidationError,
             )
 
-            if newly_listing or (
+            should_apply_listing_setup = newly_listing or (
                 print_listed(book) and not book_has_listing_attestation(book)
-            ):
+            )
+            if should_apply_listing_setup:
                 attestation_error = ensure_listing_attestation(book, data)
                 if attestation_error:
                     return jsonify({'success': False, 'error': attestation_error}), 400
 
-            try:
-                apply_listing_isbn(
-                    book,
-                    data.get('isbn_source'),
-                    data.get('isbn_manual'),
-                )
-            except IsbnValidationError as e:
-                db.session.rollback()
-                return jsonify({'success': False, 'error': str(e)}), 400
-            except IsbnPoolError as e:
-                db.session.rollback()
-                return jsonify({'success': False, 'error': str(e)}), 503
+            if should_apply_listing_setup:
+                try:
+                    apply_listing_isbn(
+                        book,
+                        data.get('isbn_source'),
+                        data.get('isbn_manual'),
+                    )
+                except IsbnValidationError as e:
+                    db.session.rollback()
+                    return jsonify({'success': False, 'error': str(e)}), 400
+                except IsbnPoolError as e:
+                    db.session.rollback()
+                    return jsonify({'success': False, 'error': str(e)}), 503
             
             db.session.commit()
 
@@ -2230,6 +2416,7 @@ def edit_book(book_id):
         media_guide=MEDIA_GUIDE,
         investment_campaign=campaign,
         investment_readiness=investment_readiness,
+        project_desc_audio_enabled=is_book_published(book),
     )
 
 @book_bp.route('/books/<int:book_id>/audiobook', methods=['GET'])
@@ -2256,6 +2443,10 @@ def book_audiobook(book_id, user_profile, profile_type):
         flash('Only the author can manage the audiobook', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
 
+    if not is_ebook_marketplace_listed(book):
+        flash('Publish your ebook to the marketplace first to use Audiobook studio.', 'warning')
+        return redirect(url_for('book_platform.edit_book', book_id=book_id))
+
     campaign = InvestmentCampaign.query.filter_by(book_project_id=book.id).first()
     try:
         investment_readiness = check_investment_readiness(book)
@@ -2276,6 +2467,8 @@ def book_audiobook(book_id, user_profile, profile_type):
                 book.audiobook_voice, voice_result.get("voices") or {}
             )
 
+    audiobook_chapter_tracklist = _build_audiobook_chapter_tracklist(book) if book.has_audiobook else []
+
     return render_template(
         'book_platform/book_audiobook.html',
         book=book,
@@ -2283,6 +2476,7 @@ def book_audiobook(book_id, user_profile, profile_type):
         investment_campaign=campaign,
         investment_readiness=investment_readiness,
         audiobook_voice_label=audiobook_voice_label or book.audiobook_voice,
+        audiobook_chapter_tracklist=audiobook_chapter_tracklist,
         redeemable_coupons=list_redeemable_coupons(book, LISTING_FORMAT_AUDIOBOOK),
         coupon_platform_fee_after=COUPON_PLATFORM_FEE_PERCENT,
     )
@@ -2313,17 +2507,42 @@ def create_chapter(book_id, user_profile, profile_type):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
+
+            title = str(data.get('title') or '').strip()
+            if not title:
+                return jsonify({'success': False, 'error': 'Give this section a title before saving.'}), 400
+            if len(title) > 255:
+                return jsonify({'success': False, 'error': 'Section titles must be 255 characters or fewer.'}), 400
             
             # Get next chapter number
             last_chapter = BookChapter.query.filter_by(book_project_id=book_id).order_by(BookChapter.chapter_number.desc()).first()
             next_number = (last_chapter.chapter_number + 1) if last_chapter else 1
             
             # Use provided chapter number or calculate next
-            chapter_number = int(data.get('chapter_number', next_number))
+            try:
+                chapter_number = int(data.get('chapter_number', next_number))
+            except (TypeError, ValueError):
+                return jsonify({'success': False, 'error': 'Reading order must be a whole number.'}), 400
+            if chapter_number < 1:
+                return jsonify({'success': False, 'error': 'Reading order must start at 1.'}), 400
+            if BookChapter.query.filter_by(
+                book_project_id=book_id, chapter_number=chapter_number
+            ).first():
+                return jsonify({'success': False, 'error': 'That reading order is already in use. Choose another number.'}), 409
             
             # Calculate word count from content (strip HTML tags)
             content = data.get('content', '')
             word_count = count_words_from_html(content) if content else 0
+
+            raw_target = data.get('word_count_target')
+            word_count_target = None
+            if raw_target not in (None, ''):
+                try:
+                    word_count_target = int(raw_target)
+                except (TypeError, ValueError):
+                    return jsonify({'success': False, 'error': 'The word-count target must be a whole number.'}), 400
+                if word_count_target < 1:
+                    return jsonify({'success': False, 'error': 'The word-count target must be positive.'}), 400
             
             from glconnect.book_utils import normalize_section_kind_input
 
@@ -2332,13 +2551,13 @@ def create_chapter(book_id, user_profile, profile_type):
                 is_published = data.get('is_published') == 'on' or data.get('is_published') is True
 
             chapter = BookChapter(
-                title=data['title'],
+                title=title,
                 content=content,
                 summary=data.get('summary', ''),
                 chapter_number=chapter_number,
                 section_kind=normalize_section_kind_input(data.get('section_kind'), data['title']),
                 word_count=word_count,
-                word_count_target=int(data.get('word_count_target', 0)) if data.get('word_count_target') else None,
+                word_count_target=word_count_target,
                 book_project_id=book_id,
                 is_published=is_published,
             )
@@ -2417,11 +2636,6 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
         flash('You do not have permission to edit this book.', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
     
-    # Check if chapter is published - if so, prevent editing
-    if chapter.is_published:
-        flash('This chapter is marked complete and cannot be edited. Reopen it first to make changes.', 'warning')
-        return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
-    
     if chapter.book_project_id != book_id:
         flash('Chapter not found in this book', 'error')
         return redirect(url_for('book_platform.view_book', book_id=book_id))
@@ -2433,6 +2647,12 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
+
+            title = str(data.get('title') or '').strip()
+            if not title:
+                return jsonify({'success': False, 'error': 'Give this section a title before saving.'}), 400
+            if len(title) > 255:
+                return jsonify({'success': False, 'error': 'Section titles must be 255 characters or fewer.'}), 400
 
             merge_suggestion_id = data.get('merge_suggestion_id')
             if merge_suggestion_id:
@@ -2466,7 +2686,7 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
                 snapshot_chapter(chapter, actor_id, change_source='author_edit')
             
             # Update chapter fields
-            chapter.title = data.get('title', chapter.title)
+            chapter.title = title
             chapter.content = data.get('content', chapter.content)
             chapter.summary = data.get('summary', chapter.summary)
             from glconnect.book_utils import normalize_section_kind_input
@@ -2480,8 +2700,10 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             if word_count_target and word_count_target.strip():
                 try:
                     chapter.word_count_target = int(word_count_target)
+                    if chapter.word_count_target < 1:
+                        raise ValueError
                 except (ValueError, TypeError):
-                    chapter.word_count_target = None
+                    return jsonify({'success': False, 'error': 'The word-count target must be a positive whole number.'}), 400
             else:
                 chapter.word_count_target = None
             
@@ -2523,7 +2745,7 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             if request.is_json:
                 return jsonify({'success': True, 'word_count': chapter.word_count})
             else:
-                flash('Chapter updated successfully!', 'success')
+                flash('Section updated successfully!', 'success')
                 return redirect(url_for('book_platform.view_chapter', book_id=book_id, chapter_id=chapter_id))
                 
         except Exception as e:
@@ -2531,15 +2753,10 @@ def edit_chapter(book_id, chapter_id, user_profile, profile_type):
             error_msg = str(e)
             logging.error(f"Chapter update error: {error_msg}", exc_info=True)
             print(f"Chapter update error: {error_msg}")
-            print(f"Error type: {type(e)}")
-            try:
-                print(f"Data received: {data}")
-            except:
-                print("Data not available in error handler")
             if request.is_json:
-                return jsonify({'success': False, 'error': f'An unexpected error occurred: {error_msg}'}), 500
+                return jsonify({'success': False, 'error': 'We could not save this section. Please try again.'}), 500
             else:
-                flash(f'An unexpected error occurred while editing chapter: {error_msg}', 'error')
+                flash('We could not save this section. Please try again.', 'error')
     
     # GET request - show edit form
     can_restore_versions = access["is_book_author"]
@@ -2743,6 +2960,29 @@ def delete_book(book_id):
             if book.author_id != author_id:
                 return jsonify({'error': 'You can only delete your own books'}), 403
 
+        # Financial history is an accounting record, not disposable content.
+        # Archive and unlist a sold/funded title instead of deleting purchases,
+        # refunds, payouts, or buyer entitlements.
+        has_financial_history = bool(
+            BookPurchase.query.filter_by(book_project_id=book_id).first()
+            or BookSale.query.filter_by(book_project_id=book_id).first()
+            or InvestmentCampaign.query.filter_by(book_project_id=book_id).first()
+            or BookPrintOrder.query.filter_by(book_project_id=book_id).first()
+        )
+        from glconnect.data_lifecycle import is_live_data_mode
+        if has_financial_history and is_live_data_mode():
+            book.status = BookStatus.ARCHIVED
+            book.digital_book_published = False
+            book.audiobook_published = False
+            book.print_enabled = False
+            book.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'archived': True,
+                'message': 'This title was archived and unlisted to preserve purchase and payment history.',
+            }), 200
+
         # Clean up related data in proper order to avoid foreign key constraints
         
         # 1. Clean up investment payouts first (they reference investments which reference campaigns)
@@ -2816,6 +3056,45 @@ def delete_book(book_id):
         logger.error(f"Error deleting book {book_id}: {str(e)}\n{error_trace}")
         return jsonify({'error': f'Failed to delete book: {str(e)}'}), 500
 
+@book_bp.route('/books/<int:book_id>/reset-audiobook', methods=['POST'])
+@book_platform_required
+def reset_audiobook(book_id):
+    """Clear generated audiobook so the author can run generation again."""
+    book = BookProject.query.get_or_404(book_id)
+    if not current_user or not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+    book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    if not book_user or book.author_id != book_user.id:
+        return jsonify({'success': False, 'error': 'Only the author can reset the audiobook'}), 403
+    if not is_ebook_marketplace_listed(book):
+        return jsonify({
+            'success': False,
+            'error': 'Publish your ebook to the marketplace first.',
+        }), 403
+    if not book.has_audiobook:
+        return jsonify({'success': True, 'message': 'Ready to generate a new audiobook.'})
+
+    # A sold audiobook is part of buyer entitlement history. In live mode it
+    # must be replaced through a controlled support/re-release process rather
+    # than silently removing the files buyers already paid for.
+    from glconnect.data_lifecycle import is_live_data_mode
+    if is_live_data_mode() and BookPurchase.query.filter(
+        BookPurchase.book_project_id == book.id,
+        BookPurchase.status == TransactionStatus.COMPLETED,
+        BookPurchase.purchase_format.in_(("audiobook", "bundle")),
+    ).first():
+        return jsonify({
+            'success': False,
+            'error': 'This audiobook has buyer purchases and cannot be reset automatically in live mode. Contact support for a versioned replacement.',
+        }), 409
+
+    clear_audiobook_generation(book, unpublish=True)
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'message': 'Previous audiobook cleared. Choose sections, voice, and price to generate again.',
+    })
+
 @book_bp.route('/books/<int:book_id>/prepare-audiobook-segments', methods=['POST'])
 @book_platform_required
 def prepare_audiobook_segments(book_id):
@@ -2831,8 +3110,24 @@ def prepare_audiobook_segments(book_id):
     book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
     if not book_user or book.author_id != book_user.id:
         return jsonify({'success': False, 'error': 'You can only prepare audiobooks for your own books'}), 403
+    if not is_ebook_marketplace_listed(book):
+        return jsonify({
+            'success': False,
+            'error': 'Publish your ebook to the marketplace first to use Audiobook studio.',
+        }), 403
     if book.has_audiobook:
         return jsonify({'success': False, 'error': 'This book already has an audiobook version'}), 400
+
+    active_task = AudioGenerationTask.query.filter(
+        AudioGenerationTask.book_project_id == book.id,
+        AudioGenerationTask.status.in_(("pending", "processing")),
+    ).first()
+    if active_task:
+        return jsonify({
+            'success': False,
+            'error': 'Audiobook generation is already in progress. Use the status panel to follow it.',
+            'task_id': active_task.id,
+        }), 409
 
     src = build_audiobook_source(book, current_app.root_path)
     if not src['success']:
@@ -2861,7 +3156,8 @@ def prepare_audiobook_segments(book_id):
         'segments': segments,
         'notice': (
             'Your ebook listing is unchanged, footnotes, index, tables, and appendix stay in the digital edition. '
-            'Here you only choose what is read for the audiobook. Uncheck sections you do not want narrated.'
+            'Here you only choose what is read for the audiobook. Check each section you want narrated; '
+            'nothing is selected until you choose (or use AI suggestions).'
         ),
     })
 
@@ -2884,6 +3180,12 @@ def generate_audiobook_for_book(book_id):
     # Check if user is the author of the book
     if book.author_id != book_user.id:
         return jsonify({'success': False, 'error': 'You can only generate audiobooks for your own books'}), 403
+
+    if not is_ebook_marketplace_listed(book):
+        return jsonify({
+            'success': False,
+            'error': 'Publish your ebook to the marketplace first to use Audiobook studio.',
+        }), 403
     
     # Check if book already has audiobook
     if book.has_audiobook:
@@ -2901,8 +3203,14 @@ def generate_audiobook_for_book(book_id):
             'success': False,
             'error': 'Audiobook price is required (use 0 for free).',
         }), 400
+    raw_price = data.get('audiobook_price')
+    if raw_price is None or (isinstance(raw_price, str) and not str(raw_price).strip()):
+        return jsonify({
+            'success': False,
+            'error': 'Audiobook price is required (use 0 for free).',
+        }), 400
     try:
-        audiobook_price = float(data.get('audiobook_price'))
+        audiobook_price = float(raw_price)
     except (TypeError, ValueError):
         return jsonify({'success': False, 'error': 'Audiobook price must be a valid number.'}), 400
     if audiobook_price < 0:
@@ -2911,6 +3219,12 @@ def generate_audiobook_for_book(book_id):
     voice_name = (data.get('voice_name') or '').strip()
     if not voice_name:
         return jsonify({'success': False, 'error': 'Voice selection is required.'}), 400
+    voice_prefix = tts_voice_list_prefix(book.language or 'en')
+    if voice_prefix and not voice_name.startswith(voice_prefix):
+        return jsonify({
+            'success': False,
+            'error': 'Choose a voice that matches the ebook language.',
+        }), 400
     
     try:
         src = build_audiobook_source(book, current_app.root_path)
@@ -2924,12 +3238,19 @@ def generate_audiobook_for_book(book_id):
         source_hash_payload = data.get('source_hash')
         segment_includes_payload = data.get('segment_includes')
 
+        plan = book.audiobook_segment_plan if isinstance(getattr(book, 'audiobook_segment_plan', None), dict) else {}
+        if not plan.get('source_hash') or not plan.get('segments'):
+            return jsonify({
+                'success': False,
+                'error': 'Review sections for audiobook and choose which parts to include before generating.',
+            }), 400
+
         if not source_hash_payload:
             return jsonify({
                 'success': False,
                 'error': 'Review sections for audiobook before generating.',
             }), 400
-        if source_hash_payload != source_hash:
+        if source_hash_payload != source_hash or plan.get('source_hash') != source_hash:
             return jsonify({
                 'success': False,
                 'error': 'Your book text changed since you reviewed sections. Please click Review sections again.',
@@ -2938,8 +3259,14 @@ def generate_audiobook_for_book(book_id):
         if not isinstance(segment_includes_payload, list) or not segment_includes_payload:
             return jsonify({
                 'success': False,
-                'error': 'segment_includes must be a list of booleans, one per section.',
+                'error': 'Choose which sections to include in the audiobook before generating.',
             }), 400
+        if len(segment_includes_payload) != len(plan.get('segments') or []):
+            return jsonify({
+                'success': False,
+                'error': 'Section selection is out of date. Click Review sections for audiobook again.',
+                'stale_segment_plan': True,
+            }), 409
         segment_bools = []
         for x in segment_includes_payload:
             if isinstance(x, bool):
@@ -2982,6 +3309,28 @@ def generate_audiobook_for_book(book_id):
 
         def generate_audio_background():
             with app.app_context():
+                def _cleanup_partial_audio(result):
+                    generated_root = os.path.realpath(os.path.join(
+                        current_app.root_path, 'static', 'audio', 'audiobooks'
+                    ))
+                    paths = []
+                    for row in (result or {}).get('chapter_results') or []:
+                        paths.append(row.get('audio_file_path') or row.get('audio_file'))
+                    path = (result or {}).get('audio_file_path')
+                    if path:
+                        paths.append(path)
+                    for raw in paths:
+                        if not raw:
+                            continue
+                        candidate = os.path.realpath(str(raw))
+                        if not os.path.isabs(str(raw)):
+                            candidate = os.path.realpath(os.path.join(current_app.root_path, 'static', str(raw)))
+                        if candidate.startswith(generated_root + os.sep) and os.path.isfile(candidate):
+                            try:
+                                os.remove(candidate)
+                            except OSError:
+                                logger.warning('Could not clean failed audiobook asset %s', candidate)
+
                 try:
                     audio_task = AudioGenerationTask.query.get(task_id)
                     book = BookProject.query.get(book_id_for_thread)
@@ -2994,19 +3343,22 @@ def generate_audiobook_for_book(book_id):
                     audio_task.progress = 10
                     db.session.commit()
                     
-                    # Always chapter-based when we have segments (platform chapters or upload parts)
-                    if chapters_for_audio_thread:
-                        audio_result = audio_book_generator.generate_audiobook_by_chapters(
-                            chapters_for_audio_thread,
+                    # Chapter-based only — segments and price are required before generation starts.
+                    if not chapters_for_audio_thread:
+                        audio_task.status = 'failed'
+                        audio_task.error_message = 'No sections selected for audiobook generation.'
+                        db.session.commit()
+                        logger.error(
+                            "Audiobook generation for book %s aborted: no sections after filter",
                             book.id,
-                            voice_name_for_thread
                         )
-                    else:
-                        audio_result = audio_book_generator.generate_audiobook(
-                            full_text_for_thread,
-                            book.id,
-                            voice_name_for_thread
-                        )
+                        return
+
+                    audio_result = audio_book_generator.generate_audiobook_by_chapters(
+                        chapters_for_audio_thread,
+                        book.id,
+                        voice_name_for_thread
+                    )
                     
                     if audio_result['success']:
                         book.has_audiobook = True
@@ -3042,8 +3394,9 @@ def generate_audiobook_for_book(book_id):
                         
                     else:
                         # Update task with error
+                        _cleanup_partial_audio(audio_result)
                         audio_task.status = 'failed'
-                        audio_task.error_message = audio_result['error']
+                        audio_task.error_message = 'Audio generation failed. Review the source text and try again.'
                         db.session.commit()
                         logger.error(f"Failed to generate audiobook for book {book.id}: {audio_result['error']}")
                         
@@ -3051,12 +3404,13 @@ def generate_audiobook_for_book(book_id):
                     import traceback
                     error_trace = traceback.format_exc()
                     logger.error(f"Error in background audiobook generation: {str(e)}\n{error_trace}")
+                    _cleanup_partial_audio(locals().get('audio_result'))
                     try:
                         # Try to update task status, but don't fail if we can't
                         audio_task = AudioGenerationTask.query.get(task_id)
                         if audio_task:
                             audio_task.status = 'failed'
-                            audio_task.error_message = str(e)
+                            audio_task.error_message = 'Audio generation failed unexpectedly. Please try again or contact support.'
                             db.session.commit()
                     except Exception as inner_e:
                         logger.error(f"Failed to update task status after error: {str(inner_e)}")
@@ -3079,7 +3433,7 @@ def generate_audiobook_for_book(book_id):
         logger.error(f"Error starting audiobook generation for book {book_id}: {str(e)}\n{error_trace}")
         return jsonify({
             'success': False,
-            'error': f'Failed to start audiobook generation: {str(e)}'
+            'error': 'We could not start audiobook generation. Please try again or contact support.'
         }), 500
 
 @book_bp.route('/audiobook/available-voices', methods=['GET'])
@@ -3175,11 +3529,20 @@ def preview_voice_upload():
 @book_bp.route('/books/<int:book_id>/audiobook/preview-voice', methods=['POST'])
 @book_platform_required
 def preview_voice(book_id):
-    """Generate a preview audio sample for a voice"""
+    """Generate an author-only preview for a voice, optionally from this book."""
     try:
-        data = request.get_json()
+        book = BookProject.query.get_or_404(book_id)
+        book_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        if not book_user or book.author_id != book_user.id:
+            return jsonify({'success': False, 'error': 'Only the author can preview this audiobook voice.'}), 403
+        data = request.get_json(silent=True) or {}
         voice_name = data.get('voice_name')
-        sample_text = data.get('sample_text')  # Optional custom sample
+        sample_text = data.get('sample_text')
+        if data.get('use_book_sample'):
+            source = build_audiobook_source(book, current_app.root_path)
+            if not source.get('success'):
+                return jsonify({'success': False, 'error': source.get('error', 'Could not prepare a book sample.')}), 400
+            sample_text = (source.get('full_text') or '')[:900]
         
         if not voice_name:
             return jsonify({
@@ -3469,12 +3832,9 @@ def view_suggestion(suggestion_id, user_profile, profile_type):
 
 # Helper function to send collaboration invitation email
 def send_collaboration_invitation_email(invitation, book, inviter):
-    """Send collaboration invitation email via Mailtrap"""
-    sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
-    api_key = os.getenv("MAIL_TRAP")
-    
-    if not api_key:
-        logger.warning("MAIL_TRAP API key not set. Cannot send collaboration invitation email.")
+    """Send collaboration invitation email via Resend"""
+    if not is_mail_configured():
+        logger.warning("RESEND_API_KEY is not set. Cannot send collaboration invitation email.")
         return False
     
     # Generate invitation URL
@@ -3513,21 +3873,18 @@ Best regards,
 Ink Studio Team
 """
     
-    try:
-        mail = Mail(
-            sender=Address(email=sender, name="Ink Studio"),
-            to=[Address(email=invitation.email)],
-            subject=subject,
-            text=message_text,
-            category="Collaboration Invitation"
-        )
-        client = MailtrapClient(token=api_key)
-        client.send(mail)
+    sent = send_email(
+        to=invitation.email,
+        subject=subject,
+        text=message_text,
+        from_name="Ink Studio",
+        tags=["collaboration-invitation"],
+    )
+    if sent:
         logger.info(f"Collaboration invitation email sent to {invitation.email} for book {book.id}")
         return True
-    except Exception as e:
-        logger.error(f"Failed to send collaboration invitation email: {str(e)}", exc_info=True)
-        return False
+    logger.error("Failed to send collaboration invitation email")
+    return False
 
 # Collaboration routes
 @book_bp.route('/books/<int:book_id>/collaborate')
@@ -3635,9 +3992,28 @@ def invite_collaborator(book_id, user_profile, profile_type):
     )
     
     db.session.add(invitation)
-    db.session.commit()
-    
-    # Send email invitation via Mailtrap
+
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception(
+            "invite_collaborator failed for book %s role %s: %s",
+            book_id,
+            collaboration_role.value,
+            exc,
+        )
+        err_text = str(exc).lower()
+        if "co_author" in err_text or "enum" in err_text or "invalid input value" in err_text:
+            return jsonify({
+                'error': (
+                    'Co-author invitations require a database update. '
+                    'Please redeploy the app or contact support.'
+                ),
+            }), 500
+        return jsonify({'error': 'Could not save this invitation. Please try again.'}), 500
+
+    # Send email invitation via Resend
     try:
         send_collaboration_invitation_email(invitation, book, book_user)
     except Exception as e:
@@ -3951,40 +4327,25 @@ def _marketplace_cover_url(book, external=False):
     return url_for("static", filename=path, _external=external)
 
 
-def _mailtrap_credentials():
-    """Resolve Mailtrap sender + API key from env or app config (same as account emails)."""
-    sender = (
-        (os.getenv("SENDER_MAIL") or "").strip()
-        or (current_app.config.get("SENDER_MAIL") or "").strip()
-        or "info@ndotonic.com"
-    )
-    api_key = (
-        (os.getenv("MAIL_TRAP") or "").strip()
-        or (current_app.config.get("MAIL_TRAP") or "").strip()
-    )
-    return sender, api_key
-
-
-def _maybe_send_purchase_receipt(book, purchase):
+def _maybe_send_purchase_receipt(book, purchase, print_order=None):
     """Send purchase receipt once per browser session (avoids duplicate on success-page refresh)."""
     if purchase.status != TransactionStatus.COMPLETED:
         return
     key = f"_receipt_sent_purchase_{purchase.id}"
     if session.get(key):
         return
-    if send_book_purchase_receipt_email(book, purchase):
+    if send_book_purchase_receipt_email(book, purchase, print_order=print_order):
         session[key] = True
 
 
-def send_book_purchase_receipt_email(book, purchase):
-    """Send a text receipt via Mailtrap (same pattern as account confirmation in routes1)."""
+def send_book_purchase_receipt_email(book, purchase, print_order=None):
+    """Send a text receipt via Resend (same pattern as account confirmation in routes1)."""
     to_email = purchase.get_buyer_email()
     if not to_email:
         logger.warning("Purchase receipt skipped: no buyer email for purchase %s", purchase.id)
         return False
-    sender, api_key = _mailtrap_credentials()
-    if not api_key:
-        logger.warning("Purchase receipt skipped: MAIL_TRAP not set (SENDER_MAIL=%s)", sender or "(empty)")
+    if not is_mail_configured():
+        logger.warning("Purchase receipt skipped: RESEND_API_KEY not set")
         return False
 
     base = (current_app.config.get("FRONTEND_BASE_URL") or "").rstrip("/")
@@ -4015,7 +4376,11 @@ def send_book_purchase_receipt_email(book, purchase):
         "",
     ]
     if purchase_grants_format(fmt_norm, "print"):
-        handling_days = int(getattr(book, "print_handling_days", None) or 7)
+        handling_days = int(
+            getattr(print_order, "handling_days", None)
+            or getattr(book, "print_handling_days", None)
+            or 7
+        )
         lines.extend([
             "This is a print edition. The author will ship your book to the address you provided at checkout.",
             f"Typical handling time: about {handling_days} business days before shipment.",
@@ -4032,20 +4397,18 @@ def send_book_purchase_receipt_email(book, purchase):
         lines.extend(["", f"My Library: {library_url}"])
     body = "\n".join(lines)
 
-    try:
-        msg = Mail(
-            sender=Address(email=sender, name="ndotonic"),
-            to=[Address(email=to_email)],
-            subject=f"Receipt: {book.title}",
-            text=body,
-            category="Book purchase",
-        )
-        MailtrapClient(token=api_key).send(msg)
+    sent = send_email(
+        to=to_email,
+        subject=f"Receipt: {book.title}",
+        text=body,
+        from_name="ndotonic",
+        tags=["book-purchase"],
+    )
+    if sent:
         logger.info("Sent purchase receipt for purchase %s to %s", purchase.id, to_email)
         return True
-    except Exception as e:
-        logger.warning("Failed to send purchase receipt: %s", e, exc_info=True)
-        return False
+    logger.warning("Failed to send purchase receipt")
+    return False
 
 
 def send_print_order_shipped_email(book, purchase, order):
@@ -4054,9 +4417,8 @@ def send_print_order_shipped_email(book, purchase, order):
     if not to_email:
         logger.warning("Shipped email skipped: no buyer email for purchase %s", purchase.id)
         return False
-    sender, api_key = _mailtrap_credentials()
-    if not api_key:
-        logger.warning("Shipped email skipped: MAIL_TRAP not set")
+    if not is_mail_configured():
+        logger.warning("Shipped email skipped: RESEND_API_KEY not set")
         return False
 
     base = (current_app.config.get("FRONTEND_BASE_URL") or "").rstrip("/")
@@ -4094,20 +4456,38 @@ def send_print_order_shipped_email(book, purchase, order):
     ])
     body = "\n".join(lines)
 
-    try:
-        msg = Mail(
-            sender=Address(email=sender, name="ndotonic"),
-            to=[Address(email=to_email)],
-            subject=f"Shipped: {book.title}",
-            text=body,
-            category="Print order shipped",
-        )
-        MailtrapClient(token=api_key).send(msg)
+    sent = send_email(
+        to=to_email,
+        subject=f"Shipped: {book.title}",
+        text=body,
+        from_name="ndotonic",
+        tags=["print-order-shipped"],
+    )
+    if sent:
         logger.info("Sent shipped email for print order %s to %s", order.id, to_email)
         return True
-    except Exception as e:
-        logger.warning("Failed to send shipped email: %s", e, exc_info=True)
-        return False
+    logger.warning("Failed to send shipped email")
+    return False
+
+
+def _print_order_ship_by_date(order, book):
+    """Return the promised ship-by date, counting the handling window as weekdays."""
+    placed_at = getattr(order, 'created_at', None)
+    if not placed_at:
+        return None
+    if placed_at.tzinfo is None:
+        placed_at = placed_at.replace(tzinfo=timezone.utc)
+    handling_days = max(1, min(
+        60,
+        int(getattr(order, 'handling_days', None) or getattr(book, 'print_handling_days', None) or 7),
+    ))
+    ship_by = placed_at.date()
+    remaining = handling_days
+    while remaining:
+        ship_by += timedelta(days=1)
+        if ship_by.weekday() < 5:
+            remaining -= 1
+    return ship_by
 
 
 # Marketplace routes
@@ -4141,9 +4521,13 @@ def marketplace():
         total_books = DatabaseOptimizer.count_marketplace_books(
             genre=genre, language=language, search_term=search_term, price_range=price_range
         )
-        list_stats = DatabaseOptimizer.get_marketplace_list_stats(
-            genre=genre, language=language, search_term=search_term, price_range=price_range
-        )
+        try:
+            list_stats = DatabaseOptimizer.get_marketplace_list_stats(
+                genre=genre, language=language, search_term=search_term, price_range=price_range
+            )
+        except Exception as stats_exc:
+            logger.warning("Marketplace list stats failed: %s", stats_exc)
+            list_stats = {"total": total_books, "paid": 0, "free": 0}
         total_pages = max(1, (total_books + per_page - 1) // per_page) if total_books else 1
 
         available_genres = DatabaseOptimizer.get_available_genres()
@@ -4164,6 +4548,8 @@ def marketplace():
             # Authors can list finished digital/audio-ready titles without writing in Ink Studio
             can_list_book_on_marketplace = bool(has_writer_profile or has_book_platform_user)
 
+        from glconnect.stripe_utils import stripe_effective_mode_is_test
+
         return render_template(
             'book_platform/marketplace.html',
             books=books,
@@ -4182,6 +4568,7 @@ def marketplace():
             available_languages=available_languages,
             search_term=search_term or '',
             marketplace_cover_url=_marketplace_cover_url,
+            stripe_checkout_test_mode=stripe_effective_mode_is_test(current_app),
             **account_terms_context(),
         )
     except Exception as e:
@@ -4195,6 +4582,8 @@ def marketplace():
         import traceback
         traceback.print_exc()
         # Return empty list on error
+        from glconnect.stripe_utils import stripe_effective_mode_is_test
+
         return render_template(
             'book_platform/marketplace.html',
             books=[],
@@ -4213,7 +4602,22 @@ def marketplace():
             available_languages=[],
             search_term='',
             marketplace_cover_url=_marketplace_cover_url,
+            stripe_checkout_test_mode=stripe_effective_mode_is_test(current_app),
         )
+
+
+@book_bp.route('/books/<int:book_id>/marketplace-visibility-debug', methods=['GET'])
+@writer_or_book_platform_required
+def marketplace_visibility_debug(book_id, user_profile, profile_type):
+    """Author-only diagnostic: why a title does or does not appear on the marketplace."""
+    author_id = get_profile_id(user_profile, profile_type)
+    book = BookProject.query.get_or_404(book_id)
+    if author_id is None or book.author_id != author_id:
+        return jsonify({'success': False, 'error': 'Only the author can view this diagnostic.'}), 403
+
+    snap = _marketplace_visibility_snapshot(book)
+    snap["in_marketplace_count"] = DatabaseOptimizer.count_marketplace_books()
+    return jsonify({'success': True, 'diagnostic': snap})
 
 
 @book_bp.route('/api/marketplace/books/<int:book_id>', methods=['GET'])
@@ -4221,12 +4625,14 @@ def marketplace():
 def api_marketplace_book_detail(book_id):
     """JSON detail for marketplace modal / future PDP (published books only)."""
     from glconnect.isbn_pool_service import format_isbn_display, marketplace_publisher_display
+    from glconnect.book_purchase_format import ebook_listed, audiobook_listed, print_listed
+    from glconnect.book_platform_models import BookStatus
 
     lang_labels = {
         'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German', 'it': 'Italian',
         'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese', 'ja': 'Japanese', 'ko': 'Korean',
         'ar': 'Arabic', 'hi': 'Hindi', 'nl': 'Dutch', 'pl': 'Polish', 'tr': 'Turkish',
-        'other': 'Other',
+        'rw': 'Kinyarwanda', 'rn': 'Kirundi', 'other': 'Other',
     }
     book = BookProject.query.options(
         joinedload(BookProject.author).joinedload(BookPlatformUser.user)
@@ -4249,15 +4655,25 @@ def api_marketplace_book_detail(book_id):
 
     primary_lc = (book.language or "en").lower()
     digital_editions_payload = []
-    if book.digital_book_published and book.digital_file_path:
-        digital_editions_payload.append(
-            {
-                "language": primary_lc,
-                "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
-                "file_format": (book.digital_file_type or "").upper() or None,
-                "kind": "original",
-            }
-        )
+    if ebook_listed(book):
+        if book.digital_file_path and book.digital_book_published:
+            digital_editions_payload.append(
+                {
+                    "language": primary_lc,
+                    "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
+                    "file_format": (book.digital_file_type or "").upper() or None,
+                    "kind": "original",
+                }
+            )
+        elif book.status == BookStatus.PUBLISHED and not book.digital_file_path:
+            digital_editions_payload.append(
+                {
+                    "language": primary_lc,
+                    "language_label": lang_labels.get(primary_lc, language_label(primary_lc)),
+                    "file_format": "INK",
+                    "kind": "platform",
+                }
+            )
     payload = {
         'success': True,
         'book': {
@@ -4278,8 +4694,8 @@ def api_marketplace_book_detail(book_id):
             'isbn_display': format_isbn_display(book.isbn) if book.isbn else None,
             'publisher_name': marketplace_publisher_display(book.publisher_name),
             'formats': {
-                'digital': bool(book.digital_book_published and book.digital_file_path),
-                'audiobook': bool(book.audiobook_published and book.has_audiobook),
+                'digital': ebook_listed(book),
+                'audiobook': audiobook_listed(book),
                 'print': print_listed(book),
             },
             'print_price': float(book.print_price) if print_listed(book) else None,
@@ -4343,8 +4759,20 @@ def publish_book(book_id):
     if attestation_error:
         return jsonify({'error': attestation_error}), 400
 
+    # Platform-authored manuscripts must contain publishable content. Uploaded
+    # digital editions do not use chapter rows, so they remain eligible here.
+    if not book.digital_file_path:
+        manuscript_chapters = BookChapter.query.filter_by(book_project_id=book.id).all()
+        if not manuscript_chapters:
+            return jsonify({'error': 'Add at least one section before publishing this manuscript.'}), 400
+        if not any(
+            (chapter.title or '').strip() and count_words_from_html(chapter.content or '') > 0
+            for chapter in manuscript_chapters
+        ):
+            return jsonify({'error': 'Add a titled section with content before publishing this manuscript.'}), 400
+
     # Validate book is ready for publishing
-    if not book.price or book.price <= 0:
+    if book.price is None or book.price < 0:
         return jsonify({'error': 'Please set a price before publishing'}), 400
     if not book_has_listing_cover(book):
         return jsonify({'error': 'Please add a cover image before publishing to the marketplace.'}), 400
@@ -4475,11 +4903,28 @@ def add_print_edition(book_id, user_profile, profile_type):
         try:
             print_shipping = max(0.0, float(request.form.get('print_shipping_price') or 5))
         except (TypeError, ValueError):
-            print_shipping = 5.0
+            flash('Enter a valid shipping price.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html', book=book,
+                cover_url=_marketplace_cover_url(book), needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn, **agreement_context_for_templates(),
+            )
         try:
-            print_handling = max(1, min(60, int(request.form.get('print_handling_days') or 7)))
+            print_handling = int(request.form.get('print_handling_days') or 7)
         except (TypeError, ValueError):
-            print_handling = 7
+            flash('Enter a valid handling time in business days.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html', book=book,
+                cover_url=_marketplace_cover_url(book), needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn, **agreement_context_for_templates(),
+            )
+        if print_handling < 1 or print_handling > 60:
+            flash('Handling time must be between 1 and 60 business days.', 'error')
+            return render_template(
+                'book_platform/add_print_edition.html', book=book,
+                cover_url=_marketplace_cover_url(book), needs_attestation=needs_attestation,
+                needs_isbn=needs_isbn, **agreement_context_for_templates(),
+            )
         print_description = (request.form.get('print_description') or '').strip() or None
 
         coupon_err = try_redeem_coupon_from_form(book, LISTING_FORMAT_PRINT, request.form)
@@ -4592,12 +5037,24 @@ def book_print_orders(book_id):
     pending_count = sum(
         1 for o in orders if o.status == PrintOrderStatus.PENDING_FULFILLMENT
     )
+    today = datetime.now(timezone.utc).date()
+    overdue_count = 0
+    for order in orders:
+        order.ship_by_date = _print_order_ship_by_date(order, book)
+        order.is_overdue = bool(
+            order.status == PrintOrderStatus.PENDING_FULFILLMENT
+            and order.ship_by_date
+            and today > order.ship_by_date
+        )
+        if order.is_overdue:
+            overdue_count += 1
     print_enabled = bool(getattr(book, 'print_enabled', False))
     return render_template(
         'book_platform/print_orders.html',
         book=book,
         orders=orders,
         pending_count=pending_count,
+        overdue_count=overdue_count,
         print_enabled=print_enabled,
         can_add_print=_can_add_print_edition(book),
     )
@@ -4614,18 +5071,25 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
     order = BookPrintOrder.query.filter_by(id=order_id, book_project_id=book_id).first_or_404()
     if order.status != PrintOrderStatus.PENDING_FULFILLMENT:
         return jsonify({'success': False, 'error': 'Order is not awaiting shipment'}), 400
+    if not order.purchase or order.purchase.status != TransactionStatus.COMPLETED:
+        return jsonify({'success': False, 'error': 'Payment is not confirmed for this order yet.'}), 409
     data = request.get_json(silent=True) or {}
     tracking = (data.get('tracking_number') or request.form.get('tracking_number') or '').strip()
     carrier = (data.get('shipping_carrier') or request.form.get('shipping_carrier') or '').strip()
     raw_days = data.get('expected_delivery_days', request.form.get('expected_delivery_days'))
-    order.tracking_number = tracking[:200] if tracking else None
-    order.shipping_carrier = carrier[:100] if carrier else None
-    if raw_days is not None and str(raw_days).strip() != '':
-        try:
-            days = int(raw_days)
-            order.expected_delivery_days = days if days > 0 else None
-        except (TypeError, ValueError):
-            order.expected_delivery_days = None
+    if not carrier:
+        return jsonify({'success': False, 'error': 'Add the shipping carrier before marking this order shipped.'}), 400
+    if not tracking:
+        return jsonify({'success': False, 'error': 'Add a tracking number before marking this order shipped.'}), 400
+    try:
+        days = int(raw_days)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Enter the expected delivery time in business days.'}), 400
+    if not 1 <= days <= 60:
+        return jsonify({'success': False, 'error': 'Expected delivery must be between 1 and 60 business days.'}), 400
+    order.tracking_number = tracking[:200]
+    order.shipping_carrier = carrier[:100]
+    order.expected_delivery_days = days
     order.status = PrintOrderStatus.SHIPPED
     order.shipped_at = datetime.now(timezone.utc)
     db.session.commit()
@@ -4641,10 +5105,43 @@ def mark_print_order_shipped(book_id, order_id, user_profile, profile_type):
     })
 
 
+@book_bp.route('/print-orders/<int:order_id>/received', methods=['POST'])
+@login_required
+def mark_print_order_received(order_id):
+    """Let the buyer close a shipped print order without deleting its history."""
+    order = BookPrintOrder.query.get_or_404(order_id)
+    purchase = order.purchase
+    if not purchase or purchase.status != TransactionStatus.COMPLETED:
+        if not request.is_json:
+            flash('This order is not a completed purchase.', 'warning')
+            return redirect(url_for('book_platform.my_library'))
+        return jsonify({'success': False, 'error': 'This order is not a completed purchase.'}), 409
+    bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+    owns_order = purchase.buyer_user_id == current_user.user_id or (
+        bp_user and purchase.buyer_id == bp_user.id
+    )
+    if not owns_order:
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    if order.status != PrintOrderStatus.SHIPPED:
+        if not request.is_json:
+            flash('Only shipped orders can be marked delivered.', 'warning')
+            return redirect(url_for('book_platform.my_library'))
+        return jsonify({'success': False, 'error': 'Only shipped orders can be marked delivered.'}), 409
+    order.status = PrintOrderStatus.COMPLETED
+    order.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    if not request.is_json:
+        flash('Print order marked as delivered.', 'success')
+        return redirect(url_for('book_platform.my_library'))
+    return jsonify({'success': True, 'message': 'Order marked as delivered.'})
+
+
 @book_bp.route('/books/<int:book_id>/unpublish', methods=['POST'])
 @login_required
 def unpublish_book(book_id):
-    """Unpublish a book from marketplace (change status to DRAFT)"""
+    """Unpublish all marketplace formats for this title."""
+    from glconnect.book_utils import clear_marketplace_listing_flags
+
     book = BookProject.query.get_or_404(book_id)
 
     if current_user.role != 'admin':
@@ -4656,15 +5153,15 @@ def unpublish_book(book_id):
             return jsonify({'error': 'Profile configuration error. Please ensure you have a Writer or Ink Studio profile.'}), 403
         if book.author_id != author_id:
             return jsonify({'error': 'Only the author or admin can unpublish the book'}), 403
-    
-    # Only unpublish if currently published
-    if book.status != BookStatus.PUBLISHED:
+
+    if not is_book_published(book):
         return jsonify({'error': 'Book is not currently published'}), 400
-    
-    # Change status to DRAFT (removes from marketplace but keeps the book)
-    book.status = BookStatus.DRAFT
+
+    if not clear_marketplace_listing_flags(book):
+        return jsonify({'error': 'Book is not currently published'}), 400
+
     book.updated_at = datetime.now(timezone.utc)
-    
+
     try:
         db.session.commit()
         return jsonify({'success': True, 'message': 'Book unpublished successfully. It has been removed from the marketplace but can be republished anytime.'})
@@ -4690,17 +5187,10 @@ def remove_listing(book_id):
             return jsonify({'error': 'Only the author or admin can remove this listing'}), 403
 
     listing_was_live = False
-    if book.digital_file_path:
-        if book.digital_book_published:
-            book.digital_book_published = False
-            listing_was_live = True
-        if book.audiobook_published:
-            book.audiobook_published = False
-            listing_was_live = True
-    else:
-        if book.status == BookStatus.PUBLISHED:
-            book.status = BookStatus.DRAFT
-            listing_was_live = True
+    from glconnect.book_utils import clear_marketplace_listing_flags
+
+    if clear_marketplace_listing_flags(book):
+        listing_was_live = True
 
     if not listing_was_live:
         return jsonify({'error': 'This book is not currently live in the marketplace'}), 400
@@ -4918,6 +5408,8 @@ def my_library():
             .order_by(BookPrintOrder.created_at.desc())
             .all()
         )
+        for order in print_orders:
+            order.ship_by_date = _print_order_ship_by_date(order, order.book_project)
 
     highlight_book_id = request.args.get('book_id', type=int)
     return render_template(
@@ -5269,6 +5761,7 @@ def _create_print_order_from_checkout_session(purchase, book, session):
         shipping_postal=(addr.get('postal_code') or addr.get('zip') or '')[:30],
         shipping_country=(addr.get('country') or 'US')[:2].upper(),
         status=PrintOrderStatus.PENDING_FULFILLMENT,
+        handling_days=max(1, min(60, int(getattr(book, 'print_handling_days', None) or 7))),
     )
     db.session.add(order)
     return order
@@ -5276,19 +5769,21 @@ def _create_print_order_from_checkout_session(purchase, book, session):
 
 def _validate_marketplace_format_selection(book, formats):
     """Ensure each requested format is listed and priced on this book."""
+    from glconnect.book_purchase_format import ebook_listed, audiobook_listed
+
     fmts = parse_selected_formats(formats)
     if not fmts:
         return None, "Choose at least one format to purchase."
     for fmt in fmts:
         if fmt == "digital":
-            if not book.digital_book_published and book.status != BookStatus.PUBLISHED:
+            if not ebook_listed(book):
                 return None, "Digital ebook is not available for this title."
-            if not book.price or book.price <= 0:
+            if book.price is None or book.price < 0:
                 return None, "Digital ebook price is not set for this book."
         elif fmt == "audiobook":
-            if not book.has_audiobook or not book.audiobook_published:
+            if not audiobook_listed(book):
                 return None, "Audiobook is not available for this title."
-            if not book.audiobook_price or book.audiobook_price <= 0:
+            if book.audiobook_price is None or book.audiobook_price < 0:
                 return None, "Audiobook price is not set for this book."
         elif fmt == "print":
             if not print_listed(book):
@@ -5329,6 +5824,20 @@ def purchase_book(book_id):
             return jsonify({'error': fmt_err}), 400
 
         purchase_type = purchase_format_key(selected_formats)
+
+        # EU digital-content withdrawal waiver (required for immediate digital delivery).
+        digital_formats = [f for f in selected_formats if f in ("digital", "audiobook")]
+        if digital_formats and not (
+            request_data.get("digital_delivery_waiver")
+            in (True, "true", "1", "on", "yes")
+        ):
+            return jsonify({
+                "error": (
+                    "Please confirm immediate digital delivery and that you waive the "
+                    "14-day withdrawal right for the digital format(s) in this order."
+                ),
+                "error_code": "digital_delivery_waiver_required",
+            }), 400
         
         buyer_user_id = current_user.user_id if current_user.is_authenticated else None
         if not buyer_user_id:
@@ -5426,6 +5935,15 @@ def purchase_book(book_id):
                     "author_payout_setup_needed": True,
                 },
             )
+        # Production: refuse paid checkout unless author Connect is ready (no platform float).
+        if marketplace_requires_author_connect() and not author_connect_id and payment_amount > 0:
+            return jsonify({
+                "error": (
+                    "This title is not ready for paid checkout. The author must finish "
+                    "Stripe Connect payout setup before sales can be accepted."
+                ),
+                "error_code": "author_payout_setup_required",
+            }), 400
         payment_intent_data, connect_checkout_error = marketplace_book_payment_intent_data(
             book=book,
             purchase_type=purchase_type,
@@ -6029,6 +6547,7 @@ def purchase_book(book_id):
                     checkout_kw['payment_intent_data'] = payment_intent_data
                     if author_connect_id:
                         checkout_kw['stripe_account'] = author_connect_id
+                checkout_kw = apply_stripe_tax_to_checkout_kw(checkout_kw)
                 checkout_session = create_marketplace_checkout_session(
                     checkout_kw,
                     purchase_type=purchase_type,
@@ -6115,7 +6634,6 @@ def purchase_book(book_id):
         logger.error(f"Purchase failed for book {book_id}, buyer {buyer_user_id}: {error_msg}", exc_info=True)
         
         # Convert technical errors to user-friendly messages
-        # TEMPORARILY: Always include error details for debugging
         user_friendly_error = "We encountered an issue processing your purchase. Please try again or contact support if the problem persists."
         
         # Check if we're in debug/development mode - include more details for debugging
@@ -6124,24 +6642,18 @@ def purchase_book(book_id):
         except Exception:
             is_debug = False
         
-        # TEMPORARILY: Always show error details for debugging
-        is_debug = True  # Force debug mode to see actual errors
-        
         # Check for specific error types and provide better messages
         if 'psycopg2' in error_msg.lower() or 'database' in error_msg.lower() or 'sql' in error_msg.lower():
             user_friendly_error = "A database error occurred. Our team has been notified. Please try again in a moment."
-            if is_debug:
-                user_friendly_error += f" (Debug: {error_msg[:200]})"
         elif 'enum' in error_msg.lower() or 'transactionstatus' in error_msg.lower():
             user_friendly_error = "There was an issue with the purchase status. Please try again."
-            if is_debug:
-                user_friendly_error += f" (Debug: {error_msg[:200]})"
         elif 'not found' in error_msg.lower() or '404' in error_msg.lower():
             user_friendly_error = "The book you're trying to purchase could not be found."
         elif 'permission' in error_msg.lower() or 'unauthorized' in error_msg.lower():
             user_friendly_error = "You don't have permission to perform this action."
-        elif is_debug:
-            # In debug mode, include the actual error message
+        elif is_debug and _purchase_app.config.get('TESTING'):
+            # Test responses may include a short diagnostic without exposing it
+            # in normal development or production browser responses.
             user_friendly_error = f"We encountered an issue: {error_msg[:300]}"
         
         
@@ -6456,7 +6968,7 @@ def purchase_book(book_id):
 
 @book_bp.route('/checkout/quick-register', methods=['POST'])
 def checkout_quick_register():
-    """Create an account during marketplace checkout, then continue as a logged in buyer."""
+    """Create an account during checkout; email verification is required before sign-in."""
     if getattr(current_user, 'is_authenticated', False):
         return jsonify({'success': True, 'already_logged_in': True})
 
@@ -6488,15 +7000,22 @@ def checkout_quick_register():
         last_name=last_name or 'User',
         username=username,
         email=email,
+        confirmed=False,
         role='other',
     )
     user.set_password(password)
     record_account_terms_acceptance(user)
     db.session.add(user)
     db.session.commit()
-    login_user(user)
-    session['user_id'] = user.user_id
-    return jsonify({'success': True})
+    from glconnect.routes1 import _send_confirmation_for_user
+    verification_sent = _send_confirmation_for_user(user)
+    return jsonify({
+        'success': True,
+        'verification_required': True,
+        'verification_sent': verification_sent,
+        'verification_url': url_for('routes1.check_email'),
+        'message': 'Check your email and confirm your account before continuing to checkout.',
+    })
 
 
 # Stripe Payment Success Callback
@@ -6591,23 +7110,26 @@ def purchase_success():
 
         # If purchase found, ensure it's COMPLETED and has BookSale
         if purchase:
-            # Purchase exists - ensure it's COMPLETED
+            # The browser return URL is not proof of payment. Only the signed
+            # Stripe webhook may grant an entitlement or create a completed
+            # sale. This prevents a buyer from completing a pending order by
+            # manually visiting this URL.
+            if purchase.status == TransactionStatus.PENDING:
+                flash(
+                    'Payment is still being confirmed. Your library will update automatically once Stripe confirms it. '
+                    'If you were charged, please refresh in a moment.',
+                    'info',
+                )
+                return redirect(url_for('book_platform.my_library'))
+            if purchase.status != TransactionStatus.COMPLETED:
+                flash('This payment was not completed, so no access was granted.', 'warning')
+                return redirect(url_for('book_platform.marketplace'))
+
+            # Purchase already confirmed by the signed webhook.
             book = BookProject.query.get_or_404(purchase.book_project_id)
-            was_pending = purchase.status == TransactionStatus.PENDING
-            purchase.status = TransactionStatus.COMPLETED
             purchase.purchased_at = purchase.purchased_at or datetime.now(timezone.utc)
             purchase.transaction_id = payment_intent_id or session_id or purchase.transaction_id
             purchase.payment_method = purchase.payment_method or 'stripe'
-            
-            # If purchase was PENDING and is now COMPLETED, update the sale status
-            if was_pending:
-                pending_sale = BookSale.query.filter_by(purchase_id=purchase.id).first()
-                if pending_sale:
-                    pending_sale.status = TransactionStatus.COMPLETED
-                    pending_sale.paid_at = datetime.now(timezone.utc)
-                    db.session.commit()
-                    logger.info(f"✅ Updated sale {pending_sale.id} to COMPLETED for purchase {purchase.id}")
-                    notify_receipt = True
         elif buyer_user_id is not None:
             # No purchase found - create new one (fallback, signed-in only)
             book = BookProject.query.get_or_404(book_id)
@@ -6716,30 +7238,29 @@ def purchase_success():
             # Don't fail the purchase - it's recorded, just needs manual distribution
             notify_receipt = True
 
-        if purchase and purchase.status == TransactionStatus.COMPLETED:
-            try:
-                _maybe_send_purchase_receipt(book, purchase)
-            except Exception as receipt_err:
-                logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
-
         purchase_format = getattr(purchase, 'purchase_format', None) or 'digital'
-        _ensure_print_order_for_purchase(
+        print_order = _ensure_print_order_for_purchase(
             purchase,
             book,
             session_id=_resolve_checkout_session_id(session_id, purchase),
         )
+        if purchase and purchase.status == TransactionStatus.COMPLETED:
+            try:
+                _maybe_send_purchase_receipt(book, purchase, print_order=print_order)
+            except Exception as receipt_err:
+                logger.warning("Purchase receipt email error: %s", receipt_err, exc_info=True)
 
         has_print = purchase_grants_format(purchase_format, 'print')
         has_digital = purchase_grants_format(purchase_format, 'digital')
         has_audio = purchase_grants_format(purchase_format, 'audiobook')
         if has_print and not has_digital and not has_audio:
-            handling_days = int(getattr(book, 'print_handling_days', None) or 7)
+            handling_days = int(getattr(print_order, 'handling_days', None) or getattr(book, 'print_handling_days', None) or 7)
             flash(
                 f'Print order confirmed! The author will ship within about {handling_days} business days.',
                 'success',
             )
         elif has_print:
-            handling_days = int(getattr(book, 'print_handling_days', None) or 7)
+            handling_days = int(getattr(print_order, 'handling_days', None) or getattr(book, 'print_handling_days', None) or 7)
             flash(
                 f'Purchase successful! Digital formats are in your library; print ships within about {handling_days} business days.',
                 'success',
@@ -6830,11 +7351,17 @@ def stripe_connect_onboard():
         next_path = safe_mybook_next_path(request.form.get('next'), default_next)
 
     country = (os.getenv('STRIPE_CONNECT_DEFAULT_COUNTRY') or 'US').strip().upper()
+    connect_business_name = (
+        os.getenv('STRIPE_CONNECT_BUSINESS_NAME') or 'Ndotonic LLC'
+    ).strip()
 
     def _create_connect_account_and_store_id():
         create_kwargs = {
             'type': 'express',
             'country': country,
+            'business_profile': {
+                'name': connect_business_name,
+            },
             'capabilities': {
                 'card_payments': {'requested': True},
                 'transfers': {'requested': True},
@@ -6870,12 +7397,16 @@ def stripe_connect_onboard():
                 'test mode account link for an account that was created in live mode' in err_msg
                 or 'live mode account link for an account that was created in test mode' in err_msg
             )
-            if not mode_mismatch:
+            missing_account = (
+                getattr(e, 'code', None) == 'resource_missing'
+                or 'no such account' in err_msg.lower()
+            )
+            if not mode_mismatch and not missing_account:
                 raise
 
             old_acct = bp_user.stripe_connect_account_id
             logger.warning(
-                "Stripe Connect mode mismatch for user=%s account=%s. Recreating account in current mode.",
+                "Stripe Connect account is stale or mode-mismatched for user=%s account=%s. Recreating account in current mode.",
                 bp_user.id,
                 old_acct,
             )
@@ -7079,6 +7610,27 @@ def stripe_webhook():
             return True
         
         # Handle the event
+        if event['type'] in ('account.deleted', 'account.application.deauthorized'):
+            event_object = (event.get('data') or {}).get('object') or {}
+            deleted_account_id = (
+                event_object.get('id')
+                or event.get('account')
+            )
+            if deleted_account_id:
+                stale_profiles = BookPlatformUser.query.filter_by(
+                    stripe_connect_account_id=deleted_account_id
+                ).all()
+                for stale_profile in stale_profiles:
+                    stale_profile.stripe_connect_account_id = None
+                if stale_profiles:
+                    db.session.commit()
+                    logger.info(
+                        "Cleared deleted Stripe Connect account %s from %d local profile(s)",
+                        deleted_account_id,
+                        len(stale_profiles),
+                    )
+            return jsonify({'received': True})
+
         if event['type'] == 'payment_intent.succeeded':
             # Handle payment_intent.succeeded event (for direct Payment Intents)
             payment_intent = event['data']['object']
@@ -7128,25 +7680,9 @@ def stripe_webhook():
                     except (ValueError, TypeError):
                         pass
                 
-                # If still no purchase, try to find by amount and email
-                if not purchase and customer_email and amount_total:
-                    user = User.query.filter_by(email=customer_email).first()
-                    if user:
-                        buyer_user_id = user.user_id
-                        bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                        buyer_id = bp_user.id if bp_user else None
-                        
-                        purchase = BookPurchase.query.filter(
-                            db.or_(
-                                BookPurchase.buyer_user_id == buyer_user_id,
-                                (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-                            ),
-                            BookPurchase.status == TransactionStatus.PENDING,
-                            db.func.abs(BookPurchase.amount - amount_total) < 0.01
-                        ).order_by(BookPurchase.created_at.desc()).first()
-                        
-                        if purchase:
-                            logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
+                # Never recover by amount/email alone: two simultaneous orders
+                # can have the same amount and would otherwise receive the
+                # wrong entitlement. Checkout metadata is the authoritative key.
                 
                 # Complete the purchase if found
                 if purchase:
@@ -7321,27 +7857,9 @@ def stripe_webhook():
                         except (ValueError, TypeError):
                             pass
                     
-                    # If still no purchase, try to find by amount and email (fallback for missing book_id)
-                    if not purchase and customer_email and amount_total:
-                        user = User.query.filter_by(email=customer_email).first()
-                        if user:
-                            buyer_user_id = user.user_id
-                            bp_user = BookPlatformUser.query.filter_by(user_id=buyer_user_id).first()
-                            buyer_id = bp_user.id if bp_user else None
-                            
-                            # Find PENDING purchase matching amount (within $0.01 tolerance)
-                            purchase = BookPurchase.query.filter(
-                                db.or_(
-                                    BookPurchase.buyer_user_id == buyer_user_id,
-                                    (BookPurchase.buyer_id == buyer_id) if buyer_id else db.false()
-                                ),
-                                BookPurchase.status == TransactionStatus.PENDING,
-                                db.func.abs(BookPurchase.amount - amount_total) < 0.01
-                            ).order_by(BookPurchase.created_at.desc()).first()
-                            
-                            if purchase:
-                                logger.info(f"Found PENDING purchase {purchase.id} by amount match: ${amount_total}")
-                                book_id = purchase.book_project_id
+                    # Do not match a payment to an order using amount/email;
+                    # missing metadata requires manual reconciliation instead
+                    # of risking delivery to the wrong buyer.
                     
                     # Complete the purchase if found
                     if purchase:
@@ -7416,7 +7934,7 @@ def stripe_webhook():
                                         db.session.add(purchase)
                                         db.session.flush()
                                         
-                                        # Revenue sharing: 90% author / 10% platform on list price; extras to author
+                                        # Revenue sharing: 90% ebook/print, 70% audiobook, 80% bundles (2+); extras to author
                                         base_price, extra_amount, royalty_amount, platform_fee, fee_pct_applied = revenue_split_for_purchase(
                                             book, 'digital', actual_amount
                                         )
@@ -7746,6 +8264,10 @@ def upload_project_description_media(book_id, user_profile, profile_type):
         return ckeditor_upload_response(error='No file selected')
 
     media_type = (request.form.get('media_type') or 'image').strip().lower()
+    if media_type == 'audio' and not is_book_published(book):
+        return ckeditor_upload_response(
+            error='Publish your book before adding audio clips to the description.'
+        )
     try:
         public_url, filename = save_project_media_file(
             file,
@@ -7865,9 +8387,6 @@ def _upload_digital_book_error(form, message, status_code=400, listing_format="e
 @book_platform_required
 def list_book():
     """Choose ebook, print, or both before the listing form."""
-    if _author_needs_publishing_agreement(current_user.user_id):
-        flash('Accept the Author Publishing Agreement before listing books.', 'warning')
-        return _redirect_to_publishing_agreement(url_for('book_platform.list_book'))
     return render_template('book_platform/list_book.html')
 
 
@@ -7878,18 +8397,6 @@ def upload_digital_book():
     
     logger.info(f"Upload digital book - Method: {request.method}, User: {current_user.user_id if current_user.is_authenticated else 'Not authenticated'}")
 
-    if _author_needs_publishing_agreement(current_user.user_id):
-        flash('Accept the Author Publishing Agreement before listing books.', 'warning')
-        if request.method == 'POST' and _upload_digital_book_accepts_json():
-            return jsonify({
-                'success': False,
-                'error': 'Accept the Author Publishing Agreement first.',
-                'redirect': url_for('book_platform.author_publishing_agreement', next=request.path),
-            }), 403
-        if request.method == 'POST':
-            flash('Accept the Author Publishing Agreement before listing books.', 'warning')
-        return _redirect_to_publishing_agreement(request.path)
-    
     form = DigitalBookUploadForm()
     _lang_choices = book_language_select_choices()
     form.ebook_language.choices = _lang_choices
@@ -7934,6 +8441,16 @@ def upload_digital_book():
         )
         wants_ebook = _listing_wants_ebook(listing_format)
         wants_print = _listing_wants_print(listing_format)
+        created_upload_paths = []
+
+        def _cleanup_created_uploads():
+            for upload_path in created_upload_paths:
+                try:
+                    if upload_path and os.path.isfile(upload_path):
+                        os.remove(upload_path)
+                except OSError:
+                    logger.warning('Could not clean up failed upload file %s', upload_path)
+
         try:
             logger.info("Starting book listing upload (format=%s)", listing_format)
             
@@ -7960,14 +8477,10 @@ def upload_digital_book():
                     listing_format=listing_format,
                 )
 
-            terms_error = validate_listing_terms_payload(request.form or {})
-            if terms_error:
-                return _upload_digital_book_error(form, terms_error, listing_format=listing_format)
-
             if not is_valid_ink_upload_genre(form.genre.data or ''):
                 return _upload_digital_book_error(
                     form,
-                    "Select Real Life or Nonfiction as the book category.",
+                    "Category must be Nonfiction.",
                     listing_format=listing_format,
                 )
 
@@ -7991,13 +8504,25 @@ def upload_digital_book():
                         listing_format=listing_format,
                     )
                 try:
-                    print_shipping = max(0.0, float(request.form.get('print_shipping_price') or 5))
+                    print_shipping = float(request.form.get('print_shipping_price') or 5)
                 except (TypeError, ValueError):
-                    print_shipping = 5.0
+                    return _upload_digital_book_error(
+                        form, 'Enter a valid print shipping price.', listing_format=listing_format
+                    )
                 try:
-                    print_handling = max(1, min(60, int(request.form.get('print_handling_days') or 7)))
+                    print_handling = int(request.form.get('print_handling_days') or 7)
                 except (TypeError, ValueError):
-                    print_handling = 7
+                    return _upload_digital_book_error(
+                        form, 'Enter a valid print handling time in business days.', listing_format=listing_format
+                    )
+                if print_shipping < 0:
+                    return _upload_digital_book_error(
+                        form, 'Print shipping price cannot be negative.', listing_format=listing_format
+                    )
+                if print_handling < 1 or print_handling > 60:
+                    return _upload_digital_book_error(
+                        form, 'Print handling time must be between 1 and 60 business days.', listing_format=listing_format
+                    )
                 print_description = (request.form.get('print_description') or '').strip() or None
             
             digital_file = form.digital_book_file.data
@@ -8029,13 +8554,15 @@ def upload_digital_book():
                 unique_digital_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
                 digital_file_path = os.path.join(digital_books_dir, unique_digital_filename)
                 digital_file.save(digital_file_path)
+                created_upload_paths.append(digital_file_path)
                 file_stat = os.stat(digital_file_path)
                 file_type = ext.lower().lstrip('.')
                 extraction_result = digital_book_processor.extract_text(digital_file_path, file_type)
                 if not extraction_result['success']:
+                    _cleanup_created_uploads()
                     return _upload_digital_book_error(
                         form,
-                        f"Failed to extract text from file: {extraction_result['error']}",
+                        "We could not read this book file. Check that it is a valid EPUB, DOCX, TXT, or PDF and try again.",
                         listing_format=listing_format,
                     )
 
@@ -8047,25 +8574,21 @@ def upload_digital_book():
                 unique_cover_filename = f"{cover_name}_{uuid.uuid4().hex[:8]}{cover_ext}"
                 abs_cover = os.path.join(covers_dir, unique_cover_filename)
                 cover_image.save(abs_cover)
+                created_upload_paths.append(abs_cover)
                 cover_path = f"book_covers/{unique_cover_filename}"
             elif form.use_ai_cover.data:
                 cover_path = promote_listing_preview_to_cover()
-                if not cover_path:
-                    return _upload_digital_book_error(
-                        form,
-                        "Generate an AI cover preview and choose “Use this cover” before listing your book, "
-                        "or upload a cover image instead.",
-                        listing_format=listing_format,
-                    )
-            else:
+            if not cover_path:
+                _cleanup_created_uploads()
                 return _upload_digital_book_error(
                     form,
-                    "Please upload a cover image or choose Generate with AI and confirm a preview.",
+                    "Please upload a cover image or generate and accept an AI cover preview.",
                     listing_format=listing_format,
                 )
 
             primary_lang = (form.ebook_language.data or "en").lower().strip()
             if primary_lang not in TTS_BOOK_LANGUAGES:
+                _cleanup_created_uploads()
                 return _upload_digital_book_error(
                     form,
                     "Choose a supported language from the list.",
@@ -8075,12 +8598,14 @@ def upload_digital_book():
             digital_price = None
             if wants_ebook:
                 if form.digital_price.data is None:
+                    _cleanup_created_uploads()
                     return _upload_digital_book_error(
                         form,
                         "Set a digital ebook price before creating the listing.",
                         listing_format=listing_format,
                     )
                 if form.digital_price.data < 0:
+                    _cleanup_created_uploads()
                     return _upload_digital_book_error(
                         form,
                         "Price cannot be negative.",
@@ -8105,8 +8630,9 @@ def upload_digital_book():
                 book.digital_file_type = file_type
                 book.digital_file_size = file_stat.st_size if file_stat else None
                 book.digital_file_uploaded_at = datetime.now(timezone.utc)
-                book.digital_book_published = True
-                book.digital_book_published_at = datetime.now(timezone.utc)
+                # Upload is an import step, not a public launch. Authors review
+                # the customer experience in Release Hub before publishing.
+                book.digital_book_published = False
             else:
                 book.digital_book_published = False
 
@@ -8116,66 +8642,26 @@ def upload_digital_book():
                 book.print_shipping_price = print_shipping
                 book.print_handling_days = print_handling
                 book.print_description = print_description
-                if not wants_ebook:
-                    book.status = BookStatus.PUBLISHED
-                    book.published_at = datetime.now(timezone.utc)
+                # Print settings are also prepared privately; publication happens
+                # from the shared release checklist.
+                book.status = BookStatus.DRAFT
 
-            record_listing_attestation(book)
-            
             db.session.add(book)
             db.session.flush()
             logger.info(f"Book created with ID: {book.id}, Title: {book.title}")
 
-            from glconnect.isbn_pool_service import apply_listing_isbn, IsbnPoolError, IsbnValidationError
-
-            try:
-                apply_listing_isbn(
-                    book,
-                    request.form.get('isbn_source'),
-                    request.form.get('isbn_manual'),
-                )
-            except IsbnValidationError as e:
-                db.session.rollback()
-                return _upload_digital_book_error(form, str(e), listing_format=listing_format)
-            except IsbnPoolError as e:
-                db.session.rollback()
-                return _upload_digital_book_error(form, str(e), listing_format=listing_format)
-
             db.session.commit()
             logger.info(f"Book {book.id} committed to database successfully")
 
-            earned_formats = []
-            if wants_ebook:
-                earned_formats.append(LISTING_FORMAT_EBOOK)
-            if wants_print:
-                earned_formats.append(LISTING_FORMAT_PRINT)
-            if earned_formats:
-                _issue_listing_coupons_for_formats(book, earned_formats)
-                db.session.commit()
-
-            if wants_print and not wants_ebook:
-                flash(
-                    "Your print listing is live. When someone orders, you'll get their shipping address to fulfill.",
-                    "success",
-                )
-                next_step_url = url_for("book_platform.books")
-            elif wants_ebook:
-                parts = ["Step 1 complete: ebook is now live."]
-                if wants_print:
-                    parts.append("Print edition is also listed.")
-                parts.append("Next: generate audiobook or skip for now.")
-                flash(
-                    " ".join(parts)
-                    + (
-                        " Note: PDF listings often read poorly in browser; consider also offering EPUB or DOCX for reflowable reading."
-                        if file_type == "pdf"
-                        else ""
-                    ),
-                    "success",
-                )
-                next_step_url = url_for("book_platform.book_audiobook", book_id=book.id)
-            else:
-                next_step_url = url_for("book_platform.books")
+            flash(
+                "Book imported privately. Review your release checklist before publishing."
+                + (
+                    " PDF listings often read poorly in browser; consider also offering EPUB or DOCX for reflowable reading."
+                    if file_type == "pdf" else ""
+                ),
+                "success",
+            )
+            next_step_url = url_for("book_platform.release_hub", book_id=book.id)
             
             logger.info(f"Upload successful! Redirecting to book {book.id}")
             if _upload_digital_book_accepts_json():
@@ -8187,15 +8673,11 @@ def upload_digital_book():
             
         except Exception as e:
             db.session.rollback()
-            error_msg = f"Error uploading book: {str(e)}"
             logger.error(f"Error in upload_digital_book: {str(e)}", exc_info=True)
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            print(f"ERROR in upload_digital_book: {str(e)}")
-            traceback.print_exc()
+            _cleanup_created_uploads()
             return _upload_digital_book_error(
                 form,
-                error_msg,
+                "We could not import this book right now. Please try again. If the problem continues, contact support.",
                 500,
                 listing_format=_normalize_listing_format(
                     request.form.get('listing_format') or request.args.get('listing')
@@ -8229,6 +8711,9 @@ def upload_digital_book():
 @book_platform_required
 def debug_check_upload():
     """Debug endpoint to check upload status"""
+    # Debug metadata must never be available on a production deployment.
+    if not current_app.debug and os.getenv('FLASK_ENV', '').strip().lower() != 'development':
+        abort(404)
     from glconnect.book_platform_models import BookProject, BookPlatformUser
     
     user_profile, profile_type = get_user_profile()
@@ -8251,7 +8736,8 @@ def debug_check_upload():
             'status': str(book.status),
             'created_at': str(book.created_at),
             'has_digital_file': bool(book.digital_file_path),
-            'digital_file_path': book.digital_file_path
+            # Do not expose internal storage paths, even in local diagnostics.
+            'digital_file_present': bool(book.digital_file_path)
         })
     
     return jsonify(debug_info)
@@ -8460,7 +8946,8 @@ def _user_has_audiobook_access(book, user_id):
         BookPurchase.status == TransactionStatus.COMPLETED
     ).all()
     return any(
-        getattr(p, 'purchase_format', 'digital') in ('audiobook', 'bundle') for p in purchases
+        purchase_grants_format(getattr(p, 'purchase_format', 'digital'), 'audiobook')
+        for p in purchases
     )
 
 
@@ -8497,6 +8984,28 @@ def serve_audiobook_chapter_file(book_id, chapter_id):
     )
 
 
+def _build_audiobook_chapter_tracklist(book):
+    """Ordered chapter audio URLs for multi-track audiobooks."""
+    chapters = (
+        AudiobookChapter.query.filter_by(book_project_id=book.id)
+        .order_by(AudiobookChapter.chapter_number)
+        .all()
+    )
+    tracklist = []
+    for ch in chapters:
+        tracklist.append({
+            'id': ch.id,
+            'title': ch.title,
+            'seconds': ch.duration_seconds or 0,
+            'src': url_for(
+                'book_platform.serve_audiobook_chapter_file',
+                book_id=book.id,
+                chapter_id=ch.id,
+            ),
+        })
+    return tracklist
+
+
 @book_bp.route('/audiobook/<int:book_id>/player')
 @login_required
 def audiobook_player(book_id):
@@ -8513,20 +9022,12 @@ def audiobook_player(book_id):
         flash("You must purchase the audiobook to listen.", "error")
         return redirect(url_for('book_platform.marketplace'))
     
-    chapters = AudiobookChapter.query.filter_by(book_project_id=book_id).order_by(AudiobookChapter.chapter_number).all()
-    chapter_tracklist = []
-    for ch in chapters:
-        src = url_for(
-            'book_platform.serve_audiobook_chapter_file',
-            book_id=book.id,
-            chapter_id=ch.id,
-        )
-        chapter_tracklist.append({
-            'id': ch.id,
-            'title': ch.title,
-            'seconds': ch.duration_seconds or 0,
-            'src': src,
-        })
+    chapter_tracklist = _build_audiobook_chapter_tracklist(book)
+    ab_chapters = (
+        AudiobookChapter.query.filter_by(book_project_id=book_id)
+        .order_by(AudiobookChapter.chapter_number)
+        .all()
+    )
     single_audiobook_src = None
     if not chapter_tracklist:
         single_audiobook_src = url_for('book_platform.serve_audiobook_file', book_id=book.id)
@@ -8536,7 +9037,7 @@ def audiobook_player(book_id):
     return render_template(
         'book_platform/audiobook_player.html',
         book=book,
-        chapters=chapters,
+        chapters=ab_chapters,
         chapter_tracklist=chapter_tracklist,
         single_audiobook_src=single_audiobook_src,
         cover_url=_marketplace_cover_url(book),
@@ -8682,12 +9183,9 @@ def reviewer_profile(reviewer_id):
 
 # Helper function to send reviewer invitation email
 def send_reviewer_invitation_email(reviewer, book, inviter, message=None):
-    """Send reviewer invitation email via Mailtrap"""
-    sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
-    api_key = os.getenv("MAIL_TRAP")
-    
-    if not api_key:
-        logger.warning("MAIL_TRAP API key not set. Cannot send reviewer invitation email.")
+    """Send reviewer invitation email via Resend"""
+    if not is_mail_configured():
+        logger.warning("RESEND_API_KEY is not set. Cannot send reviewer invitation email.")
         return False
     
     # Get reviewer email from user account
@@ -8728,21 +9226,18 @@ Best regards,
 Ink Studio Team
 """
     
-    try:
-        mail = Mail(
-            sender=Address(email=sender, name="Ink Studio"),
-            to=[Address(email=reviewer_email)],
-            subject=subject,
-            text=message_text,
-            category="Reviewer Invitation"
-        )
-        client = MailtrapClient(token=api_key)
-        client.send(mail)
+    sent = send_email(
+        to=reviewer_email,
+        subject=subject,
+        text=message_text,
+        from_name="Ink Studio",
+        tags=["reviewer-invitation"],
+    )
+    if sent:
         logger.info(f"Reviewer invitation email sent to {reviewer_email} for book {book.id}")
         return True
-    except Exception as e:
-        logger.error(f"Failed to send reviewer invitation email: {str(e)}", exc_info=True)
-        return False
+    logger.error("Failed to send reviewer invitation email")
+    return False
 
 @book_bp.route('/reviewers/<int:reviewer_id>/invite', methods=['POST'])
 @writer_or_book_platform_required
@@ -8881,16 +9376,21 @@ def create_investment_campaign(book_id, user_profile, profile_type):
     
     # Check if book is ready for investment
     investment_readiness = check_investment_readiness(book)
-    
-    if not investment_readiness['is_ready']:
-        flash('Your book is not ready for a campaign yet. Please complete the following requirements:', 'warning')
+    form = InvestmentCampaignForm()
+
+    if request.method == 'POST' and not investment_readiness['is_ready']:
+        flash('Your book is not ready for a campaign yet. Complete the requirements below.', 'warning')
         for issue in investment_readiness['issues']:
             flash(f'• {issue}', 'info')
-        return redirect(url_for('book_platform.view_book', book_id=book_id))
+        return render_template(
+            'book_platform/create_campaign.html',
+            form=form,
+            book=book,
+            media_guide=MEDIA_GUIDE,
+            investment_readiness=investment_readiness,
+        )
     
-    form = InvestmentCampaignForm()
-    
-    if form.validate_on_submit():
+    if form.validate_on_submit() and investment_readiness['is_ready']:
         try:
             from glconnect.book_campaign_patronage import (
                 CAMPAIGN_GOAL_DEADLINE_DAYS,
@@ -8939,6 +9439,7 @@ def create_investment_campaign(book_id, user_profile, profile_type):
         form=form,
         book=book,
         media_guide=MEDIA_GUIDE,
+        investment_readiness=investment_readiness,
     )
 
 
@@ -8957,6 +9458,16 @@ def edit_campaign_project(campaign_id, user_profile, profile_type):
 
     if not author_id or book.author_id != author_id:
         flash('Only the author can edit this project.', 'error')
+        return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
+
+    # A paid contribution makes the displayed campaign promise historical.
+    # Do not let an author silently rewrite it after patrons have committed.
+    committed_contribution = BookInvestment.query.filter(
+        BookInvestment.campaign_id == campaign_id,
+        BookInvestment.status.in_((InvestmentStatus.CONFIRMED, InvestmentStatus.ACTIVE)),
+    ).first()
+    if committed_contribution and request.method == 'POST':
+        flash('Campaign terms cannot be edited after a paid patron contribution.', 'error')
         return redirect(url_for('book_platform.campaign_detail', campaign_id=campaign_id))
 
     form = EditCampaignProjectForm()
@@ -9576,6 +10087,30 @@ def contribute_to_campaign(campaign_id):
             return jsonify({'error': amount_error}), 400
         flash(amount_error, 'error')
         return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
+
+    # Enforce campaign-specific limits before creating a Stripe session.
+    campaign_min = float(campaign.minimum_investment or 0)
+    campaign_max = campaign.maximum_investment
+    if campaign_min and amount < campaign_min:
+        amount_error = f'Patron gift must be at least ${campaign_min:.2f}.'
+        if request_data:
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
+    if campaign_max is not None and amount > float(campaign_max):
+        amount_error = f'Patron gift cannot exceed ${float(campaign_max):.2f}.'
+        if request_data:
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
+
+    remaining_goal = max(0.0, float(campaign.funding_goal or 0) - float(campaign.current_funding or 0))
+    if remaining_goal <= 0 or amount > remaining_goal:
+        amount_error = 'This gift would exceed the campaign funding goal.'
+        if request_data:
+            return jsonify({'error': amount_error}), 400
+        flash(amount_error, 'error')
+        return render_template('book_platform/contribute.html', form=form, **contribute_template_kwargs)
     
     try:
         from glconnect.book_campaign_patronage import (
@@ -10022,13 +10557,21 @@ def request_author_sales_payout():
         return jsonify({'error': 'Author profile not found'}), 403
     
     # Available = total revenue - paid out
+    # Reserve both paid and already-requested amounts. Only completed and
+    # successfully distributed sales are withdrawable; pending/chargeback-
+    # exposed sales must not become an immediate payout liability.
     author_paid_out = sum(
-        r.amount for r in AuthorSalesPayoutRequest.query.filter_by(
-            author_id=author_id, status='PAID'
+        r.amount for r in AuthorSalesPayoutRequest.query.filter(
+            AuthorSalesPayoutRequest.author_id == author_id,
+            AuthorSalesPayoutRequest.status.in_(['PENDING', 'PAID']),
         ).all()
     )
     total_revenue = sum(
-        s.net_amount for s in BookSale.query.filter_by(seller_id=author_id).all()
+        s.net_amount for s in BookSale.query.filter(
+            BookSale.seller_id == author_id,
+            BookSale.status == TransactionStatus.COMPLETED,
+            BookSale.distribution_completed.is_(True),
+        ).all()
     )
     available = max(0, total_revenue - author_paid_out)
     
@@ -10902,6 +11445,45 @@ def publicity_promotion():
 # UNIFIED CONTENT HUB - BLOGS, NEWS, FREELANCING
 # ============================================================================
 
+def _content_hub_role_entry(user):
+    """Primary workspace link for non-author roles on the Content Hub landing page."""
+    role = getattr(user, 'role', None) or 'other'
+    if role == 'author':
+        return None
+
+    entries = {
+        'artist': {
+            'card': 'music',
+            'label': 'Music dashboard',
+            'description': 'Launch the player, register as an artist, and submit tracks for GLC Media.',
+            'url': url_for('book_platform.music_dashboard'),
+            'write_url': None,
+        },
+        'blogger': {
+            'card': 'stories',
+            'label': 'GLC Media stories',
+            'description': 'Read community stories and publish your own posts.',
+            'url': url_for('blog.blogs'),
+            'write_url': url_for('blog.blogpost'),
+        },
+        'freelancer': {
+            'card': 'stories',
+            'label': 'Freelance stories',
+            'description': 'Journalism, features, and reporting for GLC Media.',
+            'url': url_for('blog.blogs', freelance='true'),
+            'write_url': url_for('blog.blogpost'),
+        },
+        'other': {
+            'card': 'library',
+            'label': 'My library',
+            'description': 'Your purchased books, downloads, and saved titles.',
+            'url': url_for('book_platform.my_library'),
+            'write_url': None,
+        },
+    }
+    return entries.get(role, entries['other'])
+
+
 @book_bp.route('/content-hub')
 @login_required
 def content_hub():
@@ -11005,12 +11587,16 @@ def content_hub():
             db.session.rollback()  # Rollback on error
             user_posts = []
     
+    role_entry = _content_hub_role_entry(current_user)
+
     return render_template('book_platform/content_hub.html',
                          recent_posts=recent_posts,
                          user_posts=user_posts,
                          has_artist_profile=artist_profile is not None,
                          artist_profile=artist_profile,
                          artist_needs_glc_terms=not artist_has_glc_media_terms(artist_profile),
+                         role_entry=role_entry,
+                         highlight_card=role_entry.get('card') if role_entry else None,
                          **glc_media_terms_context())
 
 @book_bp.route('/stories')
@@ -11346,6 +11932,7 @@ def news_redirect():
 @login_required
 def upload_podcast():
     """Upload a podcast episode for GLC Media promotion — max 30 minutes, requires admin approval."""
+    return jsonify({'error': 'Podcast submissions have been retired.'}), 410
     if request.method == 'GET':
         from glconnect.models import PodcastSubmission
         user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
@@ -12540,3 +13127,180 @@ def podcast_library():
     ).all()
     
     return render_template('book_platform/podcast_library.html', podcasts=podcasts)
+
+
+@book_bp.route('/books/<int:book_id>/discussion', methods=['GET', 'POST'])
+@login_required
+def reader_book_discussion(book_id):
+    """Reader-generated posts and comments for a book."""
+    book = BookProject.query.get_or_404(book_id)
+    if request.method == 'POST':
+        content = (request.form.get('content') or '').strip()
+        quote = (request.form.get('quote') or '').strip() or None
+        status = request.form.get('reading_status') or 'reading'
+        if not content:
+            flash('Write something before posting.', 'error')
+        elif status not in {'reading', 'read'}:
+            flash('Choose a valid reading status.', 'error')
+        else:
+            db.session.add(ReaderBookPost(
+                book_project_id=book.id,
+                user_id=current_user.user_id,
+                content=content,
+                quote=quote,
+                reading_status=status,
+            ))
+            db.session.commit()
+            flash('Your book post was shared.', 'success')
+            return redirect(url_for('book_platform.reader_book_discussion', book_id=book.id))
+
+    posts = ReaderBookPost.query.filter_by(book_project_id=book.id).order_by(
+        ReaderBookPost.created_at.desc()
+    ).all()
+    return render_template('book_platform/reader_book_discussion.html', book=book, posts=posts)
+
+
+@book_bp.route('/book-cafe', methods=['GET', 'POST'])
+@login_required
+def book_cafe():
+    """Community feed where regular readers share posts about books."""
+    books = BookProject.query.order_by(BookProject.title.asc()).all()
+    selected_book_id = request.args.get('book_id', type=int)
+    if request.method == 'POST':
+        book_id = request.form.get('book_id', type=int)
+        book_source = request.form.get('book_source') or 'platform'
+        external_title = (request.form.get('external_book_title') or '').strip() or None
+        external_author = (request.form.get('external_book_author') or '').strip() or None
+        external_cover = None
+        cover_file = request.files.get('external_book_cover')
+        content = (request.form.get('content') or '').strip()
+        quote = (request.form.get('quote') or '').strip() or None
+        status = request.form.get('reading_status') or 'reading'
+        book = BookProject.query.get(book_id) if book_source == 'platform' and book_id else None
+        if book_source == 'platform' and not book:
+            flash('Choose a platform book.', 'error')
+        elif book_source == 'external' and not external_title:
+            flash('Enter the title of the book you read.', 'error')
+        elif not content or status not in {'reading', 'read'}:
+            flash('Write a valid post.', 'error')
+        else:
+            if book_source == 'external' and cover_file and cover_file.filename:
+                try:
+                    from PIL import Image
+                    from werkzeug.utils import secure_filename
+                    allowed = {'jpg', 'jpeg', 'png', 'webp'}
+                    original_name = secure_filename(cover_file.filename)
+                    extension = original_name.rsplit('.', 1)[-1].lower() if '.' in original_name else ''
+                    if extension not in allowed or (request.content_length and request.content_length > 6 * 1024 * 1024):
+                        raise ValueError('Use a JPG, PNG, or WebP image smaller than 6 MB.')
+                    image = Image.open(cover_file)
+                    image.verify()
+                    cover_file.seek(0)
+                    cover_dir = os.path.join(current_app.static_folder, 'book_cafe_covers')
+                    os.makedirs(cover_dir, exist_ok=True)
+                    stored_name = f"{uuid.uuid4().hex}.{extension}"
+                    cover_file.save(os.path.join(cover_dir, stored_name))
+                    external_cover = f"book_cafe_covers/{stored_name}"
+                except Exception:
+                    flash('That cover could not be uploaded. Use a valid JPG, PNG, or WebP image under 6 MB.', 'error')
+                    return render_template('book_platform/book_cafe.html', books=books, posts=ReaderBookPost.query.order_by(ReaderBookPost.created_at.desc()).all(), selected_book=selected_book if 'selected_book' in locals() else None)
+            db.session.add(ReaderBookPost(book_project_id=book.id if book else None,
+                                          external_book_title=external_title if book_source == 'external' else None,
+                                          external_book_author=external_author if book_source == 'external' else None,
+                                          external_book_cover_url=external_cover if book_source == 'external' else None,
+                                          user_id=current_user.user_id, content=content,
+                                          quote=quote, reading_status=status))
+            db.session.commit()
+            flash('Your post was shared in Book Café.', 'success')
+            return redirect(url_for('book_platform.book_cafe'))
+    posts = ReaderBookPost.query.order_by(ReaderBookPost.created_at.desc()).all()
+    selected_book = BookProject.query.get(selected_book_id) if selected_book_id else None
+    return render_template('book_platform/book_cafe.html', books=books, posts=posts,
+                           selected_book=selected_book)
+
+
+@book_bp.route('/reader-discussion/<int:post_id>/comment', methods=['POST'])
+@login_required
+def reader_book_comment(post_id):
+    post = ReaderBookPost.query.get_or_404(post_id)
+    content = (request.form.get('content') or '').strip()
+    image_url = None
+    image_file = request.files.get('image')
+    if image_file and image_file.filename:
+        try:
+            from PIL import Image
+            from werkzeug.utils import secure_filename
+            allowed = {'jpg', 'jpeg', 'png', 'webp'}
+            safe_name = secure_filename(image_file.filename)
+            extension = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+            if extension not in allowed or (request.content_length and request.content_length > 6 * 1024 * 1024):
+                raise ValueError
+            image = Image.open(image_file)
+            image.verify()
+            image_file.seek(0)
+            image_dir = os.path.join(current_app.static_folder, 'book_cafe_replies')
+            os.makedirs(image_dir, exist_ok=True)
+            stored_name = f"{uuid.uuid4().hex}.{extension}"
+            image_file.save(os.path.join(image_dir, stored_name))
+            image_url = f"book_cafe_replies/{stored_name}"
+        except Exception:
+            flash('Reply image must be a valid JPG, PNG, or WebP image under 6 MB.', 'error')
+            return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id)) if post.book_project_id else redirect(url_for('book_platform.book_cafe'))
+    if content or image_url:
+        db.session.add(ReaderBookComment(post_id=post.id, user_id=current_user.user_id, content=content, image_url=image_url))
+        db.session.commit()
+    if post.book_project_id:
+        return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id))
+    return redirect(url_for('book_platform.book_cafe'))
+
+
+@book_bp.route('/reader-discussion/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_reader_book_post(post_id):
+    post = ReaderBookPost.query.get_or_404(post_id)
+    is_admin = current_user.username == 'admin' or current_user.role == 'admin'
+    if post.user_id != current_user.user_id and not is_admin:
+        abort(403)
+    destination = url_for('book_platform.reader_book_discussion', book_id=post.book_project_id) if post.book_project_id else url_for('book_platform.book_cafe')
+    db.session.delete(post)
+    db.session.commit()
+    flash('Post and its replies were deleted.', 'success')
+    return redirect(destination)
+
+
+@book_bp.route('/reader-discussion/<int:post_id>/edit', methods=['POST'])
+@login_required
+def edit_reader_book_post(post_id):
+    post = ReaderBookPost.query.get_or_404(post_id)
+    is_admin = current_user.username == 'admin' or current_user.role == 'admin'
+    if post.user_id != current_user.user_id and not is_admin:
+        abort(403)
+    content = (request.form.get('content') or '').strip()
+    quote = (request.form.get('quote') or '').strip() or None
+    if not content:
+        flash('Post text cannot be empty.', 'error')
+    else:
+        post.content = content
+        post.quote = quote
+        image_file = request.files.get('external_book_cover')
+        if image_file and image_file.filename and not post.book_project_id:
+            try:
+                from PIL import Image
+                from werkzeug.utils import secure_filename
+                safe_name = secure_filename(image_file.filename)
+                extension = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+                if extension not in {'jpg', 'jpeg', 'png', 'webp'} or (request.content_length and request.content_length > 6 * 1024 * 1024):
+                    raise ValueError
+                image = Image.open(image_file)
+                image.verify()
+                image_file.seek(0)
+                image_dir = os.path.join(current_app.static_folder, 'book_cafe_covers')
+                os.makedirs(image_dir, exist_ok=True)
+                stored_name = f"{uuid.uuid4().hex}.{extension}"
+                image_file.save(os.path.join(image_dir, stored_name))
+                post.external_book_cover_url = f"book_cafe_covers/{stored_name}"
+            except Exception:
+                flash('That cover could not be uploaded.', 'error')
+        db.session.commit()
+        flash('Post updated.', 'success')
+    return redirect(url_for('book_platform.reader_book_discussion', book_id=post.book_project_id)) if post.book_project_id else redirect(url_for('book_platform.book_cafe'))

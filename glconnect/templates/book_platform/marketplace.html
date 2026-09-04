@@ -215,6 +215,15 @@
                                             </div>
                                             
                                             <div class="book-meta-extra mb-3 d-flex flex-wrap gap-1 align-items-center">
+                                                {% if ebook_listed(book) %}
+                                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Ebook</span>
+                                                {% endif %}
+                                                {% if audiobook_listed(book) %}
+                                                    <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">AI-narrated audiobook</span>
+                                                {% endif %}
+                                                {% if print_listed(book) %}
+                                                    <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Print</span>
+                                                {% endif %}
                                                 {% if book.language %}
                                                     <span class="badge rounded-pill bg-info text-dark">{{ book.language|upper }}</span>
                                                 {% endif %}
@@ -235,6 +244,9 @@
                                                     <button type="button" class="btn btn-primary btn-sm ink-mp-cta ink-mp-view-btn flex-grow-1" onclick="viewBook({{ book.id }})" aria-label="View {{ book.title }}">
                                                         <i class="fas fa-book-open" aria-hidden="true"></i><span class="ink-mp-view-label">View</span>
                                                     </button>
+                                                    <a href="{{ url_for('book_platform.book_cafe', book_id=book.id) }}" class="btn btn-outline-warning btn-sm" aria-label="Review {{ book.title }}">
+                                                        <i class="fas fa-comment-dots" aria-hidden="true"></i> Review
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -378,6 +390,7 @@
                                                 'bn': 'Bengali', 'ta': 'Tamil', 'te': 'Telugu', 'ml': 'Malayalam',
                                                 'kn': 'Kannada', 'gu': 'Gujarati', 'pa': 'Punjabi', 'ur': 'Urdu',
                                                 'fa': 'Persian', 'ms': 'Malay', 'tl': 'Tagalog', 'haw': 'Hawaiian',
+                                                'rw': 'Kinyarwanda', 'rn': 'Kirundi',
                                                 'other': 'Other'
                                             } %}
                                             <option value="{{ lang_info.language }}" {% if selected_language == lang_info.language %}selected{% endif %}>
@@ -454,25 +467,53 @@
         </div>
     </div>
 
-    <!-- Book Details Modal -->
-    <div class="modal fade" id="bookDetailsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
+    <!-- Book Details Modal (single purchase surface) -->
+    <div class="modal fade" id="bookDetailsModal" tabindex="-1" aria-labelledby="bookDetailsTitle">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content ink-mp-detail-modal">
+                <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title" id="bookDetailsTitle">Book Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="bookDetailsBody">
-                    <!-- Book details will be loaded here -->
+                <div class="modal-body pt-2" id="bookDetailsBody">
+                    <!-- Loaded dynamically -->
                 </div>
-                <div class="modal-footer flex-wrap gap-2 justify-content-between align-items-center">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                    <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
-                        <span class="small text-muted d-none" id="bookDetailsCheckoutTotalWrap">Total: <strong id="bookDetailsCheckoutTotal">$0.00</strong></span>
-                        <button type="button" class="btn btn-success d-none" id="bookDetailsCheckoutBtn" disabled>
-                            <i class="fas fa-shopping-cart me-1"></i>Checkout
-                        </button>
-                        <div class="d-flex flex-wrap gap-2" id="bookDetailsActions"></div>
+                <div class="modal-footer flex-column align-items-stretch gap-3 border-0 pt-0">
+                    <div id="bookDetailsCheckoutStatus" class="ink-mp-checkout-status d-none" role="alert" aria-live="polite"></div>
+                    {% if stripe_checkout_test_mode|default(false) %}
+                    <div class="ink-mp-test-banner small" id="bookDetailsTestBanner">
+                        <i class="fas fa-flask me-1" aria-hidden="true"></i>
+                        <strong>Test checkout</strong> — no real charge. Use Stripe test card <code>4242 4242 4242 4242</code>, any future expiry, any CVC.
+                    </div>
+                    {% endif %}
+                    <div id="bookDetailsOrderSummary" class="ink-mp-order-summary d-none">
+                        <div class="ink-mp-order-lines" id="bookDetailsOrderLines"></div>
+                        <div class="ink-mp-order-total">
+                            <span>Total</span>
+                            <strong id="bookDetailsCheckoutTotal">$0.00</strong>
+                        </div>
+                    </div>
+                    <div id="bookDetailsDigitalWaiver" class="form-check small d-none">
+                        <input class="form-check-input" type="checkbox" id="bookDetailsDigitalWaiverCheck" value="on">
+                        <label class="form-check-label" for="bookDetailsDigitalWaiverCheck">
+                            I request immediate delivery of any digital ebook or AI-narrated audiobook in this order and acknowledge that I lose the right to withdraw from those digital items once delivery begins (including the EU/UK 14-day withdrawal right where it would otherwise apply).
+                        </label>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center w-100">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
+                            <div class="d-flex flex-wrap gap-2" id="bookDetailsActions"></div>
+                            <button type="button" class="btn btn-success d-none ink-mp-checkout-btn" id="bookDetailsCheckoutBtn" disabled>
+                                <span class="ink-mp-checkout-btn-label">
+                                    <i class="fas fa-lock me-1" aria-hidden="true"></i>
+                                    {% if stripe_checkout_test_mode|default(false) %}Continue to test checkout{% else %}Continue to secure checkout{% endif %}
+                                </span>
+                                <span class="ink-mp-checkout-btn-loading d-none">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    Redirecting…
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -504,84 +545,14 @@
         </div>
     </div>
 
-    <!-- Custom Payment Amount Modal -->
-    <div class="modal fade" id="customPaymentModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-credit-card me-2"></i>Purchase Book
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-2">Choose one or more formats (ebook, audiobook, print), then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
-                    <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to a <strong>US address</strong> only. Ebook + audiobook together receive a 20% bundle discount.</p>
-                    <div class="mb-3 d-none" id="purchaseTypeBlock">
-                        <label class="form-label fw-bold d-block mb-2">Choose format(s)</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="purchaseFormatOption" id="purchaseTypeDigital" value="digital">
-                            <label class="form-check-label" for="purchaseTypeDigital" id="purchaseTypeDigitalLabel">Ebook</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="purchaseFormatOption" id="purchaseTypeAudiobook" value="audiobook">
-                            <label class="form-check-label" for="purchaseTypeAudiobook" id="purchaseTypeAudiobookLabel">Audiobook</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="purchaseFormatOption" id="purchaseTypePrint" value="print">
-                            <label class="form-check-label" for="purchaseTypePrint" id="purchaseTypePrintLabel">Print edition</label>
-                        </div>
-                    </div>
-                    <p class="small text-info d-none mb-3" id="purchasePrintNote"></p>
-                    <div class="mb-3">
-                        <label for="customAmount" class="form-label fw-bold">Payment Amount</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="customAmount" step="0.01" min="0" required>
-                        </div>
-                        <small class="form-text text-muted">Minimum amount: $<span id="minAmount">0.00</span></small>
-                    </div>
-                    <div id="checkoutAccountBlock" class="mb-0 {% if current_user.is_authenticated %}d-none{% endif %}">
-                        <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Sign in</a> or create one below (same email you'll use at payment).</p>
-                        <label for="checkoutSignupEmail" class="form-label fw-bold">Email</label>
-                        <input type="email" class="form-control" id="checkoutSignupEmail" placeholder="you@example.com" autocomplete="email">
-                        <div class="mt-3 pt-2 border-top">
-                            <p class="small fw-bold mb-2">Create your account</p>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control form-control-sm" id="checkoutRegUsername" placeholder="Username" autocomplete="username">
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="password" class="form-control form-control-sm" id="checkoutRegPassword" placeholder="Password (8+ chars)" autocomplete="new-password">
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="checkoutRegisterBtn">Create account</button>
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" id="checkoutSignupAcceptAll" value="on">
-                                <label class="form-check-label small" for="checkoutSignupAcceptAll">
-                                    I accept the Account Terms and Privacy Policy (v{{ account_terms_version|default('1.0') }}),
-                                    including age confirmation and data practices described at registration.
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer flex-wrap gap-2 justify-content-between">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" id="confirmPurchaseBtn" title="Pay for this book with Stripe">
-                        <i class="fas fa-credit-card me-2" aria-hidden="true"></i>Buy now
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        window.INK_MARKETPLACE_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
+        window.INK_MARKETPLACE_CONFIG = {
+            testMode: {{ stripe_checkout_test_mode|default(false)|tojson }}
+        };
     </script>
+    <script src="{{ url_for('static', filename='marketplace_checkout.js') }}?v=1"></script>
     <script>
-        // Search functionality
         function searchBooks() {
             const top = document.getElementById('searchInput');
             const side = document.getElementById('search');
@@ -646,942 +617,6 @@
                 bookCard.style.display = show ? '' : 'none';
             });
         }
-
-        function escapeHtml(text) {
-            if (text === null || text === undefined) return '';
-            const d = document.createElement('div');
-            d.textContent = String(text);
-            return d.innerHTML;
-        }
-
-        let bookDetailsPurchaseState = null;
-
-        function computeFormatTotal(opts, formats) {
-            const fmts = (formats || []).filter(function (f) {
-                return f === 'digital' || f === 'audiobook' || f === 'print';
-            });
-            if (!fmts.length) return 0;
-            let total = 0;
-            const hasDigital = fmts.indexOf('digital') >= 0;
-            const hasAudio = fmts.indexOf('audiobook') >= 0;
-            if (hasDigital && hasAudio) {
-                total += (Number(opts.digital || 0) + Number(opts.audiobook || 0)) * 0.8;
-            } else {
-                if (hasDigital) total += Number(opts.digital || 0);
-                if (hasAudio) total += Number(opts.audiobook || 0);
-            }
-            if (fmts.indexOf('print') >= 0) {
-                total += Number(opts.print_price || 0) + Number(opts.print_shipping || 0);
-            }
-            return total;
-        }
-
-        function getSelectedPurchaseFormats() {
-            const out = [];
-            document.querySelectorAll('#purchaseTypeBlock input[type=checkbox]:checked').forEach(function (cb) {
-                if (!cb.disabled) out.push(cb.value);
-            });
-            return out;
-        }
-
-        function syncBookDetailsCheckoutUi() {
-            const state = bookDetailsPurchaseState;
-            const totalWrap = document.getElementById('bookDetailsCheckoutTotalWrap');
-            const totalEl = document.getElementById('bookDetailsCheckoutTotal');
-            const checkoutBtn = document.getElementById('bookDetailsCheckoutBtn');
-            if (!state || !checkoutBtn) return;
-            const selected = [];
-            document.querySelectorAll('#bookDetailsFormatPicker input[type=checkbox]:checked').forEach(function (cb) {
-                selected.push(cb.value);
-            });
-            state.selectedFormats = selected;
-            const total = computeFormatTotal(state.opts, selected);
-            const hasPaidSelection = selected.length > 0 && total > 0;
-            if (totalWrap) totalWrap.classList.toggle('d-none', !hasPaidSelection);
-            if (totalEl) totalEl.textContent = '$' + total.toFixed(2);
-            checkoutBtn.classList.toggle('d-none', !state.hasPaidFormats);
-            checkoutBtn.disabled = !hasPaidSelection;
-            const hint = document.getElementById('bookDetailsFormatHint');
-            if (hint) {
-                if (!state.hasPaidFormats) {
-                    hint.textContent = '';
-                } else if (!selected.length) {
-                    hint.textContent = 'Select one or more formats to checkout.';
-                } else if (selected.indexOf('print') >= 0) {
-                    hint.textContent = 'Print includes shipping to a US address; you will enter it on Stripe (apartment and optional note for the author).';
-                } else if (selected.indexOf('digital') >= 0 && selected.indexOf('audiobook') >= 0) {
-                    hint.textContent = 'Ebook + audiobook receive a 20% bundle discount.';
-                } else {
-                    hint.textContent = 'Select additional formats to combine your purchase.';
-                }
-            }
-            // #region agent log
-            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:syncBookDetailsCheckoutUi',message:'View book format selection',data:{bookId:state.bookId,selectedFormats:selected,total:total,hasPaidFormats:state.hasPaidFormats},timestamp:Date.now(),hypothesisId:'H2'})}).catch(function(){});
-            // #endregion
-        }
-
-        function viewBook(bookId) {
-            const modalEl = document.getElementById('bookDetailsModal');
-            if (!modalEl) return;
-            const modal = new bootstrap.Modal(modalEl);
-            const titleEl = document.getElementById('bookDetailsTitle');
-            const bodyEl = document.getElementById('bookDetailsBody');
-            const actionsEl = document.getElementById('bookDetailsActions');
-            if (!bodyEl || !actionsEl) return;
-
-            if (titleEl) titleEl.textContent = 'Loading...';
-            actionsEl.innerHTML = '';
-            bookDetailsPurchaseState = null;
-            const checkoutBtnReset = document.getElementById('bookDetailsCheckoutBtn');
-            const totalWrapReset = document.getElementById('bookDetailsCheckoutTotalWrap');
-            if (checkoutBtnReset) {
-                checkoutBtnReset.classList.add('d-none');
-                checkoutBtnReset.disabled = true;
-                checkoutBtnReset.onclick = null;
-            }
-            if (totalWrapReset) totalWrapReset.classList.add('d-none');
-            bodyEl.innerHTML = `
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
-                    <p class="mt-3 text-muted mb-0">Loading book details...</p>
-                </div>`;
-            modal.show();
-
-            fetch('/mybook/api/marketplace/books/' + encodeURIComponent(bookId), {
-                credentials: 'same-origin',
-                headers: { 'Accept': 'application/json' },
-            })
-                .then(function (r) {
-                    return r.json().then(function (data) {
-                        if (!r.ok) throw new Error((data && data.error) || 'Could not load this book.');
-                        return data;
-                    });
-                })
-                .then(function (data) {
-                    if (!data.success || !data.book) throw new Error('Invalid response');
-                    const b = data.book;
-                    if (titleEl) titleEl.textContent = b.title;
-
-                    const coverBlock = b.cover_url
-                        ? '<div class="col-md-4 text-center mb-3 mb-md-0"><img src="' + escapeHtml(b.cover_url) + '" class="img-fluid rounded shadow" alt=""></div>'
-                        : '<div class="col-md-4 text-center mb-3 mb-md-0"><div class="book-cover-placeholder rounded d-flex align-items-center justify-content-center bg-light" style="min-height:220px"><i class="fas fa-book fa-4x text-muted"></i></div></div>';
-
-                    const descHtml = escapeHtml(b.description || '').replace(/\n/g, '<br>');
-                    const priceDigital = b.price != null ? Number(b.price) : null;
-                    const priceAudio = b.audiobook_price != null ? Number(b.audiobook_price) : null;
-                    const fmtDigital = b.formats && b.formats.digital;
-                    const fmtAudio = b.formats && b.formats.audiobook;
-                    const fmtPrint = b.formats && b.formats.print;
-                    const pricePrint = b.print_price != null ? Number(b.print_price) : null;
-                    const pricePrintShip = b.print_shipping_price != null ? Number(b.print_shipping_price) : 0;
-
-                    function formatListingPrice(price) {
-                        if (price === 0) return ', <strong>Free</strong>';
-                        if (price != null && price > 0) return ', <strong>$' + price.toFixed(2) + '</strong>';
-                        return '';
-                    }
-
-                    const purchaseOpts = {
-                        digital: (fmtDigital && priceDigital != null && priceDigital > 0) ? priceDigital : 0,
-                        audiobook: (fmtAudio && priceAudio != null && priceAudio > 0) ? priceAudio : 0,
-                        print: !!(fmtPrint && pricePrint != null && pricePrint > 0),
-                        print_price: (fmtPrint && pricePrint != null && pricePrint > 0) ? pricePrint : 0,
-                        print_shipping: pricePrintShip || 0,
-                        print_handling_days: Number(b.print_handling_days || 7),
-                    };
-                    const hasPaidDigital = fmtDigital && priceDigital != null && priceDigital > 0;
-                    const hasPaidAudio = fmtAudio && priceAudio != null && priceAudio > 0;
-                    const hasPaidPrint = purchaseOpts.print;
-                    const hasPaidFormats = hasPaidDigital || hasPaidAudio || hasPaidPrint;
-                    const hasFreeDigital = fmtDigital && priceDigital === 0;
-                    const hasFreeAudio = fmtAudio && priceAudio === 0;
-
-                    let investBadge = '';
-                    if (b.investment && (b.investment.active || b.investment.funded)) {
-                        investBadge = '<span class="badge bg-success ms-1">Community funded</span>';
-                    }
-
-                    let pickerHtml = '';
-                    if (hasPaidFormats) {
-                        pickerHtml = '<div class="mt-4 pt-3 border-top"><p class="small text-muted mb-2"><strong>Choose formats to purchase</strong></p><div id="bookDetailsFormatPicker">';
-                        if (hasPaidDigital) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfDigital" value="digital" checked><label class="form-check-label" for="bdfDigital">Ebook' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + ', <strong>$' + purchaseOpts.digital.toFixed(2) + '</strong></label></div>';
-                        }
-                        if (hasPaidAudio) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfAudiobook" value="audiobook" checked><label class="form-check-label" for="bdfAudiobook">Audiobook, <strong>$' + purchaseOpts.audiobook.toFixed(2) + '</strong></label></div>';
-                        }
-                        if (hasPaidPrint) {
-                            pickerHtml += '<div class="form-check"><input class="form-check-input book-format-pick" type="checkbox" id="bdfPrint" value="print" checked><label class="form-check-label" for="bdfPrint">Print, <strong>$' + purchaseOpts.print_price.toFixed(2) + '</strong> + <strong>$' + purchaseOpts.print_shipping.toFixed(2) + '</strong> shipping' + (b.print_handling_days ? ', ships in ~' + Number(b.print_handling_days) + ' days' : '') + '</label></div>';
-                        }
-                        pickerHtml += '</div><p class="small text-muted mt-2 mb-0" id="bookDetailsFormatHint"></p></div>';
-                    } else {
-                        const formatLines = [];
-                        if (fmtDigital) {
-                            formatLines.push('<li>Digital' + (b.digital_file_type ? ' (' + escapeHtml(b.digital_file_type) + ')' : '') + formatListingPrice(priceDigital) + '</li>');
-                        }
-                        if (fmtAudio) {
-                            formatLines.push('<li>Audiobook' + formatListingPrice(priceAudio) + '</li>');
-                        }
-                        if (fmtPrint && pricePrint != null && pricePrint > 0) {
-                            formatLines.push('<li>Print, <strong>$' + pricePrint.toFixed(2) + '</strong></li>');
-                        }
-                        if (!formatLines.length) {
-                            formatLines.push('<li class="text-muted">See listing for availability.</li>');
-                        }
-                        pickerHtml = '<div class="mt-4 pt-3 border-top"><p class="small text-muted mb-1"><strong>Formats</strong></p><ul class="small mb-0">' +
-                            formatLines.join('') +
-                            '</ul></div>';
-                    }
-
-                    bodyEl.innerHTML =
-                        '<div class="row">' +
-                        coverBlock +
-                        '<div class="col-md-8">' +
-                        '<p class="text-muted mb-2"><i class="fas fa-user-edit me-1"></i>by <strong>' + escapeHtml(b.author.name) + '</strong>' +
-                        (b.author.marketplace_book_count > 1 ? ' <span class="small">(' + b.author.marketplace_book_count + ' titles)</span>' : '') +
-                        '</p>' +
-                        (b.publisher_name ? '<p class="small text-muted mb-2"><i class="fas fa-building me-1"></i>Publisher: <strong>' + escapeHtml(b.publisher_name) + '</strong></p>' : '') +
-                        (b.isbn_display || b.isbn ? '<p class="small text-muted mb-2"><i class="fas fa-barcode me-1"></i>ISBN: <strong>' + escapeHtml(b.isbn_display || b.isbn) + '</strong> <span class="text-muted">(ebook, print &amp; audiobook)</span></p>' : '') +
-                        '<div class="d-flex flex-wrap gap-1 mb-3">' +
-                        (b.genre ? '<span class="badge bg-primary">' + escapeHtml(b.genre) + '</span>' : '') +
-                        '<span class="badge bg-secondary">' + escapeHtml(b.language_label || b.language || '') + '</span>' +
-                        (b.word_count ? '<span class="badge bg-light border text-muted">' + b.word_count.toLocaleString() + ' words</span>' : '') +
-                        investBadge +
-                        '</div>' +
-                        '<div class="book-description text-muted small" style="line-height:1.65">' + (descHtml || '<em>No description yet.</em>') + '</div>' +
-                        pickerHtml +
-                        '</div></div>';
-
-                    // #region agent log
-                    fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:viewBook',message:'Book loaded for View Book modal',data:{bookId:b.id,hasPaidDigital:hasPaidDigital,hasPaidAudio:hasPaidAudio,hasPaidPrint:hasPaidPrint,hasPaidFormats:hasPaidFormats},timestamp:Date.now(),hypothesisId:'H1'})}).catch(function(){});
-                    // #endregion
-
-                    actionsEl.innerHTML = '';
-                    const closeModal = function () {
-                        const inst = bootstrap.Modal.getInstance(modalEl);
-                        if (inst) inst.hide();
-                    };
-
-                    bookDetailsPurchaseState = hasPaidFormats ? {
-                        bookId: b.id,
-                        opts: purchaseOpts,
-                        hasPaidFormats: true,
-                        selectedFormats: [],
-                    } : null;
-
-                    document.querySelectorAll('#bookDetailsFormatPicker .book-format-pick').forEach(function (cb) {
-                        cb.addEventListener('change', syncBookDetailsCheckoutUi);
-                    });
-                    syncBookDetailsCheckoutUi();
-
-                    const checkoutBtn = document.getElementById('bookDetailsCheckoutBtn');
-                    if (checkoutBtn && hasPaidFormats) {
-                        checkoutBtn.onclick = function () {
-                            const selected = (bookDetailsPurchaseState && bookDetailsPurchaseState.selectedFormats) || [];
-                            if (!selected.length) {
-                                alert('Select at least one format to purchase.');
-                                return;
-                            }
-                            const total = computeFormatTotal(purchaseOpts, selected);
-                            if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
-                                closeModal();
-                                showPurchaseModal(b.id, purchaseOpts, false, selected);
-                                return;
-                            }
-                            closeModal();
-                            buyWithStripeLink(b.id, total, null, selected);
-                        };
-                    } else if (checkoutBtn) {
-                        checkoutBtn.classList.add('d-none');
-                    }
-
-                    if (hasFreeDigital) {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'btn btn-outline-primary';
-                        btn.innerHTML = '<i class="fas fa-download me-1"></i>Free download';
-                        btn.addEventListener('click', function () {
-                            window.open('/mybook/books/' + b.id + '/download', '_blank');
-                        });
-                        actionsEl.appendChild(btn);
-                    }
-                    if (fmtAudio) {
-                        if (b.audiobook_preview_url) {
-                            const pbtn = document.createElement('button');
-                            pbtn.type = 'button';
-                            pbtn.className = 'btn btn-outline-info';
-                            pbtn.innerHTML = '<i class="fas fa-play me-1"></i>Preview 30s';
-                            pbtn.addEventListener('click', function () {
-                                window.open(b.audiobook_preview_url, '_blank');
-                            });
-                            actionsEl.appendChild(pbtn);
-                        }
-                    }
-                })
-                .catch(function (err) {
-                    console.error(err);
-                    if (titleEl) titleEl.textContent = 'Book unavailable';
-                    bodyEl.innerHTML =
-                        '<div class="alert alert-warning mb-0"><i class="fas fa-exclamation-triangle me-2"></i>' +
-                        escapeHtml(err.message || 'Something went wrong.') +
-                        '</div>';
-                });
-        }
-
-        function purchaseBook(bookId) {
-            if (confirm('Are you sure you want to purchase this book? You will be redirected to Stripe for payment.')) {
-                fetch(`/mybook/books/${bookId}/purchase`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => {
-                    // Check if response is JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        // Server returned HTML (error page) instead of JSON
-                        return response.text().then(text => {
-                            console.error('Server returned non-JSON response (status ' + response.status + '):', text.substring(0, 500));
-                            throw new Error('Server error ' + response.status + ': ' + response.statusText + '. Check console for details.');
-                        });
-                    }
-                    // Check if response is an error
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            console.error('Server returned error:', data);
-                            throw new Error(data.error || data.message || 'Server error: ' + response.status);
-                        });
-                    }
-                    return response.json();
-                })
-            .then(data => {
-                if (data.success) {
-                    // Store purchase info for success callback
-                    if (data.success_url) {
-                        localStorage.setItem('pendingPurchase', JSON.stringify({
-                            bookId: bookId,
-                            purchaseId: data.purchase_id,
-                            successUrl: data.success_url
-                        }));
-                    }
-                    
-                    // Redirect to Stripe payment link with success URL
-                    if (data.stripe_payment_link) {
-                        // Append success URL to Stripe link (if supported) or redirect after payment
-                        window.location.href = data.stripe_payment_link;
-                    } else {
-                        // Fallback: redirect to success page with instructions
-                        window.location.href = data.success_url + '?payment_completed=true';
-                    }
-                } else {
-                    alert('Purchase failed: ' + (data.error || 'Unknown error'));
-                }
-            })
-                .catch(error => {
-                    // Log technical details to console for debugging (not shown to user)
-                    console.error('Purchase error:', error);
-                    console.error('Error name:', error.name);
-                    console.error('Error message:', error.message);
-                    console.error('Error stack:', error.stack);
-                    
-                    // Show user-friendly error message
-                    let errorMsg = 'We encountered an issue processing your purchase. ';
-                    if (error.message && !error.message.includes('Server error') && !error.message.includes('traceback') && !error.message.includes('psycopg2') && !error.message.includes('database')) {
-                        // Only show message if it's user-friendly (not technical)
-                        errorMsg = error.message;
-                    } else {
-                        errorMsg += 'Please try again or contact support if the problem persists.';
-                    }
-                    
-                    alert(errorMsg);
-                });
-            }
-        }
-
-        function downloadBook(bookId) {
-            // For free books, directly download
-            window.open(`/mybook/books/${bookId}/download`, '_blank');
-        }
-
-        function downloadAudiobook(bookId) {
-            // For free audiobooks, directly access
-            window.open(`/mybook/audiobook/${bookId}/player`, '_blank');
-        }
-
-        // Bundle purchase function
-        function buyBundle(bookId) {
-            const confirmMessage = `You're about to purchase both the digital book and audiobook at a 20% discount. You'll be redirected to Stripe for secure payment processing.`;
-            
-            if (confirm(confirmMessage)) {
-                // Use backend purchase flow (same as digital/audiobook) - creates proper bundle purchase
-                buyWithStripeLink(bookId, null, 'bundle', ['digital', 'audiobook']);
-            }
-        }
-
-        function showBundleNotification(bookId) {
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-info alert-dismissible fade show position-fixed';
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
-            
-            notification.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-gift fa-2x me-3 text-info"></i>
-                    <div>
-                        <h6 class="mb-1">Bundle Purchase Processing</h6>
-                        <p class="mb-0">Complete your book + audiobook bundle purchase on Stripe. You'll get access to both formats immediately after payment.</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto remove after 10 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 10000);
-        }
-
-        // Show custom payment amount modal
-        let currentBookId = null;
-        let currentMinAmount = 0;
-        let currentPurchaseType = 'digital';
-        let currentSelectedFormats = [];
-        let currentPurchaseOptions = null;
-        let lastPurchaseTypeApplied = null;
-
-        function refreshPurchaseTypeUi() {
-            const block = document.getElementById('purchaseTypeBlock');
-            const amountInput = document.getElementById('customAmount');
-            const minAmountEl = document.getElementById('minAmount');
-            if (!amountInput || !minAmountEl) return;
-
-            const opts = currentPurchaseOptions || {};
-            const hasDigital = Number(opts.digital || 0) > 0;
-            const hasAudio = Number(opts.audiobook || 0) > 0;
-            const hasPrint = !!opts.print;
-            const showChoices = hasDigital || hasAudio || hasPrint;
-
-            if (block) block.classList.toggle('d-none', !showChoices);
-            const digitalEl = document.getElementById('purchaseTypeDigital');
-            const audioEl = document.getElementById('purchaseTypeAudiobook');
-            const printEl = document.getElementById('purchaseTypePrint');
-            if (digitalEl) digitalEl.disabled = !hasDigital;
-            if (audioEl) audioEl.disabled = !hasAudio;
-            if (printEl) printEl.disabled = !hasPrint;
-
-            const digitalLabel = document.getElementById('purchaseTypeDigitalLabel');
-            if (digitalLabel && hasDigital) {
-                digitalLabel.textContent = 'Ebook ($' + Number(opts.digital).toFixed(2) + ')';
-            }
-            const audioLabel = document.getElementById('purchaseTypeAudiobookLabel');
-            if (audioLabel && hasAudio) {
-                audioLabel.textContent = 'Audiobook ($' + Number(opts.audiobook).toFixed(2) + ')';
-            }
-            const printLabel = document.getElementById('purchaseTypePrintLabel');
-            if (printLabel && hasPrint) {
-                const pp = Number(opts.print_price || 0);
-                const ps = Number(opts.print_shipping || 0);
-                printLabel.textContent = 'Print ($' + pp.toFixed(2) + ' + $' + ps.toFixed(2) + ' shipping)';
-            }
-
-            let selected = getSelectedPurchaseFormats();
-            if (!selected.length && showChoices) {
-                if (currentSelectedFormats && currentSelectedFormats.length) {
-                    selected = currentSelectedFormats.slice();
-                } else {
-                    if (hasDigital) selected.push('digital');
-                    if (hasAudio) selected.push('audiobook');
-                    if (hasPrint) selected.push('print');
-                }
-                ['digital', 'audiobook', 'print'].forEach(function (fmt) {
-                    const el = document.getElementById(
-                        fmt === 'digital' ? 'purchaseTypeDigital' : (fmt === 'audiobook' ? 'purchaseTypeAudiobook' : 'purchaseTypePrint')
-                    );
-                    if (el) el.checked = selected.indexOf(fmt) >= 0;
-                });
-            }
-            currentSelectedFormats = selected.slice();
-
-            const printNote = document.getElementById('purchasePrintNote');
-            if (printNote) {
-                const showPrintNote = selected.indexOf('print') >= 0;
-                printNote.classList.toggle('d-none', !showPrintNote);
-                if (showPrintNote) {
-                    const days = Number(opts.print_handling_days || 7);
-                    printNote.textContent = "You'll enter your shipping address on Stripe (apartment and an optional note for the author). The author ships within about " + days + ' business days.';
-                }
-            }
-
-            const baseAmount = computeFormatTotal(opts, selected);
-            currentMinAmount = baseAmount;
-            minAmountEl.textContent = baseAmount.toFixed(2);
-            amountInput.min = baseAmount.toFixed(2);
-            const selectionKey = selected.slice().sort().join(',');
-            if (lastPurchaseTypeApplied !== selectionKey) {
-                amountInput.value = baseAmount.toFixed(2);
-            } else if (!amountInput.value || Number(amountInput.value) < baseAmount) {
-                amountInput.value = baseAmount.toFixed(2);
-            }
-            lastPurchaseTypeApplied = selectionKey;
-            if (selected.length === 1) {
-                currentPurchaseType = selected[0];
-            } else if (selected.length === 2 && selected.indexOf('digital') >= 0 && selected.indexOf('audiobook') >= 0) {
-                currentPurchaseType = 'bundle';
-            } else if (selected.length > 1) {
-                currentPurchaseType = 'combo:' + selected.slice().sort().join(',');
-            }
-        }
-
-        function showPurchaseModal(bookId, minAmountOrOptions, audiobookPurchase = false, preselectedFormats = null) {
-            try {
-                currentBookId = bookId;
-                if (typeof minAmountOrOptions === 'object' && minAmountOrOptions !== null) {
-                    currentPurchaseOptions = {
-                        digital: Number(minAmountOrOptions.digital || 0),
-                        audiobook: Number(minAmountOrOptions.audiobook || 0),
-                        print: !!minAmountOrOptions.print,
-                        print_price: Number(minAmountOrOptions.print_price || 0),
-                        print_shipping: Number(minAmountOrOptions.print_shipping || 0),
-                        print_handling_days: Number(minAmountOrOptions.print_handling_days || 7),
-                    };
-                    currentPurchaseType = currentPurchaseOptions.digital > 0 ? 'digital'
-                        : (currentPurchaseOptions.audiobook > 0 ? 'audiobook' : 'print');
-                } else {
-                    currentPurchaseOptions = audiobookPurchase
-                        ? { digital: 0, audiobook: Number(minAmountOrOptions || 0), print: false, print_price: 0, print_shipping: 0, print_handling_days: 7 }
-                        : { digital: Number(minAmountOrOptions || 0), audiobook: 0, print: false, print_price: 0, print_shipping: 0, print_handling_days: 7 };
-                    currentPurchaseType = audiobookPurchase ? 'audiobook' : 'digital';
-                }
-                currentSelectedFormats = Array.isArray(preselectedFormats) ? preselectedFormats.slice() : [];
-                currentMinAmount = computeFormatTotal(currentPurchaseOptions, currentSelectedFormats.length ? currentSelectedFormats : [currentPurchaseType]);
-                lastPurchaseTypeApplied = null;
-                
-                // Ensure modal exists in DOM - create it if missing
-                let modalEl = document.getElementById('customPaymentModal');
-                let modalWasCreated = false;
-                
-                if (!modalEl) {
-                    console.warn('Modal not found, creating dynamically...');
-                    modalWasCreated = true;
-                    // Create modal HTML dynamically
-                    const modalHTML = `
-                        <div class="modal fade" id="customPaymentModal" tabindex="-1">
-                            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-                                <div class="modal-content">
-                                    <div class="modal-header bg-success text-white">
-                                        <h5 class="modal-title">
-                                            <i class="fas fa-credit-card me-2"></i>Purchase Book
-                                        </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <p class="mb-2">Choose one or more formats (ebook, audiobook, print), then use <strong>Buy now</strong> to pay for <strong>this title only</strong> via Stripe.</p>
-                                        <p class="small text-muted mb-2"><i class="fas fa-info-circle me-1"></i>All sales are final. Digital content is delivered after payment; print orders ship to a <strong>US address</strong> only. Ebook + audiobook together receive a 20% bundle discount.</p>
-                                        <div class="mb-3 d-none" id="purchaseTypeBlock">
-                                            <label class="form-label fw-bold d-block mb-2">Choose format(s)</label>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="purchaseFormatOption" id="purchaseTypeDigital" value="digital">
-                                                <label class="form-check-label" for="purchaseTypeDigital" id="purchaseTypeDigitalLabel">Ebook</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="purchaseFormatOption" id="purchaseTypeAudiobook" value="audiobook">
-                                                <label class="form-check-label" for="purchaseTypeAudiobook" id="purchaseTypeAudiobookLabel">Audiobook</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="purchaseFormatOption" id="purchaseTypePrint" value="print">
-                                                <label class="form-check-label" for="purchaseTypePrint" id="purchaseTypePrintLabel">Print edition</label>
-                                            </div>
-                                        </div>
-                                        <p class="small text-info d-none mb-3" id="purchasePrintNote"></p>
-                                        <div class="mb-3">
-                                            <label for="customAmount" class="form-label fw-bold">Payment Amount</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" class="form-control" id="customAmount" step="0.01" min="0" required>
-                                            </div>
-                                            <small class="form-text text-muted">Minimum amount: $<span id="minAmount">0.00</span></small>
-                                        </div>
-                                        <div id="checkoutAccountBlock" class="mb-0">
-                                            <p class="small text-muted mb-2">You need an account to buy. <a href="{{ url_for('routes1.login', next=url_for('book_platform.marketplace')) }}">Sign in</a> or create one below.</p>
-                                            <label for="checkoutSignupEmail" class="form-label fw-bold">Email</label>
-                                            <input type="email" class="form-control" id="checkoutSignupEmail" placeholder="you@example.com" autocomplete="email">
-                                            <div class="mt-3 pt-2 border-top">
-                                                <p class="small fw-bold mb-2">Create your account</p>
-                                                <div class="row g-2">
-                                                    <div class="col-md-6"><input type="text" class="form-control form-control-sm" id="checkoutRegUsername" placeholder="Username" autocomplete="username"></div>
-                                                    <div class="col-md-6"><input type="password" class="form-control form-control-sm" id="checkoutRegPassword" placeholder="Password (8+ chars)" autocomplete="new-password"></div>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="checkoutRegisterBtn">Create account</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer flex-wrap gap-2 justify-content-between">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <button type="button" class="btn btn-success" id="confirmPurchaseBtn" title="Pay for this book with Stripe">
-                                            <i class="fas fa-credit-card me-2" aria-hidden="true"></i>Buy now
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    document.body.insertAdjacentHTML('beforeend', modalHTML);
-                    modalEl = document.getElementById('customPaymentModal');
-                }
-                
-                // Wait for DOM to update if modal was just created, then set values
-                const setModalValues = () => {
-                    const amountInput = document.getElementById('customAmount');
-                    if (amountInput) {
-                        amountInput.value = currentMinAmount.toFixed(2);
-                        amountInput.min = currentMinAmount.toFixed(2);
-                    } else {
-                        console.error('customAmount input not found in DOM');
-                        alert('Payment form not available. Please refresh the page and try again.');
-                        return false;
-                    }
-                    refreshPurchaseTypeUi();
-                    
-                    return true;
-                };
-                
-                const syncCheckoutAccountBlock = () => {
-                    const block = document.getElementById('checkoutAccountBlock');
-                    if (!block) return;
-                    if (window.INK_MARKETPLACE_LOGGED_IN === true) block.classList.add('d-none');
-                    else block.classList.remove('d-none');
-                };
-
-                if (modalWasCreated) {
-                    // Wait for DOM to update
-                    setTimeout(() => {
-                        if (setModalValues()) {
-                            syncCheckoutAccountBlock();
-                            // Show modal after values are set
-                            if (modalEl) {
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                            }
-                        }
-                    }, 50);
-                } else {
-                    // Modal already exists, set values immediately
-                    if (setModalValues()) {
-                        syncCheckoutAccountBlock();
-                        // Show modal
-                        if (modalEl) {
-                            const modal = new bootstrap.Modal(modalEl);
-                            modal.show();
-                        } else {
-                            console.error('customPaymentModal not found');
-                            alert('Payment modal not available. Please refresh the page and try again.');
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error in showPurchaseModal:', error);
-                alert('An error occurred opening the payment modal. Please refresh the page and try again.');
-            }
-        }
-
-        // Handle confirm purchase button - use event delegation to handle dynamically created buttons
-        // This works even if the button doesn't exist when the page loads
-        document.addEventListener('click', function(e) {
-            // Check if the clicked element is the confirm purchase button
-            if (e.target && (e.target.id === 'confirmPurchaseBtn' || e.target.closest('#confirmPurchaseBtn'))) {
-                const confirmBtn = e.target.id === 'confirmPurchaseBtn' ? e.target : e.target.closest('#confirmPurchaseBtn');
-                if (confirmBtn && confirmBtn.id === 'confirmPurchaseBtn') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const amountInput = document.getElementById('customAmount');
-                    if (!amountInput) {
-                        console.error('Custom amount input not found');
-                        alert('Payment form not available. Please refresh the page.');
-                        return;
-                    }
-                    
-                    const customAmount = parseFloat(amountInput.value);
-                    
-                    // Validate amount
-                    if (isNaN(customAmount) || customAmount < currentMinAmount) {
-                        alert(`Please enter an amount of at least $${currentMinAmount.toFixed(2)}`);
-                        amountInput.focus();
-                        return;
-                    }
-
-                    if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
-                        alert('Please sign in or use "Create account" in this window, then click Buy now again.');
-                        return;
-                    }
-
-                    const selectedFormats = getSelectedPurchaseFormats();
-                    if (!selectedFormats.length) {
-                        alert('Select at least one format to purchase.');
-                        return;
-                    }
-                    
-                    // Close modal
-                    const modalEl = document.getElementById('customPaymentModal');
-                    if (modalEl) {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        if (modal) {
-                            modal.hide();
-                        }
-                    }
-                    
-                    // Proceed with purchase
-                    buyWithStripeLink(currentBookId, customAmount, null, selectedFormats);
-                }
-            }
-        });
-
-        document.addEventListener('change', function (e) {
-            const t = e.target;
-            if (!t || t.name !== 'purchaseFormatOption') return;
-            currentSelectedFormats = getSelectedPurchaseFormats();
-            refreshPurchaseTypeUi();
-        });
-
-        document.addEventListener('click', function (e) {
-            const regBtn = e.target && (e.target.id === 'checkoutRegisterBtn' ? e.target : e.target.closest('#checkoutRegisterBtn'));
-            if (!regBtn || regBtn.id !== 'checkoutRegisterBtn') return;
-            e.preventDefault();
-            const emailEl = document.getElementById('checkoutSignupEmail');
-            const email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
-            const username = ((document.getElementById('checkoutRegUsername') || {}).value || '').trim();
-            const password = (document.getElementById('checkoutRegPassword') || {}).value || '';
-            if (!email || email.indexOf('@') < 1) {
-                alert('Enter your email first.');
-                if (emailEl) emailEl.focus();
-                return;
-            }
-            if (username.length < 2 || password.length < 8) {
-                alert('Choose a username (at least 2 characters) and password (at least 8 characters).');
-                return;
-            }
-            var termsEl = document.getElementById('checkoutSignupAcceptAll');
-            if (!termsEl || !termsEl.checked) {
-                alert('Please accept the Account Terms and Privacy Policy before creating an account.');
-                if (termsEl) termsEl.focus();
-                return;
-            }
-            fetch('/mybook/checkout/quick-register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: email,
-                    username: username,
-                    password: password,
-                    first_name: 'Reader',
-                    last_name: 'User',
-                    account_signup_accept_all: true,
-                }),
-            })
-                .then(function (r) {
-                    return r.json().then(function (j) {
-                        return { ok: r.ok, j: j };
-                    });
-                })
-                .then(function (res) {
-                    if (!res.ok) throw new Error(res.j.error || 'Registration failed');
-                    window.INK_MARKETPLACE_LOGGED_IN = true;
-                    var gb = document.getElementById('checkoutAccountBlock');
-                    if (gb) gb.classList.add('d-none');
-                    alert('Account created. Click "Proceed to Payment" to continue.');
-                })
-                .catch(function (err) {
-                    alert(err.message || 'Could not create account.');
-                });
-        });
-
-        // Stripe Payment Link Integration
-        function buyWithStripeLink(bookId, customAmount = null, purchaseType = 'digital', comboFormats = null) {
-            const requestBody = {};
-            if (customAmount !== null) {
-                requestBody.custom_amount = customAmount;
-            }
-            if (comboFormats && Array.isArray(comboFormats) && comboFormats.length) {
-                requestBody.combo_formats = comboFormats.slice();
-                if (comboFormats.length === 1) {
-                    requestBody.purchase_type = comboFormats[0];
-                } else if (comboFormats.length === 2 && comboFormats.indexOf('digital') >= 0 && comboFormats.indexOf('audiobook') >= 0) {
-                    requestBody.purchase_type = 'bundle';
-                } else {
-                    requestBody.purchase_type = 'combo:' + comboFormats.slice().sort().join(',');
-                }
-            } else {
-                requestBody.purchase_type = purchaseType || 'digital';
-            }
-
-            // #region agent log
-            fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:buyWithStripeLink',message:'Purchase request payload',data:{bookId:bookId,requestBody:requestBody},timestamp:Date.now(),hypothesisId:'H3'})}).catch(function(){});
-            // #endregion
-
-            if (window.INK_MARKETPLACE_LOGGED_IN !== true) {
-                alert('Sign in or create an account from the purchase window before paying.');
-                return;
-            }
-
-            fetch(`/mybook/books/${bookId}/purchase`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            })
-            .then(response => {
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    // Server returned HTML (error page) instead of JSON
-                    return response.text().then(text => {
-                        console.error('Server returned non-JSON response (status ' + response.status + '):', text.substring(0, 500));
-                        throw new Error('Server error ' + response.status + ': ' + response.statusText + '. Check console for details.');
-                    });
-                }
-                // Check if response is an error
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        console.error('Server returned error:', data);
-                        const code = data.error_code || data.operator_error_code;
-                        const detailMsg = data.error || data.message || ('Server error: ' + response.status);
-                        throw new Error(code ? ('[' + code + '] ' + detailMsg) : detailMsg);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                // #region agent log
-                fetch('http://127.0.0.1:7732/ingest/76e6fbe6-b760-4df3-abd0-75860347b717',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'fe2ff6'},body:JSON.stringify({sessionId:'fe2ff6',location:'marketplace.html:buyWithStripeLink:response',message:'Purchase API response',data:{success:!!data.success,error:data.error,error_code:data.error_code,operator_error_code:data.operator_error_code,hint:!!data.hint},timestamp:Date.now(),hypothesisId:'H1,H2,H4,H5'})}).catch(function(){});
-                // #endregion
-                if (data.success) {
-                    // Store purchase info for success callback
-                    if (data.success_url) {
-                        localStorage.setItem('pendingPurchase', JSON.stringify({
-                            bookId: bookId,
-                            purchaseId: data.purchase_id,
-                            successUrl: data.success_url,
-                                purchaseType: requestBody.purchase_type
-                        }));
-                    }
-                    
-                    // Redirect to Stripe payment link or checkout session
-                    if (data.stripe_checkout_url) {
-                        window.location.href = data.stripe_checkout_url;
-                    } else if (data.stripe_payment_link) {
-                        window.location.href = data.stripe_payment_link;
-                    } else {
-                        alert('Purchase link not available. Please try again.');
-                    }
-                } else {
-                    const code = data.error_code || data.operator_error_code;
-                    const msg = data.error || 'Unknown error';
-                    alert('Purchase failed: ' + (code ? ('[' + code + '] ') : '') + msg);
-                }
-            })
-            .catch(error => {
-                // Log technical details to console for debugging (not shown to user)
-                console.error('Purchase error:', error);
-                console.error('Error name:', error.name);
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
-                
-                // Show user-friendly error message
-                let errorMsg = 'We encountered an issue processing your purchase. ';
-                if (error.message && !error.message.includes('Server error') && !error.message.includes('traceback') && !error.message.includes('psycopg2') && !error.message.includes('database')) {
-                    // Only show message if it's user-friendly (not technical)
-                    errorMsg = error.message;
-                } else {
-                    errorMsg += 'Please try again or contact support if the problem persists.';
-                }
-                
-                alert(errorMsg);
-            });
-        }
-
-        function showPurchaseNotification(bookId, audiobookPurchase) {
-            const purchaseType = audiobookPurchase ? 'audiobook' : 'book';
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
-            
-            notification.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-${audiobookPurchase ? 'headphones' : 'book'} fa-2x me-3 text-success"></i>
-                    <div>
-                        <h6 class="mb-1">${purchaseType.charAt(0).toUpperCase() + purchaseType.slice(1)} Purchase Processing</h6>
-                        <p class="mb-0">Complete your ${purchaseType} purchase on Stripe. You'll get access immediately after payment.</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto remove after 10 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 10000);
-        }
-
-        // Check for completed purchases when page loads
-        function checkForCompletedPurchases() {
-            const pendingPurchase = localStorage.getItem('pendingPurchase');
-            if (pendingPurchase) {
-                const purchaseData = JSON.parse(pendingPurchase);
-                const timeElapsed = Date.now() - purchaseData.timestamp;
-                
-                // If more than 5 minutes have passed, assume purchase was completed
-                if (timeElapsed > 300000) { // 5 minutes
-                    localStorage.removeItem('pendingPurchase');
-                    showPurchaseReminder(purchaseData.bookId, purchaseData.purchaseType || 'digital');
-                }
-            }
-        }
-
-        function showPurchaseReminder(bookId, purchaseType) {
-            const isPrint = purchaseType === 'print';
-            const label = purchaseType === 'bundle' ? 'bundle' : (purchaseType === 'audiobook' ? 'audiobook' : (isPrint ? 'print book' : 'ebook'));
-            const message = isPrint
-                ? 'If you completed your print purchase, the author will ship to your US address. Check your email for confirmation.'
-                : ('If you completed your ' + label + ' purchase, please refresh the page to access your content.');
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 350px;';
-            
-            notification.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fa-2x me-3 text-warning"></i>
-                    <div>
-                        <h6 class="mb-1">Purchase Verification</h6>
-                        <p class="mb-0">${message}</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto remove after 15 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 15000);
-        }
-
-        // Check for completed purchases when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            checkForCompletedPurchases();
-        });
-
         /** Grid vs list layout (toolbar). Persists for the session. */
         function toggleView(mode) {
             var grid = document.getElementById('booksGrid');
@@ -1815,32 +850,11 @@
                 });
         }
 
-        // Verify showPurchaseModal is defined
-        if (typeof showPurchaseModal === 'undefined') {
-            console.error('showPurchaseModal is not defined!');
-        } else {
-            console.log('showPurchaseModal is defined');
-        }
-
-        (function () {
-            try {
-                var params = new URLSearchParams(window.location.search);
-                var ob = params.get('open_book');
-                if (ob && /^\d+$/.test(ob) && typeof viewBook === 'function') {
-                    setTimeout(function () {
-                        viewBook(parseInt(ob, 10));
-                    }, 250);
-                }
-            } catch (e) {
-                console.warn('open_book', e);
-            }
-        })();
     </script>
     {% include 'includes/_ndotonic_mission_footer.html' %}
 
 </body>
 </html>
-
 
 
 

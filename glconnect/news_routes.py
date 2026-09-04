@@ -6,9 +6,9 @@ import re
 import glob
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from flask_login import login_required, current_user
-from .news_agent import generate_broadcast
+from .news_agent import NEWS_GEMINI_MODEL, generate_broadcast, _gemini_generate_text
 
 # Create blueprint for news routes
 news_bp = Blueprint('news_bp', __name__)
@@ -16,6 +16,150 @@ news_bp = Blueprint('news_bp', __name__)
 # Task storage (keeping for backward compatibility, but using database as primary)
 tasks = {}
 _tasks_lock = threading.Lock()
+_parallel_webhooks_in_flight = set()
+_parallel_webhooks_lock = threading.Lock()
+
+
+def _parallel_admin_required():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Authentication required'}), 401
+    if getattr(current_user, 'role', None) != 'admin':
+        return jsonify({'error': 'Admin privileges required'}), 403
+    return None
+
+
+def _parallel_webhook_url():
+    configured = (
+        os.getenv("PARALLEL_WEBHOOK_URL")
+        or current_app.config.get("PARALLEL_WEBHOOK_URL")
+        or ""
+    ).strip()
+    if configured:
+        return configured
+    return "https://ndotonic.com/routes2/news/api/parallel-monitors/webhook"
+
+
+def _parallel_monitor_json(row, *, include_events=False):
+    payload = {
+        'id': row.id,
+        'parallel_monitor_id': row.parallel_monitor_id,
+        'topic': row.topic,
+        'desk': row.desk,
+        'query': row.query,
+        'frequency': row.frequency,
+        'processor': row.processor,
+        'status': row.status,
+        'last_event_at': row.last_event_at.isoformat() if row.last_event_at else None,
+        'last_error': row.last_error,
+        'created_at': row.created_at.isoformat() if row.created_at else None,
+        'updated_at': row.updated_at.isoformat() if row.updated_at else None,
+    }
+    if include_events:
+        from glconnect.models import ParallelNewsEvent
+
+        payload['events'] = [
+            _parallel_event_json(event)
+            for event in row.events.order_by(
+                ParallelNewsEvent.received_at.desc()
+            ).limit(25).all()
+        ]
+    return payload
+
+
+def _parallel_event_json(row):
+    try:
+        citations = json.loads(row.citations or "[]")
+    except (TypeError, ValueError):
+        citations = []
+    return {
+        'id': row.id,
+        'monitor_id': row.monitor_id,
+        'parallel_event_id': row.parallel_event_id,
+        'event_group_id': row.event_group_id,
+        'event_date': row.event_date,
+        'content': row.content,
+        'citations': citations,
+        'confidence': row.confidence,
+        'is_read': row.is_read,
+        'received_at': row.received_at.isoformat() if row.received_at else None,
+    }
+
+
+def _process_parallel_monitor_webhook(app, payload, webhook_id):
+    from glconnect.models import db, ParallelNewsEvent, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import (
+        ParallelMonitorError,
+        event_values,
+        fetch_monitor_events,
+    )
+
+    try:
+        with app.app_context():
+            event_type = str(payload.get('type') or '')
+            data = payload.get('data') if isinstance(payload.get('data'), dict) else {}
+            remote_monitor_id = str(data.get('monitor_id') or '').strip()
+            monitor = ParallelNewsMonitor.query.filter_by(
+                parallel_monitor_id=remote_monitor_id
+            ).first()
+            if not monitor:
+                app.logger.warning(
+                    "Parallel webhook %s references unknown monitor %s",
+                    webhook_id,
+                    remote_monitor_id,
+                )
+                return
+            if event_type == 'monitor.execution.failed':
+                event = data.get('event') if isinstance(data.get('event'), dict) else {}
+                monitor.last_error = str(event.get('error') or 'Parallel monitor execution failed')[:1000]
+                db.session.commit()
+                return
+            if event_type != 'monitor.event.detected':
+                return
+            event = data.get('event') if isinstance(data.get('event'), dict) else {}
+            event_group_id = str(event.get('event_group_id') or '').strip()
+            if not event_group_id:
+                monitor.last_error = 'Parallel webhook did not include event_group_id'
+                db.session.commit()
+                return
+            remote_events = fetch_monitor_events(remote_monitor_id, event_group_id)
+            inserted = 0
+            for remote_event in remote_events:
+                values = event_values(remote_event)
+                if not values['parallel_event_id'] or not values['content']:
+                    continue
+                if ParallelNewsEvent.query.filter_by(
+                    parallel_event_id=values['parallel_event_id']
+                ).first():
+                    continue
+                db.session.add(ParallelNewsEvent(monitor_id=monitor.id, **values))
+                inserted += 1
+            monitor.last_event_at = datetime.utcnow()
+            monitor.last_error = None
+            db.session.commit()
+            app.logger.info(
+                "Stored %s Parallel news event(s) for topic %s",
+                inserted,
+                monitor.topic,
+            )
+    except ParallelMonitorError as exc:
+        with app.app_context():
+            db.session.rollback()
+            monitor = ParallelNewsMonitor.query.filter_by(
+                parallel_monitor_id=str(
+                    (payload.get('data') or {}).get('monitor_id') or ''
+                )
+            ).first()
+            if monitor:
+                monitor.last_error = str(exc)[:1000]
+                db.session.commit()
+            app.logger.warning("Parallel webhook processing failed: %s", exc)
+    except Exception:
+        with app.app_context():
+            db.session.rollback()
+            app.logger.exception("Unexpected Parallel webhook processing failure")
+    finally:
+        with _parallel_webhooks_lock:
+            _parallel_webhooks_in_flight.discard(webhook_id)
 
 # Database task management functions
 def create_task_in_db(task_id, topics):
@@ -198,6 +342,111 @@ def normalize_task_format(task):
         normalized['topics_processed'] = task['topics_processed']
     
     return normalized
+
+def pipeline_from_task(task):
+    """Return the stored news pipeline trace, if the task has one."""
+    if not isinstance(task, dict):
+        return None
+    result = task.get('result')
+    if isinstance(result, dict) and result.get('pipeline'):
+        return result.get('pipeline')
+    return task.get('pipeline')
+
+
+NEWS_BUMPER_URL = '/routes2/news/bumper/grojingle.mp4'
+
+
+def _task_result(task):
+    result = task.get('result') if isinstance(task, dict) else None
+    return result if isinstance(result, dict) else {}
+
+
+def _broadcast_result_record(output, audio_file_path, summary):
+    record = {
+        'audio_file_path': audio_file_path,
+        'output_text': summary,
+        'pipeline': output.get('pipeline') if isinstance(output, dict) else None,
+        'used_fallback': bool(output.get('used_fallback')) if isinstance(output, dict) else False,
+    }
+    if isinstance(output, dict):
+        if output.get('scripts'):
+            record['scripts'] = output['scripts']
+        if output.get('topics'):
+            record['topics'] = output['topics']
+        if output.get('heygen'):
+            record['heygen'] = output['heygen']
+    return record
+
+
+def _public_heygen(heygen, task_id=None):
+    heygen = heygen if isinstance(heygen, dict) else {}
+    public_clips = []
+    for clip in heygen.get('clips') or []:
+        if not isinstance(clip, dict):
+            continue
+        public_clips.append({
+            'role': clip.get('role'),
+            'name': clip.get('name'),
+            'topic': clip.get('topic'),
+            'status': clip.get('status'),
+            'url': clip.get('url'),
+        })
+    final_url = heygen.get('final_url')
+    if task_id:
+        from glconnect.heygen_news import bulletin_file_ready, bulletin_file_url
+        if bulletin_file_ready(task_id):
+            final_url = bulletin_file_url(task_id)
+    public = {
+        'status': heygen.get('status') or 'idle',
+        'clips': public_clips,
+        'final_url': final_url or None,
+    }
+    if public['status'] in ('failed', 'partial') and heygen.get('warnings'):
+        public['warnings'] = [str(item)[:300] for item in heygen.get('warnings')[:2]]
+    return public
+
+
+def completed_news_payload(task_id, task, audio_file, summary):
+    result = _task_result(task)
+    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+    return {
+        'status': 'completed',
+        'task_id': task_id,
+        'audio_file': audio_file,
+        'summary': summary,
+        'topics': task.get('topics') or result.get('topics'),
+        'has_scripts': bool(result.get('scripts')),
+        'heygen': _public_heygen(heygen, task_id),
+        'bumper_url': NEWS_BUMPER_URL,
+    }
+
+
+def merge_news_task_result(task_id, patch):
+    """Merge keys into the stored news task result without replacing audio fields."""
+    from glconnect.models import db, NewsTask
+
+    result = {}
+    task_row = NewsTask.query.filter_by(task_id=task_id).first()
+    if task_row and task_row.result:
+        try:
+            parsed = json.loads(task_row.result)
+            if isinstance(parsed, dict):
+                result = parsed
+        except Exception:
+            result = {}
+    if not result:
+        with _tasks_lock:
+            memory_task = tasks.get(task_id) or {}
+            if isinstance(memory_task.get('result'), dict):
+                result = dict(memory_task['result'])
+    result.update(patch)
+    if task_row:
+        task_row.result = json.dumps(result)
+        db.session.commit()
+    with _tasks_lock:
+        if task_id in tasks:
+            tasks[task_id]['result'] = result
+    return result
 
 def cleanup_old_tasks():
     """Clean up old completed/failed tasks to prevent memory buildup."""
@@ -781,7 +1030,7 @@ class NewsTopicValidationAgent:
         self.client = genai.Client(api_key=self.api_key)
         # Default: widely available; override with NEWS_TOPIC_GEMINI_MODEL. Older “gemini-2.0-flash”
         # can 404 for new API users (Google returns NOT_FOUND for deprecated model names).
-        self._validation_model = (os.getenv("NEWS_TOPIC_GEMINI_MODEL") or "gemini-2.5-flash").strip()
+        self._validation_model = (os.getenv("NEWS_TOPIC_GEMINI_MODEL") or NEWS_GEMINI_MODEL).strip()
     
     def validate_topic(self, topic: str) -> tuple[bool, str]:
         """
@@ -850,7 +1099,7 @@ class NewsTopicValidationAgent:
             if not getattr(cand, "content", None) or not getattr(cand.content, "parts", None):
                 return False, (
                     f"Empty model response (finish_reason={fin}). If this persists, check API billing "
-                    f"or try NEWS_TOPIC_GEMINI_MODEL=gemini-2.5-flash."
+                    f"or try NEWS_TOPIC_GEMINI_MODEL=gemini-3.6-flash."
                 )
             raw_text = None
             for p in cand.content.parts:
@@ -1020,7 +1269,6 @@ def categorize_topic_ai(topic: str) -> str:
     More accurate and handles context better than keyword matching.
     """
     import google.generativeai as genai
-    from glconnect import config
     
     # Configure Gemini with memory-efficient settings
     generation_config = genai.types.GenerationConfig(
@@ -1028,11 +1276,6 @@ def categorize_topic_ai(topic: str) -> str:
         temperature=0.7,  # Balanced creativity
         top_p=0.8,  # Focus on most likely tokens
         top_k=40  # Limit token selection
-    )
-    
-    model = genai.GenerativeModel(
-        'gemini-2.0-flash',
-        generation_config=generation_config
     )
     
     prompt = f"""
@@ -1053,8 +1296,7 @@ def categorize_topic_ai(topic: str) -> str:
     Return only the category name, nothing else.
     """
     
-    response = model.generate_content(prompt)
-    category = response.text.strip()
+    category = _gemini_generate_text(prompt, generation_config=generation_config)
     
     # Validate the response
     valid_categories = ['Politics', 'Economy', 'Sports', 'Technology', 
@@ -1281,12 +1523,32 @@ def categorize_topic_with_confidence(topic: str) -> tuple[str, float]:
         confidence = 0.6  # Lower confidence for keyword matching
         return category, confidence
 
+def _broadcast_output_confirmation(output) -> str:
+    """Log that scripts exist without printing the script text."""
+    if output is None:
+        return "DEBUG: generate_broadcast confirmed none"
+    if isinstance(output, dict):
+        scripts = output.get("scripts") if isinstance(output.get("scripts"), dict) else {}
+        reporters = scripts.get("reporters") if isinstance(scripts, dict) else None
+        return (
+            "DEBUG: generate_broadcast confirmed "
+            f"keys={list(output.keys())} "
+            f"audio={bool(output.get('audio_file'))} "
+            f"reporters={len(reporters or [])} "
+            f"error={bool(output.get('error'))}"
+        )
+    return (
+        f"DEBUG: generate_broadcast confirmed type={type(output).__name__} "
+        f"chars={len(str(output))}"
+    )
+
+
 def extract_audio_path_from_output(output_text):
     """Extract audio file path from agent output text or filesystem."""
     if not output_text:
         return None
     
-    print(f"DEBUG: Looking for audio path in output: {output_text}")
+    print(f"DEBUG: Looking for audio path in output ({len(str(output_text))} chars)")
     
     # Look for final news broadcast audio file in glconnect/static/audio/
     patterns = [
@@ -1660,11 +1922,7 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['last_heartbeat'] = datetime.now()  # Add heartbeat
         
         print("ADK agent system completed successfully")
-        print(f"DEBUG: Output type: {type(output)}")
-        print(f"DEBUG: Output content: {str(output)[:500]}...")
-        print(f"DEBUG: Output is None: {output is None}")
-        print(f"DEBUG: Output is dict: {isinstance(output, dict)}")
-        print(f"DEBUG: Output keys: {list(output.keys()) if isinstance(output, dict) else 'Not a dict'}")
+        print(_broadcast_output_confirmation(output))
         
         # Handle both string and dictionary outputs
         if output is None:
@@ -1675,16 +1933,26 @@ def run_generate_broadcast(task_id, topics):
                 tasks[task_id]['error'] = "No topics provided for news generation"
             return
         elif isinstance(output, dict):
-            print(f"Output from generate_broadcast (dict): {output}")
+            print(_broadcast_output_confirmation(output))
             
             # Check for error first
             if 'error' in output:
                 error_message = output['error']
                 print(f"DEBUG: generate_broadcast returned error: {error_message}")
+                update_task_in_db(
+                    task_id,
+                    status='failed',
+                    failed_at=datetime.now(),
+                    error=error_message,
+                    current_step=str(error_message)[:250],
+                    result=output,
+                )
                 with _tasks_lock:
                     tasks[task_id]['status'] = 'failed'
                     tasks[task_id]['failed_at'] = datetime.now()
                     tasks[task_id]['error'] = error_message
+                    tasks[task_id]['result'] = output
+                print(f"PIPELINE_ABORT task={task_id} error={error_message}")
                 return
             
             audio_file_path = output.get('audio_file')
@@ -1760,21 +2028,16 @@ def run_generate_broadcast(task_id, topics):
             print(f"DEBUG: Audio file exists: {os.path.exists(audio_file_path) if audio_file_path else 'No path'}")
             
             # Update database
+            result_record = _broadcast_result_record(output, audio_file_path, summary)
             update_task_in_db(task_id, 
                              status='completed',
                              completed_at=datetime.now(),
-                             result={
-                                 'audio_file_path': audio_file_path,
-                                 'output_text': summary
-                             })
+                             result=result_record)
             
             with _tasks_lock:
                 tasks[task_id]['status'] = 'completed'
                 tasks[task_id]['completed_at'] = datetime.now()
-                tasks[task_id]['result'] = {
-                    'audio_file_path': audio_file_path,
-                    'output_text': summary
-                }
+                tasks[task_id]['result'] = result_record
                 tasks[task_id]['summary'] = summary
                 # Also store the audio URL for the UI
                 tasks[task_id]['audio_file'] = audio_url
@@ -1797,7 +2060,7 @@ def run_generate_broadcast(task_id, topics):
             print("ADK agent system completed successfully!")
             return
         elif isinstance(output, str):
-            print(f"Output from generate_broadcast: {output}")
+            print(_broadcast_output_confirmation(output))
             # Extract the audio file path from the string output
             audio_file_path = extract_audio_path_from_output(output)
             print(f"Extracted audio file path: {audio_file_path}")
@@ -1939,64 +2202,21 @@ def run_generate_broadcast(task_id, topics):
         import traceback
         traceback_str = traceback.format_exc()
         print(f"ERROR traceback: {traceback_str}")
-        
-        # Create detailed error message
         detailed_error = f"{error_type}: {error_message}"
-        
-        # Try simple fallback generation before marking as failed
-        try:
-            print("DEBUG: Attempting simple fallback news generation...")
-            from glconnect.news_agent import generate_intelligent_fallback_content
-            
-            fallback_content = []
-            for topic in topics:
-                content = generate_intelligent_fallback_content(topic)
-                fallback_content.append(content)
-            
-            # Create a simple broadcast structure
-            fallback_output = {
-                "broadcast_script": "\n\n".join(fallback_content),
-                "audio_files": [],
-                "combined_audio_filepath": "fallback_generation.mp3",
-                "generation_method": "fallback_simple"
-            }
-            
-            # Store the fallback result
-            with _tasks_lock:
-                tasks[task_id]['status'] = 'completed'
-                tasks[task_id]['completed_at'] = datetime.now()
-                tasks[task_id]['result'] = fallback_output
-                tasks[task_id]['generation_method'] = 'fallback_simple'
-                print(f"DEBUG: Task {task_id} completed with fallback generation")
-            
-            # Update database
-            update_task_in_db(task_id, 
-                             status='completed',
-                             completed_at=datetime.now(),
-                             result=fallback_output)
-            
-            print("DEBUG: Fallback generation successful")
-            return
-            
-        except Exception as fallback_error:
-            print(f"DEBUG: Fallback generation also failed: {fallback_error}")
-            fallback_error_type = type(fallback_error).__name__
-            fallback_error_message = str(fallback_error)
-            
-            # Create comprehensive error message
-            comprehensive_error = f"Primary error: {detailed_error}. Fallback error: {fallback_error_type}: {fallback_error_message}"
-            
-            # Update database
-            update_task_in_db(task_id, 
-                             status='failed',
-                             failed_at=datetime.now(),
-                             error=comprehensive_error)
-            
-            with _tasks_lock:
-                tasks[task_id]['status'] = 'failed'
-                tasks[task_id]['failed_at'] = datetime.now()
-                tasks[task_id]['error'] = comprehensive_error
-                print(f"DEBUG: Task {task_id} marked as failed due to: {comprehensive_error}")
+        update_task_in_db(
+            task_id,
+            status='failed',
+            failed_at=datetime.now(),
+            error=detailed_error,
+            current_step=detailed_error[:250],
+        )
+        with _tasks_lock:
+            tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['failed_at'] = datetime.now()
+            tasks[task_id]['error'] = detailed_error
+            print(f"DEBUG: Task {task_id} marked as failed due to: {detailed_error}")
+        print(f"PIPELINE_ABORT task={task_id} error={detailed_error}")
+        return
     finally:
         # Cancel the timeout thread
         timeout_occurred.set()
@@ -2006,6 +2226,251 @@ def index():
     from .forms import KeywordForm
     form = KeywordForm()
     return render_template('newsgen.html', form=form)
+
+
+@news_bp.route('/api/parallel-monitors', methods=['GET'])
+@login_required
+def list_parallel_monitors():
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import ParallelNewsMonitor
+
+    rows = ParallelNewsMonitor.query.order_by(
+        ParallelNewsMonitor.created_at.desc()
+    ).all()
+    return jsonify({
+        'configured': bool(os.getenv('PARALLEL_API_KEY')),
+        'webhook_configured': bool(os.getenv('PARALLEL_WEBHOOK_SECRET')),
+        'webhook_url': _parallel_webhook_url(),
+        'monitors': [
+            _parallel_monitor_json(row, include_events=True) for row in rows
+        ],
+    })
+
+
+@news_bp.route('/api/parallel-monitors', methods=['POST'])
+@login_required
+def create_parallel_monitor_route():
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import (
+        ParallelMonitorError,
+        create_monitor,
+        normalize_frequency,
+        normalize_processor,
+    )
+
+    data = request.get_json(silent=True) or {}
+    topic = str(data.get('topic') or '').strip()
+    desk = str(data.get('desk') or 'news').strip().lower()[:32]
+    if not topic or len(topic) > 255:
+        return jsonify({'error': 'topic is required and must be at most 255 characters'}), 400
+    if ParallelNewsMonitor.query.filter(
+        db.func.lower(ParallelNewsMonitor.topic) == topic.lower(),
+        ParallelNewsMonitor.status == 'active',
+    ).first():
+        return jsonify({'error': 'An active monitor already exists for this topic'}), 409
+    try:
+        max_active = max(1, int(os.getenv('PARALLEL_MONITOR_MAX_ACTIVE', '20')))
+    except ValueError:
+        max_active = 20
+    active_count = ParallelNewsMonitor.query.filter_by(status='active').count()
+    if active_count >= max_active:
+        return jsonify({
+            'error': f'Active monitor limit reached ({max_active}); cancel a beat first'
+        }), 409
+    try:
+        frequency = normalize_frequency(str(data.get('frequency') or '1d'))
+        processor = normalize_processor(str(data.get('processor') or 'lite'))
+        external_id = f"glc-news-{uuid.uuid4()}"
+        remote = create_monitor(
+            topic=topic,
+            desk=desk,
+            frequency=frequency,
+            processor=processor,
+            webhook_url=_parallel_webhook_url(),
+            external_id=external_id,
+        )
+        remote_id = str(remote.get('monitor_id') or '').strip()
+        if not remote_id:
+            raise ParallelMonitorError("Parallel did not return monitor_id")
+        row = ParallelNewsMonitor(
+            parallel_monitor_id=remote_id,
+            topic=topic,
+            desk=desk,
+            query=f"Extract recent material news developments about {topic}",
+            frequency=str(remote.get('frequency') or frequency),
+            processor=str(remote.get('processor') or processor),
+            status=str(remote.get('status') or 'active'),
+            created_by_user_id=current_user.user_id,
+        )
+        db.session.add(row)
+        db.session.commit()
+        return jsonify({'monitor': _parallel_monitor_json(row, include_events=True)}), 201
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except ParallelMonitorError as exc:
+        current_app.logger.warning("Parallel monitor creation failed: %s", exc)
+        return jsonify({'error': str(exc)}), 502
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not persist Parallel monitor")
+        return jsonify({'error': 'Could not save monitor'}), 500
+
+
+@news_bp.route('/api/parallel-monitors/<int:monitor_id>', methods=['PATCH'])
+@login_required
+def update_parallel_monitor_route(monitor_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import (
+        ParallelMonitorError,
+        normalize_frequency,
+        update_monitor,
+    )
+
+    row = ParallelNewsMonitor.query.get_or_404(monitor_id)
+    if row.status == 'cancelled':
+        return jsonify({'error': 'Cancelled monitors cannot be updated'}), 409
+    data = request.get_json(silent=True) or {}
+    topic = str(data.get('topic', row.topic) or '').strip()
+    desk = str(data.get('desk', row.desk) or 'news').strip().lower()[:32]
+    if not topic or len(topic) > 255:
+        return jsonify({'error': 'topic is required and must be at most 255 characters'}), 400
+    if 'processor' in data and str(data['processor']).strip().lower() != row.processor:
+        return jsonify({
+            'error': 'Parallel does not allow changing a monitor processor; recreate the monitor instead'
+        }), 400
+    try:
+        frequency = normalize_frequency(str(data.get('frequency', row.frequency)))
+        remote = update_monitor(
+            row.parallel_monitor_id,
+            topic=topic,
+            desk=desk,
+            frequency=frequency,
+            webhook_url=_parallel_webhook_url(),
+            external_id=f"glc-news-monitor-{row.id}",
+        )
+        row.topic = topic
+        row.desk = desk
+        row.query = f"Extract recent material news developments about {topic}"
+        row.frequency = str(remote.get('frequency') or frequency)
+        row.processor = str(remote.get('processor') or row.processor)
+        row.status = str(remote.get('status') or row.status)
+        row.last_error = None
+        db.session.commit()
+        return jsonify({'monitor': _parallel_monitor_json(row, include_events=True)})
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except ParallelMonitorError as exc:
+        row.last_error = str(exc)[:1000]
+        db.session.commit()
+        return jsonify({'error': str(exc)}), 502
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not update Parallel monitor")
+        return jsonify({'error': 'Could not update monitor'}), 500
+
+
+@news_bp.route('/api/parallel-monitors/<int:monitor_id>', methods=['DELETE'])
+@login_required
+def cancel_parallel_monitor_route(monitor_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import ParallelMonitorError, cancel_monitor
+
+    row = ParallelNewsMonitor.query.get_or_404(monitor_id)
+    try:
+        remote = cancel_monitor(row.parallel_monitor_id)
+        row.status = str(remote.get('status') or 'cancelled')
+        row.last_error = None
+        db.session.commit()
+        return jsonify({'monitor': _parallel_monitor_json(row)})
+    except ParallelMonitorError as exc:
+        row.last_error = str(exc)[:1000]
+        db.session.commit()
+        return jsonify({'error': str(exc)}), 502
+
+
+@news_bp.route('/api/parallel-monitors/<int:monitor_id>/trigger', methods=['POST'])
+@login_required
+def trigger_parallel_monitor_route(monitor_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import ParallelNewsMonitor
+    from glconnect.parallel_news_monitor import ParallelMonitorError, trigger_monitor
+
+    row = ParallelNewsMonitor.query.get_or_404(monitor_id)
+    if row.status != 'active':
+        return jsonify({'error': 'Only active monitors can be triggered'}), 409
+    try:
+        trigger_monitor(row.parallel_monitor_id)
+        return jsonify({'status': 'queued', 'monitor_id': row.id}), 202
+    except ParallelMonitorError as exc:
+        return jsonify({'error': str(exc)}), 502
+
+
+@news_bp.route('/api/parallel-events/<int:event_id>/read', methods=['POST'])
+@login_required
+def mark_parallel_event_read(event_id):
+    denied = _parallel_admin_required()
+    if denied:
+        return denied
+    from glconnect.models import db, ParallelNewsEvent
+
+    row = ParallelNewsEvent.query.get_or_404(event_id)
+    row.is_read = bool((request.get_json(silent=True) or {}).get('is_read', True))
+    db.session.commit()
+    return jsonify({'event': _parallel_event_json(row)})
+
+
+@news_bp.route('/api/parallel-monitors/webhook', methods=['POST'])
+def parallel_monitor_webhook():
+    from glconnect.parallel_news_monitor import (
+        parallel_webhook_secret,
+        verify_webhook_signature,
+    )
+
+    body = request.get_data(cache=True)
+    webhook_id = (request.headers.get('webhook-id') or '').strip()
+    secret = parallel_webhook_secret()
+    if not secret:
+        current_app.logger.error(
+            "Parallel webhook rejected: PARALLEL_WEBHOOK_SECRET is not configured"
+        )
+        return jsonify({'error': 'Webhook verification unavailable'}), 503
+    if not verify_webhook_signature(
+        body=body,
+        webhook_id=webhook_id,
+        webhook_timestamp=request.headers.get('webhook-timestamp') or '',
+        signature_header=request.headers.get('webhook-signature') or '',
+        secret=secret,
+    ):
+        return jsonify({'error': 'Invalid webhook signature'}), 401
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'Invalid JSON payload'}), 400
+    with _parallel_webhooks_lock:
+        if webhook_id in _parallel_webhooks_in_flight:
+            return jsonify({'status': 'already_processing'}), 200
+        _parallel_webhooks_in_flight.add(webhook_id)
+    app = current_app._get_current_object()
+    threading.Thread(
+        target=_process_parallel_monitor_webhook,
+        args=(app, payload, webhook_id),
+        daemon=True,
+        name=f"parallel-monitor-{webhook_id[:16]}",
+    ).start()
+    return jsonify({'status': 'accepted'}), 202
+
 
 @news_bp.route('/memory-status')
 def memory_status():
@@ -2125,6 +2590,154 @@ def serve_audio(filename):
     
     print(f"ERROR: Audio file {filename} not found in any expected location")
     return "Audio file not found", 404
+
+
+def _grojingle_path():
+    filename = 'grojingle.mp4'
+    candidates = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'video', filename),
+        os.path.join(os.getcwd(), 'video', filename),
+        f'/usr/src/appdir/video/{filename}',
+        os.path.abspath(os.path.join('video', filename)),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+@news_bp.route('/bumper/<filename>')
+def serve_news_bumper(filename):
+    """Serve the GRO News video bumper (grojingle.mp4 only)."""
+    if filename != 'grojingle.mp4':
+        return "Bumper not found", 404
+    path = _grojingle_path()
+    if not path:
+        print("ERROR: video/grojingle.mp4 not found")
+        return "Bumper not found", 404
+    return send_file(path, mimetype='video/mp4', conditional=True)
+
+
+@news_bp.route('/bulletin/<task_id>.mp4')
+def serve_news_bulletin_mp4(task_id):
+    """Serve the combined GRO News video bulletin MP4."""
+    from glconnect.heygen_news import bulletin_mp4_path
+
+    try:
+        path = bulletin_mp4_path(task_id)
+    except ValueError:
+        return "Bulletin not found", 404
+    if not os.path.isfile(path) or os.path.getsize(path) == 0:
+        return "Bulletin not found", 404
+    as_attachment = str(request.args.get('download') or '').lower() in ('1', 'true', 'yes')
+    return send_file(
+        path,
+        mimetype='video/mp4',
+        as_attachment=as_attachment,
+        download_name='glc-news-bulletin.mp4',
+        conditional=True,
+    )
+
+
+def _run_heygen_bulletin_thread(app, task_id, scripts, existing_clips=None):
+    from glconnect.heygen_news import generate_video_bulletin
+
+    with app.app_context():
+        try:
+            generate_video_bulletin(
+                task_id,
+                scripts,
+                lambda patch: merge_news_task_result(task_id, patch),
+                existing_clips=existing_clips,
+            )
+        except Exception as exc:
+            print(f"ERROR: HeyGen bulletin thread failed for {task_id}: {exc}")
+            try:
+                result = merge_news_task_result(task_id, {})
+                heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+                warnings = list(heygen.get('warnings') or [])
+                warnings.append(str(exc)[:400])
+                merge_news_task_result(task_id, {
+                    'heygen': {
+                        'status': 'failed',
+                        'clips': heygen.get('clips') or [],
+                        'warnings': warnings,
+                    }
+                })
+            except Exception as persist_exc:
+                print(f"ERROR: Failed to persist HeyGen failure for {task_id}: {persist_exc}")
+
+
+@news_bp.route('/video/<task_id>', methods=['POST'])
+def generate_video_bulletin_route(task_id):
+    """Start a complementary HeyGen video bulletin from saved broadcast scripts."""
+    db_task = get_task_from_db(task_id)
+    task = normalize_task_format(db_task)
+    if not task:
+        with _tasks_lock:
+            task = tasks.get(task_id)
+    if not task:
+        return jsonify({'error': 'News task not found'}), 404
+    if task.get('status') != 'completed':
+        return jsonify({'error': 'News audio must finish before generating video'}), 400
+
+    result = _task_result(task)
+    scripts = result.get('scripts')
+    if not scripts or not (scripts.get('intro') or scripts.get('reporters')):
+        return jsonify({
+            'error': 'No saved scripts on this broadcast. Generate news again, then create the video bulletin.',
+            'task_id': task_id,
+        }), 400
+    from glconnect.news_agent import reporter_scripts_block_reason
+    script_block = reporter_scripts_block_reason(scripts)
+    if script_block:
+        print(f"PIPELINE_ABORT task={task_id} video=blocked error={script_block}")
+        return jsonify({'error': script_block, 'task_id': task_id}), 400
+
+    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+    current_status = heygen.get('status')
+    existing_clips = [
+        clip for clip in (heygen.get('clips') or [])
+        if isinstance(clip, dict) and clip.get('status') == 'completed' and clip.get('url')
+    ]
+    if current_status in ('queued', 'processing'):
+        return jsonify({
+            'status': current_status,
+            'task_id': task_id,
+            'heygen': _public_heygen(heygen, task_id),
+            'bumper_url': NEWS_BUMPER_URL,
+        })
+    if current_status == 'completed' and existing_clips:
+        from glconnect.heygen_news import bulletin_file_ready, heygen_clips_missing_handoffs
+        if not heygen_clips_missing_handoffs(scripts, existing_clips) and bulletin_file_ready(task_id):
+            return jsonify({
+                'status': 'completed',
+                'task_id': task_id,
+                'heygen': _public_heygen(heygen, task_id),
+                'bumper_url': NEWS_BUMPER_URL,
+            })
+
+    queued = {
+        'status': 'queued',
+        'clips': existing_clips,
+        'warnings': [],
+        'started_at': datetime.utcnow().isoformat(),
+    }
+    merge_news_task_result(task_id, {'heygen': queued})
+    app = current_app._get_current_object()
+    thread = threading.Thread(
+        target=_run_heygen_bulletin_thread,
+        args=(app, task_id, scripts, existing_clips),
+        daemon=True,
+    )
+    thread.start()
+    return jsonify({
+        'status': 'queued',
+        'task_id': task_id,
+        'heygen': {'status': 'queued', 'clips': existing_clips, 'final_url': None},
+        'bumper_url': NEWS_BUMPER_URL,
+    })
+
 
 @news_bp.route('/broadcast', methods=['POST'])
 def broadcast():
@@ -2253,17 +2866,18 @@ def broadcast():
             from glconnect.news_agent import generate_broadcast
             result = generate_broadcast(relevant_topics, task_id=task_id)
             
-            print(f"DEBUG: Direct news generation completed for task {task_id}")
-            print(f"DEBUG: Result type: {type(result)}")
-            
             # Update task status based on result
-            if result and 'error' not in result:
+            # A result without an audio path is not a successful broadcast.
+            # The audio generator reports TTS/finalization failures using a
+            # summary and audio_file=None, so do not mark those tasks complete.
+            if result and 'error' not in result and result.get('audio_file'):
                 # Success - store result in database
+                completed_step = 'News generation completed successfully'
                 update_task_in_db(task_id, 
                                  status='completed',
                                  progress=100,
-                                 current_step='News generation completed successfully',
-                                 result=result,  # Store the result
+                                 current_step=completed_step,
+                                 result=result,  # Store the result including pipeline trace
                                  last_heartbeat=datetime.now())
                 
                 with _tasks_lock:
@@ -2272,15 +2886,20 @@ def broadcast():
                         tasks[task_id]['result'] = result
                         tasks[task_id]['completed_at'] = datetime.now()
                 
-                print(f"DEBUG: Task {task_id} marked as completed with result stored")
+                if result.get('pipeline'):
+                    print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} used_fallback={result.get('used_fallback')}")
             else:
                 # Error
-                error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                error_msg = (
+                    result.get('error') or result.get('summary') or 'No audio file was generated'
+                    if result else 'No result returned'
+                )
                 update_task_in_db(task_id, 
                                  status='failed',
                                  progress=0,
                                  current_step=f'News generation failed: {error_msg}',
                                  error=error_msg,
+                                 result=result,
                                  failed_at=datetime.now(),
                                  last_heartbeat=datetime.now())
                 
@@ -2288,9 +2907,12 @@ def broadcast():
                     if task_id in tasks:
                         tasks[task_id]['status'] = 'failed'
                         tasks[task_id]['error'] = error_msg
+                        tasks[task_id]['result'] = result
                         tasks[task_id]['failed_at'] = datetime.now()
                 
                 print(f"DEBUG: Task {task_id} marked as failed: {error_msg}")
+                if result and result.get('pipeline'):
+                    print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} error={error_msg}")
                 
         except Exception as e:
             print(f"ERROR: Direct news generation failed for task {task_id}: {e}")
@@ -2861,7 +3483,7 @@ def task_status(task_id):
                 actual_file_path = os.path.join('glconnect', 'static', 'audio', filename)
                 
                 if not os.path.exists(actual_file_path):
-                    print(f"DEBUG: Audio file not found on disk: {actual_file_path}")
+                    print(f"ERROR: Audio file not found on disk: {actual_file_path}")
                     return jsonify({
                         'status': 'failed',
                         'error': 'Audio file not found on disk'
@@ -2869,25 +3491,21 @@ def task_status(task_id):
                 
                 file_size = os.path.getsize(actual_file_path)
                 if file_size == 0:
-                    print(f"DEBUG: Audio file is empty: {actual_file_path}")
+                    print(f"ERROR: Audio file is empty: {actual_file_path}")
                     return jsonify({
                         'status': 'failed',
                         'error': 'Audio file is empty'
                     })
-                
-                print(f"DEBUG: Audio file verified for UI - {actual_file_path} ({file_size} bytes)")
             
-            return jsonify({
-                'status': 'completed',
-                'audio_file': task['audio_file'],
-                'summary': task.get('summary', '')
-            })
+            return jsonify(completed_news_payload(
+                task_id,
+                task,
+                task['audio_file'],
+                task.get('summary') or (_task_result(task).get('summary') or _task_result(task).get('output_text') or ''),
+            ))
         # Fallback for old structure
         elif 'result' in task:
             result = task['result']
-            print(f"DEBUG: Task {task_id} completed with result: {result}")
-            print(f"DEBUG: Result type: {type(result)}")
-            print(f"DEBUG: Result keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
             
             # Initialize variables
             audio_file_path = None
@@ -2899,14 +3517,10 @@ def task_status(task_id):
                 if 'audio_file' in result:
                     audio_file_path = result['audio_file']
                     summary = result.get('summary', '')
-                    print(f"DEBUG: Found audio_file in result: {audio_file_path}")
                 # Check for old structure
                 elif 'audio_file_path' in result:
                     audio_file_path = result['audio_file_path']
                     summary = result.get('summary', '')
-                    print(f"DEBUG: Found audio_file_path in result: {audio_file_path}")
-                else:
-                    print(f"DEBUG: No audio_file or audio_file_path found in result")
                 
                 # Extract summary from content if available
                 if not summary and 'content' in result:
@@ -2934,18 +3548,13 @@ def task_status(task_id):
             elif not audio_file_path:
                 return jsonify({'status': 'failed', 'error': 'No audio file path found in result'})
             
-            return jsonify({
-                'status': 'completed',
-                'audio_file': audio_file_path
-            })
+            return jsonify(completed_news_payload(task_id, task, audio_file_path, summary))
         else:
             # Handle old dictionary structure (if any) - but result is not defined here
             return jsonify({'status': 'failed', 'error': 'No valid result structure found in task'})
             
     elif task['status'] == 'failed':
         error_message = task.get('error')
-        print(f"DEBUG: Task {task_id} failed - raw error: '{error_message}'")
-        print(f"DEBUG: Task {task_id} full task data: {task}")
         
         if not error_message or error_message == 'Unknown error':
             # Try to get more specific error information
@@ -2953,8 +3562,12 @@ def task_status(task_id):
                 error_message = f"News generation failed at {task['failed_at']}. Please try again."
             else:
                 error_message = "News generation failed due to an unknown error. Please try again."
-        print(f"DEBUG: Task {task_id} failed with error: {error_message}")
-        return jsonify({'status': 'failed', 'error': error_message})
+        print(f"ERROR: Task {task_id} failed: {error_message}")
+        return jsonify({
+            'status': 'failed',
+            'error': error_message,
+            'reason': (_task_result(task) or {}).get('reason'),
+        })
     else:
         return jsonify({
             'status': 'running',
@@ -3495,7 +4108,7 @@ def run_transcription(task_id, audio_file_path, filename):
         print("Generating transcription...")
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=NEWS_GEMINI_MODEL,
                 contents=["Transcribe this audio file. Provide a clean, accurate transcription of all spoken content.", myfile]
             )
         except Exception as e:

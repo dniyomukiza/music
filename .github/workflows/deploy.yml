@@ -1,9 +1,17 @@
 # Deploy to server on push to enhancements (production branch).
+# This workflow only: pull, start Compose, succeed or fail. It does not roll back,
+# notify, or read runtime Compose logs.
+#   Patch (Grok Bot): failed run → notify, approved fix, or roll back to last green.
+#   Runtimewatch (Grok Bot): Compose logs after a green deploy.
 # Fast deploy by default: pull + restart (code bind-mounted). Full Docker rebuild only when
 # requirements/Dockerfiles change, images are missing, or workflow_dispatch force_rebuild.
-# Secrets: PUSH_TO_GCP (private SSH key). VM: scripts/deploy-production.sh (passwordless sudo for udev optional).
+# Secrets: PUSH_TO_GCP (private SSH key). VM: scripts/deploy-production.sh.
 
 name: Deploy to server
+
+concurrency:
+  group: deploy-enhancements
+  cancel-in-progress: false
 
 on:
   push:
@@ -67,79 +75,3 @@ jobs:
 
       - name: Done
         run: echo "Deploy finished."
-
-  rollback_on_failure:
-    name: Roll back to last known good deploy
-    needs: deploy
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Verify PUSH_TO_GCP secret (rollback)
-        env:
-          PUSH_TO_GCP: ${{ secrets.PUSH_TO_GCP }}
-        run: |
-          if [ -z "$PUSH_TO_GCP" ]; then
-            echo "::error::PUSH_TO_GCP is missing or empty. Repo → Settings → Secrets → Actions."
-            exit 1
-          fi
-          if ! printf '%s' "$PUSH_TO_GCP" | grep -q 'BEGIN.*PRIVATE KEY'; then
-            echo "::error::PUSH_TO_GCP does not look like a private key (expected BEGIN … PRIVATE KEY)."
-            exit 1
-          fi
-          echo "PUSH_TO_GCP is set for rollback."
-
-      - name: Write deploy SSH key file (rollback)
-        env:
-          PUSH_TO_GCP: ${{ secrets.PUSH_TO_GCP }}
-        run: |
-          umask 077
-          printf '%s\n' "$PUSH_TO_GCP" > .deploy_ssh_key
-          chmod 600 .deploy_ssh_key
-          ssh-keygen -y -f .deploy_ssh_key >/dev/null
-
-      - name: Roll back via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: 34.168.111.175
-          username: didyom1
-          key_path: .deploy_ssh_key
-          script_stop: true
-          command_timeout: 60m
-          script: |
-            set -e
-            cd /home/didyom1/music
-            git fetch origin
-            git reset --hard origin/enhancements
-            CACHE_DIR=".deploy-cache"
-            LAST_GOOD_COMMIT_FILE="$CACHE_DIR/last_good_commit"
-
-            if [ ! -f "$LAST_GOOD_COMMIT_FILE" ]; then
-              echo "No last known good commit recorded at $LAST_GOOD_COMMIT_FILE; cannot rollback automatically."
-              exit 1
-            fi
-
-            LAST_GOOD_COMMIT="$(cat "$LAST_GOOD_COMMIT_FILE" | tr -d '\n' | tr -d '\r')"
-            if [ -z "$LAST_GOOD_COMMIT" ]; then
-              echo "last_good_commit file is empty; cannot rollback automatically."
-              exit 1
-            fi
-
-            echo "--- Rolling back to last known good commit: $LAST_GOOD_COMMIT ---"
-            git fetch origin || true
-            git reset --hard "$LAST_GOOD_COMMIT"
-
-            docker compose --profile video up -d --no-build
-            docker compose --profile video restart app fastapi || true
-            docker compose --profile video restart liquidsoap liquidsoap_video 2>/dev/null || true
-
-            echo "--- Post-rollback health checks ---"
-            for i in $(seq 1 18); do
-              if curl -sf --max-time 8 http://localhost:5000/health >/dev/null; then
-                echo "App is up after rollback (${i}/18)."
-                break
-              fi
-              echo "app health after rollback... ($i/18)"
-              sleep 5
-            done

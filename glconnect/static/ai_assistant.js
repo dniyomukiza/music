@@ -12,6 +12,7 @@ class AIWritingAssistant {
         this.chatHistory = [];
         this.chatSending = false;
         this.activeTab = 'writing';
+        this._capturedSelectionText = '';
         this._dragState = null;
         this._positionStorageKey = 'inkStudioAiToolbarPosition';
         this.aiFeatures = {
@@ -27,7 +28,7 @@ class AIWritingAssistant {
                 hint: 'Fixes grammar and punctuation while keeping your voice.',
                 icon: 'fa-check-double',
                 btnClass: 'ai-action-btn-success',
-                needsSelection: false
+                needsSelection: true
             },
             'spelling': {
                 category: 'spelling',
@@ -35,7 +36,7 @@ class AIWritingAssistant {
                 hint: 'Corrects misspellings and typos only.',
                 icon: 'fa-spell-check',
                 btnClass: 'ai-action-btn-success',
-                needsSelection: false
+                needsSelection: true
             },
             'linguistic-errors': {
                 category: 'linguistic_errors',
@@ -43,7 +44,7 @@ class AIWritingAssistant {
                 hint: 'Flags wrong word usage, tense shifts, agreement, and similar issues.',
                 icon: 'fa-language',
                 btnClass: 'ai-action-btn-success',
-                needsSelection: false
+                needsSelection: true
             },
             'plot-continuity': {
                 category: 'plot_continuity',
@@ -104,12 +105,20 @@ class AIWritingAssistant {
      * Setup event listeners for AI features
      */
     setupEventListeners() {
-        // AI toolbar events
+        // Keep editor selection when clicking toolbar buttons (before focus leaves the editor)
+        document.addEventListener('mousedown', (e) => {
+            const actionBtn = e.target.closest('[data-ai-action]');
+            if (!actionBtn) return;
+            this._capturedSelectionText = this.getSelectedText();
+            e.preventDefault();
+        }, true);
+
+        // AI toolbar events (use closest — clicks often land on icons/spans inside the button)
         document.addEventListener('click', (e) => {
-            if (e.target.matches('[data-ai-action]')) {
-                e.preventDefault();
-                this.handleAIAction(e.target.dataset.aiAction);
-            }
+            const actionBtn = e.target.closest('[data-ai-action]');
+            if (!actionBtn) return;
+            e.preventDefault();
+            this.handleAIAction(actionBtn.dataset.aiAction);
         });
 
         // Keyboard shortcuts
@@ -138,7 +147,10 @@ class AIWritingAssistant {
         toolbar.className = 'ai-toolbar';
         toolbar.innerHTML = `
             <div class="ai-toolbar-header ai-toolbar-drag-handle" title="Drag to move horizontally or vertically">
-                <h6><i class="fas fa-grip-vertical ai-drag-grip" aria-hidden="true"></i><i class="fas fa-robot"></i> AI Assistant</h6>
+                <div class="ai-toolbar-drag-title">
+                    <h6><i class="fas fa-grip-vertical ai-drag-grip" aria-hidden="true"></i><i class="fas fa-robot"></i> AI Assistant</h6>
+                    <span class="ai-toolbar-drag-hint">Drag header to move</span>
+                </div>
                 <div class="ai-status ${this.isEnabled ? 'enabled' : 'disabled'}">
                     ${this.isEnabled ? 'Enabled' : 'Disabled'}
                 </div>
@@ -169,7 +181,7 @@ class AIWritingAssistant {
                     </div>
                     <div class="ai-section">
                         <h6>Author editing</h6>
-                        <p class="ai-section-hint">Copy edits and craft review for your manuscript.</p>
+                        <p class="ai-section-hint">Copy edits and craft review. Highlight a passage first for grammar, spelling, and linguistic checks.</p>
                         <button type="button" class="ai-action-btn ai-action-btn-success" data-ai-action="grammar-punctuation" title="Fix grammar and punctuation">
                             <span class="ai-action-label"><i class="fas fa-check-double" aria-hidden="true"></i><span>Grammar &amp; punctuation</span></span>
                             <span class="ai-action-desc">Correct grammar and punctuation; keeps your wording and voice.</span>
@@ -232,22 +244,25 @@ class AIWritingAssistant {
     }
 
     /**
-     * Drag bounds: full horizontal range; vertical range down to bottom of viewport
-     * (only the header strip must stay visible so the panel can be re-grabbed).
+     * Drag bounds: allow the panel mostly off-screen left/right/bottom so it can
+     * be parked out of the way on mobile. Keep a grab strip (header / edge) visible
+     * so it can always be dragged back.
      */
     _getToolbarDragBounds(toolbar) {
         const margin = 8;
-        const minVisible = 44;
+        const minVisibleY = 44;
+        // Wide enough to grab on a phone thumb; most of the panel may leave the viewport.
+        const minVisibleX = 56;
         const rect = toolbar.getBoundingClientRect();
         const width = rect.width || toolbar.offsetWidth || 320;
         const viewportW = this._viewportWidth();
         const viewportH = this._viewportHeight();
         return {
             margin,
-            minLeft: margin,
-            maxLeft: Math.max(margin, viewportW - width - margin),
+            minLeft: Math.min(margin, -(width - minVisibleX)),
+            maxLeft: Math.max(margin, viewportW - minVisibleX),
             minTop: margin,
-            maxTop: Math.max(margin, viewportH - minVisible),
+            maxTop: Math.max(margin, viewportH - minVisibleY),
         };
     }
 
@@ -259,8 +274,53 @@ class AIWritingAssistant {
         toolbar.style.top = `${y}px`;
     }
 
+    _beginToolbarDrag(toolbar, handle, clientX, clientY, dragId, source) {
+        if (this._dragState) return;
+        const rect = toolbar.getBoundingClientRect();
+        this._prepareToolbarForDrag(toolbar);
+        toolbar.style.left = `${rect.left}px`;
+        toolbar.style.top = `${rect.top}px`;
+        toolbar.classList.add('is-dragging');
+        document.body.classList.add('ai-toolbar-drag-active');
+        this._dragState = {
+            dragId,
+            source,
+            offsetX: clientX - rect.left,
+            offsetY: clientY - rect.top,
+        };
+        try {
+            if (source === 'pointer' && handle.setPointerCapture) {
+                handle.setPointerCapture(dragId);
+            }
+        } catch (_) { /* capture optional on some touch browsers */ }
+    }
+
+    _updateToolbarDrag(toolbar, clientX, clientY) {
+        if (!this._dragState) return;
+        this._applyToolbarPosition(
+            toolbar,
+            clientX - this._dragState.offsetX,
+            clientY - this._dragState.offsetY
+        );
+    }
+
+    _endToolbarDrag(toolbar, handle, dragId) {
+        if (!this._dragState || this._dragState.dragId !== dragId) return;
+        try {
+            if (this._dragState.source === 'pointer' && handle.releasePointerCapture) {
+                handle.releasePointerCapture(dragId);
+            }
+        } catch (_) { /* already released */ }
+        toolbar.classList.remove('is-dragging');
+        document.body.classList.remove('ai-toolbar-drag-active');
+        this._dragState = null;
+        this.clampToolbarPosition(toolbar);
+        this.saveToolbarPosition(toolbar);
+    }
+
     /**
      * Drag header to reposition; position persists in localStorage.
+     * Pointer events for desktop; explicit touch handlers for phones.
      */
     setupDraggable(toolbar) {
         const handle = toolbar.querySelector('.ai-toolbar-drag-handle');
@@ -268,52 +328,76 @@ class AIWritingAssistant {
 
         this.restoreToolbarPosition(toolbar);
 
+        const moveOpts = { capture: true, passive: false };
+
         const onPointerMove = (e) => {
-            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
+            if (!this._dragState || this._dragState.source !== 'pointer' || e.pointerId !== this._dragState.dragId) {
+                return;
+            }
             e.preventDefault();
-            this._applyToolbarPosition(
-                toolbar,
-                e.clientX - this._dragState.offsetX,
-                e.clientY - this._dragState.offsetY
-            );
+            this._updateToolbarDrag(toolbar, e.clientX, e.clientY);
         };
 
-        const endDrag = (e) => {
-            if (!this._dragState || e.pointerId !== this._dragState.pointerId) return;
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', endDrag);
-            window.removeEventListener('pointercancel', endDrag);
-            try {
-                handle.releasePointerCapture(e.pointerId);
-            } catch (_) { /* already released */ }
-            toolbar.classList.remove('is-dragging');
-            this._dragState = null;
-            this.clampToolbarPosition(toolbar);
-            this.saveToolbarPosition(toolbar);
+        const onTouchMove = (e) => {
+            if (!this._dragState || this._dragState.source !== 'touch') return;
+            const touch = Array.from(e.touches).find((t) => t.identifier === this._dragState.dragId);
+            if (!touch) return;
+            e.preventDefault();
+            this._updateToolbarDrag(toolbar, touch.clientX, touch.clientY);
+        };
+
+        const cleanupPointerListeners = () => {
+            document.removeEventListener('pointermove', onPointerMove, moveOpts);
+            document.removeEventListener('pointerup', onPointerEnd, moveOpts);
+            document.removeEventListener('pointercancel', onPointerEnd, moveOpts);
+        };
+
+        const cleanupTouchListeners = () => {
+            document.removeEventListener('touchmove', onTouchMove, moveOpts);
+            document.removeEventListener('touchend', onTouchEnd, moveOpts);
+            document.removeEventListener('touchcancel', onTouchEnd, moveOpts);
+        };
+
+        const onPointerEnd = (e) => {
+            if (!this._dragState || this._dragState.source !== 'pointer' || e.pointerId !== this._dragState.dragId) {
+                return;
+            }
+            cleanupPointerListeners();
+            this._endToolbarDrag(toolbar, handle, e.pointerId);
+        };
+
+        const onTouchEnd = (e) => {
+            if (!this._dragState || this._dragState.source !== 'touch') return;
+            const ended = Array.from(e.changedTouches).some((t) => t.identifier === this._dragState.dragId);
+            if (!ended) return;
+            cleanupTouchListeners();
+            this._endToolbarDrag(toolbar, handle, this._dragState.dragId);
         };
 
         handle.addEventListener('pointerdown', (e) => {
+            if (this._dragState) return;
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             e.preventDefault();
-            const rect = toolbar.getBoundingClientRect();
-            this._prepareToolbarForDrag(toolbar);
-            toolbar.style.left = `${rect.left}px`;
-            toolbar.style.top = `${rect.top}px`;
-            toolbar.classList.add('is-dragging');
-            this._dragState = {
-                pointerId: e.pointerId,
-                offsetX: e.clientX - rect.left,
-                offsetY: e.clientY - rect.top,
-            };
-            handle.setPointerCapture(e.pointerId);
-            window.addEventListener('pointermove', onPointerMove);
-            window.addEventListener('pointerup', endDrag);
-            window.addEventListener('pointercancel', endDrag);
+            this._beginToolbarDrag(toolbar, handle, e.clientX, e.clientY, e.pointerId, 'pointer');
+            document.addEventListener('pointermove', onPointerMove, moveOpts);
+            document.addEventListener('pointerup', onPointerEnd, moveOpts);
+            document.addEventListener('pointercancel', onPointerEnd, moveOpts);
         });
+
+        handle.addEventListener('touchstart', (e) => {
+            if (this._dragState || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            e.preventDefault();
+            this._beginToolbarDrag(toolbar, handle, touch.clientX, touch.clientY, touch.identifier, 'touch');
+            document.addEventListener('touchmove', onTouchMove, moveOpts);
+            document.addEventListener('touchend', onTouchEnd, moveOpts);
+            document.addEventListener('touchcancel', onTouchEnd, moveOpts);
+        }, { passive: false });
 
         window.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => this.clampToolbarPosition(toolbar));
+            window.visualViewport.addEventListener('scroll', () => this.clampToolbarPosition(toolbar));
         }
     }
 
@@ -406,12 +490,47 @@ class AIWritingAssistant {
             .ai-toolbar.is-dragging {
                 box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
                 opacity: 0.98;
+                touch-action: none;
+            }
+
+            body.ai-toolbar-drag-active {
+                touch-action: none;
+                overscroll-behavior: none;
             }
 
             .ai-toolbar-drag-handle {
                 cursor: grab;
                 touch-action: none;
+                -webkit-touch-callout: none;
                 user-select: none;
+                -webkit-user-select: none;
+            }
+
+            .ai-toolbar-drag-title {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                min-width: 0;
+            }
+
+            .ai-toolbar-drag-hint {
+                display: none;
+                font-size: 10px;
+                line-height: 1.2;
+                color: #64748b !important;
+                font-weight: 500;
+            }
+
+            @media (pointer: coarse) {
+                .ai-toolbar-drag-handle {
+                    min-height: 48px;
+                    padding-top: 4px;
+                    padding-bottom: 4px;
+                }
+
+                .ai-toolbar-drag-hint {
+                    display: block;
+                }
             }
 
             .ai-toolbar-drag-handle:active,
@@ -514,6 +633,22 @@ class AIWritingAssistant {
                 resize: vertical;
                 min-height: 56px;
                 font-size: 13px;
+                color: #1e293b !important;
+                background-color: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                caret-color: #1e293b;
+            }
+
+            .ai-chat-compose textarea::placeholder {
+                color: #64748b !important;
+                opacity: 1;
+            }
+
+            .ai-chat-compose textarea:focus {
+                color: #1e293b !important;
+                background-color: #ffffff !important;
+                border-color: #86b7fe !important;
+                box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
             }
 
             .ai-chat-actions {
@@ -533,11 +668,16 @@ class AIWritingAssistant {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 8px;
             }
             
             .ai-toolbar-header h6 {
                 margin: 0;
                 color: #2c3e50;
+            }
+
+            .ai-toolbar-header .ai-status {
+                flex-shrink: 0;
             }
             
             .ai-status {
@@ -721,6 +861,11 @@ class AIWritingAssistant {
             }
             
             /* Ensure form controls are visible */
+            .ai-toolbar .form-control,
+            .ai-toolbar .ai-chat-compose textarea,
+            .ai-toolbar input,
+            .ai-toolbar textarea,
+            .ai-toolbar select,
             .ai-modal-content .form-control,
             .ai-modal-content input,
             .ai-modal-content textarea,
@@ -729,7 +874,9 @@ class AIWritingAssistant {
                 background-color: white !important;
             }
             
-            .ai-modal-content .form-control::placeholder {
+            .ai-modal-content .form-control::placeholder,
+            .ai-toolbar .form-control::placeholder,
+            .ai-toolbar .ai-chat-compose textarea::placeholder {
                 color: #6c757d !important;
             }
             
@@ -1062,8 +1209,23 @@ class AIWritingAssistant {
         const config = this.authorReviewCategories[actionKey];
         if (!config) return;
 
-        const selected = this.getSelectedText();
-        const text = selected || this.getCurrentText();
+        const selected = (this._capturedSelectionText || this.getSelectedText() || '').trim();
+        this._capturedSelectionText = '';
+
+        let text;
+        if (config.needsSelection) {
+            if (!selected) {
+                this.showNotification(
+                    `Highlight a passage in your manuscript first, then run ${config.title}.`,
+                    'warning'
+                );
+                return;
+            }
+            text = selected;
+        } else {
+            text = selected || this.getCurrentText();
+        }
+
         if (!text || !text.trim()) {
             this.showNotification('No text to review, select a passage or open a chapter', 'warning');
             return;
@@ -1307,17 +1469,84 @@ class AIWritingAssistant {
     }
 
     /**
+     * Active CKEditor 5 instance (chapter editor sets window.editor on init).
+     */
+    getCKEditor() {
+        if (window.editor && window.editor.model) {
+            return window.editor;
+        }
+        return null;
+    }
+
+    /**
+     * Plain text from a CKEditor 5 model selection range.
+     */
+    getCKEditor5SelectedText(editor) {
+        const selection = editor.model.document.selection;
+        if (selection.isCollapsed) {
+            return '';
+        }
+        let text = '';
+        for (const item of selection.getFirstRange().getItems()) {
+            if (item.is('$text') || item.is('$textProxy')) {
+                text += item.data;
+            }
+        }
+        return text;
+    }
+
+    /**
+     * Selected text from any CKEditor 4 instance on the page.
+     */
+    getCKEditor4SelectedText() {
+        if (!window.CKEDITOR || !window.CKEDITOR.instances) {
+            return '';
+        }
+        for (const name of Object.keys(window.CKEDITOR.instances)) {
+            const instance = window.CKEDITOR.instances[name];
+            if (!instance || typeof instance.getSelection !== 'function') {
+                continue;
+            }
+            const selected = instance.getSelection().getSelectedText();
+            if (selected && selected.trim()) {
+                return selected;
+            }
+        }
+        return '';
+    }
+
+    /**
      * Get current text from editor
      */
     getCurrentText() {
-        // Try CKEditor first
-        if (window.editor && window.editor.getData) {
-            return window.editor.getData();
+        const ckEditor = this.getCKEditor();
+        if (ckEditor && ckEditor.getData) {
+            const editable = document.querySelector('.ck-editor__editable');
+            if (editable) {
+                return editable.innerText || editable.textContent || '';
+            }
+            return ckEditor.getData();
+        }
+
+        if (window.CKEDITOR && window.CKEDITOR.instances) {
+            for (const name of Object.keys(window.CKEDITOR.instances)) {
+                const instance = window.CKEDITOR.instances[name];
+                if (!instance || typeof instance.getData !== 'function') {
+                    continue;
+                }
+                if (instance.focusManager && instance.focusManager.hasFocus) {
+                    const body = instance.document && instance.document.getBody();
+                    if (body && body.getText) {
+                        return body.getText();
+                    }
+                    return instance.getData();
+                }
+            }
         }
         
         // Try different editor types
-        const editor = document.querySelector('#editor') || 
-                      document.querySelector('.ck-editor__editable') ||
+        const editor = document.querySelector('.ck-editor__editable') ||
+                      document.querySelector('#editor') ||
                       document.querySelector('[contenteditable="true"]');
         
         if (editor) {
@@ -1331,17 +1560,33 @@ class AIWritingAssistant {
      * Get selected text from editor
      */
     getSelectedText() {
-        // Try CKEditor first
-        if (window.editor && window.editor.model && window.editor.model.document) {
-            const selection = window.editor.model.document.selection;
-            if (selection.getSelectedText) {
-                return selection.getSelectedText();
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const selected = this.getCKEditor5SelectedText(ckEditor);
+            if (selected) {
+                return selected;
             }
         }
-        
-        // Fallback to standard selection
+
+        const ck4Selected = this.getCKEditor4SelectedText();
+        if (ck4Selected) {
+            return ck4Selected;
+        }
+
+        const editable = document.querySelector('.ck-editor__editable') ||
+            document.querySelector('[contenteditable="true"]');
         const selection = window.getSelection();
-        return selection.toString();
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+            if (!editable) {
+                return selection.toString();
+            }
+            const range = selection.getRangeAt(0);
+            if (editable.contains(range.commonAncestorContainer)) {
+                return selection.toString();
+            }
+        }
+
+        return selection ? selection.toString() : '';
     }
 
     /**
@@ -1563,8 +1808,9 @@ class AIWritingAssistant {
      * Get current selection range for undo functionality
      */
     getSelectionRange() {
-        if (window.editor && window.editor.model) {
-            const selection = window.editor.model.document.selection;
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const selection = ckEditor.model.document.selection;
             return {
                 start: selection.getFirstPosition(),
                 end: selection.getLastPosition(),
@@ -1659,8 +1905,12 @@ class AIWritingAssistant {
         }
         
         try {
-            if (this.lastReplacementPosition.isCKEditor && window.editor) {
-                const model = window.editor.model;
+            if (this.lastReplacementPosition.isCKEditor) {
+                const ckEditor = this.getCKEditor();
+                if (!ckEditor) {
+                    throw new Error('Editor not available');
+                }
+                const model = ckEditor.model;
                 const position = this.lastReplacementPosition.start;
                 
                 model.change(writer => {
@@ -1673,7 +1923,7 @@ class AIWritingAssistant {
                 // Update the hidden textarea
                 const textarea = document.getElementById('content');
                 if (textarea) {
-                    textarea.value = window.editor.getData();
+                    textarea.value = ckEditor.getData();
                 }
             } else {
                 // Fallback for non-CKEditor
@@ -1701,9 +1951,9 @@ class AIWritingAssistant {
      * Insert text into editor
      */
     insertText(text) {
-        // Try CKEditor first
-        if (window.editor && window.editor.model) {
-            const model = window.editor.model;
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const model = ckEditor.model;
             const selection = model.document.selection;
             
             // Insert at current position
@@ -1715,7 +1965,7 @@ class AIWritingAssistant {
             // Update the hidden textarea
             const textarea = document.getElementById('content');
             if (textarea) {
-                textarea.value = window.editor.getData();
+                textarea.value = ckEditor.getData();
             }
             
             return;
@@ -1748,25 +1998,22 @@ class AIWritingAssistant {
      * Replace selected text in editor
      */
     replaceSelectedText(text) {
-        // Try CKEditor first
-        if (window.editor && window.editor.model) {
-            const model = window.editor.model;
+        const ckEditor = this.getCKEditor();
+        if (ckEditor) {
+            const model = ckEditor.model;
             const selection = model.document.selection;
             
             model.change(writer => {
-                // Delete selected content
-                if (selection.getSelectedText()) {
-                    writer.delete(selection.getFirstRange());
+                if (!selection.isCollapsed) {
+                    writer.remove(selection.getFirstRange());
                 }
-                // Insert new text
-                const insertPosition = selection.getFirstPosition();
-                writer.insertText(text, insertPosition);
+                writer.insertText(text, selection.getFirstPosition());
             });
             
             // Update the hidden textarea
             const textarea = document.getElementById('content');
             if (textarea) {
-                textarea.value = window.editor.getData();
+                textarea.value = ckEditor.getData();
             }
             
             return;

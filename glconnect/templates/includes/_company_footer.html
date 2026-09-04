@@ -1,48 +1,7 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=7">
 <footer class="company-footer" aria-label="Site footer">
     <div class="company-footer-inner">
-        <div class="company-footer-menu">
-            <button type="button"
-                    class="company-footer-toggle"
-                    id="companyFooterToggle"
-                    aria-expanded="false"
-                    aria-controls="companyFooterDropdown">
-                Company <i class="fas fa-chevron-down" aria-hidden="true"></i>
-            </button>
-            <ul class="company-footer-dropdown" id="companyFooterDropdown" hidden>
-                <li class="company-footer-item"><a href="{{ url_for('routes.careers') }}">Join Our Mission</a></li>
-                <li class="company-footer-item"><a href="{{ url_for('blog.contact') }}">Support</a></li>
-                <li class="company-footer-item"><a href="https://www.instagram.com/GLConnect_cool/" target="_blank" rel="noopener noreferrer">@GLConnect_cool</a></li>
-            </ul>
-        </div>
+        {% include 'includes/_company_menu.html' %}
     </div>
 </footer>
-<script>
-(function () {
-    var toggle = document.getElementById('companyFooterToggle');
-    var menu = document.getElementById('companyFooterDropdown');
-    if (!toggle || !menu) return;
-
-    function closeMenu() {
-        menu.hidden = true;
-        toggle.setAttribute('aria-expanded', 'false');
-    }
-
-    toggle.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var open = menu.hidden;
-        menu.hidden = !open;
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-
-    document.addEventListener('click', function (e) {
-        if (!menu.hidden && !menu.contains(e.target) && e.target !== toggle) {
-            closeMenu();
-        }
-    });
-
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeMenu();
-    });
-})();
-</script>
+<script src="{{ url_for('static', filename='company_menu.js') }}?v=1" defer></script>

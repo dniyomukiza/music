@@ -1,19 +1,252 @@
 """
 Analytics module for tracking and viewing app usage statistics.
-This module provides publicly accessible endpoints to view detailed analytics about page views and user behavior.
 """
 
-from flask import Blueprint, jsonify, render_template, request
+import os
+import re
+from collections import defaultdict
+
+from flask import Blueprint, current_app, jsonify, render_template, request, url_for
 from sqlalchemy import func, distinct
-from datetime import datetime, timezone, timedelta
-from .models import PageAnalytics, PageAnalyticsStats, db
+from datetime import date, datetime, time, timezone, timedelta
+from werkzeug.exceptions import MethodNotAllowed, NotFound
+from werkzeug.routing.exceptions import RequestRedirect
+
+from .models import PageAnalytics, db
 
 analytics_bp = Blueprint('analytics', __name__)
 
+ANALYTICS_SITE_HOST = (
+    os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com")
+    .replace("https://", "")
+    .replace("http://", "")
+    .rstrip("/")
+    .removeprefix("www.")
+)
+
+_ANALYTICS_SKIP_PREFIXES = (
+    "/static/",
+    "/hls/",
+    "/api/hls-status",
+    "/_analytics",
+)
+
+_SCANNER_PATH_SUFFIXES = (
+    ".php",
+    ".asp",
+    ".aspx",
+    ".cgi",
+    ".env",
+    ".bak",
+    ".sql",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".old",
+    ".swp",
+)
+
+_SCANNER_PATH_FRAGMENTS = re.compile(
+    r"(^|/)(wp-admin|wp-login|wp-content|wp-includes|xmlrpc\.php|phpmyadmin|cgi-bin|\.git)(/|$)",
+    re.IGNORECASE,
+)
+
+
+def normalize_request_path(path):
+    """Canonical path key for analytics grouping."""
+    if not path or path == "/":
+        return "/"
+    return path.rstrip("/") or "/"
+
+
+def _looks_like_scanner_probe(path: str) -> bool:
+    """Heuristic for bot/scanner URLs that are not real site pages."""
+    lower = (path or "").lower().split("?", 1)[0]
+    if any(lower.endswith(suffix) for suffix in _SCANNER_PATH_SUFFIXES):
+        return True
+    return bool(_SCANNER_PATH_FRAGMENTS.search(lower))
+
+
+def is_registered_browser_path(path: str) -> bool:
+    """True when path maps to a real GET route on this Flask app."""
+    normalized = normalize_request_path(path)
+    if normalized == "/analytics" or normalized.startswith(_ANALYTICS_SKIP_PREFIXES):
+        return False
+    if _looks_like_scanner_probe(normalized):
+        return False
+    try:
+        current_app.url_map.bind("localhost", "/").match(normalized, method="GET")
+        return True
+    except RequestRedirect:
+        return True
+    except (NotFound, MethodNotAllowed):
+        return False
+    except Exception:
+        return False
+
+
+def should_record_page_view(path, method, status_code, url_rule=None) -> bool:
+    """Record only successful GET/HEAD hits on real app routes (not 404 probes)."""
+    if method not in ("GET", "HEAD"):
+        return False
+    if not status_code or status_code >= 400:
+        return False
+    if url_rule is None:
+        return False
+    if url_rule.rule == "/static/<path:filename>":
+        return False
+    return is_registered_browser_path(path)
+
+
+def is_displayable_analytics_path(stored_value) -> bool:
+    """True when a stored analytics path should appear on the dashboard."""
+    if not stored_value:
+        return False
+    if stored_value.startswith("/"):
+        return is_registered_browser_path(stored_value)
+    resolved = resolve_analytics_path(stored_value)
+    if resolved.startswith("/"):
+        return is_registered_browser_path(resolved)
+    return False
+
+
+def _rule_to_display_path(rule):
+    """Turn a Flask URL rule into a readable ndotonic.com path."""
+    path = rule
+    for token in ("<int:", "<float:", "<path:", "<uuid:", "<string:", "<"):
+        if token in path:
+            idx = path.index("<")
+            end = path.index(">", idx) + 1
+            path = path[:idx] + "*" + path[end:]
+    path = path.replace("//", "/")
+    return normalize_request_path(path)
+
+
+def resolve_analytics_path(stored_value):
+    """Resolve stored request path or legacy Flask endpoint to a URL path."""
+    if not stored_value:
+        return "/"
+    if stored_value.startswith("/"):
+        return normalize_request_path(stored_value)
+
+    try:
+        return normalize_request_path(url_for(stored_value))
+    except Exception:
+        pass
+
+    try:
+        rules = [
+            rule
+            for rule in current_app.url_map.iter_rules(stored_value)
+            if "GET" in rule.methods and rule.rule != "/static/<path:filename>"
+        ]
+        if rules:
+            rules.sort(key=lambda r: (("<" in r.rule), len(r.rule)))
+            return _rule_to_display_path(rules[0].rule)
+    except Exception:
+        pass
+
+    return stored_value
+
+
+def format_site_path(stored_value):
+    """Human-readable ndotonic.com path for the dashboard."""
+    resolved = resolve_analytics_path(stored_value)
+    if not resolved or resolved == "/":
+        return ANALYTICS_SITE_HOST
+    if resolved.startswith("/"):
+        return f"{ANALYTICS_SITE_HOST}{resolved}"
+    return f"{ANALYTICS_SITE_HOST}/{resolved}"
+
+
+def _day_bucket(column):
+    """Group timestamps by calendar day (PostgreSQL + SQLite)."""
+    if db.engine.dialect.name == "postgresql":
+        return func.date_trunc("day", column)
+    return func.date(column)
+
+
+def _timestamp_to_day_label(day):
+    if day is None:
+        return None
+    if isinstance(day, str):
+        return day[:10]
+    if hasattr(day, "date"):
+        return day.date().isoformat()
+    return day.isoformat()[:10]
+
+
+def _day_bounds_utc(day_label):
+    """UTC [start, end) for a calendar day YYYY-MM-DD."""
+    day = date.fromisoformat(day_label)
+    start = datetime.combine(day, time.min, tzinfo=timezone.utc)
+    return start, start + timedelta(days=1)
+
+
 @analytics_bp.route('/analytics')
 def analytics_dashboard():
-    """Main analytics dashboard page (public access)"""
+    """Main analytics dashboard page (public access)."""
     return render_template('analytics_dashboard.html')
+
+
+@analytics_bp.route('/_analytics/api/dashboard')
+def get_dashboard():
+    """Daily view counts per page."""
+    try:
+        filter_date = (request.args.get("date") or "").strip()
+        day_expr = _day_bucket(PageAnalytics.timestamp)
+        query = db.session.query(
+            day_expr.label("day"),
+            PageAnalytics.endpoint,
+            func.count(PageAnalytics.id).label("views"),
+        )
+
+        if filter_date:
+            try:
+                date.fromisoformat(filter_date)
+            except ValueError:
+                return jsonify({"success": False, "error": "Invalid date. Use YYYY-MM-DD."}), 400
+            start, end = _day_bounds_utc(filter_date)
+            query = query.filter(
+                PageAnalytics.timestamp >= start,
+                PageAnalytics.timestamp < end,
+            )
+            days = 1
+        else:
+            days = min(max(int(request.args.get("days", 30)), 1), 365)
+            start_date = datetime.now(timezone.utc) - timedelta(days=days)
+            query = query.filter(PageAnalytics.timestamp >= start_date)
+
+        daily_rows = query.group_by(day_expr, PageAnalytics.endpoint).all()
+
+        merged_daily = defaultdict(int)
+        for day, stored, views in daily_rows:
+            if not is_displayable_analytics_path(stored):
+                continue
+            day_label = _timestamp_to_day_label(day)
+            if not day_label:
+                continue
+            display_path = format_site_path(stored)
+            merged_daily[(day_label, display_path)] += views
+
+        daily_views = [
+            {"date": day_label, "path": path, "views": count}
+            for (day_label, path), count in merged_daily.items()
+        ]
+        daily_views.sort(key=lambda row: (row["date"], row["views"], row["path"]), reverse=True)
+
+        total_views = sum(row["views"] for row in daily_views)
+
+        return jsonify({
+            "success": True,
+            "days": days,
+            "filter_date": filter_date or None,
+            "total_views": total_views,
+            "daily_views": daily_views,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @analytics_bp.route('/_analytics/api/stats')
 def get_stats():
@@ -93,6 +326,8 @@ def get_page_stats():
         
         pages = []
         for endpoint, total_views, unique_visitors, last_accessed in results:
+            if not is_displayable_analytics_path(endpoint):
+                continue
             pages.append({
                 'endpoint': endpoint,
                 'path': endpoint,
@@ -124,6 +359,8 @@ def get_recent_activity():
         
         activities = []
         for activity in recent:
+            if not is_displayable_analytics_path(activity.endpoint):
+                continue
             activities.append({
                 'id': activity.id,
                 'endpoint': activity.endpoint,
@@ -161,9 +398,12 @@ def get_time_series():
         
         # Group by time period
         if group_by == 'hour':
-            time_format = func.date_trunc('hour', PageAnalytics.timestamp)
-        else:  # day
-            time_format = func.date_trunc('day', PageAnalytics.timestamp)
+            if db.engine.dialect.name == "postgresql":
+                time_format = func.date_trunc('hour', PageAnalytics.timestamp)
+            else:
+                time_format = func.strftime('%Y-%m-%d %H:00:00', PageAnalytics.timestamp)
+        else:
+            time_format = _day_bucket(PageAnalytics.timestamp)
         
         results = db.session.query(
             time_format.label('period'),
@@ -211,6 +451,8 @@ def get_top_paths():
         
         paths = []
         for endpoint, views, unique_visitors in top_q:
+            if not is_displayable_analytics_path(endpoint):
+                continue
             paths.append({
                 'endpoint': endpoint,
                 'path': endpoint,
