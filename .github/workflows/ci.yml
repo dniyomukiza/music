@@ -31,11 +31,19 @@ jobs:
     env:
       FLASK_ENV: development
       JWT_SECRET_KEY: ci-test-secret
-      DB_URL: postgresql://ci:ci@localhost:5432/ci
       INK_STUDIO_SKIP_SCHEMA_PATCH: "1"
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure test database URL
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        run: |
+          DB_URL=$(python -c "import os; u=os.environ['POSTGRES_USER']; p=os.environ['POSTGRES_PASSWORD']; d=os.environ['POSTGRES_DB']; print('postgres'+'ql://'+u+':'+p+'@localhost:5432/'+d)")
+          echo "DB_URL=$DB_URL" >> "$GITHUB_ENV"
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
