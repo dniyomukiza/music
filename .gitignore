@@ -58,6 +58,9 @@ jingles.m3u
 
 # Media files - both audio and pictures are now tracked for remote server
 
+# Local research export — not app source
+gxp-moonshots-top100.csv
+
 # Ignore large backup and archive files
 *.zip
 *.sql

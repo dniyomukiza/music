@@ -670,10 +670,16 @@ def _desk_for_google_voice(voice_name: str) -> tuple[str, str]:
 
 
 def _heygen_audio_bytes(text: str, voice_name: str, speaking_rate: float = 1.0) -> bytes:
-    from glconnect.heygen_news import resolve_tts_voice_id, synthesize_speech_bytes
+    from glconnect.heygen_news import ANCHOR_VOICE_ID, resolve_tts_voice_id, synthesize_speech_bytes
 
     desk, gender = _desk_for_google_voice(voice_name)
-    voice_id = resolve_tts_voice_id(desk, gender)
+    # Studio desk always uses the HeyGen news-anchor voice, never a reporter ID.
+    if desk == "anchor":
+        voice_id = ANCHOR_VOICE_ID
+    else:
+        voice_id = resolve_tts_voice_id(desk, gender)
+        if voice_id == ANCHOR_VOICE_ID:
+            raise RuntimeError(f"Reporter desk {desk} resolved to the HeyGen anchor voice")
     print(f"DEBUG: HeyGen TTS desk={desk} gender={gender} voice_id={voice_id}")
     chunks = []
     max_chars = 5000
