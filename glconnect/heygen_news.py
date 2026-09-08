@@ -1,8 +1,8 @@
-"""HeyGen REST v3 client for complementary GRO News video bulletins.
+"""HeyGen REST v3 client for GRO News voices and complementary video bulletins.
 
-Audio remains the source of truth. This module is only invoked after a successful
-broadcast, from POST /routes2/news/video/<task_id>. Video failures never change
-the news task status.
+Radio TTS uses stored HeyGen voice IDs via POST /v3/voices/speech. Video is still
+invoked only after a successful broadcast, from POST /routes2/news/video/<task_id>.
+Video failures never change the news task status.
 """
 
 from __future__ import annotations
@@ -189,8 +189,126 @@ def _heygen_request(method: str, path: str, api_key: str, json_body=None, params
     return _unwrap(payload) if unwrap else payload
 
 
+_KNOWN_TTS_VOICE_IDS = {
+    "anchor": ANCHOR_VOICE_ID,
+    "sports": "Ppvl5CDbTsgbBwVUpdwj",
+    "finance": "f8c69e517f424cafaecde32dde57096b",
+    "tech": "f38a635bee7a4d1f9b0a654a31d050d2",
+    "politics": "42d00d4aac5441279d8536cd6b52c53c",
+}
+_SPEECH_TIMEOUT = (10, 120)
+_SPEECH_MAX_CHARS = 5000
+
+
 def _is_anchor_identity(avatar_id: str, voice_id: str) -> bool:
     return avatar_id == ANCHOR_AVATAR_ID or voice_id == ANCHOR_VOICE_ID
+
+
+def _list_starfish_voices(api_key: str, gender: str) -> list:
+    collected = []
+    token = None
+    for _page in range(8):
+        params = {
+            "engine": "starfish",
+            "language": "English",
+            "type": "public",
+            "limit": 100,
+        }
+        if gender:
+            params["gender"] = str(gender).strip().lower()
+        if token:
+            params["token"] = token
+        payload = _heygen_request("GET", "/v3/voices", api_key, params=params, unwrap=False)
+        collected.extend(_extract_voice_rows(payload))
+        if isinstance(payload, dict) and payload.get("has_more") and payload.get("next_token"):
+            token = payload.get("next_token")
+            continue
+        break
+    return [voice for voice in collected if _voice_matches_catalog(voice, gender)]
+
+
+def _pick_starfish_voice(api_key: str, gender: str, desk: str) -> str:
+    voices = _list_starfish_voices(api_key, gender)
+    if not voices:
+        raise RuntimeError(f"HeyGen starfish catalog returned no English {gender} voices")
+    taken = _taken_voice_ids()
+    available = [voice for voice in voices if _voice_id_of(voice) not in taken] or voices
+    slot = _DESK_VOICE_SLOT.get(desk, 0) % len(available)
+    voice_id = _voice_id_of(available[slot])
+    _log(
+        "heygen_create",
+        resource="tts_voice",
+        source="starfish",
+        desk=desk,
+        gender=gender,
+        voice_id=voice_id,
+    )
+    return voice_id
+
+
+def resolve_tts_voice_id(desk: str, gender: str = "male") -> str:
+    """Return the HeyGen voice_id used for radio TTS on this desk."""
+    desk = (desk or "news").strip().lower()
+    if desk == "anchor":
+        return ANCHOR_VOICE_ID
+    try:
+        from glconnect.models import NewsHeygenRoster, db
+
+        row = NewsHeygenRoster.query.filter_by(desk=desk).first()
+        if row and row.voice_id:
+            return row.voice_id
+        api_key = heygen_api_key()
+        if api_key:
+            voice_id = _pick_starfish_voice(api_key, gender, desk)
+            prompts = _REPORTER_PROMPTS.get(desk) or _REPORTER_PROMPTS["news"]
+            if row is None:
+                row = NewsHeygenRoster(
+                    desk=desk,
+                    reporter_name=prompts["name"],
+                    status="pending",
+                    look_key=LOOK_KEY,
+                )
+                db.session.add(row)
+            row.voice_id = voice_id
+            db.session.commit()
+            return voice_id
+    except Exception as exc:
+        _log("heygen_skip", resource="tts_voice", desk=desk, error=str(exc)[:240])
+    known = _KNOWN_TTS_VOICE_IDS.get(desk)
+    if known:
+        return known
+    raise RuntimeError(f"No HeyGen voice id is stored for desk {desk}")
+
+
+def synthesize_speech_bytes(text: str, voice_id: str, speed: float = 1.0) -> bytes:
+    """Render MP3 bytes with POST /v3/voices/speech."""
+    api_key = heygen_api_key()
+    if not api_key:
+        raise RuntimeError("HEYGEN_API_KEY is not set")
+    script = (text or "").strip()
+    if not script:
+        raise RuntimeError("HeyGen speech requires non-empty text")
+    data = _heygen_request(
+        "POST",
+        "/v3/voices/speech",
+        api_key,
+        {
+            "text": script[:_SPEECH_MAX_CHARS],
+            "voice_id": voice_id,
+            "speed": max(0.5, min(2.0, float(speed or 1.0))),
+            "locale": "en-US",
+        },
+    )
+    audio_url = ""
+    if isinstance(data, dict):
+        audio_url = str(data.get("audio_url") or data.get("url") or "").strip()
+    if not audio_url:
+        raise RuntimeError(f"HeyGen speech returned no audio_url: {data!r}"[:400])
+    response = requests.get(audio_url, timeout=_SPEECH_TIMEOUT)
+    response.raise_for_status()
+    if not response.content:
+        raise RuntimeError("HeyGen speech downloaded an empty audio file")
+    return response.content
 
 
 def _create_prompt_avatar(api_key: str, name: str, prompt: str) -> str:

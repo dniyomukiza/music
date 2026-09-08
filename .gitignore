@@ -40,6 +40,9 @@ ytdlp_cookies.txt.bak
 ytdlp_cookiesfull.txt
 scripts/fix_ytauto_from_disk.py
 
+# First-time reporter/anchor voice samples for later cloning
+/glconnect/static/audio/voice_samples/*.mp3
+
 # Combined GRO News video bulletins (generated at runtime)
 /glconnect/static/news_video/*.mp4
 
@@ -58,6 +61,10 @@ jingles.m3u
 # Ignore large backup and archive files
 *.zip
 *.sql
+
+# Application drafts (personal Q&A) — local only
+NewPublic-EIR-application.md
+SFP-interview-answers.md
 
 # Internal docs (pitch, ops, legal) — local only; not for repo/graders.
 # The writer tutorial demos are deployed by Ink Studio, so keep them versioned.

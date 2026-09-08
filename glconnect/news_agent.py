@@ -2,6 +2,7 @@ import os
 import asyncio
 import json
 import re
+import shutil
 import time
 from datetime import datetime
 import pytz
@@ -557,7 +558,8 @@ _tts_cache = {}
 _last_async_error = None
 _tts_client = None
 _tts_credentials_checked = False
-_tts_backend = None  # "google" or "elevenlabs"
+_tts_backend = None  # "heygen", "google", or "elevenlabs"
+_tts_fallback = None
 _ELEVENLABS_VOICE_MAP = {
     "en-US-Studio-O": "EXAVITQu4vr4xnSDxMaL",  # Sarah — studio anchor only
     "en-US-Neural2-D": "pNInz6obpgDQGcFmaJgB",  # Adam — Ernest
@@ -609,26 +611,42 @@ def _load_tts_credentials():
 
 def validate_tts_credentials():
     """Return an error message when TTS is not configured, otherwise None."""
-    global _tts_credentials_checked, _tts_client, _tts_backend
+    global _tts_credentials_checked, _tts_client, _tts_backend, _tts_fallback
+    heygen_key = (os.getenv("HEYGEN_API_KEY") or "").strip()
+    google_error = None
     try:
         credentials = _load_tts_credentials()
         _tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+        _tts_fallback = "google"
+    except (FileNotFoundError, json.JSONDecodeError, Exception) as google_exc:
+        google_error = google_exc
+        eleven_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
+        if eleven_key:
+            _tts_fallback = "elevenlabs"
+
+    if heygen_key:
+        _tts_backend = "heygen"
+        _tts_credentials_checked = True
+        print(
+            "DEBUG: Using HeyGen voices for news audio"
+            + (f" (fallback={_tts_fallback})" if _tts_fallback else "")
+        )
+        return None
+    if _tts_fallback == "google":
         _tts_backend = "google"
         _tts_credentials_checked = True
         print("DEBUG: Using Google Cloud TTS")
         return None
-    except (FileNotFoundError, json.JSONDecodeError, Exception) as google_exc:
-        eleven_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
-        if eleven_key:
-            _tts_backend = "elevenlabs"
-            _tts_credentials_checked = True
-            print(f"DEBUG: Google Cloud TTS unavailable ({google_exc}); using ElevenLabs fallback")
-            return None
-        if isinstance(google_exc, FileNotFoundError):
-            return str(google_exc)
-        if isinstance(google_exc, json.JSONDecodeError):
-            return "GOOGLE_TTS_CREDENTIALS_JSON is set but contains invalid JSON."
-        return f"TTS credentials could not be loaded: {google_exc}"
+    if _tts_fallback == "elevenlabs":
+        _tts_backend = "elevenlabs"
+        _tts_credentials_checked = True
+        print(f"DEBUG: Google Cloud TTS unavailable ({google_error}); using ElevenLabs fallback")
+        return None
+    if isinstance(google_error, FileNotFoundError):
+        return str(google_error)
+    if google_error:
+        return f"TTS credentials could not be loaded: {google_error}"
+    return "No TTS backend is configured. Set HEYGEN_API_KEY or Google Cloud TTS credentials."
 
 
 def _get_tts_client():
@@ -637,9 +655,38 @@ def _get_tts_client():
         error = validate_tts_credentials()
         if error:
             raise RuntimeError(error)
-    if _tts_backend != "google":
-        raise RuntimeError("Google Cloud TTS client requested but ElevenLabs fallback is active")
+    if _tts_backend != "google" and _tts_fallback != "google":
+        raise RuntimeError("Google Cloud TTS client requested but HeyGen/ElevenLabs is active")
     return _tts_client
+
+
+def _desk_for_google_voice(voice_name: str) -> tuple[str, str]:
+    if not voice_name or voice_name == ANCHOR_VOICE or _reporter_voice_collides_with_anchor(voice_name):
+        return "anchor", "male"
+    for reporter in _REPORTER_ROSTER.values():
+        if reporter["voice"] == voice_name:
+            return reporter["desk"], reporter.get("gender") or "male"
+    return "news", "male"
+
+
+def _heygen_audio_bytes(text: str, voice_name: str, speaking_rate: float = 1.0) -> bytes:
+    from glconnect.heygen_news import resolve_tts_voice_id, synthesize_speech_bytes
+
+    desk, gender = _desk_for_google_voice(voice_name)
+    voice_id = resolve_tts_voice_id(desk, gender)
+    print(f"DEBUG: HeyGen TTS desk={desk} gender={gender} voice_id={voice_id}")
+    chunks = []
+    max_chars = 5000
+    remaining = text.strip()
+    while remaining:
+        piece = remaining[:max_chars]
+        if len(remaining) > max_chars:
+            split_at = max(piece.rfind(". "), piece.rfind("? "), piece.rfind("! "))
+            if split_at > 400:
+                piece = remaining[: split_at + 1]
+        remaining = remaining[len(piece):].lstrip()
+        chunks.append(synthesize_speech_bytes(piece, voice_id, speed=speaking_rate))
+    return b"".join(chunks)
 
 
 def _elevenlabs_audio_bytes(text: str, voice_name: str) -> bytes:
@@ -673,18 +720,54 @@ def _elevenlabs_audio_bytes(text: str, voice_name: str) -> bytes:
     return b"".join(chunks)
 
 
+_AUDIO_DIR = "glconnect/static/audio"
+_VOICE_SAMPLES_DIR = os.path.join(_AUDIO_DIR, "voice_samples")
+
+
+def _voice_sample_token(value: str, fallback: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "", (value or "").strip().lower())
+    return cleaned or fallback
+
+
+def voice_sample_path(gender: str, desk: str) -> str:
+    return os.path.join(
+        _VOICE_SAMPLES_DIR,
+        f"{_voice_sample_token(gender, 'voice')}-{_voice_sample_token(desk, 'news')}.mp3",
+    )
+
+
+def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: str = "") -> bool:
+    """Keep the first report from each speaker for later voice cloning.
+
+    Later editions still generate broadcast audio, but they do not overwrite
+    or add another sample once this gender+desk already has one.
+    """
+    dest = voice_sample_path(gender, desk)
+    label = name or f"{gender} {desk}"
+    if os.path.isfile(dest) and os.path.getsize(dest) > 0:
+        print(f"DEBUG: Voice sample already saved for {label} ({os.path.basename(dest)}), skipping")
+        return False
+    if not source_path or not os.path.isfile(source_path) or os.path.getsize(source_path) == 0:
+        print(f"DEBUG: No source audio to archive for {label}")
+        return False
+    os.makedirs(_VOICE_SAMPLES_DIR, exist_ok=True)
+    shutil.copyfile(source_path, dest)
+    print(f"DEBUG: Saved first voice sample for {label}: {dest}")
+    return True
+
+
 def _run_direct_tts_phase(
     intro_text: str,
     outro_text: str,
     transitions: list[str],
-    reporter_segments: list[tuple[str, str, str]],
+    reporter_segments: list[tuple],
     task_id=None,
 ) -> None:
     """Convert all broadcast scripts to audio without Gemini tool-calling."""
     total_segments = 2 + len(transitions) + len(reporter_segments)
     completed = 0
 
-    def _convert(label: str, text: str, filename: str, voice: str) -> None:
+    def _convert(label: str, text: str, filename: str, voice: str) -> str:
         nonlocal completed
         if task_id:
             try:
@@ -697,10 +780,12 @@ def _run_direct_tts_phase(
                 )
             except Exception:
                 pass
-        text_to_speech(text, filename, voice)
+        result = text_to_speech(text, filename, voice)
         completed += 1
+        return (result or {}).get("audio_filepath") or os.path.join(_AUDIO_DIR, filename)
 
-    _convert("intro", intro_text, "intro_audio.mp3", ANCHOR_VOICE)
+    intro_path = _convert("intro", intro_text, "intro_audio.mp3", ANCHOR_VOICE)
+    archive_first_voice_sample("male", "anchor", intro_path, name="anchor")
     _convert("outro", outro_text, "outro_audio.mp3", ANCHOR_VOICE)
 
     for index, transition_text in enumerate(transitions):
@@ -711,14 +796,19 @@ def _run_direct_tts_phase(
             ANCHOR_VOICE,
         )
 
-    for segment_id, script_content, voice in reporter_segments:
+    for segment in reporter_segments:
+        segment_id, script_content, voice = segment[0], segment[1], segment[2]
+        name = segment[3] if len(segment) > 3 else segment_id
+        desk = segment[4] if len(segment) > 4 else "news"
+        gender = segment[5] if len(segment) > 5 else "voice"
         safe_voice = _sanitize_reporter_voice(voice)
-        _convert(
+        report_path = _convert(
             f"{segment_id} report",
             script_content,
             f"{segment_id}_audio.mp3",
             safe_voice,
         )
+        archive_first_voice_sample(gender, desk, report_path, name=name)
 
 
 # --- Define the Text to Speech Tool (as a callable function) ---
@@ -778,7 +868,35 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             f"voice={voice_name} chars={len(clean_text)} backend={_tts_backend}"
         )
 
-        if _tts_backend == "elevenlabs":
+        if _tts_backend == "heygen":
+            try:
+                audio_content = _heygen_audio_bytes(clean_text, voice_name, speaking_rate)
+            except Exception as heygen_exc:
+                if not _tts_fallback:
+                    raise
+                print(
+                    f"WARNING: HeyGen TTS failed for {output_filename!r} "
+                    f"({heygen_exc}); using {_tts_fallback}"
+                )
+                if _tts_fallback == "elevenlabs":
+                    audio_content = _elevenlabs_audio_bytes(clean_text, voice_name)
+                else:
+                    client = _get_tts_client()
+                    synthesis_input = texttospeech.SynthesisInput(text=clean_text)
+                    audio_config = texttospeech.AudioConfig(
+                        audio_encoding=texttospeech.AudioEncoding.MP3,
+                        speaking_rate=speaking_rate,
+                        pitch=pitch
+                    )
+                    voice_params = texttospeech.VoiceSelectionParams(
+                        language_code="en-US",
+                        name=voice_name
+                    )
+                    response = client.synthesize_speech(
+                        input=synthesis_input, voice=voice_params, audio_config=audio_config
+                    )
+                    audio_content = response.audio_content
+        elif _tts_backend == "elevenlabs":
             audio_content = _elevenlabs_audio_bytes(clean_text, voice_name)
         else:
             client = _get_tts_client()
@@ -1332,6 +1450,7 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
             "category": category,
             "name": reporter["name"],
             "desk": reporter["desk"],
+            "gender": reporter.get("gender") or "voice",
             "voice": reporter["voice"],
         })
     from glconnect.parallel_news_monitor import recent_event_packets
@@ -1397,7 +1516,14 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
         segment_id = f"report_{index}"
         script_keys.append(f"{segment_id}_script")
         scripts.append(script)
-        segments.append((segment_id, clean_text_for_speech(script), assignment["voice"]))
+        segments.append((
+            segment_id,
+            clean_text_for_speech(script),
+            assignment["voice"],
+            assignment["name"],
+            assignment["desk"],
+            assignment["gender"],
+        ))
         reporter_trace.append({
             "index": index,
             "topic": topic,
@@ -1473,6 +1599,10 @@ def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
             
             # Skip jingle.wav
             if filename == "jingle.wav":
+                continue
+            
+            # Skip first-time voice clones; these outlive a single edition
+            if filename == "voice_samples":
                 continue
             
             # Skip final broadcast files
@@ -1740,12 +1870,12 @@ CLARA_VOICE = 'en-US-Neural2-F'
 JAMES_VOICE = 'en-US-Neural2-A'
 
 _REPORTER_ROSTER = {
-    "sports": {"name": "Ernest", "desk": "sports", "voice": ERNEST_VOICE},
-    "finance": {"name": "Isabella", "desk": "finance", "voice": ISABELLA_VOICE},
-    "tech": {"name": "Mark", "desk": "tech", "voice": MARK_VOICE},
-    "politics": {"name": "Edith", "desk": "politics", "voice": EDITH_VOICE},
-    "health": {"name": "Clara", "desk": "health", "voice": CLARA_VOICE},
-    "other": {"name": "James", "desk": "news", "voice": JAMES_VOICE},
+    "sports": {"name": "Ernest", "desk": "sports", "gender": "male", "voice": ERNEST_VOICE},
+    "finance": {"name": "Isabella", "desk": "finance", "gender": "female", "voice": ISABELLA_VOICE},
+    "tech": {"name": "Mark", "desk": "tech", "gender": "male", "voice": MARK_VOICE},
+    "politics": {"name": "Edith", "desk": "politics", "gender": "female", "voice": EDITH_VOICE},
+    "health": {"name": "Clara", "desk": "health", "gender": "female", "voice": CLARA_VOICE},
+    "other": {"name": "James", "desk": "news", "gender": "male", "voice": JAMES_VOICE},
 }
 
 _CATEGORY_ALIASES = {
@@ -2489,7 +2619,8 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
         "glconnect/static/audio/jingle.wav",
         "glconnect/static/audio/intro_audio.mp3",
     ]
-    for i, (segment_id, _script, _voice) in enumerate(reporter_segments):
+    for i, segment in enumerate(reporter_segments):
+        segment_id = segment[0]
         final_audio_paths.append(f"glconnect/static/audio/transition_audio_{i}.mp3")
         final_audio_paths.append(f"glconnect/static/audio/{segment_id}_audio.mp3")
     final_audio_paths.extend([

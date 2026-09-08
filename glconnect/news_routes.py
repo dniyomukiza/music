@@ -605,6 +605,9 @@ def cleanup_old_audio_files():
         files_to_keep = []
         if os.path.exists(os.path.join(audio_dir, "jingle.wav")):
             files_to_keep.append(os.path.join(audio_dir, "jingle.wav"))
+        voice_samples_dir = os.path.join(audio_dir, "voice_samples")
+        if os.path.isdir(voice_samples_dir):
+            files_to_keep.append(voice_samples_dir)
         
         # Keep the most recent final_news_broadcast*.mp3
         final_broadcast_files = glob.glob(os.path.join(audio_dir, "final_news_broadcast*.mp3"))
@@ -1604,6 +1607,10 @@ def cleanup_temp_audio_files():
         # NEVER delete jingle.wav - this is a protected file
         if filename == "jingle.wav":
             print(f"DEBUG: PROTECTED - Keeping jingle.wav")
+            continue
+
+        if filename == "voice_samples":
+            print(f"DEBUG: PROTECTED - Keeping first-time voice samples")
             continue
             
         # NEVER delete final news broadcast files - these are protected files
