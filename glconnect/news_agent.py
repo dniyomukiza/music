@@ -670,14 +670,34 @@ def _desk_for_google_voice(voice_name: str) -> tuple[str, str]:
 
 
 def _heygen_audio_bytes(text: str, voice_name: str, speaking_rate: float = 1.0) -> bytes:
-    from glconnect.heygen_news import ANCHOR_VOICE_ID, resolve_tts_voice_id, synthesize_speech_bytes
+    from glconnect.heygen_news import ANCHOR_VOICE_ID, NEWS_TTS_VOICE_IDS, resolve_tts_voice_id, synthesize_speech_bytes
 
     desk, gender = _desk_for_google_voice(voice_name)
-    # Studio desk always uses the HeyGen news-anchor voice, never a reporter ID.
+    reporter_name = "anchor"
+    for reporter in _REPORTER_ROSTER.values():
+        if reporter["desk"] == desk:
+            reporter_name = reporter["name"]
+            break
+    sample = voice_sample_path(gender, desk)
+    has_sample = os.path.isfile(sample) and os.path.getsize(sample) > 0
+    clone_id = cloned_voice_id(desk)
+    if has_sample and not clone_id:
+        clone_id = ensure_cloned_voice(desk, gender, name=reporter_name)
+    if clone_id:
+        print(f"DEBUG: Clone TTS desk={desk} elevenlabs_voice_id={clone_id}")
+        return _elevenlabs_audio_bytes(text, voice_name, voice_id=clone_id)
+    if has_sample:
+        raise RuntimeError(
+            f"HeyGen sample already saved for {desk}; not calling HeyGen again. "
+            "Clone that file before the next edition (ELEVENLABS_API_KEY)."
+        )
+
+    # First edition only: no saved file yet, so HeyGen speaks once.
     if desk == "anchor":
         voice_id = ANCHOR_VOICE_ID
     else:
-        voice_id = resolve_tts_voice_id(desk, gender)
+        roster_id = NEWS_TTS_VOICE_IDS.get(desk)
+        voice_id = roster_id or resolve_tts_voice_id(desk, gender)
         if voice_id == ANCHOR_VOICE_ID:
             raise RuntimeError(f"Reporter desk {desk} resolved to the HeyGen anchor voice")
     print(f"DEBUG: HeyGen TTS desk={desk} gender={gender} voice_id={voice_id}")
@@ -695,14 +715,14 @@ def _heygen_audio_bytes(text: str, voice_name: str, speaking_rate: float = 1.0) 
     return b"".join(chunks)
 
 
-def _elevenlabs_audio_bytes(text: str, voice_name: str) -> bytes:
+def _elevenlabs_audio_bytes(text: str, voice_name: str, voice_id: str | None = None) -> bytes:
     from elevenlabs.client import ElevenLabs
 
     api_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
     if not api_key:
         raise RuntimeError("ELEVENLABS_API_KEY is not set")
     client = ElevenLabs(api_key=api_key)
-    voice_id = _ELEVENLABS_VOICE_MAP.get(voice_name, _ELEVENLABS_DEFAULT_VOICE)
+    voice_id = voice_id or _ELEVENLABS_VOICE_MAP.get(voice_name, _ELEVENLABS_DEFAULT_VOICE)
     chunks = []
     max_chars = 2400
     remaining = text.strip()
@@ -742,6 +762,74 @@ def voice_sample_path(gender: str, desk: str) -> str:
     )
 
 
+_CLONE_MANIFEST = os.path.join(_VOICE_SAMPLES_DIR, "clones.json")
+
+
+def _load_clone_manifest() -> dict:
+    if not os.path.isfile(_CLONE_MANIFEST):
+        return {}
+    try:
+        payload = json.loads(open(_CLONE_MANIFEST, encoding="utf-8").read())
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _save_clone_manifest(payload: dict) -> None:
+    os.makedirs(_VOICE_SAMPLES_DIR, exist_ok=True)
+    with open(_CLONE_MANIFEST, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+
+def cloned_voice_id(desk: str) -> str | None:
+    row = _load_clone_manifest().get(desk) or {}
+    voice_id = str(row.get("elevenlabs_voice_id") or "").strip()
+    return voice_id or None
+
+
+def ensure_cloned_voice(desk: str, gender: str, name: str = "") -> str | None:
+    """Turn the first saved HeyGen take into an ElevenLabs clone. Once per desk."""
+    existing = cloned_voice_id(desk)
+    if existing:
+        return existing
+    api_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
+    sample = voice_sample_path(gender, desk)
+    if not api_key:
+        print(f"DEBUG: No ELEVENLABS_API_KEY; cannot clone {desk} yet")
+        return None
+    if not os.path.isfile(sample) or os.path.getsize(sample) == 0:
+        return None
+    import requests
+
+    label = name or desk
+    with open(sample, "rb") as handle:
+        response = requests.post(
+            "https://api.elevenlabs.io/v1/voices/add",
+            headers={"xi-api-key": api_key},
+            data={
+                "name": f"GRO News {label}"[:80],
+                "description": f"Clone of first HeyGen {desk} news take",
+            },
+            files={"files": (os.path.basename(sample), handle, "audio/mpeg")},
+            timeout=120,
+        )
+    if response.status_code >= 400:
+        print(f"WARNING: ElevenLabs clone failed for {desk}: {response.text[:240]}")
+        return None
+    try:
+        voice_id = str((response.json() or {}).get("voice_id") or "").strip()
+    except Exception:
+        voice_id = ""
+    if not voice_id:
+        print(f"WARNING: ElevenLabs clone for {desk} returned no voice_id")
+        return None
+    manifest = _load_clone_manifest()
+    manifest[desk] = {"elevenlabs_voice_id": voice_id, "name": label}
+    _save_clone_manifest(manifest)
+    print(f"DEBUG: Cloned {label} ({desk}) to ElevenLabs voice {voice_id}")
+    return voice_id
+
+
 def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: str = "") -> bool:
     """Keep the first report from each speaker for later voice cloning.
 
@@ -752,6 +840,7 @@ def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: s
     label = name or f"{gender} {desk}"
     if os.path.isfile(dest) and os.path.getsize(dest) > 0:
         print(f"DEBUG: Voice sample already saved for {label} ({os.path.basename(dest)}), skipping")
+        ensure_cloned_voice(desk, gender, name=label)
         return False
     if not source_path or not os.path.isfile(source_path) or os.path.getsize(source_path) == 0:
         print(f"DEBUG: No source audio to archive for {label}")
@@ -759,6 +848,7 @@ def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: s
     os.makedirs(_VOICE_SAMPLES_DIR, exist_ok=True)
     shutil.copyfile(source_path, dest)
     print(f"DEBUG: Saved first voice sample for {label}: {dest}")
+    ensure_cloned_voice(desk, gender, name=label)
     return True
 
 
@@ -1573,6 +1663,103 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
         )
     return script_keys, scripts, segments, assignments
 
+
+def parse_bot_news_reports(payload):
+    """Normalize bot JSON into [{topic, category, script}, ...]. Returns (reports, error)."""
+    if not isinstance(payload, dict):
+        return [], "JSON object required"
+    raw = payload.get("reporters")
+    if raw is None:
+        raw = payload.get("scripts")
+    if raw is None:
+        raw = payload.get("items")
+    if not isinstance(raw, list) or not raw:
+        return [], "Provide reporters: [{topic, category, script}, ...]"
+    if len(raw) > 5:
+        return [], "Maximum 5 reporter scripts allowed"
+    reports = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            return [], f"Reporter {index} must be an object"
+        topic = (item.get("topic") or item.get("title") or "").strip()
+        script = (item.get("script") or item.get("copy") or item.get("text") or "").strip()
+        category = _normalize_category(item.get("category") or item.get("desk") or "other")
+        if not topic:
+            return [], f"Reporter {index} is missing topic"
+        if not script:
+            return [], f"Reporter {index} ({topic!r}) is missing script"
+        if is_placeholder_reporter_script(script):
+            return [], f"Reporter {index} ({topic!r}) script looks like a placeholder"
+        reports.append({
+            "topic": topic,
+            "category": category,
+            "script": script,
+        })
+    return reports, None
+
+
+def _segments_from_bot_reports(reports, trace=None, source="grok-bot"):
+    """Map bot copy to desk voices. Skips Parallel research and Gemini script writing."""
+    assignments = []
+    scripts = []
+    segments = []
+    script_keys = []
+    reporter_trace = []
+    for index, report in enumerate(reports):
+        reporter = _reporter_for_category(report["category"])
+        assignment = {
+            "topic": report["topic"],
+            "category": report["category"],
+            "name": reporter["name"],
+            "desk": reporter["desk"],
+            "gender": reporter.get("gender") or "voice",
+            "voice": reporter["voice"],
+        }
+        assignments.append(assignment)
+        script = report["script"]
+        segment_id = f"report_{index}"
+        script_keys.append(f"{segment_id}_script")
+        scripts.append(script)
+        segments.append((
+            segment_id,
+            clean_text_for_speech(script),
+            assignment["voice"],
+            assignment["name"],
+            assignment["desk"],
+            assignment["gender"],
+        ))
+        reporter_trace.append({
+            "index": index,
+            "topic": assignment["topic"],
+            "category": assignment["category"],
+            "source": source,
+            "voice": assignment["voice"],
+            "reporter": assignment["name"],
+            "desk": assignment["desk"],
+            "anchor_collision": _reporter_voice_collides_with_anchor(assignment["voice"]),
+            "chars": len(script),
+        })
+        print(
+            f"DEBUG: Bot reporter {index} name={assignment['name']} category={assignment['category']} "
+            f"topic={assignment['topic']!r} voice={assignment['voice']} chars={len(script)}"
+        )
+    if trace:
+        collisions = [row["topic"] for row in reporter_trace if row.get("anchor_collision")]
+        warning = None
+        if collisions:
+            warning = f"Reporter voice collides with studio anchor for: {collisions}"
+        trace.stage(
+            "scripts_assign",
+            status="ok",
+            warning=warning,
+            source=source,
+            skipped=["topic_intake", "categorize", "scripts_generate"],
+            fallback_count=0,
+            reporters=reporter_trace,
+        )
+    return script_keys, scripts, segments, assignments
+
+
 def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
     """
     Clean up intermediate audio files after final broadcast generation.
@@ -1865,8 +2052,12 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
         return {"combined_audio_filepath": f"Error: Critical failure in audio combination. {e}"}
 
 # --- Define Voices ---
-# Studio-O is the desk anchor only. Field reporters must use a different voice
-# or the same person appears to both host the bulletin and file a report.
+# Two doors into the same newsroom:
+# UI /broadcast: topics → classify → write scripts → narrate → stitch.
+# Bot /bot-scripts: already has topic + category + script → narrate → stitch.
+# Google names (Studio-O, Neural2, …) are fallback labels only. Live narration
+# uses the HeyGen voice already assigned to that desk; the first take is also
+# saved under voice_samples/ for later cloning.
 ANCHOR_VOICE = 'en-US-Studio-O'
 ERNEST_VOICE = 'en-US-Neural2-D'
 EDITH_VOICE = 'en-US-Neural2-C'
@@ -1911,8 +2102,12 @@ def _reporter_for_category(category: str) -> dict:
 
 
 def _reporter_voice_collides_with_anchor(voice: str) -> bool:
-    """True when TTS would sound like the studio anchor (Google name or ElevenLabs id)."""
+    """True when TTS would sound like the studio anchor (Google name, ElevenLabs, or HeyGen)."""
     if not voice or voice == ANCHOR_VOICE:
+        return True
+    from glconnect.heygen_news import ANCHOR_VOICE_ID
+
+    if voice == ANCHOR_VOICE_ID:
         return True
     anchor_id = _ELEVENLABS_VOICE_MAP.get(ANCHOR_VOICE)
     reporter_id = _ELEVENLABS_VOICE_MAP.get(voice)
@@ -2286,6 +2481,64 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
             trace,
         )
 
+
+def generate_broadcast_from_bot_copy(reports, task_id=None, source="grok-bot"):
+    """Narrate bot-supplied scripts. Skips topic intake, classify, and Gemini writing."""
+    topics = [row.get("topic") for row in (reports or []) if row.get("topic")]
+    print(f"DEBUG: Starting bot-copy news generation source={source} topics={topics}")
+    trace = NewsPipelineTrace(topics, task_id=task_id)
+    trace.stage(
+        "start",
+        source=source,
+        skipped=["topic_intake", "categorize", "scripts_generate"],
+        topic_count=len(topics),
+        default_model=NEWS_GEMINI_MODEL,
+    )
+    if not reports:
+        trace.stage("start", status="failed", error="No reporter scripts provided")
+        return _result_with_pipeline({"error": "No reporter scripts provided"}, trace)
+    trace.stage(
+        "categorize",
+        status="skipped",
+        source=source,
+        categories={row["topic"]: row["category"] for row in reports},
+    )
+    trace.stage("scripts_generate", status="skipped", source=source)
+
+    tts_error = validate_tts_credentials()
+    if tts_error:
+        print(f"ERROR: TTS preflight failed: {tts_error}")
+        trace.stage("tts_preflight", status="failed", error=tts_error)
+        return _result_with_pipeline({"error": tts_error}, trace)
+    trace.stage("tts_preflight", backend=_tts_backend)
+    try:
+        _, reporter_scripts, reporter_segments, reporter_assignments = _segments_from_bot_reports(
+            reports, trace=trace, source=source
+        )
+        return _narrate_prepared_broadcast(
+            topics,
+            reporter_scripts,
+            reporter_segments,
+            reporter_assignments,
+            task_id,
+            trace,
+            progress_step="Bot scripts ready, converting to speech...",
+        )
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        trace.stage(
+            "pipeline",
+            status="failed",
+            error=type(exc).__name__,
+            detail=_clip_trace_text(exc, 240),
+        )
+        return _result_with_pipeline(
+            {"error": f"News generation failed: {exc}", "audio_file": None},
+            trace,
+        )
+
+
 def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failure=False):
     """Safely run async coroutine in a thread, handling interpreter shutdown gracefully with retry logic."""
     import asyncio
@@ -2418,6 +2671,232 @@ def _run_async_safely(coro_factory, max_retries=3, retry_delay=2, raise_on_failu
     if raise_on_failure:
         raise RuntimeError(_last_async_error or "Async operation failed without a captured exception")
     return None
+
+
+def _narrate_prepared_broadcast(
+    topics,
+    reporter_scripts,
+    reporter_segments,
+    reporter_assignments,
+    task_id=None,
+    trace=None,
+    progress_step=None,
+):
+    """Shared hop-in after scripts exist: anchor copy, TTS, stitch. Used by UI and bot ingest."""
+    import gc
+    import glob
+
+    if trace is None:
+        trace = NewsPipelineTrace(topics, task_id=task_id)
+
+    timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
+    intro_text = _anchor_intro_text(timezone, topics)
+    transitions = [
+        _anchor_handoff_text(
+            assignment,
+            previous=reporter_assignments[index - 1] if index else None,
+        )
+        for index, assignment in enumerate(reporter_assignments)
+    ]
+    outro_text = _anchor_outro_text(reporter_assignments)
+    persisted_scripts = {
+        "intro": intro_text,
+        "outro": outro_text,
+        "reporters": [
+            {
+                "topic": assignment["topic"],
+                "desk": assignment["desk"],
+                "name": assignment["name"],
+                "category": assignment["category"],
+                "script": reporter_scripts[index],
+                "handoff": transitions[index],
+            }
+            for index, assignment in enumerate(reporter_assignments)
+        ],
+    }
+    print(
+        f"DEBUG: Persisted video scripts intro={len(intro_text)} "
+        f"outro={len(outro_text)} reporters={len(persisted_scripts['reporters'])}"
+    )
+    print(f"DEBUG: Built {len(reporter_segments)} reporter segments")
+
+    if task_id:
+        try:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(
+                task_id,
+                progress=55,
+                current_step=progress_step or f'Writing {len(reporter_segments)} reporter scripts...',
+                last_heartbeat=datetime.now(),
+            )
+        except Exception:
+            pass
+
+    final_audio_paths = [
+        "glconnect/static/audio/jingle.wav",
+        "glconnect/static/audio/intro_audio.mp3",
+    ]
+    for i, segment in enumerate(reporter_segments):
+        segment_id = segment[0]
+        final_audio_paths.append(f"glconnect/static/audio/transition_audio_{i}.mp3")
+        final_audio_paths.append(f"glconnect/static/audio/{segment_id}_audio.mp3")
+    final_audio_paths.extend([
+        "glconnect/static/audio/outro_audio.mp3",
+        "glconnect/static/audio/jingle.wav",
+    ])
+    summarized_text_input = " ".join(reporter_scripts)
+
+    print("DEBUG: Executing direct TTS phase...")
+    if task_id:
+        try:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(
+                task_id,
+                progress=70,
+                current_step='Converting text segments to speech...',
+                last_heartbeat=datetime.now(),
+            )
+        except Exception:
+            pass
+
+    try:
+        _run_direct_tts_phase(
+            intro_text=intro_text,
+            outro_text=outro_text,
+            transitions=transitions,
+            reporter_segments=reporter_segments,
+            task_id=task_id,
+        )
+    except Exception as exc:
+        print(f"DEBUG: Direct TTS phase failed: {exc}")
+        import traceback
+        traceback.print_exc()
+        trace.stage(
+            "tts",
+            status="failed",
+            backend=_tts_backend,
+            error=_classify_model_error(exc),
+            detail=_clip_trace_text(exc, 240),
+        )
+        return _result_with_pipeline(
+            {
+                "audio_file": None,
+                "summary": f"News generation failed: TTS conversion failed. Root cause: {exc}",
+            },
+            trace,
+        )
+    trace.stage("tts", backend=_tts_backend, segments=len(reporter_segments))
+
+    gc.collect()
+
+    if task_id:
+        try:
+            from glconnect.news_routes import update_task_in_db
+            update_task_in_db(
+                task_id,
+                progress=85,
+                current_step='TTS conversion completed, assembling final audio...',
+                last_heartbeat=datetime.now(),
+            )
+        except Exception:
+            pass
+
+    print("DEBUG: Assembling final broadcast audio...")
+    combine_result = combine_audio_files(final_audio_paths, output_filename="final_news_broadcast.mp3")
+    combined_path = combine_result.get("combined_audio_filepath", "")
+    if not combined_path or str(combined_path).startswith("Error"):
+        trace.stage("assemble", status="failed", error=_clip_trace_text(combined_path, 240))
+        return _result_with_pipeline(
+            {
+                "audio_file": None,
+                "summary": f"News generation failed: audio assembly failed. Root cause: {combined_path}",
+            },
+            trace,
+        )
+    trace.stage("assemble", path=combined_path)
+
+    broadcast_summary = _broadcast_summary(topics, reporter_scripts)
+    if not broadcast_summary.strip():
+        summary_result = summarize_text(summarized_text_input)
+        broadcast_summary = summary_result.get("summary", "")
+
+    gc.collect()
+    gc.collect()
+    gc.collect()
+
+    global _tts_cache
+    if len(_tts_cache) > 50:
+        recent_entries = dict(list(_tts_cache.items())[-20:])
+        _tts_cache.clear()
+        _tts_cache.update(recent_entries)
+        print(f"DEBUG: Cleared old TTS cache entries, kept {len(_tts_cache)} recent ones")
+
+    try:
+        import psutil
+        memory_info = psutil.virtual_memory()
+        print(f"DEBUG: Memory after news generation cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
+    except Exception:
+        pass
+
+    audio_files = glob.glob("glconnect/static/audio/final_news_broadcast_*.mp3")
+    if not audio_files:
+        exact_file = "glconnect/static/audio/final_news_broadcast.mp3"
+        if os.path.exists(exact_file):
+            audio_files = [exact_file]
+
+    if not audio_files:
+        current_dir_files = glob.glob("final_news_broadcast*.mp3")
+        if current_dir_files:
+            audio_files = current_dir_files
+
+    if audio_files:
+        latest_audio = max(audio_files, key=os.path.getctime)
+        print(f"DEBUG: Found audio file: {latest_audio}")
+
+        if os.path.exists(latest_audio):
+            file_size = os.path.getsize(latest_audio)
+            print(f"DEBUG: Final audio file verified - size: {file_size} bytes")
+
+            if file_size > 0:
+                try:
+                    cleanup_intermediate_audio_files(latest_audio)
+                    print(f"DEBUG: Cleanup completed after successful final broadcast generation")
+                except Exception as e:
+                    print(f"DEBUG: Cleanup failed (non-critical): {e}")
+            else:
+                print(f"WARNING: Final audio file is empty, skipping cleanup to preserve intermediate files")
+        else:
+            print(f"ERROR: Final audio file not found, skipping cleanup")
+
+        if latest_audio.startswith("glconnect/static/audio/"):
+            web_path = latest_audio.replace("glconnect/static/audio/", "/static/audio/")
+        elif latest_audio.startswith("/usr/src/appdir/glconnect/static/audio/"):
+            web_path = latest_audio.replace("/usr/src/appdir/glconnect/static/audio/", "/static/audio/")
+        else:
+            web_path = f"/static/audio/{os.path.basename(latest_audio)}"
+
+        print(f"DEBUG: Web-accessible path: {web_path}")
+        return _result_with_pipeline(
+            {
+                "audio_file": web_path,
+                "summary": broadcast_summary,
+                "topics": list(topics),
+                "scripts": persisted_scripts,
+            },
+            trace,
+        )
+
+    print("DEBUG: No audio files found")
+    trace.stage("finalize", status="failed", error="Final audio file was not found")
+    return _result_with_pipeline(
+        {
+            "audio_file": None,
+            "summary": broadcast_summary or "News generation completed but final audio file was not found.",
+            "topics": list(topics),
+        },
+        trace,
+    )
+
 
 def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: NewsPipelineTrace = None) -> dict:
     import gc
@@ -2578,229 +3057,14 @@ def _generate_broadcast_attempt(topics: list[str], task_id: str = None, trace: N
             trace,
         )
 
-    timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
-    intro_text = _anchor_intro_text(timezone, topics)
-    transitions = [
-        _anchor_handoff_text(
-            assignment,
-            previous=reporter_assignments[index - 1] if index else None,
-        )
-        for index, assignment in enumerate(reporter_assignments)
-    ]
-    outro_text = _anchor_outro_text(reporter_assignments)
-    persisted_scripts = {
-        "intro": intro_text,
-        "outro": outro_text,
-        "reporters": [
-            {
-                "topic": assignment["topic"],
-                "desk": assignment["desk"],
-                "name": assignment["name"],
-                "category": assignment["category"],
-                "script": reporter_scripts[index],
-                "handoff": transitions[index],
-            }
-            for index, assignment in enumerate(reporter_assignments)
-        ],
-    }
-    print(
-        f"DEBUG: Persisted video scripts intro={len(intro_text)} "
-        f"outro={len(outro_text)} reporters={len(persisted_scripts['reporters'])}"
+    return _narrate_prepared_broadcast(
+        topics,
+        reporter_scripts,
+        reporter_segments,
+        reporter_assignments,
+        task_id,
+        trace,
     )
-    print(f"DEBUG: Built {len(reporter_segments)} reporter segments")
-
-    if task_id:
-        try:
-            from glconnect.news_routes import update_task_in_db
-            update_task_in_db(
-                task_id,
-                progress=55,
-                current_step=f'Writing {len(reporter_segments)} reporter scripts...',
-                last_heartbeat=datetime.now(),
-            )
-        except Exception:
-            pass
-
-    final_audio_paths = [
-        "glconnect/static/audio/jingle.wav",
-        "glconnect/static/audio/intro_audio.mp3",
-    ]
-    for i, segment in enumerate(reporter_segments):
-        segment_id = segment[0]
-        final_audio_paths.append(f"glconnect/static/audio/transition_audio_{i}.mp3")
-        final_audio_paths.append(f"glconnect/static/audio/{segment_id}_audio.mp3")
-    final_audio_paths.extend([
-        "glconnect/static/audio/outro_audio.mp3",
-        "glconnect/static/audio/jingle.wav",
-    ])
-    summarized_text_input = " ".join(reporter_scripts)
-
-    # Convert all scripts to audio directly (more reliable than Gemini tool-calling)
-    print("DEBUG: Executing direct TTS phase...")
-    if task_id:
-        try:
-            from glconnect.news_routes import update_task_in_db
-            update_task_in_db(
-                task_id,
-                progress=70,
-                current_step='Converting text segments to speech...',
-                last_heartbeat=datetime.now(),
-            )
-        except Exception:
-            pass
-
-    try:
-        _run_direct_tts_phase(
-            intro_text=intro_text,
-            outro_text=outro_text,
-            transitions=transitions,
-            reporter_segments=reporter_segments,
-            task_id=task_id,
-        )
-    except Exception as exc:
-        print(f"DEBUG: Direct TTS phase failed: {exc}")
-        import traceback
-        traceback.print_exc()
-        trace.stage(
-            "tts",
-            status="failed",
-            backend=_tts_backend,
-            error=_classify_model_error(exc),
-            detail=_clip_trace_text(exc, 240),
-        )
-        return _result_with_pipeline(
-            {
-                "audio_file": None,
-                "summary": f"News generation failed: TTS conversion failed. Root cause: {exc}",
-            },
-            trace,
-        )
-    trace.stage("tts", backend=_tts_backend, segments=len(reporter_segments))
-
-    gc.collect()
-
-    if task_id:
-        try:
-            from glconnect.news_routes import update_task_in_db
-            update_task_in_db(
-                task_id,
-                progress=85,
-                current_step='TTS conversion completed, assembling final audio...',
-                last_heartbeat=datetime.now(),
-            )
-        except Exception:
-            pass
-
-    print("DEBUG: Assembling final broadcast audio...")
-    combine_result = combine_audio_files(final_audio_paths, output_filename="final_news_broadcast.mp3")
-    combined_path = combine_result.get("combined_audio_filepath", "")
-    if not combined_path or str(combined_path).startswith("Error"):
-        trace.stage("assemble", status="failed", error=_clip_trace_text(combined_path, 240))
-        return _result_with_pipeline(
-            {
-                "audio_file": None,
-                "summary": f"News generation failed: audio assembly failed. Root cause: {combined_path}",
-            },
-            trace,
-        )
-    trace.stage("assemble", path=combined_path)
-
-    broadcast_summary = _broadcast_summary(topics, reporter_scripts)
-    if not broadcast_summary.strip():
-        summary_result = summarize_text(summarized_text_input)
-        broadcast_summary = summary_result.get("summary", "")
-    
-    # Force aggressive garbage collection to free memory
-    gc.collect()
-    gc.collect()
-    gc.collect()
-    
-    # Clear only old TTS cache entries to free memory (keep recent ones)
-    global _tts_cache
-    if len(_tts_cache) > 50:  # Only clear if cache is large
-        # Keep only the most recent 20 entries
-        recent_entries = dict(list(_tts_cache.items())[-20:])
-        _tts_cache.clear()
-        _tts_cache.update(recent_entries)
-        print(f"DEBUG: Cleared old TTS cache entries, kept {len(_tts_cache)} recent ones")
-    
-    # Check memory after cleanup
-    try:
-        memory_info = psutil.virtual_memory()
-        print(f"DEBUG: Memory after news generation cleanup - Used: {memory_info.used / 1024 / 1024:.1f}MB, Available: {memory_info.available / 1024 / 1024:.1f}MB, Percent: {memory_info.percent}%")
-    except:
-        pass
-    
-    # The final_output is a string, but we need to return a dict
-    # Extract the audio file path from the filesystem
-    import glob
-    
-    # Check for both patterns: with and without wildcard
-    audio_files = glob.glob("glconnect/static/audio/final_news_broadcast_*.mp3")
-    if not audio_files:
-        # Try the exact filename without wildcard
-        exact_file = "glconnect/static/audio/final_news_broadcast.mp3"
-        if os.path.exists(exact_file):
-            audio_files = [exact_file]
-    
-    # Also check in the current directory (where FFmpeg creates it)
-    if not audio_files:
-        current_dir_files = glob.glob("final_news_broadcast*.mp3")
-        if current_dir_files:
-            audio_files = current_dir_files
-    
-    if audio_files:
-        # Get the most recent audio file
-        latest_audio = max(audio_files, key=os.path.getctime)
-        print(f"DEBUG: Found audio file: {latest_audio}")
-        
-        # Verify the final audio file exists and has content before cleanup
-        if os.path.exists(latest_audio):
-            file_size = os.path.getsize(latest_audio)
-            print(f"DEBUG: Final audio file verified - size: {file_size} bytes")
-            
-            if file_size > 0:
-                # Only clean up AFTER final broadcast is successfully generated and verified
-                try:
-                    cleanup_intermediate_audio_files(latest_audio)
-                    print(f"DEBUG: Cleanup completed after successful final broadcast generation")
-                except Exception as e:
-                    print(f"DEBUG: Cleanup failed (non-critical): {e}")
-            else:
-                print(f"WARNING: Final audio file is empty, skipping cleanup to preserve intermediate files")
-        else:
-            print(f"ERROR: Final audio file not found, skipping cleanup")
-        
-        # Convert to web-accessible path
-        if latest_audio.startswith("glconnect/static/audio/"):
-            web_path = latest_audio.replace("glconnect/static/audio/", "/static/audio/")
-        elif latest_audio.startswith("/usr/src/appdir/glconnect/static/audio/"):
-            web_path = latest_audio.replace("/usr/src/appdir/glconnect/static/audio/", "/static/audio/")
-        else:
-            web_path = f"/static/audio/{os.path.basename(latest_audio)}"
-        
-        print(f"DEBUG: Web-accessible path: {web_path}")
-        return _result_with_pipeline(
-            {
-                "audio_file": web_path,
-                "summary": broadcast_summary,
-                "topics": list(topics),
-                "scripts": persisted_scripts,
-            },
-            trace,
-        )
-    else:
-        print("DEBUG: No audio files found")
-        trace.stage("finalize", status="failed", error="Final audio file was not found")
-        return _result_with_pipeline(
-            {
-                "audio_file": None,
-                "summary": broadcast_summary or "News generation completed but final audio file was not found.",
-                "topics": list(topics),
-            },
-            trace,
-        )
-
 
 
 

@@ -40,8 +40,9 @@ ytdlp_cookies.txt.bak
 ytdlp_cookiesfull.txt
 scripts/fix_ytauto_from_disk.py
 
-# First-time reporter/anchor voice samples for later cloning
+# First-time reporter/anchor voice samples and clone IDs
 /glconnect/static/audio/voice_samples/*.mp3
+/glconnect/static/audio/voice_samples/clones.json
 
 # Combined GRO News video bulletins (generated at runtime)
 /glconnect/static/news_video/*.mp4

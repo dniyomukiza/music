@@ -1,4 +1,5 @@
 import os
+import hmac
 import uuid
 import threading
 import json
@@ -8,7 +9,13 @@ from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from flask_login import login_required, current_user
-from .news_agent import NEWS_GEMINI_MODEL, generate_broadcast, _gemini_generate_text
+from .news_agent import (
+    NEWS_GEMINI_MODEL,
+    generate_broadcast,
+    generate_broadcast_from_bot_copy,
+    parse_bot_news_reports,
+    _gemini_generate_text,
+)
 
 # Create blueprint for news routes
 news_bp = Blueprint('news_bp', __name__)
@@ -2744,6 +2751,135 @@ def generate_video_bulletin_route(task_id):
         'heygen': {'status': 'queued', 'clips': existing_clips, 'final_url': None},
         'bumper_url': NEWS_BUMPER_URL,
     })
+
+
+def _news_bot_ingest_token():
+    return (os.environ.get("NEWS_BOT_INGEST_TOKEN") or "").strip()
+
+
+def _bot_ingest_authorized(req):
+    expected = _news_bot_ingest_token()
+    if not expected:
+        return False
+    auth = (req.headers.get("Authorization") or "").strip()
+    token = ""
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    if not token:
+        token = (req.headers.get("X-News-Bot-Token") or "").strip()
+    if not token:
+        return False
+    return hmac.compare_digest(token, expected)
+
+
+def _create_running_news_task(topics):
+    task_id = str(uuid.uuid4())
+    if not create_task_in_db(task_id, topics):
+        print(f"ERROR: Failed to create task {task_id} in database, falling back to memory")
+    with _tasks_lock:
+        tasks[task_id] = {
+            'status': 'running',
+            'created_at': datetime.now(),
+            'error': None,
+        }
+    return task_id
+
+
+def _store_news_task_outcome(task_id, result):
+    if result and 'error' not in result and result.get('audio_file'):
+        completed_step = 'News generation completed successfully'
+        update_task_in_db(
+            task_id,
+            status='completed',
+            progress=100,
+            current_step=completed_step,
+            result=result,
+            last_heartbeat=datetime.now(),
+        )
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['status'] = 'completed'
+                tasks[task_id]['result'] = result
+                tasks[task_id]['completed_at'] = datetime.now()
+        if result.get('pipeline'):
+            print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} used_fallback={result.get('used_fallback')}")
+        return True
+    error_msg = (
+        result.get('error') or result.get('summary') or 'No audio file was generated'
+        if result else 'No result returned'
+    )
+    update_task_in_db(
+        task_id,
+        status='failed',
+        progress=0,
+        current_step=f'News generation failed: {error_msg}',
+        error=error_msg,
+        result=result,
+        failed_at=datetime.now(),
+        last_heartbeat=datetime.now(),
+    )
+    with _tasks_lock:
+        if task_id in tasks:
+            tasks[task_id]['status'] = 'failed'
+            tasks[task_id]['error'] = error_msg
+            tasks[task_id]['result'] = result
+            tasks[task_id]['failed_at'] = datetime.now()
+    print(f"DEBUG: Task {task_id} marked as failed: {error_msg}")
+    if result and result.get('pipeline'):
+        print(f"PIPELINE_TASK {task_id} outcome={result['pipeline'].get('outcome')} error={error_msg}")
+    return False
+
+
+@news_bp.route('/bot-scripts', methods=['POST'])
+def bot_scripts():
+    """Ingest bot topic + category + script and skip classify / Gemini writing."""
+    if not _news_bot_ingest_token():
+        current_app.logger.error("NEWS_BOT_INGEST_TOKEN is not configured")
+        return jsonify({'error': 'Bot ingest is not configured'}), 503
+    if not _bot_ingest_authorized(request):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    payload = request.get_json(silent=True)
+    reports, parse_error = parse_bot_news_reports(payload)
+    if parse_error:
+        return jsonify({'error': parse_error}), 400
+
+    topics = [row['topic'] for row in reports]
+    source = ((payload or {}).get('source') or 'grok-bot').strip() or 'grok-bot'
+
+    try:
+        from glconnect.news_agent import get_memory_usage
+        memory_percent = get_memory_usage()
+        if memory_percent >= 85:
+            return jsonify({
+                'error': 'Server memory is critically high. Please try again later.',
+                'details': f'Memory usage: {memory_percent:.1f}%',
+            }), 503
+    except Exception:
+        pass
+
+    task_id = _create_running_news_task(topics)
+    print(f"DEBUG: Starting bot-copy news generation for task {task_id} source={source}")
+    try:
+        result = generate_broadcast_from_bot_copy(reports, task_id=task_id, source=source)
+        _store_news_task_outcome(task_id, result)
+    except Exception as exc:
+        print(f"ERROR: Bot-copy news generation failed for task {task_id}: {exc}")
+        update_task_in_db(
+            task_id,
+            status='failed',
+            progress=0,
+            current_step=f'News generation failed: {exc}',
+            error=str(exc),
+            failed_at=datetime.now(),
+            last_heartbeat=datetime.now(),
+        )
+        with _tasks_lock:
+            if task_id in tasks:
+                tasks[task_id]['status'] = 'failed'
+                tasks[task_id]['error'] = str(exc)
+                tasks[task_id]['failed_at'] = datetime.now()
+    return jsonify({'task_id': task_id, 'source': source, 'skipped': ['topic_intake', 'classify', 'scripts']})
 
 
 @news_bp.route('/broadcast', methods=['POST'])

@@ -189,13 +189,15 @@ def _heygen_request(method: str, path: str, api_key: str, json_body=None, params
     return _unwrap(payload) if unwrap else payload
 
 
-_KNOWN_TTS_VOICE_IDS = {
+# Desk → HeyGen voice used for radio narration (same IDs as the video roster).
+NEWS_TTS_VOICE_IDS = {
     "anchor": ANCHOR_VOICE_ID,
     "sports": "Ppvl5CDbTsgbBwVUpdwj",
     "finance": "f8c69e517f424cafaecde32dde57096b",
     "tech": "f38a635bee7a4d1f9b0a654a31d050d2",
     "politics": "42d00d4aac5441279d8536cd6b52c53c",
 }
+_KNOWN_TTS_VOICE_IDS = NEWS_TTS_VOICE_IDS
 _SPEECH_TIMEOUT = (10, 120)
 _SPEECH_MAX_CHARS = 5000
 

@@ -48,6 +48,7 @@ def _load_config():
         "HEYGEN_API_KEY": os.getenv("HEYGEN_API_KEY"),
         "PARALLEL_API_KEY": (os.getenv("PARALLEL_API_KEY") or os.getenv("PARALLEL_KEY") or "").strip() or None,
         "PARALLEL_WEBHOOK_SECRET": (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip() or None,
+        "NEWS_BOT_INGEST_TOKEN": (os.getenv("NEWS_BOT_INGEST_TOKEN") or "").strip() or None,
         "PARALLEL_WEBHOOK_URL": (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip() or None,
         "PARALLEL_MONITOR_MAX_ACTIVE": (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip() or None,
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
@@ -97,6 +98,10 @@ def _load_config():
                     _pws = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_SECRET")
                     if _pws:
                         cfg["PARALLEL_WEBHOOK_SECRET"] = _pws
+                if not cfg.get("NEWS_BOT_INGEST_TOKEN"):
+                    _nbt = _gl_first_nonempty(file_cfg, "NEWS_BOT_INGEST_TOKEN")
+                    if _nbt:
+                        cfg["NEWS_BOT_INGEST_TOKEN"] = _nbt
                 if not cfg.get("PARALLEL_WEBHOOK_URL"):
                     _pwu = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_URL")
                     if _pwu:
@@ -244,6 +249,8 @@ if config.get("PARALLEL_API_KEY") and not (os.getenv("PARALLEL_API_KEY") or "").
     os.environ["PARALLEL_API_KEY"] = config["PARALLEL_API_KEY"]
 if config.get("PARALLEL_WEBHOOK_SECRET") and not (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip():
     os.environ["PARALLEL_WEBHOOK_SECRET"] = config["PARALLEL_WEBHOOK_SECRET"]
+if config.get("NEWS_BOT_INGEST_TOKEN") and not (os.getenv("NEWS_BOT_INGEST_TOKEN") or "").strip():
+    os.environ["NEWS_BOT_INGEST_TOKEN"] = config["NEWS_BOT_INGEST_TOKEN"]
 if config.get("PARALLEL_WEBHOOK_URL") and not (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip():
     os.environ["PARALLEL_WEBHOOK_URL"] = config["PARALLEL_WEBHOOK_URL"]
 if config.get("PARALLEL_MONITOR_MAX_ACTIVE") and not (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip():
