@@ -2830,6 +2830,31 @@ def _store_news_task_outcome(task_id, result):
     return False
 
 
+def _run_bot_scripts_thread(app, reports, task_id, source):
+    """Background worker: narrate/stitch bot-supplied scripts after HTTP accept."""
+    with app.app_context():
+        print(f"DEBUG: Bot-copy news generation thread started for task {task_id} source={source}")
+        try:
+            result = generate_broadcast_from_bot_copy(reports, task_id=task_id, source=source)
+            _store_news_task_outcome(task_id, result)
+        except Exception as exc:
+            print(f"ERROR: Bot-copy news generation failed for task {task_id}: {exc}")
+            update_task_in_db(
+                task_id,
+                status='failed',
+                progress=0,
+                current_step=f'News generation failed: {exc}',
+                error=str(exc),
+                failed_at=datetime.now(),
+                last_heartbeat=datetime.now(),
+            )
+            with _tasks_lock:
+                if task_id in tasks:
+                    tasks[task_id]['status'] = 'failed'
+                    tasks[task_id]['error'] = str(exc)
+                    tasks[task_id]['failed_at'] = datetime.now()
+
+
 @news_bp.route('/bot-scripts', methods=['POST'])
 def bot_scripts():
     """Ingest bot topic + category + script and skip classify / Gemini writing."""
@@ -2859,27 +2884,20 @@ def bot_scripts():
         pass
 
     task_id = _create_running_news_task(topics)
-    print(f"DEBUG: Starting bot-copy news generation for task {task_id} source={source}")
-    try:
-        result = generate_broadcast_from_bot_copy(reports, task_id=task_id, source=source)
-        _store_news_task_outcome(task_id, result)
-    except Exception as exc:
-        print(f"ERROR: Bot-copy news generation failed for task {task_id}: {exc}")
-        update_task_in_db(
-            task_id,
-            status='failed',
-            progress=0,
-            current_step=f'News generation failed: {exc}',
-            error=str(exc),
-            failed_at=datetime.now(),
-            last_heartbeat=datetime.now(),
-        )
-        with _tasks_lock:
-            if task_id in tasks:
-                tasks[task_id]['status'] = 'failed'
-                tasks[task_id]['error'] = str(exc)
-                tasks[task_id]['failed_at'] = datetime.now()
-    return jsonify({'task_id': task_id, 'source': source, 'skipped': ['topic_intake', 'classify', 'scripts']})
+    print(f"DEBUG: Accepted bot-copy news generation for task {task_id} source={source}")
+    app = current_app._get_current_object()
+    threading.Thread(
+        target=_run_bot_scripts_thread,
+        args=(app, reports, task_id, source),
+        daemon=True,
+        name=f"bot-scripts-{task_id[:8]}",
+    ).start()
+    return jsonify({
+        'task_id': task_id,
+        'status': 'accepted',
+        'source': source,
+        'skipped': ['topic_intake', 'classify', 'scripts'],
+    }), 202
 
 
 @news_bp.route('/broadcast', methods=['POST'])
