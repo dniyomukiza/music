@@ -1,0 +1,25 @@
+{
+  "source": "grok-bot",
+  "reporters": [
+    {
+      "topic": "Northern California faces weekend power shutoff risk",
+      "category": "other",
+      "script": "James here. Nearly a dozen Northern California counties face an elevated risk of power shutoffs this weekend as extreme heat and high winds raise wildfire danger. PG and E, which serves more than five point five million electric customers across northern and central California, says public safety power shutoffs are possible Saturday in parts of eight inland counties. Those include El Dorado, Lassen, Nevada, Placer, Plumas, Shasta, Sierra, and Tehama. On Sunday the warning expands to about eleven counties, adding Colusa, Glenn, and Yolo, with monitoring continuing into Monday for some of those areas. The utility points to strong winds, low humidity, and critically dry vegetation. Forecasts call for gusts that could reach about forty five to fifty five miles per hour in places. PG and E says it will make final shutoff decisions based on local conditions and is urging customers to prepare for possible outages. I am James, for GLC News"
+    },
+    {
+      "topic": "Anthropic says China and Russia misused Claude for cyberattacks",
+      "category": "tech",
+      "script": "Mark here. Anthropic says China and Russia attempted to use its Claude AI system for cyberattacks, weapons design, propaganda, and mass surveillance, according to Reuters. In a September threat intelligence report covering activity disrupted from December twenty twenty five through August twenty twenty six, Anthropic said it shut down alleged malicious uses of Claude across cyber operations, influence campaigns, surveillance, and conventional weapons development. Reuters said the company detailed a suspected Russia linked cyber espionage campaign and efforts by Chinese AI firms it accused of extracting and replicating Claude capabilities. Anthropic said AI was used not only to assist tasks but to orchestrate large portions of some attacks. The company says it has strengthened safeguards and shared intelligence with authorities where appropriate. I am Mark, for GLC News"
+    },
+    {
+      "topic": "SpaceX says next Starship flight will generate revenue",
+      "category": "finance",
+      "script": "Isabella here. SpaceX says its next Starship flight will be revenue generating, Seeking Alpha reported, citing chief financial officer Bret Johnsen at the Goldman Sachs Communacopia and Technology Conference. Johnsen said Flight fourteen later this month is set to carry production Starlink Version three satellites to orbit, marking a shift from demonstration flights toward a production cadence. He said the company is excited to move into flying production V three Starlink satellites after recent heat shield and flight learnings. Coverage of the same remarks said the mission is planned as Starship's first revenue flight, with Starlink V three as the commercial payload. SpaceX has framed the hop as part of building a steadier Starship cadence tied to constellation capacity. I am Isabella, for GLC News"
+    },
+    {
+      "topic": "Newsom signs two California AI safety audit bills",
+      "category": "politics",
+      "script": "Edith here. California Governor Gavin Newsom has signed two AI safety bills that regulate outside audits of artificial intelligence systems, with backing from Anthropic and OpenAI, according to the California Governor's Office. Senate Bill eight thirteen establishes a first in the nation framework for independent verification organizations that can assess AI systems and models for compliance with state law. Assembly Bill fourteen oh five creates a state registry for AI auditors and sets standards for their independence, transparency, and integrity. The Governor's Office framed the package as strengthening California's safeguards for safe, transparent, and accountable AI. Anthropic supported the measures, and OpenAI also endorsed them ahead of the signing. I am Edith, for GLC News"
+    }
+  ]
+}
