@@ -37,7 +37,7 @@ jobs:
             echo "::error::Add repo secret NEWS_BOT_INGEST_TOKEN. The bot does not hold this value."
             exit 1
           fi
-          URL="${NEWS_INGEST_URL:-https://glc.cool/routes2/news/bot-scripts}"
+          URL="${NEWS_INGEST_URL:-https://ndotonic.com/routes2/news/bot-scripts}"
           python3 - "$URL" <<'PY'
           import json
           import os
