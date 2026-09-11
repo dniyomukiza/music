@@ -1,4 +1,5 @@
 {
+  "source": "grok-bot",
   "reporters": [
     {
       "category": "other",
@@ -20,6 +21,5 @@
       "script": "Edith here. California Governor Gavin Newsom has signed two AI safety bills that regulate outside audits of artificial intelligence systems, with backing from Anthropic and OpenAI, according to the California Governor's Office. Senate Bill eight thirteen establishes a first in the nation framework for independent verification organizations that can assess AI systems and models for compliance with state law. Assembly Bill fourteen oh five creates a state registry for AI auditors and sets standards for their independence, transparency, and integrity. The Governor's Office framed the package as strengthening California's safeguards for safe, transparent, and accountable AI. Anthropic supported the measures, and OpenAI also endorsed them ahead of the signing. I am Edith, for GLC News",
       "topic": "Newsom signs two California AI safety audit bills"
     }
-  ],
-  "source": "grok-bot"
+  ]
 }
