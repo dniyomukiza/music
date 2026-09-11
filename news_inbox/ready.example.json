@@ -1,0 +1,10 @@
+{
+  "source": "grok-bot",
+  "reporters": [
+    {
+      "topic": "Lakers close out the series",
+      "category": "sports",
+      "script": "Ernest here. The Lakers finished it in six. Role players hit the late shots, and the building emptied with a clinch that had been two nights in the making. I am Ernest, for GLC News"
+    }
+  ]
+}

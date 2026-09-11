@@ -86,9 +86,9 @@ def main():
     if not campaign_goal_reached(funded):
         failures.append('funded campaign should report goal reached')
 
-    allowed, _ = campaign_open_for_contributions(funded)
-    if not allowed:
-        failures.append('funded at-goal campaign should still accept overfunding before deadline')
+    allowed, reason = campaign_open_for_contributions(funded)
+    if allowed or not reason or 'funding goal' not in reason.lower():
+        failures.append('funded at-goal campaign should block new contributions before deadline')
 
     funded_over = MockCampaign(
         start_date=start,
@@ -99,9 +99,9 @@ def main():
     if not campaign_goal_reached(funded_over):
         failures.append('overfunded campaign should report goal reached')
 
-    allowed, _ = campaign_open_for_contributions(funded_over)
-    if not allowed:
-        failures.append('overfunded campaign should still accept contributions before deadline')
+    allowed, reason = campaign_open_for_contributions(funded_over)
+    if allowed or not reason or 'funding goal' not in reason.lower():
+        failures.append('overfunded campaign should block new contributions before deadline')
 
     if '2 years' not in CAMPAIGN_GOAL_FAILURE_REASON.lower():
         failures.append('failure reason should mention 2 years')

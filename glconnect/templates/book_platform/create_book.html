@@ -50,9 +50,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.earnings_dashboard') }}">Earnings</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('book_platform.create_book') }}" aria-current="page">Create book</a>
-                    </li>
                     {% if current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('book_platform.admin_hub') }}">Admin</a>
@@ -83,7 +80,6 @@
             <div class="col-md-8 col-lg-6">
                 <div class="card">
                     <div class="card-header text-center">
-                        <h3><i class="fas fa-pen"></i> Write in Ink Studio</h3>
                         <p class="text-muted">Optional, for authors who want to draft chapter by chapter here instead of uploading a finished file.</p>
                     </div>
                     <div class="card-body">
@@ -100,8 +96,9 @@
                             </div>
 
                             <div class="mb-3">
-                                <h6 class="text-secondary">Cover for the marketplace</h6>
-                                {% with cover_uid='create', use_wtforms=false %}
+                                <h6 class="text-secondary mb-1">Book cover <span class="text-muted fw-normal">(optional for drafts)</span></h6>
+                                <p class="small text-muted mb-2 mb-md-3">You can upload or generate a cover now, or add it when you prepare your release.</p>
+                                {% with cover_uid='create', use_wtforms=false, suppress_cover_intro=true %}
                                 {% include 'book_platform/includes/_cover_upload_or_ai.html' %}
                                 {% endwith %}
                             </div>
@@ -109,11 +106,10 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="genre" class="form-label">Category <span class="text-danger">*</span></label>
-                                        {% with required=true %}
-                                        {% include 'book_platform/includes/_ink_studio_genre_select.html' %}
-                                        {% endwith %}
-                                        <div class="form-text">Nonfiction only — stories drawn from real life and lived experience.</div>
+                                        <label class="form-label">Category</label>
+                                        <input type="hidden" id="genre" name="genre" value="nonfiction">
+                                        <p class="form-control-plaintext text-white mb-0 fw-semibold">Nonfiction</p>
+                                        <div class="form-text">All books on Ndotonic are nonfiction — real stories and lived experience.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -181,7 +177,8 @@
                                             <option value="ms">Malay</option>
                                             <option value="tl">Tagalog</option>
                                             <option value="haw">Hawaiian</option>
-                                            <option value="other">Other</option>
+                                            <option value="rw">Kinyarwanda</option>
+                                            <option value="rn">Kirundi</option>
                                         </select>
                                         <small class="form-text text-muted">Select the primary language of your book</small>
                                     </div>
@@ -209,13 +206,9 @@
                                 <strong>Already have a manuscript?</strong> Most authors upload a finished file. Use <a href="{{ url_for('book_platform.list_book') }}" aria-label="List your book on the marketplace">List your book</a> with <strong>EPUB or DOCX</strong> for the best reading experience. This page is for writing section-by-section inside Ink Studio instead.
                             </div>
 
-                            <div class="d-grid gap-2 ink-create-form-actions">
-                                <button type="submit" class="btn btn-ink-gold">
-                                    <i class="fas fa-pen" aria-hidden="true"></i> Create project &amp; start writing
-                                </button>
-                                <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-ink-ghost">
-                                    <i class="fas fa-times" aria-hidden="true"></i> Cancel
-                                </a>
+                            <div class="d-flex flex-wrap gap-2 ink-create-form-actions">
+                                <button type="submit" class="btn btn-sm btn-ink-gold ink-create-action-btn">Start project</button>
+                                <a href="{{ url_for('book_platform.dashboard') }}" class="btn btn-sm btn-ink-ghost ink-create-action-btn">Cancel</a>
                             </div>
                         </form>
                     </div>
@@ -330,21 +323,34 @@
             function bindCoverSourceMode(uid, useAiEl, onAiOff) {
                 const uploadPanel = document.getElementById(uid + 'CoverUploadPanel');
                 const aiPanel = document.getElementById(uid + 'CoverAiPanel');
+                const aiLabel = document.querySelector('label[for="' + uid + 'CoverModeAi"]');
+                const backUpload = document.getElementById(uid + 'CoverBackUpload');
+                const uploadRadio = document.getElementById(uid + 'CoverModeUpload');
+                const aiRadio = document.getElementById(uid + 'CoverModeAi');
+
+                function applyMode(isAi) {
+                    if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
+                    if (aiLabel) aiLabel.classList.toggle('d-none', isAi);
+                    if (backUpload) backUpload.classList.toggle('d-none', !isAi);
+                    if (useAiEl) useAiEl.checked = isAi;
+                    if (!isAi && onAiOff) onAiOff();
+                }
+
                 document.querySelectorAll('input[name="' + uid + '_cover_mode"]').forEach(function (radio) {
                     radio.addEventListener('change', function () {
                         if (!this.checked) return;
-                        const isAi = this.value === 'ai';
-                        if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
-                        if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
-                        if (useAiEl) useAiEl.checked = isAi;
-                        if (!isAi && onAiOff) onAiOff();
+                        applyMode(this.value === 'ai');
                     });
                 });
+                if (backUpload && uploadRadio) {
+                    backUpload.addEventListener('click', function () {
+                        uploadRadio.checked = true;
+                        if (aiRadio) aiRadio.checked = false;
+                        applyMode(false);
+                    });
+                }
                 const checked = document.querySelector('input[name="' + uid + '_cover_mode"]:checked');
-                const isAi = checked && checked.value === 'ai';
-                if (uploadPanel) uploadPanel.classList.toggle('d-none', isAi);
-                if (aiPanel) aiPanel.classList.toggle('d-none', !isAi);
-                if (useAiEl) useAiEl.checked = !!isAi;
+                applyMode(checked && checked.value === 'ai');
             }
 
             bindCoverSourceMode('create', useAi, function () {
@@ -401,11 +407,6 @@
             if (!genreVal) {
                 alert('Please select a nonfiction category for your book');
                 if (genreEl) genreEl.focus();
-                return;
-            }
-
-            if (!coverFile && !ai) {
-                alert('Choose an image file, or switch to Generate with AI and create a preview.');
                 return;
             }
 

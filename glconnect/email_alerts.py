@@ -1,14 +1,15 @@
 """
 Email Alert System for Application Monitoring
-Sends email alerts via Mailtrap for critical events and system monitoring
+Sends email alerts via Resend for critical events and system monitoring
 """
 
 import os
 import psutil
 import traceback
 from datetime import datetime
-from mailtrap import MailtrapClient, Mail, Address
 from typing import Optional, Dict, List
+
+from glconnect.email_service import get_inbound_receiver, is_mail_configured, send_email
 
 
 class EmailAlertService:
@@ -16,35 +17,28 @@ class EmailAlertService:
     
     def __init__(self):
         self.sender = os.getenv("SENDER_MAIL", "info@ndotonic.com")
-        self.receiver = os.getenv("RECEIVER_MAIL", "info@ndotonic.com")
-        self.api_key = os.getenv("MAIL_TRAP")
-        
-        if not self.api_key:
-            print("WARNING: MAIL_TRAP API key not set. Email alerts will be disabled.")
-            self.enabled = False
-        else:
-            self.enabled = True
-            self.client = MailtrapClient(token=self.api_key)
+        self.receiver = get_inbound_receiver()
+        self.enabled = is_mail_configured()
+        if not self.enabled:
+            print("WARNING: RESEND_API_KEY is not set. Email alerts will be disabled.")
     
     def _send_email(self, subject: str, body: str, category: str = "System Alert", priority: str = "normal"):
-        """Internal method to send email via Mailtrap"""
+        """Internal method to send email via Resend"""
         if not self.enabled:
             print(f"Email alert disabled. Would send: {subject}")
             return False
         
-        try:
-            mail = Mail(
-                sender=Address(email=self.sender, name="Ndotonic System Monitor"),
-                to=[Address(email=self.receiver)],
-                subject=subject,
-                text=body,
-                category=category
-            )
-            self.client.send(mail)
-            return True
-        except Exception as e:
-            print(f"ERROR: Failed to send email alert: {e}")
-            return False
+        sent = send_email(
+            to=self.receiver,
+            subject=subject,
+            text=body,
+            from_email=self.sender,
+            from_name="Ndotonic System Monitor",
+            tags=[category],
+        )
+        if not sent:
+            print(f"ERROR: Failed to send email alert: {subject}")
+        return sent
     
     # ==================== CRITICAL ALERTS ====================
     

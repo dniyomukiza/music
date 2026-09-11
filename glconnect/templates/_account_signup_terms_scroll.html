@@ -5,21 +5,23 @@
      tabindex="0"
      role="region"
      aria-label="Account Terms and Privacy Policy">
-    <p class="mb-2 fw-semibold">Account Terms &amp; Privacy (v{{ account_terms_version|default('1.0') }})</p>
+    <p class="mb-2 fw-semibold"><a href="{{ url_for('routes.policy_detail', policy_key='terms') }}">Account Terms</a> &amp; <a href="{{ url_for('routes.policy_detail', policy_key='privacy') }}">Privacy Policy</a> (v{{ account_terms_version|default('1.0') }})</p>
 
-    <p class="mb-2"><strong>Who we are.</strong> Ndotonic (“we,” “us,” “the platform”) operates Ink Studio, the marketplace, campaigns, and related creator tools. By creating an account, you enter a contract with us as an individual user—not as our employee, agent, or partner.</p>
+    <p class="mb-2"><strong>Who we are.</strong> Ndotonic (“we,” “us,” “the platform”) operates Ink Studio, the marketplace, campaigns, and related creator tools. By creating an account, you enter a contract with us as an individual user, not as our employee, agent, or partner.</p>
 
     <p class="mb-2"><strong>Your account.</strong> You must provide accurate registration information and keep your credentials secure. You are responsible for all activity under your account. Notify us promptly if you suspect unauthorized access. We may suspend or terminate accounts for abuse, fraud, or policy violations.</p>
 
-    <p class="mb-2"><strong>Age.</strong> You represent that you are at least <strong>18 years old</strong>, or the age of majority where you live, and legally able to enter this agreement. We do not knowingly collect personal data from children below applicable minimum ages.</p>
+    <p class="mb-2"><strong>Age.</strong> You represent that you are at least <strong>18 years old</strong>, or the age of majority where you live (whichever is higher), and legally able to enter this agreement. We do not knowingly collect personal data from children under 13.</p>
 
-    <p class="mb-2"><strong>Privacy — what we collect.</strong> We collect information you provide (name, email, username, role, profile and author card details, payment identifiers via Stripe, content you upload, and communications with support) and technical data needed to operate the service (device/browser data, logs, cookies or similar technologies, and security signals).</p>
+    <p class="mb-2"><strong>Privacy: what we collect.</strong> We collect information you provide (name, email, username, role, profile information, content you upload, and communications with support) and technical data needed to operate the service (device/browser data, logs, cookies or similar technologies, and security signals).</p>
 
-    <p class="mb-2"><strong>Privacy — how we use data.</strong> We use your data to create and secure your account, deliver features you request (publishing, purchases, payouts, collaboration, AI tools), process payments, send service and security messages, comply with law, and improve the platform. We do <strong>not</strong> sell your personal information as a standalone product.</p>
+    <p class="mb-2"><strong>Payments and Stripe.</strong> Checkout, author payouts, and payout account setup are handled by <strong>Stripe</strong>. When you pay or connect a bank account for earnings, you enter card or bank details directly with Stripe. <strong>Ndotonic does not collect, store, or have access to</strong> your full card number, security code, or bank account credentials. We may receive only limited information from Stripe (such as the last four digits of a card, payout account status, or transaction IDs) needed to complete purchases and payouts on the platform.</p>
 
-    <p class="mb-2"><strong>Privacy — what is public vs private.</strong> Your <strong>email address and payment details are not shown publicly</strong> on marketplace listings. Information you choose to publish (pen name, bio, profile photo, book listings, reviews, comments, campaign pages, or media you upload) may be visible to other users and the public. You control much of what you publish; publish only what you are comfortable sharing.</p>
+    <p class="mb-2"><strong>Privacy: how we use data.</strong> We use your data to create and secure your account, deliver features you request (publishing, purchases, payouts, collaboration, AI tools), facilitate payments through Stripe, send service and security messages, comply with law, and improve the platform. We do <strong>not</strong> sell your personal information as a standalone product.</p>
 
-    <p class="mb-2"><strong>Third-party services.</strong> We use service providers (e.g., payment processing, email delivery, hosting, analytics, and AI model providers) who process data on our behalf under their own terms and policies. Your use of AI features may involve sending prompts or content to third-party APIs. You consent to that processing when you use those features.</p>
+    <p class="mb-2"><strong>Privacy: what is public vs private.</strong> Your <strong>email address is not shown publicly</strong> on marketplace listings. Payment and bank details are handled by Stripe; we do not store or access your full card or bank information. Information you choose to publish (pen name, bio, profile photo, book listings, reviews, comments, campaign pages, or media you upload) may be visible to other users and the public. You control much of what you publish; publish only what you are comfortable sharing.</p>
+
+    <p class="mb-2"><strong>Third-party services.</strong> We use service providers who process data on our behalf under their own terms and policies, including <strong>Stripe</strong> for payments and payouts, plus email delivery, hosting, analytics, and AI model providers. Your use of AI features may involve sending prompts or content to third-party APIs. You consent to that processing when you use those features.</p>
 
     <p class="mb-2"><strong>Your content and others’ privacy.</strong> You must not upload, publish, or generate content that unlawfully discloses another person’s private information (including contact details, financial data, or sensitive personal data) without lawful basis and consent. You are solely responsible for privacy and publicity rights in content you submit.</p>
 
@@ -27,7 +29,9 @@
 
     <p class="mb-2"><strong>Marketing.</strong> We may send transactional and service-related messages. Optional marketing messages, if offered, require your separate opt-in where required by law. You may opt out of non-essential marketing as described in those messages.</p>
 
-    <p class="mb-2"><strong>Data retention and deletion.</strong> We retain account and transaction records as needed to provide the service, meet legal obligations, resolve disputes, and enforce agreements. You may request account closure; some data may be retained where required by law or legitimate business needs (e.g., completed purchase records).</p>
+    <p class="mb-2"><strong>Data retention, access, and deletion.</strong> We retain account and transaction records as needed to provide the service, meet legal obligations, resolve disputes, and enforce agreements. You may request access to, correction of, or deletion of personal data, or account closure, by contacting Support from the email on your account. Some records may be retained where required by law or legitimate business needs (e.g., completed purchase and tax records). We will verify requests and respond as applicable law requires.</p>
+
+    <p class="mb-2"><strong>Subprocessors.</strong> Providers that process data for payments (Stripe), hosting, email, and optional AI features (including Google Gemini and Google Cloud Text-to-Speech) are listed in the Privacy Policy.</p>
 
     <p class="mb-2"><strong>International users.</strong> If you access the platform from outside our primary operating region, you consent to processing and storage in jurisdictions where we and our providers operate, which may have different data protection rules than your home country, to the extent permitted by law.</p>
 

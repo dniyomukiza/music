@@ -7,8 +7,14 @@
 <body>
     {% include 'messages.html' %}
     <p>Almost there, we’ve sent a message to your email with a link to confirm your account.</p>
-    <p>Open the email and tap <strong>confirm</strong> (or the link in the message) to finish signing up.</p>
-    <p class="text-muted small">Nothing after a few minutes? Check your spam or junk folder. If you still don’t see it, try registering again with the same email or contact support, we’re happy to help.</p>    {% include 'includes/_ndotonic_mission_footer.html' %}
+    <p>Open the email and tap <strong>confirm</strong> (or the link in the message) before signing in or using the platform.</p>
+    <p class="text-muted small">Nothing after a few minutes? Check spam or junk, then request a fresh link below. Confirmation links expire after one hour.</p>
+    <form method="POST" action="{{ url_for('routes1.resend_confirmation') }}" class="mt-3">
+        <label for="confirmationEmail" class="form-label">Email address</label>
+        <input type="email" class="form-control" id="confirmationEmail" name="email" value="{{ confirmation_email or '' }}" required autocomplete="email">
+        <button type="submit" class="btn btn-outline-primary mt-2">Resend confirmation email</button>
+    </form>
+    {% include 'includes/_ndotonic_mission_footer.html' %}
 
 </body>
 </html>

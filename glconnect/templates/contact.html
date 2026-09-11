@@ -16,7 +16,7 @@
     <div class="contact-page-wrap">
         <header class="contact-header">
             <a href="{{ url_for('routes.index') }}" class="contact-header-brand">
-                <img src="{{ url_for('static', filename='images/ndotonic.png') }}" alt="Ndotonic" width="40" height="40">
+                <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" class="contact-header-brand-logo">
             </a>
             <a href="{{ url_for('routes.index') }}" class="contact-header-back">← Home</a>
         </header>
@@ -79,7 +79,7 @@
                             {{ form.submit(class="btn contact-submit", value="Send message") }}
                         </div>
                     </form>
-                    <p class="contact-mail-fallback">Prefer email? Write to <a href="mailto:info@ndotonic.com">info@ndotonic.com</a> and we’ll reply as soon as we can.</p>
+                    <p class="contact-mail-fallback">Prefer email? Write to <a href="mailto:info@ndotonic.com">info@ndotonic.com</a> or call <a href="tel:+16282701430">628-270-1430</a> and we’ll reply as soon as we can.</p>
                 </div>
 
                 <p class="contact-back"><a href="{{ url_for('routes.index') }}">Back to homepage</a></p>

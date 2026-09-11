@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Automated Monitoring and Alerting Script
-Periodically checks system health and sends email alerts via Mailtrap
+Periodically checks system health and sends email alerts via Resend
 """
 
 import time

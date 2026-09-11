@@ -84,6 +84,11 @@ def _audiobook_listed(book: Any) -> bool:
     )
 
 
+def audiobook_listed(book: Any) -> bool:
+    """Public alias for marketplace and purchase checks."""
+    return _audiobook_listed(book)
+
+
 def marketplace_listed_format_amounts(book: Any) -> List[float]:
     """
     Explicit list prices for each marketplace format (0.0 = author set free).
@@ -141,6 +146,7 @@ def _marketplace_stats_row_as_book(row: Any) -> Any:
 
     book = _RowBook()
     for attr in (
+        "id",
         "price",
         "digital_book_published",
         "digital_file_path",
@@ -181,6 +187,11 @@ def ebook_listed(book: Any) -> bool:
     return False
 
 
+def marketplace_buyable(book: Any) -> bool:
+    """True when at least one marketplace format can be purchased."""
+    return bool(ebook_listed(book) or _audiobook_listed(book) or print_listed(book))
+
+
 def print_shipping_amount(book: Any) -> float:
     return max(0.0, float(getattr(book, "print_shipping_price", None) or 0))
 
@@ -195,14 +206,14 @@ def base_price_for_format(book: Any, purchase_format: str) -> float:
     if pt == "bundle":
         digital = float(getattr(book, "price", None) or 0)
         audio = float(getattr(book, "audiobook_price", None) or 0)
-        return (digital + audio) * 0.8
+        return digital + audio
     if pt == "print":
         return float(getattr(book, "print_price", None) or 0)
     return float(getattr(book, "price", None) or 0)
 
 
 def combo_base_price(book: Any, formats: Iterable[str]) -> float:
-    """Subtotal for selected formats (bundle discount when ebook + audiobook both chosen)."""
+    """Subtotal for selected formats (ebook + audiobook use their combined prices)."""
     fmts = parse_selected_formats(formats)
     total = 0.0
     has_digital = "digital" in fmts
@@ -248,12 +259,13 @@ def revenue_split_for_purchase(
     """
     Returns (base_price, extra_amount, royalty_amount, platform_fee, platform_fee_percent_applied).
     Extra amount (e.g. shipping, tip) goes 100% to author; platform fee only on base list portions.
-    Per-format fee overrides (from cross format coupons) apply via author_listing_coupon_policy.
+
+    Author royalties (list price): ebook/print 90%, audiobook 70%, bundle of 2+ 80%.
+    Remainder is platform maintenance. Coupon overrides may lower single-format fees.
     """
     from glconnect.author_listing_coupon_policy import (
         effective_platform_fee_percent,
         royalty_fraction_for_fee_percent,
-        _format_base_portions,
     )
 
     pt = normalize_purchase_format(purchase_format)
@@ -262,19 +274,24 @@ def revenue_split_for_purchase(
 
     if pt.startswith("combo:") or pt == "bundle":
         fmts = formats_from_purchase_format(pt)
-        portions = _format_base_portions(book, fmts)
-        platform_fee = 0.0
-        base_royalty = 0.0
-        for fmt_key, portion in portions.items():
-            if portion <= 0:
-                continue
-            fee_pct = effective_platform_fee_percent(book, fmt_key)
-            frac = royalty_fraction_for_fee_percent(fee_pct)
-            platform_fee += portion * (fee_pct / 100.0)
-            base_royalty += portion * frac
-        fee_pct_applied = (
-            round(platform_fee / base_price * 100, 2) if base_price > 0 else effective_platform_fee_percent(book, pt)
-        )
+        if len(fmts) >= 2:
+            # Flat 20% platform / 80% author on the combo list-price base
+            fee_pct_applied = effective_platform_fee_percent(book, pt)
+            royalty_fraction = royalty_fraction_for_fee_percent(fee_pct_applied)
+            base_royalty = base_price * royalty_fraction
+            platform_fee = base_price - base_royalty
+        elif len(fmts) == 1:
+            fee_pct_applied = effective_platform_fee_percent(book, fmts[0])
+            if royalty_percentage is None:
+                royalty_fraction = royalty_fraction_for_fee_percent(fee_pct_applied)
+            else:
+                royalty_fraction = float(royalty_percentage)
+            base_royalty = base_price * royalty_fraction
+            platform_fee = base_price - base_royalty
+        else:
+            fee_pct_applied = effective_platform_fee_percent(book, "digital")
+            base_royalty = 0.0
+            platform_fee = 0.0
     else:
         fee_pct_applied = effective_platform_fee_percent(book, pt)
         if royalty_percentage is None:

@@ -130,12 +130,12 @@
                     {% for err in form.email.errors %}<p class="errors">{{ err }}</p>{% endfor %}
                 </div>
                 <div class="form-group">
-                    <label for="portfolio_url">Portfolio or LinkedIn (optional)</label>
-                    {{ form.portfolio_url(id="portfolio_url") }}
-                    {% for err in form.portfolio_url.errors %}<p class="errors">{{ err }}</p>{% endfor %}
+                    <label for="phone">Phone number</label>
+                    {{ form.phone(id="phone") }}
+                    {% for err in form.phone.errors %}<p class="errors">{{ err }}</p>{% endfor %}
                 </div>
                 <div class="form-group">
-                    <label for="message">Cover letter / message</label>
+                    <label for="message">Message</label>
                     {{ form.message(id="message") }}
                     {% for err in form.message.errors %}<p class="errors">{{ err }}</p>{% endfor %}
                 </div>

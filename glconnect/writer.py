@@ -122,6 +122,20 @@ def delete_profile():
         flash("Profile not found.", "warning")
         return redirect(url_for('writer.writer_dashboard'))
 
+    from glconnect.data_lifecycle import is_live_data_mode
+    if is_live_data_mode():
+        from glconnect.book_platform_models import BookPlatformUser, BookProject
+        bp_user = BookPlatformUser.query.filter_by(user_id=current_user.user_id).first()
+        has_ink_books = bool(
+            bp_user and BookProject.query.filter_by(author_id=bp_user.id).first()
+        )
+        if Book.query.filter_by(writer_id=writer.writer_id).first() or has_ink_books:
+            flash(
+                "This profile has published or marketplace-linked work. It cannot be deleted in live mode; request account anonymization instead.",
+                "error",
+            )
+            return redirect(url_for('writer.writer_dashboard'))
+
     books = Book.query.filter_by(writer_id=writer.writer_id).all()
     for book in books:
         if book.cover_image and os.path.exists(os.path.join(ABS_UPLOAD_FOLDER, book.cover_image.split('/')[-1])):

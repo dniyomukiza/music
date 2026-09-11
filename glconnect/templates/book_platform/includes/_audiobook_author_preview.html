@@ -1,0 +1,98 @@
+{# Full author preview: multi-chapter tracklist or single merged MP3. #}
+{% set tracklist = audiobook_chapter_tracklist|default([]) %}
+{% if tracklist|length > 1 %}
+<div class="ink-audiobook-author-preview" data-preview-root>
+    <p class="small text-muted mb-2">
+        <i class="fas fa-list-ol me-1" aria-hidden="true"></i>
+        {{ tracklist|length }} audio sections ({{ (book.audiobook_duration // 60) if book.audiobook_duration else 0 }} min total).
+        The player below starts with section 1; pick any section or open the full player.
+    </p>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a href="{{ url_for('book_platform.audiobook_player', book_id=book.id) }}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-play-circle me-1" aria-hidden="true"></i>Open full audiobook player
+        </a>
+        <a href="{{ url_for('book_platform.download_audio_book', book_id=book.id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-download me-1" aria-hidden="true"></i>Download all sections
+        </a>
+    </div>
+    <p class="form-label mb-1"><i class="fas fa-headphones me-2" aria-hidden="true"></i><span data-now-playing-label>Preview: {{ tracklist[0].title }}</span></p>
+    <audio controls class="w-100 mb-3" style="max-width: 100%;" data-preview-audio preload="metadata" playsinline
+           src="{{ tracklist[0].src }}">
+        Your browser does not support the audio element.
+    </audio>
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="authorAudiobookAutoAdvance{{ book.id }}" checked data-auto-advance>
+        <label class="form-check-label small" for="authorAudiobookAutoAdvance{{ book.id }}">Auto-play next section</label>
+    </div>
+    <ul class="list-group list-group-flush border rounded overflow-hidden" data-chapter-list>
+        {% for ch in tracklist %}
+        <li class="list-group-item list-group-item-dark py-2 px-3 d-flex justify-content-between align-items-center{% if loop.first %} active{% endif %}"
+            data-chapter-item data-src="{{ ch.src }}" data-title="{{ ch.title|e }}">
+            <button type="button" class="btn btn-link btn-sm text-start text-decoration-none p-0 flex-grow-1 ink-audiobook-chapter-btn"
+                    data-chapter-play>
+                <span class="text-muted me-2">{{ loop.index }}.</span>{{ ch.title }}
+            </button>
+            <span class="small text-muted ms-2 text-nowrap">
+                {% if ch.seconds %}{{ (ch.seconds // 60) }}:{{ '%02d'|format(ch.seconds % 60) }}{% else %}—{% endif %}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% elif tracklist|length == 1 %}
+<div class="mb-3">
+    <label class="form-label"><i class="fas fa-headphones me-2" aria-hidden="true"></i>Preview Audiobook:</label>
+    <p class="small text-muted mb-2">{{ tracklist[0].title }}</p>
+    <audio controls class="w-100" style="max-width: 100%;" preload="metadata" playsinline src="{{ tracklist[0].src }}">
+        Your browser does not support the audio element.
+    </audio>
+</div>
+{% elif book.has_audiobook %}
+<div class="mb-3">
+    <label class="form-label"><i class="fas fa-headphones me-2" aria-hidden="true"></i>Preview Audiobook:</label>
+    <audio controls class="w-100" style="max-width: 100%;" preload="metadata" playsinline>
+        <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    document.querySelectorAll('[data-preview-root]').forEach(function (root) {
+        if (root.dataset.previewBound) return;
+        root.dataset.previewBound = '1';
+        var audio = root.querySelector('[data-preview-audio]');
+        var items = Array.prototype.slice.call(root.querySelectorAll('[data-chapter-item]'));
+        var label = root.querySelector('[data-now-playing-label]');
+        var autoAdvance = root.querySelector('[data-auto-advance]');
+        if (!audio || !items.length) return;
+
+        function playItem(item, autoplay) {
+            items.forEach(function (el) { el.classList.remove('active'); });
+            item.classList.add('active');
+            audio.src = item.getAttribute('data-src');
+            if (label) {
+                label.textContent = 'Preview: ' + (item.getAttribute('data-title') || 'Section');
+            }
+            if (autoplay !== false) {
+                audio.play().catch(function () {});
+            }
+        }
+
+        items.forEach(function (item) {
+            var btn = item.querySelector('[data-chapter-play]');
+            if (!btn) return;
+            btn.addEventListener('click', function () { playItem(item); });
+        });
+
+        audio.addEventListener('ended', function () {
+            if (!autoAdvance || !autoAdvance.checked) return;
+            var idx = items.findIndex(function (el) { return el.classList.contains('active'); });
+            if (idx >= 0 && idx < items.length - 1) {
+                playItem(items[idx + 1]);
+            }
+        });
+    });
+})();
+</script>
