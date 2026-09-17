@@ -1,6 +1,6 @@
 # Deploy to server on push to enhancements (production branch).
-# This workflow only: pull, start Compose, succeed or fail. It does not roll back,
-# notify, or read runtime Compose logs.
+# This workflow: pull, start Compose, succeed or fail, then notify Grok Bot (Tech Lead Deploy webhook).
+# It does not roll back or read runtime Compose logs.
 #   Patch (Grok Bot): failed run → notify, approved fix, or roll back to last green.
 #   Runtimewatch (Grok Bot): Compose logs after a green deploy.
 # Fast deploy by default: pull + restart (code bind-mounted). Full Docker rebuild only when
@@ -75,3 +75,28 @@ jobs:
 
       - name: Done
         run: echo "Deploy finished."
+
+      # Wakes Tech Lead's Deploy webhook routine (Grok Bot) on every run, green or red.
+      - name: Notify Grok Bot (deploy webhook)
+        if: always()
+        continue-on-error: true
+        env:
+          GROK_DEPLOY_WEBHOOK_URL: ${{ secrets.GROK_DEPLOY_WEBHOOK_URL }}
+          GROK_DEPLOY_WEBHOOK_KEY: ${{ secrets.GROK_DEPLOY_WEBHOOK_KEY }}
+        run: |
+          # Auth: Authorization: Bearer <GROK_DEPLOY_WEBHOOK_KEY> (Grok Bot sender key).
+          if [ -z "$GROK_DEPLOY_WEBHOOK_URL" ] || [ -z "$GROK_DEPLOY_WEBHOOK_KEY" ]; then
+            echo "Grok deploy webhook secrets not configured; skipping notify."
+            exit 0
+          fi
+          payload=$(jq -n \
+            --arg status "${{ job.status }}" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg head_sha "${{ github.sha }}" \
+            --arg workflow "${{ github.workflow }}" \
+            --arg branch "${{ github.ref_name }}" \
+            '{status: $status, run_url: $run_url, head_sha: $head_sha, workflow: $workflow, branch: $branch}')
+          curl -fsS -X POST "$GROK_DEPLOY_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GROK_DEPLOY_WEBHOOK_KEY" \
+            -d "$payload"
