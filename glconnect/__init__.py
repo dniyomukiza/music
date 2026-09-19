@@ -239,6 +239,8 @@ config, STRIPE_TEST_KEYS_FROM_GLCONFIG = _load_config()
 # Never log environment contents, filesystem paths, or credential fragments at startup.
 
 # Push config into os.environ so modules that use os.getenv() get the values
+if config.get("GOOGLE_APPLICATION_CREDENTIALS"):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = config["GOOGLE_APPLICATION_CREDENTIALS"]
 if config.get("GOOGLE_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = config["GOOGLE_API_KEY"]
 if config.get("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY"):

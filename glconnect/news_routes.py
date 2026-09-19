@@ -13,6 +13,7 @@ from .news_agent import (
     NEWS_GEMINI_MODEL,
     generate_broadcast,
     generate_broadcast_from_bot_copy,
+    parse_bot_anchor,
     parse_bot_news_reports,
     _gemini_generate_text,
 )
@@ -2844,8 +2845,11 @@ def bot_scripts():
     if parse_error:
         return jsonify({'error': parse_error}), 400
 
-    topics = [row['topic'] for row in reports]
+    topics = []
+    for row in reports:
+        topics.extend(row.get('topics') or [row['topic']])
     source = ((payload or {}).get('source') or 'grok-bot').strip() or 'grok-bot'
+    anchor = parse_bot_anchor(payload)
 
     try:
         from glconnect.news_agent import get_memory_usage
@@ -2861,7 +2865,9 @@ def bot_scripts():
     task_id = _create_running_news_task(topics)
     print(f"DEBUG: Starting bot-copy news generation for task {task_id} source={source}")
     try:
-        result = generate_broadcast_from_bot_copy(reports, task_id=task_id, source=source)
+        result = generate_broadcast_from_bot_copy(
+            reports, task_id=task_id, source=source, anchor=anchor
+        )
         _store_news_task_outcome(task_id, result)
     except Exception as exc:
         print(f"ERROR: Bot-copy news generation failed for task {task_id}: {exc}")
@@ -2898,13 +2904,6 @@ def broadcast():
             topics = [topic.strip() for topic in data['topics']]
         
         print(f"DEBUG: Topics received: {topics}")
-        
-        # Enforce maximum topic limit (reduced for memory safety)
-        if len(topics) > 5:
-            return jsonify({
-                'error': 'Maximum 5 topics allowed due to server memory constraints. Please reduce the number of topics and try again.',
-                'details': f'Received {len(topics)} topics, maximum allowed is 5'
-            }), 400
         
         # Check server health before processing using container-aware memory
         try:

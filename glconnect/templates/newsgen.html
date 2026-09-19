@@ -1979,15 +1979,6 @@
                 return;
             }
             
-            // Check topic limit
-            if (addedTopics.length >= 5) {
-                showFlaskValidationFeedback(topic, {
-                    valid: false,
-                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
-                });
-                return;
-            }
-            
             // Validate the topic first
             try {
                 const response = await fetch('/routes2/news/api/validate-news-topic', {
@@ -2066,15 +2057,6 @@
                 showValidationFeedback(topic, {
                     valid: false,
                     error: 'This topic has already been added'
-                });
-                return;
-            }
-            
-            // Check topic limit
-            if (addedTopics.length >= 5) {
-                showValidationFeedback(topic, {
-                    valid: false,
-                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -2552,12 +2534,8 @@
             
             // Update topic count display
             if (topicCount) {
-                topicCount.textContent = `(${addedTopics.length}/5 maximum)`;
-                if (addedTopics.length >= 5) {
-                    topicCount.style.color = '#dc3545'; // Red when at limit
-                } else {
-                    topicCount.style.color = '#6c757d'; // Gray when under limit
-                }
+                topicCount.textContent = `(${addedTopics.length})`;
+                topicCount.style.color = '#6c757d';
             }
             
             if (container) {
@@ -2637,12 +2615,6 @@
                     alert('Please add at least one topic before generating news.');
                     return;
                 }
-            }
-            
-            // Limit to maximum 5 topics for memory safety
-            if (topicsToUse.length > 5) {
-                alert('Maximum 5 topics allowed due to server memory constraints. Please remove some topics and try again.');
-                return;
             }
             
             // Set flag to prevent duplicate requests

@@ -376,6 +376,72 @@ def _anchor_outro_text(assignments: list) -> str:
     return f"{thanks}That's all for this GLC News bulletin. Thank you for listening."
 
 
+_TIMECHECK_TOKEN = "{TIMECHECK}"
+_STALE_CLOCK_RE = re.compile(
+    r"^(?:\{TIMECHECK\}|"
+    r"It'?s\s+\d{1,2}(?::\d{2})?\s*(?:A\.?M\.?|P\.?M\.?)?\s*Pacific time"
+    r"(?:,\s+\d{1,2}(?::\d{2})?\s*(?:A\.?M\.?|P\.?M\.?)?\s*Eastern time)?"
+    r"(?:,?\s+and\s+\d{1,2}(?::\d{2})?\s*(?:A\.?M\.?|P\.?M\.?)?\s*Central time)?"
+    r")\.?\s*",
+    re.IGNORECASE,
+)
+
+
+def reporter_signoff_text(name: str) -> str:
+    return f"I am {(name or 'our reporter').strip()}, for GLC News."
+
+
+def _has_reporter_signoff(script: str, name: str) -> bool:
+    text = re.sub(r"\s+", " ", (script or "")).strip().lower()
+    if not text:
+        return False
+    wanted = f"i am {(name or '').strip().lower()}, for glc news"
+    return wanted in text
+
+
+def ensure_reporter_signoff(script: str, name: str, signoff: str = "") -> str:
+    """Append the house sign-off once, at the end of a reporter block."""
+    cleaned = re.sub(r"\s+", " ", (script or "")).strip()
+    closing = (signoff or "").strip() or reporter_signoff_text(name)
+    if _has_reporter_signoff(cleaned, name):
+        return cleaned
+    if closing.lower().rstrip(".") in cleaned.lower():
+        return cleaned
+    if cleaned and cleaned[-1] not in ".!?":
+        cleaned += "."
+    return f"{cleaned} {closing}".strip()
+
+
+def apply_live_timecheck(intro: str, timezone_info: str) -> str:
+    """Stamp Pacific/Eastern/Central at production. Never speak a written clock."""
+    clock = (timezone_info or "").strip()
+    if clock and not clock.endswith("."):
+        clock = f"{clock}."
+    text = (intro or "").strip()
+    if not text:
+        return clock
+    if _TIMECHECK_TOKEN in text:
+        stamped = text.replace(_TIMECHECK_TOKEN, clock.rstrip("."), 1)
+        return re.sub(r"\s+", " ", stamped).strip()
+    match = _STALE_CLOCK_RE.match(text)
+    if match:
+        rest = text[match.end():].strip()
+        return f"{clock} {rest}".strip() if rest else clock
+    if "pacific time" not in text.lower():
+        return f"{clock} {text}".strip()
+    return text
+
+
+def parse_bot_anchor(payload) -> dict:
+    raw = payload.get("anchor") if isinstance(payload, dict) else None
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        "intro": (raw.get("intro") or "").strip(),
+        "outro": (raw.get("outro") or "").strip(),
+    }
+
+
 def _quota_retry_seconds(exc) -> float | None:
     text = str(exc or "")
     match = re.search(r"retry in ([0-9.]+)s", text, re.I)
@@ -558,18 +624,7 @@ _tts_cache = {}
 _last_async_error = None
 _tts_client = None
 _tts_credentials_checked = False
-_tts_backend = None  # "heygen", "google", or "elevenlabs"
-_tts_fallback = None
-_ELEVENLABS_VOICE_MAP = {
-    "en-US-Studio-O": "EXAVITQu4vr4xnSDxMaL",  # Sarah — studio anchor only
-    "en-US-Neural2-D": "pNInz6obpgDQGcFmaJgB",  # Adam — Ernest
-    "en-US-Neural2-C": "21m00Tcm4TlvDq8ikWAM",  # Rachel — Edith
-    "en-US-Standard-F": "MF3mGyEYCl7XYWbV9V6O",  # Elli — Isabella
-    "en-GB-Standard-B": "JBFqnCBsd6RMkjVDRZzb",  # George — Mark
-    "en-US-Neural2-F": "AZnzlk1XvdvUeBnXmlld",  # Domi — Clara
-    "en-US-Neural2-A": "TxGEqnHWrfWFTfGW9XjX",  # Josh — James
-}
-_ELEVENLABS_DEFAULT_VOICE = "TxGEqnHWrfWFTfGW9XjX"  # James — never reuse anchor Sarah
+_tts_backend = None  # news audio is Google Cloud TTS only
 
 
 def _resolve_tts_credentials_path() -> str:
@@ -610,140 +665,46 @@ def _load_tts_credentials():
 
 
 def validate_tts_credentials():
-    """Return an error message when TTS is not configured, otherwise None."""
-    global _tts_credentials_checked, _tts_client, _tts_backend, _tts_fallback
-    heygen_key = (os.getenv("HEYGEN_API_KEY") or "").strip()
-    google_error = None
+    """Return an error message when Google Cloud TTS is not configured, otherwise None."""
+    global _tts_credentials_checked, _tts_client, _tts_backend
     try:
         credentials = _load_tts_credentials()
         _tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
-        _tts_fallback = "google"
-    except (FileNotFoundError, json.JSONDecodeError, Exception) as google_exc:
-        google_error = google_exc
-        eleven_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
-        if eleven_key:
-            _tts_fallback = "elevenlabs"
-
-    if heygen_key:
-        _tts_backend = "heygen"
-        _tts_credentials_checked = True
-        print(
-            "DEBUG: Using HeyGen voices for news audio"
-            + (f" (fallback={_tts_fallback})" if _tts_fallback else "")
-        )
-        return None
-    if _tts_fallback == "google":
         _tts_backend = "google"
         _tts_credentials_checked = True
         print("DEBUG: Using Google Cloud TTS")
         return None
-    if _tts_fallback == "elevenlabs":
-        _tts_backend = "elevenlabs"
-        _tts_credentials_checked = True
-        print(f"DEBUG: Google Cloud TTS unavailable ({google_error}); using ElevenLabs fallback")
-        return None
-    if isinstance(google_error, FileNotFoundError):
-        return str(google_error)
-    if google_error:
-        return f"TTS credentials could not be loaded: {google_error}"
-    return "No TTS backend is configured. Set HEYGEN_API_KEY or Google Cloud TTS credentials."
+    except FileNotFoundError as google_exc:
+        return str(google_exc)
+    except (json.JSONDecodeError, Exception) as google_exc:
+        return f"Google Cloud TTS credentials could not be loaded: {google_exc}"
 
 
 def _get_tts_client():
-    global _tts_client, _tts_credentials_checked
-    if _tts_backend is None:
+    global _tts_client
+    if _tts_backend is None or _tts_client is None:
         error = validate_tts_credentials()
         if error:
             raise RuntimeError(error)
-    if _tts_backend != "google" and _tts_fallback != "google":
-        raise RuntimeError("Google Cloud TTS client requested but HeyGen/ElevenLabs is active")
     return _tts_client
 
 
-def _desk_for_google_voice(voice_name: str) -> tuple[str, str]:
-    if not voice_name or voice_name == ANCHOR_VOICE or _reporter_voice_collides_with_anchor(voice_name):
-        return "anchor", "male"
-    for reporter in _REPORTER_ROSTER.values():
-        if reporter["voice"] == voice_name:
-            return reporter["desk"], reporter.get("gender") or "male"
-    return "news", "male"
-
-
-def _heygen_audio_bytes(text: str, voice_name: str, speaking_rate: float = 1.0) -> bytes:
-    from glconnect.heygen_news import ANCHOR_VOICE_ID, NEWS_TTS_VOICE_IDS, resolve_tts_voice_id, synthesize_speech_bytes
-
-    desk, gender = _desk_for_google_voice(voice_name)
-    reporter_name = "anchor"
-    for reporter in _REPORTER_ROSTER.values():
-        if reporter["desk"] == desk:
-            reporter_name = reporter["name"]
-            break
-    sample = voice_sample_path(gender, desk)
-    has_sample = os.path.isfile(sample) and os.path.getsize(sample) > 0
-    clone_id = cloned_voice_id(desk)
-    if has_sample and not clone_id:
-        clone_id = ensure_cloned_voice(desk, gender, name=reporter_name)
-    if clone_id:
-        print(f"DEBUG: Clone TTS desk={desk} elevenlabs_voice_id={clone_id}")
-        return _elevenlabs_audio_bytes(text, voice_name, voice_id=clone_id)
-    if has_sample:
-        raise RuntimeError(
-            f"HeyGen sample already saved for {desk}; not calling HeyGen again. "
-            "Clone that file before the next edition (ELEVENLABS_API_KEY)."
-        )
-
-    # First edition only: no saved file yet, so HeyGen speaks once.
-    if desk == "anchor":
-        voice_id = ANCHOR_VOICE_ID
-    else:
-        roster_id = NEWS_TTS_VOICE_IDS.get(desk)
-        voice_id = roster_id or resolve_tts_voice_id(desk, gender)
-        if voice_id == ANCHOR_VOICE_ID:
-            raise RuntimeError(f"Reporter desk {desk} resolved to the HeyGen anchor voice")
-    print(f"DEBUG: HeyGen TTS desk={desk} gender={gender} voice_id={voice_id}")
-    chunks = []
-    max_chars = 5000
-    remaining = text.strip()
-    while remaining:
-        piece = remaining[:max_chars]
-        if len(remaining) > max_chars:
-            split_at = max(piece.rfind(". "), piece.rfind("? "), piece.rfind("! "))
-            if split_at > 400:
-                piece = remaining[: split_at + 1]
-        remaining = remaining[len(piece):].lstrip()
-        chunks.append(synthesize_speech_bytes(piece, voice_id, speed=speaking_rate))
-    return b"".join(chunks)
-
-
-def _elevenlabs_audio_bytes(text: str, voice_name: str, voice_id: str | None = None) -> bytes:
-    from elevenlabs.client import ElevenLabs
-
-    api_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
-    if not api_key:
-        raise RuntimeError("ELEVENLABS_API_KEY is not set")
-    client = ElevenLabs(api_key=api_key)
-    voice_id = voice_id or _ELEVENLABS_VOICE_MAP.get(voice_name, _ELEVENLABS_DEFAULT_VOICE)
-    chunks = []
-    max_chars = 2400
-    remaining = text.strip()
-    while remaining:
-        piece = remaining[:max_chars]
-        if len(remaining) > max_chars:
-            split_at = max(piece.rfind(". "), piece.rfind("? "), piece.rfind("! "))
-            if split_at > 400:
-                piece = remaining[: split_at + 1]
-        remaining = remaining[len(piece):].lstrip()
-        audio = client.text_to_speech.convert(
-            voice_id=voice_id,
-            text=piece,
-            model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_128",
-        )
-        if isinstance(audio, (bytes, bytearray)):
-            chunks.append(bytes(audio))
-        else:
-            chunks.append(b"".join(audio))
-    return b"".join(chunks)
+def _google_tts_bytes(text: str, voice_name: str, speaking_rate: float = 1.0, pitch: float = 0.0) -> bytes:
+    language_code = "en-GB" if str(voice_name).startswith("en-GB-") else "en-US"
+    client = _get_tts_client()
+    response = client.synthesize_speech(
+        input=texttospeech.SynthesisInput(text=text),
+        voice=texttospeech.VoiceSelectionParams(
+            language_code=language_code,
+            name=voice_name,
+        ),
+        audio_config=texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=speaking_rate,
+            pitch=pitch,
+        ),
+    )
+    return response.audio_content
 
 
 _AUDIO_DIR = "glconnect/static/audio"
@@ -762,76 +723,8 @@ def voice_sample_path(gender: str, desk: str) -> str:
     )
 
 
-_CLONE_MANIFEST = os.path.join(_VOICE_SAMPLES_DIR, "clones.json")
-
-
-def _load_clone_manifest() -> dict:
-    if not os.path.isfile(_CLONE_MANIFEST):
-        return {}
-    try:
-        payload = json.loads(open(_CLONE_MANIFEST, encoding="utf-8").read())
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _save_clone_manifest(payload: dict) -> None:
-    os.makedirs(_VOICE_SAMPLES_DIR, exist_ok=True)
-    with open(_CLONE_MANIFEST, "w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
-
-
-def cloned_voice_id(desk: str) -> str | None:
-    row = _load_clone_manifest().get(desk) or {}
-    voice_id = str(row.get("elevenlabs_voice_id") or "").strip()
-    return voice_id or None
-
-
-def ensure_cloned_voice(desk: str, gender: str, name: str = "") -> str | None:
-    """Turn the first saved HeyGen take into an ElevenLabs clone. Once per desk."""
-    existing = cloned_voice_id(desk)
-    if existing:
-        return existing
-    api_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
-    sample = voice_sample_path(gender, desk)
-    if not api_key:
-        print(f"DEBUG: No ELEVENLABS_API_KEY; cannot clone {desk} yet")
-        return None
-    if not os.path.isfile(sample) or os.path.getsize(sample) == 0:
-        return None
-    import requests
-
-    label = name or desk
-    with open(sample, "rb") as handle:
-        response = requests.post(
-            "https://api.elevenlabs.io/v1/voices/add",
-            headers={"xi-api-key": api_key},
-            data={
-                "name": f"GRO News {label}"[:80],
-                "description": f"Clone of first HeyGen {desk} news take",
-            },
-            files={"files": (os.path.basename(sample), handle, "audio/mpeg")},
-            timeout=120,
-        )
-    if response.status_code >= 400:
-        print(f"WARNING: ElevenLabs clone failed for {desk}: {response.text[:240]}")
-        return None
-    try:
-        voice_id = str((response.json() or {}).get("voice_id") or "").strip()
-    except Exception:
-        voice_id = ""
-    if not voice_id:
-        print(f"WARNING: ElevenLabs clone for {desk} returned no voice_id")
-        return None
-    manifest = _load_clone_manifest()
-    manifest[desk] = {"elevenlabs_voice_id": voice_id, "name": label}
-    _save_clone_manifest(manifest)
-    print(f"DEBUG: Cloned {label} ({desk}) to ElevenLabs voice {voice_id}")
-    return voice_id
-
-
 def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: str = "") -> bool:
-    """Keep the first report from each speaker for later voice cloning.
+    """Keep the first Google TTS take from each speaker.
 
     Later editions still generate broadcast audio, but they do not overwrite
     or add another sample once this gender+desk already has one.
@@ -840,7 +733,6 @@ def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: s
     label = name or f"{gender} {desk}"
     if os.path.isfile(dest) and os.path.getsize(dest) > 0:
         print(f"DEBUG: Voice sample already saved for {label} ({os.path.basename(dest)}), skipping")
-        ensure_cloned_voice(desk, gender, name=label)
         return False
     if not source_path or not os.path.isfile(source_path) or os.path.getsize(source_path) == 0:
         print(f"DEBUG: No source audio to archive for {label}")
@@ -848,7 +740,6 @@ def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: s
     os.makedirs(_VOICE_SAMPLES_DIR, exist_ok=True)
     shutil.copyfile(source_path, dest)
     print(f"DEBUG: Saved first voice sample for {label}: {dest}")
-    ensure_cloned_voice(desk, gender, name=label)
     return True
 
 
@@ -961,55 +852,9 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     try:
         print(
             f"DEBUG: TTS confirmed for {output_filename} "
-            f"voice={voice_name} chars={len(clean_text)} backend={_tts_backend}"
+            f"voice={voice_name} chars={len(clean_text)} backend=google"
         )
-
-        if _tts_backend == "heygen":
-            try:
-                audio_content = _heygen_audio_bytes(clean_text, voice_name, speaking_rate)
-            except Exception as heygen_exc:
-                if not _tts_fallback:
-                    raise
-                print(
-                    f"WARNING: HeyGen TTS failed for {output_filename!r} "
-                    f"({heygen_exc}); using {_tts_fallback}"
-                )
-                if _tts_fallback == "elevenlabs":
-                    audio_content = _elevenlabs_audio_bytes(clean_text, voice_name)
-                else:
-                    client = _get_tts_client()
-                    synthesis_input = texttospeech.SynthesisInput(text=clean_text)
-                    audio_config = texttospeech.AudioConfig(
-                        audio_encoding=texttospeech.AudioEncoding.MP3,
-                        speaking_rate=speaking_rate,
-                        pitch=pitch
-                    )
-                    voice_params = texttospeech.VoiceSelectionParams(
-                        language_code="en-US",
-                        name=voice_name
-                    )
-                    response = client.synthesize_speech(
-                        input=synthesis_input, voice=voice_params, audio_config=audio_config
-                    )
-                    audio_content = response.audio_content
-        elif _tts_backend == "elevenlabs":
-            audio_content = _elevenlabs_audio_bytes(clean_text, voice_name)
-        else:
-            client = _get_tts_client()
-            synthesis_input = texttospeech.SynthesisInput(text=clean_text)
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3,
-                speaking_rate=speaking_rate,
-                pitch=pitch
-            )
-            voice_params = texttospeech.VoiceSelectionParams(
-                language_code="en-US",
-                name=voice_name
-            )
-            response = client.synthesize_speech(
-                input=synthesis_input, voice=voice_params, audio_config=audio_config
-            )
-            audio_content = response.audio_content
+        audio_content = _google_tts_bytes(clean_text, voice_name, speaking_rate, pitch)
 
         print(f"DEBUG: TTS response received, audio content length: {len(audio_content) if audio_content else 'None'}")
         
@@ -1665,7 +1510,12 @@ def _build_reporter_segments(topics: list, categorized_topics: dict, trace: News
 
 
 def parse_bot_news_reports(payload):
-    """Normalize bot JSON into [{topic, category, script}, ...]. Returns (reports, error)."""
+    """Normalize bot JSON into reporter blocks. Returns (reports, error).
+
+    Accepts the flat {topic, category, script} rows and the grouped
+    {reporter, stories[], handoff, signoff} bulletin. Same-reporter stories
+    become one script with bridges and a single sign-off.
+    """
     if not isinstance(payload, dict):
         return [], "JSON object required"
     raw = payload.get("reporters")
@@ -1674,28 +1524,96 @@ def parse_bot_news_reports(payload):
     if raw is None:
         raw = payload.get("items")
     if not isinstance(raw, list) or not raw:
-        return [], "Provide reporters: [{topic, category, script}, ...]"
-    if len(raw) > 5:
-        return [], "Maximum 5 reporter scripts allowed"
+        return [], "Provide reporters: [{topic, category, script}, ...] or [{reporter, stories}, ...]"
     reports = []
     for index, item in enumerate(raw):
         if not isinstance(item, dict):
             return [], f"Reporter {index} must be an object"
-        topic = (item.get("topic") or item.get("title") or "").strip()
-        script = (item.get("script") or item.get("copy") or item.get("text") or "").strip()
-        category = _normalize_category(item.get("category") or item.get("desk") or "other")
-        if not topic:
-            return [], f"Reporter {index} is missing topic"
-        if not script:
-            return [], f"Reporter {index} ({topic!r}) is missing script"
+        roster, roster_error = _resolve_bot_reporter(item, index)
+        if roster_error:
+            return [], roster_error
+        flattened, flatten_error = _flatten_bot_reporter_stories(item, index)
+        if flatten_error:
+            return [], flatten_error
+        script = ensure_reporter_signoff(
+            flattened["script"],
+            roster["name"],
+            signoff=(item.get("signoff") or "").strip(),
+        )
         if is_placeholder_reporter_script(script):
-            return [], f"Reporter {index} ({topic!r}) script looks like a placeholder"
+            return [], f"Reporter {index} ({flattened['topics'][0]!r}) script looks like a placeholder"
         reports.append({
-            "topic": topic,
-            "category": category,
+            "topic": flattened["topics"][0],
+            "topics": flattened["topics"],
+            "category": roster["category"],
+            "name": roster["name"],
+            "handoff": (item.get("handoff") or "").strip(),
             "script": script,
         })
     return reports, None
+
+
+def _resolve_bot_reporter(item: dict, index: int) -> tuple[dict | None, str | None]:
+    named = (item.get("reporter") or item.get("name") or "").strip()
+    raw_desk = (item.get("category") or item.get("desk") or "").strip()
+    by_name = _reporter_for_name(named) if named else None
+    if named and by_name is None:
+        return None, f"Reporter {index} name {named!r} is not on the roster"
+    if raw_desk:
+        category = _normalize_category(raw_desk)
+        by_cat = _reporter_for_category(category)
+        if by_name and by_name["name"].lower() != by_cat["name"].lower():
+            return None, (
+                f"Reporter {index} {named!r} does not match category {category} "
+                f"(expected {by_cat['name']})"
+            )
+        chosen = by_name or by_cat
+        chosen = dict(chosen)
+        chosen["category"] = category
+        return chosen, None
+    if by_name:
+        chosen = dict(by_name)
+        chosen["category"] = _category_for_reporter_name(by_name["name"])
+        return chosen, None
+    chosen = dict(_reporter_for_category("other"))
+    chosen["category"] = "other"
+    return chosen, None
+
+
+def _flatten_bot_reporter_stories(item: dict, index: int) -> tuple[dict | None, str | None]:
+    stories = item.get("stories")
+    if isinstance(stories, list) and stories:
+        parts = []
+        topics = []
+        for story_index, story in enumerate(stories):
+            if not isinstance(story, dict):
+                return None, f"Reporter {index} story {story_index} must be an object"
+            topic = (story.get("topic") or story.get("title") or "").strip()
+            script = (story.get("script") or story.get("copy") or story.get("text") or "").strip()
+            bridge = (story.get("bridge") or "").strip()
+            if not topic:
+                return None, f"Reporter {index} story {story_index} is missing topic"
+            if not script:
+                return None, f"Reporter {index} story {story_index} ({topic!r}) is missing script"
+            if is_placeholder_reporter_script(script):
+                return None, (
+                    f"Reporter {index} story {story_index} ({topic!r}) "
+                    "script looks like a placeholder"
+                )
+            piece = f"{bridge} {script}".strip() if story_index and bridge else script
+            parts.append(piece)
+            topics.append(topic)
+        return {"topics": topics, "script": " ".join(parts)}, None
+
+    topic = (item.get("topic") or item.get("title") or "").strip()
+    script = (item.get("script") or item.get("copy") or item.get("text") or "").strip()
+    if not topic:
+        return None, f"Reporter {index} is missing topic"
+    if not script:
+        return None, f"Reporter {index} ({topic!r}) is missing script"
+    if is_placeholder_reporter_script(script):
+        return None, f"Reporter {index} ({topic!r}) script looks like a placeholder"
+    return {"topics": [topic], "script": script}, None
 
 
 def _segments_from_bot_reports(reports, trace=None, source="grok-bot"):
@@ -1706,7 +1624,8 @@ def _segments_from_bot_reports(reports, trace=None, source="grok-bot"):
     script_keys = []
     reporter_trace = []
     for index, report in enumerate(reports):
-        reporter = _reporter_for_category(report["category"])
+        named = _reporter_for_name(report.get("name") or "")
+        reporter = named or _reporter_for_category(report["category"])
         assignment = {
             "topic": report["topic"],
             "category": report["category"],
@@ -1714,6 +1633,7 @@ def _segments_from_bot_reports(reports, trace=None, source="grok-bot"):
             "desk": reporter["desk"],
             "gender": reporter.get("gender") or "voice",
             "voice": reporter["voice"],
+            "handoff": (report.get("handoff") or "").strip(),
         }
         assignments.append(assignment)
         script = report["script"]
@@ -2055,9 +1975,7 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
 # Two doors into the same newsroom:
 # UI /broadcast: topics → classify → write scripts → narrate → stitch.
 # Bot /bot-scripts: already has topic + category + script → narrate → stitch.
-# Google names (Studio-O, Neural2, …) are fallback labels only. Live narration
-# uses the HeyGen voice already assigned to that desk; the first take is also
-# saved under voice_samples/ for later cloning.
+# Live narration uses these Google Cloud TTS voice names. HeyGen is video-only.
 ANCHOR_VOICE = 'en-US-Studio-O'
 ERNEST_VOICE = 'en-US-Neural2-D'
 EDITH_VOICE = 'en-US-Neural2-C'
@@ -2101,17 +2019,29 @@ def _reporter_for_category(category: str) -> dict:
     return reporter
 
 
-def _reporter_voice_collides_with_anchor(voice: str) -> bool:
-    """True when TTS would sound like the studio anchor (Google name, ElevenLabs, or HeyGen)."""
-    if not voice or voice == ANCHOR_VOICE:
-        return True
-    from glconnect.heygen_news import ANCHOR_VOICE_ID
+def _reporter_for_name(name: str) -> dict | None:
+    wanted = (name or "").strip().lower()
+    if not wanted:
+        return None
+    for reporter in _REPORTER_ROSTER.values():
+        if reporter["name"].lower() == wanted:
+            row = dict(reporter)
+            row["voice"] = _sanitize_reporter_voice(row["voice"])
+            return row
+    return None
 
-    if voice == ANCHOR_VOICE_ID:
-        return True
-    anchor_id = _ELEVENLABS_VOICE_MAP.get(ANCHOR_VOICE)
-    reporter_id = _ELEVENLABS_VOICE_MAP.get(voice)
-    return bool(anchor_id and reporter_id and anchor_id == reporter_id)
+
+def _category_for_reporter_name(name: str) -> str:
+    wanted = (name or "").strip().lower()
+    for category, reporter in _REPORTER_ROSTER.items():
+        if reporter["name"].lower() == wanted:
+            return category
+    return "other"
+
+
+def _reporter_voice_collides_with_anchor(voice: str) -> bool:
+    """True when a reporter would be assigned the studio anchor Google voice."""
+    return not voice or voice == ANCHOR_VOICE
 
 
 def _sanitize_reporter_voice(voice: str) -> str:
@@ -2133,10 +2063,6 @@ def _validate_reporter_roster() -> None:
                 f"Reporter roster misconfigured: {category} voice {reporter['voice']!r} "
                 f"matches studio anchor {ANCHOR_VOICE!r}"
             )
-    if _ELEVENLABS_DEFAULT_VOICE == _ELEVENLABS_VOICE_MAP.get(ANCHOR_VOICE):
-        raise ValueError(
-            "ElevenLabs default voice must not be the studio anchor voice"
-        )
 
 
 _validate_reporter_roster()
@@ -2482,9 +2408,15 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         )
 
 
-def generate_broadcast_from_bot_copy(reports, task_id=None, source="grok-bot"):
+def generate_broadcast_from_bot_copy(reports, task_id=None, source="grok-bot", anchor=None):
     """Narrate bot-supplied scripts. Skips topic intake, classify, and Gemini writing."""
-    topics = [row.get("topic") for row in (reports or []) if row.get("topic")]
+    topics = []
+    for row in reports or []:
+        extra = row.get("topics")
+        if extra:
+            topics.extend(topic for topic in extra if topic)
+        elif row.get("topic"):
+            topics.append(row["topic"])
     print(f"DEBUG: Starting bot-copy news generation source={source} topics={topics}")
     trace = NewsPipelineTrace(topics, task_id=task_id)
     trace.stage(
@@ -2523,6 +2455,7 @@ def generate_broadcast_from_bot_copy(reports, task_id=None, source="grok-bot"):
             task_id,
             trace,
             progress_step="Bot scripts ready, converting to speech...",
+            anchor=anchor,
         )
     except Exception as exc:
         import traceback
@@ -2681,6 +2614,7 @@ def _narrate_prepared_broadcast(
     task_id=None,
     trace=None,
     progress_step=None,
+    anchor=None,
 ):
     """Shared hop-in after scripts exist: anchor copy, TTS, stitch. Used by UI and bot ingest."""
     import gc
@@ -2690,15 +2624,24 @@ def _narrate_prepared_broadcast(
         trace = NewsPipelineTrace(topics, task_id=task_id)
 
     timezone = get_timezone_info().get("timezone_info", "Welcome to GLC News")
-    intro_text = _anchor_intro_text(timezone, topics)
-    transitions = [
-        _anchor_handoff_text(
-            assignment,
-            previous=reporter_assignments[index - 1] if index else None,
+    supplied = anchor if isinstance(anchor, dict) else {}
+    supplied_intro = (supplied.get("intro") or "").strip()
+    supplied_outro = (supplied.get("outro") or "").strip()
+    if supplied_intro:
+        intro_text = apply_live_timecheck(supplied_intro, timezone)
+    else:
+        intro_text = _anchor_intro_text(timezone, topics)
+    transitions = []
+    for index, assignment in enumerate(reporter_assignments):
+        supplied_handoff = (assignment.get("handoff") or "").strip()
+        transitions.append(
+            supplied_handoff
+            or _anchor_handoff_text(
+                assignment,
+                previous=reporter_assignments[index - 1] if index else None,
+            )
         )
-        for index, assignment in enumerate(reporter_assignments)
-    ]
-    outro_text = _anchor_outro_text(reporter_assignments)
+    outro_text = supplied_outro or _anchor_outro_text(reporter_assignments)
     persisted_scripts = {
         "intro": intro_text,
         "outro": outro_text,
