@@ -5,10 +5,10 @@ from typing import Any, Optional, Tuple
 
 
 # Bump when account level agreement text changes materially; authors must re-accept.
-AUTHOR_PUBLISHING_AGREEMENT_VERSION = "1.1"
+AUTHOR_PUBLISHING_AGREEMENT_VERSION = "1.2"
 
 # Bump when per-listing attestation text changes materially.
-LISTING_ATTESTATION_VERSION = "1.1"
+LISTING_ATTESTATION_VERSION = "1.2"
 
 
 def _as_bool(v: Any) -> bool:

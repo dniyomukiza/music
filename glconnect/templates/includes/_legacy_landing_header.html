@@ -1,0 +1,119 @@
+<header class="header">
+    <div class="nav-container">
+        <nav class="nav-links" aria-label="Primary">
+            <a href="{{ url_for('book_platform.book_cafe') }}"{% if request.endpoint == 'book_platform.book_cafe' %} class="is-active" aria-current="page"{% endif %}>Discussions</a>
+            <a href="{{ url_for('news_bp.index') }}"{% if request.endpoint == 'news_bp.index' %} class="is-active" aria-current="page"{% endif %}>News</a>
+            <a href="{{ url_for('routes1.findwords') }}"{% if request.endpoint == 'routes1.findwords' %} class="is-active" aria-current="page"{% endif %}>Language</a>
+            <a href="{{ url_for('book_platform.content_hub') }}"{% if request.endpoint == 'book_platform.content_hub' %} class="is-active" aria-current="page"{% endif %}>Content</a>
+            {% if show_marketplace_nav|default(false) %}
+            <a href="{{ url_for('book_platform.marketplace') }}"{% if request.endpoint == 'book_platform.marketplace' %} class="is-active" aria-current="page"{% endif %}>Marketplace</a>
+            {% endif %}
+        </nav>
+    </div>
+    <a class="wordmark" href="{% if current_user.is_authenticated %}{{ url_for('routes.index') }}{% else %}{{ url_for('routes1.login', next=url_for('routes.index')) }}{% endif %}" aria-label="Ndotonic home">
+        <img src="{{ url_for('static', filename='images/ndotonic_official.png') }}" alt="Ndotonic" class="wordmark-img">
+    </a>
+    <div class="platform-button-container">
+        {% if show_company_nav|default(true) %}
+        {% include 'includes/_company_nav.html' %}
+        {% endif %}
+        {% if current_user.is_authenticated %}
+        <div class="legacy-user-menu" id="legacyUserMenu">
+            <button type="button" class="legacy-user-menu-btn" onclick="toggleLegacyUserMenu(event)" aria-expanded="false" aria-controls="legacyUserMenuPanel" aria-label="Account menu for {{ current_user.first_name or current_user.username }}">
+                {% if current_user.profile_picture %}
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" alt="" class="legacy-user-menu-avatar">
+                {% else %}
+                <i class="fas fa-user-circle legacy-user-menu-icon" aria-hidden="true"></i>
+                {% endif %}
+            </button>
+            <div class="legacy-user-menu-panel" id="legacyUserMenuPanel" hidden>
+                <p class="legacy-user-menu-greet">Welcome back, {{ current_user.first_name or current_user.username }}</p>
+                <p class="legacy-user-menu-role">{{ current_user.role|title if current_user.role else 'Creator' }}</p>
+                <p class="legacy-user-menu-email">{{ current_user.email }}</p>
+                <div class="legacy-user-menu-links">
+                    <a href="{{ url_for('prof.edit_profile') }}"><i class="fas fa-sliders-h" aria-hidden="true"></i> Settings</a>
+                    <a href="{{ url_for('routes.index') }}"><i class="fas fa-compass" aria-hidden="true"></i> About</a>
+                    <a href="{{ url_for('blog.logout') }}" class="legacy-user-menu-signout"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sign out</a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ url_for('routes1.login', next=url_for('routes.index')) }}" class="platform-button">About</a>
+        {% endif %}
+    </div>
+    <button type="button" class="mobile-menu-button" onclick="toggleLegacyMobileMenu()" aria-expanded="false" aria-controls="legacyMobileNav" aria-label="Open menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+    </button>
+</header>
+
+<nav class="mobile-nav" id="legacyMobileNav" aria-label="Mobile">
+    {% if current_user.is_authenticated %}
+    <div class="legacy-mobile-user">
+        <p class="legacy-mobile-user-greet">Welcome back, {{ current_user.first_name or current_user.username }}</p>
+        <p class="legacy-mobile-user-meta">{{ current_user.role|title if current_user.role else 'Creator' }} · {{ current_user.email }}</p>
+        <a href="{{ url_for('prof.edit_profile') }}">Settings</a>
+    </div>
+    {% endif %}
+    <a href="{{ url_for('book_platform.book_cafe') }}">Discussions</a>
+    <a href="{{ url_for('news_bp.index') }}">News</a>
+    <a href="{{ url_for('routes1.findwords') }}">Language</a>
+    <a href="{{ url_for('book_platform.content_hub') }}">Content</a>
+    {% if show_marketplace_nav|default(false) %}
+    <a href="{{ url_for('book_platform.marketplace') }}">Marketplace</a>
+    {% endif %}
+    <a href="{{ url_for('routes.careers') }}">Join Our Mission</a>
+    <a href="{{ url_for('blog.contact') }}">Support</a>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('routes.index') }}" class="platform-button">About</a>
+    <a href="{{ url_for('blog.logout') }}">Sign out</a>
+    {% else %}
+    <a href="{{ url_for('routes1.login', next=url_for('routes.index')) }}" class="platform-button">About</a>
+    {% endif %}
+</nav>
+
+<script>
+function toggleLegacyMobileMenu() {
+    var mobileNav = document.getElementById("legacyMobileNav");
+    var btn = document.querySelector(".mobile-menu-button");
+    var open = mobileNav && mobileNav.style.display === "flex";
+    if (mobileNav) mobileNav.style.display = open ? "none" : "flex";
+    if (btn) btn.setAttribute("aria-expanded", open ? "false" : "true");
+}
+
+function toggleLegacyUserMenu(event) {
+    if (event) event.stopPropagation();
+    var menu = document.getElementById("legacyUserMenu");
+    var panel = document.getElementById("legacyUserMenuPanel");
+    var btn = menu ? menu.querySelector(".legacy-user-menu-btn") : null;
+    if (!panel || !btn) return;
+    var open = !panel.hidden;
+    panel.hidden = open;
+    btn.setAttribute("aria-expanded", open ? "false" : "true");
+}
+
+document.addEventListener("click", function (event) {
+    var menu = document.getElementById("legacyUserMenu");
+    var panel = document.getElementById("legacyUserMenuPanel");
+    if (!menu || !panel || panel.hidden) return;
+    if (!menu.contains(event.target)) {
+        panel.hidden = true;
+        var btn = menu.querySelector(".legacy-user-menu-btn");
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    var panel = document.getElementById("legacyUserMenuPanel");
+    var menu = document.getElementById("legacyUserMenu");
+    if (!panel || panel.hidden) return;
+    panel.hidden = true;
+    var btn = menu ? menu.querySelector(".legacy-user-menu-btn") : null;
+    if (btn) {
+        btn.setAttribute("aria-expanded", "false");
+        btn.focus();
+    }
+});
+</script>

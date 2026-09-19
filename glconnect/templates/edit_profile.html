@@ -25,6 +25,9 @@
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" value="{{ user.email }}" required>
 
+        <label for="current_password">Current password (required only when changing email):</label>
+        <input type="password" id="current_password" name="current_password" autocomplete="current-password">
+
         <label for="profile_picture">Profile Picture:</label>
         <input type="file" id="profile_picture" name="profile_picture">
 

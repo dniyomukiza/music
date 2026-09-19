@@ -3,6 +3,9 @@ Shared utilities for book platform - avoids circular imports.
 """
 
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 _FRONT_MATTER_PREFIXES = (
     'foreword', 'preface', 'introduction', 'prologue', 'acknowledgment',
@@ -169,6 +172,45 @@ def audiobook_ready_for_marketplace_publish(book):
     )
 
 
+def clear_audiobook_generation(book, *, unpublish: bool = True) -> None:
+    """Remove generated audiobook assets so the author can regenerate from scratch."""
+    from glconnect import db
+    from glconnect.book_platform_models import AudiobookChapter
+    import os
+
+    if not book:
+        return
+    chapter_rows = AudiobookChapter.query.filter_by(book_project_id=book.id).all()
+    generated_root = os.path.realpath(os.path.join(
+        os.getcwd(), 'glconnect', 'static', 'audio', 'audiobooks'
+    ))
+    paths = [getattr(book, 'audiobook_file_path', None)] + [
+        getattr(row, 'audio_file_path', None) for row in chapter_rows
+    ]
+    for raw_path in paths:
+        if not raw_path:
+            continue
+        path = os.path.realpath(str(raw_path))
+        if not os.path.isabs(str(raw_path)):
+            path = os.path.realpath(os.path.join(os.getcwd(), str(raw_path)))
+        # Only remove files produced inside the audiobook generation folder.
+        if path.startswith(generated_root + os.sep) and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                logger.warning('Could not remove audiobook asset %s', path)
+    AudiobookChapter.query.filter_by(book_project_id=book.id).delete(synchronize_session=False)
+    book.has_audiobook = False
+    book.audiobook_file_path = None
+    book.audiobook_duration = None
+    book.audiobook_generated_at = None
+    book.audiobook_voice = None
+    book.audiobook_segment_plan = None
+    if unpublish:
+        book.audiobook_published = False
+    db.session.flush()
+
+
 def is_book_published(book):
     """
     Unified check: book is published if:
@@ -193,6 +235,40 @@ def is_book_published(book):
     except Exception:
         pass
     return False
+
+
+def is_ebook_marketplace_listed(book):
+    """True when the ebook/digital edition is live on the marketplace (not audiobook or print alone)."""
+    if not book:
+        return False
+    from glconnect.book_platform_models import BookStatus
+    if getattr(book, 'digital_file_path', None):
+        return bool(getattr(book, 'digital_book_published', False))
+    return book.status == BookStatus.PUBLISHED
+
+
+def clear_marketplace_listing_flags(book) -> bool:
+    """Remove all marketplace listing flags. Returns True if anything was live."""
+    if not book:
+        return False
+    from glconnect.book_platform_models import BookStatus
+
+    listing_was_live = False
+    if getattr(book, "digital_file_path", None):
+        if getattr(book, "digital_book_published", False):
+            book.digital_book_published = False
+            listing_was_live = True
+        if getattr(book, "audiobook_published", False):
+            book.audiobook_published = False
+            listing_was_live = True
+    else:
+        if book.status == BookStatus.PUBLISHED:
+            book.status = BookStatus.DRAFT
+            listing_was_live = True
+        if getattr(book, "audiobook_published", False):
+            book.audiobook_published = False
+            listing_was_live = True
+    return listing_was_live
 
 
 def delete_book_chapter_version_graph_for_project(book_project_id: int) -> None:

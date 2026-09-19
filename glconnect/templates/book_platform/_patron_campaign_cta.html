@@ -17,18 +17,9 @@
             </a>
             {% endif %}
         {% else %}
-            {% set total_requirements = investment_readiness.requirement_total|default(4) %}
-            {% set completed = total_requirements - investment_readiness.issues|length %}
-            {% set progress_pct = (completed / total_requirements * 100)|round %}
-            <p class="small text-muted mb-2">Optional campaign: {{ completed }}/{{ total_requirements }} requirements met</p>
-            <div class="progress mb-2" style="height: 6px;">
-                <div class="progress-bar bg-warning" style="width: {{ progress_pct }}%"></div>
-            </div>
-            <ul class="small text-muted ps-3 mb-0">
-                {% for issue in investment_readiness.issues[:4] %}
-                <li>{{ issue }}</li>
-                {% endfor %}
-            </ul>
+            {% with prefix='book-' ~ book.id|string, intro_prefix='Optional campaign:' %}
+            {% include 'book_platform/includes/_campaign_requirements_progress.html' %}
+            {% endwith %}
         {% endif %}
     {% else %}
         {% if investment_readiness.is_ready %}

@@ -51,10 +51,10 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST" class="row g-4">
+        <form method="POST" class="row g-4 justify-content-center">
             {{ form.hidden_tag() }}
 
-            <div class="col-lg-7">
+            <div class="col-lg-8">
                 <section class="ink-panel mb-4">
                     <div class="ink-panel-head">
                         <h2 class="ink-panel-title h5 mb-0">Campaign details</h2>
@@ -96,7 +96,6 @@
                         {% set project_desc_field_id = 'book_description' %}
                         {% set project_desc_book_id = book.id %}
                         {% set project_desc_upload_url = upload_url %}
-                        {% set project_desc_preview_target = 'inkPreviewAboutProject' %}
                         {% set show_media_guide = false %}
                         {% include 'book_platform/_project_description_editor.html' %}
                         {% if form.book_description.errors %}
@@ -114,7 +113,6 @@
                         {% set project_desc_field_id = 'campaign_description' %}
                         {% set project_desc_book_id = book.id %}
                         {% set project_desc_upload_url = upload_url %}
-                        {% set project_desc_preview_target = 'inkPreviewCampaignPitch' %}
                         {% set show_media_guide = false %}
                         {% include 'book_platform/_project_description_editor.html' %}
                         {% if form.campaign_description.errors %}
@@ -126,16 +124,6 @@
                 <div class="d-flex flex-wrap gap-2">
                     {{ form.submit(class="btn btn-ink-gold btn-lg") }}
                     <a href="{{ preview_page_url }}" class="btn btn-ink-ghost btn-lg" target="_blank" rel="noopener">Preview saved page</a>
-                </div>
-            </div>
-
-            <div class="col-lg-5">
-                <div class="ink-project-preview-sticky">
-                    {% set ink_preview_about_id = 'inkPreviewAboutProject' %}
-                    {% set ink_preview_pitch_id = 'inkPreviewCampaignPitch' %}
-                    {% set ink_preview_timeline_id = 'inkPreviewTimeline' %}
-                    {% set ink_preview_timeline_input_id = 'tentative_timeline' %}
-                    {% include 'book_platform/_project_description_preview.html' %}
                 </div>
             </div>
         </form>

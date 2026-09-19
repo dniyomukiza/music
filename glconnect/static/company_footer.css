@@ -150,3 +150,23 @@
     transform: none;
   }
 }
+
+.company-nav-slot {
+  display: flex;
+  align-items: center;
+}
+
+.company-footer-menu--nav .company-footer-toggle {
+  font-size: 0.72rem;
+}
+
+.company-footer-menu--nav .company-footer-dropdown {
+  bottom: auto;
+  top: calc(100% + 0.55rem);
+}
+
+@media (max-width: 768px) {
+  .company-nav-slot {
+    margin-left: auto;
+  }
+}

@@ -1,0 +1,91 @@
+# Bot drops news_inbox/ready.json on branch news-inbox.
+# This posts that file to the live newsroom. It does not deploy.
+# Secrets: NEWS_BOT_INGEST_TOKEN (required), NEWS_INGEST_URL (optional).
+
+name: News inbox ingest
+
+concurrency:
+  group: news-inbox
+  cancel-in-progress: false
+
+on:
+  push:
+    branches: [news-inbox]
+    paths:
+      - news_inbox/ready.json
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Post ready.json to the live news app
+        id: ingest
+        env:
+          NEWS_BOT_INGEST_TOKEN: ${{ secrets.NEWS_BOT_INGEST_TOKEN }}
+          NEWS_INGEST_URL: ${{ secrets.NEWS_INGEST_URL }}
+        run: |
+          set -euo pipefail
+          if [ ! -f news_inbox/ready.json ]; then
+            echo "ready.json is not present; skip"
+            exit 0
+          fi
+          if [ -z "${NEWS_BOT_INGEST_TOKEN:-}" ]; then
+            echo "::error::Add repo secret NEWS_BOT_INGEST_TOKEN. The bot does not hold this value."
+            exit 1
+          fi
+          URL="${NEWS_INGEST_URL:-https://glc.cool/routes2/news/bot-scripts}"
+          python3 - "$URL" <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+
+          url = sys.argv[1]
+          with open("news_inbox/ready.json", encoding="utf-8") as handle:
+              payload = json.load(handle)
+          if not isinstance(payload, dict) or not payload.get("reporters"):
+              raise SystemExit("news_inbox/ready.json must contain reporters[]")
+          body = json.dumps(payload).encode("utf-8")
+          request = urllib.request.Request(
+              url,
+              data=body,
+              method="POST",
+              headers={
+                  "Authorization": f"Bearer {os.environ['NEWS_BOT_INGEST_TOKEN']}",
+                  "Content-Type": "application/json",
+              },
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  raw = response.read().decode("utf-8")
+                  status = response.status
+          except urllib.error.HTTPError as exc:
+              detail = exc.read().decode("utf-8", errors="replace")
+              raise SystemExit(f"Ingest failed HTTP {exc.code}: {detail}") from exc
+          print(raw)
+          data = json.loads(raw)
+          task_id = data.get("task_id") or ""
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"task_id={task_id}\n")
+              out.write(f"http_status={status}\n")
+          PY
+
+      - name: Archive ingested edition
+        if: steps.ingest.outputs.task_id != ''
+        env:
+          TASK_ID: ${{ steps.ingest.outputs.task_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p news_inbox/processed
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          dest="news_inbox/processed/${stamp}-${TASK_ID}.json"
+          git mv news_inbox/ready.json "$dest"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "News inbox: processed ${TASK_ID}"
+          git push

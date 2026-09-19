@@ -1,29 +1,47 @@
-
 {% extends "base.html" %}
 
-{% block title %}Reset Request | Ndotonic{% endblock %}
+{% block title %}Reset Password | Ndotonic{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='request.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
 {% endblock %}
 
 {% block salutation %}
-<div class="reset-container">
-    {% include 'messages.html' %}
-    <h2>Reset Request</h2>
+<div class="auth-page-shell">
+    <div class="auth-card">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="auth-flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
 
-    <!-- Form for requesting a password reset -->
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            {{ form.email(class="form-control", id="email", placeholder="Enter your email address") }}
-        </div>
-        <input type="submit" value="Request Password Reset" class="btn">
-         <div class="form-group">
+        <p class="auth-eyebrow"><span class="auth-eyebrow-dot" aria-hidden="true"></span> Account</p>
+        <h2>Reset your password</h2>
+        <p class="auth-lead">Enter your username or email. We will send a secure link that expires in one hour.</p>
+
+        <form method="POST" class="auth-form">
+            {{ form.hidden_tag() }}
+            <div class="auth-field">
+                <label for="login">Username or email</label>
+                {{ form.login(class="auth-input", id="login", autocomplete="username email") }}
+            </div>
+            <div class="auth-field auth-field--recap">
                 {{ form.recap }}
-        </div>
-    </form>
-    <p>Remembered your password? <a href="{{ url_for('routes1.login') }}">Login</a></p>
+            </div>
+            <div class="auth-field auth-field--submit">
+                {{ form.submit(class="btn auth-submit") }}
+            </div>
+        </form>
+
+        <p class="auth-footer auth-footer--muted">
+            <a href="{{ url_for('routes1.login') }}">Back to sign in</a>
+            ·
+            <a href="{{ url_for('routes.index') }}">Homepage</a>
+        </p>
+    </div>
 </div>
 {% endblock %}
