@@ -671,11 +671,7 @@ ANCHOR_VOICE = ANCHOR_XAI_VOICE_ID
 
 
 def _xai_api_key() -> str:
-    for name in ("XAI_API_KEY", "GROK_API", "GROK_API_KEY"):
-        value = (os.getenv(name) or "").strip()
-        if value:
-            return value
-    return ""
+    return (os.getenv("XAI_API_KEY") or "").strip()
 
 
 def validate_tts_credentials():
@@ -684,7 +680,7 @@ def validate_tts_credentials():
     if not _xai_api_key():
         return (
             "XAI_API_KEY is not configured for the news anchor. Set XAI_API_KEY "
-            "(or GROK_API / GROK_API_KEY) in the environment or /etc/glconfig.json."
+            "in the environment or /etc/glconfig.json."
         )
     try:
         credentials = _load_tts_credentials()
