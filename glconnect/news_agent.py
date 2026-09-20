@@ -664,15 +664,34 @@ def _load_tts_credentials():
     return service_account.Credentials.from_service_account_file(credentials_path)
 
 
+XAI_TTS_URL = "https://api.x.ai/v1/tts"
+ANCHOR_XAI_VOICE_ID = (os.getenv("NEWS_ANCHOR_XAI_VOICE_ID") or "n3csvb9krzue").strip() or "n3csvb9krzue"
+GOOGLE_ANCHOR_VOICE_LEGACY = "en-US-Studio-O"
+ANCHOR_VOICE = ANCHOR_XAI_VOICE_ID
+
+
+def _xai_api_key() -> str:
+    for name in ("XAI_API_KEY", "GROK_API", "GROK_API_KEY"):
+        value = (os.getenv(name) or "").strip()
+        if value:
+            return value
+    return ""
+
+
 def validate_tts_credentials():
-    """Return an error message when Google Cloud TTS is not configured, otherwise None."""
+    """Return an error message when reporter or anchor TTS is not configured."""
     global _tts_credentials_checked, _tts_client, _tts_backend
+    if not _xai_api_key():
+        return (
+            "XAI_API_KEY is not configured for the news anchor. Set XAI_API_KEY "
+            "(or GROK_API / GROK_API_KEY) in the environment or /etc/glconfig.json."
+        )
     try:
         credentials = _load_tts_credentials()
         _tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
         _tts_backend = "google"
         _tts_credentials_checked = True
-        print("DEBUG: Using Google Cloud TTS")
+        print("DEBUG: Using Google Cloud TTS for reporters and xAI TTS for the studio anchor")
         return None
     except FileNotFoundError as google_exc:
         return str(google_exc)
@@ -705,6 +724,46 @@ def _google_tts_bytes(text: str, voice_name: str, speaking_rate: float = 1.0, pi
         ),
     )
     return response.audio_content
+
+
+def _is_anchor_audio_filename(output_filename: str) -> bool:
+    name = os.path.basename(output_filename or "")
+    return name in {"intro_audio.mp3", "outro_audio.mp3"} or name.startswith("transition_audio_")
+
+
+def _xai_tts_bytes(text: str, voice_id: str = "") -> bytes:
+    import requests
+
+    api_key = _xai_api_key()
+    if not api_key:
+        raise RuntimeError("XAI_API_KEY is not configured for the news anchor")
+    spoken = " ".join((text or "").split())
+    if not spoken:
+        raise RuntimeError("Anchor script is empty")
+    chosen_voice = (voice_id or ANCHOR_VOICE).strip() or ANCHOR_XAI_VOICE_ID
+    response = requests.post(
+        XAI_TTS_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "text": spoken,
+            "voice_id": chosen_voice,
+            "output_format": {"codec": "mp3", "sample_rate": 44100, "bit_rate": 128000},
+            "language": "en",
+        },
+        timeout=180,
+    )
+    if not response.ok:
+        detail = (response.text or "").strip()[:240]
+        raise RuntimeError(f"xAI TTS failed ({response.status_code}): {detail}")
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if "json" in content_type:
+        raise RuntimeError(f"xAI TTS returned JSON instead of audio: {(response.text or '')[:240]}")
+    if len(response.content) < 64:
+        raise RuntimeError("xAI TTS returned empty audio")
+    return response.content
 
 
 _AUDIO_DIR = "glconnect/static/audio"
@@ -805,7 +864,7 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
     Args:
         text: The text to convert to speech.
         output_filename: The name of the output audio file (e.g., 'news_report.mp3').
-        voice_name: The name of the voice to use (e.g., 'en-US-Studio-O').
+        voice_name: Google reporter voice, or the xAI studio-anchor voice id.
         speaking_rate: Optional: The speaking rate (0.25 to 4.0). 1.0 is normal. Default 1.0.
         pitch: Optional: The pitch (from -20.0 to 20.0). 0.0 is normal. Default 0.0.
     Returns:
@@ -850,11 +909,21 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
             raise RuntimeError(error)
 
     try:
+        use_xai_anchor = _is_anchor_audio_filename(output_filename) or voice_name in {
+            ANCHOR_VOICE,
+            ANCHOR_XAI_VOICE_ID,
+        }
+        if use_xai_anchor and is_reporter_segment:
+            use_xai_anchor = False
+        backend_name = "xai" if use_xai_anchor else "google"
         print(
             f"DEBUG: TTS confirmed for {output_filename} "
-            f"voice={voice_name} chars={len(clean_text)} backend=google"
+            f"voice={voice_name} chars={len(clean_text)} backend={backend_name}"
         )
-        audio_content = _google_tts_bytes(clean_text, voice_name, speaking_rate, pitch)
+        if use_xai_anchor:
+            audio_content = _xai_tts_bytes(clean_text, ANCHOR_VOICE)
+        else:
+            audio_content = _google_tts_bytes(clean_text, voice_name, speaking_rate, pitch)
 
         print(f"DEBUG: TTS response received, audio content length: {len(audio_content) if audio_content else 'None'}")
         
@@ -1975,8 +2044,8 @@ def combine_audio_files(file_paths: list[str], output_filename: str = "final_new
 # Two doors into the same newsroom:
 # UI /broadcast: topics → classify → write scripts → narrate → stitch.
 # Bot /bot-scripts: already has topic + category + script → narrate → stitch.
-# Live narration uses these Google Cloud TTS voice names. HeyGen is video-only.
-ANCHOR_VOICE = 'en-US-Studio-O'
+# Live narration: studio anchor is xAI TTS; reporters stay on Google Cloud TTS.
+# HeyGen is video-only.
 ERNEST_VOICE = 'en-US-Neural2-D'
 EDITH_VOICE = 'en-US-Neural2-C'
 ISABELLA_VOICE = 'en-US-Standard-F'
@@ -2040,8 +2109,8 @@ def _category_for_reporter_name(name: str) -> str:
 
 
 def _reporter_voice_collides_with_anchor(voice: str) -> bool:
-    """True when a reporter would be assigned the studio anchor Google voice."""
-    return not voice or voice == ANCHOR_VOICE
+    """True when a reporter would be assigned the studio anchor voice."""
+    return not voice or voice in {ANCHOR_VOICE, ANCHOR_XAI_VOICE_ID, GOOGLE_ANCHOR_VOICE_LEGACY}
 
 
 def _sanitize_reporter_voice(voice: str) -> str:
@@ -2367,7 +2436,7 @@ def generate_broadcast(topics: list[str], max_retries: int = 2, task_id: str = N
         print(f"ERROR: TTS preflight failed: {tts_error}")
         trace.stage("tts_preflight", status="failed", error=tts_error)
         return _result_with_pipeline({"error": tts_error}, trace)
-    trace.stage("tts_preflight", backend=_tts_backend)
+    trace.stage("tts_preflight", backend=_tts_backend, reporters="google", anchor="xai")
     
     # Check memory before starting
     try:
@@ -2442,7 +2511,7 @@ def generate_broadcast_from_bot_copy(reports, task_id=None, source="grok-bot", a
         print(f"ERROR: TTS preflight failed: {tts_error}")
         trace.stage("tts_preflight", status="failed", error=tts_error)
         return _result_with_pipeline({"error": tts_error}, trace)
-    trace.stage("tts_preflight", backend=_tts_backend)
+    trace.stage("tts_preflight", backend=_tts_backend, reporters="google", anchor="xai")
     try:
         _, reporter_scripts, reporter_segments, reporter_assignments = _segments_from_bot_reports(
             reports, trace=trace, source=source

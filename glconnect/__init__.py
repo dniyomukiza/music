@@ -49,6 +49,9 @@ def _load_config():
         "PARALLEL_API_KEY": (os.getenv("PARALLEL_API_KEY") or os.getenv("PARALLEL_KEY") or "").strip() or None,
         "PARALLEL_WEBHOOK_SECRET": (os.getenv("PARALLEL_WEBHOOK_SECRET") or "").strip() or None,
         "NEWS_BOT_INGEST_TOKEN": (os.getenv("NEWS_BOT_INGEST_TOKEN") or "").strip() or None,
+        "XAI_API_KEY": (
+            os.getenv("XAI_API_KEY") or os.getenv("GROK_API") or os.getenv("GROK_API_KEY") or ""
+        ).strip() or None,
         "PARALLEL_WEBHOOK_URL": (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip() or None,
         "PARALLEL_MONITOR_MAX_ACTIVE": (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip() or None,
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "tts.json"),
@@ -102,6 +105,10 @@ def _load_config():
                     _nbt = _gl_first_nonempty(file_cfg, "NEWS_BOT_INGEST_TOKEN")
                     if _nbt:
                         cfg["NEWS_BOT_INGEST_TOKEN"] = _nbt
+                if not cfg.get("XAI_API_KEY"):
+                    _xai = _gl_first_nonempty(file_cfg, "XAI_API_KEY", "GROK_API", "GROK_API_KEY")
+                    if _xai:
+                        cfg["XAI_API_KEY"] = _xai
                 if not cfg.get("PARALLEL_WEBHOOK_URL"):
                     _pwu = _gl_first_nonempty(file_cfg, "PARALLEL_WEBHOOK_URL")
                     if _pwu:
@@ -253,6 +260,10 @@ if config.get("PARALLEL_WEBHOOK_SECRET") and not (os.getenv("PARALLEL_WEBHOOK_SE
     os.environ["PARALLEL_WEBHOOK_SECRET"] = config["PARALLEL_WEBHOOK_SECRET"]
 if config.get("NEWS_BOT_INGEST_TOKEN") and not (os.getenv("NEWS_BOT_INGEST_TOKEN") or "").strip():
     os.environ["NEWS_BOT_INGEST_TOKEN"] = config["NEWS_BOT_INGEST_TOKEN"]
+if config.get("XAI_API_KEY") and not (
+    (os.getenv("XAI_API_KEY") or os.getenv("GROK_API") or os.getenv("GROK_API_KEY") or "").strip()
+):
+    os.environ["XAI_API_KEY"] = config["XAI_API_KEY"]
 if config.get("PARALLEL_WEBHOOK_URL") and not (os.getenv("PARALLEL_WEBHOOK_URL") or "").strip():
     os.environ["PARALLEL_WEBHOOK_URL"] = config["PARALLEL_WEBHOOK_URL"]
 if config.get("PARALLEL_MONITOR_MAX_ACTIVE") and not (os.getenv("PARALLEL_MONITOR_MAX_ACTIVE") or "").strip():
@@ -307,6 +318,7 @@ print(f"GOOGLE_API_KEY: {'(set)' if google_api_key else '(not set)'}")
 print(f"GEMINI_API_KEY: {'(set)' if gemini_api_key else '(not set)'}")
 heygen_api_key = config.get("HEYGEN_API_KEY")
 print(f"HEYGEN_API_KEY: {'(set)' if heygen_api_key else '(not set)'}")
+print(f"XAI_API_KEY: {'(set)' if config.get('XAI_API_KEY') else '(not set)'}")
 print(f"GOOGLE_APPLICATION_CREDENTIALS: {config.get('GOOGLE_APPLICATION_CREDENTIALS', 'tts.json')}")
 
 # Initialize extensions
