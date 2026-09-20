@@ -169,6 +169,21 @@ def _process_parallel_monitor_webhook(app, payload, webhook_id):
         with _parallel_webhooks_lock:
             _parallel_webhooks_in_flight.discard(webhook_id)
 
+# news_tasks.current_step is VARCHAR(255) in production; keep a safe margin.
+NEWS_TASK_TEXT_MAX_LEN = 250
+
+
+def _truncate_news_task_text(value, max_len=NEWS_TASK_TEXT_MAX_LEN):
+    """Truncate task status strings so DB writes never hit StringDataRightTruncation."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+    if len(value) <= max_len:
+        return value
+    return value[:max_len]
+
+
 # Database task management functions
 def create_task_in_db(task_id, topics):
     """Create a new task in the database."""
@@ -205,6 +220,10 @@ def update_task_in_db(task_id, **kwargs):
     from glconnect import create_app
     import json
     
+    for field in ('current_step', 'error'):
+        if field in kwargs:
+            kwargs[field] = _truncate_news_task_text(kwargs[field])
+
     app, socketio = create_app()
     with app.app_context():
         try:
