@@ -3,7 +3,7 @@
 Search X only, write a short talk-show script, then send it to Grok Imagine
 Video 1.5 as one presenter clip. Stdout is the video path.
 
-Prefers XAI_API_KEY from .env, then GROK_API, then GROK_API_KEY.
+Requires XAI_API_KEY from .env (or environment).
 
 Examples:
   python3 scripts/test_grok_api.py
@@ -87,10 +87,9 @@ Imagine clip: about 4 to 6 spoken sentences.
 
 
 def resolve_api_key() -> tuple[str | None, str | None]:
-    for name in ("XAI_API_KEY", "GROK_API", "GROK_API_KEY"):
-        value = (os.getenv(name) or "").strip()
-        if value:
-            return value, name
+    value = (os.getenv("XAI_API_KEY") or "").strip()
+    if value:
+        return value, "XAI_API_KEY"
     return None, None
 
 
@@ -906,7 +905,7 @@ def main() -> None:
     api_key, source = resolve_api_key()
     if not api_key:
         print(
-            "ERROR: Set XAI_API_KEY, GROK_API, or GROK_API_KEY in .env.",
+            "ERROR: Set XAI_API_KEY in .env.",
             file=sys.stderr,
         )
         sys.exit(1)
