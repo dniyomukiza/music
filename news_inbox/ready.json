@@ -1,0 +1,50 @@
+{
+  "source": "newsroom-agent",
+  "anchor": {
+    "intro": "{TIMECHECK} Welcome to GLC News. Tonight: Lionel Messi hits nine hundred thirty career goals, Sam Altman heads to the U.N. Security Council on A.I., a Neuralink trial restores speech for an A.L.S. patient, and a Wall Street Journal look at food-stamp card theft.",
+    "outro": "Thanks James for that report. That wraps this GLC News bulletin. Thank you for listening."
+  },
+  "reporters": [
+    {
+      "reporter": "Ernest",
+      "category": "sports",
+      "handoff": "First, Ernest with Messi's latest milestone.",
+      "stories": [
+        {
+          "topic": "Lionel Messi reaches 930 career goals",
+          "script": "Lionel Messi scored his nine hundred thirtieth career goal for Inter Miami against San Diego F.C., curling home a free kick in the twenty-fifth minute. Coverage from Bolavip and Major League Soccer says the set piece was also his seventy-fifth career free-kick goal. In the same match he later reached one hundred one goals for Inter Miami, after hitting one hundred for the club earlier in the week against Cruz Azul."
+        }
+      ],
+      "signoff": "I am Ernest, for GLC News."
+    },
+    {
+      "reporter": "Mark",
+      "category": "tech",
+      "handoff": "Thanks Ernest. Mark has two stories, starting with Sam Altman at the U.N.",
+      "stories": [
+        {
+          "topic": "Sam Altman to brief UN Security Council on AI",
+          "script": "OpenAI chief executive Sam Altman is scheduled to brief the United Nations Security Council on Wednesday on artificial intelligence and international security. AFP reports the open session is being organized by France, which holds the rotating presidency of the fifteen-member Council, during the annual U.N. General Assembly gathering in New York. The company confirmed the briefing as industry leaders have urged coordinated caution on the pace of A.I. development."
+        },
+        {
+          "topic": "Neuralink ALS patient Terry communicates via implant voice",
+          "bridge": "Also,",
+          "script": "Neuralink shared a demonstration from its V.O.I.C.E. clinical trial showing an A.L.S. patient known as Terry using a brain implant to communicate in a synthetic voice modeled on his own. He first trained the system by miming speech, then by thinking words that are decoded into audible speech. Neuralink says the device is investigational and not F.D.A. approved, according to trial coverage carried by outlets including TeslaNorth."
+        }
+      ],
+      "signoff": "I am Mark, for GLC News."
+    },
+    {
+      "reporter": "James",
+      "category": "other",
+      "handoff": "Thanks Mark. James now, on food-stamp card fraud.",
+      "stories": [
+        {
+          "topic": "Romanian gangs draining US food-stamp accounts via magnetic stripes",
+          "script": "The Wall Street Journal reports Romanian organized crime groups are stealing hundreds of millions of dollars in U.S. food-stamp benefits by exploiting magnetic-stripe technology from the nineteen sixties on electronic benefit cards. Investigators say skimmers capture card data and P.I.N.s so cloned cards can drain accounts, with federal cases citing crews that planted devices at convenience stores and gas stations. Few states have upgraded E.B.T. cards to chip and tap, the Journal said."
+        }
+      ],
+      "signoff": "I am James, for GLC News."
+    }
+  ]
+}
