@@ -1,47 +1,47 @@
 {
   "source": "newsroom-agent",
   "anchor": {
-    "intro": "{TIMECHECK} Welcome to GLC News. Tonight: Lionel Messi hits nine hundred thirty career goals, Sam Altman heads to the U.N. Security Council on A.I., a Neuralink trial restores speech for an A.L.S. patient, and a Wall Street Journal look at food-stamp card theft.",
-    "outro": "Thanks James for that report. That wraps this GLC News bulletin. Thank you for listening."
+    "intro": "{TIMECHECK} Welcome to GLC News. Coming up: the White House launches a twenty-four seven Trump TV stream, the E.P.A. begins screening drinking water for abortion-pill traces, Google backs a nuclear uprate deal in Georgia, and new lawsuits over vision loss tied to popular weight-loss drugs.",
+    "outro": "Thanks James for that report. That is our GLC News bulletin for now. Thank you for listening."
   },
   "reporters": [
     {
-      "reporter": "Ernest",
-      "category": "sports",
-      "handoff": "First, Ernest with Messi's latest milestone.",
+      "reporter": "Edith",
+      "category": "politics",
+      "handoff": "First, Edith on the White House stream and a new E.P.A. water study.",
       "stories": [
         {
-          "topic": "Lionel Messi reaches 930 career goals",
-          "script": "Lionel Messi scored his nine hundred thirtieth career goal for Inter Miami against San Diego F.C., curling home a free kick in the twenty-fifth minute. Coverage from Bolavip and Major League Soccer says the set piece was also his seventy-fifth career free-kick goal. In the same match he later reached one hundred one goals for Inter Miami, after hitting one hundred for the club earlier in the week against Cruz Azul."
-        }
-      ],
-      "signoff": "I am Ernest, for GLC News."
-    },
-    {
-      "reporter": "Mark",
-      "category": "tech",
-      "handoff": "Thanks Ernest. Mark has two stories, starting with Sam Altman at the U.N.",
-      "stories": [
-        {
-          "topic": "Sam Altman to brief UN Security Council on AI",
-          "script": "OpenAI chief executive Sam Altman is scheduled to brief the United Nations Security Council on Wednesday on artificial intelligence and international security. AFP reports the open session is being organized by France, which holds the rotating presidency of the fifteen-member Council, during the annual U.N. General Assembly gathering in New York. The company confirmed the briefing as industry leaders have urged coordinated caution on the pace of A.I. development."
+          "topic": "White House launches Trump TV 24/7 stream",
+          "script": "The White House has launched Trump TV, billed as The Essential Station, a twenty-four seven stream of administration videos, major presidential remarks, and highlights. Coverage from the Daily Mail and White House posts says the feed began Monday evening on WhiteHouse.gov and the official White House YouTube channel, promoted as continuously updated in real time. The rollout comes days after the administration barred several news networks from covering the White House, with officials framing the channel as a direct way to reach viewers outside traditional news outlets."
         },
         {
-          "topic": "Neuralink ALS patient Terry communicates via implant voice",
+          "topic": "EPA drinking water study screens for abortion-pill traces",
           "bridge": "Also,",
-          "script": "Neuralink shared a demonstration from its V.O.I.C.E. clinical trial showing an A.L.S. patient known as Terry using a brain implant to communicate in a synthetic voice modeled on his own. He first trained the system by miming speech, then by thinking words that are decoded into audible speech. Neuralink says the device is investigational and not F.D.A. approved, according to trial coverage carried by outlets including TeslaNorth."
+          "script": "The Environmental Protection Agency is launching a scientific drinking-water study that will screen samples from several metropolitan areas for more than one thousand four hundred emerging contaminants, including the abortion medications mifepristone and misoprostol. The Hill reports the work uses non-targeted analysis and can show whether a substance is present, not how much is there or whether it poses a health risk. E.P.A. says it is lining up water systems for a study expected to run over about the next year, with results published after quality review. The agency framed the project as research under the Safe Drinking Water Act, not a new nationwide monitoring rule."
         }
       ],
-      "signoff": "I am Mark, for GLC News."
+      "signoff": "I am Edith, for GLC News."
+    },
+    {
+      "reporter": "Isabella",
+      "category": "finance",
+      "handoff": "Thanks Edith. Isabella next, on Google and Georgia nuclear power.",
+      "stories": [
+        {
+          "topic": "Google funds nuclear uprates at Vogtle and Hatch",
+          "script": "Georgia Power and Google announced an agreement, pending Georgia Public Service Commission approval, for Google to support nuclear uprates at Plants Vogtle and Hatch. The upgrades are projected to add about ninety-six megawatts of capacity for Georgia Power customers, with Google's subscription expected to enable about nine hundred million dollars in customer benefits over the life of the units. Southern Company and Georgia Power filings describe a new Nuclear Uprate tariff and an extended power uprate request for Hatch, while Vogtle units one and two already had uprate approval in the twenty twenty-five integrated resource plan. The companies say the deal aims to add carbon-free power as data-center demand rises, without shifting upgrade costs onto non-participating customers."
+        }
+      ],
+      "signoff": "I am Isabella, for GLC News."
     },
     {
       "reporter": "James",
       "category": "other",
-      "handoff": "Thanks Mark. James now, on food-stamp card fraud.",
+      "handoff": "Thanks Isabella. James now, on weight-loss drug lawsuits and vision loss.",
       "stories": [
         {
-          "topic": "Romanian gangs draining US food-stamp accounts via magnetic stripes",
-          "script": "The Wall Street Journal reports Romanian organized crime groups are stealing hundreds of millions of dollars in U.S. food-stamp benefits by exploiting magnetic-stripe technology from the nineteen sixties on electronic benefit cards. Investigators say skimmers capture card data and P.I.N.s so cloned cards can drain accounts, with federal cases citing crews that planted devices at convenience stores and gas stations. Few states have upgraded E.B.T. cards to chip and tap, the Journal said."
+          "topic": "Lawsuits allege Ozempic Wegovy Zepbound cause irreversible vision loss",
+          "script": "U.S.A. Today reports dozens of lawsuits allege popular obesity and diabetes drugs can cause irreversible vision loss. Patients say Ozempic and Wegovy from Novo Nordisk, and Zepbound and related G.L.P. one medicines from Eli Lilly, are linked to non-arteritic anterior ischemic optic neuropathy, a rare condition that can bring sudden permanent vision damage. Federal claims are consolidated in multidistrict litigation three one six three in the Eastern District of Pennsylvania, with roughly two hundred cases pending and early briefing on causation and warnings underway. Manufacturers dispute the claims, research remains mixed, and no verdicts or settlements have been reported."
         }
       ],
       "signoff": "I am James, for GLC News."
