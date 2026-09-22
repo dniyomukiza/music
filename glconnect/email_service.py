@@ -111,6 +111,78 @@ def _tag_value(raw: str) -> str:
     return (cleaned or "email")[:50]
 
 
+def notify_ops(
+    *,
+    subject: str,
+    text: str,
+    reply_to: Optional[Union[str, Sequence[str]]] = None,
+    tags: Optional[Sequence[str]] = None,
+) -> bool:
+    """Internal alert to info@ndotonic.com (or RECEIVER_MAIL). Never raises."""
+    try:
+        return send_email(
+            to=get_inbound_receiver(),
+            subject=subject,
+            text=text,
+            reply_to=reply_to,
+            tags=tags or ["ops-alert"],
+        )
+    except Exception:
+        logger.exception("Ops notification failed: %s", subject)
+        return False
+
+
+def notify_new_account(user: object) -> bool:
+    user_id = getattr(user, "user_id", "")
+    username = getattr(user, "username", "") or ""
+    email = getattr(user, "email", "") or ""
+    role = getattr(user, "role", "") or ""
+    first_name = getattr(user, "first_name", "") or ""
+    last_name = getattr(user, "last_name", "") or ""
+    text = (
+        "A new Ndotonic account was created.\n\n"
+        f"User ID: {user_id}\n"
+        f"Username: {username}\n"
+        f"Name: {first_name} {last_name}\n"
+        f"Email: {email}\n"
+        f"Role: {role}\n\n"
+        "Confirm the account if needed, then process any artist or creator follow-up."
+    )
+    return notify_ops(
+        subject=f"New account: {username or email}",
+        text=text,
+        reply_to=email or None,
+        tags=["new-account"],
+    )
+
+
+def notify_song_upload(
+    *,
+    artist_name: str,
+    song_name: str,
+    local_path: str = "",
+    song_id: object = None,
+    user_email: str = "",
+    username: str = "",
+) -> bool:
+    text = (
+        "An artist submitted a track for GLC Media review.\n\n"
+        f"Artist: {artist_name}\n"
+        f"Track: {song_name}\n"
+        f"Song ID: {song_id or 'n/a'}\n"
+        f"File: {local_path or 'n/a'}\n"
+        f"Account: {username or 'n/a'}\n"
+        f"Email: {user_email or 'n/a'}\n\n"
+        "Approve or reject it in the admin songs queue, then add it to radio if it clears review."
+    )
+    return notify_ops(
+        subject=f"Song upload: {artist_name} — {song_name}",
+        text=text,
+        reply_to=user_email or None,
+        tags=["song-upload"],
+    )
+
+
 def send_email(
     *,
     to: Union[str, Sequence[str]],

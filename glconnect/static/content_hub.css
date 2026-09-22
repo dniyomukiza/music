@@ -2,7 +2,6 @@
 
 .content-hub-wrap {
   position: relative;
-  z-index: 10;
   min-height: auto;
   display: block;
   padding: 0 clamp(1.25rem, 5vw, 4rem) 5.5rem;
@@ -297,6 +296,18 @@
 .btn-modern-success:hover {
   background: linear-gradient(135deg, #059669, #047857);
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+/* Keep dialogs above the dim overlay and live radio/TV bars (z-index 1040). */
+.legacy-content-hub .modal {
+  z-index: 1080;
+}
+.legacy-content-hub .modal-backdrop,
+body.modal-open .modal-backdrop {
+  z-index: 1070;
+}
+body.modal-open .live-broadcast-bar {
+  z-index: 1030;
 }
 
 .legacy-content-hub .modal-content {

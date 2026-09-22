@@ -14,7 +14,7 @@
                         {% if current_user.is_authenticated %}
                         {% if not has_artist_profile %}
                         <button type="button" class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#createArtistModalContentHub">
-                            Register as artist
+                            Upload songs
                         </button>
                         {% else %}
                         <button type="button" class="btn btn-modern btn-modern-success" data-bs-toggle="modal" data-bs-target="#uploadSongModalContentHub">
@@ -92,7 +92,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="createArtistModalContentHub" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">

@@ -21,7 +21,7 @@ from flask_login import login_user,logout_user,LoginManager,login_required,curre
 from urllib.parse import urlparse
 from sqlalchemy import func
 from glconnect.book_platform_security import rate_limit
-from glconnect.email_service import send_email
+from glconnect.email_service import notify_new_account, send_email
 
 bp1 = Blueprint('routes1', __name__)
 API_URL = os.getenv("FRONTEND_BASE_URL", "https://ndotonic.com").rstrip("/") + "/word/"
@@ -189,6 +189,7 @@ def register():
                 try:
                     db.session.add(new_user)
                     db.session.commit()
+                    notify_new_account(new_user)
 
                     session['pending_confirmation_user_id'] = new_user.user_id
                     if not _send_confirmation_for_user(new_user):

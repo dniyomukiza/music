@@ -7007,6 +7007,8 @@ def checkout_quick_register():
     record_account_terms_acceptance(user)
     db.session.add(user)
     db.session.commit()
+    from glconnect.email_service import notify_new_account
+    notify_new_account(user)
     from glconnect.routes1 import _send_confirmation_for_user
     verification_sent = _send_confirmation_for_user(user)
     return jsonify({
@@ -11888,6 +11890,15 @@ def upload_song_music_dashboard():
         db.session.add(new_song_upload)
         
         db.session.commit()
+        from glconnect.email_service import notify_song_upload
+        notify_song_upload(
+            artist_name=artist.artist_name,
+            song_name=song_name,
+            local_path=full_db_path,
+            song_id=new_song.id,
+            user_email=getattr(current_user, "email", "") or "",
+            username=getattr(current_user, "username", "") or "",
+        )
         
         return jsonify({
             'success': True,
